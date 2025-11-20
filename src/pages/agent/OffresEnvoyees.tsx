@@ -218,17 +218,26 @@ export default function OffresEnvoyees() {
                           <Eye className="h-4 w-4 mr-2" />
                           Voir le client
                         </Button>
-                        {offre.lienAnnonce && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => window.open(offre.lienAnnonce, '_blank')}
-                          >
-                            <ExternalLink className="h-4 w-4 mr-2" />
-                            Annonce
-                          </Button>
-                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => {
+                            if (offre.lienAnnonce && offre.lienAnnonce.trim()) {
+                              window.open(offre.lienAnnonce, '_blank');
+                            } else {
+                              toast({
+                                title: 'Lien manquant',
+                                description: 'Aucun lien d\'annonce n\'a été renseigné pour cette offre',
+                                variant: 'destructive',
+                              });
+                            }
+                          }}
+                          disabled={!offre.lienAnnonce || !offre.lienAnnonce.trim()}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Annonce
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
