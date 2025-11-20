@@ -227,6 +227,20 @@ export default function ClientDetail() {
     navigate('/agent/mes-clients');
   };
 
+  // Calculs mémorisés - DOIVENT être avant tout return conditionnel
+  const mandateData = useMemo(
+    () => client ? calculateMandateDuration(client.dateInscription) : { daysElapsed: 0, daysRemaining: 0, progressPercentage: 0 },
+    [client?.dateInscription]
+  );
+  const budgetRecommande = useMemo(
+    () => client ? Math.round(client.revenuMensuel / 3) : 0,
+    [client?.revenuMensuel]
+  );
+  const progressColor = useMemo(
+    () => mandateData.daysElapsed < 60 ? 'bg-green-500' : mandateData.daysElapsed < 90 ? 'bg-orange-500' : 'bg-red-500',
+    [mandateData.daysElapsed]
+  );
+
   if (!client) {
     return (
       <div className="flex h-screen bg-background">
@@ -238,18 +252,7 @@ export default function ClientDetail() {
     );
   }
 
-  const { daysElapsed, daysRemaining, progressPercentage } = useMemo(
-    () => calculateMandateDuration(client.dateInscription),
-    [client.dateInscription]
-  );
-  const budgetRecommande = useMemo(
-    () => Math.round(client.revenuMensuel / 3),
-    [client.revenuMensuel]
-  );
-  const progressColor = useMemo(
-    () => daysElapsed < 60 ? 'bg-green-500' : daysElapsed < 90 ? 'bg-orange-500' : 'bg-red-500',
-    [daysElapsed]
-  );
+  const { daysElapsed, daysRemaining, progressPercentage } = mandateData;
 
   return (
     <div className="flex h-screen bg-background">
