@@ -589,7 +589,16 @@ export default function ClientDetail() {
                       <Calendar className="w-5 h-5 text-muted-foreground mt-1" />
                       <div>
                         <p className="text-sm text-muted-foreground">Date de naissance</p>
-                        <p className="font-medium">{new Date(client.dateNaissance).toLocaleDateString('fr-CH')}</p>
+                        <p className="font-medium">
+                          {client.dateNaissance 
+                            ? (() => {
+                                const date = new Date(client.dateNaissance);
+                                return isNaN(date.getTime()) 
+                                  ? client.dateNaissance 
+                                  : date.toLocaleDateString('fr-CH');
+                              })()
+                            : 'Non renseignée'}
+                        </p>
                       </div>
                     </div>
 
