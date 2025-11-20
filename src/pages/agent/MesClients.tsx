@@ -55,8 +55,8 @@ const MesClients = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
                         <h3 className="text-xl font-semibold">{client.prenom} {client.nom}</h3>
-                        <Badge variant={duration > 60 ? "destructive" : "default"}>
-                          J+{duration}
+                        <Badge variant={duration.daysElapsed > 60 ? "destructive" : "default"}>
+                          J+{duration.daysElapsed}
                         </Badge>
                       </div>
                       

@@ -16,9 +16,12 @@ import AgentMesClients from "./pages/agent/MesClients";
 import AgentEnvoyerOffre from "./pages/agent/EnvoyerOffre";
 import AgentMessagerie from "./pages/agent/Messagerie";
 import ClientDashboard from "./pages/client/Dashboard";
+import ClientDossier from "./pages/client/Dossier";
 import ClientOffresRecues from "./pages/client/OffresRecues";
+import ClientVisites from "./pages/client/Visites";
 import ClientMesCandidatures from "./pages/client/MesCandidatures";
 import ClientMessagerie from "./pages/client/Messagerie";
+import ClientDocuments from "./pages/client/Documents";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,9 +47,12 @@ const App = () => (
           <Route path="/agent/envoyer-offre" element={<AgentEnvoyerOffre />} />
           <Route path="/agent/messagerie" element={<AgentMessagerie />} />
           <Route path="/client" element={<ClientDashboard />} />
+          <Route path="/client/dossier" element={<ClientDossier />} />
           <Route path="/client/offres-recues" element={<ClientOffresRecues />} />
+          <Route path="/client/visites" element={<ClientVisites />} />
           <Route path="/client/mes-candidatures" element={<ClientMesCandidatures />} />
           <Route path="/client/messagerie" element={<ClientMessagerie />} />
+          <Route path="/client/documents" element={<ClientDocuments />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
