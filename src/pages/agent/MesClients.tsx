@@ -312,7 +312,7 @@ const MesClients = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4" />
-                      <span>État civil: {client.etatCivil}</span>
+                      <span>État civil: {client.etatCivil || 'Non renseigné'}</span>
                     </div>
                     {client.vehicules && (
                       <div className="flex items-center gap-2">
