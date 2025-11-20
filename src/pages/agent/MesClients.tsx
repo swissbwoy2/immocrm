@@ -45,18 +45,22 @@ const MesClients = () => {
       `${client.prenom} ${client.nom}`.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchRegion = selectedRegions.length === 0 || 
-      client.regions.some(r => selectedRegions.includes(r));
+      (client.regions && client.regions.length > 0 && client.regions.some(r => selectedRegions.includes(r)));
     
     const matchPieces = selectedPieces.length === 0 || 
       selectedPieces.some(p => {
         if (p === 'Autre') return true;
-        const pieceNum = parseInt(p.replace('+', ''));
-        const clientPieces = client.nombrePiecesSouhaite;
-        if (clientPieces.includes('+')) {
-          const clientNum = parseInt(clientPieces.replace('+', ''));
+        const pieceNum = parseFloat(p.replace('+', ''));
+        const clientPieces = client.nombrePiecesSouhaite || '';
+        
+        // Handle both "2.5" and "2+" formats
+        const clientNum = parseFloat(clientPieces.toString().replace('+', ''));
+        
+        if (p.includes('+')) {
           return clientNum >= pieceNum;
         }
-        return clientPieces === p;
+        
+        return Math.floor(clientNum) === Math.floor(pieceNum);
       });
     
     return matchSearch && matchRegion && matchPieces;
