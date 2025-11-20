@@ -42,6 +42,15 @@ function findColumnValue(row: CSVRow, variants: string[]): string {
   return '';
 }
 
+// Nettoie et parse un nombre (gère les formats suisses avec apostrophes, espaces, etc.)
+function parseNumber(value: string): number {
+  if (!value) return 0;
+  // Retire les espaces, apostrophes, et autres séparateurs de milliers
+  const cleaned = value.toString().replace(/[\s''']/g, '').replace(/[,]/g, '.');
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
+}
+
 export function parseCSV(fileContent: string): ParsedCSVData {
   const lines = fileContent.split('\n').filter(line => line.trim());
   
@@ -188,18 +197,20 @@ function parseClientFromRow(row: CSVRow, lineNumber: number): {
   };
 
   // Parser les champs numériques avec valeurs par défaut
-  const revenuMensuel = parseFloat(findColumnValue(row, [
+  const revenuMensuel = parseNumber(findColumnValue(row, [
     'Revenu mensuel net', 'Revenu', 'Revenue', 'Salaire', 'Revenu net'
-  ]) || '0');
-  const loyerActuel = parseFloat(findColumnValue(row, [
+  ]));
+  const loyerActuel = parseNumber(findColumnValue(row, [
     'Loyer brut actuel', 'Loyer', 'Loyer actuel', 'Rent', 'Loyer mensuel'
-  ]) || '0');
-  const budgetMax = parseFloat(findColumnValue(row, [
-    'Budget maximum', 'Budget', 'Budget max', 'Maximum budget'
-  ]) || '0');
-  const montantCharges = parseFloat(findColumnValue(row, [
+  ]));
+  const budgetMax = parseNumber(findColumnValue(row, [
+    'Budget maximum', 'Budget', 'Budget max', 'Maximum budget', 'Budget maximum (le loyer brut ne devant pas dépasser le tiers du salaire)'
+  ]));
+  const montantCharges = parseNumber(findColumnValue(row, [
     'Montant charges', 'Charges', 'Montant des charges'
-  ]) || '0');
+  ]));
+
+  console.log(`💰 Ligne ${lineNumber} - Montants:`, { revenuMensuel, loyerActuel, budgetMax, montantCharges });
 
   // Parser les régions
   const regionsString = findColumnValue(row, [
@@ -229,9 +240,9 @@ function parseClientFromRow(row: CSVRow, lineNumber: number): {
     contactGerance: findColumnValue(row, ['Contact gérance', 'Contact gerance', 'Contact']),
     loyerActuel: loyerActuel,
     depuisLe: findColumnValue(row, ['Depuis le', 'Depuis', 'Date debut']),
-    nombrePiecesActuel: parseFloat(findColumnValue(row, [
+    nombrePiecesActuel: parseNumber(findColumnValue(row, [
       'Nombre de pièces actuel', 'Pieces actuelles', 'Pieces', 'Nb pieces actuel'
-    ]) || '0'),
+    ])),
     chargesExtraordinaires: findColumnValue(row, ['Charges extraordinaires', 'Charges extra']) || 'Non',
     montantCharges: montantCharges,
     poursuites: findColumnValue(row, ['Poursuites', 'Poursuite']).toLowerCase() === 'oui',
