@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Trash2 } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Trash2, Upload } from "lucide-react";
 import { getClients, getAgents, getCurrentUser } from "@/utils/localStorage";
 import { calculateDaysElapsed } from "@/utils/calculations";
+import { CSVImportDialog } from "@/components/CSVImportDialog";
 
 const MesClients = () => {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ const MesClients = () => {
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedPieces, setSelectedPieces] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const regions = ['Chablais', 'Fribourg', 'Gros-de-Vaud', 'Lausanne et région', 'Ouest-lausannois', 'Lavaux', 'Nord-vaudois', 'Nyon et région', 'Riviera', 'Valais', 'Genève', 'Autre'];
   const nombrePieces = ['1+', '2+', '3+', '4+', '5+', 'Autre'];
@@ -85,8 +87,12 @@ const MesClients = () => {
       <Sidebar />
       <div className="flex-1 overflow-auto">
         <div className="p-8">
-          <div className="mb-6">
+          <div className="mb-6 flex items-center justify-between">
             <h1 className="text-3xl font-bold text-foreground">Clients</h1>
+            <Button onClick={() => setImportDialogOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Importer CSV
+            </Button>
           </div>
 
           {/* Barre de recherche */}
@@ -321,6 +327,12 @@ const MesClients = () => {
           )}
         </div>
       </div>
+
+      <CSVImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        onImportComplete={() => window.location.reload()}
+      />
     </div>
   );
 };
