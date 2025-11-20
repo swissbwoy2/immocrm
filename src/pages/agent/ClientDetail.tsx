@@ -277,7 +277,7 @@ export default function ClientDetail() {
                       </p>
                     </div>
                   </div>
-                  <Progress value={progressPercentage} className="h-3" />
+                  <Progress value={progressPercentage} className="h-3" indicatorClassName={progressColor} />
                 </div>
               </div>
 
