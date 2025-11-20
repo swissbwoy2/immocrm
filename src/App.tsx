@@ -13,6 +13,7 @@ import AdminTransactions from "./pages/admin/Transactions";
 import AdminMessagerie from "./pages/admin/Messagerie";
 import AgentDashboard from "./pages/agent/Dashboard";
 import AgentMesClients from "./pages/agent/MesClients";
+import AgentClientDetail from "./pages/agent/ClientDetail";
 import AgentEnvoyerOffre from "./pages/agent/EnvoyerOffre";
 import AgentMessagerie from "./pages/agent/Messagerie";
 import ClientDashboard from "./pages/client/Dashboard";
@@ -44,6 +45,7 @@ const App = () => (
           <Route path="/admin/messagerie" element={<AdminMessagerie />} />
           <Route path="/agent" element={<AgentDashboard />} />
           <Route path="/agent/mes-clients" element={<AgentMesClients />} />
+          <Route path="/agent/clients/:id" element={<AgentClientDetail />} />
           <Route path="/agent/envoyer-offre" element={<AgentEnvoyerOffre />} />
           <Route path="/agent/messagerie" element={<AgentMessagerie />} />
           <Route path="/client" element={<ClientDashboard />} />
