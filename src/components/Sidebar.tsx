@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LucideIcon, LogOut, Building2, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar } from 'lucide-react';
+import { LucideIcon, LogOut, Building2, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { getCurrentUser, saveCurrentUser } from '@/utils/localStorage';
@@ -14,20 +14,23 @@ const getMenuForRole = (role: string): MenuItem[] => {
   switch (role) {
     case 'admin':
       return [
-        { name: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
-        { name: 'Agents', icon: Users, path: '/admin/agents' },
+        { name: 'Tableau de bord', icon: LayoutDashboard, path: '/admin' },
+        { name: 'Agents', icon: UserCog, path: '/admin/agents' },
         { name: 'Clients', icon: Users, path: '/admin/clients' },
-        { name: 'Assignations', icon: UserCog, path: '/admin/assignations' },
-        { name: 'Mandats', icon: FileText, path: '/admin/mandats' },
         { name: 'Transactions', icon: DollarSign, path: '/admin/transactions' },
+        { name: 'Assignations', icon: UserCog, path: '/admin/assignations' },
         { name: 'Messagerie', icon: MessageSquare, path: '/admin/messagerie' },
+        { name: 'Documents', icon: FileText, path: '/admin/documents' },
+        { name: 'Paramètres', icon: Settings, path: '/admin/parametres' },
       ];
     case 'agent':
       return [
-        { name: 'Dashboard', icon: LayoutDashboard, path: '/agent' },
-        { name: 'Mes Clients', icon: Users, path: '/agent/mes-clients' },
+        { name: 'Tableau de bord', icon: LayoutDashboard, path: '/agent' },
+        { name: 'Mes clients', icon: Users, path: '/agent/mes-clients' },
         { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre' },
         { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie' },
+        { name: 'Documents', icon: FileText, path: '/agent/documents' },
+        { name: 'Paramètres', icon: Settings, path: '/agent/parametres' },
       ];
     case 'client':
       return [

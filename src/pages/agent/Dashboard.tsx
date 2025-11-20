@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, Users, Send, MessageSquare, TrendingUp, CheckCircle } from 'lucide-react';
+import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getCurrentUser, getAgents, getClients, getOffres, getMessages } from '@/utils/localStorage';
 import { calculateDaysElapsed, getStatutLabel } from '@/utils/calculations';
-import { findTopMatches, mockProperties } from '@/utils/matching';
 import { useNavigate } from 'react-router-dom';
 
 export default function AgentDashboard() {
@@ -65,9 +64,6 @@ export default function AgentDashboard() {
     return days >= 60;
   }).sort((a, b) => calculateDaysElapsed(b.dateInscription) - calculateDaysElapsed(a.dateInscription));
 
-  // Calcul des matchings automatiques
-  const topMatches = findTopMatches(mesClients, mockProperties, 3);
-
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
@@ -81,9 +77,9 @@ export default function AgentDashboard() {
           </div>
 
           {/* KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <KPICard 
-              title="Mes clients" 
+              title="Clients actifs" 
               value={clientsActifs} 
               icon={Users}
               onClick={() => navigate('/agent/mes-clients')}
@@ -107,74 +103,13 @@ export default function AgentDashboard() {
               variant={deadlinesCritiques > 0 ? 'danger' : 'default'}
               onClick={() => navigate('/agent/mes-clients')}
             />
+            <KPICard 
+              title="Commission pot." 
+              value={`${totalCommissionPotentielle.toLocaleString()} CHF`} 
+              icon={DollarSign}
+              variant="default"
+            />
           </div>
-
-          {/* Derniers matchings */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold">🎯 Derniers matchings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {topMatches.length > 0 ? (
-                <div className="space-y-3">
-                  {topMatches.map((match, index) => (
-                    <div 
-                      key={`${match.clientId}-${index}`}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-muted/30 hover:bg-muted/50 rounded-lg border transition-all duration-200"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <p className="font-semibold">{match.client.prenom} {match.client.nom}</p>
-                          <Badge variant="outline" className="text-xs">
-                            {match.client.nombrePiecesSouhaite} pcs
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate">{match.propertyDescription}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {match.propertyDetails.surface} m² • {match.propertyDetails.region}
-                        </p>
-                      </div>
-                      
-                      <div className="flex items-center gap-3 sm:gap-4">
-                        <div className="flex flex-col items-end">
-                          <div className="flex items-center gap-1.5">
-                            <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
-                            <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                              {match.score}%
-                            </span>
-                          </div>
-                          <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden mt-1">
-                            <div 
-                              className="h-full bg-green-500" 
-                              style={{ width: `${match.score}%` }}
-                            />
-                          </div>
-                        </div>
-                        
-                        <Button 
-                          size="sm"
-                          onClick={() => navigate(`/agent/envoyer-offre?clientId=${match.clientId}`)}
-                        >
-                          <Send className="w-3 h-3 mr-1" />
-                          Envoyer
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
-                    <TrendingUp className="w-6 h-6" />
-                  </div>
-                  <p className="text-sm font-medium">Aucun matching récent</p>
-                  <p className="text-xs mt-1 max-w-md mx-auto">
-                    Les matchings apparaîtront automatiquement quand des propriétés correspondront aux critères de vos clients.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Projection financière & Deadlines */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
