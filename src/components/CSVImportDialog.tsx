@@ -18,9 +18,10 @@ interface CSVImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImportComplete: () => void;
+  currentAgentId?: string; // ID de l'agent qui importe les clients
 }
 
-export function CSVImportDialog({ open, onOpenChange, onImportComplete }: CSVImportDialogProps) {
+export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentAgentId }: CSVImportDialogProps) {
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [parsing, setParsing] = useState(false);
@@ -129,16 +130,22 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete }: CSVImp
       const mergedClients = [...currentClients];
       parseResult.clients.forEach(newClient => {
         const existingIndex = mergedClients.findIndex(c => c.email === newClient.email);
+        
+        // Auto-assign current agent if provided
+        const clientToSave = currentAgentId 
+          ? { ...newClient, agentId: newClient.agentId || currentAgentId }
+          : newClient;
+        
         if (existingIndex >= 0) {
-          // Update existing client but preserve agentId if it exists
+          // Update existing client but preserve agentId if it exists, otherwise use current agent
           mergedClients[existingIndex] = { 
-            ...newClient,
-            agentId: mergedClients[existingIndex].agentId || newClient.agentId 
+            ...clientToSave,
+            agentId: mergedClients[existingIndex].agentId || clientToSave.agentId 
           };
           updatedClientsCount++;
         } else {
           // Add new client
-          mergedClients.push(newClient);
+          mergedClients.push(clientToSave);
           addedClientsCount++;
         }
       });

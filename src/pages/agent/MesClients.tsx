@@ -343,6 +343,7 @@ const MesClients = () => {
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
         onImportComplete={handleImportComplete}
+        currentAgentId={agent?.id}
       />
     </div>
   );
