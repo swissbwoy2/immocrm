@@ -50,7 +50,11 @@ const MesClients = () => {
               const clientOffres = getClientOffres(client.id);
               
               return (
-                <Card key={client.id} className="p-6">
+                <Card 
+                  key={client.id} 
+                  className="p-6 cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => navigate(`/agent/clients/${client.id}`)}
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
