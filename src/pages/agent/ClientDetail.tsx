@@ -330,17 +330,14 @@ export default function ClientDetail() {
                     <FormField
                       control={form.control}
                       name="revenuMensuel"
-                      render={({ field }) => (
+                      render={({ field: { value, onChange, ...field } }) => (
                         <FormItem>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
-                              value={field.value || ''}
-                              onChange={(e) => {
-                                const value = e.target.value === '' ? 0 : Number(e.target.value);
-                                field.onChange(value);
-                              }}
+                              value={value}
+                              onChange={(e) => onChange(e.target.valueAsNumber || 0)}
                               placeholder="Revenu mensuel"
                             />
                           </FormControl>
@@ -371,17 +368,14 @@ export default function ClientDetail() {
                     <FormField
                       control={form.control}
                       name="budgetMax"
-                      render={({ field }) => (
+                      render={({ field: { value, onChange, ...field } }) => (
                         <FormItem>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
-                              value={field.value || ''}
-                              onChange={(e) => {
-                                const value = e.target.value === '' ? 0 : Number(e.target.value);
-                                field.onChange(value);
-                              }}
+                              value={value}
+                              onChange={(e) => onChange(e.target.valueAsNumber || 0)}
                               placeholder="Budget maximum"
                             />
                           </FormControl>
@@ -615,18 +609,15 @@ export default function ClientDetail() {
                     <FormField
                       control={form.control}
                       name="loyerActuel"
-                      render={({ field }) => (
+                      render={({ field: { value, onChange, ...field } }) => (
                         <FormItem>
                           <FormLabel>Loyer actuel (CHF)</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
-                              value={field.value || ''}
-                              onChange={(e) => {
-                                const value = e.target.value === '' ? 0 : Number(e.target.value);
-                                field.onChange(value);
-                              }}
+                              value={value}
+                              onChange={(e) => onChange(e.target.valueAsNumber || 0)}
                             />
                           </FormControl>
                           <FormMessage />
@@ -649,18 +640,15 @@ export default function ClientDetail() {
                     <FormField
                       control={form.control}
                       name="nombrePiecesActuel"
-                      render={({ field }) => (
+                      render={({ field: { value, onChange, ...field } }) => (
                         <FormItem>
                           <FormLabel>Nombre de pièces actuel</FormLabel>
                           <FormControl>
                             <Input
                               type="number"
                               {...field}
-                              value={field.value || ''}
-                              onChange={(e) => {
-                                const value = e.target.value === '' ? 1 : Number(e.target.value);
-                                field.onChange(value);
-                              }}
+                              value={value}
+                              onChange={(e) => onChange(e.target.valueAsNumber || 1)}
                             />
                           </FormControl>
                           <FormMessage />
