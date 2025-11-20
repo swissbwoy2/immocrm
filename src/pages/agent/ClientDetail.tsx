@@ -37,10 +37,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   ArrowLeft, Pencil, Trash2, Mail, Phone, MapPin, Calendar, Users, 
   DollarSign, Home, Building2, Briefcase, Heart, Car, Send, X, Check,
-  TrendingUp, Flag, FileText
+  TrendingUp, Flag, FileText, Download, Upload as UploadIcon
 } from 'lucide-react';
 import { getCurrentUser, getClients, saveClients, getOffres } from '@/utils/localStorage';
 import { Client, Offre } from '@/data/mockData';
@@ -85,6 +93,19 @@ export default function ClientDetail() {
   const [offres, setOffres] = useState<Offre[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [documents, setDocuments] = useState<Array<{
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+    uploadDate: string;
+    data: string;
+  }>>(() => {
+    const stored = localStorage.getItem(`client-documents-${id}`);
+    return stored ? JSON.parse(stored) : [];
+  });
   const currentUser = getCurrentUser();
   const { toast } = useToast();
 
@@ -210,6 +231,81 @@ export default function ClientDetail() {
     });
 
     setIsEditing(false);
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    
+    const newDocuments = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const reader = new FileReader();
+      
+      await new Promise<void>((resolve) => {
+        reader.onload = () => {
+          const document = {
+            id: `doc-${Date.now()}-${i}`,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            uploadDate: new Date().toISOString(),
+            data: reader.result as string,
+          };
+          newDocuments.push(document);
+          resolve();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    const updatedDocuments = [...documents, ...newDocuments];
+    setDocuments(updatedDocuments);
+    localStorage.setItem(`client-documents-${id}`, JSON.stringify(updatedDocuments));
+    
+    setUploading(false);
+    setUploadDialogOpen(false);
+    
+    toast({
+      title: 'Documents ajoutés',
+      description: `${newDocuments.length} document(s) ajouté(s) avec succès`,
+    });
+  };
+
+  const handleDeleteDocument = (docId: string) => {
+    const updatedDocuments = documents.filter(d => d.id !== docId);
+    setDocuments(updatedDocuments);
+    localStorage.setItem(`client-documents-${id}`, JSON.stringify(updatedDocuments));
+    
+    toast({
+      title: 'Document supprimé',
+      description: 'Le document a été supprimé avec succès',
+    });
+  };
+
+  const handleDownloadDocument = (document: any) => {
+    const link = window.document.createElement('a');
+    link.href = document.data;
+    link.download = document.name;
+    link.click();
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type.includes('pdf')) return '📄';
+    if (type.includes('image')) return '🖼️';
+    if (type.includes('word') || type.includes('document')) return '📝';
+    if (type.includes('excel') || type.includes('spreadsheet')) return '📊';
+    return '📎';
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
   const handleDelete = () => {
@@ -1139,16 +1235,55 @@ export default function ClientDetail() {
                 <FileText className="w-5 h-5" />
                 Documents
               </h2>
-              <Button variant="outline" onClick={() => toast({ title: 'Fonctionnalité à venir' })}>
-                <FileText className="w-4 h-4 mr-2" />
+              <Button variant="outline" onClick={() => setUploadDialogOpen(true)}>
+                <UploadIcon className="w-4 h-4 mr-2" />
                 Ajouter un document
               </Button>
             </div>
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                Aucun document disponible
-              </CardContent>
-            </Card>
+            
+            {documents.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {documents.map((doc) => (
+                  <Card key={doc.id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3 flex-1">
+                        <span className="text-2xl">{getFileIcon(doc.type)}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{doc.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatFileSize(doc.size)} • {new Date(doc.uploadDate).toLocaleDateString('fr-FR')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleDownloadDocument(doc)}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteDocument(doc.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  Aucun document disponible
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
         </Form>
@@ -1160,7 +1295,7 @@ export default function ClientDetail() {
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer le client</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer {client.prenom} {client.nom} ? 
+              Êtes-vous sûr de vouloir supprimer {client?.prenom} {client?.nom} ? 
               Cette action est irréversible et supprimera toutes les données associées.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1172,6 +1307,35 @@ export default function ClientDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Upload Document Dialog */}
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ajouter des documents</DialogTitle>
+            <DialogDescription>
+              Sélectionnez un ou plusieurs fichiers à ajouter au dossier du client
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              type="file"
+              multiple
+              onChange={handleFileUpload}
+              disabled={uploading}
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+            />
+            {uploading && (
+              <p className="text-sm text-muted-foreground mt-2">Upload en cours...</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadDialogOpen(false)} disabled={uploading}>
+              Annuler
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
