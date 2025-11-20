@@ -143,9 +143,21 @@ export function getStatutColor(statut: string): string {
   return colors[statut] || 'bg-muted text-muted-foreground';
 }
 
-// Calcul durée mandat
-export function calculateMandateDuration(dateInscription: string): number {
-  return calculateDaysElapsed(dateInscription);
+// Calcul durée mandat avec détails
+export function calculateMandateDuration(dateInscription: string): {
+  daysElapsed: number;
+  daysRemaining: number;
+  progressPercentage: number;
+} {
+  const daysElapsed = calculateDaysElapsed(dateInscription);
+  const daysRemaining = Math.max(0, 90 - daysElapsed);
+  const progressPercentage = Math.min(100, Math.round((daysElapsed / 90) * 100));
+  
+  return {
+    daysElapsed,
+    daysRemaining,
+    progressPercentage,
+  };
 }
 
 // Format statut offre pour badge

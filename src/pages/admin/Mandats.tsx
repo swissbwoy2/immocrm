@@ -26,7 +26,7 @@ const Mandats = () => {
   const sortedClients = [...clients].sort((a, b) => {
     const durationA = calculateMandateDuration(a.dateInscription);
     const durationB = calculateMandateDuration(b.dateInscription);
-    return durationB - durationA;
+    return durationB.daysElapsed - durationA.daysElapsed;
   });
 
   return (
@@ -42,8 +42,8 @@ const Mandats = () => {
           <div className="grid gap-4">
             {sortedClients.map((client) => {
               const duration = calculateMandateDuration(client.dateInscription);
-              const progress = Math.min((duration / 90) * 100, 100);
-              const status = getMandateStatus(duration);
+              const progress = duration.progressPercentage;
+              const status = getMandateStatus(duration.daysElapsed);
               
               return (
                 <Card key={client.id} className="p-6">
@@ -60,10 +60,10 @@ const Mandats = () => {
                       </div>
                       <div className="text-right">
                         <div className={`text-3xl font-bold ${status.color}`}>
-                          J+{duration}
+                          J+{duration.daysElapsed}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {90 - duration > 0 ? `${90 - duration} jours restants` : "Mandat expiré"}
+                          {duration.daysRemaining > 0 ? `${duration.daysRemaining} jours restants` : "Mandat expiré"}
                         </p>
                       </div>
                     </div>
@@ -85,7 +85,7 @@ const Mandats = () => {
                         <TrendingUp className="h-4 w-4" />
                         Split: {client.splitAgent}% / {client.splitAgence}%
                       </div>
-                      {duration > 60 && (
+                      {duration.daysElapsed > 60 && (
                         <div className="flex items-center gap-2 text-destructive">
                           <AlertCircle className="h-4 w-4" />
                           Mandat proche de l'expiration

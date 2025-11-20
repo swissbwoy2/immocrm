@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LucideIcon, LogOut, Building2, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog } from 'lucide-react';
+import { LucideIcon, LogOut, Building2, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { getCurrentUser, saveCurrentUser } from '@/utils/localStorage';
@@ -32,9 +32,12 @@ const getMenuForRole = (role: string): MenuItem[] => {
     case 'client':
       return [
         { name: 'Dashboard', icon: LayoutDashboard, path: '/client' },
+        { name: 'Mon dossier', icon: User, path: '/client/dossier' },
         { name: 'Offres reçues', icon: Home, path: '/client/offres-recues' },
+        { name: 'Prochaines visites', icon: Calendar, path: '/client/visites' },
         { name: 'Mes candidatures', icon: Clipboard, path: '/client/mes-candidatures' },
         { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie' },
+        { name: 'Mes documents', icon: FileText, path: '/client/documents' },
       ];
     default:
       return [];
