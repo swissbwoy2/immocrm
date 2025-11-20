@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Trash2 } from "lucide-react";
 import { getClients, getAgents, getCurrentUser } from "@/utils/localStorage";
@@ -18,6 +19,7 @@ const MesClients = () => {
   
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedPieces, setSelectedPieces] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const regions = ['Chablais', 'Fribourg', 'Gros-de-Vaud', 'Lausanne et région', 'Ouest-lausannois', 'Lavaux', 'Nord-vaudois', 'Nyon et région', 'Riviera', 'Valais', 'Genève', 'Autre'];
   const nombrePieces = ['1+', '2+', '3+', '4+', '5+', 'Autre'];
@@ -35,6 +37,11 @@ const MesClients = () => {
   };
 
   const filteredClients = allClients.filter(client => {
+    const matchSearch = searchTerm === "" || 
+      client.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      `${client.prenom} ${client.nom}`.toLowerCase().includes(searchTerm.toLowerCase());
+    
     const matchRegion = selectedRegions.length === 0 || 
       client.regions.some(r => selectedRegions.includes(r));
     
@@ -50,7 +57,7 @@ const MesClients = () => {
         return clientPieces === p;
       });
     
-    return matchRegion && matchPieces;
+    return matchSearch && matchRegion && matchPieces;
   });
 
   const getProgressColor = (days: number) => {
@@ -80,6 +87,16 @@ const MesClients = () => {
         <div className="p-8">
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-foreground">Clients</h1>
+          </div>
+
+          {/* Barre de recherche */}
+          <div className="mb-4">
+            <Input
+              placeholder="Rechercher un client par nom ou prénom..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="max-w-md"
+            />
           </div>
 
           {/* Filtres Régions */}
@@ -128,7 +145,11 @@ const MesClients = () => {
               const isCritical = daysElapsed >= 60;
 
               return (
-                <Card key={client.id} className="p-4 flex flex-col relative">
+                <Card 
+                  key={client.id} 
+                  className="p-4 flex flex-col relative cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => navigate(`/agent/clients/${client.id}`)}
+                >
                   {/* Actions en haut à droite */}
                   <div className="absolute top-3 right-3 flex gap-2">
                     <Button
