@@ -574,37 +574,130 @@ export default function ClientDetail() {
             </h2>
             <Card>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                <div>
-                  <p className="text-sm text-muted-foreground">Gérance actuelle</p>
-                  <p className="font-medium">{client.geranceActuelle || 'Non renseigné'}</p>
-                </div>
+                {isEditing ? (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="geranceActuelle"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Gérance actuelle</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="contactGerance"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact gérance</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="loyerActuel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Loyer actuel (CHF)</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="depuisLe"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Depuis le</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="nombrePiecesActuel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nombre de pièces actuel</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="motifChangement"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Motif du changement</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Gérance actuelle</p>
+                      <p className="font-medium">{client.geranceActuelle || 'Non renseigné'}</p>
+                    </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground">Contact gérance</p>
-                  <p className="font-medium">{client.contactGerance || 'Non renseigné'}</p>
-                </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Contact gérance</p>
+                      <p className="font-medium">{client.contactGerance || 'Non renseigné'}</p>
+                    </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground">Loyer actuel</p>
-                  <p className="font-medium">{client.loyerActuel.toLocaleString('fr-CH')} CHF</p>
-                </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Loyer actuel</p>
+                      <p className="font-medium">{client.loyerActuel.toLocaleString('fr-CH')} CHF</p>
+                    </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground">Depuis le</p>
-                  <p className="font-medium">
-                    {client.depuisLe ? new Date(client.depuisLe).toLocaleDateString('fr-CH') : 'Non renseigné'}
-                  </p>
-                </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Depuis le</p>
+                      <p className="font-medium">
+                        {client.depuisLe ? new Date(client.depuisLe).toLocaleDateString('fr-CH') : 'Non renseigné'}
+                      </p>
+                    </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground">Nombre de pièces actuel</p>
-                  <p className="font-medium">{client.nombrePiecesActuel} pièces</p>
-                </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Nombre de pièces actuel</p>
+                      <p className="font-medium">{client.nombrePiecesActuel} pièces</p>
+                    </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground">Motif du changement</p>
-                  <p className="font-medium">{client.motifChangement}</p>
-                </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Motif du changement</p>
+                      <p className="font-medium">{client.motifChangement}</p>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -617,30 +710,80 @@ export default function ClientDetail() {
             </h2>
             <Card>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                <div className="flex items-start gap-3">
-                  <Briefcase className="w-5 h-5 text-muted-foreground mt-1" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Profession</p>
-                    <p className="font-medium">{client.profession}</p>
-                  </div>
-                </div>
+                {isEditing ? (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="profession"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Profession</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="employeur"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Employeur</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dateEngagement"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date d'engagement</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Revenu mensuel net</p>
+                      <p className="text-muted-foreground text-xs">Modifiable dans la section "Situation financière"</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-start gap-3">
+                      <Briefcase className="w-5 h-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Profession</p>
+                        <p className="font-medium">{client.profession}</p>
+                      </div>
+                    </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground">Employeur</p>
-                  <p className="font-medium">{client.employeur}</p>
-                </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Employeur</p>
+                      <p className="font-medium">{client.employeur}</p>
+                    </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground">Date d'engagement</p>
-                  <p className="font-medium">
-                    {client.dateEngagement ? new Date(client.dateEngagement).toLocaleDateString('fr-CH') : 'Non renseigné'}
-                  </p>
-                </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Date d'engagement</p>
+                      <p className="font-medium">
+                        {client.dateEngagement ? new Date(client.dateEngagement).toLocaleDateString('fr-CH') : 'Non renseigné'}
+                      </p>
+                    </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground">Revenu mensuel net</p>
-                  <p className="font-medium">{client.revenuMensuel.toLocaleString('fr-CH')} CHF</p>
-                </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Revenu mensuel net</p>
+                      <p className="font-medium">{client.revenuMensuel.toLocaleString('fr-CH')} CHF</p>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -653,66 +796,197 @@ export default function ClientDetail() {
             </h2>
             <Card>
               <CardContent className="space-y-6 pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Type de recherche</p>
-                    <p className="font-medium">{client.typeRecherche}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-muted-foreground">Type de bien</p>
-                    <p className="font-medium">{client.typeBien}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-muted-foreground">Nombre de pièces souhaité</p>
-                    <p className="font-medium">{client.nombrePiecesSouhaite} pièces</p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-muted-foreground">Budget maximum</p>
-                    <p className="font-medium">{client.budgetMax.toLocaleString('fr-CH')} CHF</p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Régions recherchées</p>
-                  <div className="flex flex-wrap gap-2">
-                    {client.regions.map((region, index) => (
-                      <Badge key={index} variant="secondary">
-                        {region}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3">
-                    <Heart className="w-5 h-5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Animaux</p>
-                      <Badge variant={client.animaux ? "default" : "secondary"}>
-                        {client.animaux ? 'Oui' : 'Non'}
-                      </Badge>
+                {isEditing ? (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="typeRecherche"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Type de recherche</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="typeBien"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Type de bien</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="nombrePiecesSouhaite"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nombre de pièces souhaité</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="ex: 3+" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Budget maximum</p>
+                        <p className="text-muted-foreground text-xs">Modifiable dans la section "Situation financière"</p>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-3">
-                    <Car className="w-5 h-5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Véhicules</p>
-                      <Badge variant={client.vehicules ? "default" : "secondary"}>
-                        {client.vehicules ? `Oui (${client.numeroPlaques})` : 'Non'}
-                      </Badge>
+                    <FormField
+                      control={form.control}
+                      name="regions"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Régions recherchées (séparées par des virgules)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              value={field.value.join(', ')}
+                              onChange={(e) => field.onChange(e.target.value.split(',').map(r => r.trim()))}
+                              placeholder="ex: Lausanne, Genève, Vaud"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        control={form.control}
+                        name="animaux"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-3 space-y-0">
+                            <FormControl>
+                              <Checkbox 
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel className="!mt-0">Animaux</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="vehicules"
+                        render={({ field }) => (
+                          <FormItem className="flex items-center gap-3 space-y-0">
+                            <FormControl>
+                              <Checkbox 
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel className="!mt-0">Véhicules</FormLabel>
+                          </FormItem>
+                        )}
+                      />
                     </div>
-                  </div>
-                </div>
 
-                {client.souhaitsParticuliers && (
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">Souhaits particuliers</p>
-                    <p className="font-medium p-4 bg-muted rounded-lg">{client.souhaitsParticuliers}</p>
+                    <FormField
+                      control={form.control}
+                      name="numeroPlaques"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Numéro de plaques (optionnel)</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="souhaitsParticuliers"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Souhaits particuliers</FormLabel>
+                          <FormControl>
+                            <Textarea {...field} rows={4} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Type de recherche</p>
+                        <p className="font-medium">{client.typeRecherche}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-sm text-muted-foreground">Type de bien</p>
+                        <p className="font-medium">{client.typeBien}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-sm text-muted-foreground">Nombre de pièces souhaité</p>
+                        <p className="font-medium">{client.nombrePiecesSouhaite} pièces</p>
+                      </div>
+
+                      <div>
+                        <p className="text-sm text-muted-foreground">Budget maximum</p>
+                        <p className="font-medium">{client.budgetMax.toLocaleString('fr-CH')} CHF</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Régions recherchées</p>
+                      <div className="flex flex-wrap gap-2">
+                        {client.regions.map((region, index) => (
+                          <Badge key={index} variant="secondary">
+                            {region}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center gap-3">
+                        <Heart className="w-5 h-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Animaux</p>
+                          <Badge variant={client.animaux ? "default" : "secondary"}>
+                            {client.animaux ? 'Oui' : 'Non'}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <Car className="w-5 h-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Véhicules</p>
+                          <Badge variant={client.vehicules ? "default" : "secondary"}>
+                            {client.vehicules ? `Oui (${client.numeroPlaques})` : 'Non'}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+
+                    {client.souhaitsParticuliers && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Souhaits particuliers</p>
+                        <p className="font-medium p-4 bg-muted rounded-lg">{client.souhaitsParticuliers}</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
