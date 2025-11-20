@@ -619,9 +619,20 @@ export default function ClientDetail() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>État civil</FormLabel>
-                          <FormControl>
-                            <Input {...field} />
-                          </FormControl>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionner" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Célibataire">Célibataire</SelectItem>
+                              <SelectItem value="Marié">Marié</SelectItem>
+                              <SelectItem value="Divorcé">Divorcé</SelectItem>
+                              <SelectItem value="Veuf">Veuf</SelectItem>
+                              <SelectItem value="Partenariat enregistré">Partenariat enregistré</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -702,7 +713,7 @@ export default function ClientDetail() {
                       <Users className="w-5 h-5 text-muted-foreground mt-1" />
                       <div>
                         <p className="text-sm text-muted-foreground">État civil</p>
-                        <p className="font-medium">{client.etatCivil}</p>
+                        <p className="font-medium">{client.etatCivil || 'Non renseigné'}</p>
                       </div>
                     </div>
 
