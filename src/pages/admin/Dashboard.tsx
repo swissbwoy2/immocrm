@@ -70,21 +70,44 @@ export default function AdminDashboard() {
 
           {/* KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <KPICard title="Clients actifs" value={clientsActifs} icon={Users} />
-            <KPICard title="Agents" value={totalAgents} icon={UserCog} />
-            <KPICard title="Transactions en cours" value={transactionsEnCours} icon={Clock} />
-            <KPICard title="Conclues ce mois" value={transactionsConcluesMois} icon={CheckCircle} variant="success" />
+            <KPICard 
+              title="Clients actifs" 
+              value={clientsActifs} 
+              icon={Users}
+              onClick={() => navigate('/admin/clients')}
+            />
+            <KPICard 
+              title="Agents" 
+              value={totalAgents} 
+              icon={UserCog}
+              onClick={() => navigate('/admin/agents')}
+            />
+            <KPICard 
+              title="Transactions en cours" 
+              value={transactionsEnCours} 
+              icon={Clock}
+              onClick={() => navigate('/admin/transactions')}
+            />
+            <KPICard 
+              title="Conclues ce mois" 
+              value={transactionsConcluesMois} 
+              icon={CheckCircle} 
+              variant="success"
+              onClick={() => navigate('/admin/transactions')}
+            />
             <KPICard 
               title="Deadlines critiques" 
               value={deadlinesCritiques} 
               icon={AlertTriangle} 
-              variant={deadlinesCritiques > 0 ? 'danger' : 'default'} 
+              variant={deadlinesCritiques > 0 ? 'danger' : 'default'}
+              onClick={() => navigate('/admin/mandats')}
             />
             <KPICard 
               title="Revenus agence" 
               value={`${revenusAgenceMois.toLocaleString()} CHF`} 
               icon={DollarSign} 
-              variant="success" 
+              variant="success"
+              onClick={() => navigate('/admin/transactions')}
             />
           </div>
 
