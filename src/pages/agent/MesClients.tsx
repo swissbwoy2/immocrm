@@ -22,6 +22,7 @@ const MesClients = () => {
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedPieces, setSelectedPieces] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortOrder, setSortOrder] = useState<'recent' | 'ancien'>('recent');
   const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const handleImportComplete = () => {
@@ -80,6 +81,13 @@ const MesClients = () => {
       });
     
     return matchSearch && matchRegion && matchPieces;
+  });
+
+  // Trier les clients par date de création
+  const sortedClients = [...filteredClients].sort((a, b) => {
+    const dateA = new Date(a.dateInscription || 0).getTime();
+    const dateB = new Date(b.dateInscription || 0).getTime();
+    return sortOrder === 'recent' ? dateB - dateA : dateA - dateB;
   });
 
   const getProgressColor = (days: number) => {
@@ -144,7 +152,7 @@ const MesClients = () => {
           </div>
 
           {/* Filtres Nombre de pièces */}
-          <div className="mb-6">
+          <div className="mb-4">
             <p className="text-sm font-medium mb-2">Nombre de pièces</p>
             <div className="flex flex-wrap gap-2">
               {nombrePieces.map(pieces => (
@@ -161,9 +169,30 @@ const MesClients = () => {
             </div>
           </div>
 
+          {/* Tri par date de création */}
+          <div className="mb-6 flex items-center gap-2">
+            <p className="text-sm font-medium">Trier par :</p>
+            <Button
+              variant={sortOrder === 'recent' ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSortOrder('recent')}
+              className="text-xs"
+            >
+              Plus récent
+            </Button>
+            <Button
+              variant={sortOrder === 'ancien' ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSortOrder('ancien')}
+              className="text-xs"
+            >
+              Plus ancien
+            </Button>
+          </div>
+
           {/* Grid de clients */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredClients.map((client) => {
+            {sortedClients.map((client) => {
               const daysElapsed = calculateDaysElapsed(client.dateInscription);
               const daysRemaining = 90 - daysElapsed;
               const progressPercent = (daysElapsed / 90) * 100;
