@@ -30,6 +30,15 @@ const MesClients = () => {
     setAllClients(updatedClients);
   };
 
+  const handleDeleteClient = (clientId: string) => {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) {
+      const allClientsData = getClients();
+      const updatedClients = allClientsData.filter(c => c.id !== clientId);
+      localStorage.setItem('clients', JSON.stringify(updatedClients));
+      setAllClients(updatedClients.filter(c => c.agentId === agent?.id));
+    }
+  };
+
   const regions = ['Chablais', 'Fribourg', 'Gros-de-Vaud', 'Lausanne et région', 'Ouest-lausannois', 'Lavaux', 'Nord-vaudois', 'Nyon et région', 'Riviera', 'Valais', 'Genève', 'Autre'];
   const nombrePieces = ['1+', '2+', '3+', '4+', '5+', 'Autre'];
 
@@ -183,10 +192,10 @@ const MesClients = () => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={(e) => {
                         e.stopPropagation();
-                        // TODO: Delete functionality
+                        handleDeleteClient(client.id);
                       }}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -324,8 +333,8 @@ const MesClients = () => {
                           Attention - {daysElapsed} jours écoulés
                         </span>
                       </div>
-                    )}
-                  </div>
+                     )}
+                   </div>
                 </Card>
               );
             })}
