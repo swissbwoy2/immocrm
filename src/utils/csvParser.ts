@@ -10,6 +10,36 @@ export interface ParsedCSVData {
   errors: string[];
 }
 
+// Normalise un nom de colonne pour faciliter la comparaison
+function normalizeColumnName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Retire les accents
+    .replace(/[^a-z0-9]/g, '') // Garde seulement lettres et chiffres
+    .trim();
+}
+
+// Cherche la valeur d'une colonne avec plusieurs variantes possibles
+function findColumnValue(row: CSVRow, variants: string[]): string {
+  const normalizedRow: { [key: string]: string } = {};
+  
+  // Normaliser toutes les clés du row
+  Object.keys(row).forEach(key => {
+    normalizedRow[normalizeColumnName(key)] = row[key];
+  });
+
+  // Essayer chaque variante
+  for (const variant of variants) {
+    const normalized = normalizeColumnName(variant);
+    if (normalizedRow[normalized]) {
+      return normalizedRow[normalized];
+    }
+  }
+  
+  return '';
+}
+
 export function parseCSV(fileContent: string): ParsedCSVData {
   const lines = fileContent.split('\n').filter(line => line.trim());
   
@@ -18,6 +48,9 @@ export function parseCSV(fileContent: string): ParsedCSVData {
   }
 
   const headers = parseCSVLine(lines[0]);
+  console.log('📋 Headers détectés:', headers);
+  console.log('📋 Headers normalisés:', headers.map(h => normalizeColumnName(h)));
+  
   const clients: Client[] = [];
   const users: User[] = [];
   const errors: string[] = [];
@@ -96,11 +129,21 @@ function parseClientFromRow(row: CSVRow, lineNumber: number): {
   user: User | null; 
   error: string | null;
 } {
-  // Validation des champs requis
-  const email = row['E-mail'] || row['Email'];
-  const prenom = row['Prénom'] || row['Prenom'];
-  const nom = row['Nom de famille'] || row['Nom'];
-  const telephone = row['Téléphone'] || row['Telephone'];
+  // Validation des champs requis avec recherche flexible
+  const email = findColumnValue(row, [
+    'E-mail', 'Email', 'e-mail', 'email', 'E mail', 'Courriel', 'Adresse email', 'Mail'
+  ]);
+  const prenom = findColumnValue(row, [
+    'Prénom', 'Prenom', 'First name', 'First Name', 'prenom', 'firstName'
+  ]);
+  const nom = findColumnValue(row, [
+    'Nom de famille', 'Nom', 'Last name', 'Last Name', 'Famille', 'nom', 'nom de famille', 'lastName'
+  ]);
+  const telephone = findColumnValue(row, [
+    'Téléphone', 'Telephone', 'Tel', 'Phone', 'Mobile', 'Numéro', 'Numero', 'telephone', 'phone'
+  ]);
+
+  console.log(`Ligne ${lineNumber}:`, { email, prenom, nom, telephone });
 
   if (!email || !prenom || !nom || !telephone) {
     return {
@@ -143,19 +186,31 @@ function parseClientFromRow(row: CSVRow, lineNumber: number): {
   };
 
   // Parser les champs numériques avec valeurs par défaut
-  const revenuMensuel = parseFloat(row['Revenu mensuel net'] || row['Revenu'] || '0');
-  const loyerActuel = parseFloat(row['Loyer brut actuel'] || row['Loyer'] || '0');
-  const budgetMax = parseFloat(row['Budget maximum'] || row['Budget'] || '0');
-  const montantCharges = parseFloat(row['Montant charges'] || '0');
+  const revenuMensuel = parseFloat(findColumnValue(row, [
+    'Revenu mensuel net', 'Revenu', 'Revenue', 'Salaire', 'Revenu net'
+  ]) || '0');
+  const loyerActuel = parseFloat(findColumnValue(row, [
+    'Loyer brut actuel', 'Loyer', 'Loyer actuel', 'Rent', 'Loyer mensuel'
+  ]) || '0');
+  const budgetMax = parseFloat(findColumnValue(row, [
+    'Budget maximum', 'Budget', 'Budget max', 'Maximum budget'
+  ]) || '0');
+  const montantCharges = parseFloat(findColumnValue(row, [
+    'Montant charges', 'Charges', 'Montant des charges'
+  ]) || '0');
 
   // Parser les régions
-  const regionsString = row['Région'] || row['Regions'] || '';
+  const regionsString = findColumnValue(row, [
+    'Région', 'Regions', 'Region', 'Régions', 'Localisation'
+  ]);
   const regions = regionsString.split(/[;,]/).map(r => r.trim()).filter(r => r);
 
   // Créer le client
   const client: Client = {
     id: clientId,
-    dateInscription: row['Date et heure de l\'envoi'] || new Date().toISOString(),
+    dateInscription: findColumnValue(row, [
+      'Date et heure de l\'envoi', 'Date inscription', 'Date', 'Date envoi'
+    ]) || new Date().toISOString(),
     agentId: undefined, // À assigner manuellement
     splitAgent: 45, // Par défaut 45/55
     splitAgence: 55,
@@ -163,34 +218,36 @@ function parseClientFromRow(row: CSVRow, lineNumber: number): {
     prenom: prenom,
     nom: nom,
     telephone: telephone,
-    adresse: row['Adresse'] || '',
-    dateNaissance: row['Date de naissance'] || '',
-    nationalite: row['Nationalité'] || row['Nationalite'] || '',
-    typePermis: row['Type de permis de séjour'] || row['Permis'] || '',
-    etatCivil: row['État civil'] || row['Etat civil'] || '',
-    geranceActuelle: row['Gérance actuelle'] || row['Gerance'] || '',
-    contactGerance: row['Contact gérance'] || row['Contact gerance'] || '',
+    adresse: findColumnValue(row, ['Adresse', 'Address', 'Rue']),
+    dateNaissance: findColumnValue(row, ['Date de naissance', 'Date naissance', 'Naissance', 'Birth date']),
+    nationalite: findColumnValue(row, ['Nationalité', 'Nationalite', 'Nationality']),
+    typePermis: findColumnValue(row, ['Type de permis de séjour', 'Permis', 'Type permis', 'Permit']),
+    etatCivil: findColumnValue(row, ['État civil', 'Etat civil', 'Statut civil']),
+    geranceActuelle: findColumnValue(row, ['Gérance actuelle', 'Gerance', 'Gérance']),
+    contactGerance: findColumnValue(row, ['Contact gérance', 'Contact gerance', 'Contact']),
     loyerActuel: loyerActuel,
-    depuisLe: row['Depuis le'] || '',
-    nombrePiecesActuel: parseFloat(row['Nombre de pièces actuel'] || row['Pieces actuelles'] || '0'),
-    chargesExtraordinaires: row['Charges extraordinaires'] || 'Non',
+    depuisLe: findColumnValue(row, ['Depuis le', 'Depuis', 'Date debut']),
+    nombrePiecesActuel: parseFloat(findColumnValue(row, [
+      'Nombre de pièces actuel', 'Pieces actuelles', 'Pieces', 'Nb pieces actuel'
+    ]) || '0'),
+    chargesExtraordinaires: findColumnValue(row, ['Charges extraordinaires', 'Charges extra']) || 'Non',
     montantCharges: montantCharges,
-    poursuites: row['Poursuites']?.toLowerCase() === 'oui',
-    curatelle: row['Curatelle']?.toLowerCase() === 'oui',
-    motifChangement: row['Motif changement'] || '',
-    profession: row['Profession'] || '',
-    employeur: row['Employeur'] || '',
+    poursuites: findColumnValue(row, ['Poursuites', 'Poursuite']).toLowerCase() === 'oui',
+    curatelle: findColumnValue(row, ['Curatelle']).toLowerCase() === 'oui',
+    motifChangement: findColumnValue(row, ['Motif changement', 'Motif', 'Raison changement']),
+    profession: findColumnValue(row, ['Profession', 'Métier', 'Job', 'Emploi']),
+    employeur: findColumnValue(row, ['Employeur', 'Employer', 'Entreprise']),
     revenuMensuel: revenuMensuel,
-    dateEngagement: row['Date d\'engagement'] || row['Date engagement'] || '',
-    animaux: row['Animaux']?.toLowerCase() === 'oui',
-    vehicules: row['Véhicules']?.toLowerCase() === 'oui' || row['Vehicules']?.toLowerCase() === 'oui',
-    numeroPlaques: row['Numéro plaques'] || row['Numero plaques'] || '',
-    typeRecherche: row['Type recherche'] || 'Location',
-    typeBien: row['Type d\'objet'] || row['Type objet'] || 'Appartement',
-    nombrePiecesSouhaite: row['Nb de pcs'] || row['Nombre de pieces'] || '2.5',
+    dateEngagement: findColumnValue(row, ['Date d\'engagement', 'Date engagement', 'Date embauche']),
+    animaux: findColumnValue(row, ['Animaux', 'Animal', 'Pets']).toLowerCase() === 'oui',
+    vehicules: findColumnValue(row, ['Véhicules', 'Vehicules', 'Voiture', 'Vehicle']).toLowerCase() === 'oui',
+    numeroPlaques: findColumnValue(row, ['Numéro plaques', 'Numero plaques', 'Plaque', 'Plate number']),
+    typeRecherche: findColumnValue(row, ['Type recherche', 'Type', 'Recherche']) || 'Location',
+    typeBien: findColumnValue(row, ['Type d\'objet', 'Type objet', 'Type bien', 'Property type']) || 'Appartement',
+    nombrePiecesSouhaite: findColumnValue(row, ['Nb de pcs', 'Nombre de pieces', 'Pieces souhaitees', 'Rooms']) || '2.5',
     regions: regions,
     budgetMax: budgetMax,
-    souhaitsParticuliers: row['Souhaits particuliers'] || '',
+    souhaitsParticuliers: findColumnValue(row, ['Souhaits particuliers', 'Souhaits', 'Remarques', 'Notes']),
     notificationJ60Envoyee: false,
   };
 
