@@ -335,8 +335,12 @@ export default function ClientDetail() {
                           <FormControl>
                             <Input
                               type="number"
-                              value={field.value}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              {...field}
+                              value={field.value || ''}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : Number(e.target.value);
+                                field.onChange(value);
+                              }}
                               placeholder="Revenu mensuel"
                             />
                           </FormControl>
@@ -372,8 +376,12 @@ export default function ClientDetail() {
                           <FormControl>
                             <Input
                               type="number"
-                              value={field.value}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              {...field}
+                              value={field.value || ''}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : Number(e.target.value);
+                                field.onChange(value);
+                              }}
                               placeholder="Budget maximum"
                             />
                           </FormControl>
@@ -614,7 +622,11 @@ export default function ClientDetail() {
                             <Input
                               type="number"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              value={field.value || ''}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : Number(e.target.value);
+                                field.onChange(value);
+                              }}
                             />
                           </FormControl>
                           <FormMessage />
@@ -644,7 +656,11 @@ export default function ClientDetail() {
                             <Input
                               type="number"
                               {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                              value={field.value || ''}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 1 : Number(e.target.value);
+                                field.onChange(value);
+                              }}
                             />
                           </FormControl>
                           <FormMessage />
