@@ -336,12 +336,14 @@ export default function ClientDetail() {
                           <FormControl>
                             <Input 
                               type="number"
-                              {...field}
-                              value={field.value || ''}
+                              value={field.value}
                               onChange={(e) => {
-                                const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                const value = e.target.valueAsNumber;
                                 field.onChange(isNaN(value) ? 0 : value);
                               }}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
                               placeholder="Revenu mensuel"
                             />
                           </FormControl>
@@ -378,12 +380,14 @@ export default function ClientDetail() {
                           <FormControl>
                             <Input 
                               type="number"
-                              {...field}
-                              value={field.value || ''}
+                              value={field.value}
                               onChange={(e) => {
-                                const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                const value = e.target.valueAsNumber;
                                 field.onChange(isNaN(value) ? 0 : value);
                               }}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
                               placeholder="Budget maximum"
                             />
                           </FormControl>
@@ -623,12 +627,15 @@ export default function ClientDetail() {
                           <FormControl>
                             <Input 
                               type="number"
-                              {...field}
-                              value={field.value || ''}
+                              value={field.value}
                               onChange={(e) => {
-                                const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                const value = e.target.valueAsNumber;
                                 field.onChange(isNaN(value) ? 0 : value);
                               }}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
+                              placeholder="Loyer actuel"
                             />
                           </FormControl>
                           <FormMessage />
@@ -657,12 +664,15 @@ export default function ClientDetail() {
                           <FormControl>
                             <Input 
                               type="number"
-                              {...field}
-                              value={field.value || ''}
+                              value={field.value}
                               onChange={(e) => {
-                                const value = e.target.value === '' ? 1 : parseInt(e.target.value);
-                                field.onChange(isNaN(value) ? 1 : value);
+                                const value = e.target.valueAsNumber;
+                                field.onChange(isNaN(value) || value < 1 ? 1 : Math.round(value));
                               }}
+                              onBlur={field.onBlur}
+                              name={field.name}
+                              ref={field.ref}
+                              placeholder="Nombre de pièces"
                             />
                           </FormControl>
                           <FormMessage />
