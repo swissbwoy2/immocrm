@@ -5,11 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Calendar, Users } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, Eye } from "lucide-react";
 import { getClients, getAgents, getOffres } from "@/utils/localStorage";
 import { calculateMandateDuration } from "@/utils/calculations";
+import { useNavigate } from "react-router-dom";
 
 const Clients = () => {
+  const navigate = useNavigate();
   const [clients] = useState(getClients());
   const [agents] = useState(getAgents());
   const [offres] = useState(getOffres());
@@ -71,12 +73,12 @@ const Clients = () => {
               const offresCount = getClientOffresCount(client.id);
               
               return (
-                <Card key={client.id} className="p-6">
+                <Card key={client.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(`/agent/clients/${client.id}`)}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
                         <h3 className="text-xl font-semibold">{client.prenom} {client.nom}</h3>
-                        <Badge variant={duration.daysElapsed > 60 ? "destructive" : "default"}>
+                        <Badge variant={duration.daysElapsed > 60 ? "destructive" : duration.daysElapsed > 30 ? "default" : "secondary"}>
                           J+{duration.daysElapsed}
                         </Badge>
                       </div>
@@ -98,7 +100,7 @@ const Clients = () => {
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4" />
-                            Inscrit le {new Date(client.dateInscription).toLocaleDateString('fr-FR')}
+                            Inscrit le {new Date(client.dateInscription).toLocaleDateString('fr-CH')}
                           </div>
                           <div className="flex items-center gap-2">
                             <Users className="h-4 w-4" />
@@ -109,11 +111,22 @@ const Clients = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="mt-4 pt-4 border-t">
+                      <div className="mt-4 pt-4 border-t flex items-center justify-between">
                         <div className="text-sm">
                           <span className="font-medium">Budget max:</span> CHF {client.budgetMax.toLocaleString()} • 
                           <span className="font-medium ml-2">Recherche:</span> {client.typeBien} {client.nombrePiecesSouhaite} pièces
                         </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/agent/clients/${client.id}`);
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Voir le détail
+                        </Button>
                       </div>
                     </div>
                   </div>

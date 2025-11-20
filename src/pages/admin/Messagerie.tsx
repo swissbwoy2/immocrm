@@ -6,25 +6,38 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Send } from "lucide-react";
-import { getConversations, getMessages, getAgents, getClients } from "@/utils/localStorage";
+import { getConversations, getMessages, getAgents, getClients, getUsers } from "@/utils/localStorage";
 
 const Messagerie = () => {
   const [conversations] = useState(getConversations());
   const [messages] = useState(getMessages());
   const [agents] = useState(getAgents());
   const [clients] = useState(getClients());
+  const [users] = useState(getUsers());
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
 
   const getParticipantName = (participantId: string) => {
-    const agent = agents.find(a => a.id === participantId);
-    if (agent) return `${agent.prenom} ${agent.nom}`;
+    // Chercher d'abord dans les users
+    const user = users.find(u => u.id === participantId);
+    if (user) return `${user.prenom} ${user.nom} (${user.role})`;
+    
+    // Puis dans les agents
+    const agent = agents.find(a => a.userId === participantId || a.id === participantId);
+    if (agent) return `${agent.prenom} ${agent.nom} (Agent)`;
+    
+    // Puis dans les clients
     const client = clients.find(c => c.id === participantId);
-    if (client) return `${client.prenom} ${client.nom}`;
+    if (client) return `${client.prenom} ${client.nom} (Client)`;
+    
     return "Inconnu";
   };
 
-  const selectedMessages = selectedConv ? messages.filter(m => m.conversationId === selectedConv) : [];
+  const selectedMessages = selectedConv 
+    ? messages.filter(m => m.conversationId === selectedConv).sort((a, b) => 
+        new Date(a.dateEnvoi).getTime() - new Date(b.dateEnvoi).getTime()
+      )
+    : [];
 
   return (
     <div className="flex h-screen bg-background">
