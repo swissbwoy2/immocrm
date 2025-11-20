@@ -142,3 +142,23 @@ export function getStatutColor(statut: string): string {
   };
   return colors[statut] || 'bg-muted text-muted-foreground';
 }
+
+// Calcul durée mandat
+export function calculateMandateDuration(dateInscription: string): number {
+  return calculateDaysElapsed(dateInscription);
+}
+
+// Format statut offre pour badge
+export function formatStatutOffre(statut: string): { label: string; variant: "default" | "secondary" | "destructive" | "outline" } {
+  const statusMap: { [key: string]: { label: string; variant: "default" | "secondary" | "destructive" | "outline" } } = {
+    'envoyee': { label: 'Envoyée', variant: 'secondary' },
+    'vue': { label: 'Vue', variant: 'secondary' },
+    'interesse': { label: 'Intéressé', variant: 'default' },
+    'visite_planifiee': { label: 'Visite planifiée', variant: 'default' },
+    'visite_effectuee': { label: 'Visite effectuée', variant: 'default' },
+    'candidature_deposee': { label: 'Candidature déposée', variant: 'default' },
+    'acceptee': { label: 'Acceptée', variant: 'default' },
+    'refusee': { label: 'Refusée', variant: 'destructive' },
+  };
+  return statusMap[statut] || { label: statut, variant: 'secondary' };
+}

@@ -59,7 +59,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <Sidebar menu={adminMenu} userRole="admin" userName={`${currentUser.prenom} ${currentUser.nom}`} />
+      <Sidebar />
 
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
