@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LucideIcon, LogOut, Building2, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard } from 'lucide-react';
+import { LucideIcon, LogOut, Building2, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { getCurrentUser, saveCurrentUser } from '@/utils/localStorage';
@@ -17,6 +17,7 @@ const getMenuForRole = (role: string): MenuItem[] => {
         { name: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
         { name: 'Agents', icon: Users, path: '/admin/agents' },
         { name: 'Clients', icon: Users, path: '/admin/clients' },
+        { name: 'Assignations', icon: UserCog, path: '/admin/assignations' },
         { name: 'Mandats', icon: FileText, path: '/admin/mandats' },
         { name: 'Transactions', icon: DollarSign, path: '/admin/transactions' },
         { name: 'Messagerie', icon: MessageSquare, path: '/admin/messagerie' },

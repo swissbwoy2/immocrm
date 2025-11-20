@@ -7,10 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getUsers, saveCurrentUser, initializeLocalStorage } from '@/utils/localStorage';
 import { useToast } from '@/hooks/use-toast';
+import { FirstLoginModal } from '@/components/FirstLoginModal';
+import { User } from '@/data/mockData';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [inactiveUser, setInactiveUser] = useState<User | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -35,11 +38,7 @@ export default function Login() {
     }
 
     if (!user.actif) {
-      toast({
-        title: 'Compte inactif',
-        description: 'Votre compte n\'est pas encore activé',
-        variant: 'destructive',
-      });
+      setInactiveUser(user);
       return;
     }
 
@@ -64,8 +63,38 @@ export default function Login() {
     }
   };
 
+  const handleFirstLoginSuccess = (updatedUser: User) => {
+    saveCurrentUser(updatedUser);
+    
+    toast({
+      title: 'Bienvenue !',
+      description: 'Votre compte a été activé avec succès',
+    });
+
+    setInactiveUser(null);
+
+    // Redirection selon le rôle
+    switch (updatedUser.role) {
+      case 'admin':
+        navigate('/admin');
+        break;
+      case 'agent':
+        navigate('/agent');
+        break;
+      case 'client':
+        navigate('/client');
+        break;
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
+    <>
+      <FirstLoginModal
+        user={inactiveUser!}
+        open={!!inactiveUser}
+        onSuccess={handleFirstLoginSuccess}
+      />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
@@ -132,6 +161,7 @@ export default function Login() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }
