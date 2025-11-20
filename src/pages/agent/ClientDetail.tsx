@@ -340,12 +340,18 @@ export default function ClientDetail() {
                           <FormControl>
                             <Input 
                               type="number"
-                              value={field.value}
+                              value={field.value || ''}
                               onChange={(e) => {
-                                const value = e.target.valueAsNumber;
-                                field.onChange(isNaN(value) ? 0 : value);
+                                const value = e.target.value === '' ? '' : e.target.valueAsNumber;
+                                field.onChange(value);
                               }}
-                              onBlur={field.onBlur}
+                              onBlur={(e) => {
+                                const value = e.target.valueAsNumber;
+                                if (isNaN(value)) {
+                                  field.onChange(0);
+                                }
+                                field.onBlur();
+                              }}
                               name={field.name}
                               ref={field.ref}
                               placeholder="Revenu mensuel"
@@ -384,12 +390,18 @@ export default function ClientDetail() {
                           <FormControl>
                             <Input 
                               type="number"
-                              value={field.value}
+                              value={field.value || ''}
                               onChange={(e) => {
-                                const value = e.target.valueAsNumber;
-                                field.onChange(isNaN(value) ? 0 : value);
+                                const value = e.target.value === '' ? '' : e.target.valueAsNumber;
+                                field.onChange(value);
                               }}
-                              onBlur={field.onBlur}
+                              onBlur={(e) => {
+                                const value = e.target.valueAsNumber;
+                                if (isNaN(value)) {
+                                  field.onChange(0);
+                                }
+                                field.onBlur();
+                              }}
                               name={field.name}
                               ref={field.ref}
                               placeholder="Budget maximum"
@@ -631,12 +643,18 @@ export default function ClientDetail() {
                           <FormControl>
                             <Input 
                               type="number"
-                              value={field.value}
+                              value={field.value || ''}
                               onChange={(e) => {
-                                const value = e.target.valueAsNumber;
-                                field.onChange(isNaN(value) ? 0 : value);
+                                const value = e.target.value === '' ? '' : e.target.valueAsNumber;
+                                field.onChange(value);
                               }}
-                              onBlur={field.onBlur}
+                              onBlur={(e) => {
+                                const value = e.target.valueAsNumber;
+                                if (isNaN(value)) {
+                                  field.onChange(0);
+                                }
+                                field.onBlur();
+                              }}
                               name={field.name}
                               ref={field.ref}
                               placeholder="Loyer actuel"
@@ -668,12 +686,20 @@ export default function ClientDetail() {
                           <FormControl>
                             <Input 
                               type="number"
-                              value={field.value}
+                              value={field.value || ''}
                               onChange={(e) => {
-                                const value = e.target.valueAsNumber;
-                                field.onChange(isNaN(value) || value < 1 ? 1 : Math.round(value));
+                                const value = e.target.value === '' ? '' : e.target.valueAsNumber;
+                                field.onChange(value);
                               }}
-                              onBlur={field.onBlur}
+                              onBlur={(e) => {
+                                const value = e.target.valueAsNumber;
+                                if (isNaN(value) || value < 1) {
+                                  field.onChange(1);
+                                } else {
+                                  field.onChange(Math.round(value));
+                                }
+                                field.onBlur();
+                              }}
                               name={field.name}
                               ref={field.ref}
                               placeholder="Nombre de pièces"
