@@ -13,10 +13,10 @@ const Messagerie = () => {
   const clientId = currentUser?.id || '';
   
   const allConversations = JSON.parse(localStorage.getItem('conversations') || '[]');
-  const [conversations] = useState(allConversations.filter((c: any) => c.clientId === clientId));
+  const [conversations, setConversations] = useState(allConversations.filter((c: any) => c.clientId === clientId));
   
   const allMessages = JSON.parse(localStorage.getItem('messages') || '[]');
-  const [messages] = useState(allMessages);
+  const [messages, setMessages] = useState(allMessages);
   
   const [agents] = useState(getAgents());
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
@@ -25,7 +25,6 @@ const Messagerie = () => {
   const handleSendMessage = () => {
     if (!messageText.trim() || !selectedConv) return;
 
-    const allMessages = JSON.parse(localStorage.getItem('messages') || '[]');
     const newMessage = {
       id: `msg-${Date.now()}`,
       conversation_id: selectedConv,
@@ -36,10 +35,18 @@ const Messagerie = () => {
       read: false,
     };
     
-    allMessages.push(newMessage);
-    localStorage.setItem('messages', JSON.stringify(allMessages));
+    const updatedMessages = [...messages, newMessage];
+    setMessages(updatedMessages);
+    localStorage.setItem('messages', JSON.stringify(updatedMessages));
     
     // Update conversation last message time
+    const updatedConversations = conversations.map((c: any) => 
+      c.id === selectedConv 
+        ? { ...c, last_message_at: new Date().toISOString() }
+        : c
+    );
+    setConversations(updatedConversations);
+    
     const allConversations = JSON.parse(localStorage.getItem('conversations') || '[]');
     const convIndex = allConversations.findIndex((c: any) => c.id === selectedConv);
     if (convIndex !== -1) {
@@ -48,7 +55,6 @@ const Messagerie = () => {
     }
     
     setMessageText("");
-    window.location.reload(); // Refresh to show new message
   };
 
   const getAgentName = (agentId: string) => {
