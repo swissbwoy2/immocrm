@@ -77,7 +77,11 @@ export function parseCSV(fileContent: string): ParsedCSVData {
 
       const row: CSVRow = {};
       headers.forEach((header, index) => {
-        row[header] = values[index]?.trim() || '';
+        const value = values[index]?.trim() || '';
+        // Garder la première valeur non-vide pour chaque header
+        if (!row[header] || row[header] === '') {
+          row[header] = value;
+        }
       });
 
       const { client, user, error } = parseClientFromRow(row, i + 1);
