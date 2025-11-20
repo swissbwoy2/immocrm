@@ -282,10 +282,10 @@ export default function ClientDetail() {
                     </p>
                     <div className="text-right">
                       <p className="text-sm font-semibold">
-                        {daysRemaining} jours restants
+                        {Math.floor(daysRemaining)}j {Math.floor((daysRemaining - Math.floor(daysRemaining)) * 24)}h {Math.floor(((daysRemaining - Math.floor(daysRemaining)) * 24 - Math.floor((daysRemaining - Math.floor(daysRemaining)) * 24)) * 60)}m
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {daysElapsed} / 90 jours
+                        {Math.floor(daysElapsed)} / 90 jours
                       </p>
                     </div>
                   </div>
