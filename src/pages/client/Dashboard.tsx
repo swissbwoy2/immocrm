@@ -4,6 +4,7 @@ import { Sidebar } from '@/components/Sidebar';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { getCurrentUser, getClients, getOffres, getAgents } from '@/utils/localStorage';
 import { calculateDaysElapsed, calculateDaysRemaining, getClientStats, getProchainesVisites, getCandidatures } from '@/utils/calculations';
 import { useNavigate } from 'react-router-dom';
@@ -260,36 +261,75 @@ export default function ClientDashboard() {
           {/* Candidatures récentes */}
           <Card>
             <CardHeader>
-              <CardTitle>📝 Mes candidatures récentes</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>📝 Mes candidatures récentes</CardTitle>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => navigate('/client/mes-candidatures')}
+                >
+                  Voir tout
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {candidatures.length > 0 ? (
+              {offres.filter(o => o.clientId === client.id).length > 0 ? (
                 <>
-                  {candidatures.map(cand => (
-                    <div key={cand.offreId} className="p-4 bg-muted/50 rounded-lg">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium">{cand.localisation}</p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Déposée le {new Date(cand.dateDepot).toLocaleDateString('fr-CH')}
+                  {offres
+                    .filter(o => o.clientId === client.id)
+                    .slice(0, 3)
+                    .map(offre => {
+                      const getStatutLabel = (statut: string) => {
+                        switch (statut) {
+                          case 'envoyee': return 'Envoyée';
+                          case 'vue': return 'Vue';
+                          case 'interesse': return 'Intéressé';
+                          case 'visite_planifiee': return 'Visite planifiée';
+                          case 'visite_effectuee': return 'Visite effectuée';
+                          case 'candidature_deposee': return 'Candidature déposée';
+                          case 'acceptee': return 'Acceptée ✓';
+                          case 'refusee': return 'Refusée';
+                          default: return statut;
+                        }
+                      };
+
+                      const getStatutBadgeVariant = (statut: string): "default" | "secondary" | "destructive" | "outline" => {
+                        switch (statut) {
+                          case 'envoyee': return 'secondary';
+                          case 'vue': return 'outline';
+                          case 'interesse': return 'default';
+                          case 'visite_planifiee': return 'default';
+                          case 'visite_effectuee': return 'default';
+                          case 'candidature_deposee': return 'default';
+                          case 'acceptee': return 'default';
+                          case 'refusee': return 'destructive';
+                          default: return 'secondary';
+                        }
+                      };
+
+                      return (
+                        <div key={offre.id} className="p-4 bg-muted/50 rounded-lg">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <p className="font-medium">{offre.localisation}</p>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {offre.nombrePieces} pièces • {offre.surface}m² • {offre.prix.toLocaleString('fr-CH')} CHF/mois
+                              </p>
+                            </div>
+                            <Badge variant={getStatutBadgeVariant(offre.statut)} className="ml-2">
+                              {getStatutLabel(offre.statut)}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Envoyée le {new Date(offre.dateEnvoi).toLocaleDateString('fr-CH')}
                           </p>
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          cand.resultat === 'acceptee' ? 'bg-success/10 text-success' :
-                          cand.resultat === 'refusee' ? 'bg-destructive/10 text-destructive' :
-                          'bg-warning/10 text-warning'
-                        }`}>
-                          {cand.resultat === 'acceptee' ? '✅ Acceptée' :
-                           cand.resultat === 'refusee' ? '❌ Refusée' :
-                           '⏳ En attente'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })}
                   <Button 
                     variant="ghost" 
                     className="w-full text-sm text-primary"
-                    onClick={() => navigate('/client/candidatures')}
+                    onClick={() => navigate('/client/mes-candidatures')}
                   >
                     Voir toutes les candidatures →
                   </Button>
@@ -297,7 +337,7 @@ export default function ClientDashboard() {
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <p className="text-sm">Aucune candidature déposée</p>
-                  <p className="text-xs mt-1">Votre agent déposera vos candidatures après les visites</p>
+                  <p className="text-xs mt-1">Votre agent vous enverra des offres bientôt</p>
                 </div>
               )}
             </CardContent>
