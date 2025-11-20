@@ -370,7 +370,7 @@ const EnvoyerOffre = () => {
                   <div className="border-t pt-4 text-sm text-muted-foreground text-center">
                     <p>Pour toute question, n'hésitez pas à nous appeler au +41 21 634 28 39 ou à répondre directement à cet email.</p>
                     <p className="mt-2">Cordialement,<br />L'équipe Immo-rama.ch</p>
-                    <p className="text-xs mt-2">📍 Chemin du Bochet 12 - 1024 Écublens, VD</p>
+                    <p className="text-xs mt-2">📍 Chemin de l'Esparcette 5 - 1023 Crissier</p>
                   </div>
                 </div>
               </Card>
