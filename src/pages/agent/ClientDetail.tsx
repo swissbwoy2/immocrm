@@ -143,42 +143,46 @@ export default function ClientDetail() {
 
     setClient(foundClient);
 
-    // Initialiser le formulaire avec les données du client
-    form.reset({
-      prenom: foundClient.prenom,
-      nom: foundClient.nom,
-      email: foundClient.email,
-      telephone: foundClient.telephone,
-      adresse: foundClient.adresse,
-      dateNaissance: foundClient.dateNaissance,
-      nationalite: foundClient.nationalite,
-      typePermis: foundClient.typePermis,
-      etatCivil: foundClient.etatCivil,
-      profession: foundClient.profession,
-      employeur: foundClient.employeur,
-      revenuMensuel: foundClient.revenuMensuel,
-      dateEngagement: foundClient.dateEngagement || '',
-      geranceActuelle: foundClient.geranceActuelle || '',
-      contactGerance: foundClient.contactGerance || '',
-      loyerActuel: foundClient.loyerActuel,
-      depuisLe: foundClient.depuisLe || '',
-      nombrePiecesActuel: foundClient.nombrePiecesActuel,
-      motifChangement: foundClient.motifChangement || '',
-      typeRecherche: foundClient.typeRecherche,
-      typeBien: foundClient.typeBien,
-      nombrePiecesSouhaite: foundClient.nombrePiecesSouhaite,
-      budgetMax: foundClient.budgetMax,
-      regions: foundClient.regions,
-      animaux: foundClient.animaux,
-      vehicules: foundClient.vehicules,
-      numeroPlaques: foundClient.numeroPlaques || '',
-      souhaitsParticuliers: foundClient.souhaitsParticuliers || '',
-    });
-
     const allOffres = getOffres();
     const clientOffres = allOffres.filter(o => o.clientId === id);
     setOffres(clientOffres);
-  }, [id, currentUser, navigate]);
+  }, [id, currentUser, navigate, toast]);
+
+  // Initialiser le formulaire séparément pour éviter la boucle infinie
+  useEffect(() => {
+    if (!client) return;
+    
+    form.reset({
+      prenom: client.prenom,
+      nom: client.nom,
+      email: client.email,
+      telephone: client.telephone,
+      adresse: client.adresse,
+      dateNaissance: client.dateNaissance,
+      nationalite: client.nationalite,
+      typePermis: client.typePermis,
+      etatCivil: client.etatCivil,
+      profession: client.profession,
+      employeur: client.employeur,
+      revenuMensuel: client.revenuMensuel,
+      dateEngagement: client.dateEngagement || '',
+      geranceActuelle: client.geranceActuelle || '',
+      contactGerance: client.contactGerance || '',
+      loyerActuel: client.loyerActuel,
+      depuisLe: client.depuisLe || '',
+      nombrePiecesActuel: client.nombrePiecesActuel,
+      motifChangement: client.motifChangement || '',
+      typeRecherche: client.typeRecherche,
+      typeBien: client.typeBien,
+      nombrePiecesSouhaite: client.nombrePiecesSouhaite,
+      budgetMax: client.budgetMax,
+      regions: client.regions,
+      animaux: client.animaux,
+      vehicules: client.vehicules,
+      numeroPlaques: client.numeroPlaques || '',
+      souhaitsParticuliers: client.souhaitsParticuliers || '',
+    });
+  }, [client?.id]);
 
   const handleSave = (values: z.infer<typeof clientSchema>) => {
     if (!client) return;
