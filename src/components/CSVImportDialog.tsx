@@ -99,27 +99,62 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete }: CSVImp
       const currentUsers = getUsers();
       console.log('👥 Current users count:', currentUsers.length);
       
-      const newUsers = parseResult.users.filter(
-        newUser => !currentUsers.some(u => u.email === newUser.email)
-      );
-      console.log('➕ New users to add:', newUsers.length, newUsers);
+      let addedUsersCount = 0;
+      let updatedUsersCount = 0;
       
-      saveUsers([...currentUsers, ...newUsers]);
+      const mergedUsers = [...currentUsers];
+      parseResult.users.forEach(newUser => {
+        const existingIndex = mergedUsers.findIndex(u => u.email === newUser.email);
+        if (existingIndex >= 0) {
+          // Update existing user
+          mergedUsers[existingIndex] = { ...mergedUsers[existingIndex], ...newUser };
+          updatedUsersCount++;
+        } else {
+          // Add new user
+          mergedUsers.push(newUser);
+          addedUsersCount++;
+        }
+      });
+      
+      console.log(`➕ Users - Added: ${addedUsersCount}, Updated: ${updatedUsersCount}`);
+      saveUsers(mergedUsers);
 
       // Sauvegarder les clients
       const currentClients = getClients();
       console.log('👤 Current clients count:', currentClients.length);
       
-      const newClients = parseResult.clients.filter(
-        newClient => !currentClients.some(c => c.email === newClient.email)
-      );
-      console.log('➕ New clients to add:', newClients.length, newClients);
+      let addedClientsCount = 0;
+      let updatedClientsCount = 0;
       
-      saveClients([...currentClients, ...newClients]);
+      const mergedClients = [...currentClients];
+      parseResult.clients.forEach(newClient => {
+        const existingIndex = mergedClients.findIndex(c => c.email === newClient.email);
+        if (existingIndex >= 0) {
+          // Update existing client but preserve agentId if it exists
+          mergedClients[existingIndex] = { 
+            ...newClient,
+            agentId: mergedClients[existingIndex].agentId || newClient.agentId 
+          };
+          updatedClientsCount++;
+        } else {
+          // Add new client
+          mergedClients.push(newClient);
+          addedClientsCount++;
+        }
+      });
+      
+      console.log(`➕ Clients - Added: ${addedClientsCount}, Updated: ${updatedClientsCount}`);
+      saveClients(mergedClients);
+
+      const message = addedClientsCount > 0 && updatedClientsCount > 0
+        ? `${addedClientsCount} nouveaux clients ajoutés, ${updatedClientsCount} mis à jour`
+        : addedClientsCount > 0
+        ? `${addedClientsCount} nouveaux clients ajoutés`
+        : `${updatedClientsCount} clients mis à jour`;
 
       toast({
         title: 'Import réussi',
-        description: `${newClients.length} nouveaux clients importés`,
+        description: message,
       });
 
       onImportComplete();
