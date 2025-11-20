@@ -280,15 +280,19 @@ export default function ClientDetail() {
                     <p className="text-sm text-muted-foreground">
                       Progression du mandat
                     </p>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold">
-                        {Math.floor(daysRemaining)}j {Math.floor((daysRemaining - Math.floor(daysRemaining)) * 24)}h {Math.floor(((daysRemaining - Math.floor(daysRemaining)) * 24 - Math.floor((daysRemaining - Math.floor(daysRemaining)) * 24)) * 60)}m
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {Math.floor(daysElapsed)} / 90 jours
-                      </p>
+                    <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                      daysElapsed < 60 
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                        : daysElapsed < 90 
+                        ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' 
+                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                    }`}>
+                      {Math.floor(daysRemaining)}j {Math.floor((daysRemaining - Math.floor(daysRemaining)) * 24)}h {Math.floor(((daysRemaining - Math.floor(daysRemaining)) * 24 - Math.floor((daysRemaining - Math.floor(daysRemaining)) * 24)) * 60)}m
                     </div>
                   </div>
+                  <p className="text-xs text-muted-foreground text-right mb-2">
+                    {Math.floor(daysElapsed)} / 90 jours
+                  </p>
                   <Progress value={progressPercentage} className="h-3" indicatorClassName={progressColor} />
                 </div>
               </div>
