@@ -11,18 +11,23 @@ import { getConversations, getMessages, getClients, getCurrentUser } from "@/uti
 const Messagerie = () => {
   const currentUser = getCurrentUser();
   const agentId = `agent-${currentUser?.id.split('-')[1]}`;
-  const [conversations] = useState(getConversations().filter(c => c.participants.includes(agentId)));
-  const [messages] = useState(getMessages());
+  
+  const allConversations = JSON.parse(localStorage.getItem('conversations') || '[]');
+  const [conversations] = useState(allConversations.filter((c: any) => c.agentId === agentId));
+  
+  const allMessages = JSON.parse(localStorage.getItem('messages') || '[]');
+  const [messages] = useState(allMessages);
+  
   const [clients] = useState(getClients());
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
 
-  const getClientName = (participantId: string) => {
-    const client = clients.find(c => c.id === participantId);
+  const getClientName = (clientId: string) => {
+    const client = clients.find(c => c.id === clientId);
     return client ? `${client.prenom} ${client.nom}` : "Inconnu";
   };
 
-  const selectedMessages = selectedConv ? messages.filter(m => m.conversationId === selectedConv) : [];
+  const selectedMessages = selectedConv ? messages.filter((m: any) => m.conversation_id === selectedConv) : [];
 
   return (
     <div className="flex h-screen bg-background">
@@ -33,8 +38,11 @@ const Messagerie = () => {
             <h2 className="font-semibold">Mes Conversations</h2>
           </div>
           <ScrollArea className="h-[calc(100vh-73px)]">
-            {conversations.map((conv) => {
-              const otherParticipant = conv.participants.find(p => p !== agentId);
+            {conversations.map((conv: any) => {
+              const convMessages = messages.filter((m: any) => m.conversation_id === conv.id);
+              const lastMessage = convMessages[convMessages.length - 1];
+              const unreadCount = convMessages.filter((m: any) => !m.read && m.sender_id !== agentId).length;
+              
               return (
                 <div
                   key={conv.id}
@@ -42,14 +50,16 @@ const Messagerie = () => {
                   className={`p-4 border-b cursor-pointer hover:bg-muted/50 ${selectedConv === conv.id ? 'bg-muted' : ''}`}
                 >
                   <div className="flex items-start justify-between mb-1">
-                    <p className="font-medium text-sm">{getClientName(otherParticipant || '')}</p>
-                    {conv.nonLus > 0 && (
-                      <Badge variant="default" className="ml-2">{conv.nonLus}</Badge>
+                    <p className="font-medium text-sm">{getClientName(conv.clientId)}</p>
+                    {unreadCount > 0 && (
+                      <Badge variant="default" className="ml-2">{unreadCount}</Badge>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{conv.dernierMessage}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {lastMessage?.content?.substring(0, 50) || conv.subject}
+                  </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {new Date(conv.dateDernierMessage).toLocaleDateString('fr-FR')}
+                    {new Date(conv.last_message_at || conv.created_at).toLocaleDateString('fr-FR')}
                   </p>
                 </div>
               );
@@ -62,24 +72,22 @@ const Messagerie = () => {
             <>
               <div className="p-4 border-b bg-card">
                 <h2 className="font-semibold">
-                  {conversations.find(c => c.id === selectedConv)?.participants
-                    .filter(p => p !== agentId)
-                    .map(p => getClientName(p)).join(', ')}
+                  {getClientName(conversations.find((c: any) => c.id === selectedConv)?.clientId)}
                 </h2>
               </div>
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-4">
-                  {selectedMessages.map((msg) => (
-                    <Card key={msg.id} className={`p-4 ${msg.expediteurId === agentId ? 'ml-auto max-w-[70%] bg-primary/10' : 'mr-auto max-w-[70%]'}`}>
+                  {selectedMessages.map((msg: any) => (
+                    <Card key={msg.id} className={`p-4 ${msg.sender_id === agentId ? 'ml-auto max-w-[70%] bg-primary/10' : 'mr-auto max-w-[70%]'}`}>
                       <div className="flex items-start justify-between mb-2">
                         <p className="font-medium text-sm">
-                          {msg.expediteurId === agentId ? 'Vous' : getClientName(msg.expediteurId)}
+                          {msg.sender_id === agentId ? 'Vous' : getClientName(msg.sender_id)}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {new Date(msg.dateEnvoi).toLocaleString('fr-FR')}
+                          {new Date(msg.created_at).toLocaleString('fr-FR')}
                         </p>
                       </div>
-                      <p className="text-sm">{msg.contenu || "(Offre envoyée)"}</p>
+                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                     </Card>
                   ))}
                 </div>
