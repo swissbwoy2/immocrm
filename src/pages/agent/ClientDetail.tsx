@@ -335,8 +335,9 @@ export default function ClientDetail() {
                           <FormControl>
                             <Input
                               type="number"
-                              {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              value={field.value}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              placeholder="Revenu mensuel"
                             />
                           </FormControl>
                           <FormMessage />
@@ -371,8 +372,9 @@ export default function ClientDetail() {
                           <FormControl>
                             <Input
                               type="number"
-                              {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              value={field.value}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              placeholder="Budget maximum"
                             />
                           </FormControl>
                           <FormMessage />
