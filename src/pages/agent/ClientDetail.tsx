@@ -178,7 +178,7 @@ export default function ClientDetail() {
     const allOffres = getOffres();
     const clientOffres = allOffres.filter(o => o.clientId === id);
     setOffres(clientOffres);
-  }, [id, currentUser, navigate, toast]);
+  }, [id, currentUser, navigate]);
 
   const handleSave = (values: z.infer<typeof clientSchema>) => {
     if (!client) return;
@@ -327,18 +327,28 @@ export default function ClientDetail() {
                 </CardHeader>
                 <CardContent>
                   {isEditing ? (
-                    <div className="space-y-2">
-                      <Label>Revenu mensuel (CHF)</Label>
-                      <Input
-                        type="number"
-                        value={form.watch('revenuMensuel')}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          form.setValue('revenuMensuel', val === '' ? 0 : parseFloat(val));
-                        }}
-                        placeholder="Revenu mensuel"
-                      />
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="revenuMensuel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Revenu mensuel (CHF)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number"
+                              {...field}
+                              value={field.value || ''}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                field.onChange(isNaN(value) ? 0 : value);
+                              }}
+                              placeholder="Revenu mensuel"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   ) : (
                     <>
                       <p className="text-2xl font-bold">
@@ -359,18 +369,28 @@ export default function ClientDetail() {
                 </CardHeader>
                 <CardContent>
                   {isEditing ? (
-                    <div className="space-y-2">
-                      <Label>Budget maximum (CHF)</Label>
-                      <Input
-                        type="number"
-                        value={form.watch('budgetMax')}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          form.setValue('budgetMax', val === '' ? 0 : parseFloat(val));
-                        }}
-                        placeholder="Budget maximum"
-                      />
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="budgetMax"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Budget maximum (CHF)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number"
+                              {...field}
+                              value={field.value || ''}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                field.onChange(isNaN(value) ? 0 : value);
+                              }}
+                              placeholder="Budget maximum"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   ) : (
                     <>
                       <p className="text-2xl font-bold">
@@ -594,17 +614,27 @@ export default function ClientDetail() {
                         </FormItem>
                       )}
                     />
-                    <div className="space-y-2">
-                      <Label>Loyer actuel (CHF)</Label>
-                      <Input
-                        type="number"
-                        value={form.watch('loyerActuel')}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          form.setValue('loyerActuel', val === '' ? 0 : parseFloat(val));
-                        }}
-                      />
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="loyerActuel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Loyer actuel (CHF)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number"
+                              {...field}
+                              value={field.value || ''}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                                field.onChange(isNaN(value) ? 0 : value);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <FormField
                       control={form.control}
                       name="depuisLe"
@@ -618,17 +648,27 @@ export default function ClientDetail() {
                         </FormItem>
                       )}
                     />
-                    <div className="space-y-2">
-                      <Label>Nombre de pièces actuel</Label>
-                      <Input
-                        type="number"
-                        value={form.watch('nombrePiecesActuel')}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          form.setValue('nombrePiecesActuel', val === '' ? 1 : parseInt(val));
-                        }}
-                      />
-                    </div>
+                    <FormField
+                      control={form.control}
+                      name="nombrePiecesActuel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nombre de pièces actuel</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number"
+                              {...field}
+                              value={field.value || ''}
+                              onChange={(e) => {
+                                const value = e.target.value === '' ? 1 : parseInt(e.target.value);
+                                field.onChange(isNaN(value) ? 1 : value);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <FormField
                       control={form.control}
                       name="motifChangement"
