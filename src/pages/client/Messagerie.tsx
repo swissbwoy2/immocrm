@@ -22,6 +22,35 @@ const Messagerie = () => {
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
 
+  const handleSendMessage = () => {
+    if (!messageText.trim() || !selectedConv) return;
+
+    const allMessages = JSON.parse(localStorage.getItem('messages') || '[]');
+    const newMessage = {
+      id: `msg-${Date.now()}`,
+      conversation_id: selectedConv,
+      sender_id: clientId,
+      sender_type: 'client',
+      content: messageText,
+      created_at: new Date().toISOString(),
+      read: false,
+    };
+    
+    allMessages.push(newMessage);
+    localStorage.setItem('messages', JSON.stringify(allMessages));
+    
+    // Update conversation last message time
+    const allConversations = JSON.parse(localStorage.getItem('conversations') || '[]');
+    const convIndex = allConversations.findIndex((c: any) => c.id === selectedConv);
+    if (convIndex !== -1) {
+      allConversations[convIndex].last_message_at = new Date().toISOString();
+      localStorage.setItem('conversations', JSON.stringify(allConversations));
+    }
+    
+    setMessageText("");
+    window.location.reload(); // Refresh to show new message
+  };
+
   const getAgentName = (agentId: string) => {
     const agent = agents.find(a => a.id === agentId);
     return agent ? `${agent.prenom} ${agent.nom}` : "Mon agent";
@@ -98,8 +127,9 @@ const Messagerie = () => {
                     placeholder="Écrire un message..."
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                   />
-                  <Button>
+                  <Button onClick={handleSendMessage}>
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>
