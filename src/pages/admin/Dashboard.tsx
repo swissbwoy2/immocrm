@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign } from 'lucide-react';
+import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getCurrentUser, getAgents, getClients, getTransactions } from '@/utils/localStorage';
+import { getCurrentUser, getAgents, getClients, getTransactions, getOffres } from '@/utils/localStorage';
 import { calculateDaysElapsed } from '@/utils/calculations';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,6 +23,7 @@ export default function AdminDashboard() {
   const [agents, setAgents] = useState(getAgents());
   const [clients, setClients] = useState(getClients());
   const [transactions, setTransactions] = useState(getTransactions());
+  const [offres, setOffres] = useState(getOffres());
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== 'admin') {
@@ -34,6 +35,7 @@ export default function AdminDashboard() {
 
   const clientsActifs = clients.filter(c => calculateDaysElapsed(c.dateInscription) <= 90).length;
   const totalAgents = agents.filter(a => a.actif).length;
+  const totalOffresEnvoyees = offres.length;
   const transactionsEnCours = transactions.filter(t => t.statut === 'en_cours').length;
   const transactionsConcluesMois = transactions.filter(t => {
     if (t.statut !== 'conclue' || !t.dateConclusion) return false;
@@ -69,7 +71,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <KPICard 
               title="Clients actifs" 
               value={clientsActifs} 
@@ -81,6 +83,11 @@ export default function AdminDashboard() {
               value={totalAgents} 
               icon={UserCog}
               onClick={() => navigate('/admin/agents')}
+            />
+            <KPICard 
+              title="Offres envoyées" 
+              value={totalOffresEnvoyees} 
+              icon={Send}
             />
             <KPICard 
               title="Transactions en cours" 
