@@ -5,7 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Trash2, Upload } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Trash2, Upload, Trash } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { getClients, saveClients, getAgents, getCurrentUser } from "@/utils/localStorage";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { CSVImportDialog } from "@/components/CSVImportDialog";
@@ -24,6 +34,7 @@ const MesClients = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState<'recent' | 'ancien'>('recent');
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
 
   const handleImportComplete = () => {
     // Reload clients from localStorage
@@ -38,6 +49,15 @@ const MesClients = () => {
       saveClients(updatedClients);
       setAllClients(updatedClients.filter(c => c.agentId === agent?.id));
     }
+  };
+
+  const handleDeleteAllClients = () => {
+    const allClientsData = getClients();
+    // Garder seulement les clients qui ne sont pas à cet agent
+    const otherAgentsClients = allClientsData.filter(c => c.agentId !== agent?.id);
+    saveClients(otherAgentsClients);
+    setAllClients([]);
+    setDeleteAllDialogOpen(false);
   };
 
   const regions = ['Chablais', 'Fribourg', 'Gros-de-Vaud', 'Lausanne et région', 'Ouest-lausannois', 'Lavaux', 'Nord-vaudois', 'Nyon et région', 'Riviera', 'Valais', 'Genève', 'Autre'];
@@ -117,10 +137,20 @@ const MesClients = () => {
         <div className="p-8">
           <div className="mb-6 flex items-center justify-between">
             <h1 className="text-3xl font-bold text-foreground">Clients</h1>
-            <Button onClick={() => setImportDialogOpen(true)}>
-              <Upload className="w-4 h-4 mr-2" />
-              Importer CSV
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="destructive" 
+                onClick={() => setDeleteAllDialogOpen(true)}
+                disabled={allClients.length === 0}
+              >
+                <Trash className="w-4 h-4 mr-2" />
+                Supprimer tous
+              </Button>
+              <Button onClick={() => setImportDialogOpen(true)}>
+                <Upload className="w-4 h-4 mr-2" />
+                Importer CSV
+              </Button>
+            </div>
           </div>
 
           {/* Barre de recherche */}
@@ -383,6 +413,23 @@ const MesClients = () => {
         onImportComplete={handleImportComplete}
         currentAgentId={agent?.id}
       />
+
+      <AlertDialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer tous les clients ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Tous vos clients ({allClients.length}) seront définitivement supprimés.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAllClients} className="bg-destructive hover:bg-destructive/90">
+              Supprimer tous
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
