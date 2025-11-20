@@ -271,7 +271,7 @@ export default function ClientDetail() {
                     <Flag className="w-3 h-3 mr-1" />
                     {client.nationalite}
                   </Badge>
-                  <Badge variant="secondary">{client.typePermis}</Badge>
+                  <Badge variant="secondary">Permis {client.typePermis}</Badge>
                 </div>
                 
                 {/* Barre de progression */}
