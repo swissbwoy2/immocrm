@@ -1,8 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LucideIcon, LogOut, Building2 } from 'lucide-react';
+import { LucideIcon, LogOut, Building2, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { saveCurrentUser } from '@/utils/localStorage';
+import { getCurrentUser, saveCurrentUser } from '@/utils/localStorage';
 
 interface MenuItem {
   name: string;
@@ -10,14 +10,47 @@ interface MenuItem {
   path: string;
 }
 
-interface SidebarProps {
-  menu: MenuItem[];
-  userRole: string;
-  userName: string;
-}
+const getMenuForRole = (role: string): MenuItem[] => {
+  switch (role) {
+    case 'admin':
+      return [
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/admin' },
+        { name: 'Agents', icon: Users, path: '/admin/agents' },
+        { name: 'Clients', icon: Users, path: '/admin/clients' },
+        { name: 'Mandats', icon: FileText, path: '/admin/mandats' },
+        { name: 'Transactions', icon: DollarSign, path: '/admin/transactions' },
+        { name: 'Messagerie', icon: MessageSquare, path: '/admin/messagerie' },
+      ];
+    case 'agent':
+      return [
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/agent' },
+        { name: 'Mes Clients', icon: Users, path: '/agent/mes-clients' },
+        { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre' },
+        { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie' },
+      ];
+    case 'client':
+      return [
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/client' },
+        { name: 'Offres reçues', icon: Home, path: '/client/offres-recues' },
+        { name: 'Mes candidatures', icon: Clipboard, path: '/client/mes-candidatures' },
+        { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie' },
+      ];
+    default:
+      return [];
+  }
+};
 
-export function Sidebar({ menu, userRole, userName }: SidebarProps) {
+export function Sidebar() {
   const location = useLocation();
+  const currentUser = getCurrentUser();
+  
+  if (!currentUser) {
+    return null;
+  }
+
+  const menu = getMenuForRole(currentUser.role);
+  const userName = `${currentUser.prenom} ${currentUser.nom}`;
+  const userRole = currentUser.role;
 
   const handleLogout = () => {
     saveCurrentUser(null);
