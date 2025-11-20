@@ -15,6 +15,7 @@ import AgentDashboard from "./pages/agent/Dashboard";
 import AgentMesClients from "./pages/agent/MesClients";
 import AgentClientDetail from "./pages/agent/ClientDetail";
 import AgentEnvoyerOffre from "./pages/agent/EnvoyerOffre";
+import AgentOffresEnvoyees from "./pages/agent/OffresEnvoyees";
 import AgentMessagerie from "./pages/agent/Messagerie";
 import ClientDashboard from "./pages/client/Dashboard";
 import ClientDossier from "./pages/client/Dossier";
@@ -47,6 +48,7 @@ const App = () => (
           <Route path="/agent/mes-clients" element={<AgentMesClients />} />
           <Route path="/agent/clients/:id" element={<AgentClientDetail />} />
           <Route path="/agent/envoyer-offre" element={<AgentEnvoyerOffre />} />
+          <Route path="/agent/offres-envoyees" element={<AgentOffresEnvoyees />} />
           <Route path="/agent/messagerie" element={<AgentMessagerie />} />
           <Route path="/client" element={<ClientDashboard />} />
           <Route path="/client/dossier" element={<ClientDossier />} />

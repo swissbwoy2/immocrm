@@ -88,7 +88,7 @@ export default function AgentDashboard() {
               title="Offres envoyées" 
               value={offresEnvoyees} 
               icon={Send}
-              onClick={() => navigate('/agent/envoyer-offre')}
+              onClick={() => navigate('/agent/offres-envoyees')}
             />
             <KPICard 
               title="Messages non lus" 

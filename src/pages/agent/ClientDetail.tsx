@@ -50,7 +50,7 @@ import {
   DollarSign, Home, Building2, Briefcase, Heart, Car, Send, X, Check,
   TrendingUp, Flag, FileText, Download, Upload as UploadIcon, Eye
 } from 'lucide-react';
-import { getCurrentUser, getClients, saveClients, getOffres } from '@/utils/localStorage';
+import { getCurrentUser, getClients, saveClients, getOffres, saveOffres } from '@/utils/localStorage';
 import { Client, Offre } from '@/data/mockData';
 import { calculateMandateDuration } from '@/utils/calculations';
 import { useToast } from '@/hooks/use-toast';
@@ -291,6 +291,52 @@ export default function ClientDetail() {
     link.href = document.data;
     link.download = document.name;
     link.click();
+  };
+
+  const handleStatutChange = (offreId: string, newStatut: string) => {
+    const allOffres = getOffres();
+    const updatedOffres = allOffres.map(o => 
+      o.id === offreId 
+        ? { ...o, statut: newStatut as Offre['statut'], dateStatut: new Date().toISOString() }
+        : o
+    );
+    saveOffres(updatedOffres);
+    
+    const clientOffres = updatedOffres.filter(o => o.clientId === id);
+    setOffres(clientOffres);
+    
+    toast({
+      title: 'Statut mis à jour',
+      description: `Le statut a été changé`,
+    });
+  };
+
+  const getStatutLabel = (statut: string) => {
+    switch (statut) {
+      case 'envoyee': return 'Envoyée';
+      case 'vue': return 'Vue';
+      case 'interesse': return 'Intéressé';
+      case 'visite_planifiee': return 'Visite planifiée';
+      case 'visite_effectuee': return 'Visite effectuée';
+      case 'candidature_deposee': return 'Candidature déposée';
+      case 'acceptee': return 'Acceptée';
+      case 'refusee': return 'Refusée';
+      default: return statut;
+    }
+  };
+
+  const getStatutBadgeVariant = (statut: string): "default" | "secondary" | "destructive" | "outline" => {
+    switch (statut) {
+      case 'envoyee': return 'secondary';
+      case 'vue': return 'outline';
+      case 'interesse': return 'default';
+      case 'visite_planifiee': return 'default';
+      case 'visite_effectuee': return 'default';
+      case 'candidature_deposee': return 'default';
+      case 'acceptee': return 'default';
+      case 'refusee': return 'destructive';
+      default: return 'secondary';
+    }
   };
 
   const getFileIcon = (type: string) => {
@@ -1190,7 +1236,7 @@ export default function ClientDetail() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold flex items-center gap-2">
                 <Send className="w-5 h-5" />
-                Offres de biens envoyées
+                Offres de biens envoyées ({offres.length})
               </h2>
               <Button onClick={() => navigate(`/agent/envoyer-offre?clientId=${client.id}`)}>
                 <Send className="w-4 h-4 mr-2" />
@@ -1205,27 +1251,53 @@ export default function ClientDetail() {
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
                         <CardTitle className="text-base">{offre.localisation}</CardTitle>
-                        <Badge variant="secondary">{offre.statut}</Badge>
+                        <Badge variant={getStatutBadgeVariant(offre.statut)}>
+                          {getStatutLabel(offre.statut)}
+                        </Badge>
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Prix</span>
-                        <span className="font-medium">{offre.prix.toLocaleString('fr-CH')} CHF</span>
+                    <CardContent className="space-y-3">
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Prix</span>
+                          <span className="font-medium">{offre.prix.toLocaleString('fr-CH')} CHF</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Surface</span>
+                          <span className="font-medium">{offre.surface} m²</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Pièces</span>
+                          <span className="font-medium">{offre.nombrePieces}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Date d'envoi</span>
+                          <span className="font-medium">
+                            {new Date(offre.dateEnvoi).toLocaleDateString('fr-CH')}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Surface</span>
-                        <span className="font-medium">{offre.surface} m²</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Pièces</span>
-                        <span className="font-medium">{offre.nombrePieces}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Date d'envoi</span>
-                        <span className="font-medium">
-                          {new Date(offre.dateEnvoi).toLocaleDateString('fr-CH')}
-                        </span>
+                      
+                      <div className="pt-3 border-t space-y-2">
+                        <Label className="text-sm font-medium">Statut de la candidature</Label>
+                        <Select 
+                          value={offre.statut} 
+                          onValueChange={(value) => handleStatutChange(offre.id, value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="envoyee">Envoyée</SelectItem>
+                            <SelectItem value="vue">Vue</SelectItem>
+                            <SelectItem value="interesse">Intéressé</SelectItem>
+                            <SelectItem value="visite_planifiee">Visite planifiée</SelectItem>
+                            <SelectItem value="visite_effectuee">Visite effectuée</SelectItem>
+                            <SelectItem value="candidature_deposee">Candidature déposée</SelectItem>
+                            <SelectItem value="acceptee">Acceptée</SelectItem>
+                            <SelectItem value="refusee">Refusée</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </CardContent>
                   </Card>
