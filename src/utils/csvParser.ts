@@ -252,7 +252,7 @@ function parseClientFromRow(row: CSVRow, lineNumber: number): {
     dateNaissance: findColumnValue(row, ['Date de naissance', 'Date naissance', 'Naissance', 'Birth date']),
     nationalite: findColumnValue(row, ['Nationalité', 'Nationalite', 'Nationality']),
     typePermis: findColumnValue(row, ['Type de permis de séjour', 'Permis', 'Type permis', 'Permit']),
-    etatCivil: findColumnValue(row, ['État civil', 'Etat civil', 'Statut civil']),
+    etatCivil: findColumnValue(row, ['État civil', 'Etat civil', 'Etat civile', 'Statut civil']),
     geranceActuelle: findColumnValue(row, ['Gérance actuelle', 'Gerance', 'Gérance']),
     contactGerance: findColumnValue(row, ['Contact gérance', 'Contact gerance', 'Contact']),
     loyerActuel: loyerActuel,
