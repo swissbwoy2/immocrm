@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Trash2, Upload } from "lucide-react";
-import { getClients, getAgents, getCurrentUser } from "@/utils/localStorage";
+import { getClients, saveClients, getAgents, getCurrentUser } from "@/utils/localStorage";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { CSVImportDialog } from "@/components/CSVImportDialog";
 
@@ -34,7 +34,7 @@ const MesClients = () => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) {
       const allClientsData = getClients();
       const updatedClients = allClientsData.filter(c => c.id !== clientId);
-      localStorage.setItem('clients', JSON.stringify(updatedClients));
+      saveClients(updatedClients);
       setAllClients(updatedClients.filter(c => c.agentId === agent?.id));
     }
   };
