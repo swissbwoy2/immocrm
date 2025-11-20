@@ -16,7 +16,9 @@ function normalizeColumnName(name: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // Retire les accents
-    .replace(/[^a-z0-9]/g, '') // Garde seulement lettres et chiffres
+    .replace(/[\u2010-\u2015\u2212]/g, '-') // Remplace tous les types de tirets par un tiret normal
+    .replace(/[^a-z0-9-]/g, '') // Garde lettres, chiffres et tirets
+    .replace(/-+/g, '') // Retire tous les tirets
     .trim();
 }
 
