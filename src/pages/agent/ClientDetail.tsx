@@ -242,73 +242,74 @@ export default function ClientDetail() {
     <div className="flex h-screen bg-background">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
-        <div className="p-8 space-y-6">
-          {/* Header */}
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-2">
-                <h1 className="text-3xl font-bold">
-                  {client.prenom} {client.nom}
-                </h1>
-                <Badge variant="outline">
-                  <Flag className="w-3 h-3 mr-1" />
-                  {client.nationalite}
-                </Badge>
-                <Badge variant="secondary">{client.typePermis}</Badge>
-              </div>
-              
-              {/* Barre de progression */}
-              <div className="mt-4 max-w-2xl">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm text-muted-foreground">
-                    Progression du mandat
-                  </p>
-                  <div className="text-right">
-                    <p className="text-sm font-semibold">
-                      {daysRemaining} jours restants
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {daysElapsed} / 90 jours
-                    </p>
-                  </div>
+        <Form {...form}>
+          <div className="p-8 space-y-6">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-3xl font-bold">
+                    {client.prenom} {client.nom}
+                  </h1>
+                  <Badge variant="outline">
+                    <Flag className="w-3 h-3 mr-1" />
+                    {client.nationalite}
+                  </Badge>
+                  <Badge variant="secondary">{client.typePermis}</Badge>
                 </div>
-                <Progress value={progressPercentage} className="h-3" />
+                
+                {/* Barre de progression */}
+                <div className="mt-4 max-w-2xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-muted-foreground">
+                      Progression du mandat
+                    </p>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold">
+                        {daysRemaining} jours restants
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {daysElapsed} / 90 jours
+                      </p>
+                    </div>
+                  </div>
+                  <Progress value={progressPercentage} className="h-3" />
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => navigate('/agent/mes-clients')}>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Retour
+                </Button>
+                {!isEditing ? (
+                  <>
+                    <Button variant="outline" onClick={() => setIsEditing(true)}>
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Modifier
+                    </Button>
+                    <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Supprimer
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" onClick={() => {
+                      setIsEditing(false);
+                      form.reset();
+                    }}>
+                      <X className="w-4 h-4 mr-2" />
+                      Annuler
+                    </Button>
+                    <Button onClick={form.handleSubmit(handleSave)}>
+                      <Check className="w-4 h-4 mr-2" />
+                      Enregistrer
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
-
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => navigate('/agent/mes-clients')}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Retour
-              </Button>
-              {!isEditing ? (
-                <>
-                  <Button variant="outline" onClick={() => setIsEditing(true)}>
-                    <Pencil className="w-4 h-4 mr-2" />
-                    Modifier
-                  </Button>
-                  <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Supprimer
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="outline" onClick={() => {
-                    setIsEditing(false);
-                    form.reset();
-                  }}>
-                    <X className="w-4 h-4 mr-2" />
-                    Annuler
-                  </Button>
-                  <Button onClick={form.handleSubmit(handleSave)}>
-                    <Check className="w-4 h-4 mr-2" />
-                    Enregistrer
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
 
           {/* Situation financière */}
           <div>
@@ -415,7 +416,7 @@ export default function ClientDetail() {
             <Card>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
                 {isEditing ? (
-                  <Form {...form}>
+                  <>
                     <FormField
                       control={form.control}
                       name="email"
@@ -509,7 +510,7 @@ export default function ClientDetail() {
                         )}
                       />
                     </div>
-                  </Form>
+                  </>
                 ) : (
                   <>
                     <div className="flex items-start gap-3">
@@ -791,6 +792,7 @@ export default function ClientDetail() {
             </Card>
           </div>
         </div>
+        </Form>
       </main>
 
       {/* Delete Confirmation Dialog */}
