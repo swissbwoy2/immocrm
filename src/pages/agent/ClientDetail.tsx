@@ -1,10 +1,32 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Sidebar } from '@/components/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,13 +39,44 @@ import {
 } from '@/components/ui/alert-dialog';
 import { 
   ArrowLeft, Pencil, Trash2, Mail, Phone, MapPin, Calendar, Users, 
-  DollarSign, Home, Building2, Briefcase, Heart, Car, Send, FileText,
-  TrendingUp, Flag
+  DollarSign, Home, Building2, Briefcase, Heart, Car, Send, X, Check,
+  TrendingUp, Flag, FileText
 } from 'lucide-react';
 import { getCurrentUser, getClients, saveClients, getOffres } from '@/utils/localStorage';
 import { Client, Offre } from '@/data/mockData';
 import { calculateMandateDuration } from '@/utils/calculations';
 import { useToast } from '@/hooks/use-toast';
+
+const clientSchema = z.object({
+  prenom: z.string().trim().min(1, 'Le prénom est requis').max(100),
+  nom: z.string().trim().min(1, 'Le nom est requis').max(100),
+  email: z.string().trim().email('Email invalide').max(255),
+  telephone: z.string().trim().min(1, 'Le téléphone est requis'),
+  adresse: z.string().trim().min(1, 'L\'adresse est requise'),
+  dateNaissance: z.string().min(1, 'La date de naissance est requise'),
+  nationalite: z.string().trim().min(1, 'La nationalité est requise'),
+  typePermis: z.string().min(1, 'Le type de permis est requis'),
+  etatCivil: z.string().min(1, 'L\'état civil est requis'),
+  profession: z.string().trim().min(1, 'La profession est requise'),
+  employeur: z.string().trim().min(1, 'L\'employeur est requis'),
+  revenuMensuel: z.number().min(0, 'Le revenu doit être positif'),
+  dateEngagement: z.string().optional(),
+  geranceActuelle: z.string().optional(),
+  contactGerance: z.string().optional(),
+  loyerActuel: z.number().min(0),
+  depuisLe: z.string().optional(),
+  nombrePiecesActuel: z.number().min(1),
+  motifChangement: z.string().optional(),
+  typeRecherche: z.string().min(1),
+  typeBien: z.string().min(1),
+  nombrePiecesSouhaite: z.string().min(1),
+  budgetMax: z.number().min(0),
+  regions: z.array(z.string()).min(1, 'Au moins une région est requise'),
+  animaux: z.boolean(),
+  vehicules: z.boolean(),
+  numeroPlaques: z.string().optional(),
+  souhaitsParticuliers: z.string().optional(),
+});
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -31,8 +84,43 @@ export default function ClientDetail() {
   const [client, setClient] = useState<Client | null>(null);
   const [offres, setOffres] = useState<Offre[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const currentUser = getCurrentUser();
   const { toast } = useToast();
+
+  const form = useForm<z.infer<typeof clientSchema>>({
+    resolver: zodResolver(clientSchema),
+    defaultValues: {
+      prenom: '',
+      nom: '',
+      email: '',
+      telephone: '',
+      adresse: '',
+      dateNaissance: '',
+      nationalite: '',
+      typePermis: '',
+      etatCivil: '',
+      profession: '',
+      employeur: '',
+      revenuMensuel: 0,
+      dateEngagement: '',
+      geranceActuelle: '',
+      contactGerance: '',
+      loyerActuel: 0,
+      depuisLe: '',
+      nombrePiecesActuel: 1,
+      motifChangement: '',
+      typeRecherche: '',
+      typeBien: '',
+      nombrePiecesSouhaite: '',
+      budgetMax: 0,
+      regions: [],
+      animaux: false,
+      vehicules: false,
+      numeroPlaques: '',
+      souhaitsParticuliers: '',
+    },
+  });
 
   useEffect(() => {
     if (!currentUser || currentUser.role !== 'agent') {
@@ -55,10 +143,70 @@ export default function ClientDetail() {
 
     setClient(foundClient);
 
+    // Initialiser le formulaire avec les données du client
+    form.reset({
+      prenom: foundClient.prenom,
+      nom: foundClient.nom,
+      email: foundClient.email,
+      telephone: foundClient.telephone,
+      adresse: foundClient.adresse,
+      dateNaissance: foundClient.dateNaissance,
+      nationalite: foundClient.nationalite,
+      typePermis: foundClient.typePermis,
+      etatCivil: foundClient.etatCivil,
+      profession: foundClient.profession,
+      employeur: foundClient.employeur,
+      revenuMensuel: foundClient.revenuMensuel,
+      dateEngagement: foundClient.dateEngagement || '',
+      geranceActuelle: foundClient.geranceActuelle || '',
+      contactGerance: foundClient.contactGerance || '',
+      loyerActuel: foundClient.loyerActuel,
+      depuisLe: foundClient.depuisLe || '',
+      nombrePiecesActuel: foundClient.nombrePiecesActuel,
+      motifChangement: foundClient.motifChangement || '',
+      typeRecherche: foundClient.typeRecherche,
+      typeBien: foundClient.typeBien,
+      nombrePiecesSouhaite: foundClient.nombrePiecesSouhaite,
+      budgetMax: foundClient.budgetMax,
+      regions: foundClient.regions,
+      animaux: foundClient.animaux,
+      vehicules: foundClient.vehicules,
+      numeroPlaques: foundClient.numeroPlaques || '',
+      souhaitsParticuliers: foundClient.souhaitsParticuliers || '',
+    });
+
     const allOffres = getOffres();
     const clientOffres = allOffres.filter(o => o.clientId === id);
     setOffres(clientOffres);
   }, [id, currentUser, navigate, toast]);
+
+  const handleSave = (values: z.infer<typeof clientSchema>) => {
+    if (!client) return;
+
+    const clients = getClients();
+    const updatedClients = clients.map(c => 
+      c.id === client.id 
+        ? {
+            ...c,
+            ...values,
+          }
+        : c
+    );
+
+    saveClients(updatedClients);
+    
+    const updatedClient = updatedClients.find(c => c.id === client.id);
+    if (updatedClient) {
+      setClient(updatedClient);
+    }
+
+    toast({
+      title: 'Client mis à jour',
+      description: 'Les modifications ont été enregistrées avec succès',
+    });
+
+    setIsEditing(false);
+  };
 
   const handleDelete = () => {
     if (!client) return;
@@ -133,14 +281,32 @@ export default function ClientDetail() {
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Retour
               </Button>
-              <Button variant="outline" onClick={() => toast({ title: 'Fonctionnalité à venir' })}>
-                <Pencil className="w-4 h-4 mr-2" />
-                Modifier
-              </Button>
-              <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-                <Trash2 className="w-4 h-4 mr-2" />
-                Supprimer
-              </Button>
+              {!isEditing ? (
+                <>
+                  <Button variant="outline" onClick={() => setIsEditing(true)}>
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Modifier
+                  </Button>
+                  <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Supprimer
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={() => {
+                    setIsEditing(false);
+                    form.reset();
+                  }}>
+                    <X className="w-4 h-4 mr-2" />
+                    Annuler
+                  </Button>
+                  <Button onClick={form.handleSubmit(handleSave)}>
+                    <Check className="w-4 h-4 mr-2" />
+                    Enregistrer
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
@@ -159,10 +325,31 @@ export default function ClientDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold">
-                    {client.revenuMensuel.toLocaleString('fr-CH')} CHF
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">Net</p>
+                  {isEditing ? (
+                    <FormField
+                      control={form.control}
+                      name="revenuMensuel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold">
+                        {client.revenuMensuel.toLocaleString('fr-CH')} CHF
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Net</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -174,10 +361,31 @@ export default function ClientDetail() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold">
-                    {client.budgetMax.toLocaleString('fr-CH')} CHF
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">Par mois</p>
+                  {isEditing ? (
+                    <FormField
+                      control={form.control}
+                      name="budgetMax"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold">
+                        {client.budgetMax.toLocaleString('fr-CH')} CHF
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Par mois</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
@@ -206,53 +414,153 @@ export default function ClientDetail() {
             </h2>
             <Card>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                <div className="flex items-start gap-3">
-                  <Mail className="w-5 h-5 text-muted-foreground mt-1" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="font-medium">{client.email}</p>
-                  </div>
-                </div>
+                {isEditing ? (
+                  <Form {...form}>
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="telephone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Téléphone</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="adresse"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Adresse</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="dateNaissance"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Date de naissance</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="etatCivil"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>État civil</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="nationalite"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nationalité</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="typePermis"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Type de permis</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </Form>
+                ) : (
+                  <>
+                    <div className="flex items-start gap-3">
+                      <Mail className="w-5 h-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Email</p>
+                        <p className="font-medium">{client.email}</p>
+                      </div>
+                    </div>
 
-                <div className="flex items-start gap-3">
-                  <Phone className="w-5 h-5 text-muted-foreground mt-1" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Téléphone</p>
-                    <p className="font-medium">{client.telephone}</p>
-                  </div>
-                </div>
+                    <div className="flex items-start gap-3">
+                      <Phone className="w-5 h-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Téléphone</p>
+                        <p className="font-medium">{client.telephone}</p>
+                      </div>
+                    </div>
 
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Adresse</p>
-                    <p className="font-medium">{client.adresse}</p>
-                  </div>
-                </div>
+                    <div className="flex items-start gap-3">
+                      <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Adresse</p>
+                        <p className="font-medium">{client.adresse}</p>
+                      </div>
+                    </div>
 
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 text-muted-foreground mt-1" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Date de naissance</p>
-                    <p className="font-medium">{new Date(client.dateNaissance).toLocaleDateString('fr-CH')}</p>
-                  </div>
-                </div>
+                    <div className="flex items-start gap-3">
+                      <Calendar className="w-5 h-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Date de naissance</p>
+                        <p className="font-medium">{new Date(client.dateNaissance).toLocaleDateString('fr-CH')}</p>
+                      </div>
+                    </div>
 
-                <div className="flex items-start gap-3">
-                  <Users className="w-5 h-5 text-muted-foreground mt-1" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">État civil</p>
-                    <p className="font-medium">{client.etatCivil}</p>
-                  </div>
-                </div>
+                    <div className="flex items-start gap-3">
+                      <Users className="w-5 h-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">État civil</p>
+                        <p className="font-medium">{client.etatCivil}</p>
+                      </div>
+                    </div>
 
-                <div className="flex items-start gap-3">
-                  <Building2 className="w-5 h-5 text-muted-foreground mt-1" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Nationalité / Permis</p>
-                    <p className="font-medium">{client.nationalite} • {client.typePermis}</p>
-                  </div>
-                </div>
+                    <div className="flex items-start gap-3">
+                      <Building2 className="w-5 h-5 text-muted-foreground mt-1" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Nationalité / Permis</p>
+                        <p className="font-medium">{client.nationalite} • {client.typePermis}</p>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>
