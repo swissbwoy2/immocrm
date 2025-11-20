@@ -1,23 +1,14 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, Users, Send, MessageSquare, FileText, Settings, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, Users, Send, MessageSquare, TrendingUp, CheckCircle } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getCurrentUser, getAgents, getClients, getOffres, getMessages } from '@/utils/localStorage';
-import { calculateDaysElapsed, getStatutLabel, getStatutColor } from '@/utils/calculations';
+import { calculateDaysElapsed, getStatutLabel } from '@/utils/calculations';
 import { findTopMatches, mockProperties } from '@/utils/matching';
 import { useNavigate } from 'react-router-dom';
-
-const agentMenu = [
-  { name: 'Tableau de bord', icon: LayoutDashboard, path: '/agent' },
-  { name: 'Mes clients', icon: Users, path: '/agent/clients' },
-  { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre' },
-  { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie' },
-  { name: 'Documents', icon: FileText, path: '/agent/documents' },
-  { name: 'Paramètres', icon: Settings, path: '/agent/parametres' },
-];
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
@@ -82,14 +73,15 @@ export default function AgentDashboard() {
       <Sidebar />
 
       <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Tableau de bord</h1>
-            <p className="text-muted-foreground">Gérez vos clients et vos offres</p>
+        <div className="p-6 md:p-8 space-y-6">
+          {/* Header */}
+          <div>
+            <h1 className="text-3xl font-bold">Tableau de bord</h1>
+            <p className="text-muted-foreground mt-1">Gérez vos clients et vos offres</p>
           </div>
 
           {/* KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <KPICard 
               title="Mes clients" 
               value={clientsActifs} 
@@ -118,11 +110,9 @@ export default function AgentDashboard() {
           </div>
 
           {/* Derniers matchings */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                🎯 Derniers matchings
-              </CardTitle>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold">🎯 Derniers matchings</CardTitle>
             </CardHeader>
             <CardContent>
               {topMatches.length > 0 ? (
@@ -130,32 +120,32 @@ export default function AgentDashboard() {
                   {topMatches.map((match, index) => (
                     <div 
                       key={`${match.clientId}-${index}`}
-                      className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950 dark:to-blue-950 rounded-lg border border-green-200 dark:border-green-800 hover:shadow-md transition-shadow"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-muted/30 hover:bg-muted/50 rounded-lg border transition-all duration-200"
                     >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <p className="font-semibold">{match.client.prenom} {match.client.nom}</p>
                           <Badge variant="outline" className="text-xs">
                             {match.client.nombrePiecesSouhaite} pcs
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground">{match.propertyDescription}</p>
+                        <p className="text-sm text-muted-foreground truncate">{match.propertyDescription}</p>
                         <p className="text-xs text-muted-foreground mt-1">
                           {match.propertyDetails.surface} m² • {match.propertyDetails.region}
                         </p>
                       </div>
                       
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <div className="flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4 text-green-600" />
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="flex flex-col items-end">
+                          <div className="flex items-center gap-1.5">
+                            <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400" />
                             <span className="text-lg font-bold text-green-600 dark:text-green-400">
                               {match.score}%
                             </span>
                           </div>
-                          <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-1">
+                          <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden mt-1">
                             <div 
-                              className="h-full bg-gradient-to-r from-green-500 to-blue-500" 
+                              className="h-full bg-green-500" 
                               style={{ width: `${match.score}%` }}
                             />
                           </div>
@@ -174,45 +164,58 @@ export default function AgentDashboard() {
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  <p className="text-sm">Aucun matching récent</p>
-                  <p className="text-xs mt-1">Les matchings apparaîtront automatiquement quand des propriétés correspondront aux critères de vos clients.</p>
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
+                    <TrendingUp className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-medium">Aucun matching récent</p>
+                  <p className="text-xs mt-1 max-w-md mx-auto">
+                    Les matchings apparaîtront automatiquement quand des propriétés correspondront aux critères de vos clients.
+                  </p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Projection financière & Deadlines */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Projection financière */}
             <Card>
-              <CardHeader>
-                <CardTitle>💰 Projection financière</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold">💰 Projection financière</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {projectionFinanciere.slice(0, 5).map(proj => (
-                  <div key={proj.clientId} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div>
-                      <p className="font-medium text-sm">{proj.nom}</p>
-                      <p className="text-xs text-muted-foreground">Budget: {proj.budgetMax} CHF</p>
+                  <div key={proj.clientId} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{proj.nom}</p>
+                      <p className="text-xs text-muted-foreground">Budget: {proj.budgetMax.toLocaleString()} CHF</p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-success">{proj.partAgent} CHF</p>
-                      <p className="text-xs text-muted-foreground">{proj.splitAgent}% sur {proj.commissionBrute} CHF</p>
+                    <div className="text-right ml-3">
+                      <p className="font-bold text-success">{proj.partAgent.toLocaleString()} CHF</p>
+                      <p className="text-xs text-muted-foreground">{proj.splitAgent}%</p>
                     </div>
                   </div>
                 ))}
-                <div className="pt-3 border-t">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium">Total potentiel</p>
-                    <p className="text-xl font-bold text-success">{totalCommissionPotentielle.toLocaleString()} CHF</p>
+                {projectionFinanciere.length === 0 && (
+                  <div className="text-center py-6 text-muted-foreground text-sm">
+                    Aucune projection disponible
                   </div>
-                </div>
+                )}
+                {projectionFinanciere.length > 0 && (
+                  <div className="pt-3 border-t">
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold">Total potentiel</p>
+                      <p className="text-xl font-bold text-success">{totalCommissionPotentielle.toLocaleString()} CHF</p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
             {/* Deadlines critiques */}
             <Card>
-              <CardHeader>
-                <CardTitle>⚠️ Deadlines critiques</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold">⚠️ Deadlines critiques</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {clientsCritiques.length > 0 ? (
@@ -230,37 +233,47 @@ export default function AgentDashboard() {
                             ? 'bg-destructive/10 border-destructive/20' 
                             : isWarning 
                             ? 'bg-warning/10 border-warning/20'
-                            : 'bg-blue-50 border-blue-200'
+                            : 'bg-muted/30 border-border'
                         }`}
                       >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-medium text-sm">{client.prenom} {client.nom}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Depuis le {new Date(client.dateInscription).toLocaleDateString('fr-CH')}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{client.prenom} {client.nom}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Inscrit le {new Date(client.dateInscription).toLocaleDateString('fr-CH')}
                             </p>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right flex-shrink-0">
                             <p className={`text-sm font-bold ${
-                              isExpired ? 'text-destructive' : isWarning ? 'text-warning' : 'text-blue-600'
+                              isExpired ? 'text-destructive' : isWarning ? 'text-warning' : 'text-foreground'
                             }`}>
-                              {isExpired ? '0 jours' : `${daysRemaining} jours`}
+                              {isExpired ? 'Expiré' : `${daysRemaining}j`}
                             </p>
-                            <p className="text-xs text-muted-foreground">restants</p>
+                            <p className="text-xs text-muted-foreground">
+                              {isExpired ? 'J+90' : 'restants'}
+                            </p>
                           </div>
                         </div>
                         {isExpired && (
-                          <p className="text-xs text-destructive font-medium mt-2">Délai critique - 90 jours écoulés</p>
+                          <div className="mt-2 pt-2 border-t border-destructive/20">
+                            <p className="text-xs text-destructive font-medium">⚠️ Mandat expiré - Action requise</p>
+                          </div>
                         )}
                         {isWarning && !isExpired && (
-                          <p className="text-xs text-warning font-medium mt-2">Attention - 60 jours écoulés</p>
+                          <div className="mt-2 pt-2 border-t border-warning/20">
+                            <p className="text-xs text-warning font-medium">⏰ Moins de 30 jours restants</p>
+                          </div>
                         )}
                       </div>
                     );
                   })
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    <p className="text-sm">Aucune deadline critique</p>
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
+                      <CheckCircle className="w-6 h-6" />
+                    </div>
+                    <p className="text-sm font-medium">Aucune deadline critique</p>
+                    <p className="text-xs mt-1">Tous vos clients sont à jour</p>
                   </div>
                 )}
               </CardContent>
@@ -269,30 +282,48 @@ export default function AgentDashboard() {
 
           {/* Dernières offres */}
           <Card>
-            <CardHeader>
-              <CardTitle>📤 Dernières offres envoyées</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold">📤 Dernières offres envoyées</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2">
               {dernieresOffres.length > 0 ? (
                 dernieresOffres.map(offre => {
                   const client = clients.find(c => c.id === offre.clientId);
                   return (
-                    <div key={offre.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{offre.localisation}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Pour {client?.prenom} {client?.nom} • {offre.nombrePieces} pcs • {offre.prix} CHF
+                    <div key={offre.id} className="flex items-center justify-between p-3 bg-muted/30 hover:bg-muted/50 rounded-lg transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{offre.localisation}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {client?.prenom} {client?.nom} • {offre.nombrePieces} pcs • {offre.prix.toLocaleString()} CHF
                         </p>
                       </div>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatutColor(offre.statut)}`}>
+                      <Badge 
+                        variant={
+                          offre.statut === 'acceptee' ? 'default' :
+                          offre.statut === 'refusee' ? 'destructive' :
+                          'secondary'
+                        }
+                        className="ml-3 flex-shrink-0"
+                      >
                         {getStatutLabel(offre.statut)}
-                      </span>
+                      </Badge>
                     </div>
                   );
                 })
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  <p className="text-sm">Aucune offre envoyée</p>
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
+                    <Send className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-medium">Aucune offre envoyée</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3"
+                    onClick={() => navigate('/agent/envoyer-offre')}
+                  >
+                    Envoyer une offre
+                  </Button>
                 </div>
               )}
             </CardContent>
