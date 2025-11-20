@@ -327,24 +327,18 @@ export default function ClientDetail() {
                 </CardHeader>
                 <CardContent>
                   {isEditing ? (
-                    <FormField
-                      control={form.control}
-                      name="revenuMensuel"
-                      render={({ field: { value, onChange, ...field } }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              {...field}
-                              value={value}
-                              onChange={(e) => onChange(e.target.valueAsNumber || 0)}
-                              placeholder="Revenu mensuel"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="space-y-2">
+                      <Label>Revenu mensuel (CHF)</Label>
+                      <Input
+                        type="number"
+                        value={form.watch('revenuMensuel')}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          form.setValue('revenuMensuel', val === '' ? 0 : parseFloat(val));
+                        }}
+                        placeholder="Revenu mensuel"
+                      />
+                    </div>
                   ) : (
                     <>
                       <p className="text-2xl font-bold">
@@ -365,24 +359,18 @@ export default function ClientDetail() {
                 </CardHeader>
                 <CardContent>
                   {isEditing ? (
-                    <FormField
-                      control={form.control}
-                      name="budgetMax"
-                      render={({ field: { value, onChange, ...field } }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              {...field}
-                              value={value}
-                              onChange={(e) => onChange(e.target.valueAsNumber || 0)}
-                              placeholder="Budget maximum"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="space-y-2">
+                      <Label>Budget maximum (CHF)</Label>
+                      <Input
+                        type="number"
+                        value={form.watch('budgetMax')}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          form.setValue('budgetMax', val === '' ? 0 : parseFloat(val));
+                        }}
+                        placeholder="Budget maximum"
+                      />
+                    </div>
                   ) : (
                     <>
                       <p className="text-2xl font-bold">
@@ -606,24 +594,17 @@ export default function ClientDetail() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="loyerActuel"
-                      render={({ field: { value, onChange, ...field } }) => (
-                        <FormItem>
-                          <FormLabel>Loyer actuel (CHF)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              {...field}
-                              value={value}
-                              onChange={(e) => onChange(e.target.valueAsNumber || 0)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="space-y-2">
+                      <Label>Loyer actuel (CHF)</Label>
+                      <Input
+                        type="number"
+                        value={form.watch('loyerActuel')}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          form.setValue('loyerActuel', val === '' ? 0 : parseFloat(val));
+                        }}
+                      />
+                    </div>
                     <FormField
                       control={form.control}
                       name="depuisLe"
@@ -637,24 +618,17 @@ export default function ClientDetail() {
                         </FormItem>
                       )}
                     />
-                    <FormField
-                      control={form.control}
-                      name="nombrePiecesActuel"
-                      render={({ field: { value, onChange, ...field } }) => (
-                        <FormItem>
-                          <FormLabel>Nombre de pièces actuel</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              {...field}
-                              value={value}
-                              onChange={(e) => onChange(e.target.valueAsNumber || 1)}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="space-y-2">
+                      <Label>Nombre de pièces actuel</Label>
+                      <Input
+                        type="number"
+                        value={form.watch('nombrePiecesActuel')}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          form.setValue('nombrePiecesActuel', val === '' ? 1 : parseInt(val));
+                        }}
+                      />
+                    </div>
                     <FormField
                       control={form.control}
                       name="motifChangement"
