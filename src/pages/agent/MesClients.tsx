@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,12 +16,19 @@ const MesClients = () => {
   const agents = getAgents();
   const agent = agents.find(a => a.userId === currentUser?.id);
   
-  const allClients = getClients().filter(c => c.agentId === agent?.id);
-  
+  const [allClients, setAllClients] = useState(() => 
+    getClients().filter(c => c.agentId === agent?.id)
+  );
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedPieces, setSelectedPieces] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+
+  const handleImportComplete = () => {
+    // Reload clients from localStorage
+    const updatedClients = getClients().filter(c => c.agentId === agent?.id);
+    setAllClients(updatedClients);
+  };
 
   const regions = ['Chablais', 'Fribourg', 'Gros-de-Vaud', 'Lausanne et région', 'Ouest-lausannois', 'Lavaux', 'Nord-vaudois', 'Nyon et région', 'Riviera', 'Valais', 'Genève', 'Autre'];
   const nombrePieces = ['1+', '2+', '3+', '4+', '5+', 'Autre'];
@@ -335,7 +342,7 @@ const MesClients = () => {
       <CSVImportDialog
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
-        onImportComplete={() => window.location.reload()}
+        onImportComplete={handleImportComplete}
       />
     </div>
   );
