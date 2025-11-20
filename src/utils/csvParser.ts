@@ -31,10 +31,10 @@ function findColumnValue(row: CSVRow, variants: string[]): string {
     normalizedRow[normalizeColumnName(key)] = row[key];
   });
 
-  // Essayer chaque variante
+  // Essayer chaque variante et retourner la première valeur non-vide
   for (const variant of variants) {
     const normalized = normalizeColumnName(variant);
-    if (normalizedRow[normalized]) {
+    if (normalizedRow[normalized] && normalizedRow[normalized].trim()) {
       return normalizedRow[normalized];
     }
   }
