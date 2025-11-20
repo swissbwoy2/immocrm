@@ -297,7 +297,7 @@ const EnvoyerOffre = () => {
               </Card>
 
               <Button onClick={handleSubmit} className="w-full" size="lg">
-                Envoyer par email
+                Envoyer
               </Button>
             </div>
 
