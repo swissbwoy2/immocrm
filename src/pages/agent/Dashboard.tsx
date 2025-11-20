@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, Users, Send, MessageSquare, FileText, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, Send, MessageSquare, FileText, Settings, TrendingUp } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { getCurrentUser, getAgents, getClients, getOffres, getMessages } from '@/utils/localStorage';
 import { calculateDaysElapsed, getStatutLabel, getStatutColor } from '@/utils/calculations';
+import { findTopMatches, mockProperties } from '@/utils/matching';
 import { useNavigate } from 'react-router-dom';
 
 const agentMenu = [
@@ -71,6 +74,9 @@ export default function AgentDashboard() {
     return days >= 60;
   }).sort((a, b) => calculateDaysElapsed(b.dateInscription) - calculateDaysElapsed(a.dateInscription));
 
+  // Calcul des matchings automatiques
+  const topMatches = findTopMatches(mesClients, mockProperties, 3);
+
   return (
     <div className="flex min-h-screen bg-background">
       <Sidebar />
@@ -84,16 +90,96 @@ export default function AgentDashboard() {
 
           {/* KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <KPICard title="Mes clients" value={clientsActifs} icon={Users} />
-            <KPICard title="Offres envoyées" value={offresEnvoyees} icon={Send} />
-            <KPICard title="Messages non lus" value={messagesNonLus} icon={MessageSquare} />
+            <KPICard 
+              title="Mes clients" 
+              value={clientsActifs} 
+              icon={Users}
+              onClick={() => navigate('/agent/mes-clients')}
+            />
+            <KPICard 
+              title="Offres envoyées" 
+              value={offresEnvoyees} 
+              icon={Send}
+              onClick={() => navigate('/agent/envoyer-offre')}
+            />
+            <KPICard 
+              title="Messages non lus" 
+              value={messagesNonLus} 
+              icon={MessageSquare}
+              onClick={() => navigate('/agent/messagerie')}
+            />
             <KPICard 
               title="Deadlines critiques" 
               value={deadlinesCritiques} 
               icon={LayoutDashboard} 
-              variant={deadlinesCritiques > 0 ? 'danger' : 'default'} 
+              variant={deadlinesCritiques > 0 ? 'danger' : 'default'}
+              onClick={() => navigate('/agent/mes-clients')}
             />
           </div>
+
+          {/* Derniers matchings */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                🎯 Derniers matchings
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {topMatches.length > 0 ? (
+                <div className="space-y-3">
+                  {topMatches.map((match, index) => (
+                    <div 
+                      key={`${match.clientId}-${index}`}
+                      className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950 dark:to-blue-950 rounded-lg border border-green-200 dark:border-green-800 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold">{match.client.prenom} {match.client.nom}</p>
+                          <Badge variant="outline" className="text-xs">
+                            {match.client.nombrePiecesSouhaite} pcs
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">{match.propertyDescription}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {match.propertyDetails.surface} m² • {match.propertyDetails.region}
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <div className="flex items-center gap-2">
+                            <TrendingUp className="w-4 h-4 text-green-600" />
+                            <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                              {match.score}%
+                            </span>
+                          </div>
+                          <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mt-1">
+                            <div 
+                              className="h-full bg-gradient-to-r from-green-500 to-blue-500" 
+                              style={{ width: `${match.score}%` }}
+                            />
+                          </div>
+                        </div>
+                        
+                        <Button 
+                          size="sm"
+                          onClick={() => navigate(`/agent/envoyer-offre?clientId=${match.clientId}`)}
+                        >
+                          <Send className="w-3 h-3 mr-1" />
+                          Envoyer
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="text-sm">Aucun matching récent</p>
+                  <p className="text-xs mt-1">Les matchings apparaîtront automatiquement quand des propriétés correspondront aux critères de vos clients.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Projection financière */}
