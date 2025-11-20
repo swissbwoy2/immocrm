@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -238,9 +238,18 @@ export default function ClientDetail() {
     );
   }
 
-  const { daysElapsed, daysRemaining, progressPercentage } = calculateMandateDuration(client.dateInscription);
-  const budgetRecommande = Math.round(client.revenuMensuel / 3);
-  const progressColor = daysElapsed < 60 ? 'bg-green-500' : daysElapsed < 90 ? 'bg-orange-500' : 'bg-red-500';
+  const { daysElapsed, daysRemaining, progressPercentage } = useMemo(
+    () => calculateMandateDuration(client.dateInscription),
+    [client.dateInscription]
+  );
+  const budgetRecommande = useMemo(
+    () => Math.round(client.revenuMensuel / 3),
+    [client.revenuMensuel]
+  );
+  const progressColor = useMemo(
+    () => daysElapsed < 60 ? 'bg-green-500' : daysElapsed < 90 ? 'bg-orange-500' : 'bg-red-500',
+    [daysElapsed]
+  );
 
   return (
     <div className="flex h-screen bg-background">
