@@ -93,18 +93,28 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete }: CSVImp
     if (!parseResult) return;
 
     try {
+      console.log('📊 Import - Parsed results:', parseResult);
+      
       // Sauvegarder les utilisateurs
       const currentUsers = getUsers();
+      console.log('👥 Current users count:', currentUsers.length);
+      
       const newUsers = parseResult.users.filter(
         newUser => !currentUsers.some(u => u.email === newUser.email)
       );
+      console.log('➕ New users to add:', newUsers.length, newUsers);
+      
       saveUsers([...currentUsers, ...newUsers]);
 
       // Sauvegarder les clients
       const currentClients = getClients();
+      console.log('👤 Current clients count:', currentClients.length);
+      
       const newClients = parseResult.clients.filter(
         newClient => !currentClients.some(c => c.email === newClient.email)
       );
+      console.log('➕ New clients to add:', newClients.length, newClients);
+      
       saveClients([...currentClients, ...newClients]);
 
       toast({
@@ -115,6 +125,7 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete }: CSVImp
       onImportComplete();
       handleClose();
     } catch (error) {
+      console.error('❌ Import error:', error);
       toast({
         title: 'Erreur',
         description: 'Impossible d\'importer les clients',
