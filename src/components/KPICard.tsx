@@ -8,9 +8,10 @@ interface KPICardProps {
   icon: LucideIcon;
   variant?: 'default' | 'success' | 'warning' | 'danger';
   subtitle?: string;
+  onClick?: () => void;
 }
 
-export function KPICard({ title, value, icon: Icon, variant = 'default', subtitle }: KPICardProps) {
+export function KPICard({ title, value, icon: Icon, variant = 'default', subtitle, onClick }: KPICardProps) {
   const variantClasses = {
     default: 'bg-primary/10 text-primary',
     success: 'bg-success/10 text-success',
@@ -19,7 +20,10 @@ export function KPICard({ title, value, icon: Icon, variant = 'default', subtitl
   };
 
   return (
-    <Card>
+    <Card 
+      className={onClick ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}
+      onClick={onClick}
+    >
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
