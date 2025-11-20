@@ -17,7 +17,7 @@ export function parseCSV(fileContent: string): ParsedCSVData {
     return { clients: [], users: [], errors: ['Fichier CSV vide ou invalide'] };
   }
 
-  const headers = lines[0].split(',').map(h => h.trim());
+  const headers = parseCSVLine(lines[0]);
   const clients: Client[] = [];
   const users: User[] = [];
   const errors: string[] = [];
@@ -62,19 +62,33 @@ function parseCSVLine(line: string): string[] {
 
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
+    const nextChar = line[i + 1];
     
     if (char === '"') {
-      inQuotes = !inQuotes;
+      // Handle escaped quotes (double quotes)
+      if (inQuotes && nextChar === '"') {
+        current += '"';
+        i++; // Skip next quote
+      } else {
+        inQuotes = !inQuotes;
+      }
     } else if (char === ',' && !inQuotes) {
-      values.push(current);
+      values.push(current.trim());
       current = '';
     } else {
       current += char;
     }
   }
   
-  values.push(current);
-  return values;
+  values.push(current.trim());
+  
+  // Remove surrounding quotes from values if present
+  return values.map(val => {
+    if (val.startsWith('"') && val.endsWith('"')) {
+      return val.slice(1, -1);
+    }
+    return val;
+  });
 }
 
 function parseClientFromRow(row: CSVRow, lineNumber: number): { 
