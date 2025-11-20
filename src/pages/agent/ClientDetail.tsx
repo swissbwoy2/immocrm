@@ -1438,29 +1438,35 @@ export default function ClientDetail() {
           <DialogHeader>
             <DialogTitle>{previewDocument?.name}</DialogTitle>
             <DialogDescription>
-              {previewDocument && formatFileSize(previewDocument.size)} • {previewDocument && new Date(previewDocument.uploadDate).toLocaleDateString('fr-FR')}
+              {previewDocument && `${formatFileSize(previewDocument.size)} • ${new Date(previewDocument.uploadDate).toLocaleDateString('fr-CH')}`}
             </DialogDescription>
           </DialogHeader>
-          <div className="overflow-auto max-h-[70vh]">
+          <div className="overflow-auto max-h-[70vh] bg-muted/20 rounded-lg p-4">
             {previewDocument && (
-              <div className="flex items-center justify-center">
+              <div className="flex items-center justify-center min-h-[400px]">
                 {previewDocument.type.includes('image') ? (
                   <img 
                     src={previewDocument.data} 
                     alt={previewDocument.name}
-                    className="max-w-full h-auto rounded-lg"
+                    className="max-w-full h-auto rounded-lg shadow-lg"
+                    onError={(e) => {
+                      console.error('Error loading image:', e);
+                    }}
                   />
                 ) : previewDocument.type.includes('pdf') ? (
                   <iframe
-                    src={previewDocument.data}
-                    className="w-full h-[60vh] border rounded-lg"
+                    src={`${previewDocument.data}#toolbar=0`}
+                    className="w-full h-[60vh] border-0 rounded-lg"
                     title={previewDocument.name}
+                    onError={(e) => {
+                      console.error('Error loading PDF:', e);
+                    }}
                   />
                 ) : (
                   <div className="text-center py-12">
                     <FileText className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
                     <p className="text-muted-foreground mb-4">
-                      Aperçu non disponible pour ce type de fichier
+                      Aperçu non disponible pour ce type de fichier ({previewDocument.type})
                     </p>
                     <Button onClick={() => handleDownloadDocument(previewDocument)}>
                       <Download className="w-4 h-4 mr-2" />
