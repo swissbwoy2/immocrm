@@ -48,7 +48,7 @@ import {
 import { 
   ArrowLeft, Pencil, Trash2, Mail, Phone, MapPin, Calendar, Users, 
   DollarSign, Home, Building2, Briefcase, Heart, Car, Send, X, Check,
-  TrendingUp, Flag, FileText, Download, Upload as UploadIcon
+  TrendingUp, Flag, FileText, Download, Upload as UploadIcon, Eye
 } from 'lucide-react';
 import { getCurrentUser, getClients, saveClients, getOffres } from '@/utils/localStorage';
 import { Client, Offre } from '@/data/mockData';
@@ -95,6 +95,7 @@ export default function ClientDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [previewDocument, setPreviewDocument] = useState<any>(null);
   const [documents, setDocuments] = useState<Array<{
     id: string;
     name: string;
@@ -1271,7 +1272,17 @@ export default function ClientDetail() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
+                          onClick={() => setPreviewDocument(doc)}
+                          title="Aperçu"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
                           onClick={() => handleDownloadDocument(doc)}
+                          title="Télécharger"
                         >
                           <Download className="h-4 w-4" />
                         </Button>
@@ -1280,6 +1291,7 @@ export default function ClientDetail() {
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
                           onClick={() => handleDeleteDocument(doc.id)}
+                          title="Supprimer"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -1344,6 +1356,59 @@ export default function ClientDetail() {
             <Button variant="outline" onClick={() => setUploadDialogOpen(false)} disabled={uploading}>
               Annuler
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Document Dialog */}
+      <Dialog open={!!previewDocument} onOpenChange={() => setPreviewDocument(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{previewDocument?.name}</DialogTitle>
+            <DialogDescription>
+              {previewDocument && formatFileSize(previewDocument.size)} • {previewDocument && new Date(previewDocument.uploadDate).toLocaleDateString('fr-FR')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="overflow-auto max-h-[70vh]">
+            {previewDocument && (
+              <div className="flex items-center justify-center">
+                {previewDocument.type.includes('image') ? (
+                  <img 
+                    src={previewDocument.data} 
+                    alt={previewDocument.name}
+                    className="max-w-full h-auto rounded-lg"
+                  />
+                ) : previewDocument.type.includes('pdf') ? (
+                  <iframe
+                    src={previewDocument.data}
+                    className="w-full h-[60vh] border rounded-lg"
+                    title={previewDocument.name}
+                  />
+                ) : (
+                  <div className="text-center py-12">
+                    <FileText className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-4">
+                      Aperçu non disponible pour ce type de fichier
+                    </p>
+                    <Button onClick={() => handleDownloadDocument(previewDocument)}>
+                      <Download className="w-4 h-4 mr-2" />
+                      Télécharger
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewDocument(null)}>
+              Fermer
+            </Button>
+            {previewDocument && (
+              <Button onClick={() => handleDownloadDocument(previewDocument)}>
+                <Download className="w-4 h-4 mr-2" />
+                Télécharger
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
