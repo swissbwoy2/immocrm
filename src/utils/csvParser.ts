@@ -197,20 +197,33 @@ function parseClientFromRow(row: CSVRow, lineNumber: number): {
   };
 
   // Parser les champs numériques avec valeurs par défaut
-  const revenuMensuel = parseNumber(findColumnValue(row, [
+  const revenuRaw = findColumnValue(row, [
     'Revenu mensuel net', 'Revenu', 'Revenue', 'Salaire', 'Revenu net'
-  ]));
-  const loyerActuel = parseNumber(findColumnValue(row, [
+  ]);
+  const loyerRaw = findColumnValue(row, [
     'Loyer brut actuel', 'Loyer', 'Loyer actuel', 'Rent', 'Loyer mensuel'
-  ]));
-  const budgetMax = parseNumber(findColumnValue(row, [
-    'Budget maximum', 'Budget', 'Budget max', 'Maximum budget', 'Budget maximum (le loyer brut ne devant pas dépasser le tiers du salaire)'
-  ]));
-  const montantCharges = parseNumber(findColumnValue(row, [
+  ]);
+  const budgetRaw = findColumnValue(row, [
+    'Budget maximum (le loyer brut ne devant pas dépasser le tiers du salaire):', 
+    'Budget maximum (le loyer brut ne devant pas dépasser le tiers du salaire)',
+    'Budget maximum', 'Budget', 'Budget max', 'Maximum budget'
+  ]);
+  const chargesRaw = findColumnValue(row, [
     'Montant charges', 'Charges', 'Montant des charges'
-  ]));
+  ]);
 
-  console.log(`💰 Ligne ${lineNumber} - Montants:`, { revenuMensuel, loyerActuel, budgetMax, montantCharges });
+  console.log(`📋 Ligne ${lineNumber} - Valeurs brutes:`, { 
+    revenuRaw, loyerRaw, budgetRaw, chargesRaw 
+  });
+
+  const revenuMensuel = parseNumber(revenuRaw);
+  const loyerActuel = parseNumber(loyerRaw);
+  const budgetMax = parseNumber(budgetRaw);
+  const montantCharges = parseNumber(chargesRaw);
+
+  console.log(`💰 Ligne ${lineNumber} - Montants parsés:`, { 
+    revenuMensuel, loyerActuel, budgetMax, montantCharges 
+  });
 
   // Parser les régions
   const regionsString = findColumnValue(row, [
