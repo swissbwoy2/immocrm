@@ -20,10 +20,15 @@ interface Client {
   pieces?: number;
   budget_max?: number;
   revenus_mensuels?: number;
+  charges_mensuelles?: number;
   nationalite?: string;
   type_permis?: string;
   region_recherche?: string;
   type_bien?: string;
+  situation_familiale?: string;
+  profession?: string;
+  secteur_activite?: string;
+  residence?: string;
   created_at?: string;
   date_ajout?: string;
 }
@@ -370,77 +375,95 @@ const Clients = () => {
                 className="p-4 flex flex-col relative cursor-pointer hover:shadow-lg transition-shadow"
                 onClick={() => navigate(`/admin/clients/${client.id}`)}
               >
-                {/* Nom et nationalité */}
-                <div className="mb-3">
-                  <h3 className="text-lg font-semibold text-primary mb-1">
+                {/* SECTION 1: Identité */}
+                <div className="mb-3 pb-3 border-b">
+                  <h3 className="text-lg font-semibold text-primary mb-2">
                     {profile.prenom} {profile.nom}
                   </h3>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    <span>{client.nationalite || 'Non renseigné'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                    <Users className="h-4 w-4" />
-                    <span>Type de permis: {client.type_permis || 'Non renseigné'}</span>
-                  </div>
-                </div>
-
-                {/* Finances */}
-                <div className="space-y-2 mb-3">
-                  <div className="flex items-start gap-2 bg-muted/30 p-2 rounded">
-                    <DollarSign className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted-foreground">Revenu mensuel</p>
-                      <p className="text-sm font-semibold">CHF {client.revenus_mensuels?.toLocaleString() || 0}</p>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      <span>Nationalité: {client.nationalite || 'Non renseigné'}</span>
                     </div>
-                  </div>
-                  <div className="flex items-start gap-2 bg-primary/10 p-2 rounded">
-                    <DollarSign className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted-foreground">Budget maximum</p>
-                      <p className="text-sm font-semibold text-primary">CHF {client.budget_max?.toLocaleString() || 0}</p>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>Permis: {client.type_permis || 'Non renseigné'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>Situation: {client.situation_familiale || 'Non renseigné'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      <span>Profession: {client.profession || 'Non renseigné'}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Contact */}
-                <div className="space-y-1 mb-3 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">{profile.telephone || 'Non renseigné'}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Mail className="h-4 w-4 flex-shrink-0" />
-                    <span className="truncate">{profile.email}</span>
+                {/* SECTION 2: Finances */}
+                <div className="mb-3 pb-3 border-b">
+                  <p className="text-sm font-medium mb-2">💰 Situation financière</p>
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2 bg-muted/30 p-2 rounded">
+                      <DollarSign className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Revenu mensuel</p>
+                        <p className="text-sm font-semibold">CHF {client.revenus_mensuels?.toLocaleString() || 0}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2 bg-muted/30 p-2 rounded">
+                      <DollarSign className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Charges mensuelles</p>
+                        <p className="text-sm font-semibold">CHF {client.charges_mensuelles?.toLocaleString() || 0}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2 bg-primary/10 p-2 rounded">
+                      <DollarSign className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Budget maximum</p>
+                        <p className="text-sm font-semibold text-primary">CHF {client.budget_max?.toLocaleString() || 0}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Critères de recherche */}
+                {/* SECTION 3: Contact */}
+                <div className="mb-3 pb-3 border-b">
+                  <p className="text-sm font-medium mb-2">📞 Contact</p>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Phone className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{profile.telephone || 'Non renseigné'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Mail className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{profile.email}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECTION 4: Recherche */}
                 <div className="mb-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Critères de recherche</span>
-                  </div>
-                  <div className="flex gap-2 flex-wrap">
-                    <Badge variant="secondary" className="text-xs">
-                      {client.type_bien || 'Location'}, {client.pieces || 0} pièces
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Région souhaitée */}
-                <div className="mb-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-xs font-medium">Région souhaitée:</span>
-                  </div>
-                  <div className="pl-6 text-xs text-muted-foreground">
-                    {client.region_recherche || 'Non renseigné'}
+                  <p className="text-sm font-medium mb-2">🏠 Critères de recherche</p>
+                  <div className="space-y-2">
+                    <div className="flex gap-2 flex-wrap">
+                      <Badge variant="secondary" className="text-xs">
+                        {client.type_bien || 'Location'}
+                      </Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        {client.pieces || 0} pièces
+                      </Badge>
+                    </div>
+                    <div className="flex items-start gap-2 text-xs">
+                      <MapPin className="h-3 w-3 mt-0.5 text-muted-foreground flex-shrink-0" />
+                      <span className="text-muted-foreground">{client.region_recherche || 'Non renseigné'}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Agent */}
-                <div className="space-y-1 mb-3 text-xs text-muted-foreground">
+                {/* Agent assigné */}
+                <div className="space-y-1 mb-3 text-xs text-muted-foreground pt-3 border-t">
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     <span>Agent: {getAgentName(client.agent_id)}</span>
