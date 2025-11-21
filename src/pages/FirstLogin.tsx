@@ -16,8 +16,13 @@ export default function FirstLogin() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Wait for Supabase to process the hash from invitation link
+    const checkSession = async () => {
+      // Give Supabase time to process the URL hash
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
       if (!session) {
         toast({
           title: 'Session expirée',
@@ -26,7 +31,9 @@ export default function FirstLogin() {
         });
         navigate('/login');
       }
-    });
+    };
+
+    checkSession();
   }, [navigate, toast]);
 
   const handleSetPassword = async (e: React.FormEvent) => {
