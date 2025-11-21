@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Calendar, Users, DollarSign, Upload } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, DollarSign, Upload, Trash2 } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,6 +53,8 @@ const Clients = () => {
   const [sortOrder, setSortOrder] = useState<'recent' | 'ancien'>('recent');
   const [loading, setLoading] = useState(true);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -183,6 +186,36 @@ const Clients = () => {
     return agent ? `${agent.profile.prenom} ${agent.profile.nom}` : "Non assigné";
   };
 
+  const handleDeleteAllClients = async () => {
+    try {
+      setDeleting(true);
+
+      const { data, error } = await supabase.functions.invoke('delete-all-clients');
+
+      if (error) throw error;
+
+      console.log('Delete all clients response:', data);
+
+      toast({
+        title: 'Suppression réussie',
+        description: `${data.deletedClients} clients supprimés`,
+      });
+
+      // Reload data
+      await loadData();
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      console.error('Error deleting all clients:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de supprimer tous les clients',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const formatTimeElapsed = (days: number) => {
     const totalHours = days * 24;
     const displayDays = Math.floor(days);
@@ -208,10 +241,35 @@ const Clients = () => {
               <h1 className="text-3xl font-bold text-foreground">Gestion des Clients</h1>
               <p className="text-muted-foreground">Vue d'ensemble de tous les clients</p>
             </div>
-            <Button onClick={() => setShowImportDialog(true)}>
-              <Upload className="h-4 w-4 mr-2" />
-              Importer CSV
-            </Button>
+            <div className="flex gap-2">
+              <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={clients.length === 0 || deleting}>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    {deleting ? 'Suppression...' : 'Supprimer tous les clients'}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette action est irréversible. Cela supprimera définitivement tous les clients ({clients.length}) 
+                      et toutes leurs données associées (profils, comptes utilisateurs).
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteAllClients} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Supprimer tout
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <Button onClick={() => setShowImportDialog(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Importer CSV
+              </Button>
+            </div>
           </div>
         </div>
 
