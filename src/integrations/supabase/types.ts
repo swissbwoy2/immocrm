@@ -14,6 +14,140 @@ export type Database = {
   }
   public: {
     Tables: {
+      agents: {
+        Row: {
+          created_at: string | null
+          id: string
+          nombre_clients_assignes: number | null
+          statut: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          nombre_clients_assignes?: number | null
+          statut?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          nombre_clients_assignes?: number | null
+          statut?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      clients: {
+        Row: {
+          agent_id: string | null
+          anciennete_mois: number | null
+          apport_personnel: number | null
+          autres_credits: boolean | null
+          budget_max: number | null
+          charges_mensuelles: number | null
+          commission_split: number | null
+          created_at: string | null
+          date_ajout: string | null
+          etat_avancement: string | null
+          garanties: string | null
+          id: string
+          nationalite: string | null
+          note_agent: string | null
+          pieces: number | null
+          priorite: string | null
+          profession: string | null
+          region_recherche: string | null
+          residence: string | null
+          revenus_mensuels: number | null
+          secteur_activite: string | null
+          situation_familiale: string | null
+          situation_financiere: string | null
+          source_revenus: string | null
+          statut: string | null
+          type_bien: string | null
+          type_contrat: string | null
+          type_permis: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          anciennete_mois?: number | null
+          apport_personnel?: number | null
+          autres_credits?: boolean | null
+          budget_max?: number | null
+          charges_mensuelles?: number | null
+          commission_split?: number | null
+          created_at?: string | null
+          date_ajout?: string | null
+          etat_avancement?: string | null
+          garanties?: string | null
+          id?: string
+          nationalite?: string | null
+          note_agent?: string | null
+          pieces?: number | null
+          priorite?: string | null
+          profession?: string | null
+          region_recherche?: string | null
+          residence?: string | null
+          revenus_mensuels?: number | null
+          secteur_activite?: string | null
+          situation_familiale?: string | null
+          situation_financiere?: string | null
+          source_revenus?: string | null
+          statut?: string | null
+          type_bien?: string | null
+          type_contrat?: string | null
+          type_permis?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          anciennete_mois?: number | null
+          apport_personnel?: number | null
+          autres_credits?: boolean | null
+          budget_max?: number | null
+          charges_mensuelles?: number | null
+          commission_split?: number | null
+          created_at?: string | null
+          date_ajout?: string | null
+          etat_avancement?: string | null
+          garanties?: string | null
+          id?: string
+          nationalite?: string | null
+          note_agent?: string | null
+          pieces?: number | null
+          priorite?: string | null
+          profession?: string | null
+          region_recherche?: string | null
+          residence?: string | null
+          revenus_mensuels?: number | null
+          secteur_activite?: string | null
+          situation_familiale?: string | null
+          situation_financiere?: string | null
+          source_revenus?: string | null
+          statut?: string | null
+          type_bien?: string | null
+          type_contrat?: string | null
+          type_permis?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           agent_id: string
@@ -82,15 +216,76 @@ export type Database = {
           },
         ]
       }
+      profiles: {
+        Row: {
+          actif: boolean | null
+          created_at: string | null
+          email: string
+          id: string
+          nom: string
+          prenom: string
+          telephone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          actif?: boolean | null
+          created_at?: string | null
+          email: string
+          id: string
+          nom: string
+          prenom: string
+          telephone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          actif?: boolean | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          nom?: string
+          prenom?: string
+          telephone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       get_current_user_id: { Args: never; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "agent" | "client"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -217,6 +412,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "agent", "client"],
+    },
   },
 } as const
