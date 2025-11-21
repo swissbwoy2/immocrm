@@ -134,5 +134,5 @@ const MesCandidatures = () => {
       </div>
     );
   };
-  
-  export default MesCandidatures;
+
+export default MesCandidatures;

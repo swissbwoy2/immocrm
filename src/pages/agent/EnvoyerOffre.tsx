@@ -378,4 +378,4 @@ const EnvoyerOffre = () => {
     );
   };
   
-  export default EnvoyerOffre;
+export default EnvoyerOffre;
