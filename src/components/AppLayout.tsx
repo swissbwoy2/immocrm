@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { Menu } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -20,6 +20,11 @@ export function AppLayout({ children }: AppLayoutProps) {
               <Menu className="h-5 w-5" />
             </SidebarTrigger>
             <div className="flex items-center gap-2 ml-3">
+              <img 
+                src={logoImmoRama} 
+                alt="Immo-Rama Logo" 
+                className="h-8 w-auto object-contain"
+              />
               <span className="font-semibold text-lg">ImmoCRM</span>
             </div>
           </header>

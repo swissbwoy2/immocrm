@@ -1,4 +1,4 @@
-import { LogOut, Building2, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { getCurrentUser, saveCurrentUser } from '@/utils/localStorage';
+import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 
 const getMenuForRole = (role: string) => {
   switch (role) {
@@ -79,9 +80,11 @@ export function AppSidebar() {
       {/* Logo */}
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-3 p-4">
-          <div className="p-2 bg-sidebar-primary rounded-lg flex-shrink-0">
-            <Building2 className="w-5 h-5 text-sidebar-primary-foreground" />
-          </div>
+          <img 
+            src={logoImmoRama} 
+            alt="Immo-Rama Logo" 
+            className="h-10 w-auto object-contain flex-shrink-0"
+          />
           {!collapsed && (
             <div className="min-w-0">
               <h1 className="text-lg font-bold text-sidebar-foreground truncate">ImmoCRM</h1>
