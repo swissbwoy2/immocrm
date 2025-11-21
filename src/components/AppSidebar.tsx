@@ -108,17 +108,15 @@ export function AppSidebar() {
             <SidebarMenu>
               {menu.map((item) => (
                 <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.path}
-                      end={item.path === '/admin' || item.path === '/agent' || item.path === '/client'}
-                      className="hover:bg-sidebar-accent/50"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-                    >
-                      <item.icon className={collapsed ? "w-5 h-5" : "w-5 h-5 mr-3"} />
-                      {!collapsed && <span>{item.name}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
+                  <NavLink
+                    to={item.path}
+                    end={item.path === '/admin' || item.path === '/agent' || item.path === '/client'}
+                    className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors"
+                    activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                  >
+                    <item.icon className="w-5 h-5 flex-shrink-0" />
+                    {!collapsed && <span className="truncate">{item.name}</span>}
+                  </NavLink>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
