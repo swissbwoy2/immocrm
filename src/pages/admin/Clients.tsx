@@ -4,9 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Calendar, Users, Eye, DollarSign } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, DollarSign } from "lucide-react";
 import { getClients, getAgents, getOffres } from "@/utils/localStorage";
-import { calculateMandateDuration } from "@/utils/calculations";
+import { calculateDaysElapsed } from "@/utils/calculations";
 import { useNavigate } from "react-router-dom";
 
 const Clients = () => {
@@ -34,145 +34,191 @@ const Clients = () => {
     return offres.filter(o => o.clientId === clientId).length;
   };
 
+  const formatTimeElapsed = (days: number) => {
+    const totalHours = days * 24;
+    const displayDays = Math.floor(days);
+    const remainingHours = Math.floor((days - displayDays) * 24);
+    const remainingMinutes = Math.floor(((days - displayDays) * 24 - remainingHours) * 60);
+    return `${displayDays}j ${remainingHours}h ${remainingMinutes}m`;
+  };
+
   return (
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Gestion des Clients</h1>
-            <p className="text-muted-foreground">Vue d'ensemble de tous les clients</p>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-foreground">Gestion des Clients</h1>
+          <p className="text-muted-foreground">Vue d'ensemble de tous les clients</p>
+        </div>
 
-          <div className="mb-6 flex gap-4">
-            <Input
-              placeholder="Rechercher un client..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md"
-            />
-            <Select value={filterAgent} onValueChange={setFilterAgent}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filtrer par agent" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les agents</SelectItem>
-                {agents.map(agent => (
-                  <SelectItem key={agent.id} value={agent.id}>
-                    {agent.prenom} {agent.nom}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="mb-4">
+          <Input
+            placeholder="Rechercher un client par nom ou email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-md"
+          />
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredClients.map((client) => {
-              const duration = calculateMandateDuration(client.dateInscription);
-              const offresCount = getClientOffresCount(client.id);
-              const daysElapsed = duration.daysElapsed;
-              const progressPercent = (daysElapsed / 90) * 100;
-              
-              return (
-                <Card 
-                  key={client.id} 
-                  className="p-4 flex flex-col cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => navigate(`/agent/clients/${client.id}`)}
-                >
-                  {/* Nom et Badge */}
-                  <div className="mb-3">
-                    <h3 className="text-lg font-semibold text-primary mb-2">
-                      {client.prenom} {client.nom}
-                    </h3>
-                    <Badge variant={daysElapsed > 60 ? "destructive" : daysElapsed > 30 ? "default" : "secondary"}>
-                      J+{daysElapsed}
-                    </Badge>
+        <div className="mb-6">
+          <Select value={filterAgent} onValueChange={setFilterAgent}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrer par agent" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les agents</SelectItem>
+              {agents.map(agent => (
+                <SelectItem key={agent.id} value={agent.id}>
+                  {agent.prenom} {agent.nom}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Grid de clients */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredClients.map((client) => {
+            const daysElapsed = calculateDaysElapsed(client.dateInscription);
+            const offresCount = getClientOffresCount(client.id);
+            const progressPercent = (daysElapsed / 90) * 100;
+
+            return (
+              <Card 
+                key={client.id} 
+                className="p-4 flex flex-col relative cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => navigate(`/agent/clients/${client.id}`)}
+              >
+                {/* Nom et nationalité */}
+                <div className="mb-3">
+                  <h3 className="text-lg font-semibold text-primary mb-1">
+                    {client.prenom} {client.nom}
+                  </h3>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4" />
+                    <span>{client.nationalite}</span>
                   </div>
-
-                  {/* Budget */}
-                  <div className="space-y-2 mb-3">
-                    <div className="flex items-start gap-2 bg-primary/10 p-2 rounded">
-                      <DollarSign className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Budget maximum</p>
-                        <p className="text-sm font-semibold text-primary">CHF {client.budgetMax.toLocaleString()}</p>
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                    <Users className="h-4 w-4" />
+                    <span>Type de permis: {client.typePermis}</span>
                   </div>
+                </div>
 
-                  {/* Contact */}
-                  <div className="space-y-1 mb-3 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Phone className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{client.telephone}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Mail className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{client.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{client.adresse}</span>
+                {/* Finances */}
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-start gap-2 bg-muted/30 p-2 rounded">
+                    <DollarSign className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Revenu mensuel</p>
+                      <p className="text-sm font-semibold">CHF {client.revenuMensuel?.toLocaleString() || 0}</p>
                     </div>
                   </div>
-
-                  {/* Critères de recherche */}
-                  <div className="mb-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Critères</span>
+                  <div className="flex items-start gap-2 bg-primary/10 p-2 rounded">
+                    <DollarSign className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Budget maximum</p>
+                      <p className="text-sm font-semibold text-primary">CHF {client.budgetMax?.toLocaleString() || 0}</p>
                     </div>
+                  </div>
+                </div>
+
+                {/* Contact */}
+                <div className="space-y-1 mb-3 text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Phone className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{client.telephone}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{client.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <MapPin className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">{client.adresse}</span>
+                  </div>
+                </div>
+
+                {/* Critères de recherche */}
+                <div className="mb-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Critères de recherche</span>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
                     <Badge variant="secondary" className="text-xs">
-                      {client.typeBien} {client.nombrePiecesSouhaite} pièces
+                      {client.typeBien || 'Location'}, {client.nombrePiecesSouhaite}
                     </Badge>
                   </div>
+                </div>
 
-                  {/* Agent assigné et offres */}
-                  <div className="space-y-1 mb-3 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      <span>Agent: {getAgentName(client.agentId)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      <span>{offresCount} offre{offresCount > 1 ? 's' : ''} envoyée{offresCount > 1 ? 's' : ''}</span>
-                    </div>
+                {/* Régions souhaitées */}
+                <div className="mb-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs font-medium">Régions souhaitées:</span>
                   </div>
+                  <div className="pl-6 text-xs text-muted-foreground">
+                    {client.regions?.join(', ') || 'Autre'}
+                  </div>
+                </div>
 
-                  {/* Date et barre de progression */}
-                  <div className="mt-auto pt-3 border-t">
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+                {/* Agent et offres */}
+                <div className="space-y-1 mb-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    <span>Agent: {getAgentName(client.agentId)}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    <span>{offresCount} offre{offresCount > 1 ? 's' : ''} envoyée{offresCount > 1 ? 's' : ''}</span>
+                  </div>
+                </div>
+
+                {/* Date et barre de progression */}
+                <div className="mt-auto pt-3 border-t">
+                  <div className="flex items-center justify-between mb-2 text-xs">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <Calendar className="h-3 w-3" />
-                      <span>Inscrit le {new Date(client.dateInscription).toLocaleDateString('fr-CH')}</span>
+                      <span>{new Date(client.dateInscription).toLocaleDateString('fr-CH')}</span>
                     </div>
-
-                    {/* Barre de progression */}
-                    <div className="w-full bg-muted rounded-full h-2 mb-2">
-                      <div
-                        className={`h-2 rounded-full transition-all ${
-                          daysElapsed < 60 ? 'bg-green-500' :
-                          daysElapsed < 90 ? 'bg-orange-500' :
-                          'bg-red-500'
-                        }`}
-                        style={{ width: `${Math.min(progressPercent, 100)}%` }}
-                      />
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <span>Depuis le {new Date(client.dateInscription).toLocaleDateString('fr-CH')}</span>
                     </div>
-
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="w-full"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/agent/clients/${client.id}`);
-                      }}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      Voir le détail
-                    </Button>
                   </div>
-                </Card>
-              );
-            })}
+                  
+                  {/* Temps écoulé avec icône */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                      daysElapsed < 60 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                      daysElapsed < 90 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                      'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                    }`}>
+                      <Calendar className="h-3 w-3" />
+                      <span>{formatTimeElapsed(daysElapsed)}</span>
+                    </div>
+                  </div>
+
+                  {/* Barre de progression */}
+                  <div className="w-full bg-muted rounded-full h-2 mb-2">
+                    <div
+                      className={`h-2 rounded-full transition-all ${
+                        daysElapsed < 60 ? 'bg-green-500' :
+                        daysElapsed < 90 ? 'bg-orange-500' :
+                        'bg-red-500'
+                      }`}
+                      style={{ width: `${Math.min(progressPercent, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+
+        {filteredClients.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Aucun client ne correspond aux filtres sélectionnés</p>
           </div>
+        )}
       </div>
     </div>
   );
