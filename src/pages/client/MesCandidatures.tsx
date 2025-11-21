@@ -132,8 +132,7 @@ const MesCandidatures = () => {
           )}
         </div>
       </div>
-    </div>
-  );
-};
-
-export default MesCandidatures;
+    );
+  };
+  
+  export default MesCandidatures;

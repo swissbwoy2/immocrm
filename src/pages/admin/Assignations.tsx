@@ -97,8 +97,9 @@ export default function Assignations() {
   };
 
   return (
-    <main className="flex-1 overflow-y-auto">
-      <div className="p-4 md:p-8 space-y-6">
+    <>
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-4 md:p-8 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
@@ -289,6 +290,6 @@ export default function Assignations() {
         onOpenChange={setImportDialogOpen}
         onImportComplete={loadData}
       />
-    </div>
+    </>
   );
 }

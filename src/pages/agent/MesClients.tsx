@@ -130,8 +130,9 @@ const MesClients = () => {
   };
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="p-4 md:p-8">
+    <>
+      <div className="flex-1 overflow-auto">
+        <div className="p-4 md:p-8">
           <div className="mb-6 flex items-center justify-between">
             <h1 className="text-3xl font-bold text-foreground">Clients</h1>
             <div className="flex gap-2">
@@ -427,7 +428,7 @@ const MesClients = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
 };
 

@@ -145,8 +145,7 @@ const Messagerie = () => {
           )}
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
 export default Messagerie;

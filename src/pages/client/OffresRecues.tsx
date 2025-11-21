@@ -126,8 +126,7 @@ const OffresRecues = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
-};
-
-export default OffresRecues;
+    );
+  };
+  
+  export default OffresRecues;
