@@ -11,8 +11,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { parseCSV, ParsedCSVData } from '@/utils/csvParser';
-import { getUsers, saveUsers, getClients, saveClients } from '@/utils/localStorage';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CSVImportDialogProps {
   open: boolean;
@@ -90,79 +90,65 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
     }
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!parseResult) return;
 
     try {
-      console.log('📊 Import - Parsed results:', parseResult);
-      
-      // Sauvegarder les utilisateurs
-      const currentUsers = getUsers();
-      console.log('👥 Current users count:', currentUsers.length);
-      
-      let addedUsersCount = 0;
-      let updatedUsersCount = 0;
-      
-      const mergedUsers = [...currentUsers];
-      parseResult.users.forEach(newUser => {
-        const existingIndex = mergedUsers.findIndex(u => u.email === newUser.email);
-        if (existingIndex >= 0) {
-          // Update existing user
-          mergedUsers[existingIndex] = { ...mergedUsers[existingIndex], ...newUser };
-          updatedUsersCount++;
-        } else {
-          // Add new user
-          mergedUsers.push(newUser);
-          addedUsersCount++;
-        }
-      });
-      
-      console.log(`➕ Users - Added: ${addedUsersCount}, Updated: ${updatedUsersCount}`);
-      saveUsers(mergedUsers);
+      console.log('📊 Import - Starting Supabase import...');
+      setParsing(true);
 
-      // Sauvegarder les clients
-      const currentClients = getClients();
-      console.log('👤 Current clients count:', currentClients.length);
-      
-      let addedClientsCount = 0;
-      let updatedClientsCount = 0;
-      
-      const mergedClients = [...currentClients];
-      parseResult.clients.forEach(newClient => {
-        const existingIndex = mergedClients.findIndex(c => c.email === newClient.email);
-        
-        // Auto-assign current agent if provided
-        const clientToSave = currentAgentId 
-          ? { ...newClient, agentId: newClient.agentId || currentAgentId }
-          : newClient;
-        
-        if (existingIndex >= 0) {
-          // Update existing client but preserve agentId if it exists, otherwise use current agent
-          mergedClients[existingIndex] = { 
-            ...clientToSave,
-            agentId: mergedClients[existingIndex].agentId || clientToSave.agentId 
-          };
-          updatedClientsCount++;
-        } else {
-          // Add new client
-          mergedClients.push(clientToSave);
-          addedClientsCount++;
-        }
+      // Transform parsed data to match edge function format
+      const clientsToImport = parseResult.clients.map((client, index) => {
+        const user = parseResult.users[index];
+        return {
+          user: {
+            email: user.email,
+            password: user.password,
+            prenom: user.prenom,
+            nom: user.nom,
+            telephone: user.telephone,
+          },
+          client: {
+            nationalite: client.nationalite || null,
+            type_permis: client.typePermis || null,
+            situation_familiale: client.etatCivil || null,
+            profession: client.profession || null,
+            revenus_mensuels: client.revenuMensuel || 0,
+            budget_max: client.budgetMax || 0,
+            charges_mensuelles: client.montantCharges || 0,
+            pieces: parseInt(client.nombrePiecesSouhaite) || null,
+            region_recherche: client.regions?.join(', ') || null,
+            type_bien: client.typeBien || null,
+            type_contrat: client.typeRecherche || null,
+          },
+          agentEmail: undefined, // Not supported yet in CSV
+        };
       });
-      
-      console.log(`➕ Clients - Added: ${addedClientsCount}, Updated: ${updatedClientsCount}`);
-      saveClients(mergedClients);
 
-      const message = addedClientsCount > 0 && updatedClientsCount > 0
-        ? `${addedClientsCount} nouveaux clients ajoutés, ${updatedClientsCount} mis à jour`
-        : addedClientsCount > 0
-        ? `${addedClientsCount} nouveaux clients ajoutés`
-        : `${updatedClientsCount} clients mis à jour`;
-
-      toast({
-        title: 'Import réussi',
-        description: message,
+      // Call edge function
+      const { data, error } = await supabase.functions.invoke('import-clients-csv', {
+        body: { clients: clientsToImport }
       });
+
+      if (error) {
+        throw error;
+      }
+
+      const result = data as { success: number; failed: number; errors: Array<{ email: string; reason: string }> };
+
+      if (result.errors.length > 0) {
+        console.error('Import errors:', result.errors);
+        toast({
+          title: 'Import partiellement réussi',
+          description: `${result.success} clients importés, ${result.failed} échecs`,
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: 'Import réussi',
+          description: `${result.success} clients importés avec succès`,
+        });
+      }
 
       onImportComplete();
       handleClose();
@@ -173,6 +159,8 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
         description: 'Impossible d\'importer les clients',
         variant: 'destructive',
       });
+    } finally {
+      setParsing(false);
     }
   };
 
