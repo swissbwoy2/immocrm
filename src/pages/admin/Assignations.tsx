@@ -35,6 +35,7 @@ interface Agent {
 export default function Assignations() {
   const [clients, setClients] = useState<Client[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [clientProfiles, setClientProfiles] = useState<Map<string, Profile>>(new Map());
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   const [selectedSplit, setSelectedSplit] = useState<'45-55' | '60-40'>('45-55');
@@ -59,6 +60,18 @@ export default function Assignations() {
 
       if (clientsError) throw clientsError;
       setClients(clientsData || []);
+
+      // Load client profiles
+      const clientUserIds = clientsData?.map(c => c.user_id) || [];
+      const { data: clientProfilesData, error: clientProfilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', clientUserIds);
+
+      if (clientProfilesError) throw clientProfilesError;
+
+      const clientProfilesMap = new Map(clientProfilesData?.map(p => [p.id, p]) || []);
+      setClientProfiles(clientProfilesMap);
 
       // Load agents
       const { data: agentsData, error: agentsError } = await supabase
@@ -320,11 +333,13 @@ export default function Assignations() {
                       </SelectTrigger>
                       <SelectContent>
                         {unassignedClients.map(client => {
-                          // Find profile for this client
-                          const profile = agents.find(a => a.user_id === client.user_id)?.profile;
+                          const profile = clientProfiles.get(client.user_id);
+                          const displayName = profile 
+                            ? `${profile.prenom} ${profile.nom}` 
+                            : `Client ID: ${client.id.substring(0, 8)}...`;
                           return (
                             <SelectItem key={client.id} value={client.id}>
-                              Client ID: {client.id.substring(0, 8)}...
+                              {displayName}
                             </SelectItem>
                           );
                         })}
@@ -407,6 +422,10 @@ export default function Assignations() {
                       {agentClients.map(client => {
                         const commissionSplit = client.commission_split || 50;
                         const agencySplit = 100 - commissionSplit;
+                        const profile = clientProfiles.get(client.user_id);
+                        const displayName = profile 
+                          ? `${profile.prenom} ${profile.nom}` 
+                          : `Client ID: ${client.id.substring(0, 8)}...`;
                         
                         return (
                           <div
@@ -415,10 +434,10 @@ export default function Assignations() {
                           >
                             <div className="flex-1">
                               <p className="font-medium">
-                                Client ID: {client.id.substring(0, 8)}...
+                                {displayName}
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                Ajouté le {new Date(client.created_at || '').toLocaleDateString('fr-CH')}
+                                {profile?.email} • Ajouté le {new Date(client.created_at || '').toLocaleDateString('fr-CH')}
                               </p>
                             </div>
                             <div className="flex items-center gap-3">
