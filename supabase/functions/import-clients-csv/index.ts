@@ -27,6 +27,7 @@ interface ImportClient {
     region_recherche?: string;
     type_bien?: string;
     type_contrat?: string;
+    date_ajout?: string;
   };
   agentEmail?: string;
 }

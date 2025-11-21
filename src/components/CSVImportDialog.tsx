@@ -120,6 +120,7 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
             region_recherche: client.regions?.join(', ') || null,
             type_bien: client.typeBien || null,
             type_contrat: client.typeRecherche || null,
+            date_ajout: client.dateInscription || new Date().toISOString(),
           },
           agentEmail: undefined, // Not supported yet in CSV
         };
