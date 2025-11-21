@@ -38,7 +38,7 @@ serve(async (req) => {
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
       email,
       {
-        redirectTo: `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify`,
+        redirectTo: 'https://immocrm.lovable.app/first-login',
       }
     );
 
