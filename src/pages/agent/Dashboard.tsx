@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign } from 'lucide-react';
-import { Sidebar } from '@/components/Sidebar';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -65,11 +64,8 @@ export default function AgentDashboard() {
   }).sort((a, b) => calculateDaysElapsed(b.dateInscription) - calculateDaysElapsed(a.dateInscription));
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-6 md:p-8 space-y-6">
+    <main className="flex-1 overflow-y-auto">
+      <div className="p-4 md:p-8 space-y-6">
           {/* Header */}
           <div>
             <h1 className="text-3xl font-bold">Tableau de bord</h1>
@@ -263,8 +259,7 @@ export default function AgentDashboard() {
               )}
             </CardContent>
           </Card>
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }

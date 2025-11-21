@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send } from 'lucide-react';
-import { Sidebar } from '@/components/Sidebar';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -60,11 +59,8 @@ export default function AdminDashboard() {
   }).length;
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
+    <div className="flex-1 overflow-y-auto">
+      <div className="p-4 md:p-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">Tableau de bord</h1>
             <p className="text-muted-foreground">Vue d'ensemble de l'activité</p>
@@ -215,8 +211,7 @@ export default function AdminDashboard() {
               )}
             </CardContent>
           </Card>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }

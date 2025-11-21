@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Sidebar } from "@/components/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,10 +24,8 @@ const OffresRecues = () => {
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
+    <div className="flex-1 overflow-auto">
+      <div className="p-4 md:p-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">Offres Reçues</h1>
             <p className="text-muted-foreground">Consultez les biens qui vous sont proposés</p>

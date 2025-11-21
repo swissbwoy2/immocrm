@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Sidebar } from "@/components/Sidebar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Calendar, Square, Home, FileText, Building } from "lucide-react";
@@ -42,10 +41,8 @@ const MesCandidatures = () => {
   );
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
+    <div className="flex-1 overflow-auto">
+      <div className="p-4 md:p-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">Mes Candidatures</h1>
             <p className="text-muted-foreground">Suivez l'état de vos offres et candidatures en temps réel</p>

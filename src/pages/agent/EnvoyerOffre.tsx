@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Sidebar } from "@/components/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -142,10 +141,8 @@ const EnvoyerOffre = () => {
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
+    <div className="flex-1 overflow-auto">
+      <div className="p-4 md:p-8">
           <h1 className="text-3xl font-bold mb-8">Envoyer une offre</h1>
 
           <Tabs defaultValue="email" className="mb-4">

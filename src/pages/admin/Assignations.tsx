@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Users, UserPlus, Upload } from 'lucide-react';
-import { Sidebar } from '@/components/Sidebar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -98,10 +97,8 @@ export default function Assignations() {
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8 space-y-6">
+    <main className="flex-1 overflow-y-auto">
+      <div className="p-4 md:p-8 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>

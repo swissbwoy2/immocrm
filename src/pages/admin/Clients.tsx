@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Sidebar } from "@/components/Sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -36,10 +35,8 @@ const Clients = () => {
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
+    <div className="flex-1 overflow-auto">
+      <div className="p-4 md:p-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">Gestion des Clients</h1>
             <p className="text-muted-foreground">Vue d'ensemble de tous les clients</p>
@@ -134,7 +131,6 @@ const Clients = () => {
               );
             })}
           </div>
-        </div>
       </div>
     </div>
   );
