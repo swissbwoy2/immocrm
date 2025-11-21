@@ -1,100 +1,74 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { getUsers, saveCurrentUser, initializeLocalStorage } from '@/utils/localStorage';
 import { useToast } from '@/hooks/use-toast';
-import { FirstLoginModal } from '@/components/FirstLoginModal';
-import { User } from '@/data/mockData';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [inactiveUser, setInactiveUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, userRole } = useAuth();
 
-  // Initialiser localStorage au chargement
-  useState(() => {
-    initializeLocalStorage();
-  });
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && userRole) {
+      navigate(`/${userRole}`);
+    }
+  }, [user, userRole, navigate]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
 
-    const users = getUsers();
-    const user = users.find(u => u.email === email && u.password === password);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (!user) {
+      if (error) throw error;
+
+      if (!data.user) {
+        throw new Error('Connexion échouée');
+      }
+
+      // Fetch user role
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', data.user.id)
+        .single();
+
+      if (roleError) throw roleError;
+
+      toast({
+        title: 'Connexion réussie',
+        description: 'Bienvenue !',
+      });
+
+      // Navigate based on role
+      navigate(`/${roleData.role}`);
+    } catch (error: any) {
       toast({
         title: 'Erreur de connexion',
-        description: 'Email ou mot de passe incorrect',
+        description: error.message || 'Email ou mot de passe incorrect',
         variant: 'destructive',
       });
-      return;
-    }
-
-    if (!user.actif) {
-      setInactiveUser(user);
-      return;
-    }
-
-    saveCurrentUser(user);
-
-    toast({
-      title: 'Connexion réussie',
-      description: `Bienvenue ${user.prenom} !`,
-    });
-
-    // Redirection selon le rôle
-    switch (user.role) {
-      case 'admin':
-        navigate('/admin');
-        break;
-      case 'agent':
-        navigate('/agent');
-        break;
-      case 'client':
-        navigate('/client');
-        break;
-    }
-  };
-
-  const handleFirstLoginSuccess = (updatedUser: User) => {
-    saveCurrentUser(updatedUser);
-    
-    toast({
-      title: 'Bienvenue !',
-      description: 'Votre compte a été activé avec succès',
-    });
-
-    setInactiveUser(null);
-
-    // Redirection selon le rôle
-    switch (updatedUser.role) {
-      case 'admin':
-        navigate('/admin');
-        break;
-      case 'agent':
-        navigate('/agent');
-        break;
-      case 'client':
-        navigate('/client');
-        break;
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <>
-      <FirstLoginModal
-        user={inactiveUser!}
-        open={!!inactiveUser}
-        onSuccess={handleFirstLoginSuccess}
-      />
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
@@ -121,6 +95,7 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -137,31 +112,27 @@ export default function Login() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10"
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
 
-            <Button type="submit" className="w-full">
-              Se connecter
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Connexion...' : 'Se connecter'}
             </Button>
           </form>
 
           <div className="mt-6 p-4 bg-muted/50 rounded-lg text-sm space-y-2">
-            <p className="font-medium text-center mb-3">Comptes de démonstration :</p>
+            <p className="font-medium text-center mb-3">Compte de démonstration :</p>
             <div className="space-y-2 text-xs">
               <div>
                 <p className="font-medium">Admin:</p>
-                <p className="text-muted-foreground">admin@immo-rama.ch / admin123</p>
-              </div>
-              <div>
-                <p className="font-medium">Agent:</p>
-                <p className="text-muted-foreground">marc.dubois@immo-rama.ch / agent123</p>
+                <p className="text-muted-foreground">admin@immo-rama.ch / Admin123!</p>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
-      </div>
-    </>
+    </div>
   );
 }
