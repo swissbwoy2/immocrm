@@ -85,17 +85,33 @@ const Clients = () => {
         setClientProfiles(profilesMap);
       }
 
-      // Load agents with their profiles
+      // Load agents
       const { data: agentsData, error: agentsError } = await supabase
         .from('agents')
-        .select('id, user_id, statut, profiles!inner(nom, prenom, email, telephone)')
+        .select('id, user_id, statut')
         .eq('statut', 'actif');
 
       if (agentsError) throw agentsError;
 
+      // Load agent profiles separately
+      const agentUserIds = agentsData?.map(a => a.user_id) || [];
+      const { data: agentProfilesData, error: agentProfilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', agentUserIds);
+
+      if (agentProfilesError) throw agentProfilesError;
+
+      const agentProfilesMap = new Map(agentProfilesData?.map(p => [p.id, p]));
+
       const transformedAgents = agentsData?.map(agent => ({
         id: agent.id,
-        profile: agent.profiles as unknown as Profile,
+        profile: agentProfilesMap.get(agent.user_id) as Profile || {
+          nom: '',
+          prenom: '',
+          email: '',
+          telephone: '',
+        },
       })) || [];
 
       setAgents(transformedAgents);

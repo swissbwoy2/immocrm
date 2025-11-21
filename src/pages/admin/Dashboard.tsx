@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send } from 'lucide-react';
+import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send, Bell } from 'lucide-react';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { calculateDaysElapsed } from '@/utils/calculations';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 
 const adminMenu = [
   { name: 'Tableau de bord', icon: Users, path: '/admin' },
@@ -19,6 +21,7 @@ const adminMenu = [
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
+  const { counts } = useRealtimeNotifications(user?.id, userRole);
 
   const [agents, setAgents] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -34,20 +37,34 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
 
-      // Load agents with profiles
+      // Load agents
       const { data: agentsData, error: agentsError } = await supabase
         .from('agents')
-        .select('id, statut, profiles!inner(nom, prenom)')
+        .select('id, user_id, statut')
         .eq('statut', 'actif');
 
       if (agentsError) throw agentsError;
+
+      // Load profiles separately
+      const userIds = agentsData?.map(a => a.user_id) || [];
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, nom, prenom')
+        .in('id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
       
-      const transformedAgents = agentsData?.map(agent => ({
-        id: agent.id,
-        actif: agent.statut === 'actif',
-        prenom: (agent.profiles as any).prenom,
-        nom: (agent.profiles as any).nom,
-      })) || [];
+      const transformedAgents = agentsData?.map(agent => {
+        const profile = profilesMap.get(agent.user_id);
+        return {
+          id: agent.id,
+          actif: agent.statut === 'actif',
+          prenom: profile?.prenom || '',
+          nom: profile?.nom || '',
+        };
+      }) || [];
       
       setAgents(transformedAgents);
 
@@ -112,8 +129,19 @@ export default function AdminDashboard() {
     <div className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Tableau de bord</h1>
-            <p className="text-muted-foreground">Vue d'ensemble de l'activité</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">Tableau de bord</h1>
+                <p className="text-muted-foreground">Vue d'ensemble de l'activité</p>
+              </div>
+              {counts.unreadMessages > 0 && (
+                <Button variant="outline" onClick={() => navigate('/admin/messagerie')} className="relative">
+                  <Bell className="w-4 h-4 mr-2" />
+                  Messages
+                  <Badge variant="destructive" className="ml-2">{counts.unreadMessages}</Badge>
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* KPIs */}
