@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { calculateDaysElapsed } from '@/utils/calculations';
 
 interface Client {
   id: string;
@@ -140,21 +142,58 @@ export default function ClientDetail() {
     );
   }
 
+  const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
+  const daysRemaining = 90 - daysElapsed;
+  const progressPercentage = (daysElapsed / 90) * 100;
+  const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);
+
   return (
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8 space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate('/admin/clients')}>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold">
+                {profile.prenom} {profile.nom}
+              </h1>
+              <Badge variant="outline">{client.nationalite || 'N/A'}</Badge>
+              <Badge variant="secondary">Permis {client.type_permis || 'N/A'}</Badge>
+            </div>
+
+            {/* Progress bar */}
+            <div className="mt-4 max-w-2xl">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-muted-foreground">Progression du mandat</p>
+                <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                  daysElapsed < 60 
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                    : daysElapsed < 90 
+                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' 
+                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                }`}>
+                  {Math.floor(daysRemaining)}j {Math.floor((daysRemaining - Math.floor(daysRemaining)) * 24)}h
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground text-right mb-2">
+                {Math.floor(daysElapsed)} / 90 jours
+              </p>
+              <Progress 
+                value={progressPercentage} 
+                className="h-3" 
+                indicatorClassName={
+                  daysElapsed < 60 ? 'bg-green-500' :
+                  daysElapsed < 90 ? 'bg-orange-500' :
+                  'bg-red-500'
+                }
+              />
+            </div>
+          </div>
+
+          <Button variant="outline" onClick={() => navigate('/admin/clients')}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Retour
           </Button>
-          <div>
-            <h1 className="text-3xl font-bold">
-              {profile.prenom} {profile.nom}
-            </h1>
-            <p className="text-muted-foreground">Détails du client</p>
-          </div>
         </div>
 
         {/* Status Badges */}
@@ -178,17 +217,6 @@ export default function ClientDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Prénom</p>
-                  <p className="font-medium">{profile.prenom}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Nom</p>
-                  <p className="font-medium">{profile.nom}</p>
-                </div>
-              </div>
-              <Separator />
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4 text-muted-foreground" />
@@ -200,7 +228,7 @@ export default function ClientDetail() {
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span>{client.nationalite || 'Non renseigné'}</span>
+                  <span>{client.residence || 'Non renseigné'}</span>
                 </div>
               </div>
               <Separator />
@@ -210,8 +238,8 @@ export default function ClientDetail() {
                   <p className="font-medium">{client.situation_familiale || 'Non renseigné'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Type de permis</p>
-                  <p className="font-medium">{client.type_permis || 'Non renseigné'}</p>
+                  <p className="text-sm text-muted-foreground">Profession</p>
+                  <p className="font-medium">{client.profession || 'Non renseigné'}</p>
                 </div>
               </div>
             </CardContent>
@@ -249,27 +277,10 @@ export default function ClientDetail() {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Apport personnel</p>
-                  <p className="font-medium text-lg">
-                    CHF {client.apport_personnel?.toLocaleString() || '0'}
+                  <p className="text-sm text-muted-foreground">Budget recommandé</p>
+                  <p className="font-medium text-lg text-green-600">
+                    CHF {budgetRecommande.toLocaleString()}
                   </p>
-                </div>
-              </div>
-              <Separator />
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm text-muted-foreground">Situation financière</p>
-                  <p className="font-medium">{client.situation_financiere || 'Non renseigné'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Profession</p>
-                  <p className="font-medium">{client.profession || 'Non renseigné'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Autres crédits</p>
-                  <Badge variant={client.autres_credits ? 'destructive' : 'default'}>
-                    {client.autres_credits ? 'Oui' : 'Non'}
-                  </Badge>
                 </div>
               </div>
             </CardContent>
@@ -279,7 +290,7 @@ export default function ClientDetail() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <MapPin className="w-5 h-5" />
+                <Home className="w-5 h-5" />
                 Recherche immobilière
               </CardTitle>
             </CardHeader>
@@ -306,12 +317,12 @@ export default function ClientDetail() {
             </CardContent>
           </Card>
 
-          {/* Agent et suivi */}
+          {/* Suivi */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                Agent et suivi
+                Suivi
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
