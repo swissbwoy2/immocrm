@@ -4,11 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Calendar, Users, DollarSign } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, DollarSign, Upload } from "lucide-react";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { CSVImportDialog } from "@/components/CSVImportDialog";
 
 interface Client {
   id: string;
@@ -50,6 +51,7 @@ const Clients = () => {
   const [selectedPieces, setSelectedPieces] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<'recent' | 'ancien'>('recent');
   const [loading, setLoading] = useState(true);
+  const [showImportDialog, setShowImportDialog] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -201,8 +203,16 @@ const Clients = () => {
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground">Gestion des Clients</h1>
-          <p className="text-muted-foreground">Vue d'ensemble de tous les clients</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Gestion des Clients</h1>
+              <p className="text-muted-foreground">Vue d'ensemble de tous les clients</p>
+            </div>
+            <Button onClick={() => setShowImportDialog(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Importer CSV
+            </Button>
+          </div>
         </div>
 
         <div className="mb-4">
@@ -423,6 +433,15 @@ const Clients = () => {
           </div>
         )}
       </div>
+
+      <CSVImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        onImportComplete={() => {
+          setShowImportDialog(false);
+          loadData();
+        }}
+      />
     </div>
   );
 };
