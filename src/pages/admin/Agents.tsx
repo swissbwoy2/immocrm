@@ -82,9 +82,6 @@ const Agents = () => {
     }
   };
 
-  const generateTemporaryPassword = () => {
-    return Math.random().toString(36).slice(-12) + 'A1!';
-  };
 
   const handleAddAgent = async () => {
     if (!formData.nom || !formData.prenom || !formData.email || !formData.telephone) {
@@ -93,62 +90,17 @@ const Agents = () => {
     }
 
     try {
-      // 1. Create user in Supabase Auth using service role key via edge function
-      const tempPassword = generateTemporaryPassword();
-      
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        password: tempPassword,
-        email_confirm: true,
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Utilisateur non créé');
-
-      // 2. Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
+      // Call edge function to create agent with admin privileges
+      const { data, error } = await supabase.functions.invoke('create-agent', {
+        body: {
           prenom: formData.prenom,
           nom: formData.nom,
           email: formData.email,
           telephone: formData.telephone,
-          actif: true,
-        });
+        },
+      });
 
-      if (profileError) throw profileError;
-
-      // 3. Assign agent role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role: 'agent',
-        });
-
-      if (roleError) throw roleError;
-
-      // 4. Create agent entry
-      const { error: agentError } = await supabase
-        .from('agents')
-        .insert({
-          user_id: authData.user.id,
-          statut: 'actif',
-          nombre_clients_assignes: 0,
-        });
-
-      if (agentError) throw agentError;
-
-      // 5. Send password reset email
-      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        formData.email,
-        {
-          redirectTo: `${window.location.origin}/first-login`,
-        }
-      );
-
-      if (resetError) console.error('Error sending reset email:', resetError);
+      if (error) throw error;
 
       toast({
         title: "Succès",
