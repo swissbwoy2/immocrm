@@ -1,15 +1,36 @@
 import { useState, useEffect } from 'react';
-import { Users, UserPlus, Upload } from 'lucide-react';
+import { Users, UserPlus, Upload, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { CSVImportDialog } from '@/components/CSVImportDialog';
-import { getClients, saveClients, getAgents } from '@/utils/localStorage';
-import { Client, Agent } from '@/data/mockData';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+
+interface Client {
+  id: string;
+  user_id: string;
+  agent_id?: string;
+  commission_split?: number;
+  created_at?: string;
+}
+
+interface Profile {
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone?: string;
+}
+
+interface Agent {
+  id: string;
+  user_id: string;
+  profile: Profile;
+}
 
 export default function Assignations() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -18,21 +39,59 @@ export default function Assignations() {
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   const [selectedSplit, setSelectedSplit] = useState<'45-55' | '60-40'>('45-55');
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    setClients(getClients());
-    setAgents(getAgents());
+  const loadData = async () => {
+    try {
+      setLoading(true);
+
+      // Load clients
+      const { data: clientsData, error: clientsError } = await supabase
+        .from('clients')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (clientsError) throw clientsError;
+      setClients(clientsData || []);
+
+      // Load agents with their profiles
+      const { data: agentsData, error: agentsError } = await supabase
+        .from('agents')
+        .select('id, user_id, statut, profiles!inner(nom, prenom, email, telephone)')
+        .eq('statut', 'actif');
+
+      if (agentsError) throw agentsError;
+
+      // Transform the data to match our interface
+      const transformedAgents = agentsData?.map(agent => ({
+        id: agent.id,
+        user_id: agent.user_id,
+        profile: agent.profiles as unknown as Profile,
+      })) || [];
+
+      setAgents(transformedAgents);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de charger les données',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const unassignedClients = clients.filter(c => !c.agentId);
-  const assignedClients = clients.filter(c => c.agentId);
+  const unassignedClients = clients.filter(c => !c.agent_id);
+  const assignedClients = clients.filter(c => c.agent_id);
 
-  const handleAssign = () => {
+  const handleAssign = async () => {
     if (!selectedClient || !selectedAgent) {
       toast({
         title: 'Erreur',
@@ -42,59 +101,118 @@ export default function Assignations() {
       return;
     }
 
-    const [splitAgent, splitAgence] = selectedSplit === '45-55' ? [45, 55] : [60, 40];
+    try {
+      const commissionValue = selectedSplit === '45-55' ? 45 : 60;
 
-    const updatedClients = clients.map(c => {
-      if (c.id === selectedClient) {
-        return {
-          ...c,
-          agentId: selectedAgent,
-          splitAgent,
-          splitAgence,
-        };
-      }
-      return c;
-    });
+      const { error } = await supabase
+        .from('clients')
+        .update({
+          agent_id: selectedAgent,
+          commission_split: commissionValue,
+        })
+        .eq('id', selectedClient);
 
-    saveClients(updatedClients);
-    setClients(updatedClients);
-    setSelectedClient(null);
-    setSelectedAgent('');
+      if (error) throw error;
 
-    toast({
-      title: 'Assignation réussie',
-      description: 'Le client a été assigné à l\'agent',
-    });
+      // Update local state
+      setClients(clients.map(c => 
+        c.id === selectedClient
+          ? { ...c, agent_id: selectedAgent, commission_split: commissionValue }
+          : c
+      ));
+
+      setSelectedClient(null);
+      setSelectedAgent('');
+
+      toast({
+        title: 'Assignation réussie',
+        description: 'Le client a été assigné à l\'agent',
+      });
+    } catch (error) {
+      console.error('Error assigning client:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible d\'assigner le client',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleReassign = (clientId: string) => {
-    const updatedClients = clients.map(c => {
-      if (c.id === clientId) {
-        return {
-          ...c,
-          agentId: undefined,
-        };
-      }
-      return c;
-    });
+  const handleReassign = async (clientId: string) => {
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({
+          agent_id: null,
+        })
+        .eq('id', clientId);
 
-    saveClients(updatedClients);
-    setClients(updatedClients);
+      if (error) throw error;
 
-    toast({
-      title: 'Désassignation réussie',
-      description: 'Le client a été retiré de l\'agent',
-    });
+      // Update local state
+      setClients(clients.map(c => 
+        c.id === clientId ? { ...c, agent_id: undefined } : c
+      ));
+
+      toast({
+        title: 'Désassignation réussie',
+        description: 'Le client a été retiré de l\'agent',
+      });
+    } catch (error) {
+      console.error('Error reassigning client:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de retirer le client',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteAllClients = async () => {
+    try {
+      setDeleting(true);
+
+      const { data, error } = await supabase.functions.invoke('delete-all-clients');
+
+      if (error) throw error;
+
+      console.log('Delete all clients response:', data);
+
+      toast({
+        title: 'Suppression réussie',
+        description: `${data.deletedClients} clients supprimés`,
+      });
+
+      // Reload data
+      await loadData();
+    } catch (error) {
+      console.error('Error deleting all clients:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de supprimer tous les clients',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const getAgentName = (agentId: string) => {
     const agent = agents.find(a => a.id === agentId);
-    return agent ? `${agent.prenom} ${agent.nom}` : 'Agent inconnu';
+    return agent ? `${agent.profile.prenom} ${agent.profile.nom}` : 'Agent inconnu';
   };
 
   const getClientsByAgent = (agentId: string) => {
-    return assignedClients.filter(c => c.agentId === agentId);
+    return assignedClients.filter(c => c.agent_id === agentId);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -108,10 +226,35 @@ export default function Assignations() {
                 Gérer l'assignation des clients aux agents
               </p>
             </div>
-            <Button onClick={() => setImportDialogOpen(true)}>
-              <Upload className="w-4 h-4 mr-2" />
-              Importer CSV
-            </Button>
+            <div className="flex gap-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={clients.length === 0 || deleting}>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    {deleting ? 'Suppression...' : 'Supprimer tous les clients'}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette action est irréversible. Cela supprimera définitivement tous les clients ({clients.length}) 
+                      et toutes leurs données associées (profils, comptes utilisateurs).
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteAllClients} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      Supprimer tout
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <Button onClick={() => setImportDialogOpen(true)}>
+                <Upload className="w-4 h-4 mr-2" />
+                Importer CSV
+              </Button>
+            </div>
           </div>
 
           {/* Stats */}
@@ -160,11 +303,15 @@ export default function Assignations() {
                         <SelectValue placeholder="Choisir un client" />
                       </SelectTrigger>
                       <SelectContent>
-                        {unassignedClients.map(client => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.prenom} {client.nom}
-                          </SelectItem>
-                        ))}
+                        {unassignedClients.map(client => {
+                          // Find profile for this client
+                          const profile = agents.find(a => a.user_id === client.user_id)?.profile;
+                          return (
+                            <SelectItem key={client.id} value={client.id}>
+                              Client ID: {client.id.substring(0, 8)}...
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>
@@ -178,7 +325,7 @@ export default function Assignations() {
                       <SelectContent>
                         {agents.map(agent => (
                           <SelectItem key={agent.id} value={agent.id}>
-                            {agent.prenom} {agent.nom} ({getClientsByAgent(agent.id).length} clients)
+                            {agent.profile.prenom} {agent.profile.nom} ({getClientsByAgent(agent.id).length} clients)
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -229,9 +376,9 @@ export default function Assignations() {
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle className="text-lg">
-                          {agent.prenom} {agent.nom}
+                          {agent.profile.prenom} {agent.profile.nom}
                         </CardTitle>
-                        <CardDescription>{agent.email}</CardDescription>
+                        <CardDescription>{agent.profile.email}</CardDescription>
                       </div>
                       <Badge variant="secondary">
                         <Users className="w-3 h-3 mr-1" />
@@ -241,33 +388,38 @@ export default function Assignations() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      {agentClients.map(client => (
-                        <div
-                          key={client.id}
-                          className="flex items-center justify-between p-3 bg-muted rounded-lg"
-                        >
-                          <div className="flex-1">
-                            <p className="font-medium">
-                              {client.prenom} {client.nom}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {client.email} • {client.telephone}
-                            </p>
+                      {agentClients.map(client => {
+                        const commissionSplit = client.commission_split || 50;
+                        const agencySplit = 100 - commissionSplit;
+                        
+                        return (
+                          <div
+                            key={client.id}
+                            className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                          >
+                            <div className="flex-1">
+                              <p className="font-medium">
+                                Client ID: {client.id.substring(0, 8)}...
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                Ajouté le {new Date(client.created_at || '').toLocaleDateString('fr-CH')}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Badge variant="outline">
+                                Split {commissionSplit}/{agencySplit}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleReassign(client.id)}
+                              >
+                                Retirer
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <Badge variant="outline">
-                              Split {client.splitAgent}/{client.splitAgence}
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleReassign(client.id)}
-                            >
-                              Retirer
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </CardContent>
                 </Card>

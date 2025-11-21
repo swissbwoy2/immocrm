@@ -12,6 +12,7 @@ import Setup from "./pages/Setup";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminAgents from "./pages/admin/Agents";
 import AdminClients from "./pages/admin/Clients";
+import AdminClientDetail from "./pages/admin/ClientDetail";
 import AdminAssignations from "./pages/admin/Assignations";
 import AdminMandats from "./pages/admin/Mandats";
 import AdminTransactions from "./pages/admin/Transactions";
@@ -50,6 +51,7 @@ const App = () => (
             <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminDashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/agents" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAgents /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/clients" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminClients /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/clients/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminClientDetail /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/assignations" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAssignations /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/mandats" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMandats /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/transactions" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminTransactions /></AppLayout></ProtectedRoute>} />
