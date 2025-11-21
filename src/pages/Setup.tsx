@@ -14,39 +14,12 @@ export default function Setup() {
   const createAdminAccount = async () => {
     setLoading(true);
     try {
-      // Create admin user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: 'admin@immo-rama.ch',
-        password: 'Admin123!',
-        email_confirm: true,
+      // Call edge function to create admin
+      const { data, error } = await supabase.functions.invoke('create-admin', {
+        method: 'POST',
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Utilisateur non créé');
-
-      // Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authData.user.id,
-          prenom: 'Administrateur',
-          nom: 'Admin',
-          email: 'admin@immo-rama.ch',
-          telephone: '+41 21 634 28 39',
-          actif: true,
-        });
-
-      if (profileError) throw profileError;
-
-      // Assign admin role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: authData.user.id,
-          role: 'admin',
-        });
-
-      if (roleError) throw roleError;
+      if (error) throw error;
 
       toast({
         title: 'Installation réussie',
@@ -55,7 +28,7 @@ export default function Setup() {
 
       navigate('/login');
     } catch (error: any) {
-      if (error.message?.includes('User already registered')) {
+      if (error.message?.includes('Admin already exists')) {
         toast({
           title: 'Compte existant',
           description: 'Le compte admin existe déjà. Vous pouvez vous connecter.',
