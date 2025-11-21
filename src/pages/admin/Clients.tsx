@@ -75,7 +75,7 @@ const Clients = () => {
                 <Card 
                   key={client.id} 
                   className="p-4 flex flex-col cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => navigate(`/admin/clients/${client.id}`)}
+                  onClick={() => navigate(`/agent/clients/${client.id}`)}
                 >
                   {/* Nom et Badge */}
                   <div className="mb-3">
@@ -162,7 +162,7 @@ const Clients = () => {
                       className="w-full"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/admin/clients/${client.id}`);
+                        navigate(`/agent/clients/${client.id}`);
                       }}
                     >
                       <Eye className="h-4 w-4 mr-2" />
