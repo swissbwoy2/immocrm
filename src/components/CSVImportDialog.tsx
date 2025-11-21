@@ -143,19 +143,19 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
         throw error;
       }
 
-      const result = data as { success: number; failed: number; errors: Array<{ email: string; reason: string }> };
+      const result = data as { created: number; updated: number; failed: number; errors: Array<{ email: string; reason: string }> };
 
       if (result.errors.length > 0) {
         console.error('Import errors:', result.errors);
         toast({
           title: 'Import partiellement réussi',
-          description: `${result.success} clients importés, ${result.failed} échecs`,
+          description: `${result.created} créés, ${result.updated} mis à jour, ${result.failed} échecs`,
           variant: 'default',
         });
       } else {
         toast({
           title: 'Import réussi',
-          description: `${result.success} clients importés avec succès`,
+          description: `${result.created} créés, ${result.updated} mis à jour`,
         });
       }
 

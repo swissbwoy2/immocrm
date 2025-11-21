@@ -33,7 +33,8 @@ interface ImportClient {
 }
 
 interface ImportResult {
-  success: number;
+  created: number;
+  updated: number;
   failed: number;
   errors: Array<{ email: string; reason: string }>;
 }
@@ -59,7 +60,8 @@ serve(async (req) => {
     console.log(`Starting import of ${clients.length} clients...`);
 
     const result: ImportResult = {
-      success: 0,
+      created: 0,
+      updated: 0,
       failed: 0,
       errors: []
     };
@@ -67,59 +69,81 @@ serve(async (req) => {
     // Process each client
     for (const clientData of clients) {
       try {
-        // 1. Create user in auth
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email: clientData.user.email,
-          password: clientData.user.password,
-          email_confirm: true,
-          user_metadata: {
-            prenom: clientData.user.prenom,
-            nom: clientData.user.nom
-          }
-        });
+        let userId: string;
+        let isUpdate = false;
 
-        if (authError) {
-          // Check if user already exists
-          if (authError.message.includes('already registered')) {
-            result.errors.push({
-              email: clientData.user.email,
-              reason: 'Email déjà enregistré'
-            });
-            result.failed++;
-            continue;
-          }
-          throw authError;
-        }
-
-        const userId = authData.user.id;
-
-        // 2. Create profile
-        const { error: profileError } = await supabase
+        // 1. Check if user already exists
+        const { data: existingProfile } = await supabase
           .from('profiles')
-          .insert({
-            id: userId,
+          .select('id')
+          .eq('email', clientData.user.email)
+          .single();
+
+        if (existingProfile) {
+          // User exists - we'll update their data
+          userId = existingProfile.id;
+          isUpdate = true;
+          console.log(`User ${clientData.user.email} already exists, updating...`);
+        } else {
+          // Create new user in auth
+          const { data: authData, error: authError } = await supabase.auth.admin.createUser({
             email: clientData.user.email,
-            prenom: clientData.user.prenom,
-            nom: clientData.user.nom,
-            telephone: clientData.user.telephone
+            password: clientData.user.password,
+            email_confirm: true,
+            user_metadata: {
+              prenom: clientData.user.prenom,
+              nom: clientData.user.nom
+            }
           });
 
-        if (profileError) {
-          console.error('Profile error:', profileError);
-          throw profileError;
+          if (authError) throw authError;
+          userId = authData.user.id;
+          console.log(`Created new user: ${clientData.user.email}`);
         }
 
-        // 3. Create user_role as 'client'
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: userId,
-            role: 'client'
-          });
+        // 2. Create or update profile
+        if (isUpdate) {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .update({
+              prenom: clientData.user.prenom,
+              nom: clientData.user.nom,
+              telephone: clientData.user.telephone
+            })
+            .eq('id', userId);
 
-        if (roleError) {
-          console.error('Role error:', roleError);
-          throw roleError;
+          if (profileError) {
+            console.error('Profile update error:', profileError);
+            throw profileError;
+          }
+        } else {
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              email: clientData.user.email,
+              prenom: clientData.user.prenom,
+              nom: clientData.user.nom,
+              telephone: clientData.user.telephone
+            });
+
+          if (profileError) {
+            console.error('Profile error:', profileError);
+            throw profileError;
+          }
+
+          // 3. Create user_role as 'client' (only for new users)
+          const { error: roleError } = await supabase
+            .from('user_roles')
+            .insert({
+              user_id: userId,
+              role: 'client'
+            });
+
+          if (roleError) {
+            console.error('Role error:', roleError);
+            throw roleError;
+          }
         }
 
         // 4. Find agent if specified
@@ -144,38 +168,64 @@ serve(async (req) => {
           }
         }
 
-        // 5. Create client
-        const { error: clientError } = await supabase
+        // 5. Create or update client
+        const { data: existingClient } = await supabase
           .from('clients')
-          .insert({
-            user_id: userId,
-            agent_id: agentId,
-            ...clientData.client
-          });
+          .select('id')
+          .eq('user_id', userId)
+          .single();
 
-        if (clientError) {
-          console.error('Client error:', clientError);
-          throw clientError;
-        }
+        if (existingClient) {
+          // Update existing client
+          const { error: clientError } = await supabase
+            .from('clients')
+            .update({
+              agent_id: agentId,
+              ...clientData.client
+            })
+            .eq('user_id', userId);
 
-        // Update agent's client count if assigned
-        if (agentId) {
-          const { data: agent } = await supabase
-            .from('agents')
-            .select('nombre_clients_assignes')
-            .eq('id', agentId)
-            .single();
-          
-          if (agent) {
-            await supabase
-              .from('agents')
-              .update({ nombre_clients_assignes: (agent.nombre_clients_assignes || 0) + 1 })
-              .eq('id', agentId);
+          if (clientError) {
+            console.error('Client update error:', clientError);
+            throw clientError;
           }
-        }
 
-        result.success++;
-        console.log(`Successfully imported: ${clientData.user.email}`);
+          result.updated++;
+          console.log(`Successfully updated: ${clientData.user.email}`);
+        } else {
+          // Create new client
+          const { error: clientError } = await supabase
+            .from('clients')
+            .insert({
+              user_id: userId,
+              agent_id: agentId,
+              ...clientData.client
+            });
+
+          if (clientError) {
+            console.error('Client error:', clientError);
+            throw clientError;
+          }
+
+          // Update agent's client count if assigned (only for new clients)
+          if (agentId) {
+            const { data: agent } = await supabase
+              .from('agents')
+              .select('nombre_clients_assignes')
+              .eq('id', agentId)
+              .single();
+            
+            if (agent) {
+              await supabase
+                .from('agents')
+                .update({ nombre_clients_assignes: (agent.nombre_clients_assignes || 0) + 1 })
+                .eq('id', agentId);
+            }
+          }
+
+          result.created++;
+          console.log(`Successfully created: ${clientData.user.email}`);
+        }
 
       } catch (error) {
         console.error(`Failed to import ${clientData.user.email}:`, error);
@@ -187,7 +237,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Import completed: ${result.success} success, ${result.failed} failed`);
+    console.log(`Import completed: ${result.created} created, ${result.updated} updated, ${result.failed} failed`);
 
     return new Response(
       JSON.stringify(result),
