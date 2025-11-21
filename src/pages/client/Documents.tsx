@@ -3,12 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Sidebar } from '@/components/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { 
   FileText, Upload, Download, Trash2, File, 
   Image as ImageIcon, FileSpreadsheet, AlertCircle 
 } from 'lucide-react';
-import { getCurrentUser } from '@/utils/localStorage';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -28,50 +26,59 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
-interface Document {
-  id: string;
-  clientId: string;
-  nom: string;
-  type: string;
-  taille: number;
-  dateUpload: string;
-  contenu: string;
-}
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Documents() {
   const navigate = useNavigate();
-  const [documents, setDocuments] = useState<Document[]>([]);
+  const { user } = useAuth();
+  const [documents, setDocuments] = useState<any[]>([]);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
+  const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const currentUser = getCurrentUser();
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [clientId, setClientId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!currentUser || currentUser.role !== 'client') {
-      navigate('/login');
-      return;
-    }
-
     loadDocuments();
-  }, [currentUser, navigate]);
+  }, [user]);
 
-  const loadDocuments = () => {
-    const storedDocs = localStorage.getItem('documents');
-    if (storedDocs) {
-      const allDocs = JSON.parse(storedDocs) as Document[];
-      setDocuments(allDocs.filter(d => d.clientId === currentUser?.clientId));
+  const loadDocuments = async () => {
+    if (!user) return;
+
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!clientData) return;
+      
+      setClientId(clientData.id);
+
+      const { data: docsData, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date_upload', { ascending: false });
+
+      if (error) throw error;
+
+      setDocuments(docsData || []);
+    } catch (error) {
+      console.error('Error loading documents:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les documents",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const saveDocuments = (docs: Document[]) => {
-    const storedDocs = localStorage.getItem('documents');
-    const allDocs = storedDocs ? JSON.parse(storedDocs) as Document[] : [];
-    const otherDocs = allDocs.filter(d => d.clientId !== currentUser?.clientId);
-    localStorage.setItem('documents', JSON.stringify([...otherDocs, ...docs]));
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -117,20 +124,21 @@ export default function Documents() {
 
     try {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        const newDoc: Document = {
-          id: `doc-${Date.now()}`,
-          clientId: currentUser!.clientId!,
-          nom: file.name,
-          type: file.type,
-          taille: file.size,
-          dateUpload: new Date().toISOString(),
-          contenu: e.target?.result as string,
-        };
+      reader.onload = async (e) => {
+        const { error } = await supabase
+          .from('documents')
+          .insert({
+            nom: file.name,
+            type: file.type,
+            taille: file.size,
+            user_id: user!.id,
+            client_id: clientId,
+            url: e.target?.result as string,
+          });
 
-        const updatedDocs = [...documents, newDoc];
-        setDocuments(updatedDocs);
-        saveDocuments(updatedDocs);
+        if (error) throw error;
+
+        await loadDocuments();
 
         toast({
           title: 'Document ajouté',
@@ -142,6 +150,7 @@ export default function Documents() {
 
       reader.readAsDataURL(file);
     } catch (error) {
+      console.error('Error uploading document:', error);
       toast({
         title: 'Erreur',
         description: 'Impossible d\'uploader le fichier',
@@ -150,25 +159,39 @@ export default function Documents() {
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!selectedDoc) return;
 
-    const updatedDocs = documents.filter(d => d.id !== selectedDoc.id);
-    setDocuments(updatedDocs);
-    saveDocuments(updatedDocs);
+    try {
+      const { error } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', selectedDoc.id);
 
-    toast({
-      title: 'Document supprimé',
-      description: 'Le document a été supprimé avec succès',
-    });
+      if (error) throw error;
 
-    setDeleteDialogOpen(false);
-    setSelectedDoc(null);
+      await loadDocuments();
+
+      toast({
+        title: 'Document supprimé',
+        description: 'Le document a été supprimé avec succès',
+      });
+
+      setDeleteDialogOpen(false);
+      setSelectedDoc(null);
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de supprimer le document',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleDownload = (doc: Document) => {
+  const handleDownload = (doc: any) => {
     const link = document.createElement('a');
-    link.href = doc.contenu;
+    link.href = doc.url;
     link.download = doc.nom;
     link.click();
   };
@@ -185,6 +208,14 @@ export default function Documents() {
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-muted-foreground">Chargement...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-background">
@@ -246,12 +277,12 @@ export default function Documents() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="text-xs text-muted-foreground">
-                        Ajouté le {new Date(doc.dateUpload).toLocaleDateString('fr-CH')}
+                        Ajouté le {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
                       </div>
                       
-                      {doc.type.includes('image') && (
+                      {doc.type.includes('image') && doc.url && (
                         <img 
-                          src={doc.contenu} 
+                          src={doc.url} 
                           alt={doc.nom}
                           className="w-full h-32 object-cover rounded-lg"
                         />

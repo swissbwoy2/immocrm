@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Calendar, Square, Home, FileText, Building } from "lucide-react";
-import { getOffres, getCurrentUser, getClients } from "@/utils/localStorage";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const getStatutLabel = (statut: string) => {
   switch (statut) {
@@ -33,106 +34,128 @@ const getStatutBadgeVariant = (statut: string): "default" | "secondary" | "destr
 };
 
 const MesCandidatures = () => {
-  const currentUser = getCurrentUser();
-  const clients = getClients();
-  const client = clients.find(c => c.email === currentUser?.email);
-  const [offres] = useState(
-    getOffres().filter(o => o.clientId === client?.id)
-  );
+  const { user } = useAuth();
+  const [offres, setOffres] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadOffres();
+  }, [user]);
+
+  const loadOffres = async () => {
+    if (!user) return;
+
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!clientData) return;
+
+      const { data: offresData, error } = await supabase
+        .from('offres')
+        .select('*')
+        .eq('client_id', clientData.id)
+        .order('date_envoi', { ascending: false });
+
+      if (error) throw error;
+
+      setOffres(offresData || []);
+    } catch (error) {
+      console.error('Error loading offres:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-muted-foreground">Chargement...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Mes Candidatures</h1>
-            <p className="text-muted-foreground">Suivez l'état de vos offres et candidatures en temps réel</p>
-          </div>
-
-          {offres.length > 0 ? (
-            <div className="grid gap-6">
-              {offres.map((offre) => (
-                <Card key={offre.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <CardTitle className="text-xl">{offre.localisation}</CardTitle>
-                          <Badge variant={getStatutBadgeVariant(offre.statut)}>
-                            {getStatutLabel(offre.statut)}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            Envoyée le {new Date(offre.dateEnvoi).toLocaleDateString('fr-CH')}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-primary">CHF {offre.prix.toLocaleString()}</p>
-                        <p className="text-sm text-muted-foreground">par mois</p>
-                      </div>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="flex items-center gap-2">
-                        <Home className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{offre.nombrePieces} pièces</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Square className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{offre.surface} m²</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{offre.etage} étage</span>
-                      </div>
-                    </div>
-
-                    {offre.description && (
-                      <p className="text-sm text-muted-foreground">{offre.description}</p>
-                    )}
-
-                    {offre.candidature && (
-                      <div className="space-y-3 pt-4 border-t">
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Building className="h-4 w-4" />
-                            <span className="font-medium text-sm">Gérance</span>
-                          </div>
-                          <p className="text-sm">{offre.candidature.gerance}</p>
-                          <p className="text-sm text-muted-foreground">{offre.candidature.contactGerance}</p>
-                        </div>
-
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                          <div className="flex items-center gap-2 mb-2">
-                            <FileText className="h-4 w-4" />
-                            <span className="font-medium text-sm">Documents envoyés</span>
-                          </div>
-                          <ul className="text-sm space-y-1">
-                            {offre.candidature.documentsEnvoyes.map((doc, idx) => (
-                              <li key={idx}>• {doc}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                Aucune offre reçue pour le moment
-              </CardContent>
-            </Card>
-          )}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Mes Candidatures</h1>
+          <p className="text-muted-foreground">Suivez l'état de vos offres et candidatures en temps réel</p>
         </div>
+
+        {offres.length > 0 ? (
+          <div className="grid gap-6">
+            {offres.map((offre) => (
+              <Card key={offre.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <CardTitle className="text-xl">{offre.adresse}</CardTitle>
+                        <Badge variant={getStatutBadgeVariant(offre.statut)}>
+                          {getStatutLabel(offre.statut)}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          Envoyée le {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-primary">CHF {offre.prix.toLocaleString()}</p>
+                      <p className="text-sm text-muted-foreground">par mois</p>
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Home className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{offre.pieces} pièces</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Square className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{offre.surface} m²</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{offre.etage} étage</span>
+                    </div>
+                  </div>
+
+                  {offre.description && (
+                    <p className="text-sm text-muted-foreground">{offre.description}</p>
+                  )}
+
+                  {offre.commentaires && (
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-4 w-4" />
+                        <span className="font-medium text-sm">Commentaires</span>
+                      </div>
+                      <p className="text-sm">{offre.commentaires}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              Aucune offre reçue pour le moment
+            </CardContent>
+          </Card>
+        )}
       </div>
-    );
-  };
+    </div>
+  );
+};
 
 export default MesCandidatures;

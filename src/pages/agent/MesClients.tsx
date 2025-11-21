@@ -15,48 +15,159 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { getClients, saveClients, getAgents, getCurrentUser } from "@/utils/localStorage";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { calculateDaysElapsed } from "@/utils/calculations";
-import { CSVImportDialog } from "@/components/CSVImportDialog";
+import { useToast } from "@/hooks/use-toast";
 
 const MesClients = () => {
   const navigate = useNavigate();
-  const currentUser = getCurrentUser();
-  const agents = getAgents();
-  const agent = agents.find(a => a.userId === currentUser?.id);
+  const { user } = useAuth();
+  const { toast } = useToast();
   
-  const [allClients, setAllClients] = useState(() => 
-    getClients().filter(c => c.agentId === agent?.id)
-  );
+  const [allClients, setAllClients] = useState<any[]>([]);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedPieces, setSelectedPieces] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState<'recent' | 'ancien'>('recent');
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [agentId, setAgentId] = useState<string | null>(null);
 
-  const handleImportComplete = () => {
-    // Reload clients from localStorage
-    const updatedClients = getClients().filter(c => c.agentId === agent?.id);
-    setAllClients(updatedClients);
-  };
+  useEffect(() => {
+    loadAgentAndClients();
+  }, [user]);
 
-  const handleDeleteClient = (clientId: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) {
-      const allClientsData = getClients();
-      const updatedClients = allClientsData.filter(c => c.id !== clientId);
-      saveClients(updatedClients);
-      setAllClients(updatedClients.filter(c => c.agentId === agent?.id));
+  const loadAgentAndClients = async () => {
+    if (!user) return;
+
+    try {
+      // Get agent ID
+      const { data: agentData } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!agentData) {
+        toast({
+          title: "Erreur",
+          description: "Agent introuvable",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setAgentId(agentData.id);
+
+      // Load clients
+      const { data: clientsData, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('agent_id', agentData.id);
+
+      if (error) throw error;
+
+      // Load profiles separately
+      const userIds = clientsData?.map(c => c.user_id) || [];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', userIds);
+
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
+
+      // Transform data to match expected format
+      const transformedClients = clientsData?.map(client => {
+        const profile = profilesMap.get(client.user_id);
+        return {
+          id: client.id,
+          prenom: profile?.prenom || '',
+          nom: profile?.nom || '',
+          email: profile?.email || '',
+          telephone: profile?.telephone || '',
+        adresse: '', // Not in DB
+        nationalite: client.nationalite,
+        typePermis: client.type_permis,
+        etatCivil: client.situation_familiale,
+        profession: client.profession,
+        employeur: client.secteur_activite,
+        revenuMensuel: client.revenus_mensuels,
+        budgetMax: client.budget_max,
+        nombrePiecesSouhaite: client.pieces?.toString() || '',
+        regions: client.region_recherche ? [client.region_recherche] : [],
+          animaux: false,
+          vehicules: false,
+          dateInscription: client.date_ajout || client.created_at,
+          agentId: client.agent_id,
+          typeBien: client.type_bien,
+        };
+      }) || [];
+
+      setAllClients(transformedClients);
+    } catch (error) {
+      console.error('Error loading clients:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les clients",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDeleteAllClients = () => {
-    const allClientsData = getClients();
-    // Garder seulement les clients qui ne sont pas à cet agent
-    const otherAgentsClients = allClientsData.filter(c => c.agentId !== agent?.id);
-    saveClients(otherAgentsClients);
-    setAllClients([]);
-    setDeleteAllDialogOpen(false);
+  const handleDeleteClient = async (clientId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', clientId);
+
+      if (error) throw error;
+
+      setAllClients(allClients.filter(c => c.id !== clientId));
+      toast({
+        title: "Client supprimé",
+        description: "Le client a été supprimé avec succès",
+      });
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le client",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAllClients = async () => {
+    if (!agentId) return;
+
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('agent_id', agentId);
+
+      if (error) throw error;
+
+      setAllClients([]);
+      setDeleteAllDialogOpen(false);
+      toast({
+        title: "Clients supprimés",
+        description: "Tous les clients ont été supprimés",
+      });
+    } catch (error) {
+      console.error('Error deleting all clients:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer les clients",
+        variant: "destructive",
+      });
+    }
   };
 
   const regions = ['Chablais', 'Fribourg', 'Gros-de-Vaud', 'Lausanne et région', 'Ouest-lausannois', 'Lavaux', 'Nord-vaudois', 'Nyon et région', 'Riviera', 'Valais', 'Genève', 'Autre'];
@@ -81,15 +192,13 @@ const MesClients = () => {
       `${client.prenom} ${client.nom}`.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchRegion = selectedRegions.length === 0 || 
-      (client.regions && client.regions.length > 0 && client.regions.some(r => selectedRegions.includes(r)));
+      (client.regions && client.regions.length > 0 && client.regions.some((r: string) => selectedRegions.includes(r)));
     
     const matchPieces = selectedPieces.length === 0 || 
       selectedPieces.some(p => {
         if (p === 'Autre') return true;
         const pieceNum = parseFloat(p.replace('+', ''));
         const clientPieces = client.nombrePiecesSouhaite || '';
-        
-        // Handle both "2.5" and "2+" formats
         const clientNum = parseFloat(clientPieces.toString().replace('+', ''));
         
         if (p.includes('+')) {
@@ -102,7 +211,6 @@ const MesClients = () => {
     return matchSearch && matchRegion && matchPieces;
   });
 
-  // Trier les clients par date de création
   const sortedClients = [...filteredClients].sort((a, b) => {
     const dateA = new Date(a.dateInscription || 0).getTime();
     const dateB = new Date(b.dateInscription || 0).getTime();
@@ -115,12 +223,6 @@ const MesClients = () => {
     return 'bg-red-500';
   };
 
-  const getProgressBarColor = (days: number) => {
-    if (days < 60) return 'bg-green-500';
-    if (days < 90) return 'bg-orange-500';
-    return 'bg-red-500';
-  };
-
   const formatTimeElapsed = (days: number) => {
     const totalHours = days * 24;
     const displayDays = Math.floor(days);
@@ -128,6 +230,14 @@ const MesClients = () => {
     const remainingMinutes = Math.floor(((days - displayDays) * 24 - remainingHours) * 60);
     return `${displayDays}j ${remainingHours}h ${remainingMinutes}m`;
   };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-muted-foreground">Chargement...</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -143,10 +253,6 @@ const MesClients = () => {
               >
                 <Trash className="w-4 h-4 mr-2" />
                 Supprimer tous
-              </Button>
-              <Button onClick={() => setImportDialogOpen(true)}>
-                <Upload className="w-4 h-4 mr-2" />
-                Importer CSV
               </Button>
             </div>
           </div>
@@ -224,7 +330,6 @@ const MesClients = () => {
               const daysElapsed = calculateDaysElapsed(client.dateInscription);
               const daysRemaining = 90 - daysElapsed;
               const progressPercent = (daysElapsed / 90) * 100;
-              const isWarning = daysElapsed >= 45;
               const isCritical = daysElapsed >= 60;
 
               return (
@@ -302,10 +407,6 @@ const MesClients = () => {
                       <Mail className="h-4 w-4 flex-shrink-0" />
                       <span className="truncate">{client.email}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{client.adresse}</span>
-                    </div>
                   </div>
 
                   {/* Critères de recherche */}
@@ -332,33 +433,12 @@ const MesClients = () => {
                     </div>
                   </div>
 
-                  {/* Informations supplémentaires */}
-                  <div className="space-y-1 mb-3 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      <span>{client.employeur || client.profession}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      <span>État civil: {client.etatCivil || 'Non renseigné'}</span>
-                    </div>
-                    {client.vehicules && (
-                      <div className="flex items-center gap-2">
-                        <Car className="h-4 w-4" />
-                        <span>Véhicules</span>
-                      </div>
-                    )}
-                  </div>
-
                   {/* Date et barre de progression */}
                   <div className="mt-auto pt-3 border-t">
                     <div className="flex items-center justify-between mb-2 text-xs">
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Calendar className="h-3 w-3" />
                         <span>{new Date(client.dateInscription).toLocaleDateString('fr-CH')}</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <span>Depuis le {new Date(client.dateInscription).toLocaleDateString('fr-CH')}</span>
                       </div>
                     </div>
                     
@@ -377,7 +457,7 @@ const MesClients = () => {
                     {/* Barre de progression */}
                     <div className="w-full bg-muted rounded-full h-2 mb-2">
                       <div
-                        className={`h-2 rounded-full transition-all ${getProgressBarColor(daysElapsed)}`}
+                        className={`h-2 rounded-full transition-all ${getProgressColor(daysElapsed)}`}
                         style={{ width: `${Math.min(progressPercent, 100)}%` }}
                       />
                     </div>
@@ -390,8 +470,8 @@ const MesClients = () => {
                           Attention - {daysElapsed} jours écoulés
                         </span>
                       </div>
-                     )}
-                   </div>
+                    )}
+                  </div>
                 </Card>
               );
             })}
@@ -405,25 +485,18 @@ const MesClients = () => {
         </div>
       </div>
 
-      <CSVImportDialog
-        open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
-        onImportComplete={handleImportComplete}
-        currentAgentId={agent?.id}
-      />
-
       <AlertDialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer tous les clients ?</AlertDialogTitle>
+            <AlertDialogTitle>Supprimer tous les clients</AlertDialogTitle>
             <AlertDialogDescription>
-              Cette action est irréversible. Tous vos clients ({allClients.length}) seront définitivement supprimés.
+              Êtes-vous sûr de vouloir supprimer tous vos clients ? Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteAllClients} className="bg-destructive hover:bg-destructive/90">
-              Supprimer tous
+            <AlertDialogAction onClick={handleDeleteAllClients} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

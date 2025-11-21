@@ -1,56 +1,102 @@
 import { useEffect, useState } from 'react';
 import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
-import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getCurrentUser, getClients, getOffres, getAgents } from '@/utils/localStorage';
-import { calculateDaysElapsed, calculateDaysRemaining, getClientStats, getProchainesVisites, getCandidatures } from '@/utils/calculations';
 import { useNavigate } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
 import { AlertTriangle, User } from 'lucide-react';
-
-const clientMenu = [
-  { name: 'Mon tableau de bord', icon: LayoutDashboard, path: '/client' },
-  { name: 'Mon dossier', icon: FileText, path: '/client/dossier' },
-  { name: 'Offres reçues', icon: Home, path: '/client/offres' },
-  { name: 'Prochaines visites', icon: Calendar, path: '/client/visites' },
-  { name: 'Mes candidatures', icon: FileCheck, path: '/client/candidatures' },
-  { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie' },
-  { name: 'Mes documents', icon: File, path: '/client/documents' },
-];
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { calculateDaysElapsed, calculateDaysRemaining } from '@/utils/calculations';
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
-  const currentUser = getCurrentUser();
-
-  const [client, setClient] = useState(() => {
-    const clients = getClients();
-    return clients.find(c => c.email === currentUser?.email);
-  });
-  const [agent, setAgent] = useState(() => {
-    if (!client?.agentId) return null;
-    const agents = getAgents();
-    return agents.find(a => a.id === client.agentId);
-  });
-  const [offres, setOffres] = useState(getOffres());
+  const { user } = useAuth();
+  const [client, setClient] = useState<any>(null);
+  const [agent, setAgent] = useState<any>(null);
+  const [offres, setOffres] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser || currentUser.role !== 'client') {
-      navigate('/login');
+    loadData();
+  }, [user]);
+
+  const loadData = async () => {
+    if (!user) return;
+
+    try {
+      // Load client
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!clientData) return;
+      setClient(clientData);
+
+      // Load agent if assigned
+      if (clientData.agent_id) {
+        const { data: agentData } = await supabase
+          .from('agents')
+          .select('*, profiles!agents_user_id_fkey(*)')
+          .eq('id', clientData.agent_id)
+          .single();
+
+        if (agentData) {
+          const { data: agentProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', agentData.user_id)
+            .single();
+
+          setAgent({
+            ...agentData,
+            prenom: agentProfile?.prenom || '',
+            nom: agentProfile?.nom || '',
+            email: agentProfile?.email || '',
+            telephone: agentProfile?.telephone || '',
+          });
+        }
+      }
+
+      // Load offres
+      const { data: offresData } = await supabase
+        .from('offres')
+        .select('*')
+        .eq('client_id', clientData.id);
+
+      setOffres(offresData || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [currentUser, navigate]);
+  };
 
-  if (!currentUser || !client) return null;
+  if (loading || !client) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-muted-foreground">Chargement...</p>
+      </div>
+    );
+  }
 
-  const daysElapsed = calculateDaysElapsed(client.dateInscription);
-  const daysRemaining = calculateDaysRemaining(client.dateInscription);
+  const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
+  const daysRemaining = calculateDaysRemaining(client.date_ajout || client.created_at);
   const progressPercent = Math.min((daysElapsed / 90) * 100, 100);
 
-  const stats = getClientStats(client.id, offres);
-  const prochainesVisites = getProchainesVisites(client.id, offres).slice(0, 3);
-  const candidatures = getCandidatures(client.id, offres).slice(0, 3);
+  // Calculate stats
+  const stats = {
+    offresRecues: offres.length,
+    offresNonVues: offres.filter(o => o.statut === 'envoyee').length,
+    visitesAVenir: offres.filter(o => o.statut === 'visite_planifiee').length,
+    visitesEffectuees: offres.filter(o => o.statut === 'visite_effectuee').length,
+    candidaturesDeposees: offres.filter(o => o.statut === 'candidature_deposee').length,
+    candidaturesEnAttente: offres.filter(o => ['candidature_deposee', 'visite_effectuee'].includes(o.statut)).length,
+  };
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -153,7 +199,7 @@ export default function ClientDashboard() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Date de début</p>
-                    <p className="font-medium">{new Date(client.dateInscription).toLocaleDateString('fr-CH')}</p>
+                    <p className="font-medium">{new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Jours restants</p>
@@ -171,7 +217,7 @@ export default function ClientDashboard() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Budget recherché</p>
-                    <p className="font-medium">{client.budgetMax} CHF</p>
+                    <p className="font-medium">{client.budget_max} CHF</p>
                   </div>
                 </div>
                 <div>
@@ -221,23 +267,16 @@ export default function ClientDashboard() {
               <CardTitle>📅 Prochaines visites</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {prochainesVisites.length > 0 ? (
+              {offres.filter(o => o.statut === 'visite_planifiee').length > 0 ? (
                 <>
-                  {prochainesVisites.map(visite => (
-                    <div key={visite.offreId} className="p-4 bg-muted/50 rounded-lg">
+                  {offres.filter(o => o.statut === 'visite_planifiee').slice(0, 3).map(offre => (
+                    <div key={offre.id} className="p-4 bg-muted/50 rounded-lg">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <p className="font-medium">{visite.adresse}</p>
+                          <p className="font-medium">{offre.adresse}</p>
                           <p className="text-sm text-muted-foreground mt-1">
-                            {visite.nombrePieces} pièces • {visite.surface}m² • {visite.prix} CHF/mois
+                            {offre.pieces} pièces • {offre.surface}m² • {offre.prix} CHF/mois
                           </p>
-                          {visite.codeImmeuble && (
-                            <p className="text-sm text-primary mt-2">Code: {visite.codeImmeuble}</p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium text-sm">{new Date(visite.date).toLocaleDateString('fr-CH')}</p>
-                          <p className="text-sm text-muted-foreground">{visite.heure}</p>
                         </div>
                       </div>
                     </div>
@@ -273,59 +312,56 @@ export default function ClientDashboard() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {offres.filter(o => o.clientId === client.id).length > 0 ? (
+              {offres.length > 0 ? (
                 <>
-                  {offres
-                    .filter(o => o.clientId === client.id)
-                    .slice(0, 3)
-                    .map(offre => {
-                      const getStatutLabel = (statut: string) => {
-                        switch (statut) {
-                          case 'envoyee': return 'Envoyée';
-                          case 'vue': return 'Vue';
-                          case 'interesse': return 'Intéressé';
-                          case 'visite_planifiee': return 'Visite planifiée';
-                          case 'visite_effectuee': return 'Visite effectuée';
-                          case 'candidature_deposee': return 'Candidature déposée';
-                          case 'acceptee': return 'Acceptée ✓';
-                          case 'refusee': return 'Refusée';
-                          default: return statut;
-                        }
-                      };
+                  {offres.slice(0, 3).map(offre => {
+                    const getStatutLabel = (statut: string) => {
+                      switch (statut) {
+                        case 'envoyee': return 'Envoyée';
+                        case 'vue': return 'Vue';
+                        case 'interesse': return 'Intéressé';
+                        case 'visite_planifiee': return 'Visite planifiée';
+                        case 'visite_effectuee': return 'Visite effectuée';
+                        case 'candidature_deposee': return 'Candidature déposée';
+                        case 'acceptee': return 'Acceptée ✓';
+                        case 'refusee': return 'Refusée';
+                        default: return statut;
+                      }
+                    };
 
-                      const getStatutBadgeVariant = (statut: string): "default" | "secondary" | "destructive" | "outline" => {
-                        switch (statut) {
-                          case 'envoyee': return 'secondary';
-                          case 'vue': return 'outline';
-                          case 'interesse': return 'default';
-                          case 'visite_planifiee': return 'default';
-                          case 'visite_effectuee': return 'default';
-                          case 'candidature_deposee': return 'default';
-                          case 'acceptee': return 'default';
-                          case 'refusee': return 'destructive';
-                          default: return 'secondary';
-                        }
-                      };
+                    const getStatutBadgeVariant = (statut: string): "default" | "secondary" | "destructive" | "outline" => {
+                      switch (statut) {
+                        case 'envoyee': return 'secondary';
+                        case 'vue': return 'outline';
+                        case 'interesse': return 'default';
+                        case 'visite_planifiee': return 'default';
+                        case 'visite_effectuee': return 'default';
+                        case 'candidature_deposee': return 'default';
+                        case 'acceptee': return 'default';
+                        case 'refusee': return 'destructive';
+                        default: return 'secondary';
+                      }
+                    };
 
-                      return (
-                        <div key={offre.id} className="p-4 bg-muted/50 rounded-lg">
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="flex-1">
-                              <p className="font-medium">{offre.localisation}</p>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {offre.nombrePieces} pièces • {offre.surface}m² • {offre.prix.toLocaleString('fr-CH')} CHF/mois
-                              </p>
-                            </div>
-                            <Badge variant={getStatutBadgeVariant(offre.statut)} className="ml-2">
-                              {getStatutLabel(offre.statut)}
-                            </Badge>
+                    return (
+                      <div key={offre.id} className="p-4 bg-muted/50 rounded-lg">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <p className="font-medium">{offre.adresse}</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {offre.pieces} pièces • {offre.surface}m² • {offre.prix?.toLocaleString('fr-CH')} CHF/mois
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            Envoyée le {new Date(offre.dateEnvoi).toLocaleDateString('fr-CH')}
-                          </p>
+                          <Badge variant={getStatutBadgeVariant(offre.statut)} className="ml-2">
+                            {getStatutLabel(offre.statut)}
+                          </Badge>
                         </div>
-                      );
-                    })}
+                        <p className="text-xs text-muted-foreground">
+                          Envoyée le {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
+                        </p>
+                      </div>
+                    );
+                  })}
                   <Button 
                     variant="ghost" 
                     className="w-full text-sm text-primary"

@@ -1,132 +1,189 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { MapPin, Calendar, Square, Home, ExternalLink, Eye, Heart, CheckCircle } from "lucide-react";
-import { getOffres, getCurrentUser, saveOffres } from "@/utils/localStorage";
-import { formatStatutOffre } from "@/utils/calculations";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const OffresRecues = () => {
   const { toast } = useToast();
-  const currentUser = getCurrentUser();
-  const clientId = currentUser?.clientId || '';
-  const [offres, setOffres] = useState(getOffres().filter(o => o.clientId === clientId));
+  const { user } = useAuth();
+  const [offres, setOffres] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const updateStatut = (offreId: string, newStatut: typeof offres[0]['statut']) => {
-    const allOffres = getOffres();
-    const updatedOffres = allOffres.map(o => 
-      o.id === offreId ? { ...o, statut: newStatut, dateStatut: new Date().toISOString().split('T')[0] } : o
-    );
-    saveOffres(updatedOffres);
-    setOffres(updatedOffres.filter(o => o.clientId === clientId));
-    toast({ title: "Succès", description: "Statut mis à jour" });
+  useEffect(() => {
+    loadOffres();
+  }, [user]);
+
+  const loadOffres = async () => {
+    if (!user) return;
+
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!clientData) return;
+
+      const { data: offresData, error } = await supabase
+        .from('offres')
+        .select('*')
+        .eq('client_id', clientData.id)
+        .order('date_envoi', { ascending: false });
+
+      if (error) throw error;
+
+      setOffres(offresData || []);
+    } catch (error) {
+      console.error('Error loading offres:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les offres",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const updateStatut = async (offreId: string, newStatut: string) => {
+    try {
+      const { error } = await supabase
+        .from('offres')
+        .update({ statut: newStatut, updated_at: new Date().toISOString() })
+        .eq('id', offreId);
+
+      if (error) throw error;
+
+      setOffres(offres.map(o => o.id === offreId ? { ...o, statut: newStatut } : o));
+      toast({ title: "Succès", description: "Statut mis à jour" });
+    } catch (error) {
+      console.error('Error updating statut:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour le statut",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatStatutOffre = (statut: string) => {
+    const labels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+      'envoyee': { label: 'Envoyée', variant: 'secondary' },
+      'vue': { label: 'Vue', variant: 'outline' },
+      'interesse': { label: 'Intéressé', variant: 'default' },
+      'visite_planifiee': { label: 'Visite planifiée', variant: 'default' },
+      'visite_effectuee': { label: 'Visite effectuée', variant: 'default' },
+      'candidature_deposee': { label: 'Candidature déposée', variant: 'default' },
+      'acceptee': { label: 'Acceptée', variant: 'default' },
+      'refusee': { label: 'Refusée', variant: 'destructive' },
+    };
+    return labels[statut] || { label: statut, variant: 'secondary' };
+  };
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-muted-foreground">Chargement...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Offres Reçues</h1>
-            <p className="text-muted-foreground">Consultez les biens qui vous sont proposés</p>
-          </div>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-foreground">Offres Reçues</h1>
+          <p className="text-muted-foreground">Consultez les biens qui vous sont proposés</p>
+        </div>
 
-          <div className="grid gap-6">
-            {offres.map((offre) => {
-              const { label, variant } = formatStatutOffre(offre.statut);
-              
-              return (
-                <Card key={offre.id} className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-semibold">{offre.localisation}</h3>
-                        <Badge variant={variant}>{label}</Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          Reçue le {new Date(offre.dateEnvoi).toLocaleDateString('fr-FR')}
-                        </div>
-                      </div>
+        <div className="grid gap-6">
+          {offres.map((offre) => {
+            const { label, variant } = formatStatutOffre(offre.statut);
+            
+            return (
+              <Card key={offre.id} className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-semibold">{offre.adresse}</h3>
+                      <Badge variant={variant}>{label}</Badge>
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-primary">CHF {offre.prix.toLocaleString()}</p>
-                      <p className="text-sm text-muted-foreground">par mois</p>
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        Reçue le {new Date(offre.date_envoi).toLocaleDateString('fr-FR')}
+                      </div>
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-3 gap-4 mb-4">
-                    <div className="flex items-center gap-2">
-                      <Home className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{offre.nombrePieces} pièces</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Square className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{offre.surface} m²</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{offre.etage} étage</span>
-                    </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-primary">CHF {offre.prix.toLocaleString()}</p>
+                    <p className="text-sm text-muted-foreground">par mois</p>
                   </div>
+                </div>
 
-                  <p className="text-sm mb-4">{offre.description}</p>
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    <Home className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{offre.pieces} pièces</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Square className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{offre.surface} m²</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">{offre.etage} étage</span>
+                  </div>
+                </div>
 
-                  {offre.disponibilite && (
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Disponible dès le {offre.disponibilite}
-                    </p>
+                <p className="text-sm mb-4">{offre.description}</p>
+
+                {offre.disponibilite && (
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Disponible dès le {offre.disponibilite}
+                  </p>
+                )}
+
+                <div className="flex gap-2 flex-wrap">
+                  {offre.lien_annonce && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={offre.lien_annonce} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Voir l'annonce
+                      </a>
+                    </Button>
                   )}
-
-                  {offre.datesVisite.length > 0 && (
-                    <div className="mb-4 p-3 bg-muted/50 rounded-lg">
-                      <p className="text-sm font-medium mb-2">Dates de visite proposées:</p>
-                      <div className="space-y-1">
-                        {offre.datesVisite.map((date, idx) => (
-                          <p key={idx} className="text-sm">
-                            {new Date(date).toLocaleString('fr-FR')}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
+                  {offre.statut === 'envoyee' && (
+                    <Button size="sm" onClick={() => updateStatut(offre.id, 'vue')}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      Marquer comme vue
+                    </Button>
                   )}
-
-                  <div className="flex gap-2 flex-wrap">
-                    {offre.lienAnnonce && (
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={offre.lienAnnonce} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          Voir l'annonce
-                        </a>
-                      </Button>
-                    )}
-                    {offre.statut === 'envoyee' && (
-                      <Button size="sm" onClick={() => updateStatut(offre.id, 'vue')}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        Marquer comme vue
-                      </Button>
-                    )}
-                    {offre.statut === 'vue' && (
-                      <Button size="sm" onClick={() => updateStatut(offre.id, 'interesse')}>
-                        <Heart className="mr-2 h-4 w-4" />
-                        Je suis intéressé
-                      </Button>
-                    )}
-                    {offre.statut === 'interesse' && (
-                      <Button size="sm" onClick={() => updateStatut(offre.id, 'visite_planifiee')}>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Planifier une visite
-                      </Button>
-                    )}
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+                  {offre.statut === 'vue' && (
+                    <Button size="sm" onClick={() => updateStatut(offre.id, 'interesse')}>
+                      <Heart className="mr-2 h-4 w-4" />
+                      Je suis intéressé
+                    </Button>
+                  )}
+                  {offre.statut === 'interesse' && (
+                    <Button size="sm" onClick={() => updateStatut(offre.id, 'visite_planifiee')}>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Planifier une visite
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
 export default OffresRecues;
