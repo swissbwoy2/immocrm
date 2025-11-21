@@ -123,7 +123,17 @@ export default function Login() {
           </form>
 
           <div className="mt-6 p-4 bg-muted/50 rounded-lg text-sm space-y-2">
-            <p className="font-medium text-center mb-3">Compte de démonstration :</p>
+            <p className="font-medium text-center mb-3">Première utilisation ?</p>
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/setup')} 
+              className="w-full"
+              disabled={loading}
+            >
+              Configurer l'application
+            </Button>
+            
+            <p className="font-medium text-center mt-4 mb-3">Compte de démonstration :</p>
             <div className="space-y-2 text-xs">
               <div>
                 <p className="font-medium">Admin:</p>

@@ -2,7 +2,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { LucideIcon, LogOut, Building2, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { getCurrentUser, saveCurrentUser } from '@/utils/localStorage';
+import { useAuth } from '@/contexts/AuthContext';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface MenuItem {
   name: string;
@@ -50,19 +52,31 @@ const getMenuForRole = (role: string): MenuItem[] => {
 
 export function Sidebar() {
   const location = useLocation();
-  const currentUser = getCurrentUser();
+  const { user, userRole, signOut } = useAuth();
+  const [userProfile, setUserProfile] = useState<{ prenom: string; nom: string } | null>(null);
   
-  if (!currentUser) {
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from('profiles')
+        .select('prenom, nom')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          if (data) setUserProfile(data);
+        });
+    }
+  }, [user]);
+
+  if (!user || !userRole) {
     return null;
   }
 
-  const menu = getMenuForRole(currentUser.role);
-  const userName = `${currentUser.prenom} ${currentUser.nom}`;
-  const userRole = currentUser.role;
+  const menu = getMenuForRole(userRole);
+  const userName = userProfile ? `${userProfile.prenom} ${userProfile.nom}` : 'Chargement...';
 
-  const handleLogout = () => {
-    saveCurrentUser(null);
-    window.location.href = '/login';
+  const handleLogout = async () => {
+    await signOut();
   };
 
   return (
