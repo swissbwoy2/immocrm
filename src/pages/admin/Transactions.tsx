@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Sidebar } from "@/components/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getTransactions, getClients, getAgents, getOffres } from "@/utils/localStorage";
@@ -30,10 +29,8 @@ const Transactions = () => {
   const totalAgencyPart = transactions.reduce((sum, t) => sum + t.partAgence, 0);
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <div className="flex-1 overflow-auto">
-        <div className="p-8">
+    <div className="flex-1 overflow-auto">
+      <div className="p-4 md:p-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">Transactions</h1>
             <p className="text-muted-foreground">Suivi des commissions et transactions</p>
@@ -143,8 +140,7 @@ const Transactions = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
-};
-
-export default Transactions;
+    );
+  };
+  
+  export default Transactions;

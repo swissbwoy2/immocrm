@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AppLayout } from "@/components/AppLayout";
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminAgents from "./pages/admin/Agents";
@@ -37,26 +38,26 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/agents" element={<AdminAgents />} />
-          <Route path="/admin/clients" element={<AdminClients />} />
-          <Route path="/admin/assignations" element={<AdminAssignations />} />
-          <Route path="/admin/mandats" element={<AdminMandats />} />
-          <Route path="/admin/transactions" element={<AdminTransactions />} />
-          <Route path="/admin/messagerie" element={<AdminMessagerie />} />
-          <Route path="/agent" element={<AgentDashboard />} />
-          <Route path="/agent/mes-clients" element={<AgentMesClients />} />
-          <Route path="/agent/clients/:id" element={<AgentClientDetail />} />
-          <Route path="/agent/envoyer-offre" element={<AgentEnvoyerOffre />} />
-          <Route path="/agent/offres-envoyees" element={<AgentOffresEnvoyees />} />
-          <Route path="/agent/messagerie" element={<AgentMessagerie />} />
-          <Route path="/client" element={<ClientDashboard />} />
-          <Route path="/client/dossier" element={<ClientDossier />} />
-          <Route path="/client/offres-recues" element={<ClientOffresRecues />} />
-          <Route path="/client/visites" element={<ClientVisites />} />
-          <Route path="/client/mes-candidatures" element={<ClientMesCandidatures />} />
-          <Route path="/client/messagerie" element={<ClientMessagerie />} />
-          <Route path="/client/documents" element={<ClientDocuments />} />
+          <Route path="/admin" element={<AppLayout><AdminDashboard /></AppLayout>} />
+          <Route path="/admin/agents" element={<AppLayout><AdminAgents /></AppLayout>} />
+          <Route path="/admin/clients" element={<AppLayout><AdminClients /></AppLayout>} />
+          <Route path="/admin/assignations" element={<AppLayout><AdminAssignations /></AppLayout>} />
+          <Route path="/admin/mandats" element={<AppLayout><AdminMandats /></AppLayout>} />
+          <Route path="/admin/transactions" element={<AppLayout><AdminTransactions /></AppLayout>} />
+          <Route path="/admin/messagerie" element={<AppLayout><AdminMessagerie /></AppLayout>} />
+          <Route path="/agent" element={<AppLayout><AgentDashboard /></AppLayout>} />
+          <Route path="/agent/mes-clients" element={<AppLayout><AgentMesClients /></AppLayout>} />
+          <Route path="/agent/clients/:id" element={<AppLayout><AgentClientDetail /></AppLayout>} />
+          <Route path="/agent/envoyer-offre" element={<AppLayout><AgentEnvoyerOffre /></AppLayout>} />
+          <Route path="/agent/offres-envoyees" element={<AppLayout><AgentOffresEnvoyees /></AppLayout>} />
+          <Route path="/agent/messagerie" element={<AppLayout><AgentMessagerie /></AppLayout>} />
+          <Route path="/client" element={<AppLayout><ClientDashboard /></AppLayout>} />
+          <Route path="/client/dossier" element={<AppLayout><ClientDossier /></AppLayout>} />
+          <Route path="/client/offres-recues" element={<AppLayout><ClientOffresRecues /></AppLayout>} />
+          <Route path="/client/visites" element={<AppLayout><ClientVisites /></AppLayout>} />
+          <Route path="/client/mes-candidatures" element={<AppLayout><ClientMesCandidatures /></AppLayout>} />
+          <Route path="/client/messagerie" element={<AppLayout><ClientMessagerie /></AppLayout>} />
+          <Route path="/client/documents" element={<AppLayout><ClientDocuments /></AppLayout>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

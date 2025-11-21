@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Sidebar } from "@/components/Sidebar";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -40,10 +39,8 @@ const Messagerie = () => {
     : [];
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <div className="flex-1 flex overflow-hidden">
-        <div className="w-80 border-r border-border bg-card">
+    <div className="flex-1 flex overflow-hidden">
+      <div className="w-80 border-r border-border bg-card">
           <div className="p-4 border-b">
             <h2 className="font-semibold">Conversations</h2>
           </div>
@@ -114,8 +111,7 @@ const Messagerie = () => {
           )}
         </div>
       </div>
-    </div>
-  );
-};
-
-export default Messagerie;
+    );
+  };
+  
+  export default Messagerie;

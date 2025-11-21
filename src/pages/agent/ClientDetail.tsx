@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Sidebar } from '@/components/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -386,11 +385,8 @@ export default function ClientDetail() {
 
   if (!client) {
     return (
-      <div className="flex h-screen bg-background">
-        <Sidebar />
-        <main className="flex-1 flex items-center justify-center">
-          <p className="text-muted-foreground">Chargement...</p>
-        </main>
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-muted-foreground">Chargement...</p>
       </div>
     );
   }
@@ -398,11 +394,10 @@ export default function ClientDetail() {
   const { daysElapsed, daysRemaining, progressPercentage } = mandateData;
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
+    <>
       <main className="flex-1 overflow-y-auto">
         <Form {...form}>
-          <div className="p-8 space-y-6">
+          <div className="p-4 md:p-8 space-y-6">
             {/* Header */}
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -1381,11 +1376,11 @@ export default function ClientDetail() {
             )}
           </div>
         </div>
-        </Form>
-      </main>
+      </Form>
+    </main>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+    {/* Delete Confirmation Dialog */}
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer le client</AlertDialogTitle>
@@ -1490,6 +1485,6 @@ export default function ClientDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

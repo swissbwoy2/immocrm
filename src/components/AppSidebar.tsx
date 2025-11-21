@@ -1,0 +1,142 @@
+import { LogOut, Building2, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail } from 'lucide-react';
+import { NavLink } from '@/components/NavLink';
+import { useLocation } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarFooter,
+  SidebarHeader,
+  useSidebar,
+} from '@/components/ui/sidebar';
+import { getCurrentUser, saveCurrentUser } from '@/utils/localStorage';
+
+const getMenuForRole = (role: string) => {
+  switch (role) {
+    case 'admin':
+      return [
+        { name: 'Tableau de bord', icon: LayoutDashboard, path: '/admin' },
+        { name: 'Agents', icon: UserCog, path: '/admin/agents' },
+        { name: 'Clients', icon: Users, path: '/admin/clients' },
+        { name: 'Transactions', icon: DollarSign, path: '/admin/transactions' },
+        { name: 'Assignations', icon: UserCog, path: '/admin/assignations' },
+        { name: 'Messagerie', icon: MessageSquare, path: '/admin/messagerie' },
+        { name: 'Documents', icon: FileText, path: '/admin/documents' },
+        { name: 'Paramètres', icon: Settings, path: '/admin/parametres' },
+      ];
+    case 'agent':
+      return [
+        { name: 'Tableau de bord', icon: LayoutDashboard, path: '/agent' },
+        { name: 'Mes clients', icon: Users, path: '/agent/mes-clients' },
+        { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre' },
+        { name: 'Offres envoyées', icon: Mail, path: '/agent/offres-envoyees' },
+        { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie' },
+        { name: 'Documents', icon: FileText, path: '/agent/documents' },
+        { name: 'Paramètres', icon: Settings, path: '/agent/parametres' },
+      ];
+    case 'client':
+      return [
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/client' },
+        { name: 'Mon dossier', icon: User, path: '/client/dossier' },
+        { name: 'Offres reçues', icon: Home, path: '/client/offres-recues' },
+        { name: 'Prochaines visites', icon: Calendar, path: '/client/visites' },
+        { name: 'Mes candidatures', icon: Clipboard, path: '/client/mes-candidatures' },
+        { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie' },
+        { name: 'Mes documents', icon: FileText, path: '/client/documents' },
+      ];
+    default:
+      return [];
+  }
+};
+
+export function AppSidebar() {
+  const { state } = useSidebar();
+  const collapsed = state === 'collapsed';
+  const location = useLocation();
+  const currentUser = getCurrentUser();
+  
+  if (!currentUser) {
+    return null;
+  }
+
+  const menu = getMenuForRole(currentUser.role);
+  const userName = `${currentUser.prenom} ${currentUser.nom}`;
+  const userRole = currentUser.role;
+
+  const handleLogout = () => {
+    saveCurrentUser(null);
+    window.location.href = '/login';
+  };
+
+  return (
+    <Sidebar collapsible="icon">
+      {/* Logo */}
+      <SidebarHeader className="border-b border-sidebar-border">
+        <div className="flex items-center gap-3 p-4">
+          <div className="p-2 bg-sidebar-primary rounded-lg flex-shrink-0">
+            <Building2 className="w-5 h-5 text-sidebar-primary-foreground" />
+          </div>
+          {!collapsed && (
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold text-sidebar-foreground truncate">ImmoCRM</h1>
+              <p className="text-xs text-sidebar-foreground/60 truncate">Immo-Rama.ch</p>
+            </div>
+          )}
+        </div>
+      </SidebarHeader>
+
+      {/* User Info */}
+      {!collapsed && (
+        <div className="p-4 border-b border-sidebar-border">
+          <div className="text-sm text-sidebar-foreground/80">
+            <div className="font-medium text-sidebar-foreground truncate">{userName}</div>
+            <div className="text-xs capitalize">{userRole}</div>
+          </div>
+        </div>
+      )}
+
+      <SidebarContent>
+        <SidebarGroup>
+          {!collapsed && <SidebarGroupLabel>Navigation</SidebarGroupLabel>}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {menu.map((item) => (
+                <SidebarMenuItem key={item.path}>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.path}
+                      end={item.path === '/admin' || item.path === '/agent' || item.path === '/client'}
+                      className="hover:bg-sidebar-accent/50"
+                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                    >
+                      <item.icon className={collapsed ? "w-5 h-5" : "w-5 h-5 mr-3"} />
+                      {!collapsed && <span>{item.name}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      {/* Logout */}
+      <SidebarFooter className="border-t border-sidebar-border">
+        <Button
+          variant="ghost"
+          className={`w-full ${collapsed ? 'justify-center px-2' : 'justify-start'} text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50`}
+          onClick={handleLogout}
+        >
+          <LogOut className={collapsed ? "w-5 h-5" : "w-5 h-5 mr-3"} />
+          {!collapsed && <span>Déconnexion</span>}
+        </Button>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
