@@ -253,6 +253,5 @@ export default function OffresEnvoyees() {
           )}
         </div>
       </main>
-    </div>
-  );
-}
+    );
+  }
