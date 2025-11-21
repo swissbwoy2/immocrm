@@ -34,11 +34,13 @@ serve(async (req) => {
       }
     );
 
-    // Create user in auth
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    // Invite user (creates user and sends email)
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
       email,
-      email_confirm: true,
-    });
+      {
+        redirectTo: `${Deno.env.get('SUPABASE_URL')}/auth/v1/verify`,
+      }
+    );
 
     if (authError) {
       console.error('Auth error:', authError);
@@ -46,7 +48,7 @@ serve(async (req) => {
     }
     if (!authData.user) throw new Error('User not created');
 
-    console.log('User created in auth:', authData.user.id);
+    console.log('User invited in auth:', authData.user.id);
 
     // Create profile
     const { error: profileError } = await supabaseAdmin
@@ -96,20 +98,7 @@ serve(async (req) => {
       throw agentError;
     }
 
-    console.log('Agent record created');
-
-    // Send password reset email
-    const { error: resetError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'recovery',
-      email,
-    });
-
-    if (resetError) {
-      console.error('Reset email error:', resetError);
-      // Don't throw, just log - the agent was created successfully
-    }
-
-    console.log('Password reset email sent');
+    console.log('Agent record created and invitation email sent');
 
     return new Response(
       JSON.stringify({ 
