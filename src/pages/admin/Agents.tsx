@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Mail, Phone, Users } from "lucide-react";
+import { Plus, Mail, Phone, Users, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface AgentWithProfile {
@@ -139,6 +139,33 @@ const Agents = () => {
     }
   };
 
+  const deleteAgent = async (userId: string) => {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cet agent ?")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke('delete-agent', {
+        body: { userId },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Succès",
+        description: "Agent supprimé avec succès",
+      });
+
+      fetchAgents();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Erreur lors de la suppression de l'agent",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredAgents = agents.filter(agent =>
     `${agent.profiles.prenom} ${agent.profiles.nom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     agent.profiles.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -230,12 +257,21 @@ const Agents = () => {
                         </div>
                       </div>
                     </div>
-                    <Button
-                      variant={agent.profiles.actif ? "outline" : "default"}
-                      onClick={() => toggleAgentStatus(agent.id, agent.profiles.actif)}
-                    >
-                      {agent.profiles.actif ? "Désactiver" : "Activer"}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={agent.profiles.actif ? "outline" : "default"}
+                        onClick={() => toggleAgentStatus(agent.id, agent.profiles.actif)}
+                      >
+                        {agent.profiles.actif ? "Désactiver" : "Activer"}
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => deleteAgent(agent.user_id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </Card>
               );
