@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Calendar, Users, Eye } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, Eye, DollarSign } from "lucide-react";
 import { getClients, getAgents, getOffres } from "@/utils/localStorage";
 import { calculateMandateDuration } from "@/utils/calculations";
 import { useNavigate } from "react-router-dom";
@@ -64,68 +64,110 @@ const Clients = () => {
             </Select>
           </div>
 
-          <div className="grid gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredClients.map((client) => {
               const duration = calculateMandateDuration(client.dateInscription);
               const offresCount = getClientOffresCount(client.id);
+              const daysElapsed = duration.daysElapsed;
+              const progressPercent = (daysElapsed / 90) * 100;
               
               return (
-                <Card key={client.id} className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate(`/agent/clients/${client.id}`)}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <h3 className="text-xl font-semibold">{client.prenom} {client.nom}</h3>
-                        <Badge variant={duration.daysElapsed > 60 ? "destructive" : duration.daysElapsed > 30 ? "default" : "secondary"}>
-                          J+{duration.daysElapsed}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4" />
-                            {client.email}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-4 w-4" />
-                            {client.telephone}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />
-                            {client.adresse}
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            Inscrit le {new Date(client.dateInscription).toLocaleDateString('fr-CH')}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            Agent: {getAgentName(client.agentId)}
-                          </div>
-                          <div>
-                            {offresCount} offre{offresCount > 1 ? 's' : ''} envoyée{offresCount > 1 ? 's' : ''}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="mt-4 pt-4 border-t flex items-center justify-between">
-                        <div className="text-sm">
-                          <span className="font-medium">Budget max:</span> CHF {client.budgetMax.toLocaleString()} • 
-                          <span className="font-medium ml-2">Recherche:</span> {client.typeBien} {client.nombrePiecesSouhaite} pièces
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/agent/clients/${client.id}`);
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Voir le détail
-                        </Button>
+                <Card 
+                  key={client.id} 
+                  className="p-4 flex flex-col cursor-pointer hover:shadow-lg transition-shadow"
+                  onClick={() => navigate(`/admin/clients/${client.id}`)}
+                >
+                  {/* Nom et Badge */}
+                  <div className="mb-3">
+                    <h3 className="text-lg font-semibold text-primary mb-2">
+                      {client.prenom} {client.nom}
+                    </h3>
+                    <Badge variant={daysElapsed > 60 ? "destructive" : daysElapsed > 30 ? "default" : "secondary"}>
+                      J+{daysElapsed}
+                    </Badge>
+                  </div>
+
+                  {/* Budget */}
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-start gap-2 bg-primary/10 p-2 rounded">
+                      <DollarSign className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Budget maximum</p>
+                        <p className="text-sm font-semibold text-primary">CHF {client.budgetMax.toLocaleString()}</p>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Contact */}
+                  <div className="space-y-1 mb-3 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Phone className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{client.telephone}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Mail className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{client.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{client.adresse}</span>
+                    </div>
+                  </div>
+
+                  {/* Critères de recherche */}
+                  <div className="mb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Critères</span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {client.typeBien} {client.nombrePiecesSouhaite} pièces
+                    </Badge>
+                  </div>
+
+                  {/* Agent assigné et offres */}
+                  <div className="space-y-1 mb-3 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <span>Agent: {getAgentName(client.agentId)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      <span>{offresCount} offre{offresCount > 1 ? 's' : ''} envoyée{offresCount > 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+
+                  {/* Date et barre de progression */}
+                  <div className="mt-auto pt-3 border-t">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+                      <Calendar className="h-3 w-3" />
+                      <span>Inscrit le {new Date(client.dateInscription).toLocaleDateString('fr-CH')}</span>
+                    </div>
+
+                    {/* Barre de progression */}
+                    <div className="w-full bg-muted rounded-full h-2 mb-2">
+                      <div
+                        className={`h-2 rounded-full transition-all ${
+                          daysElapsed < 60 ? 'bg-green-500' :
+                          daysElapsed < 90 ? 'bg-orange-500' :
+                          'bg-red-500'
+                        }`}
+                        style={{ width: `${Math.min(progressPercent, 100)}%` }}
+                      />
+                    </div>
+
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="w-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/admin/clients/${client.id}`);
+                      }}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Voir le détail
+                    </Button>
                   </div>
                 </Card>
               );
