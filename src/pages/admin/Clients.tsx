@@ -16,12 +16,54 @@ const Clients = () => {
   const [offres] = useState(getOffres());
   const [searchTerm, setSearchTerm] = useState("");
   const [filterAgent, setFilterAgent] = useState<string>("all");
+  const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
+  const [selectedPieces, setSelectedPieces] = useState<string[]>([]);
+  const [sortOrder, setSortOrder] = useState<'recent' | 'ancien'>('recent');
+
+  const regions = ['Chablais', 'Fribourg', 'Gros-de-Vaud', 'Lausanne et région', 'Ouest-lausannois', 'Lavaux', 'Nord-vaudois', 'Nyon et région', 'Riviera', 'Valais', 'Genève', 'Autre'];
+  const nombrePieces = ['1+', '2+', '3+', '4+', '5+', 'Autre'];
+
+  const toggleRegion = (region: string) => {
+    setSelectedRegions(prev => 
+      prev.includes(region) ? prev.filter(r => r !== region) : [...prev, region]
+    );
+  };
+
+  const togglePieces = (pieces: string) => {
+    setSelectedPieces(prev => 
+      prev.includes(pieces) ? prev.filter(p => p !== pieces) : [...prev, pieces]
+    );
+  };
 
   const filteredClients = clients.filter(client => {
     const matchesSearch = `${client.prenom} ${client.nom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          client.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesAgent = filterAgent === "all" || client.agentId === filterAgent;
-    return matchesSearch && matchesAgent;
+    
+    const matchRegion = selectedRegions.length === 0 || 
+      (client.regions && client.regions.length > 0 && client.regions.some(r => selectedRegions.includes(r)));
+    
+    const matchPieces = selectedPieces.length === 0 || 
+      selectedPieces.some(p => {
+        if (p === 'Autre') return true;
+        const pieceNum = parseFloat(p.replace('+', ''));
+        const clientPieces = client.nombrePiecesSouhaite || '';
+        const clientNum = parseFloat(clientPieces.toString().replace('+', ''));
+        
+        if (p.includes('+')) {
+          return clientNum >= pieceNum;
+        }
+        return Math.floor(clientNum) === Math.floor(pieceNum);
+      });
+    
+    return matchesSearch && matchesAgent && matchRegion && matchPieces;
+  });
+
+  // Trier les clients par date de création
+  const sortedClients = [...filteredClients].sort((a, b) => {
+    const dateA = new Date(a.dateInscription || 0).getTime();
+    const dateB = new Date(b.dateInscription || 0).getTime();
+    return sortOrder === 'recent' ? dateB - dateA : dateA - dateB;
   });
 
   const getAgentName = (agentId?: string) => {
@@ -59,7 +101,7 @@ const Clients = () => {
           />
         </div>
 
-        <div className="mb-6">
+        <div className="mb-4">
           <Select value={filterAgent} onValueChange={setFilterAgent}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Filtrer par agent" />
@@ -75,9 +117,66 @@ const Clients = () => {
           </Select>
         </div>
 
+        {/* Filtres Régions */}
+        <div className="mb-4">
+          <p className="text-sm font-medium mb-2">Régions</p>
+          <div className="flex flex-wrap gap-2">
+            {regions.map(region => (
+              <Button
+                key={region}
+                variant={selectedRegions.includes(region) ? "default" : "outline"}
+                size="sm"
+                onClick={() => toggleRegion(region)}
+                className="text-xs"
+              >
+                {region}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Filtres Nombre de pièces */}
+        <div className="mb-4">
+          <p className="text-sm font-medium mb-2">Nombre de pièces</p>
+          <div className="flex flex-wrap gap-2">
+            {nombrePieces.map(pieces => (
+              <Button
+                key={pieces}
+                variant={selectedPieces.includes(pieces) ? "default" : "outline"}
+                size="sm"
+                onClick={() => togglePieces(pieces)}
+                className="text-xs"
+              >
+                {pieces}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tri par date de création */}
+        <div className="mb-6 flex items-center gap-2">
+          <p className="text-sm font-medium">Trier par :</p>
+          <Button
+            variant={sortOrder === 'recent' ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSortOrder('recent')}
+            className="text-xs"
+          >
+            Plus récent
+          </Button>
+          <Button
+            variant={sortOrder === 'ancien' ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSortOrder('ancien')}
+            className="text-xs"
+          >
+            Plus ancien
+          </Button>
+        </div>
+
         {/* Grid de clients */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredClients.map((client) => {
+          {sortedClients.map((client) => {
             const daysElapsed = calculateDaysElapsed(client.dateInscription);
             const offresCount = getClientOffresCount(client.id);
             const progressPercent = (daysElapsed / 90) * 100;
@@ -214,7 +313,7 @@ const Clients = () => {
           })}
         </div>
 
-        {filteredClients.length === 0 && (
+        {sortedClients.length === 0 && (
           <div className="text-center py-12">
             <p className="text-muted-foreground">Aucun client ne correspond aux filtres sélectionnés</p>
           </div>
