@@ -4,64 +4,96 @@ import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getCurrentUser, getAgents, getClients, getOffres, getMessages } from '@/utils/localStorage';
-import { calculateDaysElapsed, getStatutLabel } from '@/utils/calculations';
+import { calculateDaysElapsed } from '@/utils/calculations';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
-  const currentUser = getCurrentUser();
-
-  const [agent, setAgent] = useState(() => {
-    const agents = getAgents();
-    return agents.find(a => a.userId === currentUser?.id);
-  });
-  const [clients, setClients] = useState(getClients());
-  const [offres, setOffres] = useState(getOffres());
-  const [messages, setMessages] = useState(getMessages());
+  const { user, userRole } = useAuth();
+  
+  const [agent, setAgent] = useState<any>(null);
+  const [clients, setClients] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser || currentUser.role !== 'agent') {
+    if (!user || userRole !== 'agent') {
       navigate('/login');
+      return;
     }
-  }, [currentUser, navigate]);
+    
+    loadAgentData();
+  }, [user, userRole, navigate]);
 
-  if (!currentUser || !agent) return null;
+  const loadAgentData = async () => {
+    if (!user) return;
+    
+    try {
+      // Récupérer l'agent
+      const { data: agentData } = await supabase
+        .from('agents')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      setAgent(agentData);
 
-  const mesClients = clients.filter(c => c.agentId === agent.id);
-  const clientsActifs = mesClients.filter(c => calculateDaysElapsed(c.dateInscription) <= 90).length;
-  const deadlinesCritiques = mesClients.filter(c => calculateDaysElapsed(c.dateInscription) >= 90).length;
-  const mesOffres = offres.filter(o => o.agentId === agent.id);
-  const offresEnvoyees = mesOffres.length;
-  const messagesNonLus = messages.filter(m => 
-    m.expediteurRole === 'client' && 
-    !m.lu &&
-    mesClients.some(c => m.expediteurId === c.id)
-  ).length;
+      // Récupérer les clients assignés à cet agent (RLS filtre automatiquement)
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('*');
+      
+      setClients(clientsData || []);
+    } catch (error) {
+      console.error('Erreur chargement données agent:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const projectionFinanciere = mesClients.map(client => {
-    const commissionBrute = client.budgetMax;
-    const partAgent = Math.round(commissionBrute * (client.splitAgent / 100));
+  if (loading || !agent) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Les clients sont déjà filtrés par RLS
+  const clientsActifs = clients.filter(c => {
+    const dateAjout = c.date_ajout || c.created_at;
+    return calculateDaysElapsed(dateAjout) <= 90;
+  }).length;
+  
+  const deadlinesCritiques = clients.filter(c => {
+    const dateAjout = c.date_ajout || c.created_at;
+    return calculateDaysElapsed(dateAjout) >= 90;
+  }).length;
+
+  const projectionFinanciere = clients.map(client => {
+    const commissionBrute = client.budget_max || 0;
+    const splitAgent = client.commission_split || 50;
+    const partAgent = Math.round(commissionBrute * (splitAgent / 100));
     return {
       clientId: client.id,
-      nom: `${client.prenom} ${client.nom}`,
-      budgetMax: client.budgetMax,
-      commissionBrute,
-      splitAgent: client.splitAgent,
+      budgetMax: commissionBrute,
+      splitAgent,
       partAgent,
     };
   });
 
   const totalCommissionPotentielle = projectionFinanciere.reduce((sum, p) => sum + p.partAgent, 0);
 
-  const dernieresOffres = mesOffres.slice(0, 5).sort((a, b) => 
-    new Date(b.dateEnvoi).getTime() - new Date(a.dateEnvoi).getTime()
-  );
-
-  const clientsCritiques = mesClients.filter(c => {
-    const days = calculateDaysElapsed(c.dateInscription);
+  const clientsCritiques = clients.filter(c => {
+    const dateAjout = c.date_ajout || c.created_at;
+    const days = calculateDaysElapsed(dateAjout);
     return days >= 60;
-  }).sort((a, b) => calculateDaysElapsed(b.dateInscription) - calculateDaysElapsed(a.dateInscription));
+  }).sort((a, b) => {
+    const dateA = a.date_ajout || a.created_at;
+    const dateB = b.date_ajout || b.created_at;
+    return calculateDaysElapsed(dateB) - calculateDaysElapsed(dateA);
+  });
 
   return (
     <main className="flex-1 overflow-y-auto">
@@ -82,13 +114,13 @@ export default function AgentDashboard() {
             />
             <KPICard 
               title="Offres envoyées" 
-              value={offresEnvoyees} 
+              value={0} 
               icon={Send}
               onClick={() => navigate('/agent/offres-envoyees')}
             />
             <KPICard 
               title="Messages non lus" 
-              value={messagesNonLus} 
+              value={0} 
               icon={MessageSquare}
               onClick={() => navigate('/agent/messagerie')}
             />
@@ -115,18 +147,21 @@ export default function AgentDashboard() {
                 <CardTitle className="text-lg font-semibold">💰 Projection financière</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {projectionFinanciere.slice(0, 5).map(proj => (
-                  <div key={proj.clientId} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{proj.nom}</p>
-                      <p className="text-xs text-muted-foreground">Budget: {proj.budgetMax.toLocaleString()} CHF</p>
+                {projectionFinanciere.slice(0, 5).map(proj => {
+                  const client = clients.find(c => c.id === proj.clientId);
+                  return (
+                    <div key={proj.clientId} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">Client</p>
+                        <p className="text-xs text-muted-foreground">Budget: {proj.budgetMax.toLocaleString()} CHF</p>
+                      </div>
+                      <div className="text-right ml-3">
+                        <p className="font-bold text-success">{proj.partAgent.toLocaleString()} CHF</p>
+                        <p className="text-xs text-muted-foreground">{proj.splitAgent}%</p>
+                      </div>
                     </div>
-                    <div className="text-right ml-3">
-                      <p className="font-bold text-success">{proj.partAgent.toLocaleString()} CHF</p>
-                      <p className="text-xs text-muted-foreground">{proj.splitAgent}%</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {projectionFinanciere.length === 0 && (
                   <div className="text-center py-6 text-muted-foreground text-sm">
                     Aucune projection disponible
@@ -151,7 +186,8 @@ export default function AgentDashboard() {
               <CardContent className="space-y-3">
                 {clientsCritiques.length > 0 ? (
                   clientsCritiques.slice(0, 5).map(client => {
-                    const daysElapsed = calculateDaysElapsed(client.dateInscription);
+                    const dateAjout = client.date_ajout || client.created_at;
+                    const daysElapsed = calculateDaysElapsed(dateAjout);
                     const daysRemaining = 90 - daysElapsed;
                     const isExpired = daysRemaining <= 0;
                     const isWarning = daysRemaining > 0 && daysRemaining <= 30;
@@ -169,9 +205,9 @@ export default function AgentDashboard() {
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{client.prenom} {client.nom}</p>
+                            <p className="font-medium text-sm truncate">Client</p>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              Inscrit le {new Date(client.dateInscription).toLocaleDateString('fr-CH')}
+                              Inscrit le {new Date(dateAjout).toLocaleDateString('fr-CH')}
                             </p>
                           </div>
                           <div className="text-right flex-shrink-0">
@@ -217,46 +253,20 @@ export default function AgentDashboard() {
               <CardTitle className="text-lg font-semibold">📤 Dernières offres envoyées</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {dernieresOffres.length > 0 ? (
-                dernieresOffres.map(offre => {
-                  const client = clients.find(c => c.id === offre.clientId);
-                  return (
-                    <div key={offre.id} className="flex items-center justify-between p-3 bg-muted/30 hover:bg-muted/50 rounded-lg transition-colors">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{offre.localisation}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {client?.prenom} {client?.nom} • {offre.nombrePieces} pcs • {offre.prix.toLocaleString()} CHF
-                        </p>
-                      </div>
-                      <Badge 
-                        variant={
-                          offre.statut === 'acceptee' ? 'default' :
-                          offre.statut === 'refusee' ? 'destructive' :
-                          'secondary'
-                        }
-                        className="ml-3 flex-shrink-0"
-                      >
-                        {getStatutLabel(offre.statut)}
-                      </Badge>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
-                    <Send className="w-6 h-6" />
-                  </div>
-                  <p className="text-sm font-medium">Aucune offre envoyée</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="mt-3"
-                    onClick={() => navigate('/agent/envoyer-offre')}
-                  >
-                    Envoyer une offre
-                  </Button>
+              <div className="text-center py-8 text-muted-foreground">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
+                  <Send className="w-6 h-6" />
                 </div>
-              )}
+                <p className="text-sm font-medium">Aucune offre envoyée</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-3"
+                  onClick={() => navigate('/agent/envoyer-offre')}
+                >
+                  Envoyer une offre
+                </Button>
+              </div>
             </CardContent>
           </Card>
       </div>
