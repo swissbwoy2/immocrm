@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File } from 'lucide-react';
+import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send } from 'lucide-react';
 import { Sidebar } from '@/components/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,10 +10,12 @@ import { AlertTriangle, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { calculateDaysElapsed, calculateDaysRemaining } from '@/utils/calculations';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
+  const { counts, markOffersAsViewed } = useRealtimeNotifications(user?.id, userRole);
   const [client, setClient] = useState<any>(null);
   const [agent, setAgent] = useState<any>(null);
   const [offres, setOffres] = useState<any[]>([]);
@@ -104,9 +106,27 @@ export default function ClientDashboard() {
 
       <main className="flex-1 overflow-y-auto">
         <div className="p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Mon tableau de bord</h1>
-            <p className="text-muted-foreground">Suivez l'avancement de votre recherche</p>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Mon tableau de bord</h1>
+              <p className="text-muted-foreground">Suivez l'avancement de votre recherche</p>
+            </div>
+            <div className="flex gap-2">
+              {counts.unreadMessages > 0 && (
+                <Button variant="outline" onClick={() => navigate('/client/messagerie')} className="relative">
+                  <Bell className="w-4 h-4 mr-2" />
+                  Messages
+                  <Badge variant="destructive" className="ml-2">{counts.unreadMessages}</Badge>
+                </Button>
+              )}
+              {counts.newOffers > 0 && (
+                <Button variant="outline" onClick={() => { navigate('/client/offres-recues'); markOffersAsViewed(); }} className="relative">
+                  <Send className="w-4 h-4 mr-2" />
+                  Offres
+                  <Badge variant="destructive" className="ml-2">{counts.newOffers}</Badge>
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Alerte mandat */}

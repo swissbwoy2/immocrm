@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign } from 'lucide-react';
+import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell } from 'lucide-react';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,10 +8,12 @@ import { calculateDaysElapsed } from '@/utils/calculations';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
+  const { counts } = useRealtimeNotifications(user?.id, userRole);
   
   const [agent, setAgent] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
@@ -99,9 +101,18 @@ export default function AgentDashboard() {
     <main className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8 space-y-6">
           {/* Header */}
-          <div>
-            <h1 className="text-3xl font-bold">Tableau de bord</h1>
-            <p className="text-muted-foreground mt-1">Gérez vos clients et vos offres</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Tableau de bord</h1>
+              <p className="text-muted-foreground mt-1">Gérez vos clients et vos offres</p>
+            </div>
+            {counts.unreadMessages > 0 && (
+              <Button variant="outline" onClick={() => navigate('/agent/messagerie')} className="relative">
+                <Bell className="w-4 h-4 mr-2" />
+                Messages
+                <Badge variant="destructive" className="ml-2">{counts.unreadMessages}</Badge>
+              </Button>
+            )}
           </div>
 
           {/* KPIs */}
@@ -120,9 +131,10 @@ export default function AgentDashboard() {
             />
             <KPICard 
               title="Messages non lus" 
-              value={0} 
+              value={counts.unreadMessages} 
               icon={MessageSquare}
               onClick={() => navigate('/agent/messagerie')}
+              variant={counts.unreadMessages > 0 ? 'danger' : 'default'}
             />
             <KPICard 
               title="Deadlines critiques" 
