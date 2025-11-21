@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -7,15 +7,28 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Mail, Phone, Users } from "lucide-react";
-import { getAgents, getClients, saveAgents } from "@/utils/localStorage";
-import type { Agent } from "@/data/mockData";
+import { supabase } from "@/integrations/supabase/client";
+
+interface AgentWithProfile {
+  id: string;
+  user_id: string;
+  statut: string;
+  nombre_clients_assignes: number;
+  profiles: {
+    nom: string;
+    prenom: string;
+    email: string;
+    telephone: string;
+    actif: boolean;
+  };
+}
 
 const Agents = () => {
-  const [agents, setAgents] = useState(getAgents());
+  const [agents, setAgents] = useState<AgentWithProfile[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const clients = getClients();
 
   const [formData, setFormData] = useState({
     nom: "",
@@ -24,41 +37,168 @@ const Agents = () => {
     telephone: "",
   });
 
-  const handleAddAgent = () => {
+  useEffect(() => {
+    fetchAgents();
+  }, []);
+
+  const fetchAgents = async () => {
+    try {
+      const { data: agentsData, error } = await supabase
+        .from('agents')
+        .select('id, user_id, statut, nombre_clients_assignes');
+
+      if (error) throw error;
+
+      // Fetch profiles separately
+      const userIds = agentsData?.map(a => a.user_id) || [];
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, nom, prenom, email, telephone, actif')
+        .in('id', userIds);
+
+      if (profilesError) throw profilesError;
+
+      // Merge data
+      const mergedData = agentsData?.map(agent => ({
+        ...agent,
+        profiles: profilesData?.find(p => p.id === agent.user_id) || {
+          nom: '',
+          prenom: '',
+          email: '',
+          telephone: '',
+          actif: false
+        }
+      })) || [];
+
+      setAgents(mergedData);
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les agents",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateTemporaryPassword = () => {
+    return Math.random().toString(36).slice(-12) + 'A1!';
+  };
+
+  const handleAddAgent = async () => {
     if (!formData.nom || !formData.prenom || !formData.email || !formData.telephone) {
       toast({ title: "Erreur", description: "Veuillez remplir tous les champs", variant: "destructive" });
       return;
     }
 
-    const newAgent: Agent = {
-      id: `agent-${Date.now()}`,
-      userId: `user-${Date.now()}`,
-      ...formData,
-      clientsAssignes: [],
-      actif: true,
-    };
+    try {
+      // 1. Create user in Supabase Auth using service role key via edge function
+      const tempPassword = generateTemporaryPassword();
+      
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: formData.email,
+        password: tempPassword,
+        email_confirm: true,
+      });
 
-    const updatedAgents = [...agents, newAgent];
-    setAgents(updatedAgents);
-    saveAgents(updatedAgents);
-    setIsDialogOpen(false);
-    setFormData({ nom: "", prenom: "", email: "", telephone: "" });
-    toast({ title: "Succès", description: "Agent ajouté avec succès" });
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Utilisateur non créé');
+
+      // 2. Create profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authData.user.id,
+          prenom: formData.prenom,
+          nom: formData.nom,
+          email: formData.email,
+          telephone: formData.telephone,
+          actif: true,
+        });
+
+      if (profileError) throw profileError;
+
+      // 3. Assign agent role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: authData.user.id,
+          role: 'agent',
+        });
+
+      if (roleError) throw roleError;
+
+      // 4. Create agent entry
+      const { error: agentError } = await supabase
+        .from('agents')
+        .insert({
+          user_id: authData.user.id,
+          statut: 'actif',
+          nombre_clients_assignes: 0,
+        });
+
+      if (agentError) throw agentError;
+
+      // 5. Send password reset email
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+        formData.email,
+        {
+          redirectTo: `${window.location.origin}/first-login`,
+        }
+      );
+
+      if (resetError) console.error('Error sending reset email:', resetError);
+
+      toast({
+        title: "Succès",
+        description: `Agent créé. Un email a été envoyé à ${formData.email}`,
+      });
+
+      setIsDialogOpen(false);
+      setFormData({ nom: "", prenom: "", email: "", telephone: "" });
+      fetchAgents();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Erreur lors de la création de l'agent",
+        variant: "destructive",
+      });
+    }
   };
 
-  const toggleAgentStatus = (agentId: string) => {
-    const updatedAgents = agents.map(agent =>
-      agent.id === agentId ? { ...agent, actif: !agent.actif } : agent
-    );
-    setAgents(updatedAgents);
-    saveAgents(updatedAgents);
-    toast({ title: "Succès", description: "Statut mis à jour" });
+  const toggleAgentStatus = async (agentId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ actif: !currentStatus })
+        .eq('id', agents.find(a => a.id === agentId)?.user_id);
+
+      if (error) throw error;
+
+      toast({ title: "Succès", description: "Statut mis à jour" });
+      fetchAgents();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la mise à jour du statut",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredAgents = agents.filter(agent =>
-    `${agent.prenom} ${agent.nom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    agent.email.toLowerCase().includes(searchTerm.toLowerCase())
+    `${agent.profiles.prenom} ${agent.profiles.nom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    agent.profiles.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-auto">
@@ -113,37 +253,36 @@ const Agents = () => {
 
           <div className="grid gap-4">
             {filteredAgents.map((agent) => {
-              const agentClients = clients.filter(c => c.agentId === agent.id);
               return (
                 <Card key={agent.id} className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
-                        <h3 className="text-xl font-semibold">{agent.prenom} {agent.nom}</h3>
-                        <Badge variant={agent.actif ? "default" : "secondary"}>
-                          {agent.actif ? "Actif" : "Inactif"}
+                        <h3 className="text-xl font-semibold">{agent.profiles.prenom} {agent.profiles.nom}</h3>
+                        <Badge variant={agent.profiles.actif ? "default" : "secondary"}>
+                          {agent.profiles.actif ? "Actif" : "Inactif"}
                         </Badge>
                       </div>
                       <div className="space-y-2 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <Mail className="h-4 w-4" />
-                          {agent.email}
+                          {agent.profiles.email}
                         </div>
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4" />
-                          {agent.telephone}
+                          {agent.profiles.telephone}
                         </div>
                         <div className="flex items-center gap-2">
                           <Users className="h-4 w-4" />
-                          {agentClients.length} client{agentClients.length > 1 ? 's' : ''} assigné{agentClients.length > 1 ? 's' : ''}
+                          {agent.nombre_clients_assignes} client{agent.nombre_clients_assignes > 1 ? 's' : ''} assigné{agent.nombre_clients_assignes > 1 ? 's' : ''}
                         </div>
                       </div>
                     </div>
                     <Button
-                      variant={agent.actif ? "outline" : "default"}
-                      onClick={() => toggleAgentStatus(agent.id)}
+                      variant={agent.profiles.actif ? "outline" : "default"}
+                      onClick={() => toggleAgentStatus(agent.id, agent.profiles.actif)}
                     >
-                      {agent.actif ? "Désactiver" : "Activer"}
+                      {agent.profiles.actif ? "Désactiver" : "Activer"}
                     </Button>
                   </div>
                 </Card>

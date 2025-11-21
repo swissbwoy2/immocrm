@@ -4,7 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
+import { AuthProvider } from "./contexts/AuthContext";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 import Login from "./pages/Login";
+import FirstLogin from "./pages/FirstLogin";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminAgents from "./pages/admin/Agents";
 import AdminClients from "./pages/admin/Clients";
@@ -35,32 +38,41 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/admin" element={<AppLayout><AdminDashboard /></AppLayout>} />
-          <Route path="/admin/agents" element={<AppLayout><AdminAgents /></AppLayout>} />
-          <Route path="/admin/clients" element={<AppLayout><AdminClients /></AppLayout>} />
-          <Route path="/admin/assignations" element={<AppLayout><AdminAssignations /></AppLayout>} />
-          <Route path="/admin/mandats" element={<AppLayout><AdminMandats /></AppLayout>} />
-          <Route path="/admin/transactions" element={<AppLayout><AdminTransactions /></AppLayout>} />
-          <Route path="/admin/messagerie" element={<AppLayout><AdminMessagerie /></AppLayout>} />
-          <Route path="/agent" element={<AppLayout><AgentDashboard /></AppLayout>} />
-          <Route path="/agent/mes-clients" element={<AppLayout><AgentMesClients /></AppLayout>} />
-          <Route path="/agent/clients/:id" element={<AppLayout><AgentClientDetail /></AppLayout>} />
-          <Route path="/agent/envoyer-offre" element={<AppLayout><AgentEnvoyerOffre /></AppLayout>} />
-          <Route path="/agent/offres-envoyees" element={<AppLayout><AgentOffresEnvoyees /></AppLayout>} />
-          <Route path="/agent/messagerie" element={<AppLayout><AgentMessagerie /></AppLayout>} />
-          <Route path="/client" element={<AppLayout><ClientDashboard /></AppLayout>} />
-          <Route path="/client/dossier" element={<AppLayout><ClientDossier /></AppLayout>} />
-          <Route path="/client/offres-recues" element={<AppLayout><ClientOffresRecues /></AppLayout>} />
-          <Route path="/client/visites" element={<AppLayout><ClientVisites /></AppLayout>} />
-          <Route path="/client/mes-candidatures" element={<AppLayout><ClientMesCandidatures /></AppLayout>} />
-          <Route path="/client/messagerie" element={<AppLayout><ClientMessagerie /></AppLayout>} />
-          <Route path="/client/documents" element={<AppLayout><ClientDocuments /></AppLayout>} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/first-login" element={<FirstLogin />} />
+
+            {/* Admin Routes */}
+            <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminDashboard /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/agents" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAgents /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/clients" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminClients /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/assignations" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAssignations /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/mandats" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMandats /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/transactions" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminTransactions /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/messagerie" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMessagerie /></AppLayout></ProtectedRoute>} />
+
+            {/* Agent Routes */}
+            <Route path="/agent" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDashboard /></AppLayout></ProtectedRoute>} />
+            <Route path="/agent/mes-clients" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentMesClients /></AppLayout></ProtectedRoute>} />
+            <Route path="/agent/clients/:id" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentClientDetail /></AppLayout></ProtectedRoute>} />
+            <Route path="/agent/envoyer-offre" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentEnvoyerOffre /></AppLayout></ProtectedRoute>} />
+            <Route path="/agent/offres-envoyees" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentOffresEnvoyees /></AppLayout></ProtectedRoute>} />
+            <Route path="/agent/messagerie" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentMessagerie /></AppLayout></ProtectedRoute>} />
+
+            {/* Client Routes */}
+            <Route path="/client" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDashboard /></AppLayout></ProtectedRoute>} />
+            <Route path="/client/dossier" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDossier /></AppLayout></ProtectedRoute>} />
+            <Route path="/client/offres-recues" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientOffresRecues /></AppLayout></ProtectedRoute>} />
+            <Route path="/client/visites" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientVisites /></AppLayout></ProtectedRoute>} />
+            <Route path="/client/mes-candidatures" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientMesCandidatures /></AppLayout></ProtectedRoute>} />
+            <Route path="/client/messagerie" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientMessagerie /></AppLayout></ProtectedRoute>} />
+            <Route path="/client/documents" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDocuments /></AppLayout></ProtectedRoute>} />
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
