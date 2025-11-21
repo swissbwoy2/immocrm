@@ -3,9 +3,10 @@ import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send } f
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { getCurrentUser, getAgents, getClients, getTransactions, getOffres } from '@/utils/localStorage';
 import { calculateDaysElapsed } from '@/utils/calculations';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 const adminMenu = [
   { name: 'Tableau de bord', icon: Users, path: '/admin' },
@@ -17,20 +18,69 @@ const adminMenu = [
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const currentUser = getCurrentUser();
+  const { user, userRole } = useAuth();
 
-  const [agents, setAgents] = useState(getAgents());
-  const [clients, setClients] = useState(getClients());
-  const [transactions, setTransactions] = useState(getTransactions());
-  const [offres, setOffres] = useState(getOffres());
+  const [agents, setAgents] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
+  const [transactions] = useState<any[]>([]);
+  const [offres] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser || currentUser.role !== 'admin') {
-      navigate('/login');
-    }
-  }, [currentUser, navigate]);
+    loadData();
+  }, []);
 
-  if (!currentUser) return null;
+  const loadData = async () => {
+    try {
+      setLoading(true);
+
+      // Load agents with profiles
+      const { data: agentsData, error: agentsError } = await supabase
+        .from('agents')
+        .select('id, statut, profiles!inner(nom, prenom)')
+        .eq('statut', 'actif');
+
+      if (agentsError) throw agentsError;
+      
+      const transformedAgents = agentsData?.map(agent => ({
+        id: agent.id,
+        actif: agent.statut === 'actif',
+        prenom: (agent.profiles as any).prenom,
+        nom: (agent.profiles as any).nom,
+      })) || [];
+      
+      setAgents(transformedAgents);
+
+      // Load clients
+      const { data: clientsData, error: clientsError } = await supabase
+        .from('clients')
+        .select('*');
+
+      if (clientsError) throw clientsError;
+      
+      const transformedClients = clientsData?.map(client => ({
+        ...client,
+        dateInscription: client.date_ajout || client.created_at,
+        agentId: client.agent_id,
+        budgetMax: client.budget_max || 0,
+        notificationJ60Envoyee: false,
+      })) || [];
+      
+      setClients(transformedClients);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   const clientsActifs = clients.filter(c => calculateDaysElapsed(c.dateInscription) <= 90).length;
   const totalAgents = agents.filter(a => a.actif).length;
