@@ -43,21 +43,41 @@ export type Database = {
       }
       clients: {
         Row: {
+          adresse: string | null
           agent_id: string | null
           anciennete_mois: number | null
+          animaux: boolean | null
           apport_personnel: number | null
           autres_credits: boolean | null
           budget_max: number | null
+          charges_extraordinaires: boolean | null
           charges_mensuelles: number | null
           commission_split: number | null
+          contact_gerance: string | null
           created_at: string | null
+          curatelle: boolean | null
           date_ajout: string | null
+          date_engagement: string | null
+          date_naissance: string | null
+          decouverte_agence: string | null
+          depuis_le: string | null
+          employeur: string | null
           etat_avancement: string | null
+          etat_civil: string | null
           garanties: string | null
+          gerance_actuelle: string | null
           id: string
+          instrument_musique: boolean | null
+          loyer_actuel: number | null
+          montant_charges_extra: number | null
+          motif_changement: string | null
           nationalite: string | null
+          nombre_occupants: number | null
           note_agent: string | null
+          numero_plaques: string | null
           pieces: number | null
+          pieces_actuel: number | null
+          poursuites: boolean | null
           priorite: string | null
           profession: string | null
           region_recherche: string | null
@@ -66,6 +86,7 @@ export type Database = {
           secteur_activite: string | null
           situation_familiale: string | null
           situation_financiere: string | null
+          souhaits_particuliers: string | null
           source_revenus: string | null
           statut: string | null
           type_bien: string | null
@@ -73,23 +94,45 @@ export type Database = {
           type_permis: string | null
           updated_at: string | null
           user_id: string
+          utilisation_logement: string | null
+          vehicules: boolean | null
         }
         Insert: {
+          adresse?: string | null
           agent_id?: string | null
           anciennete_mois?: number | null
+          animaux?: boolean | null
           apport_personnel?: number | null
           autres_credits?: boolean | null
           budget_max?: number | null
+          charges_extraordinaires?: boolean | null
           charges_mensuelles?: number | null
           commission_split?: number | null
+          contact_gerance?: string | null
           created_at?: string | null
+          curatelle?: boolean | null
           date_ajout?: string | null
+          date_engagement?: string | null
+          date_naissance?: string | null
+          decouverte_agence?: string | null
+          depuis_le?: string | null
+          employeur?: string | null
           etat_avancement?: string | null
+          etat_civil?: string | null
           garanties?: string | null
+          gerance_actuelle?: string | null
           id?: string
+          instrument_musique?: boolean | null
+          loyer_actuel?: number | null
+          montant_charges_extra?: number | null
+          motif_changement?: string | null
           nationalite?: string | null
+          nombre_occupants?: number | null
           note_agent?: string | null
+          numero_plaques?: string | null
           pieces?: number | null
+          pieces_actuel?: number | null
+          poursuites?: boolean | null
           priorite?: string | null
           profession?: string | null
           region_recherche?: string | null
@@ -98,6 +141,7 @@ export type Database = {
           secteur_activite?: string | null
           situation_familiale?: string | null
           situation_financiere?: string | null
+          souhaits_particuliers?: string | null
           source_revenus?: string | null
           statut?: string | null
           type_bien?: string | null
@@ -105,23 +149,45 @@ export type Database = {
           type_permis?: string | null
           updated_at?: string | null
           user_id: string
+          utilisation_logement?: string | null
+          vehicules?: boolean | null
         }
         Update: {
+          adresse?: string | null
           agent_id?: string | null
           anciennete_mois?: number | null
+          animaux?: boolean | null
           apport_personnel?: number | null
           autres_credits?: boolean | null
           budget_max?: number | null
+          charges_extraordinaires?: boolean | null
           charges_mensuelles?: number | null
           commission_split?: number | null
+          contact_gerance?: string | null
           created_at?: string | null
+          curatelle?: boolean | null
           date_ajout?: string | null
+          date_engagement?: string | null
+          date_naissance?: string | null
+          decouverte_agence?: string | null
+          depuis_le?: string | null
+          employeur?: string | null
           etat_avancement?: string | null
+          etat_civil?: string | null
           garanties?: string | null
+          gerance_actuelle?: string | null
           id?: string
+          instrument_musique?: boolean | null
+          loyer_actuel?: number | null
+          montant_charges_extra?: number | null
+          motif_changement?: string | null
           nationalite?: string | null
+          nombre_occupants?: number | null
           note_agent?: string | null
+          numero_plaques?: string | null
           pieces?: number | null
+          pieces_actuel?: number | null
+          poursuites?: boolean | null
           priorite?: string | null
           profession?: string | null
           region_recherche?: string | null
@@ -130,6 +196,7 @@ export type Database = {
           secteur_activite?: string | null
           situation_familiale?: string | null
           situation_financiere?: string | null
+          souhaits_particuliers?: string | null
           source_revenus?: string | null
           statut?: string | null
           type_bien?: string | null
@@ -137,6 +204,8 @@ export type Database = {
           type_permis?: string | null
           updated_at?: string | null
           user_id?: string
+          utilisation_logement?: string | null
+          vehicules?: boolean | null
         }
         Relationships: [
           {

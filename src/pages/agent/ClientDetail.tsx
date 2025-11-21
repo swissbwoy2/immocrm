@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { 
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, 
-  FileText, User, Send, TrendingUp, Home
+  FileText, User, Send, Home, Building2, Briefcase, AlertCircle
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,6 +44,29 @@ interface Client {
   anciennete_mois?: number;
   created_at?: string;
   date_ajout?: string;
+  date_naissance?: string;
+  adresse?: string;
+  etat_civil?: string;
+  gerance_actuelle?: string;
+  contact_gerance?: string;
+  loyer_actuel?: number;
+  depuis_le?: string;
+  pieces_actuel?: number;
+  motif_changement?: string;
+  employeur?: string;
+  date_engagement?: string;
+  charges_extraordinaires?: boolean;
+  montant_charges_extra?: number;
+  poursuites?: boolean;
+  curatelle?: boolean;
+  souhaits_particuliers?: string;
+  nombre_occupants?: number;
+  utilisation_logement?: string;
+  animaux?: boolean;
+  instrument_musique?: boolean;
+  vehicules?: boolean;
+  numero_plaques?: string;
+  decouverte_agence?: string;
 }
 
 interface Profile {
@@ -76,7 +99,6 @@ export default function ClientDetail() {
     try {
       setLoading(true);
 
-      // Load client data
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
         .select('*')
@@ -86,7 +108,6 @@ export default function ClientDetail() {
       if (clientError) throw clientError;
       setClient(clientData);
 
-      // Load client profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -96,7 +117,6 @@ export default function ClientDetail() {
       if (profileError) throw profileError;
       setProfile(profileData);
 
-      // Load offers for this client
       const { data: offresData, error: offresError } = await supabase
         .from('offres')
         .select('*')
@@ -163,6 +183,16 @@ export default function ClientDetail() {
     if (statut === 'refusee') return 'destructive';
     if (statut === 'envoyee') return 'secondary';
     return 'outline';
+  };
+
+  const calculateAnciennete = (dateEngagement?: string) => {
+    if (!dateEngagement) return null;
+    const now = new Date();
+    const engagement = new Date(dateEngagement);
+    const months = (now.getFullYear() - engagement.getFullYear()) * 12 + (now.getMonth() - engagement.getMonth());
+    const years = Math.floor(months / 12);
+    const remainingMonths = months % 12;
+    return years > 0 ? `${years} an${years > 1 ? 's' : ''} ${remainingMonths} mois` : `${remainingMonths} mois`;
   };
 
   if (loading) {
@@ -241,17 +271,6 @@ export default function ClientDetail() {
           </Button>
         </div>
 
-        {/* Status Badges */}
-        <div className="flex gap-2">
-          <Badge variant={client.statut === 'actif' ? 'default' : 'secondary'}>
-            {client.statut || 'Actif'}
-          </Badge>
-          <Badge variant="outline">{client.priorite || 'Moyenne'}</Badge>
-          {client.etat_avancement && (
-            <Badge variant="secondary">{client.etat_avancement}</Badge>
-          )}
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Informations personnelles */}
           <Card>
@@ -271,69 +290,183 @@ export default function ClientDetail() {
                   <Phone className="w-4 h-4 text-muted-foreground" />
                   <span>{profile.telephone || 'Non renseigné'}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
-                  <span>{client.residence || 'Non renseigné'}</span>
-                </div>
+                {client.date_naissance && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-muted-foreground" />
+                    <span>{new Date(client.date_naissance).toLocaleDateString('fr-CH')}</span>
+                  </div>
+                )}
+                {client.adresse && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-muted-foreground" />
+                    <span>{client.adresse}</span>
+                  </div>
+                )}
               </div>
               <Separator />
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Situation familiale</p>
-                  <p className="font-medium">{client.situation_familiale || 'Non renseigné'}</p>
+                  <p className="text-sm text-muted-foreground">État civil</p>
+                  <p className="font-medium">{client.etat_civil || 'Non renseigné'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Profession</p>
-                  <p className="font-medium">{client.profession || 'Non renseigné'}</p>
+                  <p className="text-sm text-muted-foreground">Nationalité</p>
+                  <p className="font-medium">{client.nationalite || 'Non renseigné'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Type de permis</p>
+                  <p className="font-medium">{client.type_permis || 'Non renseigné'}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Informations financières */}
+          {/* Situation actuelle */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5" />
-                Informations financières
+                <Building2 className="w-5 h-5" />
+                Situation actuelle
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Revenus mensuels</p>
+                  <p className="text-sm text-muted-foreground">Gérance actuelle</p>
+                  <p className="font-medium">{client.gerance_actuelle || 'Non renseigné'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Contact gérance</p>
+                  <p className="font-medium">{client.contact_gerance || 'Non renseigné'}</p>
+                </div>
+              </div>
+              <Separator />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Loyer brut actuel</p>
                   <p className="font-medium text-lg">
-                    CHF {client.revenus_mensuels?.toLocaleString() || '0'}
+                    {client.loyer_actuel ? `CHF ${client.loyer_actuel.toLocaleString()}` : 'Non renseigné'}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Charges mensuelles</p>
-                  <p className="font-medium text-lg">
-                    CHF {client.charges_mensuelles?.toLocaleString() || '0'}
+                  <p className="text-sm text-muted-foreground">Depuis le</p>
+                  <p className="font-medium">
+                    {client.depuis_le ? new Date(client.depuis_le).toLocaleDateString('fr-CH') : 'Non renseigné'}
                   </p>
                 </div>
               </div>
               <Separator />
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Budget maximum</p>
-                  <p className="font-medium text-lg text-primary">
-                    CHF {client.budget_max?.toLocaleString() || '0'}
-                  </p>
+                  <p className="text-sm text-muted-foreground">Pièces actuel</p>
+                  <p className="font-medium">{client.pieces_actuel || 'Non renseigné'}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Budget recommandé</p>
-                  <p className="font-medium text-lg text-green-600">
-                    CHF {budgetRecommande.toLocaleString()}
-                  </p>
+                  <p className="text-sm text-muted-foreground">Motif du changement</p>
+                  <p className="font-medium text-sm">{client.motif_changement || 'Non renseigné'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Situation professionnelle */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Briefcase className="w-5 h-5" />
+                Situation professionnelle
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Profession</p>
+                  <p className="font-medium">{client.profession || 'Non renseigné'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Employeur</p>
+                  <p className="font-medium">{client.employeur || 'Non renseigné'}</p>
                 </div>
               </div>
               <Separator />
-              <div>
-                <p className="text-sm text-muted-foreground">Apport personnel</p>
-                <p className="font-medium text-lg">
-                  CHF {client.apport_personnel?.toLocaleString() || '0'}
-                </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Revenus mensuels nets</p>
+                  <p className="font-medium text-lg">
+                    CHF {client.revenus_mensuels?.toLocaleString() || '0'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Date d'engagement</p>
+                  <p className="font-medium">
+                    {client.date_engagement ? new Date(client.date_engagement).toLocaleDateString('fr-CH') : 'Non renseigné'}
+                  </p>
+                </div>
+              </div>
+              {calculateAnciennete(client.date_engagement) && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Ancienneté</p>
+                  <p className="font-medium">{calculateAnciennete(client.date_engagement)}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Situation financière */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5" />
+                Situation financière
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <Card className="bg-muted/50">
+                  <CardContent className="pt-6">
+                    <p className="text-sm text-muted-foreground mb-1">Revenus mensuels</p>
+                    <p className="text-2xl font-bold">
+                      CHF {client.revenus_mensuels?.toLocaleString() || '0'}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="pt-6">
+                    <p className="text-sm text-muted-foreground mb-1">Budget maximum</p>
+                    <p className="text-2xl font-bold text-primary">
+                      CHF {client.budget_max?.toLocaleString() || '0'}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="pt-6">
+                    <p className="text-sm text-muted-foreground mb-1">Budget recommandé</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      CHF {budgetRecommande.toLocaleString()}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                {client.charges_extraordinaires && (
+                  <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+                    <span className="text-sm font-medium">Charges extraordinaires</span>
+                    <span className="text-sm">
+                      {client.montant_charges_extra ? `CHF ${client.montant_charges_extra.toLocaleString()}` : 'Oui'}
+                    </span>
+                  </div>
+                )}
+                {(client.poursuites || client.curatelle) && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                    <AlertCircle className="w-4 h-4 text-red-600" />
+                    <div className="flex-1 text-sm font-medium text-red-600">
+                      {client.poursuites && 'Poursuites en cours'}
+                      {client.poursuites && client.curatelle && ' • '}
+                      {client.curatelle && 'Sous curatelle'}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -362,42 +495,62 @@ export default function ClientDetail() {
                 <p className="text-sm text-muted-foreground mb-2">Région de recherche</p>
                 <p className="font-medium">{client.region_recherche || 'Non renseigné'}</p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Type de contrat</p>
-                <Badge>{client.type_contrat || 'Location'}</Badge>
-              </div>
+              {client.nombre_occupants && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Nombre d'occupants</p>
+                  <p className="font-medium">{client.nombre_occupants}</p>
+                </div>
+              )}
+              {client.souhaits_particuliers && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Souhaits particuliers</p>
+                    <p className="text-sm bg-muted p-3 rounded-md">{client.souhaits_particuliers}</p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
 
-          {/* Suivi */}
+          {/* Autres informations */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="w-5 h-5" />
-                Suivi
+                Autres informations
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Commission split</p>
-                <p className="font-medium">{client.commission_split || 50}%</p>
-              </div>
+              {client.utilisation_logement && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Utilisation du logement</p>
+                  <p className="font-medium">{client.utilisation_logement}</p>
+                </div>
+              )}
               <Separator />
-              <div>
-                <p className="text-sm text-muted-foreground">Date d'ajout</p>
-                <div className="flex items-center gap-2 mt-1">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  <span>
-                    {new Date(client.date_ajout || client.created_at || '').toLocaleDateString('fr-CH')}
-                  </span>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${client.animaux ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <span className="text-sm">Animaux</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${client.instrument_musique ? 'bg-green-500' : 'bg-gray-300'}`} />
+                  <span className="text-sm">Instrument de musique</span>
                 </div>
               </div>
-              {client.note_agent && (
+              {client.vehicules && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Véhicules</p>
+                  <p className="font-medium">{client.numero_plaques || 'Oui'}</p>
+                </div>
+              )}
+              {client.decouverte_agence && (
                 <>
                   <Separator />
                   <div>
-                    <p className="text-sm text-muted-foreground mb-2">Notes</p>
-                    <p className="text-sm bg-muted p-3 rounded-md">{client.note_agent}</p>
+                    <p className="text-sm text-muted-foreground">Comment a découvert l'agence</p>
+                    <p className="font-medium">{client.decouverte_agence}</p>
                   </div>
                 </>
               )}

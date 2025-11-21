@@ -200,6 +200,25 @@ function parseClientFromRow(row: CSVRow, lineNumber: number): {
     actif: false, // Nécessite activation lors de la première connexion
   };
 
+  // Parse helper for dates (Swiss format)
+  const parseDate = (dateStr: string): string | null => {
+    if (!dateStr || !dateStr.trim()) return null;
+    try {
+      // Support DD/MM/YYYY, DD.MM.YYYY
+      const cleaned = dateStr.replace(/(\d{2})[./](\d{2})[./](\d{4})/, '$3-$2-$1');
+      const date = new Date(cleaned);
+      return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0];
+    } catch {
+      return null;
+    }
+  };
+
+  // Parse boolean values
+  const parseBoolean = (value: string): boolean => {
+    const normalized = value.toLowerCase().trim();
+    return normalized === 'oui' || normalized === 'yes' || normalized === '1' || normalized === 'true';
+  };
+
   // Parser les champs numériques avec valeurs par défaut
   const revenuRaw = findColumnValue(row, [
     'Revenu mensuel net', 'Revenu', 'Revenue', 'Salaire', 'Revenu net'
@@ -276,7 +295,7 @@ function parseClientFromRow(row: CSVRow, lineNumber: number): {
     dateInscription = new Date().toISOString();
   }
 
-  // Créer le client
+  // Créer le client avec TOUS les champs du CSV
   const client: Client = {
     id: clientId,
     dateInscription: dateInscription,
@@ -288,29 +307,33 @@ function parseClientFromRow(row: CSVRow, lineNumber: number): {
     nom: nom,
     telephone: telephone,
     adresse: findColumnValue(row, ['Adresse', 'Address', 'Rue']),
-    dateNaissance: findColumnValue(row, ['Date de naissance', 'Date naissance', 'Naissance', 'Birth date']),
+    dateNaissance: parseDate(findColumnValue(row, ['Date de naissance', 'Date naissance', 'Naissance', 'Birth date'])),
     nationalite: findColumnValue(row, ['Nationalité', 'Nationalite', 'Nationality']),
     typePermis: findColumnValue(row, ['Type de permis de séjour', 'Permis', 'Type permis', 'Permit']),
     etatCivil: findColumnValue(row, ['État civil', 'Etat civil', 'Etat civile', 'Statut civil']),
-    geranceActuelle: findColumnValue(row, ['Gérance actuelle', 'Gerance', 'Gérance']),
+    geranceActuelle: findColumnValue(row, ['Gérance actuelle', 'Gerance', 'Gérance', 'Propriétaire/Gérance actuelle']),
     contactGerance: findColumnValue(row, ['Contact gérance', 'Contact gerance', 'Contact']),
     loyerActuel: loyerActuel,
-    depuisLe: findColumnValue(row, ['Depuis le', 'Depuis', 'Date debut']),
+    depuisLe: parseDate(findColumnValue(row, ['Depuis le', 'Depuis', 'Date debut'])),
     nombrePiecesActuel: parseNumber(findColumnValue(row, [
-      'Nombre de pièces actuel', 'Pieces actuelles', 'Pieces', 'Nb pieces actuel'
+      'Nombre de pièces actuel', 'Pieces actuelles', 'Pieces', 'Nb pieces actuel', 'Nb de pcs actuel'
     ])),
-    chargesExtraordinaires: findColumnValue(row, ['Charges extraordinaires', 'Charges extra']) || 'Non',
+    chargesExtraordinaires: findColumnValue(row, ['Charges extraordinaires', 'Charges extra']),
     montantCharges: montantCharges,
-    poursuites: findColumnValue(row, ['Poursuites', 'Poursuite']).toLowerCase() === 'oui',
-    curatelle: findColumnValue(row, ['Curatelle']).toLowerCase() === 'oui',
+    poursuites: parseBoolean(findColumnValue(row, ['Poursuites', 'Poursuite'])),
+    curatelle: parseBoolean(findColumnValue(row, ['Curatelle'])),
     motifChangement: findColumnValue(row, ['Motif changement', 'Motif', 'Raison changement']),
     profession: findColumnValue(row, ['Profession', 'Métier', 'Job', 'Emploi']),
     employeur: findColumnValue(row, ['Employeur', 'Employer', 'Entreprise']),
     revenuMensuel: revenuMensuel,
-    dateEngagement: findColumnValue(row, ['Date d\'engagement', 'Date engagement', 'Date embauche']),
-    animaux: findColumnValue(row, ['Animaux', 'Animal', 'Pets']).toLowerCase() === 'oui',
-    vehicules: findColumnValue(row, ['Véhicules', 'Vehicules', 'Voiture', 'Vehicle']).toLowerCase() === 'oui',
+    dateEngagement: parseDate(findColumnValue(row, ['Date d\'engagement', 'Date engagement', 'Date embauche'])),
+    nombreOccupants: parseNumber(findColumnValue(row, ['Nombre d\'occupants', 'Nombre occupants', 'Occupants'])),
+    utilisationLogement: findColumnValue(row, ['Utilisation du logement', 'Utilisation', 'Usage']),
+    animaux: parseBoolean(findColumnValue(row, ['Animaux', 'Animal', 'Pets'])),
+    instrumentMusique: parseBoolean(findColumnValue(row, ['Instrument de musique', 'Instrument', 'Music'])),
+    vehicules: parseBoolean(findColumnValue(row, ['Véhicules', 'Vehicules', 'Voiture', 'Vehicle'])),
     numeroPlaques: findColumnValue(row, ['Numéro plaques', 'Numero plaques', 'Plaque', 'Plate number']),
+    decouverteAgence: findColumnValue(row, ['Comment avez-vous découvert notre agence', 'Decouverte', 'Comment nous avez vous connu']),
     typeRecherche: findColumnValue(row, ['Type recherche', 'Type', 'Recherche']) || 'Location',
     typeBien: findColumnValue(row, ['Type d\'objet', 'Type objet', 'Type bien', 'Property type']) || 'Appartement',
     nombrePiecesSouhaite: findColumnValue(row, ['Nb de pcs', 'Nombre de pieces', 'Pieces souhaitees', 'Rooms']) || '2.5',
