@@ -178,6 +178,53 @@ export type Database = {
         }
         Relationships: []
       }
+      documents: {
+        Row: {
+          client_id: string | null
+          created_at: string | null
+          date_upload: string | null
+          id: string
+          nom: string
+          statut: string | null
+          taille: number | null
+          type: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string | null
+          date_upload?: string | null
+          id?: string
+          nom: string
+          statut?: string | null
+          taille?: number | null
+          type: string
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string | null
+          date_upload?: string | null
+          id?: string
+          nom?: string
+          statut?: string | null
+          taille?: number | null
+          type?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -216,6 +263,99 @@ export type Database = {
           },
         ]
       }
+      offres: {
+        Row: {
+          adresse: string
+          agent_id: string | null
+          client_id: string | null
+          code_immeuble: string | null
+          commentaires: string | null
+          concierge_nom: string | null
+          concierge_tel: string | null
+          created_at: string | null
+          date_envoi: string | null
+          description: string | null
+          disponibilite: string | null
+          etage: string | null
+          id: string
+          lien_annonce: string | null
+          locataire_nom: string | null
+          locataire_tel: string | null
+          pieces: number | null
+          prix: number
+          statut: string | null
+          surface: number | null
+          titre: string | null
+          type_bien: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          adresse: string
+          agent_id?: string | null
+          client_id?: string | null
+          code_immeuble?: string | null
+          commentaires?: string | null
+          concierge_nom?: string | null
+          concierge_tel?: string | null
+          created_at?: string | null
+          date_envoi?: string | null
+          description?: string | null
+          disponibilite?: string | null
+          etage?: string | null
+          id?: string
+          lien_annonce?: string | null
+          locataire_nom?: string | null
+          locataire_tel?: string | null
+          pieces?: number | null
+          prix: number
+          statut?: string | null
+          surface?: number | null
+          titre?: string | null
+          type_bien?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          adresse?: string
+          agent_id?: string | null
+          client_id?: string | null
+          code_immeuble?: string | null
+          commentaires?: string | null
+          concierge_nom?: string | null
+          concierge_tel?: string | null
+          created_at?: string | null
+          date_envoi?: string | null
+          description?: string | null
+          disponibilite?: string | null
+          etage?: string | null
+          id?: string
+          lien_annonce?: string | null
+          locataire_nom?: string | null
+          locataire_tel?: string | null
+          pieces?: number | null
+          prix?: number
+          statut?: string | null
+          surface?: number | null
+          titre?: string | null
+          type_bien?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offres_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offres_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           actif: boolean | null
@@ -249,6 +389,73 @@ export type Database = {
         }
         Relationships: []
       }
+      transactions: {
+        Row: {
+          agent_id: string | null
+          client_id: string | null
+          commission_totale: number
+          created_at: string | null
+          date_transaction: string | null
+          id: string
+          montant_total: number
+          offre_id: string | null
+          part_agence: number
+          part_agent: number
+          statut: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          client_id?: string | null
+          commission_totale: number
+          created_at?: string | null
+          date_transaction?: string | null
+          id?: string
+          montant_total: number
+          offre_id?: string | null
+          part_agence: number
+          part_agent: number
+          statut?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          client_id?: string | null
+          commission_totale?: number
+          created_at?: string | null
+          date_transaction?: string | null
+          id?: string
+          montant_total?: number
+          offre_id?: string | null
+          part_agence?: number
+          part_agent?: number
+          statut?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -269,6 +476,67 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      visites: {
+        Row: {
+          adresse: string
+          agent_id: string | null
+          client_id: string | null
+          created_at: string | null
+          date_visite: string
+          id: string
+          notes: string | null
+          offre_id: string | null
+          statut: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          adresse: string
+          agent_id?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          date_visite: string
+          id?: string
+          notes?: string | null
+          offre_id?: string | null
+          statut?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          adresse?: string
+          agent_id?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          date_visite?: string
+          id?: string
+          notes?: string | null
+          offre_id?: string | null
+          statut?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visites_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visites_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visites_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
