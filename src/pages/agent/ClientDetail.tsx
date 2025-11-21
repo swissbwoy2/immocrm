@@ -145,7 +145,7 @@ export default function ClientDetail() {
   });
 
   useEffect(() => {
-    if (!currentUser || currentUser.role !== 'agent') {
+    if (!currentUser || (currentUser.role !== 'agent' && currentUser.role !== 'admin')) {
       navigate('/login');
       return;
     }
