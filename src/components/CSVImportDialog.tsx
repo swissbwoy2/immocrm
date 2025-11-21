@@ -100,6 +100,14 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
       // Transform parsed data to match edge function format
       const clientsToImport = parseResult.clients.map((client, index) => {
         const user = parseResult.users[index];
+        
+        console.log(`📤 Préparation client ${index + 1}:`, {
+          email: user.email,
+          dateInscription: client.dateInscription,
+          prenom: user.prenom,
+          nom: user.nom
+        });
+        
         return {
           user: {
             email: user.email,
@@ -120,7 +128,7 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
             region_recherche: client.regions?.join(', ') || null,
             type_bien: client.typeBien || null,
             type_contrat: client.typeRecherche || null,
-            date_ajout: client.dateInscription || new Date().toISOString(),
+            date_ajout: client.dateInscription, // Date du mandat depuis le CSV
           },
           agentEmail: undefined, // Not supported yet in CSV
         };

@@ -235,12 +235,51 @@ function parseClientFromRow(row: CSVRow, lineNumber: number): {
   ]);
   const regions = regionsString.split(/[;,]/).map(r => r.trim()).filter(r => r);
 
+  // Parser la date du mandat avec plus de variantes
+  const dateRaw = findColumnValue(row, [
+    'Date et heure de l\'envoi',
+    'Date et heure de l envoi', 
+    'Date inscription', 
+    'Date d inscription',
+    'Date',
+    'Date envoi',
+    'Timestamp',
+    'Date de creation',
+    'Date du mandat',
+    'Horodateur',
+    'Created at',
+    'Date d ajout'
+  ]);
+
+  console.log(`📅 Ligne ${lineNumber} - Date brute trouvée:`, dateRaw);
+
+  // Parser la date (support des formats suisses)
+  let dateInscription: string;
+  if (dateRaw && dateRaw.trim()) {
+    // Essayer de parser la date
+    try {
+      // Format: "21/11/2024 14:30" ou "21.11.2024 14:30" ou "2024-11-21"
+      const dateParsed = new Date(dateRaw.replace(/(\d{2})[./](\d{2})[./](\d{4})/, '$3-$2-$1'));
+      if (!isNaN(dateParsed.getTime())) {
+        dateInscription = dateParsed.toISOString();
+        console.log(`✅ Ligne ${lineNumber} - Date parsée avec succès:`, dateInscription);
+      } else {
+        console.warn(`⚠️ Ligne ${lineNumber} - Date invalide, utilisation de la date actuelle`);
+        dateInscription = new Date().toISOString();
+      }
+    } catch (error) {
+      console.warn(`⚠️ Ligne ${lineNumber} - Erreur parsing date:`, error);
+      dateInscription = new Date().toISOString();
+    }
+  } else {
+    console.warn(`⚠️ Ligne ${lineNumber} - Aucune date trouvée dans le CSV, utilisation de la date actuelle`);
+    dateInscription = new Date().toISOString();
+  }
+
   // Créer le client
   const client: Client = {
     id: clientId,
-    dateInscription: findColumnValue(row, [
-      'Date et heure de l\'envoi', 'Date inscription', 'Date', 'Date envoi'
-    ]) || new Date().toISOString(),
+    dateInscription: dateInscription,
     agentId: undefined, // À assigner manuellement
     splitAgent: 45, // Par défaut 45/55
     splitAgence: 55,
