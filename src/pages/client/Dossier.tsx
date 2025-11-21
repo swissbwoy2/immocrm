@@ -8,43 +8,64 @@ import {
   Mail, Phone, MapPin, Calendar, Users, DollarSign, 
   Home, Building2, Briefcase, Heart, Car 
 } from 'lucide-react';
-import { getCurrentUser } from '@/utils/localStorage';
-import { getClients } from '@/utils/localStorage';
-import { Client } from '@/data/mockData';
 import { calculateMandateDuration } from '@/utils/calculations';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Dossier() {
   const navigate = useNavigate();
-  const [client, setClient] = useState<Client | null>(null);
-  const currentUser = getCurrentUser();
+  const { user } = useAuth();
+  const [client, setClient] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!currentUser || currentUser.role !== 'client') {
-      navigate('/login');
-      return;
-    }
+    loadData();
+  }, [user]);
 
-    const clients = getClients();
-    const userClient = clients.find(c => c.id === currentUser.clientId);
-    
-    if (userClient) {
-      setClient(userClient);
-    }
-  }, [currentUser, navigate]);
+  const loadData = async () => {
+    if (!user) return;
 
-  if (!client) {
+    try {
+      // Load client
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (clientError) throw clientError;
+      setClient(clientData);
+
+      // Load profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+      setProfile(profileData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading || !client || !profile) {
     return (
       <div className="flex h-screen bg-background">
         <Sidebar />
         <main className="flex-1 flex items-center justify-center">
-          <p className="text-muted-foreground">Chargement...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </main>
       </div>
     );
   }
 
-  const { daysElapsed, daysRemaining, progressPercentage } = calculateMandateDuration(client.dateInscription);
-  const budgetRecommande = Math.round(client.revenuMensuel / 3);
+  const { daysElapsed, daysRemaining, progressPercentage } = calculateMandateDuration(client.date_ajout || client.created_at);
+  const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);
 
   return (
     <div className="flex h-screen bg-background">
@@ -76,8 +97,8 @@ export default function Dossier() {
             <CardContent>
               <Progress value={progressPercentage} className="h-3" />
               <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                <span>Début: {new Date(client.dateInscription).toLocaleDateString('fr-CH')}</span>
-                <span>Fin: {new Date(new Date(client.dateInscription).getTime() + 90 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-CH')}</span>
+                <span>Début: {new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</span>
+                <span>Fin: {new Date(new Date(client.date_ajout || client.created_at).getTime() + 90 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-CH')}</span>
               </div>
             </CardContent>
           </Card>
@@ -94,7 +115,7 @@ export default function Dossier() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold">{client.revenuMensuel.toLocaleString('fr-CH')} CHF</p>
+                  <p className="text-2xl font-bold">{(client.revenus_mensuels || 0).toLocaleString('fr-CH')} CHF</p>
                 </CardContent>
               </Card>
 
@@ -106,7 +127,7 @@ export default function Dossier() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold">{client.budgetMax.toLocaleString('fr-CH')} CHF</p>
+                  <p className="text-2xl font-bold">{(client.budget_max || 0).toLocaleString('fr-CH')} CHF</p>
                 </CardContent>
               </Card>
 
@@ -136,7 +157,7 @@ export default function Dossier() {
                   <Mail className="w-5 h-5 text-muted-foreground mt-1" />
                   <div>
                     <p className="text-sm text-muted-foreground">Email</p>
-                    <p className="font-medium">{client.email}</p>
+                    <p className="font-medium">{profile.email}</p>
                   </div>
                 </div>
 
@@ -144,31 +165,15 @@ export default function Dossier() {
                   <Phone className="w-5 h-5 text-muted-foreground mt-1" />
                   <div>
                     <p className="text-sm text-muted-foreground">Téléphone</p>
-                    <p className="font-medium">{client.telephone}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-muted-foreground mt-1" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Adresse</p>
-                    <p className="font-medium">{client.adresse}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 text-muted-foreground mt-1" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Date de naissance</p>
-                    <p className="font-medium">{new Date(client.dateNaissance).toLocaleDateString('fr-CH')}</p>
+                    <p className="font-medium">{profile.telephone || 'Non renseigné'}</p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
                   <Users className="w-5 h-5 text-muted-foreground mt-1" />
                   <div>
-                    <p className="text-sm text-muted-foreground">État civil</p>
-                    <p className="font-medium">{client.etatCivil}</p>
+                    <p className="text-sm text-muted-foreground">Situation familiale</p>
+                    <p className="font-medium">{client.situation_familiale || 'Non renseigné'}</p>
                   </div>
                 </div>
 
@@ -176,46 +181,8 @@ export default function Dossier() {
                   <Building2 className="w-5 h-5 text-muted-foreground mt-1" />
                   <div>
                     <p className="text-sm text-muted-foreground">Nationalité / Permis</p>
-                    <p className="font-medium">{client.nationalite} • {client.typePermis}</p>
+                    <p className="font-medium">{client.nationalite || 'Non renseigné'} • {client.type_permis || 'Non renseigné'}</p>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Situation actuelle */}
-          <div>
-            <h2 className="text-xl font-semibold mb-4">🏠 Situation actuelle</h2>
-            <Card>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                <div>
-                  <p className="text-sm text-muted-foreground">Gérance actuelle</p>
-                  <p className="font-medium">{client.geranceActuelle || 'Non renseigné'}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">Contact gérance</p>
-                  <p className="font-medium">{client.contactGerance || 'Non renseigné'}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">Loyer actuel</p>
-                  <p className="font-medium">{client.loyerActuel.toLocaleString('fr-CH')} CHF</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">Depuis le</p>
-                  <p className="font-medium">{client.depuisLe ? new Date(client.depuisLe).toLocaleDateString('fr-CH') : 'Non renseigné'}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">Nombre de pièces actuel</p>
-                  <p className="font-medium">{client.nombrePiecesActuel} pièces</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">Motif du changement</p>
-                  <p className="font-medium">{client.motifChangement}</p>
                 </div>
               </CardContent>
             </Card>
@@ -230,23 +197,18 @@ export default function Dossier() {
                   <Briefcase className="w-5 h-5 text-muted-foreground mt-1" />
                   <div>
                     <p className="text-sm text-muted-foreground">Profession</p>
-                    <p className="font-medium">{client.profession}</p>
+                    <p className="font-medium">{client.profession || 'Non renseigné'}</p>
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-sm text-muted-foreground">Employeur</p>
-                  <p className="font-medium">{client.employeur}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">Date d'engagement</p>
-                  <p className="font-medium">{client.dateEngagement ? new Date(client.dateEngagement).toLocaleDateString('fr-CH') : 'Non renseigné'}</p>
+                  <p className="text-sm text-muted-foreground">Secteur d'activité</p>
+                  <p className="font-medium">{client.secteur_activite || 'Non renseigné'}</p>
                 </div>
 
                 <div>
                   <p className="text-sm text-muted-foreground">Revenu mensuel net</p>
-                  <p className="font-medium">{client.revenuMensuel.toLocaleString('fr-CH')} CHF</p>
+                  <p className="font-medium">{(client.revenus_mensuels || 0).toLocaleString('fr-CH')} CHF</p>
                 </div>
               </CardContent>
             </Card>
@@ -259,65 +221,25 @@ export default function Dossier() {
               <CardContent className="space-y-6 pt-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <p className="text-sm text-muted-foreground">Type de recherche</p>
-                    <p className="font-medium">{client.typeRecherche}</p>
-                  </div>
-
-                  <div>
                     <p className="text-sm text-muted-foreground">Type de bien</p>
-                    <p className="font-medium">{client.typeBien}</p>
+                    <p className="font-medium">{client.type_bien || 'Non renseigné'}</p>
                   </div>
 
                   <div>
                     <p className="text-sm text-muted-foreground">Nombre de pièces souhaité</p>
-                    <p className="font-medium">{client.nombrePiecesSouhaite} pièces</p>
+                    <p className="font-medium">{client.pieces || 'Non renseigné'} pièces</p>
                   </div>
 
                   <div>
                     <p className="text-sm text-muted-foreground">Budget maximum</p>
-                    <p className="font-medium">{client.budgetMax.toLocaleString('fr-CH')} CHF</p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">Régions recherchées</p>
-                  <div className="flex flex-wrap gap-2">
-                    {client.regions.map((region, index) => (
-                      <Badge key={index} variant="secondary">
-                        {region}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3">
-                    <Heart className="w-5 h-5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Animaux</p>
-                      <Badge variant={client.animaux ? "default" : "secondary"}>
-                        {client.animaux ? 'Oui' : 'Non'}
-                      </Badge>
-                    </div>
+                    <p className="font-medium">{(client.budget_max || 0).toLocaleString('fr-CH')} CHF</p>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <Car className="w-5 h-5 text-muted-foreground" />
-                    <div>
-                      <p className="text-sm text-muted-foreground">Véhicules</p>
-                      <Badge variant={client.vehicules ? "default" : "secondary"}>
-                        {client.vehicules ? `Oui (${client.numeroPlaques})` : 'Non'}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                {client.souhaitsParticuliers && (
                   <div>
-                    <p className="text-sm text-muted-foreground mb-2">Souhaits particuliers</p>
-                    <p className="font-medium p-4 bg-muted rounded-lg">{client.souhaitsParticuliers}</p>
+                    <p className="text-sm text-muted-foreground">Région recherchée</p>
+                    <p className="font-medium">{client.region_recherche || 'Non renseigné'}</p>
                   </div>
-                )}
+                </div>
               </CardContent>
             </Card>
           </div>

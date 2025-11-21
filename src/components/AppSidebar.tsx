@@ -15,8 +15,10 @@ import {
   SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { getCurrentUser, saveCurrentUser } from '@/utils/localStorage';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
 
 const getMenuForRole = (role: string) => {
   switch (role) {
@@ -60,18 +62,38 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
-  const currentUser = getCurrentUser();
+  const { user, userRole } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
   
-  if (!currentUser) {
+  useEffect(() => {
+    if (user) {
+      loadProfile();
+    }
+  }, [user]);
+
+  const loadProfile = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    
+    if (data) {
+      setProfile(data);
+    }
+  };
+
+  if (!user || !userRole) {
     return null;
   }
 
-  const menu = getMenuForRole(currentUser.role);
-  const userName = `${currentUser.prenom} ${currentUser.nom}`;
-  const userRole = currentUser.role;
+  const menu = getMenuForRole(userRole);
+  const userName = profile ? `${profile.prenom} ${profile.nom}` : 'Chargement...';
 
-  const handleLogout = () => {
-    saveCurrentUser(null);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     window.location.href = '/login';
   };
 
