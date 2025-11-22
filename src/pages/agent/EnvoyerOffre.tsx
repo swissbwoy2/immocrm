@@ -71,8 +71,19 @@ const EnvoyerOffre = () => {
         `)
         .eq('agent_id', agentData.id);
 
+      console.log('=== DEBUG CLIENTS ===');
+      console.log('Agent ID:', agentData.id);
+      console.log('Clients data:', clientsData);
+      console.log('Clients error:', clientsError);
+      console.log('Number of clients:', clientsData?.length);
+
       if (clientsError) {
         console.error('Error loading clients:', clientsError);
+        toast({
+          variant: "destructive",
+          title: "Erreur",
+          description: "Erreur lors du chargement des clients"
+        });
       }
 
       setClients(clientsData || []);
