@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { user, userRole, loading } = useAuth();
+  const { user, userRole, loading, session } = useAuth();
 
   if (loading) {
     return (
@@ -17,7 +17,8 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     );
   }
 
-  if (!user) {
+  // Vérifier à la fois user et session pour détecter les sessions expirées
+  if (!user || !session) {
     return <Navigate to="/login" replace />;
   }
 

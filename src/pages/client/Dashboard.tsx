@@ -27,9 +27,23 @@ export default function ClientDashboard() {
   }, [user]);
 
   const loadData = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     try {
+      // Vérifier que la session est valide
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.error('Session expired or invalid:', sessionError);
+        toast.error('Votre session a expiré. Veuillez vous reconnecter.');
+        setLoading(false);
+        navigate('/login');
+        return;
+      }
+
       // Load client
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
@@ -37,7 +51,10 @@ export default function ClientDashboard() {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (clientError) throw clientError;
+      if (clientError) {
+        console.error('Error loading client:', clientError);
+        throw clientError;
+      }
       
       if (!clientData) {
         console.log('No client data found for user');
