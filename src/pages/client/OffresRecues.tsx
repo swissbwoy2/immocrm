@@ -986,7 +986,7 @@ const OffresRecues = () => {
                     </Button>
                   )}
                   {selectedOffre.statut === 'visite_effectuee' && (
-                    <Button size="sm" onClick={() => { updateStatut(selectedOffre.id, 'candidature_deposee'); setDetailsDialogOpen(false); }}>
+                    <Button size="sm" onClick={() => { handleDeposerCandidature(selectedOffre); setDetailsDialogOpen(false); }}>
                       <FileCheck className="mr-2 h-4 w-4" />
                       Déposer ma candidature
                     </Button>
