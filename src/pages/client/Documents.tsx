@@ -38,6 +38,8 @@ export default function Documents() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -103,11 +105,11 @@ export default function Documents() {
     setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileUpload(e.dataTransfer.files[0]);
+      handleFileSelect(e.dataTransfer.files[0]);
     }
   };
 
-  const handleFileUpload = async (file: File) => {
+  const validateFile = (file: File): boolean => {
     const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
       toast({
@@ -115,7 +117,7 @@ export default function Documents() {
         description: 'La taille maximale est de 10 MB',
         variant: 'destructive',
       });
-      return;
+      return false;
     }
 
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
@@ -125,24 +127,38 @@ export default function Documents() {
         description: 'Formats acceptés : PDF, JPG, PNG',
         variant: 'destructive',
       });
-      return;
+      return false;
     }
 
+    return true;
+  };
+
+  const handleFileSelect = (file: File) => {
+    if (validateFile(file)) {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleConfirmUpload = async () => {
+    if (!selectedFile || isUploading) return;
+
+    setIsUploading(true);
+
     try {
-      const filePath = `${user!.id}/general/${Date.now()}_${file.name}`;
+      const filePath = `${user!.id}/general/${Date.now()}_${selectedFile.name}`;
 
       const { error: uploadError } = await supabase.storage
         .from('client-documents')
-        .upload(filePath, file);
+        .upload(filePath, selectedFile);
 
       if (uploadError) throw uploadError;
 
       const { error: dbError } = await supabase
         .from('documents')
         .insert({
-          nom: file.name,
-          type: file.type,
-          taille: file.size,
+          nom: selectedFile.name,
+          type: selectedFile.type,
+          taille: selectedFile.size,
           user_id: user!.id,
           client_id: clientId,
           type_document: selectedType,
@@ -160,6 +176,7 @@ export default function Documents() {
 
       setUploadDialogOpen(false);
       setSelectedType('autre');
+      setSelectedFile(null);
     } catch (error) {
       console.error('Error uploading document:', error);
       toast({
@@ -167,6 +184,8 @@ export default function Documents() {
         description: 'Impossible d\'uploader le fichier',
         variant: 'destructive',
       });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -432,16 +451,39 @@ export default function Documents() {
             onDrop={handleDrop}
           >
             <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-sm font-medium mb-2">
-              Glissez-déposez votre fichier ici
-            </p>
-            <p className="text-xs text-muted-foreground mb-4">ou</p>
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              Sélectionner un fichier
-            </Button>
+            {selectedFile ? (
+              <div className="space-y-3">
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium">{selectedFile.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatFileSize(selectedFile.size)}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                >
+                  Changer de fichier
+                </Button>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm font-medium mb-2">
+                  Glissez-déposez votre fichier ici
+                </p>
+                <p className="text-xs text-muted-foreground mb-4">ou</p>
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Sélectionner un fichier
+                </Button>
+              </>
+            )}
             <input
               ref={fileInputRef}
               type="file"
@@ -449,15 +491,28 @@ export default function Documents() {
               className="hidden"
               onChange={(e) => {
                 if (e.target.files?.[0]) {
-                  handleFileUpload(e.target.files[0]);
+                  handleFileSelect(e.target.files[0]);
                 }
               }}
             />
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setUploadDialogOpen(false);
+                setSelectedFile(null);
+                setSelectedType('autre');
+              }}
+            >
               Annuler
+            </Button>
+            <Button 
+              onClick={handleConfirmUpload}
+              disabled={!selectedFile || isUploading}
+            >
+              {isUploading ? 'Upload en cours...' : 'Confirmer l\'upload'}
             </Button>
           </DialogFooter>
         </DialogContent>
