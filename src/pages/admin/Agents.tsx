@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -24,6 +25,7 @@ interface AgentWithProfile {
 }
 
 const Agents = () => {
+  const navigate = useNavigate();
   const [agents, setAgents] = useState<AgentWithProfile[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -233,7 +235,11 @@ const Agents = () => {
           <div className="grid gap-4">
             {filteredAgents.map((agent) => {
               return (
-                <Card key={agent.id} className="p-6">
+                <Card 
+                  key={agent.id} 
+                  className="p-6 cursor-pointer hover:bg-accent/50 transition-colors"
+                  onClick={() => navigate(`/admin/agents/${agent.id}`)}
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
@@ -260,14 +266,20 @@ const Agents = () => {
                     <div className="flex gap-2">
                       <Button
                         variant={agent.profiles.actif ? "outline" : "default"}
-                        onClick={() => toggleAgentStatus(agent.id, agent.profiles.actif)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleAgentStatus(agent.id, agent.profiles.actif);
+                        }}
                       >
                         {agent.profiles.actif ? "Désactiver" : "Activer"}
                       </Button>
                       <Button
                         variant="destructive"
                         size="icon"
-                        onClick={() => deleteAgent(agent.user_id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteAgent(agent.user_id);
+                        }}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
