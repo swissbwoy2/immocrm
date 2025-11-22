@@ -4,9 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, 
-  FileText, User, Send, Home, Building2, Briefcase, AlertCircle
+  FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -86,6 +90,8 @@ export default function ClientDetail() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [offres, setOffres] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState<any>({});
 
   useEffect(() => {
     if (!user) {
@@ -159,6 +165,37 @@ export default function ClientDetail() {
       toast({
         title: 'Erreur',
         description: 'Impossible de mettre à jour le statut',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleEditClick = () => {
+    setEditFormData(client);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSave = async () => {
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update(editFormData)
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Succès',
+        description: 'Les informations ont été mises à jour',
+      });
+
+      setEditDialogOpen(false);
+      loadClientData();
+    } catch (error) {
+      console.error('Error updating data:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de mettre à jour les informations',
         variant: 'destructive',
       });
     }
@@ -265,10 +302,91 @@ export default function ClientDetail() {
             </div>
           </div>
 
-          <Button variant="outline" onClick={() => navigate('/agent/mes-clients')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour
-          </Button>
+          <div className="flex gap-2">
+            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={handleEditClick}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Modifier
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Modifier les informations du client</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Budget maximum (CHF)</Label>
+                      <Input
+                        type="number"
+                        value={editFormData.budget_max || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, budget_max: parseFloat(e.target.value) })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Pièces souhaitées</Label>
+                      <Input
+                        type="number"
+                        value={editFormData.pieces || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, pieces: parseFloat(e.target.value) })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nombre d'occupants</Label>
+                      <Input
+                        type="number"
+                        value={editFormData.nombre_occupants || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, nombre_occupants: parseInt(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Région de recherche</Label>
+                    <Input
+                      value={editFormData.region_recherche || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, region_recherche: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Type de bien</Label>
+                    <Input
+                      value={editFormData.type_bien || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, type_bien: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Souhaits particuliers</Label>
+                    <Textarea
+                      value={editFormData.souhaits_particuliers || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, souhaits_particuliers: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Notes de l'agent</Label>
+                    <Textarea
+                      value={editFormData.note_agent || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, note_agent: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                      Annuler
+                    </Button>
+                    <Button onClick={handleEditSave}>
+                      Enregistrer
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline" onClick={() => navigate('/agent/mes-clients')}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Retour
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
