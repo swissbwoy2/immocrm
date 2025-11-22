@@ -319,11 +319,11 @@ function parseClientFromRow(row: CSVRow, lineNumber: number): {
     nombrePiecesActuel: parseNumber(findColumnValue(row, [
       'Nombre de pièces actuel', 'Pieces actuelles', 'Pieces', 'Nb pieces actuel', 'Nb de pcs actuel'
     ])),
-    chargesExtraordinaires: findColumnValue(row, [
+    chargesExtraordinaires: parseBoolean(findColumnValue(row, [
       'Avez-vous des charges extraordinaires ? (Leasing, crédit, pension alimentaire, etc.',
       'Charges extraordinaires', 
       'Charges extra'
-    ]),
+    ])),
     montantCharges: montantCharges,
     poursuites: parseBoolean(findColumnValue(row, [
       'Avez-vous des poursuites ou actes de défaut de biens ?',
