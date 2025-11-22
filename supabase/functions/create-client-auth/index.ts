@@ -28,64 +28,89 @@ Deno.serve(async (req) => {
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
     const existingUser = existingUsers?.users?.find(u => u.email === 'info@immo-rama.ch');
 
+    let userId: string;
+
     if (existingUser) {
-      console.log('User already exists');
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: 'Le compte existe déjà' 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      );
-    }
-
-    // Create auth user
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email: 'info@immo-rama.ch',
-      password: 'Client123!',
-      email_confirm: true,
-    });
-
-    if (authError) {
-      console.error('Error creating auth user:', authError);
-      throw authError;
-    }
-
-    console.log('Auth user created:', authData.user.id);
-
-    // Create profile
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .insert({
-        id: authData.user.id,
+      console.log('User already exists, using existing user_id:', existingUser.id);
+      userId = existingUser.id;
+      
+      // Update password if user exists
+      await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
+        password: 'Client123!',
+      });
+    } else {
+      // Create auth user
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: 'info@immo-rama.ch',
-        nom: 'Ramazani',
-        prenom: 'Christ',
-        telephone: '+41 76 123 45 67',
-        actif: true,
+        password: 'Client123!',
+        email_confirm: true,
       });
 
-    if (profileError) {
-      console.error('Error creating profile:', profileError);
-      throw profileError;
+      if (authError) {
+        console.error('Error creating auth user:', authError);
+        throw authError;
+      }
+
+      console.log('Auth user created:', authData.user.id);
+      userId = authData.user.id;
     }
 
-    console.log('Profile created');
+    // Check if profile exists
+    const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .single();
 
-    // Add client role
-    const { error: roleError } = await supabaseAdmin
+    if (!existingProfile) {
+      // Create profile
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .insert({
+          id: userId,
+          email: 'info@immo-rama.ch',
+          nom: 'Ramazani',
+          prenom: 'Christ',
+          telephone: '+41 76 123 45 67',
+          actif: true,
+        });
+
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+        throw profileError;
+      }
+
+      console.log('Profile created');
+    } else {
+      console.log('Profile already exists');
+    }
+
+    // Check if client role exists
+    const { data: existingRole } = await supabaseAdmin
       .from('user_roles')
-      .insert({
-        user_id: authData.user.id,
-        role: 'client',
-      });
+      .select('id')
+      .eq('user_id', userId)
+      .eq('role', 'client')
+      .single();
 
-    if (roleError) {
-      console.error('Error creating role:', roleError);
-      throw roleError;
+    if (!existingRole) {
+      // Add client role
+      const { error: roleError } = await supabaseAdmin
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: 'client',
+        });
+
+      if (roleError) {
+        console.error('Error creating role:', roleError);
+        throw roleError;
+      }
+
+      console.log('Client role added');
+    } else {
+      console.log('Client role already exists');
     }
-
-    console.log('Client role added');
 
     // Update existing client record if it exists
     const { data: existingClient } = await supabaseAdmin
@@ -97,7 +122,7 @@ Deno.serve(async (req) => {
     if (existingClient) {
       const { error: updateError } = await supabaseAdmin
         .from('clients')
-        .update({ user_id: authData.user.id })
+        .update({ user_id: userId })
         .eq('id', existingClient.id);
 
       if (updateError) {
@@ -110,8 +135,8 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Compte client créé avec succès',
-        user_id: authData.user.id
+        message: 'Compte client configuré avec succès',
+        user_id: userId
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
