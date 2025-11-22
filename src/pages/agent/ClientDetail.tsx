@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, 
-  FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit
+  FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -89,6 +89,7 @@ export default function ClientDetail() {
   const [client, setClient] = useState<Client | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [offres, setOffres] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<any>({});
@@ -131,6 +132,15 @@ export default function ClientDetail() {
 
       if (offresError) throw offresError;
       setOffres(offresData || []);
+
+      const { data: docsData, error: docsError } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('client_id', id)
+        .order('date_upload', { ascending: false });
+
+      if (docsError) throw docsError;
+      setDocuments(docsData || []);
     } catch (error) {
       console.error('Error loading client data:', error);
       toast({
@@ -674,7 +684,96 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </Card>
-        </div>
+      {/* Documents section */}
+      <Card className="col-span-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <FileText className="w-5 h-5" />
+            Documents du client ({documents.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {documents.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {documents.map((doc: any) => (
+                <Card key={doc.id} className="border">
+                  <CardContent className="pt-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-medium truncate">
+                          {doc.nom}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Badge variant="outline" className="text-xs">
+                        {doc.type_document === 'fiche_salaire' && '💰 Fiche salaire'}
+                        {doc.type_document === 'extrait_poursuites' && '📋 Extrait poursuites'}
+                        {doc.type_document === 'piece_identite' && '🪪 Pièce ID'}
+                        {doc.type_document === 'autre' && '📄 Autre'}
+                        {!doc.type_document && '📄 Autre'}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground">
+                        Ajouté le {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
+                      </p>
+                      {doc.offre_id && (
+                        <Badge variant="secondary" className="text-xs">
+                          📝 Lié à une candidature
+                        </Badge>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        onClick={async () => {
+                          try {
+                            if (!doc.url.startsWith('data:')) {
+                              const { data, error } = await supabase.storage
+                                .from('client-documents')
+                                .download(doc.url);
+
+                              if (error) throw error;
+
+                              const url = URL.createObjectURL(data);
+                              const link = document.createElement('a');
+                              link.href = url;
+                              link.download = doc.nom;
+                              link.click();
+                              URL.revokeObjectURL(url);
+                            } else {
+                              const link = document.createElement('a');
+                              link.href = doc.url;
+                              link.download = doc.nom;
+                              link.click();
+                            }
+                          } catch (error) {
+                            console.error('Error downloading:', error);
+                            toast({
+                              title: 'Erreur',
+                              description: 'Impossible de télécharger',
+                              variant: 'destructive'
+                            });
+                          }
+                        }}
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Télécharger
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p>Aucun document uploadé</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
 
         {/* Offres envoyées */}
         <div>

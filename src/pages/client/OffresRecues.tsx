@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Square, Home, ExternalLink, Eye, Heart, CheckCircle, Info, FileCheck, Check, X } from "lucide-react";
+import { MapPin, Calendar, Square, Home, ExternalLink, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -16,6 +16,9 @@ import {
 } from "@/components/ui/dialog";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -32,7 +35,14 @@ const OffresRecues = () => {
   const [selectedOffre, setSelectedOffre] = useState<any | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [visitDialogOpen, setVisitDialogOpen] = useState(false);
+  const [candidatureDialogOpen, setCandidatureDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [uploadingDocs, setUploadingDocs] = useState(false);
+  const [documentsFicheSalaire, setDocumentsFicheSalaire] = useState<File[]>([]);
+  const [documentExtraitPoursuites, setDocumentExtraitPoursuites] = useState<File | null>(null);
+  const [documentPieceIdentite, setDocumentPieceIdentite] = useState<File | null>(null);
+  const [messageClient, setMessageClient] = useState('');
+  const [accepteConditions, setAccepteConditions] = useState(false);
 
   useEffect(() => {
     loadOffres();
@@ -168,6 +178,199 @@ const OffresRecues = () => {
       'refusee': { label: '❌ Refusée', variant: 'destructive' },
     };
     return labels[statut] || { label: statut, variant: 'secondary' };
+  };
+
+  const uploadDocument = async (
+    file: File,
+    typeDocument: string,
+    offreId: string
+  ): Promise<string | null> => {
+    try {
+      const filePath = `${user!.id}/${offreId}/${typeDocument}/${Date.now()}_${file.name}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('client-documents')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', user!.id)
+        .maybeSingle();
+
+      if (!clientData) throw new Error('Client not found');
+
+      const { error: dbError } = await supabase
+        .from('documents')
+        .insert({
+          nom: file.name,
+          type: file.type,
+          taille: file.size,
+          user_id: user!.id,
+          client_id: clientData.id,
+          offre_id: offreId,
+          type_document: typeDocument,
+          url: filePath,
+          statut: 'valide'
+        });
+
+      if (dbError) throw dbError;
+
+      return filePath;
+    } catch (error) {
+      console.error('Upload error:', error);
+      return null;
+    }
+  };
+
+  const handleDeposerCandidature = (offre: any) => {
+    setSelectedOffre(offre);
+    setDocumentsFicheSalaire([]);
+    setDocumentExtraitPoursuites(null);
+    setDocumentPieceIdentite(null);
+    setMessageClient('');
+    setAccepteConditions(false);
+    setCandidatureDialogOpen(true);
+  };
+
+  const confirmCandidature = async () => {
+    if (!selectedOffre || !accepteConditions) {
+      toast({
+        title: 'Erreur',
+        description: 'Veuillez accepter les conditions',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (documentsFicheSalaire.length !== 3) {
+      toast({
+        title: 'Documents manquants',
+        description: 'Vous devez fournir vos 3 dernières fiches de salaire',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!documentExtraitPoursuites) {
+      toast({
+        title: 'Document manquant',
+        description: 'Vous devez fournir un extrait de l\'office des poursuites',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!documentPieceIdentite) {
+      toast({
+        title: 'Document manquant',
+        description: 'Vous devez fournir une pièce d\'identité valable',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setUploadingDocs(true);
+
+    try {
+      const salaireUploads = await Promise.all(
+        documentsFicheSalaire.map(file =>
+          uploadDocument(file, 'fiche_salaire', selectedOffre.id)
+        )
+      );
+
+      const extraitPath = await uploadDocument(
+        documentExtraitPoursuites,
+        'extrait_poursuites',
+        selectedOffre.id
+      );
+
+      const identitePath = await uploadDocument(
+        documentPieceIdentite,
+        'piece_identite',
+        selectedOffre.id
+      );
+
+      if (!salaireUploads.every(p => p) || !extraitPath || !identitePath) {
+        throw new Error('Échec de l\'upload de certains documents');
+      }
+
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id, agent_id')
+        .eq('user_id', user!.id)
+        .maybeSingle();
+
+      if (!clientData) throw new Error('Client not found');
+
+      await supabase.from('candidatures').insert({
+        offre_id: selectedOffre.id,
+        client_id: clientData.id,
+        message_client: messageClient,
+        dossier_complet: true
+      });
+
+      await supabase
+        .from('offres')
+        .update({ statut: 'candidature_deposee' })
+        .eq('id', selectedOffre.id);
+
+      if (clientData.agent_id) {
+        let { data: conv } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('client_id', clientData.id)
+          .eq('agent_id', clientData.agent_id)
+          .maybeSingle();
+
+        if (!conv) {
+          const { data: newConv } = await supabase
+            .from('conversations')
+            .insert({
+              client_id: clientData.id,
+              agent_id: clientData.agent_id,
+              subject: 'Messages'
+            })
+            .select()
+            .maybeSingle();
+          conv = newConv;
+        }
+
+        if (conv) {
+          const messageContent = `📝 **NOUVELLE CANDIDATURE DÉPOSÉE AVEC DOSSIER COMPLET**\n\n🏠 **Bien concerné:**\n- Adresse: ${selectedOffre.adresse}\n- Loyer: ${selectedOffre.prix.toLocaleString()} CHF/mois\n- Type: ${selectedOffre.type_bien || 'N/A'}\n\n✅ **Documents fournis:**\n- ✓ 3 fiches de salaire\n- ✓ Extrait de l'office des poursuites (< 3 mois)\n- ✓ Pièce d'identité valable\n\n${messageClient ? `💬 **Message du client:**\n${messageClient}\n\n` : ''}📋 Le dossier complet est disponible dans la section "Documents" du client.`;
+
+          await supabase.from('messages').insert({
+            conversation_id: conv.id,
+            sender_id: user!.id,
+            sender_type: 'client',
+            content: messageContent
+          });
+        }
+      }
+
+      setCandidatureDialogOpen(false);
+      await loadOffres();
+
+      toast({
+        title: '🎉 Candidature déposée avec succès !',
+        description: 'Votre dossier complet a été envoyé à votre agent. Vous serez contacté prochainement.'
+      });
+
+    } catch (error) {
+      console.error('Error submitting candidature:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de déposer la candidature. Veuillez réessayer.',
+        variant: 'destructive'
+      });
+    } finally {
+      setUploadingDocs(false);
+    }
   };
 
   const handleViewDetails = (offre: any) => {
@@ -377,7 +580,7 @@ const OffresRecues = () => {
                     </Button>
                   )}
                   {offre.statut === 'visite_effectuee' && (
-                    <Button size="sm" onClick={() => updateStatut(offre.id, 'candidature_deposee')}>
+                    <Button size="sm" onClick={() => handleDeposerCandidature(offre)}>
                       <FileCheck className="mr-2 h-4 w-4" />
                       Déposer ma candidature
                     </Button>
@@ -644,6 +847,158 @@ const OffresRecues = () => {
               </Button>
               <Button onClick={confirmVisit} disabled={!selectedDate}>
                 Confirmer la visite
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog de candidature */}
+        <Dialog open={candidatureDialogOpen} onOpenChange={setCandidatureDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>📝 Déposer ma candidature</DialogTitle>
+              <DialogDescription>
+                Complétez votre candidature en fournissant tous les documents requis
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedOffre && (
+              <div className="space-y-6 py-4">
+                <Card className="bg-muted">
+                  <CardContent className="pt-4">
+                    <h4 className="font-semibold mb-2">Bien concerné</h4>
+                    <p className="text-sm">{selectedOffre.adresse}</p>
+                    <p className="text-lg font-bold text-primary mt-1">
+                      CHF {selectedOffre.prix.toLocaleString()}/mois
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <div className="space-y-4">
+                  <h4 className="font-semibold">Documents à fournir (obligatoires)</h4>
+
+                  <div className="border rounded-lg p-4">
+                    <Label className="text-base font-medium">
+                      📄 3 dernières fiches de salaire *
+                    </Label>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Vos 3 derniers bulletins de salaire
+                    </p>
+                    <div className="space-y-2">
+                      {[0, 1, 2].map(index => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            type="file"
+                            accept=".pdf,image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const newDocs = [...documentsFicheSalaire];
+                                newDocs[index] = file;
+                                setDocumentsFicheSalaire(newDocs);
+                              }
+                            }}
+                          />
+                          {documentsFicheSalaire[index] && (
+                            <Check className="w-5 h-5 text-green-500" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="border rounded-lg p-4">
+                    <Label className="text-base font-medium">
+                      📋 Extrait de l'office des poursuites *
+                    </Label>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Datant de moins de 3 mois
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept=".pdf,image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) setDocumentExtraitPoursuites(file);
+                        }}
+                      />
+                      {documentExtraitPoursuites && (
+                        <Check className="w-5 h-5 text-green-500" />
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="border rounded-lg p-4">
+                    <Label className="text-base font-medium">
+                      🪪 Pièce d'identité / ID suisse *
+                    </Label>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Document valable (carte identité, passeport, permis de séjour)
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept=".pdf,image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) setDocumentPieceIdentite(file);
+                        }}
+                      />
+                      {documentPieceIdentite && (
+                        <Check className="w-5 h-5 text-green-500" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Message / Motivation (optionnel)</Label>
+                  <Textarea
+                    placeholder="Présentez-vous et expliquez pourquoi ce bien vous intéresse..."
+                    value={messageClient}
+                    onChange={(e) => setMessageClient(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+
+                <div className="flex items-start gap-2 p-4 bg-muted rounded-lg">
+                  <Checkbox
+                    id="conditions"
+                    checked={accepteConditions}
+                    onCheckedChange={(checked) => setAccepteConditions(checked as boolean)}
+                  />
+                  <Label htmlFor="conditions" className="text-sm cursor-pointer">
+                    Je confirme que tous les documents fournis sont authentiques et à jour.
+                    Je comprends que mon dossier sera examiné par l'agent et le propriétaire.
+                  </Label>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setCandidatureDialogOpen(false)}
+                disabled={uploadingDocs}
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={confirmCandidature}
+                disabled={uploadingDocs || !accepteConditions}
+              >
+                {uploadingDocs ? (
+                  <>
+                    <Upload className="mr-2 h-4 w-4 animate-spin" />
+                    Envoi en cours...
+                  </>
+                ) : (
+                  <>
+                    <FileCheck className="mr-2 h-4 w-4" />
+                    Déposer ma candidature
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
