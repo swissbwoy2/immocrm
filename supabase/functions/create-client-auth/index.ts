@@ -24,22 +24,34 @@ Deno.serve(async (req) => {
 
     console.log('Creating client auth account for info@immo-rama.ch');
 
-    // Check if user already exists
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find(u => u.email === 'info@immo-rama.ch');
+    // Chercher d'abord dans la table profiles
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('email', 'info@immo-rama.ch')
+      .maybeSingle();
 
     let userId: string;
 
-    if (existingUser) {
-      console.log('User already exists, using existing user_id:', existingUser.id);
-      userId = existingUser.id;
+    if (profile) {
+      // L'utilisateur existe déjà
+      console.log('User already exists, using existing user_id:', profile.id);
+      userId = profile.id;
       
-      // Update password if user exists
-      await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
+      // Mettre à jour le mot de passe
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(profile.id, {
         password: 'Client123!',
       });
+      
+      if (updateError) {
+        console.error('Error updating password:', updateError);
+        throw updateError;
+      }
+      
+      console.log('Password updated successfully');
     } else {
-      // Create auth user
+      // Créer un nouvel utilisateur
+      console.log('Creating new user');
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: 'info@immo-rama.ch',
         password: 'Client123!',
