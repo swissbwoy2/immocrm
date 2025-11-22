@@ -63,7 +63,7 @@ const EnvoyerOffre = () => {
         .from('clients')
         .select(`
           *,
-          profiles:user_id (
+          profiles!inner (
             email,
             nom,
             prenom
