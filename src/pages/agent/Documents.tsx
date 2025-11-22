@@ -100,9 +100,23 @@ export default function AgentDocuments() {
     setSelectedDocument(document);
     
     try {
-      // Si l'URL est une data URL (base64), l'utiliser directement
+      // Si l'URL est une data URL (base64)
       if (document.url.startsWith('data:')) {
-        setPreviewUrl(document.url);
+        // Pour les PDFs en base64, on doit créer un Blob URL
+        if (document.type === 'application/pdf') {
+          const base64 = document.url.split(',')[1];
+          const binaryString = atob(base64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          const blobUrl = URL.createObjectURL(blob);
+          setPreviewUrl(blobUrl);
+        } else {
+          // Pour les images, utiliser directement la data URL
+          setPreviewUrl(document.url);
+        }
         setPreviewDialogOpen(true);
         return;
       }
@@ -295,7 +309,13 @@ export default function AgentDocuments() {
       </div>
 
       {/* Dialog d'aperçu */}
-      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+      <Dialog open={previewDialogOpen} onOpenChange={(open) => {
+        setPreviewDialogOpen(open);
+        // Libérer le Blob URL quand on ferme le dialog
+        if (!open && previewUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(previewUrl);
+        }
+      }}>
         <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>{selectedDocument?.nom}</DialogTitle>
