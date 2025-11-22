@@ -58,11 +58,22 @@ const EnvoyerOffre = () => {
     if (agentData) {
       setAgent(agentData);
 
-      // Load agent's clients
-      const { data: clientsData } = await supabase
+      // Load agent's clients with their profiles
+      const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
-        .select('*, profiles!inner(email, nom, prenom)')
+        .select(`
+          *,
+          profiles:user_id (
+            email,
+            nom,
+            prenom
+          )
+        `)
         .eq('agent_id', agentData.id);
+
+      if (clientsError) {
+        console.error('Error loading clients:', clientsError);
+      }
 
       setClients(clientsData || []);
     }
