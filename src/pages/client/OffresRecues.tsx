@@ -298,7 +298,11 @@ const OffresRecues = () => {
             const { label, variant } = formatStatutOffre(offre.statut);
             
             return (
-              <Card key={offre.id} className="p-6">
+              <Card 
+                key={offre.id} 
+                className="p-6 cursor-pointer hover:shadow-lg transition-shadow"
+                onClick={() => handleViewDetails(offre)}
+              >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
@@ -333,7 +337,7 @@ const OffresRecues = () => {
                   </div>
                 </div>
 
-                <p className="text-sm mb-4">{offre.description}</p>
+                <p className="text-sm mb-4 line-clamp-2">{offre.description}</p>
 
                 {offre.disponibilite && (
                   <p className="text-sm text-muted-foreground mb-4">
@@ -341,7 +345,7 @@ const OffresRecues = () => {
                   </p>
                 )}
 
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
                   <Button variant="default" size="sm" onClick={() => handleViewDetails(offre)}>
                     <Info className="mr-2 h-4 w-4" />
                     Voir les détails
