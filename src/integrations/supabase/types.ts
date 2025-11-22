@@ -41,6 +41,57 @@ export type Database = {
         }
         Relationships: []
       }
+      candidatures: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          date_depot: string | null
+          dossier_complet: boolean | null
+          id: string
+          message_client: string | null
+          offre_id: string
+          statut: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          date_depot?: string | null
+          dossier_complet?: boolean | null
+          id?: string
+          message_client?: string | null
+          offre_id: string
+          statut?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          date_depot?: string | null
+          dossier_complet?: boolean | null
+          id?: string
+          message_client?: string | null
+          offre_id?: string
+          statut?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidatures_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidatures_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           adresse: string | null
@@ -268,9 +319,11 @@ export type Database = {
           date_upload: string | null
           id: string
           nom: string
+          offre_id: string | null
           statut: string | null
           taille: number | null
           type: string
+          type_document: string | null
           url: string | null
           user_id: string
         }
@@ -280,9 +333,11 @@ export type Database = {
           date_upload?: string | null
           id?: string
           nom: string
+          offre_id?: string | null
           statut?: string | null
           taille?: number | null
           type: string
+          type_document?: string | null
           url?: string | null
           user_id: string
         }
@@ -292,9 +347,11 @@ export type Database = {
           date_upload?: string | null
           id?: string
           nom?: string
+          offre_id?: string | null
           statut?: string | null
           taille?: number | null
           type?: string
+          type_document?: string | null
           url?: string | null
           user_id?: string
         }
@@ -304,6 +361,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
             referencedColumns: ["id"]
           },
         ]

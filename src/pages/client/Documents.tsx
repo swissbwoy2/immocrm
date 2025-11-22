@@ -2,6 +2,9 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   FileText, Upload, Download, Trash2, File, 
   Image as ImageIcon, FileSpreadsheet, AlertCircle 
@@ -40,6 +43,7 @@ export default function Documents() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [clientId, setClientId] = useState<string | null>(null);
+  const [selectedType, setSelectedType] = useState<string>('autre');
 
   useEffect(() => {
     loadDocuments();
@@ -104,11 +108,11 @@ export default function Documents() {
   };
 
   const handleFileUpload = async (file: File) => {
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    const maxSize = 10 * 1024 * 1024; // 10MB
     if (file.size > maxSize) {
       toast({
         title: 'Fichier trop volumineux',
-        description: 'La taille maximale est de 5 MB',
+        description: 'La taille maximale est de 10 MB',
         variant: 'destructive',
       });
       return;
@@ -125,32 +129,37 @@ export default function Documents() {
     }
 
     try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const { error } = await supabase
-          .from('documents')
-          .insert({
-            nom: file.name,
-            type: file.type,
-            taille: file.size,
-            user_id: user!.id,
-            client_id: clientId,
-            url: e.target?.result as string,
-          });
+      const filePath = `${user!.id}/general/${Date.now()}_${file.name}`;
 
-        if (error) throw error;
+      const { error: uploadError } = await supabase.storage
+        .from('client-documents')
+        .upload(filePath, file);
 
-        await loadDocuments();
+      if (uploadError) throw uploadError;
 
-        toast({
-          title: 'Document ajouté',
-          description: 'Le document a été uploadé avec succès',
+      const { error: dbError } = await supabase
+        .from('documents')
+        .insert({
+          nom: file.name,
+          type: file.type,
+          taille: file.size,
+          user_id: user!.id,
+          client_id: clientId,
+          type_document: selectedType,
+          url: filePath,
         });
 
-        setUploadDialogOpen(false);
-      };
+      if (dbError) throw dbError;
 
-      reader.readAsDataURL(file);
+      await loadDocuments();
+
+      toast({
+        title: 'Document ajouté',
+        description: 'Le document a été uploadé avec succès',
+      });
+
+      setUploadDialogOpen(false);
+      setSelectedType('autre');
     } catch (error) {
       console.error('Error uploading document:', error);
       toast({
@@ -165,6 +174,14 @@ export default function Documents() {
     if (!selectedDoc) return;
 
     try {
+      if (!selectedDoc.url.startsWith('data:')) {
+        const { error: storageError } = await supabase.storage
+          .from('client-documents')
+          .remove([selectedDoc.url]);
+
+        if (storageError) throw storageError;
+      }
+
       const { error } = await supabase
         .from('documents')
         .delete()
@@ -191,11 +208,46 @@ export default function Documents() {
     }
   };
 
-  const handleDownload = (doc: any) => {
-    const link = document.createElement('a');
-    link.href = doc.url;
-    link.download = doc.nom;
-    link.click();
+  const handleDownload = async (doc: any) => {
+    if (doc.url.startsWith('data:')) {
+      const link = document.createElement('a');
+      link.href = doc.url;
+      link.download = doc.nom;
+      link.click();
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.storage
+        .from('client-documents')
+        .download(doc.url);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.nom;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de télécharger le document',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const getTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      'fiche_salaire': '💰 Fiche salaire',
+      'extrait_poursuites': '📋 Extrait poursuites',
+      'piece_identite': '🪪 Pièce ID',
+      'autre': '📄 Autre'
+    };
+    return labels[type] || '📄 Autre';
   };
 
   const getFileIcon = (type: string) => {
@@ -276,11 +328,21 @@ export default function Documents() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      <div className="text-xs text-muted-foreground">
-                        Ajouté le {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
+                      <div className="space-y-2">
+                        <Badge variant="outline" className="text-xs">
+                          {getTypeLabel(doc.type_document)}
+                        </Badge>
+                        {doc.offre_id && (
+                          <Badge variant="secondary" className="text-xs ml-2">
+                            📝 Candidature
+                          </Badge>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          Ajouté le {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
+                        </p>
                       </div>
                       
-                      {doc.type.includes('image') && doc.url && (
+                      {doc.type.includes('image') && doc.url && doc.url.startsWith('data:') && (
                         <img 
                           src={doc.url} 
                           alt={doc.nom}
@@ -337,9 +399,26 @@ export default function Documents() {
           <DialogHeader>
             <DialogTitle>Ajouter un document</DialogTitle>
             <DialogDescription>
-              Formats acceptés : PDF, JPG, PNG (max 5 MB)
+              Formats acceptés : PDF, JPG, PNG (max 10 MB)
             </DialogDescription>
           </DialogHeader>
+
+          <div className="space-y-4 mb-4">
+            <div className="space-y-2">
+              <Label>Type de document</Label>
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fiche_salaire">Fiche de salaire</SelectItem>
+                  <SelectItem value="extrait_poursuites">Extrait des poursuites</SelectItem>
+                  <SelectItem value="piece_identite">Pièce d'identité</SelectItem>
+                  <SelectItem value="autre">Autre document</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
