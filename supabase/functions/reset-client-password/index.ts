@@ -35,18 +35,36 @@ serve(async (req) => {
 
     console.log('Recherche de l\'utilisateur avec email:', email);
 
-    // Trouver l'utilisateur par email
-    const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    // Trouver l'utilisateur par email avec pagination
+    let user = null;
+    let page = 1;
+    const perPage = 1000;
     
-    if (listError) {
-      console.error('Erreur lors de la recherche de l\'utilisateur:', listError);
-      return new Response(
-        JSON.stringify({ error: 'Erreur lors de la recherche de l\'utilisateur' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    while (!user) {
+      const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage
+      });
+      
+      if (listError) {
+        console.error('Erreur lors de la recherche de l\'utilisateur:', listError);
+        return new Response(
+          JSON.stringify({ error: 'Erreur lors de la recherche de l\'utilisateur' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
 
-    const user = users.find(u => u.email === email);
+      console.log(`Page ${page}: ${users.length} utilisateurs trouvés`);
+      
+      user = users.find(u => u.email === email);
+      
+      // Si aucun utilisateur trouvé et qu'on a moins d'utilisateurs que le max, on arrête
+      if (!user && users.length < perPage) {
+        break;
+      }
+      
+      page++;
+    }
 
     if (!user) {
       console.error('Utilisateur non trouvé:', email);
