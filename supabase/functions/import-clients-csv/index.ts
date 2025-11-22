@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -59,7 +60,9 @@ interface ImportResult {
   created: number;
   updated: number;
   failed: number;
-  errors: Array<{ email: string; reason: string }>;
+  emailsSent: number;
+  emailsFailed: number;
+  errors: Array<{ email: string; reason: string; emailSent?: boolean }>;
 }
 
 serve(async (req) => {
@@ -86,11 +89,18 @@ serve(async (req) => {
       created: 0,
       updated: 0,
       failed: 0,
+      emailsSent: 0,
+      emailsFailed: 0,
       errors: []
     };
 
+    // Initialize Resend
+    const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
+    const appUrl = Deno.env.get('VITE_SUPABASE_URL')?.replace('.supabase.co', '.lovable.app').replace('https://', 'https://app-') || 'https://ydljsdscdnqrqnjvqela.lovable.app';
+
     // Process each client
     for (const clientData of clients) {
+      let isNewClient = false;
       try {
         let userId: string;
         let isUpdate = false;
@@ -121,6 +131,7 @@ serve(async (req) => {
 
           if (authError) throw authError;
           userId = authData.user.id;
+          isNewClient = true;
           console.log(`Created new user: ${clientData.user.email}`);
         }
 
@@ -248,6 +259,119 @@ serve(async (req) => {
 
           result.created++;
           console.log(`Successfully created: ${clientData.user.email}`);
+
+          // Send welcome email for new clients
+          if (isNewClient) {
+            try {
+              console.log(`Sending welcome email to: ${clientData.user.email}`);
+              
+              const emailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f5f5f5; padding: 40px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" style="max-width: 600px; width: 100%; background-color: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden;">
+          <tr>
+            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="margin: 0; color: white; font-size: 28px; font-weight: 600;">Bienvenue chez Immo-Rama</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="margin: 0 0 20px; color: #333; font-size: 16px; line-height: 1.6;">
+                Bonjour <strong>${clientData.user.prenom} ${clientData.user.nom}</strong>,
+              </p>
+              <p style="margin: 0 0 30px; color: #666; font-size: 15px; line-height: 1.6;">
+                Votre compte client a été créé avec succès sur la plateforme Immo-Rama.
+              </p>
+              <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f8f9fa; border-radius: 8px; padding: 24px; margin-bottom: 30px;">
+                <tr>
+                  <td>
+                    <p style="margin: 0 0 16px; color: #333; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                      Vos identifiants de connexion
+                    </p>
+                    <table role="presentation" style="width: 100%; border-collapse: collapse;">
+                      <tr>
+                        <td style="padding: 8px 0;">
+                          <span style="color: #666; font-size: 14px;">📧 Email :</span>
+                        </td>
+                        <td style="padding: 8px 0;">
+                          <strong style="color: #333; font-size: 14px;">${clientData.user.email}</strong>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 8px 0;">
+                          <span style="color: #666; font-size: 14px;">🔐 Mot de passe :</span>
+                        </td>
+                        <td style="padding: 8px 0;">
+                          <code style="background-color: white; padding: 4px 8px; border-radius: 4px; color: #667eea; font-size: 15px; font-weight: 600;">${clientData.user.password}</code>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                <tr>
+                  <td align="center">
+                    <a href="${appUrl}/login" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);">
+                      Se connecter maintenant →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 16px; margin-bottom: 20px;">
+                <tr>
+                  <td>
+                    <p style="margin: 0; color: #856404; font-size: 14px; line-height: 1.5;">
+                      ⚠️ <strong>Important :</strong> Pour votre sécurité, nous vous recommandons de changer votre mot de passe dès votre première connexion.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6;">
+                Besoin d'aide ? N'hésitez pas à contacter votre agent ou notre support.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #f8f9fa; padding: 24px 30px; text-align: center; border-top: 1px solid #e9ecef;">
+              <p style="margin: 0 0 8px; color: #666; font-size: 13px;">
+                Cordialement,<br>
+                <strong style="color: #333;">L'équipe Immo-Rama</strong>
+              </p>
+              <p style="margin: 8px 0 0; color: #999; font-size: 12px;">
+                Cet email a été envoyé automatiquement, merci de ne pas y répondre.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+              await resend.emails.send({
+                from: 'Immo-Rama <onboarding@resend.dev>',
+                to: [clientData.user.email],
+                subject: 'Bienvenue chez Immo-Rama - Vos identifiants de connexion',
+                html: emailHtml,
+              });
+              
+              result.emailsSent++;
+              console.log(`Welcome email sent successfully to: ${clientData.user.email}`);
+            } catch (emailError) {
+              console.error(`Failed to send email to ${clientData.user.email}:`, emailError);
+              result.emailsFailed++;
+            }
+          }
         }
 
       } catch (error) {
@@ -260,7 +384,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Import completed: ${result.created} created, ${result.updated} updated, ${result.failed} failed`);
+    console.log(`Import completed: ${result.created} created, ${result.updated} updated, ${result.failed} failed, ${result.emailsSent} emails sent, ${result.emailsFailed} email failures`);
 
     return new Response(
       JSON.stringify(result),
