@@ -46,7 +46,7 @@ export interface Client {
   loyerActuel: number;
   depuisLe: string | null;
   nombrePiecesActuel: number;
-  chargesExtraordinaires: string;
+  chargesExtraordinaires: boolean;
   montantCharges: number;
   poursuites: boolean;
   curatelle: boolean;
@@ -226,7 +226,7 @@ export const initialClients: Client[] = [
     loyerActuel: 1800,
     depuisLe: '2020-06-01',
     nombrePiecesActuel: 3.5,
-    chargesExtraordinaires: 'Non',
+    chargesExtraordinaires: false,
     montantCharges: 200,
     poursuites: false,
     curatelle: false,
@@ -266,7 +266,7 @@ export const initialClients: Client[] = [
     loyerActuel: 1500,
     depuisLe: '2021-01-01',
     nombrePiecesActuel: 2.5,
-    chargesExtraordinaires: 'Non',
+    chargesExtraordinaires: false,
     montantCharges: 150,
     poursuites: false,
     curatelle: false,
@@ -306,7 +306,7 @@ export const initialClients: Client[] = [
     loyerActuel: 2000,
     depuisLe: '2019-03-01',
     nombrePiecesActuel: 4.5,
-    chargesExtraordinaires: 'Oui',
+    chargesExtraordinaires: true,
     montantCharges: 250,
     poursuites: false,
     curatelle: false,
