@@ -17,6 +17,7 @@ export default function AgentDashboard() {
   
   const [agent, setAgent] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
+  const [offres, setOffres] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,6 +48,17 @@ export default function AgentDashboard() {
         .select('*');
       
       setClients(clientsData || []);
+
+      // Récupérer les offres de l'agent
+      if (agentData) {
+        const { data: offresData } = await supabase
+          .from('offres')
+          .select('*, clients(user_id)')
+          .eq('agent_id', agentData.id)
+          .order('date_envoi', { ascending: false });
+        
+        setOffres(offresData || []);
+      }
     } catch (error) {
       console.error('Erreur chargement données agent:', error);
     } finally {
@@ -125,7 +137,7 @@ export default function AgentDashboard() {
             />
             <KPICard 
               title="Offres envoyées" 
-              value={0} 
+              value={offres.length} 
               icon={Send}
               onClick={() => navigate('/agent/offres-envoyees')}
             />
@@ -264,21 +276,59 @@ export default function AgentDashboard() {
             <CardHeader className="pb-3">
               <CardTitle className="text-lg font-semibold">📤 Dernières offres envoyées</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="text-center py-8 text-muted-foreground">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
-                  <Send className="w-6 h-6" />
+            <CardContent className="space-y-3">
+              {offres.length > 0 ? (
+                <>
+                  {offres.slice(0, 5).map(offre => {
+                    const client = clients.find(c => c.id === offre.client_id);
+                    return (
+                      <div 
+                        key={offre.id}
+                        className="p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                        onClick={() => navigate('/agent/offres-envoyees')}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">{offre.adresse}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {offre.pieces} pièces • {offre.surface} m² • {offre.prix.toLocaleString()} CHF
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Envoyée le {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
+                            </p>
+                          </div>
+                          <Badge variant={offre.statut === 'envoyee' ? 'default' : 'secondary'}>
+                            {offre.statut}
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full mt-2"
+                    onClick={() => navigate('/agent/offres-envoyees')}
+                  >
+                    Voir toutes les offres
+                  </Button>
+                </>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
+                    <Send className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-medium">Aucune offre envoyée</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3"
+                    onClick={() => navigate('/agent/envoyer-offre')}
+                  >
+                    Envoyer une offre
+                  </Button>
                 </div>
-                <p className="text-sm font-medium">Aucune offre envoyée</p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-3"
-                  onClick={() => navigate('/agent/envoyer-offre')}
-                >
-                  Envoyer une offre
-                </Button>
-              </div>
+              )}
             </CardContent>
           </Card>
       </div>
