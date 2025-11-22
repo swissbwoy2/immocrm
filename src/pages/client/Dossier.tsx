@@ -296,6 +296,37 @@ export default function Dossier() {
     );
   }
 
+  const handleInitializeProfile = async () => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .insert({
+          user_id: user.id,
+          date_ajout: new Date().toISOString(),
+          statut: 'actif',
+          priorite: 'moyenne'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Succès',
+        description: 'Votre profil client a été initialisé',
+      });
+
+      loadData();
+    } catch (error) {
+      console.error('Error initializing profile:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible d\'initialiser votre profil',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (!client || !profile) {
     return (
       <div className="flex-1 flex items-center justify-center p-4">
@@ -304,8 +335,11 @@ export default function Dossier() {
             <User className="w-12 h-12 mx-auto mb-4 text-orange-500" />
             <h2 className="text-xl font-semibold mb-2">Profil incomplet</h2>
             <p className="text-muted-foreground mb-4">
-              Votre profil client n'est pas encore configuré. Veuillez contacter l'administrateur.
+              Votre profil client n'est pas encore configuré. Cliquez sur le bouton ci-dessous pour l'initialiser.
             </p>
+            <Button onClick={handleInitializeProfile}>
+              Initialiser mon profil
+            </Button>
           </CardContent>
         </Card>
       </div>

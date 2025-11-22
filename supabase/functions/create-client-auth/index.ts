@@ -124,24 +124,31 @@ Deno.serve(async (req) => {
       console.log('Client role already exists');
     }
 
-    // Update existing client record if it exists
+    // Create or update client record
     const { data: existingClient } = await supabaseAdmin
       .from('clients')
       .select('id')
-      .eq('user_id', '977d15e9-f368-47f0-af1f-4ceb013b7f13')
-      .single();
+      .eq('user_id', userId)
+      .maybeSingle();
 
-    if (existingClient) {
-      const { error: updateError } = await supabaseAdmin
+    if (!existingClient) {
+      // Create new client record
+      const { error: clientError } = await supabaseAdmin
         .from('clients')
-        .update({ user_id: userId })
-        .eq('id', existingClient.id);
+        .insert({
+          user_id: userId,
+          date_ajout: new Date().toISOString(),
+          statut: 'actif',
+          priorite: 'moyenne'
+        });
 
-      if (updateError) {
-        console.error('Error updating client:', updateError);
+      if (clientError) {
+        console.error('Error creating client record:', clientError);
       } else {
-        console.log('Client record updated with new user_id');
+        console.log('Client record created successfully');
       }
+    } else {
+      console.log('Client record already exists');
     }
 
     return new Response(
