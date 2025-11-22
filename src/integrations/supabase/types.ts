@@ -676,9 +676,12 @@ export type Database = {
           client_id: string | null
           created_at: string | null
           date_visite: string
+          est_deleguee: boolean | null
+          feedback_agent: string | null
           id: string
           notes: string | null
           offre_id: string | null
+          recommandation_agent: string | null
           statut: string | null
           updated_at: string | null
         }
@@ -688,9 +691,12 @@ export type Database = {
           client_id?: string | null
           created_at?: string | null
           date_visite: string
+          est_deleguee?: boolean | null
+          feedback_agent?: string | null
           id?: string
           notes?: string | null
           offre_id?: string | null
+          recommandation_agent?: string | null
           statut?: string | null
           updated_at?: string | null
         }
@@ -700,9 +706,12 @@ export type Database = {
           client_id?: string | null
           created_at?: string | null
           date_visite?: string
+          est_deleguee?: boolean | null
+          feedback_agent?: string | null
           id?: string
           notes?: string | null
           offre_id?: string | null
+          recommandation_agent?: string | null
           statut?: string | null
           updated_at?: string | null
         }
