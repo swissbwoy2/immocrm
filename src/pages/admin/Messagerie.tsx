@@ -14,6 +14,7 @@ const Messagerie = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
+  const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
 
   useEffect(() => {
     loadConversations();
@@ -33,6 +34,55 @@ const Messagerie = () => {
 
     if (data) {
       setConversations(data);
+      
+      // Charger tous les profils nécessaires
+      const clientIds = data.map(c => c.client_id).filter(Boolean);
+      const agentIds = data.map(c => c.agent_id).filter(Boolean);
+      
+      // Charger les clients
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('id, user_id')
+        .in('id', clientIds);
+      
+      const clientUserIds = clientsData?.map(c => c.user_id) || [];
+      
+      // Charger les agents
+      const { data: agentsData } = await supabase
+        .from('agents')
+        .select('id, user_id')
+        .in('id', agentIds);
+      
+      const agentUserIds = agentsData?.map(a => a.user_id) || [];
+      
+      // Charger tous les profils
+      const allUserIds = [...clientUserIds, ...agentUserIds];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, prenom, nom, email')
+        .in('id', allUserIds);
+      
+      // Créer les maps pour accès rapide
+      const clientsMap = new Map(clientsData?.map(c => [c.id, c.user_id]));
+      const agentsMap = new Map(agentsData?.map(a => [a.id, a.user_id]));
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
+      
+      // Enrichir les conversations avec les noms
+      const enrichedConvs = data.map(conv => {
+        const clientUserId = clientsMap.get(conv.client_id);
+        const agentUserId = agentsMap.get(conv.agent_id);
+        const clientProfile = clientUserId ? profilesMap.get(clientUserId) : null;
+        const agentProfile = agentUserId ? profilesMap.get(agentUserId) : null;
+        
+        return {
+          ...conv,
+          clientName: clientProfile ? `${clientProfile.prenom} ${clientProfile.nom}` : 'Client inconnu',
+          agentName: agentProfile ? `${agentProfile.prenom} ${agentProfile.nom}` : 'Agent inconnu',
+        };
+      });
+      
+      setConversations(enrichedConvs);
+      setProfiles(profilesMap);
     }
   };
 
@@ -44,12 +94,31 @@ const Messagerie = () => {
       .order('created_at', { ascending: true });
 
     if (data) {
-      setMessages(data);
+      // Charger les profils pour les expéditeurs
+      const senderIds = [...new Set(data.map(m => m.sender_id))];
+      const { data: sendersData } = await supabase
+        .from('profiles')
+        .select('id, prenom, nom')
+        .in('id', senderIds);
+      
+      const sendersMap = new Map(sendersData?.map(p => [p.id, p]));
+      
+      const enrichedMessages = data.map(msg => ({
+        ...msg,
+        senderName: sendersMap.get(msg.sender_id) 
+          ? `${sendersMap.get(msg.sender_id).prenom} ${sendersMap.get(msg.sender_id).nom}`
+          : msg.sender_type === 'client' ? 'Client' : 'Agent'
+      }));
+      
+      setMessages(enrichedMessages);
+      
+      // Marquer les messages comme lus
+      await supabase
+        .from('messages')
+        .update({ read: true })
+        .eq('conversation_id', convId)
+        .eq('read', false);
     }
-  };
-
-  const getParticipantName = (participantId: string) => {
-    return participantId; // TODO: Load profiles
   };
 
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
@@ -69,9 +138,12 @@ const Messagerie = () => {
             >
               <div className="flex items-start justify-between mb-1">
                 <p className="font-medium text-sm">
-                  {conv.subject || 'Conversation'}
+                  {conv.clientName} ↔ {conv.agentName}
                 </p>
               </div>
+              <p className="text-xs text-muted-foreground">
+                {conv.subject || 'Conversation'}
+              </p>
               <p className="text-xs text-muted-foreground">
                 {new Date(conv.last_message_at).toLocaleDateString('fr-FR')}
               </p>
@@ -84,19 +156,29 @@ const Messagerie = () => {
         {selectedConv ? (
           <>
             <div className="p-4 border-b bg-card">
-              <h2 className="font-semibold">Conversation</h2>
+              <h2 className="font-semibold">
+                {conversations.find(c => c.id === selectedConv)?.clientName} ↔ {conversations.find(c => c.id === selectedConv)?.agentName}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {conversations.find(c => c.id === selectedConv)?.subject}
+              </p>
             </div>
             <ScrollArea className="flex-1 p-4">
               <div className="space-y-4">
                 {selectedMessages.map((msg) => (
                   <Card key={msg.id} className="p-4">
                     <div className="flex items-start justify-between mb-2">
-                      <p className="font-medium text-sm">{getParticipantName(msg.sender_id)}</p>
+                      <div>
+                        <p className="font-medium text-sm">{msg.senderName}</p>
+                        <Badge variant="outline" className="text-xs mt-1">
+                          {msg.sender_type === 'client' ? 'Client' : 'Agent'}
+                        </Badge>
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {new Date(msg.created_at).toLocaleString('fr-FR')}
                       </p>
                     </div>
-                    <p className="text-sm">{msg.content}</p>
+                    <p className="text-sm whitespace-pre-line">{msg.content}</p>
                   </Card>
                 ))}
               </div>

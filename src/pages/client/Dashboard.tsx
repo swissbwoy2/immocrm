@@ -78,23 +78,25 @@ export default function ClientDashboard() {
       if (clientData.agent_id) {
         const { data: agentData } = await supabase
           .from('agents')
-          .select('*, profiles!agents_user_id_fkey(*)')
+          .select(`
+            *,
+            profile:profiles!agents_user_id_fkey(
+              prenom,
+              nom,
+              email,
+              telephone
+            )
+          `)
           .eq('id', clientData.agent_id)
           .maybeSingle();
 
-        if (agentData) {
-          const { data: agentProfile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', agentData.user_id)
-            .maybeSingle();
-
+        if (agentData?.profile) {
           setAgent({
             ...agentData,
-            prenom: agentProfile?.prenom || '',
-            nom: agentProfile?.nom || '',
-            email: agentProfile?.email || '',
-            telephone: agentProfile?.telephone || '',
+            prenom: agentData.profile.prenom || '',
+            nom: agentData.profile.nom || '',
+            email: agentData.profile.email || '',
+            telephone: agentData.profile.telephone || '',
           });
         }
       }
