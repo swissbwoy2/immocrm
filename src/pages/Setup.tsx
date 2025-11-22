@@ -47,27 +47,29 @@ export default function Setup() {
     }
   };
 
-  const resetClientPassword = async () => {
+  const createClientAuth = async () => {
     setLoadingClient(true);
     try {
-      const { data, error } = await supabase.functions.invoke('reset-client-password', {
-        body: {
-          email: 'info@immo-rama.ch',
-          newPassword: 'Client123!'
-        }
-      });
+      const { data, error } = await supabase.functions.invoke('create-client-auth');
 
       if (error) throw error;
 
-      toast({
-        title: 'Mot de passe réinitialisé',
-        description: 'Le mot de passe de Christ Ramazani a été réinitialisé à "Client123!"',
-      });
+      if (data.success) {
+        toast({
+          title: 'Compte créé',
+          description: 'Le compte client info@immo-rama.ch a été créé avec succès',
+        });
+      } else {
+        toast({
+          title: 'Information',
+          description: data.message,
+        });
+      }
 
     } catch (error: any) {
       toast({
         title: 'Erreur',
-        description: error.message || 'Erreur lors de la réinitialisation du mot de passe',
+        description: error.message || 'Erreur lors de la création du compte client',
         variant: 'destructive',
       });
     } finally {
@@ -121,12 +123,12 @@ export default function Setup() {
           </Button>
 
           <Button 
-            onClick={resetClientPassword} 
+            onClick={createClientAuth} 
             variant="secondary"
             className="w-full" 
             disabled={loading || loadingClient}
           >
-            {loadingClient ? 'Réinitialisation...' : 'Réinitialiser mot de passe de Christ Ramazani'}
+            {loadingClient ? 'Création...' : 'Créer compte client info@immo-rama.ch'}
           </Button>
 
           <Button 
