@@ -47,33 +47,29 @@ export default function Setup() {
     }
   };
 
-  const createDemoClient = async () => {
+  const resetClientPassword = async () => {
     setLoadingClient(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-demo-client', {
-        method: 'POST',
+      const { data, error } = await supabase.functions.invoke('reset-client-password', {
+        body: {
+          email: 'info@immo-rama.ch',
+          newPassword: 'Client123!'
+        }
       });
 
       if (error) throw error;
 
       toast({
-        title: 'Client de démo créé',
-        description: 'Le compte client de démo a été créé avec succès',
+        title: 'Mot de passe réinitialisé',
+        description: 'Le mot de passe de Christ Ramazani a été réinitialisé à "Client123!"',
       });
 
     } catch (error: any) {
-      if (error.message?.includes('already exists')) {
-        toast({
-          title: 'Compte existant',
-          description: 'Le client de démo existe déjà.',
-        });
-      } else {
-        toast({
-          title: 'Erreur',
-          description: error.message || 'Erreur lors de la création du client de démo',
-          variant: 'destructive',
-        });
-      }
+      toast({
+        title: 'Erreur',
+        description: error.message || 'Erreur lors de la réinitialisation du mot de passe',
+        variant: 'destructive',
+      });
     } finally {
       setLoadingClient(false);
     }
@@ -107,9 +103,9 @@ export default function Setup() {
             </div>
 
             <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
-              <p className="font-medium">Compte client de démo :</p>
+              <p className="font-medium">Compte client (Christ Ramazani) :</p>
               <div className="space-y-1 text-xs text-muted-foreground">
-                <p><strong>Email:</strong> client@immo-rama.ch</p>
+                <p><strong>Email:</strong> info@immo-rama.ch</p>
                 <p><strong>Mot de passe:</strong> Client123!</p>
                 <p><strong>Rôle:</strong> Client</p>
               </div>
@@ -125,12 +121,12 @@ export default function Setup() {
           </Button>
 
           <Button 
-            onClick={createDemoClient} 
+            onClick={resetClientPassword} 
             variant="secondary"
             className="w-full" 
             disabled={loading || loadingClient}
           >
-            {loadingClient ? 'Création en cours...' : 'Créer le client de démo'}
+            {loadingClient ? 'Réinitialisation...' : 'Réinitialiser mot de passe de Christ Ramazani'}
           </Button>
 
           <Button 
