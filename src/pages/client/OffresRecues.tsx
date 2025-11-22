@@ -12,7 +12,17 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const OffresRecues = () => {
   const { toast } = useToast();
@@ -21,6 +31,8 @@ const OffresRecues = () => {
   const [loading, setLoading] = useState(true);
   const [selectedOffre, setSelectedOffre] = useState<any | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [visitDialogOpen, setVisitDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>("");
 
   useEffect(() => {
     loadOffres();
@@ -63,6 +75,15 @@ const OffresRecues = () => {
   };
 
   const updateStatut = async (offreId: string, newStatut: string) => {
+    // Si c'est une visite planifiée, ouvrir le dialog de sélection de date
+    if (newStatut === 'visite_planifiee') {
+      const offre = offres.find(o => o.id === offreId);
+      if (offre) {
+        handlePlanVisit(offre);
+      }
+      return;
+    }
+
     try {
       const offre = offres.find(o => o.id === offreId);
       if (!offre) return;
@@ -121,60 +142,7 @@ const OffresRecues = () => {
         }
       }
 
-      // Créer une visite automatiquement si statut = visite_planifiee
-      if (newStatut === 'visite_planifiee') {
-        const { data: clientData } = await supabase
-          .from('clients')
-          .select('id, agent_id')
-          .eq('user_id', user?.id)
-          .maybeSingle();
-
-        if (clientData?.agent_id) {
-          await supabase
-            .from('visites')
-            .insert({
-              offre_id: offreId,
-              client_id: clientData.id,
-              agent_id: clientData.agent_id,
-              date_visite: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // +7 jours
-              adresse: offre.adresse,
-              statut: 'planifiee',
-              notes: 'Visite demandée par le client',
-            });
-
-          // Notifier l'agent
-          let { data: conv } = await supabase
-            .from('conversations')
-            .select('id')
-            .eq('client_id', clientData.id)
-            .eq('agent_id', clientData.agent_id)
-            .maybeSingle();
-
-          if (!conv) {
-            const { data: newConv } = await supabase
-              .from('conversations')
-              .insert({
-                client_id: clientData.id,
-                agent_id: clientData.agent_id,
-                subject: 'Messages',
-              })
-              .select()
-              .maybeSingle();
-            conv = newConv;
-          }
-
-          if (conv) {
-            await supabase
-              .from('messages')
-              .insert({
-                conversation_id: conv.id,
-                sender_id: user?.id,
-                sender_type: 'client',
-                content: `📅 Le client souhaite planifier une visite pour : ${offre.adresse} (${offre.prix} CHF/mois)`,
-              });
-          }
-        }
-      }
+      // NE PLUS créer automatiquement de visite ici - c'est fait dans confirmVisit()
 
       setOffres(offres.map(o => o.id === offreId ? { ...o, statut: newStatut } : o));
       toast({ title: "Succès", description: "Statut mis à jour et agent notifié" });
@@ -205,6 +173,102 @@ const OffresRecues = () => {
   const handleViewDetails = (offre: any) => {
     setSelectedOffre(offre);
     setDetailsDialogOpen(true);
+  };
+
+  const handlePlanVisit = (offre: any) => {
+    setSelectedOffre(offre);
+    setSelectedDate("");
+    setVisitDialogOpen(true);
+  };
+
+  const confirmVisit = async () => {
+    if (!selectedOffre || !selectedDate) {
+      toast({ 
+        title: "Erreur", 
+        description: "Veuillez sélectionner une date et heure pour la visite",
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id, agent_id')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (!clientData?.agent_id) {
+        toast({ 
+          title: "Erreur", 
+          description: "Aucun agent assigné",
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      // Créer la visite avec la date sélectionnée
+      await supabase
+        .from('visites')
+        .insert({
+          offre_id: selectedOffre.id,
+          client_id: clientData.id,
+          agent_id: clientData.agent_id,
+          date_visite: selectedDate,
+          adresse: selectedOffre.adresse,
+          statut: 'planifiee',
+          notes: 'Visite demandée par le client',
+        });
+
+      // Mettre à jour le statut de l'offre
+      await supabase
+        .from('offres')
+        .update({ statut: 'visite_planifiee', updated_at: new Date().toISOString() })
+        .eq('id', selectedOffre.id);
+
+      // Notifier l'agent
+      let { data: conv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('client_id', clientData.id)
+        .eq('agent_id', clientData.agent_id)
+        .maybeSingle();
+
+      if (!conv) {
+        const { data: newConv } = await supabase
+          .from('conversations')
+          .insert({
+            client_id: clientData.id,
+            agent_id: clientData.agent_id,
+            subject: 'Messages',
+          })
+          .select()
+          .maybeSingle();
+        conv = newConv;
+      }
+
+      if (conv) {
+        await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conv.id,
+            sender_id: user?.id,
+            sender_type: 'client',
+            content: `📅 Le client souhaite visiter : ${selectedOffre.adresse} (${selectedOffre.prix} CHF/mois) le ${new Date(selectedDate).toLocaleDateString('fr-FR')} à ${new Date(selectedDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`,
+          });
+      }
+
+      setOffres(offres.map(o => o.id === selectedOffre.id ? { ...o, statut: 'visite_planifiee' } : o));
+      setVisitDialogOpen(false);
+      toast({ title: "Succès", description: "Visite planifiée et agent notifié" });
+    } catch (error) {
+      console.error('Error planning visit:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de planifier la visite",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -286,7 +350,7 @@ const OffresRecues = () => {
                   )}
                   {(offre.statut === 'envoyee' || offre.statut === 'vue') && (
                     <>
-                      <Button size="sm" onClick={() => updateStatut(offre.id, 'visite_planifiee')}>
+                      <Button size="sm" onClick={() => handlePlanVisit(offre)}>
                         <Calendar className="mr-2 h-4 w-4" />
                         Visiter ce bien
                       </Button>
@@ -449,7 +513,7 @@ const OffresRecues = () => {
                   )}
                   {(selectedOffre.statut === 'envoyee' || selectedOffre.statut === 'vue') && (
                     <>
-                      <Button size="sm" onClick={() => { updateStatut(selectedOffre.id, 'visite_planifiee'); setDetailsDialogOpen(false); }}>
+                      <Button size="sm" onClick={() => { handlePlanVisit(selectedOffre); setDetailsDialogOpen(false); }}>
                         <Calendar className="mr-2 h-4 w-4" />
                         Visiter ce bien
                       </Button>
@@ -474,6 +538,104 @@ const OffresRecues = () => {
                 </div>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog de planification de visite */}
+        <Dialog open={visitDialogOpen} onOpenChange={setVisitDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Planifier une visite</DialogTitle>
+              <DialogDescription>
+                Choisissez une date et heure pour visiter ce bien
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedOffre && (
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold text-sm mb-2">{selectedOffre.adresse}</h4>
+                  <p className="text-2xl font-bold text-primary">CHF {selectedOffre.prix.toLocaleString()}/mois</p>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <Label>Date de visite</Label>
+                    <CalendarComponent
+                      mode="single"
+                      selected={selectedDate ? new Date(selectedDate) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          // Garder l'heure existante si déjà définie, sinon 10h00
+                          const time = selectedDate ? new Date(selectedDate).toTimeString().slice(0, 5) : "10:00";
+                          const newDate = new Date(date);
+                          const [hours, minutes] = time.split(':');
+                          newDate.setHours(parseInt(hours), parseInt(minutes));
+                          setSelectedDate(newDate.toISOString());
+                        }
+                      }}
+                      disabled={(date) => date < new Date() || date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      className="rounded-md border pointer-events-auto"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Heure de visite</Label>
+                    <Select 
+                      value={selectedDate ? new Date(selectedDate).toTimeString().slice(0, 5) : ""}
+                      onValueChange={(time) => {
+                        const date = selectedDate ? new Date(selectedDate) : new Date();
+                        const [hours, minutes] = time.split(':');
+                        date.setHours(parseInt(hours), parseInt(minutes));
+                        setSelectedDate(date.toISOString());
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner une heure" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="09:00">09:00</SelectItem>
+                        <SelectItem value="10:00">10:00</SelectItem>
+                        <SelectItem value="11:00">11:00</SelectItem>
+                        <SelectItem value="12:00">12:00</SelectItem>
+                        <SelectItem value="13:00">13:00</SelectItem>
+                        <SelectItem value="14:00">14:00</SelectItem>
+                        <SelectItem value="15:00">15:00</SelectItem>
+                        <SelectItem value="16:00">16:00</SelectItem>
+                        <SelectItem value="17:00">17:00</SelectItem>
+                        <SelectItem value="18:00">18:00</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedDate && (
+                    <div className="p-3 bg-muted rounded-md">
+                      <p className="text-sm">
+                        <strong>Visite prévue le :</strong><br />
+                        {new Date(selectedDate).toLocaleDateString('fr-FR', { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })} à {new Date(selectedDate).toLocaleTimeString('fr-FR', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setVisitDialogOpen(false)}>
+                Annuler
+              </Button>
+              <Button onClick={confirmVisit} disabled={!selectedDate}>
+                Confirmer la visite
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
