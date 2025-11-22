@@ -6,6 +6,8 @@ import { useToast } from "@/hooks/use-toast";
 import { MapPin, Calendar, Square, Home, ExternalLink, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { calculateChances } from "@/utils/chanceCalculator";
+import { ChanceIndicator } from "@/components/ChanceIndicator";
 import {
   Dialog,
   DialogContent,
@@ -43,11 +45,17 @@ const OffresRecues = () => {
   const [documentPieceIdentite, setDocumentPieceIdentite] = useState<File | null>(null);
   const [messageClient, setMessageClient] = useState('');
   const [accepteConditions, setAccepteConditions] = useState(false);
-
   const [delegateDialogOpen, setDelegateDialogOpen] = useState(false);
+  
+  const [clientData, setClientData] = useState<any>(null);
+  const [visites, setVisites] = useState<any[]>([]);
+  const [documentsStats, setDocumentsStats] = useState<any>({});
 
   useEffect(() => {
     loadOffres();
+    loadClientData();
+    loadVisites();
+    loadDocumentsStats();
   }, [user]);
 
   const loadOffres = async () => {
@@ -84,6 +92,95 @@ const OffresRecues = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadClientData = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('revenus_mensuels, residence, type_permis')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      setClientData(data);
+    } catch (error) {
+      console.error('Error loading client data:', error);
+    }
+  };
+
+  const loadVisites = async () => {
+    if (!user) return;
+
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!clientData) return;
+
+      const { data, error } = await supabase
+        .from('visites')
+        .select('*')
+        .eq('client_id', clientData.id);
+
+      if (error) throw error;
+      setVisites(data || []);
+    } catch (error) {
+      console.error('Error loading visites:', error);
+    }
+  };
+
+  const loadDocumentsStats = async () => {
+    if (!user) return;
+
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!clientData) return;
+
+      const { data, error } = await supabase
+        .from('documents')
+        .select('type_document, offre_id')
+        .eq('client_id', clientData.id);
+
+      if (error) throw error;
+
+      // Compter les documents par offre
+      const stats: any = {};
+      data?.forEach((doc: any) => {
+        const offreId = doc.offre_id || 'global';
+        if (!stats[offreId]) {
+          stats[offreId] = {
+            fiche_salaire: 0,
+            extrait_poursuites: 0,
+            piece_identite: 0,
+            permis_sejour: 0
+          };
+        }
+        if (doc.type_document) {
+          stats[offreId][doc.type_document] = (stats[offreId][doc.type_document] || 0) + 1;
+        }
+      });
+
+      setDocumentsStats(stats);
+    } catch (error) {
+      console.error('Error loading documents stats:', error);
+    }
+  };
+
+  // Rafraîchir les données après upload
+  const refreshData = () => {
+    loadDocumentsStats();
+    loadVisites();
   };
 
   const updateStatut = async (offreId: string, newStatut: string) => {
@@ -434,6 +531,7 @@ const OffresRecues = () => {
 
       setCandidatureDialogOpen(false);
       await loadOffres();
+      refreshData();
 
       toast({
         title: '🎉 Candidature déposée avec succès !',
@@ -549,6 +647,7 @@ const OffresRecues = () => {
       
       // Rafraîchir la liste des offres
       await loadOffres();
+      refreshData();
     } catch (error) {
       console.error('Error planning visit:', error);
       toast({
@@ -625,6 +724,27 @@ const OffresRecues = () => {
                   <p className="text-sm text-muted-foreground mb-4">
                     Disponible dès le {offre.disponibilite}
                   </p>
+                )}
+
+                {/* Indicateur de chances */}
+                {(offre.statut === 'interesse' || offre.statut === 'visite_planifiee' || 
+                  offre.statut === 'visite_effectuee' || offre.statut === 'candidature_deposee') && (
+                  <div className="mb-4">
+                    <ChanceIndicator
+                      {...calculateChances(
+                        offre,
+                        clientData,
+                        documentsStats[offre.id] || documentsStats['global'] || {
+                          fiche_salaire: 0,
+                          extrait_poursuites: 0,
+                          piece_identite: 0,
+                          permis_sejour: 0
+                        },
+                        visites
+                      )}
+                      compact
+                    />
+                  </div>
                 )}
 
                 <div className="flex gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
@@ -809,6 +929,24 @@ const OffresRecues = () => {
                       )}
                     </div>
                   </div>
+                )}
+
+                {/* Indicateur de chances détaillé */}
+                {(selectedOffre.statut === 'interesse' || selectedOffre.statut === 'visite_planifiee' || 
+                  selectedOffre.statut === 'visite_effectuee' || selectedOffre.statut === 'candidature_deposee') && (
+                  <ChanceIndicator
+                    {...calculateChances(
+                      selectedOffre,
+                      clientData,
+                      documentsStats[selectedOffre.id] || documentsStats['global'] || {
+                        fiche_salaire: 0,
+                        extrait_poursuites: 0,
+                        piece_identite: 0,
+                        permis_sejour: 0
+                      },
+                      visites
+                    )}
+                  />
                 )}
 
                 {/* Commentaires de l'agent */}
