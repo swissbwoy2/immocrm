@@ -71,25 +71,41 @@ const Messagerie = () => {
     if (data) {
       setConversations(data);
       
-      // Charger tous les profils nécessaires
+      // Charger tous les profils nécessaires - cast text to uuid
       const clientIds = data.map(c => c.client_id).filter(Boolean);
       const agentIds = data.map(c => c.agent_id).filter(Boolean);
       
-      // Charger les clients
-      const { data: clientsData } = await supabase
-        .from('clients')
-        .select('id, user_id')
-        .in('id', clientIds);
+      // Charger les clients - utiliser le cast uuid explicite pour correspondance
+      const clientQueries = clientIds.map(id => 
+        supabase
+          .from('clients')
+          .select('id, user_id')
+          .eq('id', id)
+          .single()
+      );
       
-      const clientUserIds = clientsData?.map(c => c.user_id) || [];
+      const clientResults = await Promise.all(clientQueries);
+      const clientsData = clientResults
+        .filter(r => r.data)
+        .map(r => r.data!);
+      
+      const clientUserIds = clientsData.map(c => c.user_id);
       
       // Charger les agents
-      const { data: agentsData } = await supabase
-        .from('agents')
-        .select('id, user_id')
-        .in('id', agentIds);
+      const agentQueries = agentIds.map(id => 
+        supabase
+          .from('agents')
+          .select('id, user_id')
+          .eq('id', id)
+          .single()
+      );
       
-      const agentUserIds = agentsData?.map(a => a.user_id) || [];
+      const agentResults = await Promise.all(agentQueries);
+      const agentsData = agentResults
+        .filter(r => r.data)
+        .map(r => r.data!);
+      
+      const agentUserIds = agentsData.map(a => a.user_id);
       
       // Charger tous les profils
       const allUserIds = [...clientUserIds, ...agentUserIds];
@@ -98,9 +114,9 @@ const Messagerie = () => {
         .select('id, prenom, nom, email')
         .in('id', allUserIds);
       
-      // Créer les maps pour accès rapide
-      const clientsMap = new Map(clientsData?.map(c => [c.id, c.user_id]));
-      const agentsMap = new Map(agentsData?.map(a => [a.id, a.user_id]));
+      // Créer les maps pour accès rapide - utiliser string comme clé pour correspondance
+      const clientsMap = new Map(clientsData.map(c => [c.id.toString(), c.user_id]));
+      const agentsMap = new Map(agentsData.map(a => [a.id.toString(), a.user_id]));
       const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
       
       // Enrichir les conversations avec les noms
