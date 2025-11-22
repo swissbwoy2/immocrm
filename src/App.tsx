@@ -23,6 +23,7 @@ import AgentClientDetail from "./pages/agent/ClientDetail";
 import AgentEnvoyerOffre from "./pages/agent/EnvoyerOffre";
 import AgentOffresEnvoyees from "./pages/agent/OffresEnvoyees";
 import AgentMessagerie from "./pages/agent/Messagerie";
+import AgentVisites from "./pages/agent/Visites";
 import ClientDashboard from "./pages/client/Dashboard";
 import ClientDossier from "./pages/client/Dossier";
 import ClientOffresRecues from "./pages/client/OffresRecues";
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/agent/clients/:id" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentClientDetail /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/envoyer-offre" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentEnvoyerOffre /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/offres-envoyees" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentOffresEnvoyees /></AppLayout></ProtectedRoute>} />
+            <Route path="/agent/visites" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentVisites /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/messagerie" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentMessagerie /></AppLayout></ProtectedRoute>} />
 
             {/* Client Routes */}

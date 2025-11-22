@@ -39,6 +39,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Mes clients', icon: Users, path: '/agent/mes-clients' },
         { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre' },
         { name: 'Offres envoyées', icon: Mail, path: '/agent/offres-envoyees' },
+        { name: 'Visites', icon: Calendar, path: '/agent/visites' },
         { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie' },
         { name: 'Documents', icon: FileText, path: '/agent/documents' },
         { name: 'Paramètres', icon: Settings, path: '/agent/parametres' },

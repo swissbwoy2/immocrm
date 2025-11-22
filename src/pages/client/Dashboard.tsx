@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { calculateDaysElapsed, calculateDaysRemaining } from '@/utils/calculations';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
+import { toast } from 'sonner';
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ export default function ClientDashboard() {
   const [client, setClient] = useState<any>(null);
   const [agent, setAgent] = useState<any>(null);
   const [offres, setOffres] = useState<any[]>([]);
+  const [visites, setVisites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -70,10 +72,97 @@ export default function ClientDashboard() {
         .eq('client_id', clientData.id);
 
       setOffres(offresData || []);
+
+      // Load visites depuis la table visites
+      const { data: visitesData } = await supabase
+        .from('visites')
+        .select('*, offres(*)')
+        .eq('client_id', clientData.id)
+        .order('date_visite', { ascending: true });
+
+      setVisites(visitesData || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRenewMandat = async () => {
+    if (!client || !user) return;
+    
+    try {
+      const oldDate = client.date_ajout || client.created_at;
+      const newDate = new Date().toISOString();
+      
+      // 1. Créer l'historique du renouvellement
+      const { error: historyError } = await supabase
+        .from('renouvellements_mandat')
+        .insert({
+          client_id: client.id,
+          agent_id: client.agent_id,
+          date_ancien_mandat: oldDate,
+          date_nouveau_mandat: newDate,
+          raison: 'Renouvellement demandé par le client'
+        });
+      
+      if (historyError) throw historyError;
+      
+      // 2. Mettre à jour la date du mandat
+      const { error: updateError } = await supabase
+        .from('clients')
+        .update({ date_ajout: newDate })
+        .eq('id', client.id);
+      
+      if (updateError) throw updateError;
+      
+      // 3. Trouver ou créer une conversation avec l'agent
+      if (client.agent_id) {
+        let conversationId: string | null = null;
+        
+        const { data: existingConv } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('client_id', client.id)
+          .eq('agent_id', client.agent_id)
+          .maybeSingle();
+        
+        if (existingConv) {
+          conversationId = existingConv.id;
+        } else {
+          const { data: newConv } = await supabase
+            .from('conversations')
+            .insert({
+              client_id: client.id,
+              agent_id: client.agent_id,
+              subject: 'Renouvellement de mandat'
+            })
+            .select('id')
+            .maybeSingle();
+          
+          conversationId = newConv?.id || null;
+        }
+        
+        // 4. Envoyer un message à l'agent
+        if (conversationId) {
+          await supabase
+            .from('messages')
+            .insert({
+              conversation_id: conversationId,
+              sender_id: client.id,
+              sender_type: 'client',
+              content: `🔄 J'ai renouvelé mon mandat pour 90 jours supplémentaires. Nouvelle date de début : ${new Date().toLocaleDateString('fr-CH')}`
+            });
+        }
+      }
+      
+      // 5. Recharger les données
+      await loadData();
+      
+      toast.success('✅ Votre mandat a été renouvelé pour 90 jours !');
+    } catch (error) {
+      console.error('Error renewing mandate:', error);
+      toast.error('❌ Erreur lors du renouvellement');
     }
   };
 
@@ -90,11 +179,16 @@ export default function ClientDashboard() {
   const progressPercent = Math.min((daysElapsed / 90) * 100, 100);
 
   // Calculate stats
+  const now = new Date();
   const stats = {
     offresRecues: offres.length,
     offresNonVues: offres.filter(o => o.statut === 'envoyee').length,
-    visitesAVenir: offres.filter(o => o.statut === 'visite_planifiee').length,
-    visitesEffectuees: offres.filter(o => o.statut === 'visite_effectuee').length,
+    visitesAVenir: visites.filter(v => 
+      v.statut === 'planifiee' && new Date(v.date_visite) >= now
+    ).length,
+    visitesEffectuees: visites.filter(v => 
+      v.statut === 'effectuee' || (v.statut === 'planifiee' && new Date(v.date_visite) < now)
+    ).length,
     candidaturesDeposees: offres.filter(o => o.statut === 'candidature_deposee').length,
     candidaturesEnAttente: offres.filter(o => ['candidature_deposee', 'visite_effectuee'].includes(o.statut)).length,
   };
@@ -139,7 +233,7 @@ export default function ClientDashboard() {
                       Souhaitez-vous renouveler ou avez-vous des questions ?
                     </p>
                     <div className="flex gap-3 mt-4">
-                      <Button size="sm" variant="default">
+                      <Button size="sm" variant="default" onClick={handleRenewMandat}>
                         Renouveler mon mandat
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => navigate('/client/messagerie')}>
@@ -283,24 +377,32 @@ export default function ClientDashboard() {
               <CardTitle>📅 Prochaines visites</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {offres.filter(o => o.statut === 'visite_planifiee').length > 0 ? (
+              {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length > 0 ? (
                 <>
-                  {offres.filter(o => o.statut === 'visite_planifiee').slice(0, 3).map(offre => (
-                    <div 
-                      key={offre.id} 
-                      className="p-4 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
-                      onClick={() => navigate('/client/visites')}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium">{offre.adresse}</p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {offre.pieces} pièces • {offre.surface}m² • {offre.prix} CHF/mois
-                          </p>
+                  {visites
+                    .filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now)
+                    .slice(0, 3)
+                    .map(visite => (
+                      <div 
+                        key={visite.id} 
+                        className="p-4 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                        onClick={() => navigate('/client/visites')}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium">{visite.adresse}</p>
+                            {visite.offres && (
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {visite.offres.pieces} pièces • {visite.offres.surface}m² • {visite.offres.prix} CHF/mois
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-2">
+                              📅 {new Date(visite.date_visite).toLocaleDateString('fr-CH')} à {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
                   <Button 
                     variant="ghost" 
                     className="w-full text-sm text-primary"
