@@ -53,13 +53,13 @@ const getMenuForRole = (role: string): MenuItem[] => {
 export function Sidebar() {
   const location = useLocation();
   const { user, userRole, signOut } = useAuth();
-  const [userProfile, setUserProfile] = useState<{ prenom: string; nom: string } | null>(null);
+  const [userProfile, setUserProfile] = useState<{ prenom: string; nom: string; email: string } | null>(null);
   
   useEffect(() => {
     if (user) {
       supabase
         .from('profiles')
-        .select('prenom, nom')
+        .select('prenom, nom, email')
         .eq('id', user.id)
         .single()
         .then(({ data }) => {
@@ -74,6 +74,7 @@ export function Sidebar() {
 
   const menu = getMenuForRole(userRole);
   const userName = userProfile ? `${userProfile.prenom} ${userProfile.nom}` : 'Chargement...';
+  const userEmail = userProfile?.email || user.email || '';
 
   const handleLogout = async () => {
     await signOut();
@@ -98,7 +99,8 @@ export function Sidebar() {
       <div className="p-4 border-b border-sidebar-border">
         <div className="text-sm text-sidebar-foreground/80">
           <div className="font-medium text-sidebar-foreground">{userName}</div>
-          <div className="text-xs capitalize">{userRole}</div>
+          <div className="text-xs text-sidebar-foreground/60 truncate">{userEmail}</div>
+          <div className="text-xs capitalize mt-1 text-sidebar-accent-foreground bg-sidebar-accent px-2 py-0.5 rounded inline-block">{userRole}</div>
         </div>
       </div>
 
