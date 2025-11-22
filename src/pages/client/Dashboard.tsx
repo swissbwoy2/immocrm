@@ -33,17 +33,6 @@ export default function ClientDashboard() {
     }
 
     try {
-      // Vérifier que la session est valide
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session) {
-        console.error('Session expired or invalid:', sessionError);
-        toast.error('Votre session a expiré. Veuillez vous reconnecter.');
-        setLoading(false);
-        navigate('/login');
-        return;
-      }
-
       // Load client
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
