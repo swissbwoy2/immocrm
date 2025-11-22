@@ -52,6 +52,9 @@ const OffresRecues = () => {
 
   const updateStatut = async (offreId: string, newStatut: string) => {
     try {
+      const offre = offres.find(o => o.id === offreId);
+      if (!offre) return;
+
       const { error } = await supabase
         .from('offres')
         .update({ statut: newStatut, updated_at: new Date().toISOString() })
@@ -59,8 +62,110 @@ const OffresRecues = () => {
 
       if (error) throw error;
 
+      // Créer un message automatique pour notifier l'agent
+      if (newStatut === 'interesse' || newStatut === 'refusee') {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('id, agent_id, user_id')
+          .eq('user_id', user?.id)
+          .single();
+
+        if (clientData?.agent_id) {
+          // Trouver ou créer une conversation
+          let { data: conv } = await supabase
+            .from('conversations')
+            .select('id')
+            .eq('client_id', clientData.id)
+            .eq('agent_id', clientData.agent_id)
+            .maybeSingle();
+
+          if (!conv) {
+            const { data: newConv } = await supabase
+              .from('conversations')
+              .insert({
+                client_id: clientData.id,
+                agent_id: clientData.agent_id,
+                subject: 'Messages',
+              })
+              .select()
+              .single();
+            conv = newConv;
+          }
+
+          if (conv) {
+            const messageContent = newStatut === 'interesse' 
+              ? `✅ Le client est intéressé par l'offre : ${offre.adresse} (${offre.prix} CHF/mois)`
+              : `❌ Le client a refusé l'offre : ${offre.adresse}`;
+
+            await supabase
+              .from('messages')
+              .insert({
+                conversation_id: conv.id,
+                sender_id: user?.id,
+                sender_type: 'client',
+                content: messageContent,
+              });
+          }
+        }
+      }
+
+      // Créer une visite automatiquement si statut = visite_planifiee
+      if (newStatut === 'visite_planifiee') {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('id, agent_id')
+          .eq('user_id', user?.id)
+          .single();
+
+        if (clientData?.agent_id) {
+          await supabase
+            .from('visites')
+            .insert({
+              offre_id: offreId,
+              client_id: clientData.id,
+              agent_id: clientData.agent_id,
+              date_visite: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // +7 jours
+              adresse: offre.adresse,
+              statut: 'planifiee',
+              notes: 'Visite demandée par le client',
+            });
+
+          // Notifier l'agent
+          let { data: conv } = await supabase
+            .from('conversations')
+            .select('id')
+            .eq('client_id', clientData.id)
+            .eq('agent_id', clientData.agent_id)
+            .maybeSingle();
+
+          if (!conv) {
+            const { data: newConv } = await supabase
+              .from('conversations')
+              .insert({
+                client_id: clientData.id,
+                agent_id: clientData.agent_id,
+                subject: 'Messages',
+              })
+              .select()
+              .single();
+            conv = newConv;
+          }
+
+          if (conv) {
+            await supabase
+              .from('messages')
+              .insert({
+                conversation_id: conv.id,
+                sender_id: user?.id,
+                sender_type: 'client',
+                content: `📅 Le client souhaite planifier une visite pour : ${offre.adresse} (${offre.prix} CHF/mois)`,
+              });
+          }
+        }
+      }
+
       setOffres(offres.map(o => o.id === offreId ? { ...o, statut: newStatut } : o));
-      toast({ title: "Succès", description: "Statut mis à jour" });
+      toast({ title: "Succès", description: "Statut mis à jour et agent notifié" });
     } catch (error) {
       console.error('Error updating statut:', error);
       toast({

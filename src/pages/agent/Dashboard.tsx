@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell } from 'lucide-react';
+import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download } from 'lucide-react';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ export default function AgentDashboard() {
   const [agent, setAgent] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
   const [offres, setOffres] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -58,6 +59,19 @@ export default function AgentDashboard() {
           .order('date_envoi', { ascending: false });
         
         setOffres(offresData || []);
+      }
+
+      // Récupérer les documents des clients
+      const clientUserIds = clientsData?.map(c => c.user_id) || [];
+      if (clientUserIds.length > 0) {
+        const { data: documentsData } = await supabase
+          .from('documents')
+          .select('*, clients!documents_client_id_fkey(*)')
+          .in('user_id', clientUserIds)
+          .order('created_at', { ascending: false })
+          .limit(10);
+        
+        setDocuments(documentsData || []);
       }
     } catch (error) {
       console.error('Erreur chargement données agent:', error);
@@ -327,6 +341,69 @@ export default function AgentDashboard() {
                   >
                     Envoyer une offre
                   </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Documents clients */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold">📄 Documents clients</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {documents.length > 0 ? (
+                <>
+                  {documents.slice(0, 5).map(doc => {
+                    const getDocIcon = (type: string) => {
+                      if (type.includes('pdf')) return '📄';
+                      if (type.includes('image')) return '🖼️';
+                      if (type.includes('word')) return '📝';
+                      return '📎';
+                    };
+
+                    return (
+                      <div 
+                        key={doc.id}
+                        className="p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xl">{getDocIcon(doc.type)}</span>
+                              <p className="font-medium text-sm truncate">{doc.nom}</p>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Uploadé le {new Date(doc.created_at).toLocaleDateString('fr-CH')}
+                            </p>
+                            {doc.taille && (
+                              <p className="text-xs text-muted-foreground">
+                                {(doc.taille / 1024).toFixed(0)} KB
+                              </p>
+                            )}
+                          </div>
+                          {doc.url && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => window.open(doc.url, '_blank')}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              Télécharger
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
+                    <FileText className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-medium">Aucun document</p>
+                  <p className="text-xs mt-1">Les documents des clients apparaîtront ici</p>
                 </div>
               )}
             </CardContent>

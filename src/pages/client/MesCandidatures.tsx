@@ -75,6 +75,9 @@ const MesCandidatures = () => {
 
   const updateStatut = async (offreId: string, newStatut: string) => {
     try {
+      const offre = offres.find(o => o.id === offreId);
+      if (!offre) return;
+
       const { error } = await supabase
         .from('offres')
         .update({ statut: newStatut })
@@ -82,13 +85,58 @@ const MesCandidatures = () => {
 
       if (error) throw error;
 
+      // Créer un message automatique pour notifier l'agent
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id, agent_id')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (clientData?.agent_id) {
+        // Trouver ou créer une conversation
+        let { data: conv } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('client_id', clientData.id)
+          .eq('agent_id', clientData.agent_id)
+          .maybeSingle();
+
+        if (!conv) {
+          const { data: newConv } = await supabase
+            .from('conversations')
+            .insert({
+              client_id: clientData.id,
+              agent_id: clientData.agent_id,
+              subject: 'Messages',
+            })
+            .select()
+            .single();
+          conv = newConv;
+        }
+
+        if (conv) {
+          const messageContent = newStatut === 'interesse' 
+            ? `✅ Le client est intéressé par l'offre : ${offre.adresse} (${offre.prix} CHF/mois)`
+            : `❌ Le client a refusé l'offre : ${offre.adresse}`;
+
+          await supabase
+            .from('messages')
+            .insert({
+              conversation_id: conv.id,
+              sender_id: user?.id,
+              sender_type: 'client',
+              content: messageContent,
+            });
+        }
+      }
+
       setOffres(prev => 
         prev.map(o => o.id === offreId ? { ...o, statut: newStatut } : o)
       );
 
       toast({
         title: "Statut mis à jour",
-        description: `L'offre a été ${newStatut === 'interesse' ? 'approuvée' : 'refusée'}.`,
+        description: `L'offre a été ${newStatut === 'interesse' ? 'approuvée' : 'refusée'} et l'agent a été notifié.`,
       });
     } catch (error) {
       console.error('Error updating statut:', error);
