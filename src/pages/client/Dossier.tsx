@@ -326,7 +326,15 @@ export default function Dossier() {
               </div>
             </CardHeader>
             <CardContent>
-              <Progress value={progressPercentage} className="h-3" />
+              <Progress 
+                value={progressPercentage} 
+                className="h-3"
+                indicatorClassName={
+                  daysElapsed < 60 ? 'bg-green-500' :
+                  daysElapsed < 90 ? 'bg-orange-500' :
+                  'bg-red-500'
+                }
+              />
               <div className="flex justify-between mt-2 text-xs text-muted-foreground">
                 <span>Début: {new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</span>
                 <span>Fin: {new Date(new Date(client.date_ajout || client.created_at).getTime() + 90 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-CH')}</span>
