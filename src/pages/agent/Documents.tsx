@@ -102,22 +102,45 @@ export default function AgentDocuments() {
     try {
       // Si l'URL est une data URL (base64)
       if (document.url.startsWith('data:')) {
+        console.log('Processing base64 document, type:', document.type);
+        
         // Pour les PDFs en base64, on doit créer un Blob URL
         if (document.type === 'application/pdf') {
-          const base64 = document.url.split(',')[1];
-          const binaryString = atob(base64);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
+          try {
+            // Extraire le base64 pur (enlever le préfixe data:...)
+            const base64Data = document.url.split(',')[1];
+            console.log('Base64 data length:', base64Data?.length);
+            
+            // Décoder le base64
+            const binaryString = atob(base64Data);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            
+            for (let i = 0; i < len; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            // Créer un Blob avec le bon type MIME
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+            console.log('Blob created, size:', blob.size, 'type:', blob.type);
+            
+            // Créer une URL pour le Blob
+            const blobUrl = URL.createObjectURL(blob);
+            console.log('Blob URL created:', blobUrl);
+            
+            setPreviewUrl(blobUrl);
+            setPreviewDialogOpen(true);
+          } catch (error) {
+            console.error('Error converting base64 to Blob:', error);
+            toast.error('Erreur lors de la conversion du document');
+            return;
           }
-          const blob = new Blob([bytes], { type: 'application/pdf' });
-          const blobUrl = URL.createObjectURL(blob);
-          setPreviewUrl(blobUrl);
         } else {
           // Pour les images, utiliser directement la data URL
+          console.log('Using data URL directly for image');
           setPreviewUrl(document.url);
+          setPreviewDialogOpen(true);
         }
-        setPreviewDialogOpen(true);
         return;
       }
 
