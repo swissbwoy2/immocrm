@@ -446,10 +446,22 @@ export default function ClientDashboard() {
                 </div>
                 <div>
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-muted-foreground">Progression</span>
+                    <span className="text-muted-foreground">Progression du mandat (90 jours)</span>
                     <span className="font-medium">{Math.round(progressPercent)}%</span>
                   </div>
-                  <Progress value={progressPercent} className="h-2" />
+                  <Progress 
+                    value={progressPercent} 
+                    className="h-3"
+                    indicatorClassName={
+                      daysRemaining > 30 ? 'bg-success' :
+                      daysRemaining > 0 ? 'bg-warning' :
+                      'bg-destructive'
+                    }
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                    <span>Début: {new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</span>
+                    <span>{daysRemaining > 0 ? `${daysRemaining} jours restants` : 'Expiré'}</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
