@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export default function Setup() {
   const [loading, setLoading] = useState(false);
+  const [loadingClient, setLoadingClient] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -46,6 +47,38 @@ export default function Setup() {
     }
   };
 
+  const createDemoClient = async () => {
+    setLoadingClient(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-demo-client', {
+        method: 'POST',
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Client de démo créé',
+        description: 'Le compte client de démo a été créé avec succès',
+      });
+
+    } catch (error: any) {
+      if (error.message?.includes('already exists')) {
+        toast({
+          title: 'Compte existant',
+          description: 'Le client de démo existe déjà.',
+        });
+      } else {
+        toast({
+          title: 'Erreur',
+          description: error.message || 'Erreur lors de la création du client de démo',
+          variant: 'destructive',
+        });
+      }
+    } finally {
+      setLoadingClient(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
       <Card className="w-full max-w-md">
@@ -63,28 +96,48 @@ export default function Setup() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
-            <p className="font-medium">Compte qui sera créé :</p>
-            <div className="space-y-1 text-xs text-muted-foreground">
-              <p><strong>Email:</strong> admin@immo-rama.ch</p>
-              <p><strong>Mot de passe:</strong> Admin123!</p>
-              <p><strong>Rôle:</strong> Administrateur</p>
+          <div className="space-y-3">
+            <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
+              <p className="font-medium">Compte administrateur :</p>
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p><strong>Email:</strong> admin@immo-rama.ch</p>
+                <p><strong>Mot de passe:</strong> Admin123!</p>
+                <p><strong>Rôle:</strong> Administrateur</p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
+              <p className="font-medium">Compte client de démo :</p>
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p><strong>Email:</strong> client@immo-rama.ch</p>
+                <p><strong>Mot de passe:</strong> Client123!</p>
+                <p><strong>Rôle:</strong> Client</p>
+              </div>
             </div>
           </div>
 
           <Button 
             onClick={createAdminAccount} 
             className="w-full" 
-            disabled={loading}
+            disabled={loading || loadingClient}
           >
             {loading ? 'Création en cours...' : 'Créer le compte administrateur'}
+          </Button>
+
+          <Button 
+            onClick={createDemoClient} 
+            variant="secondary"
+            className="w-full" 
+            disabled={loading || loadingClient}
+          >
+            {loadingClient ? 'Création en cours...' : 'Créer le client de démo'}
           </Button>
 
           <Button 
             variant="outline" 
             onClick={() => navigate('/login')} 
             className="w-full"
-            disabled={loading}
+            disabled={loading || loadingClient}
           >
             J'ai déjà un compte
           </Button>

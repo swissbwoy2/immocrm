@@ -133,11 +133,15 @@ export default function Login() {
               Configurer l'application
             </Button>
             
-            <p className="font-medium text-center mt-4 mb-3">Compte de démonstration :</p>
+            <p className="font-medium text-center mt-4 mb-3">Comptes de démonstration :</p>
             <div className="space-y-2 text-xs">
               <div>
                 <p className="font-medium">Admin:</p>
                 <p className="text-muted-foreground">admin@immo-rama.ch / Admin123!</p>
+              </div>
+              <div>
+                <p className="font-medium">Client:</p>
+                <p className="text-muted-foreground">client@immo-rama.ch / Client123!</p>
               </div>
             </div>
           </div>
