@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { 
   Mail, Phone, MapPin, Calendar, Users, DollarSign, 
   Home, Building2, Briefcase, Heart, Car, Upload, FileText,
-  Download, Trash2, User, MessageSquare
+  Download, Trash2, User, MessageSquare, Edit
 } from 'lucide-react';
 import { calculateDaysElapsed, calculateDaysRemaining } from '@/utils/calculations';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,6 +46,8 @@ export default function Dossier() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [editProfileDialogOpen, setEditProfileDialogOpen] = useState(false);
+  const [editProfileData, setEditProfileData] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
 
@@ -230,6 +234,41 @@ export default function Dossier() {
     link.click();
   };
 
+  const handleEditProfileClick = () => {
+    setEditProfileData({
+      nom: profile?.nom,
+      prenom: profile?.prenom,
+      telephone: profile?.telephone,
+    });
+    setEditProfileDialogOpen(true);
+  };
+
+  const handleEditProfileSave = async () => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(editProfileData)
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Succès',
+        description: 'Vos informations ont été mises à jour',
+      });
+
+      setEditProfileDialogOpen(false);
+      loadData();
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de mettre à jour vos informations',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getFileIcon = (type: string) => {
     if (type.includes('pdf')) return '📄';
     if (type.includes('image')) return '🖼️';
@@ -259,9 +298,15 @@ export default function Dossier() {
     <div className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8 space-y-6">
           {/* Header */}
-          <div>
-            <h1 className="text-3xl font-bold">Mon dossier</h1>
-            <p className="text-muted-foreground">Toutes vos informations personnelles</p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold">Mon dossier</h1>
+              <p className="text-muted-foreground">Toutes vos informations personnelles</p>
+            </div>
+            <Button onClick={handleEditProfileClick}>
+              <Edit className="w-4 h-4 mr-2" />
+              Modifier mes informations
+            </Button>
           </div>
 
           {/* Barre de progression du mandat */}
@@ -619,6 +664,48 @@ export default function Dossier() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={editProfileDialogOpen} onOpenChange={setEditProfileDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier mes informations</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Prénom</Label>
+                <Input
+                  value={editProfileData.prenom || ''}
+                  onChange={(e) => setEditProfileData({ ...editProfileData, prenom: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Nom</Label>
+                <Input
+                  value={editProfileData.nom || ''}
+                  onChange={(e) => setEditProfileData({ ...editProfileData, nom: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Téléphone</Label>
+              <Input
+                value={editProfileData.telephone || ''}
+                onChange={(e) => setEditProfileData({ ...editProfileData, telephone: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditProfileDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleEditProfileSave}>
+              Enregistrer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

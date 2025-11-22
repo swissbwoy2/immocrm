@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { calculateDaysElapsed } from '@/utils/calculations';
@@ -85,6 +91,8 @@ export default function ClientDetail() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState<any>({});
 
   useEffect(() => {
     loadClientData();
@@ -137,6 +145,52 @@ export default function ClientDetail() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditClick = () => {
+    setEditFormData({
+      ...client,
+      nom: profile?.nom,
+      prenom: profile?.prenom,
+      email: profile?.email,
+      telephone: profile?.telephone,
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleEditSave = async () => {
+    try {
+      const { nom, prenom, email, telephone, ...clientFields } = editFormData;
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ nom, prenom, email, telephone })
+        .eq('id', client?.user_id);
+
+      if (profileError) throw profileError;
+
+      const { error: clientError } = await supabase
+        .from('clients')
+        .update(clientFields)
+        .eq('id', id);
+
+      if (clientError) throw clientError;
+
+      toast({
+        title: 'Succès',
+        description: 'Les informations ont été mises à jour',
+      });
+
+      setEditDialogOpen(false);
+      loadClientData();
+    } catch (error) {
+      console.error('Error updating data:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de mettre à jour les informations',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -220,10 +274,116 @@ export default function ClientDetail() {
             </div>
           </div>
 
-          <Button variant="outline" onClick={() => navigate('/admin/clients')}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Retour
-          </Button>
+          <div className="flex gap-2">
+            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={handleEditClick}>
+                  <Edit className="w-4 h-4 mr-2" />
+                  Modifier
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Modifier les informations</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Prénom</Label>
+                      <Input
+                        value={editFormData.prenom || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, prenom: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nom</Label>
+                      <Input
+                        value={editFormData.nom || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, nom: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <Input
+                        type="email"
+                        value={editFormData.email || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Téléphone</Label>
+                      <Input
+                        value={editFormData.telephone || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, telephone: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Adresse</Label>
+                    <Input
+                      value={editFormData.adresse || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, adresse: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Budget maximum (CHF)</Label>
+                      <Input
+                        type="number"
+                        value={editFormData.budget_max || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, budget_max: parseFloat(e.target.value) })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Revenus mensuels (CHF)</Label>
+                      <Input
+                        type="number"
+                        value={editFormData.revenus_mensuels || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, revenus_mensuels: parseFloat(e.target.value) })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Pièces souhaitées</Label>
+                      <Input
+                        type="number"
+                        value={editFormData.pieces || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, pieces: parseFloat(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Région de recherche</Label>
+                    <Input
+                      value={editFormData.region_recherche || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, region_recherche: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Notes de l'agent</Label>
+                    <Textarea
+                      value={editFormData.note_agent || ''}
+                      onChange={(e) => setEditFormData({ ...editFormData, note_agent: e.target.value })}
+                      rows={3}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                      Annuler
+                    </Button>
+                    <Button onClick={handleEditSave}>
+                      Enregistrer
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline" onClick={() => navigate('/admin/clients')}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Retour
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
