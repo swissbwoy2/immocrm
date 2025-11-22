@@ -121,18 +121,6 @@ export default function Login() {
               {loading ? 'Connexion...' : 'Se connecter'}
             </Button>
           </form>
-
-          <div className="mt-6 p-4 bg-muted/50 rounded-lg text-sm space-y-2">
-            <p className="font-medium text-center mb-3">Première utilisation ?</p>
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/setup')} 
-              className="w-full"
-              disabled={loading}
-            >
-              Configurer l'application
-            </Button>
-          </div>
         </CardContent>
       </Card>
     </div>
