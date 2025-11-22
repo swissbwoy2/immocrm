@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Calendar, Clock, MapPin, Home, DollarSign, 
-  Maximize, User, Phone, KeyRound, CalendarCheck 
+  Maximize, User, Phone, KeyRound, CalendarCheck, Check, X, FileCheck
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,6 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function Visites() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [visites, setVisites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -80,6 +82,156 @@ export default function Visites() {
       month: 'long', 
       day: 'numeric' 
     });
+  };
+
+  const marquerVisiteEffectuee = async (visite: any) => {
+    try {
+      await supabase
+        .from('visites')
+        .update({ statut: 'effectuee' })
+        .eq('id', visite.id);
+
+      await supabase
+        .from('offres')
+        .update({ statut: 'visite_effectuee' })
+        .eq('id', visite.offre_id);
+
+      toast({
+        title: 'Succès',
+        description: 'La visite a été marquée comme effectuée'
+      });
+
+      await loadVisites();
+    } catch (error) {
+      console.error('Error updating visite:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de mettre à jour la visite',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const accepterOffre = async (visite: any) => {
+    try {
+      await supabase
+        .from('offres')
+        .update({ statut: 'interesse' })
+        .eq('id', visite.offre_id);
+
+      // Notifier l'agent
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id, agent_id')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (clientData?.agent_id && visite.offres) {
+        let { data: conv } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('client_id', clientData.id)
+          .eq('agent_id', clientData.agent_id)
+          .maybeSingle();
+
+        if (!conv) {
+          const { data: newConv } = await supabase
+            .from('conversations')
+            .insert({
+              client_id: clientData.id,
+              agent_id: clientData.agent_id,
+              subject: 'Messages'
+            })
+            .select()
+            .maybeSingle();
+          conv = newConv;
+        }
+
+        if (conv) {
+          await supabase.from('messages').insert({
+            conversation_id: conv.id,
+            sender_id: user?.id,
+            sender_type: 'client',
+            content: `✅ **Le client est intéressé par l'offre suite à la visite**\n\n🏠 Adresse: ${visite.offres.adresse}\n💰 Loyer: ${visite.offres.prix.toLocaleString()} CHF/mois\n📅 Visite effectuée le: ${formatDate(visite.date_visite)}`
+          });
+        }
+      }
+
+      toast({
+        title: '✅ Offre acceptée',
+        description: 'Votre agent a été notifié de votre intérêt'
+      });
+
+      await loadVisites();
+    } catch (error) {
+      console.error('Error accepting offer:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible d\'accepter l\'offre',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const refuserOffre = async (visite: any) => {
+    try {
+      await supabase
+        .from('offres')
+        .update({ statut: 'refusee' })
+        .eq('id', visite.offre_id);
+
+      // Notifier l'agent
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id, agent_id')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (clientData?.agent_id && visite.offres) {
+        let { data: conv } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('client_id', clientData.id)
+          .eq('agent_id', clientData.agent_id)
+          .maybeSingle();
+
+        if (!conv) {
+          const { data: newConv } = await supabase
+            .from('conversations')
+            .insert({
+              client_id: clientData.id,
+              agent_id: clientData.agent_id,
+              subject: 'Messages'
+            })
+            .select()
+            .maybeSingle();
+          conv = newConv;
+        }
+
+        if (conv) {
+          await supabase.from('messages').insert({
+            conversation_id: conv.id,
+            sender_id: user?.id,
+            sender_type: 'client',
+            content: `❌ **Le client a refusé l'offre suite à la visite**\n\n🏠 Adresse: ${visite.offres.adresse}\n📅 Visite effectuée le: ${formatDate(visite.date_visite)}`
+          });
+        }
+      }
+
+      toast({
+        title: 'Offre refusée',
+        description: 'Votre agent a été notifié'
+      });
+
+      await loadVisites();
+    } catch (error) {
+      console.error('Error refusing offer:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de refuser l\'offre',
+        variant: 'destructive'
+      });
+    }
   };
 
   if (loading) {
@@ -250,21 +402,70 @@ export default function Visites() {
                     )}
 
                     {/* Actions */}
-                    <div className="flex gap-3">
-                      <Button 
-                        onClick={() => navigate('/client/offres-recues')}
-                        className="flex-1"
-                      >
-                        Voir l'offre complète
-                      </Button>
-                      {visite.offres?.lien_annonce && (
+                    <div className="space-y-3">
+                      {visite.statut === 'planifiee' && visite.offres?.statut !== 'visite_effectuee' && (
+                        <div className="flex gap-3">
+                          <Button 
+                            onClick={() => marquerVisiteEffectuee(visite)}
+                            className="flex-1"
+                          >
+                            <Check className="mr-2 h-4 w-4" />
+                            Marquer comme effectuée
+                          </Button>
+                        </div>
+                      )}
+
+                      {(visite.statut === 'effectuee' || visite.offres?.statut === 'visite_effectuee') && 
+                       visite.offres?.statut !== 'interesse' && 
+                       visite.offres?.statut !== 'refusee' && 
+                       visite.offres?.statut !== 'candidature_deposee' && (
+                        <div className="p-4 bg-muted rounded-lg space-y-3">
+                          <p className="text-sm font-medium text-center">
+                            Suite à cette visite, souhaitez-vous donner suite à cette offre ?
+                          </p>
+                          <div className="grid grid-cols-3 gap-2">
+                            <Button 
+                              variant="default"
+                              onClick={() => accepterOffre(visite)}
+                            >
+                              <Check className="mr-2 h-4 w-4" />
+                              Intéressé
+                            </Button>
+                            <Button 
+                              variant="outline"
+                              onClick={() => navigate('/client/offres-recues')}
+                            >
+                              <FileCheck className="mr-2 h-4 w-4" />
+                              Candidature
+                            </Button>
+                            <Button 
+                              variant="destructive"
+                              onClick={() => refuserOffre(visite)}
+                            >
+                              <X className="mr-2 h-4 w-4" />
+                              Refuser
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex gap-3">
                         <Button 
                           variant="outline"
-                          onClick={() => window.open(visite.offres.lien_annonce, '_blank')}
+                          onClick={() => navigate('/client/offres-recues')}
+                          className="flex-1"
                         >
-                          Annonce
+                          Voir l'offre complète
                         </Button>
-                      )}
+                        {visite.offres?.lien_annonce && (
+                          <Button 
+                            variant="outline"
+                            onClick={() => window.open(visite.offres.lien_annonce, '_blank')}
+                          >
+                            Annonce
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
