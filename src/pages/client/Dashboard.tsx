@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { AlertTriangle, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { calculateDaysElapsed, calculateDaysRemaining } from '@/utils/calculations';
+import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from '@/utils/calculations';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import { toast } from 'sonner';
 
@@ -318,7 +318,7 @@ export default function ClientDashboard() {
                   <AlertTriangle className="w-5 h-5 text-warning mt-0.5" />
                   <div className="flex-1">
                     <p className="font-medium text-foreground">
-                      Il vous reste {daysRemaining} jours sur votre mandat !
+                      Il vous reste {formatTimeRemaining(daysRemaining)} sur votre mandat !
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
                       Souhaitez-vous renouveler ou avez-vous des questions ?
@@ -403,8 +403,8 @@ export default function ClientDashboard() {
                     <p className="font-medium">{new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Jours restants</p>
-                    <p className="font-medium">{daysRemaining > 0 ? daysRemaining : 0} jours</p>
+                    <p className="text-sm text-muted-foreground">Temps restant</p>
+                    <p className="font-medium">{formatTimeRemaining(daysRemaining)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Statut</p>
