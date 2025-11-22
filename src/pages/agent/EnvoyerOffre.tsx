@@ -46,19 +46,29 @@ const EnvoyerOffre = () => {
   }, [user]);
 
   const loadData = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('❌ No user found');
+      return;
+    }
+
+    console.log('👤 Loading data for user:', user.id);
 
     // Load agent
-    const { data: agentData } = await supabase
+    const { data: agentData, error: agentError } = await supabase
       .from('agents')
       .select('*')
       .eq('user_id', user.id)
       .single();
 
+    console.log('🔍 Agent query result:', { agentData, agentError });
+
     if (agentData) {
       setAgent(agentData);
+      console.log('✅ Agent found:', agentData.id);
 
       // Load agent's clients with their profiles
+      console.log('📋 Loading clients for agent:', agentData.id);
+      
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select(`
@@ -71,16 +81,31 @@ const EnvoyerOffre = () => {
         `)
         .eq('agent_id', agentData.id);
 
+      console.log('📊 Clients query result:', { 
+        clientsData, 
+        clientsError,
+        count: clientsData?.length 
+      });
+
       if (clientsError) {
-        console.error('Error loading clients:', clientsError);
+        console.error('❌ Error loading clients:', clientsError);
         toast({
           variant: "destructive",
           title: "Erreur",
-          description: "Erreur lors du chargement des clients"
+          description: `Erreur lors du chargement des clients: ${clientsError.message}`
         });
+      } else {
+        console.log('✅ Clients loaded successfully:', clientsData?.length || 0);
       }
 
       setClients(clientsData || []);
+    } else {
+      console.log('❌ No agent found for this user');
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Aucun agent trouvé pour cet utilisateur"
+      });
     }
   };
 
