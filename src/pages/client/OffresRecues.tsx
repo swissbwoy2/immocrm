@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Square, Home, ExternalLink, Eye, Heart, CheckCircle, Info } from "lucide-react";
+import { MapPin, Calendar, Square, Home, ExternalLink, Eye, Heart, CheckCircle, Info, FileCheck, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -190,14 +190,14 @@ const OffresRecues = () => {
 
   const formatStatutOffre = (statut: string) => {
     const labels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-      'envoyee': { label: 'Envoyée', variant: 'secondary' },
-      'vue': { label: 'Vue', variant: 'outline' },
-      'interesse': { label: 'Intéressé', variant: 'default' },
-      'visite_planifiee': { label: 'Visite planifiée', variant: 'default' },
-      'visite_effectuee': { label: 'Visite effectuée', variant: 'default' },
-      'candidature_deposee': { label: 'Candidature déposée', variant: 'default' },
-      'acceptee': { label: 'Acceptée', variant: 'default' },
-      'refusee': { label: 'Refusée', variant: 'destructive' },
+      'envoyee': { label: '📨 Envoyée', variant: 'secondary' },
+      'vue': { label: '👁️ Vue', variant: 'outline' },
+      'interesse': { label: '💚 Intéressé', variant: 'default' },
+      'visite_planifiee': { label: '📅 Visite planifiée', variant: 'default' },
+      'visite_effectuee': { label: '✅ Visite effectuée', variant: 'default' },
+      'candidature_deposee': { label: '📝 Candidature déposée', variant: 'default' },
+      'acceptee': { label: '🎉 Acceptée', variant: 'default' },
+      'refusee': { label: '❌ Refusée', variant: 'destructive' },
     };
     return labels[statut] || { label: statut, variant: 'secondary' };
   };
@@ -300,6 +300,18 @@ const OffresRecues = () => {
                     <Button size="sm" onClick={() => updateStatut(offre.id, 'visite_planifiee')}>
                       <CheckCircle className="mr-2 h-4 w-4" />
                       Planifier une visite
+                    </Button>
+                  )}
+                  {offre.statut === 'visite_planifiee' && (
+                    <Button size="sm" onClick={() => updateStatut(offre.id, 'visite_effectuee')}>
+                      <Check className="mr-2 h-4 w-4" />
+                      Marquer la visite comme effectuée
+                    </Button>
+                  )}
+                  {offre.statut === 'visite_effectuee' && (
+                    <Button size="sm" onClick={() => updateStatut(offre.id, 'candidature_deposee')}>
+                      <FileCheck className="mr-2 h-4 w-4" />
+                      Déposer ma candidature
                     </Button>
                   )}
                 </div>
@@ -457,6 +469,18 @@ const OffresRecues = () => {
                     <Button size="sm" onClick={() => { updateStatut(selectedOffre.id, 'visite_planifiee'); setDetailsDialogOpen(false); }}>
                       <CheckCircle className="mr-2 h-4 w-4" />
                       Planifier une visite
+                    </Button>
+                  )}
+                  {selectedOffre.statut === 'visite_planifiee' && (
+                    <Button size="sm" onClick={() => { updateStatut(selectedOffre.id, 'visite_effectuee'); setDetailsDialogOpen(false); }}>
+                      <Check className="mr-2 h-4 w-4" />
+                      Marquer la visite comme effectuée
+                    </Button>
+                  )}
+                  {selectedOffre.statut === 'visite_effectuee' && (
+                    <Button size="sm" onClick={() => { updateStatut(selectedOffre.id, 'candidature_deposee'); setDetailsDialogOpen(false); }}>
+                      <FileCheck className="mr-2 h-4 w-4" />
+                      Déposer ma candidature
                     </Button>
                   )}
                 </div>
