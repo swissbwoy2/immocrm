@@ -44,6 +44,8 @@ const OffresRecues = () => {
   const [messageClient, setMessageClient] = useState('');
   const [accepteConditions, setAccepteConditions] = useState(false);
 
+  const [delegateDialogOpen, setDelegateDialogOpen] = useState(false);
+
   useEffect(() => {
     loadOffres();
   }, [user]);
@@ -236,6 +238,83 @@ const OffresRecues = () => {
     setMessageClient('');
     setAccepteConditions(false);
     setCandidatureDialogOpen(true);
+  };
+
+  const handleDeleguerVisite = (offre: any) => {
+    setSelectedOffre(offre);
+    setDelegateDialogOpen(true);
+  };
+
+  const confirmDeleguerVisite = async () => {
+    if (!selectedOffre) return;
+
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id, agent_id')
+        .eq('user_id', user!.id)
+        .maybeSingle();
+
+      if (!clientData?.agent_id) {
+        toast({
+          title: 'Erreur',
+          description: 'Aucun agent assigné',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Marquer l'offre comme intéressée
+      await supabase
+        .from('offres')
+        .update({ statut: 'interesse' })
+        .eq('id', selectedOffre.id);
+
+      // Notifier l'agent
+      let { data: conv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('client_id', clientData.id)
+        .eq('agent_id', clientData.agent_id)
+        .maybeSingle();
+
+      if (!conv) {
+        const { data: newConv } = await supabase
+          .from('conversations')
+          .insert({
+            client_id: clientData.id,
+            agent_id: clientData.agent_id,
+            subject: 'Messages'
+          })
+          .select()
+          .maybeSingle();
+        conv = newConv;
+      }
+
+      if (conv) {
+        await supabase.from('messages').insert({
+          conversation_id: conv.id,
+          sender_id: user!.id,
+          sender_type: 'client',
+          content: `🏠 **Demande de visite déléguée à l'agent**\n\n📍 Adresse: ${selectedOffre.adresse}\n💰 Loyer: ${selectedOffre.prix.toLocaleString()} CHF/mois\n\nLe client souhaite que vous organisiez la visite pour ce bien.`
+        });
+      }
+
+      setDelegateDialogOpen(false);
+      await loadOffres();
+
+      toast({
+        title: '✅ Visite déléguée',
+        description: 'Votre agent a été notifié et organisera la visite'
+      });
+    } catch (error) {
+      console.error('Error delegating visit:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de déléguer la visite',
+        variant: 'destructive'
+      });
+    }
   };
 
   const confirmCandidature = async () => {
@@ -561,16 +640,32 @@ const OffresRecues = () => {
                       </a>
                     </Button>
                   )}
-                  {(offre.statut === 'envoyee' || offre.statut === 'vue') && (
+                  {(offre.statut === 'envoyee' || offre.statut === 'vue' || offre.statut === 'interesse') && (
                     <>
                       <Button size="sm" onClick={() => handlePlanVisit(offre)}>
                         <Calendar className="mr-2 h-4 w-4" />
-                        Visiter ce bien
+                        Planifier une visite
                       </Button>
-                      <Button size="sm" variant="destructive" onClick={() => updateStatut(offre.id, 'refusee')}>
-                        <X className="mr-2 h-4 w-4" />
-                        Refuser
+                      <Button size="sm" variant="outline" onClick={() => handleDeleguerVisite(offre)}>
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Déléguer à l'agent
                       </Button>
+                      <Button size="sm" variant="secondary" onClick={() => handleDeposerCandidature(offre)}>
+                        <FileCheck className="mr-2 h-4 w-4" />
+                        Postuler direct
+                      </Button>
+                      {offre.statut !== 'interesse' && (
+                        <>
+                          <Button size="sm" onClick={() => updateStatut(offre.id, 'interesse')}>
+                            <Heart className="mr-2 h-4 w-4" />
+                            Intéressé
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => updateStatut(offre.id, 'refusee')}>
+                            <X className="mr-2 h-4 w-4" />
+                            Refuser
+                          </Button>
+                        </>
+                      )}
                     </>
                   )}
                   {offre.statut === 'visite_planifiee' && (
@@ -580,10 +675,20 @@ const OffresRecues = () => {
                     </Button>
                   )}
                   {offre.statut === 'visite_effectuee' && (
-                    <Button size="sm" onClick={() => handleDeposerCandidature(offre)}>
-                      <FileCheck className="mr-2 h-4 w-4" />
-                      Déposer ma candidature
-                    </Button>
+                    <>
+                      <Button size="sm" onClick={() => handleDeposerCandidature(offre)}>
+                        <FileCheck className="mr-2 h-4 w-4" />
+                        Déposer ma candidature
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => updateStatut(offre.id, 'interesse')}>
+                        <Heart className="mr-2 h-4 w-4" />
+                        Marquer comme intéressé
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => updateStatut(offre.id, 'refusee')}>
+                        <X className="mr-2 h-4 w-4" />
+                        Refuser
+                      </Button>
+                    </>
                   )}
                 </div>
               </Card>
@@ -874,6 +979,14 @@ const OffresRecues = () => {
                   </CardContent>
                 </Card>
 
+                {selectedOffre.statut !== 'visite_effectuee' && (
+                  <div className="p-4 bg-orange-50 dark:bg-orange-950 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                      ⚠️ <strong>Important :</strong> Une visite du bien sera obligatoire avant la validation finale de votre candidature. Vous ou votre agent devrez effectuer cette visite pour confirmer votre intérêt.
+                    </p>
+                  </div>
+                )}
+
                 <div className="space-y-4">
                   <h4 className="font-semibold">Documents à fournir (obligatoires)</h4>
 
@@ -999,6 +1112,51 @@ const OffresRecues = () => {
                     Déposer ma candidature
                   </>
                 )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog de délégation de visite */}
+        <Dialog open={delegateDialogOpen} onOpenChange={setDelegateDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Déléguer la visite à votre agent</DialogTitle>
+              <DialogDescription>
+                Votre agent organisera et effectuera la visite pour vous
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedOffre && (
+              <div className="space-y-4 py-4">
+                <div className="p-4 bg-muted rounded-lg">
+                  <h4 className="font-semibold mb-2">Bien concerné</h4>
+                  <p className="text-sm">{selectedOffre.adresse}</p>
+                  <p className="text-lg font-bold text-primary mt-1">
+                    CHF {selectedOffre.prix.toLocaleString()}/mois
+                  </p>
+                </div>
+
+                <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <strong>📋 Comment ça marche :</strong>
+                    <ul className="list-disc list-inside mt-2 space-y-1">
+                      <li>Votre agent sera notifié de votre demande</li>
+                      <li>Il organisera la visite avec le propriétaire</li>
+                      <li>Il effectuera la visite et vous fera un compte-rendu détaillé</li>
+                      <li>Vous pourrez ensuite décider de postuler ou non</li>
+                    </ul>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDelegateDialogOpen(false)}>
+                Annuler
+              </Button>
+              <Button onClick={confirmDeleguerVisite}>
+                Confirmer la délégation
               </Button>
             </DialogFooter>
           </DialogContent>
