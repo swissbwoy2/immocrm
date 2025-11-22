@@ -108,7 +108,7 @@ export default function ClientDashboard() {
       
       if (historyError) throw historyError;
       
-      // 2. Mettre à jour la date du mandat
+      // 2. Mettre à jour la date du mandat (réinitialise le compteur à 90 jours)
       const { error: updateError } = await supabase
         .from('clients')
         .update({ date_ajout: newDate })
@@ -116,7 +116,16 @@ export default function ClientDashboard() {
       
       if (updateError) throw updateError;
       
-      // 3. Trouver ou créer une conversation avec l'agent
+      // 3. Récupérer le profile du client pour le message
+      const { data: clientProfile } = await supabase
+        .from('profiles')
+        .select('nom, prenom')
+        .eq('id', user.id)
+        .single();
+
+      const messageContent = `🔄 Le client ${clientProfile?.prenom} ${clientProfile?.nom} a renouvelé son mandat pour 90 jours supplémentaires. Nouvelle date de début : ${new Date().toLocaleDateString('fr-CH')}`;
+      
+      // 4. Notifier l'agent
       if (client.agent_id) {
         let conversationId: string | null = null;
         
@@ -138,12 +147,11 @@ export default function ClientDashboard() {
               subject: 'Renouvellement de mandat'
             })
             .select('id')
-            .maybeSingle();
+            .single();
           
           conversationId = newConv?.id || null;
         }
         
-        // 4. Envoyer un message à l'agent
         if (conversationId) {
           await supabase
             .from('messages')
@@ -151,12 +159,66 @@ export default function ClientDashboard() {
               conversation_id: conversationId,
               sender_id: client.id,
               sender_type: 'client',
-              content: `🔄 J'ai renouvelé mon mandat pour 90 jours supplémentaires. Nouvelle date de début : ${new Date().toLocaleDateString('fr-CH')}`
+              content: messageContent
             });
         }
       }
+
+      // 5. Notifier tous les admins
+      const { data: adminRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin');
+
+      if (adminRoles && adminRoles.length > 0) {
+        // Récupérer les agents correspondants aux admins (si ils existent)
+        for (const adminRole of adminRoles) {
+          const { data: adminAgent } = await supabase
+            .from('agents')
+            .select('id')
+            .eq('user_id', adminRole.user_id)
+            .maybeSingle();
+
+          if (adminAgent) {
+            // Vérifier si une conversation existe déjà
+            const { data: existingAdminConv } = await supabase
+              .from('conversations')
+              .select('id')
+              .eq('client_id', client.id)
+              .eq('agent_id', adminAgent.id)
+              .maybeSingle();
+
+            let adminConversationId = existingAdminConv?.id;
+
+            if (!adminConversationId) {
+              const { data: newAdminConv } = await supabase
+                .from('conversations')
+                .insert({
+                  client_id: client.id,
+                  agent_id: adminAgent.id,
+                  subject: 'Renouvellement de mandat'
+                })
+                .select('id')
+                .single();
+
+              adminConversationId = newAdminConv?.id;
+            }
+
+            if (adminConversationId) {
+              await supabase
+                .from('messages')
+                .insert({
+                  conversation_id: adminConversationId,
+                  sender_id: client.id,
+                  sender_type: 'client',
+                  content: messageContent
+                });
+            }
+          }
+        }
+      }
       
-      // 5. Recharger les données
+      // 6. Recharger les données
       await loadData();
       
       toast.success('✅ Votre mandat a été renouvelé pour 90 jours !');
