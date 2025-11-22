@@ -18,6 +18,7 @@ import AdminMandats from "./pages/admin/Mandats";
 import AdminTransactions from "./pages/admin/Transactions";
 import AdminDocuments from "./pages/admin/Documents";
 import AdminMessagerie from "./pages/admin/Messagerie";
+import AdminMigrateDocuments from "./pages/admin/MigrateDocuments";
 import AgentDashboard from "./pages/agent/Dashboard";
 import AgentMesClients from "./pages/agent/MesClients";
 import AgentClientDetail from "./pages/agent/ClientDetail";
@@ -60,6 +61,7 @@ const App = () => (
             <Route path="/admin/mandats" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMandats /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/transactions" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminTransactions /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/documents" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminDocuments /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/migrate-documents" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMigrateDocuments /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/messagerie" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMessagerie /></AppLayout></ProtectedRoute>} />
 
             {/* Agent Routes */}
