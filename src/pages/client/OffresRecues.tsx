@@ -3,15 +3,24 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Square, Home, ExternalLink, Eye, Heart, CheckCircle } from "lucide-react";
+import { MapPin, Calendar, Square, Home, ExternalLink, Eye, Heart, CheckCircle, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const OffresRecues = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [offres, setOffres] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedOffre, setSelectedOffre] = useState<any | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
   useEffect(() => {
     loadOffres();
@@ -193,6 +202,11 @@ const OffresRecues = () => {
     return labels[statut] || { label: statut, variant: 'secondary' };
   };
 
+  const handleViewDetails = (offre: any) => {
+    setSelectedOffre(offre);
+    setDetailsDialogOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -258,6 +272,10 @@ const OffresRecues = () => {
                 )}
 
                 <div className="flex gap-2 flex-wrap">
+                  <Button variant="default" size="sm" onClick={() => handleViewDetails(offre)}>
+                    <Info className="mr-2 h-4 w-4" />
+                    Voir les détails
+                  </Button>
                   {offre.lien_annonce && (
                     <Button variant="outline" size="sm" asChild>
                       <a href={offre.lien_annonce} target="_blank" rel="noopener noreferrer">
@@ -289,6 +307,163 @@ const OffresRecues = () => {
             );
           })}
         </div>
+
+        {/* Dialog des détails */}
+        <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl">Détails de l'offre</DialogTitle>
+              <DialogDescription>
+                Informations complètes sur le bien proposé
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedOffre && (
+              <div className="space-y-6">
+                {/* En-tête */}
+                <div className="border-b pb-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h3 className="text-xl font-semibold">{selectedOffre.adresse}</h3>
+                      <Badge variant={formatStatutOffre(selectedOffre.statut).variant} className="mt-2">
+                        {formatStatutOffre(selectedOffre.statut).label}
+                      </Badge>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-3xl font-bold text-primary">CHF {selectedOffre.prix.toLocaleString()}</p>
+                      <p className="text-sm text-muted-foreground">par mois</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Caractéristiques principales */}
+                <div>
+                  <h4 className="font-semibold mb-3">📋 Caractéristiques</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Home className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Pièces</p>
+                        <p className="font-medium">{selectedOffre.pieces}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Square className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Surface</p>
+                        <p className="font-medium">{selectedOffre.surface} m²</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Étage</p>
+                        <p className="font-medium">{selectedOffre.etage}</p>
+                      </div>
+                    </div>
+                    {selectedOffre.type_bien && (
+                      <div className="flex items-center gap-2">
+                        <Home className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Type</p>
+                          <p className="font-medium">{selectedOffre.type_bien}</p>
+                        </div>
+                      </div>
+                    )}
+                    {selectedOffre.disponibilite && (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">Disponibilité</p>
+                          <p className="font-medium">{selectedOffre.disponibilite}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Description */}
+                {selectedOffre.description && (
+                  <div>
+                    <h4 className="font-semibold mb-2">📝 Description</h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedOffre.description}</p>
+                  </div>
+                )}
+
+                {/* Informations pratiques */}
+                {(selectedOffre.code_immeuble || selectedOffre.concierge_nom || selectedOffre.locataire_nom) && (
+                  <div>
+                    <h4 className="font-semibold mb-3">🏢 Informations pratiques</h4>
+                    <div className="space-y-2">
+                      {selectedOffre.code_immeuble && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Code immeuble</span>
+                          <span className="text-sm font-medium">{selectedOffre.code_immeuble}</span>
+                        </div>
+                      )}
+                      {selectedOffre.concierge_nom && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Concierge</span>
+                          <span className="text-sm font-medium">
+                            {selectedOffre.concierge_nom}
+                            {selectedOffre.concierge_tel && ` - ${selectedOffre.concierge_tel}`}
+                          </span>
+                        </div>
+                      )}
+                      {selectedOffre.locataire_nom && (
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Locataire actuel</span>
+                          <span className="text-sm font-medium">
+                            {selectedOffre.locataire_nom}
+                            {selectedOffre.locataire_tel && ` - ${selectedOffre.locataire_tel}`}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Commentaires de l'agent */}
+                {selectedOffre.commentaires && (
+                  <div>
+                    <h4 className="font-semibold mb-2">💬 Commentaires de votre agent</h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedOffre.commentaires}</p>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-2 flex-wrap pt-4 border-t">
+                  {selectedOffre.lien_annonce && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={selectedOffre.lien_annonce} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Voir l'annonce
+                      </a>
+                    </Button>
+                  )}
+                  {selectedOffre.statut === 'envoyee' && (
+                    <Button size="sm" onClick={() => { updateStatut(selectedOffre.id, 'vue'); setDetailsDialogOpen(false); }}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      Marquer comme vue
+                    </Button>
+                  )}
+                  {selectedOffre.statut === 'vue' && (
+                    <Button size="sm" onClick={() => { updateStatut(selectedOffre.id, 'interesse'); setDetailsDialogOpen(false); }}>
+                      <Heart className="mr-2 h-4 w-4" />
+                      Je suis intéressé
+                    </Button>
+                  )}
+                  {selectedOffre.statut === 'interesse' && (
+                    <Button size="sm" onClick={() => { updateStatut(selectedOffre.id, 'visite_planifiee'); setDetailsDialogOpen(false); }}>
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Planifier une visite
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
