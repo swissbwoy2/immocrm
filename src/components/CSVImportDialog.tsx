@@ -117,18 +117,54 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
             telephone: user.telephone,
           },
           client: {
+            // Informations personnelles
+            date_naissance: client.dateNaissance || null,
             nationalite: client.nationalite || null,
             type_permis: client.typePermis || null,
+            adresse: client.adresse || null,
+            etat_civil: client.etatCivil || null,
             situation_familiale: client.etatCivil || null,
+            
+            // Logement actuel
+            gerance_actuelle: client.geranceActuelle || null,
+            contact_gerance: client.contactGerance || null,
+            loyer_actuel: client.loyerActuel || null,
+            depuis_le: client.depuisLe || null,
+            pieces_actuel: client.nombrePiecesActuel || null,
+            motif_changement: client.motifChangement || null,
+            
+            // Emploi et revenus
             profession: client.profession || null,
+            employeur: client.employeur || null,
+            date_engagement: client.dateEngagement || null,
             revenus_mensuels: client.revenuMensuel || 0,
-            budget_max: client.budgetMax || 0,
+            
+            // Charges et situation financière
             charges_mensuelles: client.montantCharges || 0,
+            charges_extraordinaires: client.chargesExtraordinaires || null,
+            montant_charges_extra: client.montantCharges || null,
+            poursuites: client.poursuites || false,
+            curatelle: client.curatelle || false,
+            
+            // Recherche
+            budget_max: client.budgetMax || 0,
             pieces: parseInt(client.nombrePiecesSouhaite) || null,
             region_recherche: client.regions?.join(', ') || null,
             type_bien: client.typeBien || null,
             type_contrat: client.typeRecherche || null,
-            date_ajout: client.dateInscription, // Date du mandat depuis le CSV
+            souhaits_particuliers: client.souhaitsParticuliers || null,
+            
+            // Occupants et conditions
+            nombre_occupants: client.nombreOccupants || null,
+            utilisation_logement: client.utilisationLogement || null,
+            animaux: client.animaux || false,
+            instrument_musique: client.instrumentMusique || false,
+            vehicules: client.vehicules || false,
+            numero_plaques: client.numeroPlaques || null,
+            
+            // Autres
+            decouverte_agence: client.decouverteAgence || null,
+            date_ajout: client.dateInscription,
           },
           agentEmail: undefined, // Not supported yet in CSV
         };
