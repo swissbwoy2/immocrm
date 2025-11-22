@@ -64,9 +64,16 @@ export default function Dossier() {
         .from('clients')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (clientError) throw clientError;
+      
+      if (!clientData) {
+        console.log('No client data found');
+        setLoading(false);
+        return;
+      }
+      
       setClient(clientData);
 
       // Load profile
@@ -74,7 +81,7 @@ export default function Dossier() {
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) throw profileError;
       setProfile(profileData);
@@ -85,14 +92,14 @@ export default function Dossier() {
           .from('agents')
           .select('*')
           .eq('id', clientData.agent_id)
-          .single();
+          .maybeSingle();
 
         if (agentData) {
           const { data: agentProfile } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', agentData.user_id)
-            .single();
+            .maybeSingle();
 
           setAgent({
             ...agentData,
@@ -281,10 +288,26 @@ export default function Dossier() {
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   };
 
-  if (loading || !client || !profile) {
+  if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!client || !profile) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardContent className="pt-6 text-center">
+            <User className="w-12 h-12 mx-auto mb-4 text-orange-500" />
+            <h2 className="text-xl font-semibold mb-2">Profil incomplet</h2>
+            <p className="text-muted-foreground mb-4">
+              Votre profil client n'est pas encore configuré. Veuillez contacter l'administrateur.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }

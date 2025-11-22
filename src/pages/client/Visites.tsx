@@ -28,9 +28,12 @@ export default function Visites() {
         .from('clients')
         .select('id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (!clientData) return;
+      if (!clientData) {
+        console.log('No client data found');
+        return;
+      }
 
       const { data: visitesData, error } = await supabase
         .from('visites')

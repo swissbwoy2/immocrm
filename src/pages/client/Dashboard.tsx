@@ -31,13 +31,20 @@ export default function ClientDashboard() {
 
     try {
       // Load client
-      const { data: clientData } = await supabase
+      const { data: clientData, error: clientError } = await supabase
         .from('clients')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (!clientData) return;
+      if (clientError) throw clientError;
+      
+      if (!clientData) {
+        console.log('No client data found for user');
+        setLoading(false);
+        return;
+      }
+      
       setClient(clientData);
 
       // Load agent if assigned
@@ -46,14 +53,14 @@ export default function ClientDashboard() {
           .from('agents')
           .select('*, profiles!agents_user_id_fkey(*)')
           .eq('id', clientData.agent_id)
-          .single();
+          .maybeSingle();
 
         if (agentData) {
           const { data: agentProfile } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', agentData.user_id)
-            .single();
+            .maybeSingle();
 
           setAgent({
             ...agentData,
@@ -121,7 +128,7 @@ export default function ClientDashboard() {
         .from('profiles')
         .select('nom, prenom')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       const messageContent = `🔄 Le client ${clientProfile?.prenom} ${clientProfile?.nom} a renouvelé son mandat pour 90 jours supplémentaires. Nouvelle date de début : ${new Date().toLocaleDateString('fr-CH')}`;
       
@@ -139,15 +146,15 @@ export default function ClientDashboard() {
         if (existingConv) {
           conversationId = existingConv.id;
         } else {
-          const { data: newConv } = await supabase
-            .from('conversations')
-            .insert({
-              client_id: client.id,
-              agent_id: client.agent_id,
-              subject: 'Renouvellement de mandat'
-            })
-            .select('id')
-            .single();
+            const { data: newConv } = await supabase
+              .from('conversations')
+              .insert({
+                client_id: client.id,
+                agent_id: client.agent_id,
+                subject: 'Renouvellement de mandat'
+              })
+              .select('id')
+              .maybeSingle();
           
           conversationId = newConv?.id || null;
         }
@@ -199,7 +206,7 @@ export default function ClientDashboard() {
                   subject: 'Renouvellement de mandat'
                 })
                 .select('id')
-                .single();
+                .maybeSingle();
 
               adminConversationId = newAdminConv?.id;
             }
@@ -228,10 +235,26 @@ export default function ClientDashboard() {
     }
   };
 
-  if (loading || !client) {
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-muted-foreground">Chargement...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!client) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardContent className="pt-6 text-center">
+            <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-orange-500" />
+            <h2 className="text-xl font-semibold mb-2">Profil incomplet</h2>
+            <p className="text-muted-foreground mb-4">
+              Votre profil client n'est pas encore configuré. Veuillez contacter l'administrateur.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }

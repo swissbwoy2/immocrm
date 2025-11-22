@@ -53,9 +53,12 @@ export default function Documents() {
         .from('clients')
         .select('id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (!clientData) return;
+      if (!clientData) {
+        console.log('No client data found');
+        return;
+      }
       
       setClientId(clientData.id);
 
