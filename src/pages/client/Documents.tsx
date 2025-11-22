@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sidebar } from '@/components/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -218,10 +217,8 @@ export default function Documents() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8 space-y-6">
+    <div className="flex-1 overflow-y-auto">
+      <div className="p-4 md:p-8 space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
@@ -330,7 +327,6 @@ export default function Documents() {
             </Card>
           )}
         </div>
-      </main>
 
       {/* Upload Dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>

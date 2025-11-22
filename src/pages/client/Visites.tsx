@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sidebar } from '@/components/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -68,10 +67,8 @@ export default function Visites() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8 space-y-6">
+    <div className="flex-1 overflow-y-auto">
+      <div className="p-4 md:p-8 space-y-6">
           {/* Header */}
           <div>
             <h1 className="text-3xl font-bold">Prochaines visites</h1>
@@ -161,7 +158,7 @@ export default function Visites() {
                             <div>
                               <p className="text-sm text-muted-foreground">Disponible</p>
                               <p className="font-semibold">
-                                {new Date(visite.offres.disponibilite).toLocaleDateString('fr-CH', { month: 'short', day: 'numeric' })}
+                                {visite.offres.disponibilite}
                               </p>
                             </div>
                           </div>
@@ -264,7 +261,6 @@ export default function Visites() {
             </Card>
           )}
         </div>
-      </main>
     </div>
   );
 }

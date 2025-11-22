@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send } from 'lucide-react';
-import { Sidebar } from '@/components/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -101,11 +100,8 @@ export default function ClientDashboard() {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Sidebar />
-
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8">
+    <div className="flex-1 overflow-y-auto">
+      <div className="p-4 md:p-8">
           <div className="mb-8 flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground">Mon tableau de bord</h1>
@@ -290,7 +286,11 @@ export default function ClientDashboard() {
               {offres.filter(o => o.statut === 'visite_planifiee').length > 0 ? (
                 <>
                   {offres.filter(o => o.statut === 'visite_planifiee').slice(0, 3).map(offre => (
-                    <div key={offre.id} className="p-4 bg-muted/50 rounded-lg">
+                    <div 
+                      key={offre.id} 
+                      className="p-4 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                      onClick={() => navigate('/client/visites')}
+                    >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <p className="font-medium">{offre.adresse}</p>
@@ -364,7 +364,11 @@ export default function ClientDashboard() {
                     };
 
                     return (
-                      <div key={offre.id} className="p-4 bg-muted/50 rounded-lg">
+                      <div 
+                        key={offre.id} 
+                        className="p-4 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                        onClick={() => navigate('/client/mes-candidatures')}
+                      >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
                             <p className="font-medium">{offre.adresse}</p>
@@ -399,7 +403,6 @@ export default function ClientDashboard() {
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+      </div>
   );
 }
