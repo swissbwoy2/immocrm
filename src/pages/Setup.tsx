@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 export default function Setup() {
   const [loading, setLoading] = useState(false);
   const [loadingClient, setLoadingClient] = useState(false);
+  const [loadingReset, setLoadingReset] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -77,6 +78,34 @@ export default function Setup() {
     }
   };
 
+  const resetClientPassword = async () => {
+    setLoadingReset(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('reset-client-password', {
+        body: {
+          email: 'info@immo-rama.ch',
+          newPassword: 'Client123!'
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Mot de passe réinitialisé',
+        description: 'Le mot de passe du client a été réinitialisé à Client123!',
+      });
+
+    } catch (error: any) {
+      toast({
+        title: 'Erreur',
+        description: error.message || 'Erreur lors de la réinitialisation du mot de passe',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingReset(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
       <Card className="w-full max-w-md">
@@ -117,7 +146,7 @@ export default function Setup() {
           <Button 
             onClick={createAdminAccount} 
             className="w-full" 
-            disabled={loading || loadingClient}
+            disabled={loading || loadingClient || loadingReset}
           >
             {loading ? 'Création en cours...' : 'Créer le compte administrateur'}
           </Button>
@@ -126,16 +155,25 @@ export default function Setup() {
             onClick={createClientAuth} 
             variant="secondary"
             className="w-full" 
-            disabled={loading || loadingClient}
+            disabled={loading || loadingClient || loadingReset}
           >
             {loadingClient ? 'Création...' : 'Créer compte client info@immo-rama.ch'}
+          </Button>
+
+          <Button 
+            onClick={resetClientPassword} 
+            variant="outline"
+            className="w-full" 
+            disabled={loading || loadingClient || loadingReset}
+          >
+            {loadingReset ? 'Réinitialisation...' : 'Réinitialiser le mot de passe du client'}
           </Button>
 
           <Button 
             variant="outline" 
             onClick={() => navigate('/login')} 
             className="w-full"
-            disabled={loading || loadingClient}
+            disabled={loading || loadingClient || loadingReset}
           >
             J'ai déjà un compte
           </Button>
