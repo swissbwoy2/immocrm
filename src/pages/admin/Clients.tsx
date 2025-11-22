@@ -60,6 +60,7 @@ const Clients = () => {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -229,6 +230,37 @@ const Clients = () => {
     return `${displayDays}j ${remainingHours}h ${remainingMinutes}m`;
   };
 
+  const handleDeleteClient = async (clientUserId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Empêcher la navigation vers la page de détail
+    
+    try {
+      setDeletingClientId(clientUserId);
+
+      const { error } = await supabase.functions.invoke('delete-client', {
+        body: { userId: clientUserId }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Client supprimé',
+        description: 'Le client a été supprimé avec succès',
+      });
+
+      // Recharger les données
+      await loadData();
+    } catch (error) {
+      console.error('Error deleting client:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de supprimer le client',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingClientId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -375,6 +407,38 @@ const Clients = () => {
                 className="p-4 flex flex-col relative cursor-pointer hover:shadow-lg transition-shadow"
                 onClick={() => navigate(`/admin/clients/${client.id}`)}
               >
+                {/* Bouton Supprimer */}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => e.stopPropagation()}
+                      disabled={deletingClientId === client.user_id}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Supprimer ce client ?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Cette action est irréversible. Le client {profile?.prenom} {profile?.nom} et toutes ses données seront définitivement supprimés.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Annuler</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={(e) => handleDeleteClient(client.user_id, e)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Supprimer
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+
                 {/* SECTION 1: Identité */}
                 <div className="mb-3 pb-3 border-b">
                   <h3 className="text-lg font-semibold text-primary mb-2">
