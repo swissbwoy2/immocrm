@@ -21,8 +21,12 @@ const EnvoyerOffre = () => {
   const [agent, setAgent] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
   
+  // Lire le clientId depuis les query params de l'URL
+  const searchParams = new URLSearchParams(location.search);
+  const clientIdFromUrl = searchParams.get('clientId');
+  
   const [formData, setFormData] = useState({
-    clientId: location.state?.clientId || "",
+    clientId: location.state?.clientId || clientIdFromUrl || "",
     localisation: "",
     prix: "",
     surface: "",
