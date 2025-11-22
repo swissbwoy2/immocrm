@@ -52,7 +52,7 @@ export default function Setup() {
     try {
       const { data, error } = await supabase.functions.invoke('reset-client-password', {
         body: {
-          email: 'christ.ramazani@immo-rama.ch',
+          email: 'info@immo-rama.ch',
           newPassword: 'Client123!'
         }
       });
@@ -105,7 +105,7 @@ export default function Setup() {
             <div className="p-4 bg-muted/50 rounded-lg text-sm space-y-2">
               <p className="font-medium">Compte client (Christ Ramazani) :</p>
               <div className="space-y-1 text-xs text-muted-foreground">
-                <p><strong>Email:</strong> christ.ramazani@immo-rama.ch</p>
+                <p><strong>Email:</strong> info@immo-rama.ch</p>
                 <p><strong>Mot de passe:</strong> Client123!</p>
                 <p><strong>Rôle:</strong> Client</p>
               </div>
