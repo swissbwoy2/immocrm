@@ -254,13 +254,19 @@ const OffresRecues = () => {
             conversation_id: conv.id,
             sender_id: user?.id,
             sender_type: 'client',
-            content: `📅 Le client souhaite visiter : ${selectedOffre.adresse} (${selectedOffre.prix} CHF/mois) le ${new Date(selectedDate).toLocaleDateString('fr-FR')} à ${new Date(selectedDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`,
+            content: `📅 **NOUVELLE VISITE PLANIFIÉE**\n\n🏠 Adresse: ${selectedOffre.adresse}\n💰 Loyer: ${selectedOffre.prix.toLocaleString()} CHF/mois\n📆 Date: ${new Date(selectedDate).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n⏰ Heure: ${new Date(selectedDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}\n\n✅ Le client confirme sa présence pour cette visite.`,
           });
       }
 
       setOffres(offres.map(o => o.id === selectedOffre.id ? { ...o, statut: 'visite_planifiee' } : o));
       setVisitDialogOpen(false);
-      toast({ title: "Succès", description: "Visite planifiée et agent notifié" });
+      toast({ 
+        title: "✅ Visite planifiée", 
+        description: `Rendez-vous confirmé le ${new Date(selectedDate).toLocaleDateString('fr-FR')} à ${new Date(selectedDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}. Votre agent a été notifié.`
+      });
+      
+      // Rafraîchir la liste des offres
+      await loadOffres();
     } catch (error) {
       console.error('Error planning visit:', error);
       toast({

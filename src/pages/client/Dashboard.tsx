@@ -24,6 +24,27 @@ export default function ClientDashboard() {
 
   useEffect(() => {
     loadData();
+    
+    // Écouter les changements en temps réel sur les visites
+    const channel = supabase
+      .channel('client-visites-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'visites',
+        },
+        () => {
+          // Recharger les données quand une visite est créée/modifiée
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const loadData = async () => {
