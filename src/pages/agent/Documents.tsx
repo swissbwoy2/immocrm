@@ -100,13 +100,31 @@ export default function AgentDocuments() {
     setSelectedDocument(document);
     
     try {
-      const { data } = await supabase.storage
+      // Extraire le chemin du fichier si c'est une URL complète
+      let filePath = document.url;
+      if (filePath.includes('/storage/v1/object/')) {
+        // Extraire le chemin après le nom du bucket
+        const parts = filePath.split('/client-documents/');
+        filePath = parts[1] || filePath;
+      }
+
+      console.log('Attempting preview for path:', filePath);
+
+      const { data, error } = await supabase.storage
         .from('client-documents')
-        .createSignedUrl(document.url, 3600);
+        .createSignedUrl(filePath, 3600);
+
+      if (error) {
+        console.error('Storage error:', error);
+        throw error;
+      }
 
       if (data?.signedUrl) {
+        console.log('Preview URL created successfully');
         setPreviewUrl(data.signedUrl);
         setPreviewDialogOpen(true);
+      } else {
+        throw new Error('Aucune URL signée générée');
       }
     } catch (error) {
       console.error('Error creating preview URL:', error);
@@ -116,9 +134,21 @@ export default function AgentDocuments() {
 
   const handleDownload = async (document: any) => {
     try {
-      const { data } = await supabase.storage
+      // Extraire le chemin du fichier si c'est une URL complète
+      let filePath = document.url;
+      if (filePath.includes('/storage/v1/object/')) {
+        const parts = filePath.split('/client-documents/');
+        filePath = parts[1] || filePath;
+      }
+
+      const { data, error } = await supabase.storage
         .from('client-documents')
-        .createSignedUrl(document.url, 60);
+        .createSignedUrl(filePath, 60);
+
+      if (error) {
+        console.error('Storage error:', error);
+        throw error;
+      }
 
       if (data?.signedUrl) {
         const link = window.document.createElement('a');
