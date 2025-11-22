@@ -25,9 +25,12 @@ const OffresRecues = () => {
         .from('clients')
         .select('id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (!clientData) return;
+      if (!clientData) {
+        console.log('No client data found');
+        return;
+      }
 
       const { data: offresData, error } = await supabase
         .from('offres')
@@ -68,7 +71,7 @@ const OffresRecues = () => {
           .from('clients')
           .select('id, agent_id, user_id')
           .eq('user_id', user?.id)
-          .single();
+          .maybeSingle();
 
         if (clientData?.agent_id) {
           // Trouver ou créer une conversation
@@ -88,7 +91,7 @@ const OffresRecues = () => {
                 subject: 'Messages',
               })
               .select()
-              .single();
+              .maybeSingle();
             conv = newConv;
           }
 
@@ -115,7 +118,7 @@ const OffresRecues = () => {
           .from('clients')
           .select('id, agent_id')
           .eq('user_id', user?.id)
-          .single();
+          .maybeSingle();
 
         if (clientData?.agent_id) {
           await supabase
@@ -147,7 +150,7 @@ const OffresRecues = () => {
                 subject: 'Messages',
               })
               .select()
-              .single();
+              .maybeSingle();
             conv = newConv;
           }
 
