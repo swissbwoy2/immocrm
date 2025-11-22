@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Square, Home, ExternalLink, Eye, Heart, CheckCircle, Info, FileCheck, Check } from "lucide-react";
+import { MapPin, Calendar, Square, Home, ExternalLink, Eye, Heart, CheckCircle, Info, FileCheck, Check, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -284,23 +284,17 @@ const OffresRecues = () => {
                       </a>
                     </Button>
                   )}
-                  {offre.statut === 'envoyee' && (
-                    <Button size="sm" onClick={() => updateStatut(offre.id, 'vue')}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      Marquer comme vue
-                    </Button>
-                  )}
-                  {offre.statut === 'vue' && (
-                    <Button size="sm" onClick={() => updateStatut(offre.id, 'interesse')}>
-                      <Heart className="mr-2 h-4 w-4" />
-                      Je suis intéressé
-                    </Button>
-                  )}
-                  {offre.statut === 'interesse' && (
-                    <Button size="sm" onClick={() => updateStatut(offre.id, 'visite_planifiee')}>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Planifier une visite
-                    </Button>
+                  {(offre.statut === 'envoyee' || offre.statut === 'vue') && (
+                    <>
+                      <Button size="sm" onClick={() => updateStatut(offre.id, 'visite_planifiee')}>
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Visiter ce bien
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => updateStatut(offre.id, 'refusee')}>
+                        <X className="mr-2 h-4 w-4" />
+                        Refuser
+                      </Button>
+                    </>
                   )}
                   {offre.statut === 'visite_planifiee' && (
                     <Button size="sm" onClick={() => updateStatut(offre.id, 'visite_effectuee')}>
@@ -453,23 +447,17 @@ const OffresRecues = () => {
                       </a>
                     </Button>
                   )}
-                  {selectedOffre.statut === 'envoyee' && (
-                    <Button size="sm" onClick={() => { updateStatut(selectedOffre.id, 'vue'); setDetailsDialogOpen(false); }}>
-                      <Eye className="mr-2 h-4 w-4" />
-                      Marquer comme vue
-                    </Button>
-                  )}
-                  {selectedOffre.statut === 'vue' && (
-                    <Button size="sm" onClick={() => { updateStatut(selectedOffre.id, 'interesse'); setDetailsDialogOpen(false); }}>
-                      <Heart className="mr-2 h-4 w-4" />
-                      Je suis intéressé
-                    </Button>
-                  )}
-                  {selectedOffre.statut === 'interesse' && (
-                    <Button size="sm" onClick={() => { updateStatut(selectedOffre.id, 'visite_planifiee'); setDetailsDialogOpen(false); }}>
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      Planifier une visite
-                    </Button>
+                  {(selectedOffre.statut === 'envoyee' || selectedOffre.statut === 'vue') && (
+                    <>
+                      <Button size="sm" onClick={() => { updateStatut(selectedOffre.id, 'visite_planifiee'); setDetailsDialogOpen(false); }}>
+                        <Calendar className="mr-2 h-4 w-4" />
+                        Visiter ce bien
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => { updateStatut(selectedOffre.id, 'refusee'); setDetailsDialogOpen(false); }}>
+                        <X className="mr-2 h-4 w-4" />
+                        Refuser
+                      </Button>
+                    </>
                   )}
                   {selectedOffre.statut === 'visite_planifiee' && (
                     <Button size="sm" onClick={() => { updateStatut(selectedOffre.id, 'visite_effectuee'); setDetailsDialogOpen(false); }}>
