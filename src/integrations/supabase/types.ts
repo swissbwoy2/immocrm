@@ -757,7 +757,12 @@ export type Database = {
         Returns: boolean
       }
       is_agent_of_client: { Args: { profile_id: string }; Returns: boolean }
+      is_agent_of_client_record: {
+        Args: { _client_id: string }
+        Returns: boolean
+      }
       is_assigned_agent: { Args: { _client_user_id: string }; Returns: boolean }
+      is_my_assigned_agent: { Args: { _agent_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "agent" | "client"
