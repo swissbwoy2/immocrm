@@ -19,6 +19,7 @@ export default function AgentDashboard() {
   const [clients, setClients] = useState<any[]>([]);
   const [offres, setOffres] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
+  const [renouvellements, setRenouvellements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -72,12 +73,29 @@ export default function AgentDashboard() {
           .limit(10);
         
         setDocuments(documentsData || []);
+
+        // Récupérer les renouvellements
+        const clientIds = clientsData?.map(c => c.id) || [];
+        const { data: renouvData } = await supabase
+          .from('renouvellements_mandat')
+          .select('*')
+          .in('client_id', clientIds)
+          .order('created_at', { ascending: false });
+        
+        setRenouvellements(renouvData || []);
       }
     } catch (error) {
       console.error('Erreur chargement données agent:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getAgentName = (agentId?: string) => {
+    if (!agentId) return "Non assigné";
+    const agentFound = clients.find(c => c.agent_id === agentId);
+    if (!agentFound) return "Agent";
+    return "Agent";
   };
 
   if (loading || !agent) {
@@ -406,6 +424,56 @@ export default function AgentDashboard() {
                   <p className="text-xs mt-1">Les documents des clients apparaîtront ici</p>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Renouvellements récents */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg font-semibold">🔄 Renouvellements récents</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {(() => {
+                const recentRenewals = clients
+                  .map(client => {
+                    const renewal = renouvellements.find(r => r.client_id === client.id);
+                    if (!renewal) return null;
+                    const daysSince = Math.floor((Date.now() - new Date(renewal.created_at).getTime()) / (1000 * 60 * 60 * 24));
+                    if (daysSince > 30) return null;
+                    return { ...renewal, client, daysSince };
+                  })
+                  .filter(Boolean)
+                  .sort((a, b) => a.daysSince - b.daysSince)
+                  .slice(0, 5);
+
+                return recentRenewals.length > 0 ? (
+                  recentRenewals.map(renewal => (
+                    <div 
+                      key={renewal.id}
+                      className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">Client renouvelé</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {renewal.daysSince === 0 ? "Aujourd'hui" : `Il y a ${renewal.daysSince} jour${renewal.daysSince > 1 ? 's' : ''}`}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Agent: {getAgentName(renewal.client.agent_id)}
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="bg-green-100 dark:bg-green-900">
+                          +90 jours
+                        </Badge>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p className="text-sm">Aucun renouvellement récent</p>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
       </div>

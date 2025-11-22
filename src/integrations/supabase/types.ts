@@ -472,6 +472,51 @@ export type Database = {
         }
         Relationships: []
       }
+      renouvellements_mandat: {
+        Row: {
+          agent_id: string | null
+          client_id: string
+          created_at: string | null
+          date_ancien_mandat: string
+          date_nouveau_mandat: string
+          id: string
+          raison: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          client_id: string
+          created_at?: string | null
+          date_ancien_mandat: string
+          date_nouveau_mandat?: string
+          id?: string
+          raison?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          client_id?: string
+          created_at?: string | null
+          date_ancien_mandat?: string
+          date_nouveau_mandat?: string
+          id?: string
+          raison?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renouvellements_mandat_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renouvellements_mandat_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           agent_id: string | null

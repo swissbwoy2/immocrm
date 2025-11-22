@@ -1,32 +1,80 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Calendar, TrendingUp, AlertCircle } from "lucide-react";
-import { getClients, getAgents } from "@/utils/localStorage";
-import { calculateMandateDuration } from "@/utils/calculations";
+import { supabase } from "@/integrations/supabase/client";
+import { calculateDaysElapsed, calculateDaysRemaining } from "@/utils/calculations";
 
 const Mandats = () => {
-  const [clients] = useState(getClients());
-  const [agents] = useState(getAgents());
+  const [clients, setClients] = useState<any[]>([]);
+  const [agents, setAgents] = useState<any[]>([]);
+  const [renouvellements, setRenouvellements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('*')
+        .order('date_ajout', { ascending: false });
+
+      const { data: agentsData } = await supabase
+        .from('agents')
+        .select('*, profiles!agents_user_id_fkey(*)');
+
+      const { data: renouvData } = await supabase
+        .from('renouvellements_mandat')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      setClients(clientsData || []);
+      setAgents(agentsData || []);
+      setRenouvellements(renouvData || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getAgentName = (agentId?: string) => {
     if (!agentId) return "Non assigné";
     const agent = agents.find(a => a.id === agentId);
-    return agent ? `${agent.prenom} ${agent.nom}` : "Non assigné";
+    if (!agent?.profiles) return "Non assigné";
+    return `${agent.profiles.prenom} ${agent.profiles.nom}`;
   };
 
-  const getMandateStatus = (duration: number) => {
-    if (duration <= 30) return { label: "Nouveau", variant: "default" as const, color: "text-primary" };
-    if (duration <= 60) return { label: "En cours", variant: "secondary" as const, color: "text-warning" };
+  const getMandateStatus = (daysElapsed: number) => {
+    if (daysElapsed <= 30) return { label: "Nouveau", variant: "default" as const, color: "text-primary" };
+    if (daysElapsed <= 60) return { label: "En cours", variant: "secondary" as const, color: "text-warning" };
     return { label: "Critique", variant: "destructive" as const, color: "text-destructive" };
   };
 
+  const isRecentlyRenewed = (clientId: string) => {
+    const renewal = renouvellements.find(r => r.client_id === clientId);
+    if (!renewal) return false;
+    const daysSinceRenewal = Math.floor((Date.now() - new Date(renewal.created_at).getTime()) / (1000 * 60 * 60 * 24));
+    return daysSinceRenewal <= 7;
+  };
+
   const sortedClients = [...clients].sort((a, b) => {
-    const durationA = calculateMandateDuration(a.dateInscription);
-    const durationB = calculateMandateDuration(b.dateInscription);
-    return durationB.daysElapsed - durationA.daysElapsed;
+    const daysElapsedA = calculateDaysElapsed(a.date_ajout || a.created_at);
+    const daysElapsedB = calculateDaysElapsed(b.date_ajout || b.created_at);
+    return daysElapsedB - daysElapsedA;
   });
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-muted-foreground">Chargement...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-auto">
@@ -38,9 +86,11 @@ const Mandats = () => {
 
           <div className="grid gap-4">
             {sortedClients.map((client) => {
-              const duration = calculateMandateDuration(client.dateInscription);
-              const progress = duration.progressPercentage;
-              const status = getMandateStatus(duration.daysElapsed);
+              const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
+              const daysRemaining = calculateDaysRemaining(client.date_ajout || client.created_at);
+              const progress = Math.min((daysElapsed / 90) * 100, 100);
+              const status = getMandateStatus(daysElapsed);
+              const renewed = isRecentlyRenewed(client.id);
               
               return (
                 <Card key={client.id} className="p-6">
@@ -48,19 +98,24 @@ const Mandats = () => {
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-xl font-semibold">{client.prenom} {client.nom}</h3>
+                          <h3 className="text-xl font-semibold">Client</h3>
                           <Badge variant={status.variant}>{status.label}</Badge>
+                          {renewed && (
+                            <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-200">
+                              🔄 Renouvelé récemment
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          Agent: {getAgentName(client.agentId)}
+                          Agent: {getAgentName(client.agent_id)}
                         </p>
                       </div>
                       <div className="text-right">
                         <div className={`text-3xl font-bold ${status.color}`}>
-                          J+{duration.daysElapsed}
+                          J+{daysElapsed}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {duration.daysRemaining > 0 ? `${duration.daysRemaining} jours restants` : "Mandat expiré"}
+                          {daysRemaining > 0 ? `${daysRemaining} jours restants` : "Mandat expiré"}
                         </p>
                       </div>
                     </div>
@@ -76,13 +131,13 @@ const Mandats = () => {
                     <div className="flex items-center gap-6 text-sm text-muted-foreground">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4" />
-                        Début: {new Date(client.dateInscription).toLocaleDateString('fr-FR')}
+                        Début: {new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}
                       </div>
                       <div className="flex items-center gap-2">
                         <TrendingUp className="h-4 w-4" />
-                        Split: {client.splitAgent}% / {client.splitAgence}%
+                        Split: {client.commission_split}%
                       </div>
-                      {duration.daysElapsed > 60 && (
+                      {daysElapsed > 60 && (
                         <div className="flex items-center gap-2 text-destructive">
                           <AlertCircle className="h-4 w-4" />
                           Mandat proche de l'expiration
@@ -92,8 +147,8 @@ const Mandats = () => {
 
                     <div className="pt-4 border-t">
                       <div className="text-sm">
-                        <span className="font-medium">Recherche:</span> {client.typeBien} {client.nombrePiecesSouhaite} pièces • 
-                        <span className="font-medium ml-2">Budget:</span> CHF {client.budgetMax.toLocaleString()}
+                        <span className="font-medium">Recherche:</span> {client.type_bien} {client.pieces} pièces • 
+                        <span className="font-medium ml-2">Budget:</span> CHF {client.budget_max?.toLocaleString()}
                       </div>
                     </div>
                   </div>

@@ -221,12 +221,12 @@ const MesCandidatures = () => {
                     </div>
                   )}
 
-                  <div className="flex gap-3 pt-4">
+                  <div className="space-y-3 pt-4">
                     {offre.statut === 'envoyee' && (
                       <>
                         <Button 
                           onClick={() => updateStatut(offre.id, 'interesse')}
-                          className="flex-1"
+                          className="w-full"
                         >
                           <ThumbsUp className="h-4 w-4 mr-2" />
                           Je suis intéressé
@@ -234,18 +234,35 @@ const MesCandidatures = () => {
                         <Button 
                           onClick={() => updateStatut(offre.id, 'refusee')}
                           variant="destructive"
-                          className="flex-1"
+                          className="w-full"
                         >
                           <ThumbsDown className="h-4 w-4 mr-2" />
                           Pas intéressé
                         </Button>
                       </>
                     )}
+                    
+                    {offre.statut === 'interesse' && (
+                      <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                          ℹ️ Vous avez marqué cette offre comme intéressante. Votre agent va organiser une visite et gérer la suite du processus.
+                        </p>
+                      </div>
+                    )}
+                    
+                    {['visite_planifiee', 'visite_effectuee', 'candidature_deposee'].includes(offre.statut) && (
+                      <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                        <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                          ✅ Votre agent gère activement cette candidature. Consultez la messagerie pour plus d'informations.
+                        </p>
+                      </div>
+                    )}
+                    
                     {offre.lien_annonce && (
                       <Button 
                         variant="outline"
                         onClick={() => window.open(offre.lien_annonce, '_blank')}
-                        className={offre.statut === 'envoyee' ? 'w-full mt-2' : 'flex-1'}
+                        className="w-full"
                       >
                         <ExternalLink className="h-4 w-4 mr-2" />
                         Voir l'annonce
