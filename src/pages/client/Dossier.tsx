@@ -1,21 +1,50 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import { 
   Mail, Phone, MapPin, Calendar, Users, DollarSign, 
-  Home, Building2, Briefcase, Heart, Car 
+  Home, Building2, Briefcase, Heart, Car, Upload, FileText,
+  Download, Trash2, User, MessageSquare
 } from 'lucide-react';
-import { calculateMandateDuration } from '@/utils/calculations';
+import { calculateDaysElapsed, calculateDaysRemaining } from '@/utils/calculations';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function Dossier() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [client, setClient] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [agent, setAgent] = useState<any>(null);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,11 +74,172 @@ export default function Dossier() {
 
       if (profileError) throw profileError;
       setProfile(profileData);
+
+      // Load agent if assigned
+      if (clientData.agent_id) {
+        const { data: agentData } = await supabase
+          .from('agents')
+          .select('*')
+          .eq('id', clientData.agent_id)
+          .single();
+
+        if (agentData) {
+          const { data: agentProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', agentData.user_id)
+            .single();
+
+          setAgent({
+            ...agentData,
+            prenom: agentProfile?.prenom || '',
+            nom: agentProfile?.nom || '',
+            email: agentProfile?.email || '',
+            telephone: agentProfile?.telephone || '',
+          });
+        }
+      }
+
+      // Load documents
+      const { data: docsData } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date_upload', { ascending: false });
+
+      setDocuments(docsData || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      toast({
+        title: 'Fichier trop volumineux',
+        description: 'La taille maximale est de 5 MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: 'Type de fichier non supporté',
+        description: 'Formats acceptés : PDF, JPG, PNG',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const { error } = await supabase
+          .from('documents')
+          .insert({
+            nom: file.name,
+            type: file.type,
+            taille: file.size,
+            user_id: user!.id,
+            client_id: client.id,
+            url: e.target?.result as string,
+          });
+
+        if (error) throw error;
+
+        await loadData();
+
+        toast({
+          title: 'Document ajouté',
+          description: 'Le document a été uploadé avec succès',
+        });
+
+        setUploadDialogOpen(false);
+      };
+
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible d\'uploader le fichier',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedDoc) return;
+
+    try {
+      const { error } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', selectedDoc.id);
+
+      if (error) throw error;
+
+      await loadData();
+
+      toast({
+        title: 'Document supprimé',
+        description: 'Le document a été supprimé avec succès',
+      });
+
+      setDeleteDialogOpen(false);
+      setSelectedDoc(null);
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de supprimer le document',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDownload = (doc: any) => {
+    const link = document.createElement('a');
+    link.href = doc.url;
+    link.download = doc.nom;
+    link.click();
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type.includes('pdf')) return '📄';
+    if (type.includes('image')) return '🖼️';
+    return '📎';
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   };
 
   if (loading || !client || !profile) {
@@ -60,7 +250,9 @@ export default function Dossier() {
     );
   }
 
-  const { daysElapsed, daysRemaining, progressPercentage } = calculateMandateDuration(client.date_ajout || client.created_at);
+  const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
+  const daysRemaining = calculateDaysRemaining(client.date_ajout || client.created_at);
+  const progressPercentage = Math.min((daysElapsed / 90) * 100, 100);
   const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);
 
   return (
@@ -237,7 +429,196 @@ export default function Dossier() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Mon agent */}
+          {agent && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">👤 Mon agent</h2>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-primary/10 rounded-full">
+                      <User className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-lg">{agent.prenom} {agent.nom}</p>
+                      <div className="space-y-2 mt-3">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Mail className="w-4 h-4 text-muted-foreground" />
+                          <a href={`mailto:${agent.email}`} className="text-primary hover:underline">
+                            {agent.email}
+                          </a>
+                        </div>
+                        {agent.telephone && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Phone className="w-4 h-4 text-muted-foreground" />
+                            <a href={`tel:${agent.telephone}`} className="text-primary hover:underline">
+                              {agent.telephone}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="mt-4"
+                        onClick={() => navigate('/client/messagerie')}
+                      >
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Envoyer un message
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Mes documents */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">📄 Mes documents</h2>
+              <Button onClick={() => setUploadDialogOpen(true)} size="sm">
+                <Upload className="w-4 h-4 mr-2" />
+                Ajouter un document
+              </Button>
+            </div>
+
+            {documents.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {documents.map((doc) => (
+                  <Card key={doc.id} className="hover:shadow-lg transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
+                          <span className="text-2xl">{getFileIcon(doc.type)}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-sm truncate" title={doc.nom}>
+                              {doc.nom}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatFileSize(doc.taille)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="text-xs text-muted-foreground mb-3">
+                        Ajouté le {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => handleDownload(doc)}
+                        >
+                          <Download className="w-3 h-3 mr-1" />
+                          Télécharger
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setSelectedDoc(doc);
+                            setDeleteDialogOpen(true);
+                          }}
+                        >
+                          <Trash2 className="w-3 h-3 text-red-500" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <FileText className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Aucun document uploadé
+                  </p>
+                  <Button onClick={() => setUploadDialogOpen(true)} size="sm">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Ajouter un document
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
+
+      {/* Upload Dialog */}
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ajouter un document</DialogTitle>
+            <DialogDescription>
+              Formats acceptés : PDF, JPG, PNG (max 5 MB)
+            </DialogDescription>
+          </DialogHeader>
+
+          <div
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+              dragActive
+                ? 'border-primary bg-primary/5'
+                : 'border-muted-foreground/25 hover:border-primary/50'
+            }`}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+          >
+            <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-sm font-medium mb-2">
+              Glissez-déposez votre fichier ici
+            </p>
+            <p className="text-xs text-muted-foreground mb-4">ou</p>
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Sélectionner un fichier
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files?.[0]) {
+                  handleFileUpload(e.target.files[0]);
+                }
+              }}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>
+              Annuler
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer le document</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer "{selectedDoc?.nom}" ? Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
