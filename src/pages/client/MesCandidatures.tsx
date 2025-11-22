@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Calendar, Square, Home, FileText, Building } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MapPin, Calendar, Square, Home, FileText, Building, ThumbsUp, ThumbsDown, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const getStatutLabel = (statut: string) => {
   switch (statut) {
@@ -35,6 +37,7 @@ const getStatutBadgeVariant = (statut: string): "default" | "secondary" | "destr
 
 const MesCandidatures = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [offres, setOffres] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,6 +70,33 @@ const MesCandidatures = () => {
       console.error('Error loading offres:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateStatut = async (offreId: string, newStatut: string) => {
+    try {
+      const { error } = await supabase
+        .from('offres')
+        .update({ statut: newStatut })
+        .eq('id', offreId);
+
+      if (error) throw error;
+
+      setOffres(prev => 
+        prev.map(o => o.id === offreId ? { ...o, statut: newStatut } : o)
+      );
+
+      toast({
+        title: "Statut mis à jour",
+        description: `L'offre a été ${newStatut === 'interesse' ? 'approuvée' : 'refusée'}.`,
+      });
+    } catch (error) {
+      console.error('Error updating statut:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour le statut.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -142,6 +172,38 @@ const MesCandidatures = () => {
                       <p className="text-sm">{offre.commentaires}</p>
                     </div>
                   )}
+
+                  <div className="flex gap-3 pt-4">
+                    {offre.statut === 'envoyee' && (
+                      <>
+                        <Button 
+                          onClick={() => updateStatut(offre.id, 'interesse')}
+                          className="flex-1"
+                        >
+                          <ThumbsUp className="h-4 w-4 mr-2" />
+                          Je suis intéressé
+                        </Button>
+                        <Button 
+                          onClick={() => updateStatut(offre.id, 'refusee')}
+                          variant="destructive"
+                          className="flex-1"
+                        >
+                          <ThumbsDown className="h-4 w-4 mr-2" />
+                          Pas intéressé
+                        </Button>
+                      </>
+                    )}
+                    {offre.lien_annonce && (
+                      <Button 
+                        variant="outline"
+                        onClick={() => window.open(offre.lien_annonce, '_blank')}
+                        className={offre.statut === 'envoyee' ? 'w-full mt-2' : 'flex-1'}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Voir l'annonce
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             ))}

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sidebar } from '@/components/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -55,11 +54,8 @@ export default function Dossier() {
 
   if (loading || !client || !profile) {
     return (
-      <div className="flex h-screen bg-background">
-        <Sidebar />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </main>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -68,10 +64,8 @@ export default function Dossier() {
   const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-8 space-y-6">
+    <div className="flex-1 overflow-y-auto">
+      <div className="p-4 md:p-8 space-y-6">
           {/* Header */}
           <div>
             <h1 className="text-3xl font-bold">Mon dossier</h1>
@@ -244,7 +238,6 @@ export default function Dossier() {
             </Card>
           </div>
         </div>
-      </main>
     </div>
   );
 }
