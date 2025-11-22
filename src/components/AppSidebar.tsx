@@ -92,6 +92,7 @@ export function AppSidebar() {
 
   const menu = getMenuForRole(userRole);
   const userName = profile ? `${profile.prenom} ${profile.nom}` : 'Chargement...';
+  const userEmail = profile?.email || user.email || '';
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -122,7 +123,8 @@ export function AppSidebar() {
         <div className="p-4 border-b border-sidebar-border">
           <div className="text-sm text-sidebar-foreground/80">
             <div className="font-medium text-sidebar-foreground truncate">{userName}</div>
-            <div className="text-xs capitalize">{userRole}</div>
+            <div className="text-xs text-sidebar-foreground/60 truncate">{userEmail}</div>
+            <div className="text-xs capitalize mt-1 text-sidebar-accent-foreground bg-sidebar-accent px-2 py-0.5 rounded inline-block">{userRole}</div>
           </div>
         </div>
       )}
