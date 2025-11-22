@@ -15,6 +15,11 @@ import {
   SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -137,15 +142,33 @@ export function AppSidebar() {
             <SidebarMenu>
               {menu.map((item) => (
                 <SidebarMenuItem key={item.path}>
-                  <NavLink
-                    to={item.path}
-                    end={item.path === '/admin' || item.path === '/agent' || item.path === '/client'}
-                    className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors"
-                    activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-                  >
-                    <item.icon className="w-5 h-5 flex-shrink-0" />
-                    {!collapsed && <span className="truncate">{item.name}</span>}
-                  </NavLink>
+                  {collapsed ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <NavLink
+                          to={item.path}
+                          end={item.path === '/admin' || item.path === '/agent' || item.path === '/client'}
+                          className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors"
+                          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                        >
+                          <item.icon className="w-5 h-5 flex-shrink-0" />
+                        </NavLink>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <p>{item.name}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <NavLink
+                      to={item.path}
+                      end={item.path === '/admin' || item.path === '/agent' || item.path === '/client'}
+                      className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors"
+                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                    >
+                      <item.icon className="w-5 h-5 flex-shrink-0" />
+                      <span className="truncate">{item.name}</span>
+                    </NavLink>
+                  )}
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

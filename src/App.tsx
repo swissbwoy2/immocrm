@@ -16,6 +16,7 @@ import AdminClientDetail from "./pages/admin/ClientDetail";
 import AdminAssignations from "./pages/admin/Assignations";
 import AdminMandats from "./pages/admin/Mandats";
 import AdminTransactions from "./pages/admin/Transactions";
+import AdminDocuments from "./pages/admin/Documents";
 import AdminMessagerie from "./pages/admin/Messagerie";
 import AgentDashboard from "./pages/agent/Dashboard";
 import AgentMesClients from "./pages/agent/MesClients";
@@ -24,6 +25,7 @@ import AgentEnvoyerOffre from "./pages/agent/EnvoyerOffre";
 import AgentOffresEnvoyees from "./pages/agent/OffresEnvoyees";
 import AgentMessagerie from "./pages/agent/Messagerie";
 import AgentVisites from "./pages/agent/Visites";
+import AgentDocuments from "./pages/agent/Documents";
 import ClientDashboard from "./pages/client/Dashboard";
 import ClientDossier from "./pages/client/Dossier";
 import ClientOffresRecues from "./pages/client/OffresRecues";
@@ -57,6 +59,7 @@ const App = () => (
             <Route path="/admin/assignations" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAssignations /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/mandats" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMandats /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/transactions" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminTransactions /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/documents" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminDocuments /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/messagerie" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMessagerie /></AppLayout></ProtectedRoute>} />
 
             {/* Agent Routes */}
@@ -66,6 +69,7 @@ const App = () => (
             <Route path="/agent/envoyer-offre" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentEnvoyerOffre /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/offres-envoyees" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentOffresEnvoyees /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/visites" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentVisites /></AppLayout></ProtectedRoute>} />
+            <Route path="/agent/documents" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDocuments /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/messagerie" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentMessagerie /></AppLayout></ProtectedRoute>} />
 
             {/* Client Routes */}
