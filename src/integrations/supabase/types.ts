@@ -620,6 +620,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_agent_of_client: { Args: { profile_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "agent" | "client"
