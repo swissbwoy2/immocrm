@@ -23,6 +23,42 @@ const Messagerie = () => {
   useEffect(() => {
     if (selectedConv) {
       loadMessages(selectedConv);
+      
+      // S'abonner aux nouveaux messages en temps réel
+      const channel = supabase
+        .channel(`admin-messages-${selectedConv}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `conversation_id=eq.${selectedConv}`
+          },
+          (payload) => {
+            const newMessage = payload.new as any;
+            // Charger le profil de l'expéditeur
+            supabase
+              .from('profiles')
+              .select('id, prenom, nom')
+              .eq('id', newMessage.sender_id)
+              .single()
+              .then(({ data: senderProfile }) => {
+                const enrichedMessage = {
+                  ...newMessage,
+                  senderName: senderProfile
+                    ? `${senderProfile.prenom} ${senderProfile.nom}`
+                    : newMessage.sender_type === 'client' ? 'Client' : newMessage.sender_type === 'admin' ? 'Admin' : 'Agent'
+                };
+                setMessages(prev => [...prev, enrichedMessage]);
+              });
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [selectedConv]);
 
@@ -121,6 +157,32 @@ const Messagerie = () => {
     }
   };
 
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !selectedConv || !user) return;
+
+    const { error } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: selectedConv,
+        sender_id: user.id,
+        sender_type: 'admin',
+        content: messageText.trim(),
+      });
+
+    if (error) {
+      console.error('Erreur envoi message:', error);
+      return;
+    }
+
+    setMessageText('');
+    
+    // Mettre à jour le timestamp de la conversation
+    await supabase
+      .from('conversations')
+      .update({ last_message_at: new Date().toISOString() })
+      .eq('id', selectedConv);
+  };
+
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
 
   return (
@@ -170,8 +232,17 @@ const Messagerie = () => {
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <p className="font-medium text-sm">{msg.senderName}</p>
-                        <Badge variant="outline" className="text-xs mt-1">
-                          {msg.sender_type === 'client' ? 'Client' : 'Agent'}
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs mt-1 ${
+                            msg.sender_type === 'admin' 
+                              ? 'border-primary text-primary' 
+                              : msg.sender_type === 'agent'
+                              ? 'border-blue-500 text-blue-500'
+                              : 'border-green-500 text-green-500'
+                          }`}
+                        >
+                          {msg.sender_type === 'client' ? 'Client' : msg.sender_type === 'admin' ? 'Admin' : 'Agent'}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
@@ -189,8 +260,14 @@ const Messagerie = () => {
                   placeholder="Écrire un message..."
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
                 />
-                <Button>
+                <Button onClick={handleSendMessage}>
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
