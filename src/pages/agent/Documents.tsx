@@ -100,31 +100,29 @@ export default function AgentDocuments() {
     setSelectedDocument(document);
     
     try {
-      // Extraire le chemin du fichier si c'est une URL complète
+      // Si l'URL est une data URL (base64), l'utiliser directement
+      if (document.url.startsWith('data:')) {
+        setPreviewUrl(document.url);
+        setPreviewDialogOpen(true);
+        return;
+      }
+
+      // Sinon, extraire le chemin du fichier et créer une URL signée
       let filePath = document.url;
       if (filePath.includes('/storage/v1/object/')) {
-        // Extraire le chemin après le nom du bucket
         const parts = filePath.split('/client-documents/');
         filePath = parts[1] || filePath;
       }
-
-      console.log('Attempting preview for path:', filePath);
 
       const { data, error } = await supabase.storage
         .from('client-documents')
         .createSignedUrl(filePath, 3600);
 
-      if (error) {
-        console.error('Storage error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       if (data?.signedUrl) {
-        console.log('Preview URL created successfully');
         setPreviewUrl(data.signedUrl);
         setPreviewDialogOpen(true);
-      } else {
-        throw new Error('Aucune URL signée générée');
       }
     } catch (error) {
       console.error('Error creating preview URL:', error);
@@ -134,7 +132,17 @@ export default function AgentDocuments() {
 
   const handleDownload = async (document: any) => {
     try {
-      // Extraire le chemin du fichier si c'est une URL complète
+      // Si l'URL est une data URL (base64), la télécharger directement
+      if (document.url.startsWith('data:')) {
+        const link = window.document.createElement('a');
+        link.href = document.url;
+        link.download = document.nom;
+        link.click();
+        toast.success('Téléchargement démarré');
+        return;
+      }
+
+      // Sinon, créer une URL signée depuis le storage
       let filePath = document.url;
       if (filePath.includes('/storage/v1/object/')) {
         const parts = filePath.split('/client-documents/');
@@ -145,10 +153,7 @@ export default function AgentDocuments() {
         .from('client-documents')
         .createSignedUrl(filePath, 60);
 
-      if (error) {
-        console.error('Storage error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
       if (data?.signedUrl) {
         const link = window.document.createElement('a');
