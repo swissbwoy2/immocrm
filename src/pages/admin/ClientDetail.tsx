@@ -227,6 +227,65 @@ export default function ClientDetail() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Situation financière */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="w-5 h-5" />
+                Situation financière
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <Card className="bg-muted/50">
+                  <CardContent className="pt-6">
+                    <p className="text-sm text-muted-foreground mb-1">Revenus mensuels</p>
+                    <p className="text-2xl font-bold">
+                      CHF {client.revenus_mensuels?.toLocaleString() || '0'}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="pt-6">
+                    <p className="text-sm text-muted-foreground mb-1">Budget maximum</p>
+                    <p className="text-2xl font-bold text-primary">
+                      CHF {client.budget_max?.toLocaleString() || '0'}
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/50">
+                  <CardContent className="pt-6">
+                    <p className="text-sm text-muted-foreground mb-1">Budget recommandé</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      CHF {budgetRecommande.toLocaleString()}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                {client.charges_extraordinaires && (
+                  <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
+                    <span className="text-sm font-medium">Charges extraordinaires</span>
+                    <span className="text-sm">
+                      {client.montant_charges_extra ? `CHF ${client.montant_charges_extra.toLocaleString()}` : 'Oui'}
+                    </span>
+                  </div>
+                )}
+                {(client.poursuites || client.curatelle) && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                    <AlertCircle className="w-4 h-4 text-red-600" />
+                    <div className="flex-1 text-sm font-medium text-red-600">
+                      {client.poursuites && 'Poursuites en cours'}
+                      {client.poursuites && client.curatelle && ' • '}
+                      {client.curatelle && 'Sous curatelle'}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Informations personnelles */}
           <Card>
             <CardHeader>
@@ -367,71 +426,12 @@ export default function ClientDetail() {
             </CardContent>
           </Card>
 
-          {/* Situation financière */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5" />
-                Situation financière
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <Card className="bg-muted/50">
-                  <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground mb-1">Revenus mensuels</p>
-                    <p className="text-2xl font-bold">
-                      CHF {client.revenus_mensuels?.toLocaleString() || '0'}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground mb-1">Budget maximum</p>
-                    <p className="text-2xl font-bold text-primary">
-                      CHF {client.budget_max?.toLocaleString() || '0'}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground mb-1">Budget recommandé</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      CHF {budgetRecommande.toLocaleString()}
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-              <Separator />
-              <div className="space-y-2">
-                {client.charges_extraordinaires && (
-                  <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
-                    <span className="text-sm font-medium">Charges extraordinaires</span>
-                    <span className="text-sm">
-                      {client.montant_charges_extra ? `CHF ${client.montant_charges_extra.toLocaleString()}` : 'Oui'}
-                    </span>
-                  </div>
-                )}
-                {(client.poursuites || client.curatelle) && (
-                  <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                    <AlertCircle className="w-4 h-4 text-red-600" />
-                    <div className="flex-1 text-sm font-medium text-red-600">
-                      {client.poursuites && 'Poursuites en cours'}
-                      {client.poursuites && client.curatelle && ' • '}
-                      {client.curatelle && 'Sous curatelle'}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recherche immobilière */}
+          {/* Critères de recherche */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Home className="w-5 h-5" />
-                Recherche immobilière
+                Critères de recherche
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
