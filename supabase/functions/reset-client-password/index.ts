@@ -35,36 +35,24 @@ serve(async (req) => {
 
     console.log('Recherche de l\'utilisateur avec email:', email);
 
-    // Trouver l'utilisateur par email avec pagination
-    let user = null;
-    let page = 1;
-    const perPage = 1000;
-    
-    while (!user) {
-      const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers({
-        page,
-        perPage
-      });
-      
-      if (listError) {
-        console.error('Erreur lors de la recherche de l\'utilisateur:', listError);
-        return new Response(
-          JSON.stringify({ error: 'Erreur lors de la recherche de l\'utilisateur' }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+    // Trouver l'utilisateur via la table profiles
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .single();
 
-      console.log(`Page ${page}: ${users.length} utilisateurs trouvés`);
-      
-      user = users.find(u => u.email === email);
-      
-      // Si aucun utilisateur trouvé et qu'on a moins d'utilisateurs que le max, on arrête
-      if (!user && users.length < perPage) {
-        break;
-      }
-      
-      page++;
+    if (profileError || !profile) {
+      console.error('Utilisateur non trouvé dans profiles:', profileError);
+      return new Response(
+        JSON.stringify({ error: 'Utilisateur non trouvé' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    console.log('Utilisateur trouvé, ID:', profile.id);
+
+    const user = { id: profile.id };
 
     if (!user) {
       console.error('Utilisateur non trouvé:', email);
