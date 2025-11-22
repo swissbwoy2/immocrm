@@ -54,15 +54,7 @@ serve(async (req) => {
 
     const user = { id: profile.id };
 
-    if (!user) {
-      console.error('Utilisateur non trouvé:', email);
-      return new Response(
-        JSON.stringify({ error: 'Utilisateur non trouvé' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Utilisateur trouvé, ID:', user.id);
+    console.log('Réinitialisation du mot de passe pour l\'utilisateur:', user.id);
 
     // Réinitialiser le mot de passe
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
