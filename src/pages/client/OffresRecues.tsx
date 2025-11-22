@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Square, Home, ExternalLink, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload } from "lucide-react";
+import { MapPin, Calendar, Square, Home, ExternalLink, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateChances } from "@/utils/chanceCalculator";
@@ -75,7 +75,19 @@ const OffresRecues = () => {
 
       const { data: offresData, error } = await supabase
         .from('offres')
-        .select('*')
+        .select(`
+          *,
+          agent:agents!offres_agent_id_fkey(
+            id,
+            user_id,
+            profile:profiles!agents_user_id_fkey(
+              prenom,
+              nom,
+              email,
+              telephone
+            )
+          )
+        `)
         .eq('client_id', clientData.id)
         .order('date_envoi', { ascending: false });
 
@@ -708,6 +720,19 @@ const OffresRecues = () => {
                         <Calendar className="h-4 w-4" />
                         Reçue le {new Date(offre.date_envoi).toLocaleDateString('fr-FR')}
                       </div>
+                      
+                      {offre.agent?.profile && (
+                        <div className="flex items-center gap-2">
+                          <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-xs font-medium text-primary">
+                              {offre.agent.profile.prenom[0]}{offre.agent.profile.nom[0]}
+                            </span>
+                          </div>
+                          <span className="text-sm">
+                            Envoyée par <strong>{offre.agent.profile.prenom} {offre.agent.profile.nom}</strong>
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">
@@ -960,6 +985,46 @@ const OffresRecues = () => {
                       visites
                     )}
                   />
+                )}
+
+                {/* Section Agent */}
+                {selectedOffre.agent?.profile && (
+                  <div className="bg-muted/30 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <User className="h-5 w-5" />
+                      👤 Votre agent
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-sm font-medium text-primary">
+                            {selectedOffre.agent.profile.prenom[0]}{selectedOffre.agent.profile.nom[0]}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {selectedOffre.agent.profile.prenom} {selectedOffre.agent.profile.nom}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Agent immobilier</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 flex-wrap">
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={`mailto:${selectedOffre.agent.profile.email}`}>
+                            📧 {selectedOffre.agent.profile.email}
+                          </a>
+                        </Button>
+                        {selectedOffre.agent.profile.telephone && (
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={`tel:${selectedOffre.agent.profile.telephone}`}>
+                              📞 {selectedOffre.agent.profile.telephone}
+                            </a>
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 )}
 
                 {/* Commentaires de l'agent */}
