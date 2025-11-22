@@ -140,7 +140,11 @@ export default function Login() {
                 <p className="text-muted-foreground">admin@immo-rama.ch / Admin123!</p>
               </div>
               <div>
-                <p className="font-medium">Client (Christ Ramazani):</p>
+                <p className="font-medium">Agent (Christ Ramazani):</p>
+                <p className="text-muted-foreground">christ.ramazani@immo-rama.ch / Agent123!</p>
+              </div>
+              <div>
+                <p className="font-medium">Client:</p>
                 <p className="text-muted-foreground">info@immo-rama.ch / Client123!</p>
               </div>
             </div>
