@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, 
-  FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download
+  FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download, Eye
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -93,6 +93,9 @@ export default function ClientDetail() {
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<any>({});
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
 
   useEffect(() => {
     if (!user) {
@@ -207,6 +210,68 @@ export default function ClientDetail() {
         title: 'Erreur',
         description: 'Impossible de mettre à jour les informations',
         variant: 'destructive',
+      });
+    }
+  };
+
+  const handlePreview = async (document: any) => {
+    setSelectedDocument(document);
+    
+    try {
+      if (document.url.startsWith('data:')) {
+        if (document.type === 'application/pdf') {
+          try {
+            const base64Data = document.url.split(',')[1];
+            const binaryString = atob(base64Data);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            
+            for (let i = 0; i < len; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+            const blobUrl = URL.createObjectURL(blob);
+            setPreviewUrl(blobUrl);
+            setPreviewDialogOpen(true);
+          } catch (error) {
+            console.error('Error converting base64 to Blob:', error);
+            toast({
+              title: 'Erreur',
+              description: 'Erreur lors de la conversion du document',
+              variant: 'destructive'
+            });
+            return;
+          }
+        } else {
+          setPreviewUrl(document.url);
+          setPreviewDialogOpen(true);
+        }
+        return;
+      }
+
+      let filePath = document.url;
+      if (filePath.includes('/storage/v1/object/')) {
+        const parts = filePath.split('/client-documents/');
+        filePath = parts[1] || filePath;
+      }
+
+      const { data, error } = await supabase.storage
+        .from('client-documents')
+        .createSignedUrl(filePath, 3600);
+
+      if (error) throw error;
+
+      if (data?.signedUrl) {
+        setPreviewUrl(data.signedUrl);
+        setPreviewDialogOpen(true);
+      }
+    } catch (error) {
+      console.error('Error creating preview URL:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de prévisualiser le document',
+        variant: 'destructive'
       });
     }
   };
@@ -722,11 +787,23 @@ export default function ClientDetail() {
                           📝 Lié à une candidature
                         </Badge>
                       )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full"
-                        onClick={async () => {
+                      <div className="flex gap-2">
+                        {(doc.type.includes('image') || doc.type.includes('pdf')) && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={() => handlePreview(doc)}
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            Aperçu
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1"
+                          onClick={async () => {
                           try {
                             if (!doc.url.startsWith('data:')) {
                               const { data, error } = await supabase.storage
@@ -757,9 +834,10 @@ export default function ClientDetail() {
                           }
                         }}
                       >
-                        <Download className="w-3 h-3 mr-1" />
-                        Télécharger
-                      </Button>
+                          <Download className="w-3 h-3 mr-1" />
+                          Télécharger
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -834,6 +912,50 @@ export default function ClientDetail() {
           )}
         </div>
       </div>
+
+      {/* Dialog d'aperçu */}
+      <Dialog open={previewDialogOpen} onOpenChange={(open) => {
+        setPreviewDialogOpen(open);
+        if (!open && previewUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(previewUrl);
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>{selectedDocument?.nom}</span>
+              {selectedDocument?.type.includes('pdf') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(previewUrl, '_blank')}
+                >
+                  Ouvrir dans un nouvel onglet
+                </Button>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="overflow-auto max-h-[70vh]">
+            {selectedDocument?.type.includes('image') ? (
+              <img
+                src={previewUrl}
+                alt={selectedDocument?.nom}
+                className="w-full h-auto"
+              />
+            ) : selectedDocument?.type.includes('pdf') ? (
+              <embed
+                src={previewUrl}
+                type="application/pdf"
+                className="w-full h-[70vh]"
+              />
+            ) : (
+              <p className="text-center text-muted-foreground py-8">
+                Aperçu non disponible pour ce type de fichier
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
