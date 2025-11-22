@@ -11,7 +11,7 @@ import {
   Home, Building2, Briefcase, Heart, Car, Upload, FileText,
   Download, Trash2, User, MessageSquare, Edit
 } from 'lucide-react';
-import { calculateDaysElapsed, calculateDaysRemaining } from '@/utils/calculations';
+import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from '@/utils/calculations';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -339,12 +339,12 @@ export default function Dossier() {
                 <div>
                   <CardTitle>Progression du mandat</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {daysElapsed} jours écoulés sur 90
+                    {Math.floor(daysElapsed)} jours écoulés sur 90
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold">{daysRemaining}</p>
-                  <p className="text-sm text-muted-foreground">jours restants</p>
+                  <p className="text-2xl font-bold">{formatTimeRemaining(daysRemaining)}</p>
+                  <p className="text-sm text-muted-foreground">temps restant</p>
                 </div>
               </div>
             </CardHeader>
