@@ -141,7 +141,7 @@ export default function Login() {
               </div>
               <div>
                 <p className="font-medium">Client (Christ Ramazani):</p>
-                <p className="text-muted-foreground">info@immo-rama.ch / Client123!</p>
+                <p className="text-muted-foreground">christ.ramazani@immo-rama.ch / Client123!</p>
               </div>
             </div>
           </div>
