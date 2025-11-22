@@ -318,7 +318,18 @@ export default function AgentDocuments() {
       }}>
         <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>{selectedDocument?.nom}</DialogTitle>
+            <DialogTitle className="flex items-center justify-between">
+              <span>{selectedDocument?.nom}</span>
+              {selectedDocument?.type.includes('pdf') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(previewUrl, '_blank')}
+                >
+                  Ouvrir dans un nouvel onglet
+                </Button>
+              )}
+            </DialogTitle>
             <DialogDescription>
               Aperçu du document
             </DialogDescription>
@@ -331,10 +342,10 @@ export default function AgentDocuments() {
                 className="w-full h-auto"
               />
             ) : selectedDocument?.type.includes('pdf') ? (
-              <iframe
+              <embed
                 src={previewUrl}
+                type="application/pdf"
                 className="w-full h-[70vh]"
-                title="Document preview"
               />
             ) : (
               <p className="text-center text-muted-foreground py-8">
