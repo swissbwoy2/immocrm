@@ -361,6 +361,18 @@ const OffresRecues = () => {
         return;
       }
 
+      // Créer une visite déléguée
+      await supabase.from('visites').insert({
+        offre_id: selectedOffre.id,
+        client_id: clientData.id,
+        agent_id: clientData.agent_id,
+        adresse: selectedOffre.adresse,
+        date_visite: new Date().toISOString(),
+        statut: 'planifiee',
+        est_deleguee: true,
+        notes: 'Visite déléguée à l\'agent par le client'
+      });
+
       // Marquer l'offre comme intéressée
       await supabase
         .from('offres')
@@ -399,6 +411,7 @@ const OffresRecues = () => {
 
       setDelegateDialogOpen(false);
       await loadOffres();
+      await refreshData();
 
       toast({
         title: '✅ Visite déléguée',
