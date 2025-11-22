@@ -72,7 +72,7 @@ export default function OffresEnvoyees() {
       // Load agent's offers
       const { data: offresData, error } = await supabase
         .from('offres')
-        .select('*, clients(*, profiles!inner(nom, prenom))')
+        .select('*, clients(*, profiles!clients_user_id_fkey(nom, prenom))')
         .eq('agent_id', agentData.id)
         .order('date_envoi', { ascending: false });
 
