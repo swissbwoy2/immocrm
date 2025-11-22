@@ -232,6 +232,7 @@ function parseClientFromRow(row: CSVRow, lineNumber: number): {
     'Budget maximum', 'Budget', 'Budget max', 'Maximum budget'
   ]);
   const chargesRaw = findColumnValue(row, [
+    'Si oui, montant / échéance',
     'Montant charges', 'Charges', 'Montant des charges'
   ]);
 
@@ -318,28 +319,60 @@ function parseClientFromRow(row: CSVRow, lineNumber: number): {
     nombrePiecesActuel: parseNumber(findColumnValue(row, [
       'Nombre de pièces actuel', 'Pieces actuelles', 'Pieces', 'Nb pieces actuel', 'Nb de pcs actuel'
     ])),
-    chargesExtraordinaires: findColumnValue(row, ['Avez-vous des charges extraordinaires ? (Leasing, crédit, pension alimentaire, etc.', 'Charges extraordinaires', 'Charges extra']),
+    chargesExtraordinaires: findColumnValue(row, [
+      'Avez-vous des charges extraordinaires ? (Leasing, crédit, pension alimentaire, etc.',
+      'Charges extraordinaires', 
+      'Charges extra'
+    ]),
     montantCharges: montantCharges,
-    poursuites: parseBoolean(findColumnValue(row, ['Poursuites', 'Poursuite'])),
-    curatelle: parseBoolean(findColumnValue(row, ['Curatelle'])),
+    poursuites: parseBoolean(findColumnValue(row, [
+      'Avez-vous des poursuites ou actes de défaut de biens ?',
+      'Poursuites', 
+      'Poursuite'
+    ])),
+    curatelle: parseBoolean(findColumnValue(row, [
+      'Êtes-vous sous curatelle ?',
+      'Curatelle'
+    ])),
     motifChangement: findColumnValue(row, ['Motif du changement de domicile ?', 'Motif du changement de domicile', 'Motif changement', 'Motif', 'Raison changement']),
     profession: findColumnValue(row, ['Profession', 'Métier', 'Job', 'Emploi']),
     employeur: findColumnValue(row, ['Employeur', 'Employer', 'Entreprise']),
     revenuMensuel: revenuMensuel,
     dateEngagement: parseDate(findColumnValue(row, ['Date d\'engagement au poste', 'Date d\'engagement', 'Date engagement', 'Date embauche'])),
     nombreOccupants: parseNumber(findColumnValue(row, ['Combien de personnes occuperaient l\'appartement ?', 'Nombre d\'occupants', 'Nombre occupants', 'Occupants'])),
-    utilisationLogement: findColumnValue(row, ['Utilisation du logement', 'Utilisation', 'Usage']),
+    utilisationLogement: findColumnValue(row, [
+      'Utilisation du logement à titre',
+      'Utilisation du logement', 
+      'Utilisation', 
+      'Usage'
+    ]),
     animaux: parseBoolean(findColumnValue(row, ['Avez-vous des animaux ?', 'Animaux', 'Animal', 'Pets'])),
     instrumentMusique: parseBoolean(findColumnValue(row, ['Jouez-vous d\'un instrument de musique ? ', 'Instrument de musique', 'Instrument', 'Music'])),
     vehicules: parseBoolean(findColumnValue(row, ['Avez-vous un ou plusieurs véhicules ? ', 'Véhicules', 'Vehicules', 'Voiture', 'Vehicle'])),
     numeroPlaques: findColumnValue(row, ['Si oui, veuillez indiquer le numero de plaques ', 'Numéro plaques', 'Numero plaques', 'Plaque', 'Plate number']),
-    decouverteAgence: findColumnValue(row, ['Comment avez-vous découvert notre agence', 'Decouverte', 'Comment nous avez vous connu']),
-    typeRecherche: findColumnValue(row, ['Type recherche', 'Type', 'Recherche']) || 'Location',
+    decouverteAgence: findColumnValue(row, [
+      'Comment avez-vous découvert notre agence ?',
+      'Comment avez-vous découvert notre agence',
+      'Decouverte', 
+      'Comment nous avez vous connu'
+    ]),
+    typeRecherche: findColumnValue(row, [
+      'Sélectionnez ce qui correspond',
+      'Type recherche', 
+      'Type', 
+      'Recherche'
+    ]) || 'Location',
     typeBien: findColumnValue(row, ['Type d\'objet', 'Type objet', 'Type bien', 'Property type']) || 'Appartement',
     nombrePiecesSouhaite: findColumnValue(row, ['Nb de pcs', 'Nombre de pieces', 'Pieces souhaitees', 'Rooms']) || '2.5',
     regions: regions,
     budgetMax: budgetMax,
-    souhaitsParticuliers: findColumnValue(row, ['Souhaits particuliers', 'Souhaits', 'Remarques', 'Notes']),
+    souhaitsParticuliers: findColumnValue(row, [
+      'Souhait particulier concernant l\'étage, le quartier, la vue :',
+      'Souhaits particuliers', 
+      'Souhaits', 
+      'Remarques', 
+      'Notes'
+    ]),
     notificationJ60Envoyee: false,
   };
 
