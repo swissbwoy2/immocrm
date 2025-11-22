@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   FileText, Upload, Download, Trash2, File, 
-  Image as ImageIcon, FileSpreadsheet, AlertCircle 
+  Image as ImageIcon, FileSpreadsheet, AlertCircle, Eye 
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -46,6 +46,9 @@ export default function Documents() {
   const [loading, setLoading] = useState(true);
   const [clientId, setClientId] = useState<string | null>(null);
   const [selectedType, setSelectedType] = useState<string>('autre');
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [previewDocument, setPreviewDocument] = useState<any>(null);
 
   useEffect(() => {
     loadDocuments();
@@ -227,6 +230,67 @@ export default function Documents() {
     }
   };
 
+  const handlePreview = async (document: any) => {
+    setPreviewDocument(document);
+    
+    try {
+      // Si l'URL est une data URL (base64)
+      if (document.url.startsWith('data:')) {
+        // Pour les PDFs en base64, on doit créer un Blob URL
+        if (document.type === 'application/pdf') {
+          try {
+            const base64Data = document.url.split(',')[1];
+            const binaryString = atob(base64Data);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            
+            for (let i = 0; i < len; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+            const blobUrl = URL.createObjectURL(blob);
+            
+            setPreviewUrl(blobUrl);
+            setPreviewDialogOpen(true);
+          } catch (error) {
+            console.error('Error converting base64 to Blob:', error);
+            toast({
+              title: 'Erreur',
+              description: 'Erreur lors de la conversion du document',
+              variant: 'destructive',
+            });
+            return;
+          }
+        } else {
+          // Pour les images, utiliser directement la data URL
+          setPreviewUrl(document.url);
+          setPreviewDialogOpen(true);
+        }
+        return;
+      }
+
+      // Sinon, créer une URL signée depuis le storage
+      const { data, error } = await supabase.storage
+        .from('client-documents')
+        .createSignedUrl(document.url, 3600);
+
+      if (error) throw error;
+
+      if (data?.signedUrl) {
+        setPreviewUrl(data.signedUrl);
+        setPreviewDialogOpen(true);
+      }
+    } catch (error) {
+      console.error('Error creating preview URL:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de prévisualiser le document',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleDownload = async (doc: any) => {
     if (doc.url.startsWith('data:')) {
       const link = document.createElement('a');
@@ -370,6 +434,16 @@ export default function Documents() {
                       )}
 
                       <div className="flex gap-2">
+                        {(doc.type.includes('image') || doc.type === 'application/pdf') && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handlePreview(doc)}
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            Aperçu
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="outline"
@@ -515,6 +589,47 @@ export default function Documents() {
               {isUploading ? 'Upload en cours...' : 'Confirmer l\'upload'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog 
+        open={previewDialogOpen} 
+        onOpenChange={(open) => {
+          setPreviewDialogOpen(open);
+          if (!open && previewUrl && previewUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(previewUrl);
+          }
+        }}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{previewDocument?.nom}</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-auto max-h-[calc(90vh-120px)]">
+            {previewDocument?.type === 'application/pdf' ? (
+              <div className="space-y-4">
+                <embed
+                  src={previewUrl}
+                  type="application/pdf"
+                  className="w-full h-[600px] rounded-lg"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(previewUrl, '_blank')}
+                  className="w-full"
+                >
+                  Ouvrir dans un nouvel onglet
+                </Button>
+              </div>
+            ) : (
+              <img 
+                src={previewUrl} 
+                alt={previewDocument?.nom}
+                className="w-full h-auto rounded-lg"
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
