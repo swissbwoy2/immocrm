@@ -744,6 +744,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_client_agent_id: {
+        Args: { _client_user_id: string }
+        Returns: string
+      }
       get_current_user_id: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -753,6 +757,7 @@ export type Database = {
         Returns: boolean
       }
       is_agent_of_client: { Args: { profile_id: string }; Returns: boolean }
+      is_assigned_agent: { Args: { _client_user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "agent" | "client"
