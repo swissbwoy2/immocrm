@@ -58,17 +58,10 @@ const EnvoyerOffre = () => {
     if (agentData) {
       setAgent(agentData);
 
-      // Load agent's clients with their profiles
+      // Load agent's clients
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
-        .select(`
-          *,
-          profiles:user_id (
-            email,
-            nom,
-            prenom
-          )
-        `)
+        .select('*')
         .eq('agent_id', agentData.id);
 
       if (clientsError) {
@@ -78,9 +71,27 @@ const EnvoyerOffre = () => {
           title: "Erreur",
           description: "Erreur lors du chargement des clients"
         });
+        return;
       }
 
-      setClients(clientsData || []);
+      // Load profiles for each client
+      if (clientsData && clientsData.length > 0) {
+        const userIds = clientsData.map(c => c.user_id);
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, email, nom, prenom')
+          .in('id', userIds);
+
+        // Merge profiles with clients
+        const clientsWithProfiles = clientsData.map(client => ({
+          ...client,
+          profiles: profilesData?.find(p => p.id === client.user_id)
+        }));
+
+        setClients(clientsWithProfiles);
+      } else {
+        setClients([]);
+      }
     }
   };
 
