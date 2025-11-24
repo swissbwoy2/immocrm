@@ -63,6 +63,13 @@ const Messagerie = () => {
     }
   }, [selectedConv]);
 
+  // Fonction pour extraire le nom du client depuis le subject
+  const extractClientName = (subject: string) => {
+    // Format attendu : "Conversation avec [Nom]"
+    const match = subject?.match(/Conversation avec (.+)/i);
+    return match ? match[1] : 'Client inconnu';
+  };
+
   const loadConversations = async () => {
     const { data, error } = await supabase
       .from('conversations')
@@ -70,45 +77,32 @@ const Messagerie = () => {
       .order('last_message_at', { ascending: false });
 
     if (data) {
-      // Charger tous les clients et agents en parallèle
-      const clientIds = [...new Set(data.map(c => c.client_id).filter(Boolean))];
+      // Charger uniquement les agents (la table clients est vide)
       const agentIds = [...new Set(data.map(c => c.agent_id).filter(Boolean))];
-      
-      const { data: clientsData } = await supabase
-        .from('clients')
-        .select('id, user_id')
-        .in('id', clientIds);
       
       const { data: agentsData } = await supabase
         .from('agents')
         .select('id, user_id')
         .in('id', agentIds);
       
-      // Charger tous les profils nécessaires
-      const clientUserIds = clientsData?.map(c => c.user_id) || [];
       const agentUserIds = agentsData?.map(a => a.user_id) || [];
-      const allUserIds = [...clientUserIds, ...agentUserIds].filter(Boolean);
       
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('id, prenom, nom, email')
-        .in('id', allUserIds);
+        .in('id', agentUserIds);
       
-      // Créer les maps pour accès rapide
-      const clientsMap = new Map(clientsData?.map(c => [c.id, c.user_id]));
       const agentsMap = new Map(agentsData?.map(a => [a.id, a.user_id]));
       const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
       
-      // Enrichir les conversations avec les noms
+      // Enrichir les conversations
       const enrichedConvs = data.map(conv => {
-        const clientUserId = clientsMap.get(conv.client_id);
         const agentUserId = agentsMap.get(conv.agent_id);
-        const clientProfile = clientUserId ? profilesMap.get(clientUserId) : null;
         const agentProfile = agentUserId ? profilesMap.get(agentUserId) : null;
         
         return {
           ...conv,
-          clientName: clientProfile ? `${clientProfile.prenom} ${clientProfile.nom}` : 'Client inconnu',
+          clientName: extractClientName(conv.subject), // Extraction depuis subject
           agentName: agentProfile ? `${agentProfile.prenom} ${agentProfile.nom}` : 'Agent inconnu',
         };
       });
