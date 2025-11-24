@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, UserPlus, Upload, Trash2 } from 'lucide-react';
+import { Users, UserPlus, Upload, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,6 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CSVImportDialog } from '@/components/CSVImportDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +40,9 @@ export default function Assignations() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   const [selectedSplit, setSelectedSplit] = useState<'45-55' | '60-40'>('45-55');
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [editAgent, setEditAgent] = useState<string>('');
+  const [editSplit, setEditSplit] = useState<'45-55' | '60-40'>('45-55');
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -192,6 +196,44 @@ export default function Assignations() {
       toast({
         title: 'Erreur',
         description: 'Impossible de retirer le client',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleUpdateAssignment = async () => {
+    if (!editingClient || !editAgent) return;
+
+    try {
+      const commissionValue = editSplit === '45-55' ? 45 : 60;
+
+      const { error } = await supabase
+        .from('clients')
+        .update({
+          agent_id: editAgent,
+          commission_split: commissionValue,
+        })
+        .eq('id', editingClient.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setClients(clients.map(c => 
+        c.id === editingClient.id
+          ? { ...c, agent_id: editAgent, commission_split: commissionValue }
+          : c
+      ));
+
+      setEditingClient(null);
+      toast({
+        title: 'Modification réussie',
+        description: 'L\'assignation a été mise à jour',
+      });
+    } catch (error) {
+      console.error('Error updating assignment:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de modifier l\'assignation',
         variant: 'destructive',
       });
     }
@@ -445,6 +487,18 @@ export default function Assignations() {
                                 Split {commissionSplit}/{agencySplit}
                               </Badge>
                               <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingClient(client);
+                                  setEditAgent(client.agent_id || '');
+                                  setEditSplit(client.commission_split === 60 ? '60-40' : '45-55');
+                                }}
+                              >
+                                <Pencil className="w-4 h-4 mr-1" />
+                                Modifier
+                              </Button>
+                              <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleReassign(client.id)}
@@ -471,6 +525,60 @@ export default function Assignations() {
           </div>
         </div>
       </main>
+
+      <Dialog open={!!editingClient} onOpenChange={(open) => !open && setEditingClient(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier l'assignation</DialogTitle>
+            <DialogDescription>
+              Modifier l'agent ou le split de commission pour {editingClient && clientProfiles.get(editingClient.user_id)?.prenom}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nouvel agent</Label>
+              <Select value={editAgent} onValueChange={setEditAgent}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir un agent" />
+                </SelectTrigger>
+                <SelectContent>
+                  {agents.map(agent => (
+                    <SelectItem key={agent.id} value={agent.id}>
+                      {agent.profile.prenom} {agent.profile.nom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Commission Split</Label>
+              <RadioGroup value={editSplit} onValueChange={(v) => setEditSplit(v as '45-55' | '60-40')}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="45-55" id="edit-split-45" />
+                  <Label htmlFor="edit-split-45" className="font-normal cursor-pointer">
+                    45% Agent / 55% Agence
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="60-40" id="edit-split-60" />
+                  <Label htmlFor="edit-split-60" className="font-normal cursor-pointer">
+                    60% Agent / 40% Agence
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingClient(null)}>
+              Annuler
+            </Button>
+            <Button onClick={handleUpdateAssignment}>
+              Sauvegarder
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <CSVImportDialog
         open={importDialogOpen}
