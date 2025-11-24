@@ -37,11 +37,15 @@ export default function AgentDashboard() {
     
     try {
       // Récupérer l'agent
-      const { data: agentData } = await supabase
+      const { data: agentData, error: agentError } = await supabase
         .from('agents')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
+      
+      if (agentError) {
+        console.error('Erreur récupération agent:', agentError);
+      }
       
       setAgent(agentData);
 
