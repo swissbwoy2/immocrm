@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download } from 'lucide-react';
+import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download, Calendar } from 'lucide-react';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ export default function AgentDashboard() {
   const [renouvellements, setRenouvellements] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [visitesDelegues, setVisitesDelegues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -114,6 +115,28 @@ export default function AgentDashboard() {
           .order('date_transaction', { ascending: false });
         
         setTransactions(transactionsData || []);
+
+        // Récupérer les visites déléguées
+        const { data: visitesData } = await supabase
+          .from('visites')
+          .select(`
+            *,
+            offres (
+              adresse,
+              prix,
+              pieces,
+              surface
+            ),
+            clients (
+              user_id
+            )
+          `)
+          .eq('agent_id', agentData.id)
+          .eq('est_deleguee', true)
+          .eq('statut', 'planifiee')
+          .order('date_visite', { ascending: true });
+        
+        setVisitesDelegues(visitesData || []);
       }
     } catch (error) {
       console.error('Erreur chargement données agent:', error);
@@ -246,6 +269,79 @@ export default function AgentDashboard() {
               variant="success"
             />
           </div>
+
+          {/* Visites déléguées */}
+          {visitesDelegues.length > 0 && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <Calendar className="w-5 h-5" />
+                    🤝 Visites déléguées par vos clients
+                  </CardTitle>
+                  <Badge variant="default" className="animate-pulse">
+                    {visitesDelegues.length}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {visitesDelegues.slice(0, 3).map(visite => {
+                  const client = clients.find(c => c.id === visite.client_id);
+                  const profile = client ? profiles.get(client.user_id) : null;
+                  const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client';
+                  const dateVisite = new Date(visite.date_visite);
+                  const isToday = dateVisite.toDateString() === new Date().toDateString();
+                  const isPast = dateVisite < new Date();
+                  
+                  return (
+                    <div 
+                      key={visite.id}
+                      className={`p-4 rounded-lg border cursor-pointer transition-colors hover:bg-muted/50 ${
+                        isToday 
+                          ? 'bg-warning/10 border-warning/30' 
+                          : isPast
+                          ? 'bg-destructive/10 border-destructive/30'
+                          : 'bg-muted/30 border-border'
+                      }`}
+                      onClick={() => navigate('/agent/visites')}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-sm truncate">{visite.offres?.adresse}</p>
+                            {isToday && <Badge variant="outline" className="text-xs">Aujourd'hui</Badge>}
+                            {isPast && <Badge variant="destructive" className="text-xs">En retard</Badge>}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {visite.offres?.pieces} pièces • {visite.offres?.surface} m² • {visite.offres?.prix?.toLocaleString()} CHF
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            📅 {dateVisite.toLocaleDateString('fr-CH')} à {dateVisite.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                          <p className="text-xs text-primary font-medium mt-1">
+                            👤 Délégué par {clientName}
+                          </p>
+                        </div>
+                      </div>
+                      {visite.notes && (
+                        <div className="mt-2 pt-2 border-t">
+                          <p className="text-xs text-muted-foreground italic">"{visite.notes}"</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full mt-2"
+                  onClick={() => navigate('/agent/visites')}
+                >
+                  Voir toutes les visites déléguées
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Bouton Conclure une affaire */}
           <div className="flex justify-end">
