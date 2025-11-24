@@ -376,14 +376,20 @@ export default function Documents() {
             <CardContent className="flex items-start gap-3 pt-6">
               <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
               <div className="text-sm text-blue-800 dark:text-blue-200">
-                <p className="font-medium mb-1">Documents importants à fournir :</p>
-                <ul className="list-disc list-inside space-y-1">
-                  <li>Fiche de salaire (3 derniers mois)</li>
+                <p className="font-medium mb-2">Documents requis (Personnes salariées sans garant) :</p>
+                <ul className="list-disc list-inside space-y-1.5">
+                  <li>Formulaire de demande de recherches dûment complété et signé</li>
+                  <li>Copie de carte d'identité/passeport (si suisse) OU Copie du permis de séjour</li>
+                  <li>Copie des 3 dernières fiches de salaire et du contrat de travail</li>
                   <li>Attestation de l'employeur</li>
-                  <li>Justificatif de domicile</li>
-                  <li>Pièce d'identité</li>
-                  <li>Extrait de poursuites</li>
+                  <li>Copie de la déclaration d'impôts (si indépendant)</li>
+                  <li>Attestation de l'Office des Poursuites (antérieure à 3 mois)</li>
+                  <li>Attestation de domicile ou d'établissement de la commune actuelle</li>
+                  <li>Copie de la RC-ménage (assurance responsabilité civile)</li>
                 </ul>
+                <p className="text-xs mt-3 italic">
+                  Note : Toute personne mariée ou en partenariat enregistré devra remettre tous les documents précédemment cités.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -607,27 +613,22 @@ export default function Documents() {
             <DialogTitle>{previewDocument?.nom}</DialogTitle>
           </DialogHeader>
           <div className="overflow-auto max-h-[calc(90vh-120px)]">
-            {previewDocument?.type === 'application/pdf' ? (
-              <div className="space-y-4">
-                <embed
-                  src={previewUrl}
-                  type="application/pdf"
-                  className="w-full h-[600px] rounded-lg"
-                />
-                <Button
-                  variant="outline"
-                  onClick={() => window.open(previewUrl, '_blank')}
-                  className="w-full"
-                >
-                  Ouvrir dans un nouvel onglet
-                </Button>
-              </div>
-            ) : (
+            {previewDocument?.type.includes('pdf') ? (
+              <iframe
+                src={previewUrl}
+                className="w-full h-[600px] rounded-lg"
+                title="Document preview"
+              />
+            ) : previewDocument?.type.includes('image') ? (
               <img 
                 src={previewUrl} 
                 alt={previewDocument?.nom}
                 className="w-full h-auto rounded-lg"
               />
+            ) : (
+              <p className="text-center text-muted-foreground py-8">
+                Aperçu non disponible pour ce type de fichier
+              </p>
             )}
           </div>
         </DialogContent>
