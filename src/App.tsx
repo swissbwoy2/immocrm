@@ -28,6 +28,7 @@ import AgentOffresEnvoyees from "./pages/agent/OffresEnvoyees";
 import AgentMessagerie from "./pages/agent/Messagerie";
 import AgentVisites from "./pages/agent/Visites";
 import AgentDocuments from "./pages/agent/Documents";
+import AgentConclureAffaire from "./pages/agent/ConclureAffaire";
 import ClientDashboard from "./pages/client/Dashboard";
 import ClientDossier from "./pages/client/Dossier";
 import ClientOffresRecues from "./pages/client/OffresRecues";
@@ -75,6 +76,7 @@ const App = () => (
             <Route path="/agent/visites" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentVisites /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/documents" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDocuments /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/messagerie" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentMessagerie /></AppLayout></ProtectedRoute>} />
+            <Route path="/agent/conclure-affaire" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentConclureAffaire /></AppLayout></ProtectedRoute>} />
 
             {/* Client Routes */}
             <Route path="/client" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDashboard /></AppLayout></ProtectedRoute>} />

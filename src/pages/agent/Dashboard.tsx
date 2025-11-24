@@ -21,6 +21,7 @@ export default function AgentDashboard() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [renouvellements, setRenouvellements] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -103,6 +104,17 @@ export default function AgentDashboard() {
         
         setRenouvellements(renouvData || []);
       }
+
+      // Récupérer les transactions de l'agent
+      if (agentData) {
+        const { data: transactionsData } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('agent_id', agentData.id)
+          .order('date_transaction', { ascending: false });
+        
+        setTransactions(transactionsData || []);
+      }
     } catch (error) {
       console.error('Erreur chargement données agent:', error);
     } finally {
@@ -136,7 +148,13 @@ export default function AgentDashboard() {
     return calculateDaysElapsed(dateAjout) >= 90;
   }).length;
 
-  const projectionFinanciere = clients.map(client => {
+  // Filtrer uniquement les clients des 3 derniers mois pour la projection financière
+  const clientsActifs3Mois = clients.filter(c => {
+    const dateAjout = c.date_ajout || c.created_at;
+    return calculateDaysElapsed(dateAjout) <= 90;
+  });
+
+  const projectionFinanciere = clientsActifs3Mois.map(client => {
     const commissionBrute = client.budget_max || 0;
     const splitAgent = client.commission_split || 50;
     const partAgent = Math.round(commissionBrute * (splitAgent / 100));
@@ -149,6 +167,14 @@ export default function AgentDashboard() {
   });
 
   const totalCommissionPotentielle = projectionFinanciere.reduce((sum, p) => sum + p.partAgent, 0);
+
+  // Calculer les commissions du mois en cours
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const transactionsCeMois = transactions.filter(t => 
+    new Date(t.date_transaction) >= startOfMonth && t.statut === 'conclue'
+  );
+  const commissionsCeMois = transactionsCeMois.reduce((sum, t) => sum + (t.part_agent || 0), 0);
 
   const clientsCritiques = clients.filter(c => {
     const dateAjout = c.date_ajout || c.created_at;
@@ -179,7 +205,7 @@ export default function AgentDashboard() {
           </div>
 
           {/* KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
             <KPICard 
               title="Clients actifs" 
               value={clientsActifs} 
@@ -211,7 +237,26 @@ export default function AgentDashboard() {
               value={`${totalCommissionPotentielle.toLocaleString()} CHF`} 
               icon={DollarSign}
               variant="default"
+              subtitle="3 derniers mois"
             />
+            <KPICard 
+              title="Commissions ce mois" 
+              value={`${commissionsCeMois.toLocaleString()} CHF`} 
+              icon={CheckCircle}
+              variant="success"
+            />
+          </div>
+
+          {/* Bouton Conclure une affaire */}
+          <div className="flex justify-end">
+            <Button 
+              onClick={() => navigate('/agent/conclure-affaire')}
+              size="lg"
+              className="gap-2"
+            >
+              <CheckCircle className="w-5 h-5" />
+              Conclure une affaire
+            </Button>
           </div>
 
           {/* Projection financière & Deadlines */}
@@ -219,7 +264,7 @@ export default function AgentDashboard() {
             {/* Projection financière */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-semibold">💰 Projection financière</CardTitle>
+                <CardTitle className="text-lg font-semibold">💰 Projection financière (3 derniers mois)</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {projectionFinanciere.slice(0, 5).map(proj => {
@@ -326,6 +371,51 @@ export default function AgentDashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Affaires conclues ce mois */}
+          {transactionsCeMois.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg font-semibold">✅ Affaires conclues ce mois</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {transactionsCeMois.map(transaction => {
+                  const client = clients.find(c => c.id === transaction.client_id);
+                  const profile = client ? profiles.get(client.user_id) : null;
+                  const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client';
+                  
+                  return (
+                    <div 
+                      key={transaction.id}
+                      className="p-3 bg-success/10 border border-success/20 rounded-lg"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{clientName}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Loyer: {transaction.montant_total.toLocaleString()} CHF/an
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Conclue le {new Date(transaction.date_transaction).toLocaleDateString('fr-CH')}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-success">{transaction.part_agent.toLocaleString()} CHF</p>
+                          <p className="text-xs text-muted-foreground">Votre part</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="pt-3 border-t">
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold">Total ce mois</p>
+                    <p className="text-xl font-bold text-success">{commissionsCeMois.toLocaleString()} CHF</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Dernières offres */}
           <Card>
