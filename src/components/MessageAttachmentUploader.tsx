@@ -22,6 +22,13 @@ interface MessageAttachmentUploaderProps {
   conversationId: string;
 }
 
+const normalizeAttachmentType = (mimeType: string): 'image' | 'video' | 'document' | 'audio' => {
+  if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType.startsWith('video/')) return 'video';
+  if (mimeType.startsWith('audio/')) return 'audio';
+  return 'document'; // Par défaut pour PDF, DOC, XLSX, etc.
+};
+
 export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }: MessageAttachmentUploaderProps) => {
   const [uploading, setUploading] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -60,7 +67,7 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
 
       const attachment: AttachmentData = {
         url: urlData.publicUrl,
-        type: file.type,
+        type: normalizeAttachmentType(file.type),
         name: file.name,
         size: file.size,
       };
