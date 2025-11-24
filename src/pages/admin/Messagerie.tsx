@@ -70,54 +70,33 @@ const Messagerie = () => {
       .order('last_message_at', { ascending: false });
 
     if (data) {
-      setConversations(data);
+      // Charger tous les clients et agents en parallèle
+      const clientIds = [...new Set(data.map(c => c.client_id).filter(Boolean))];
+      const agentIds = [...new Set(data.map(c => c.agent_id).filter(Boolean))];
       
-      // Charger tous les profils nécessaires - cast text to uuid
-      const clientIds = data.map(c => c.client_id).filter(Boolean);
-      const agentIds = data.map(c => c.agent_id).filter(Boolean);
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('id, user_id')
+        .in('id', clientIds);
       
-      // Charger les clients - utiliser le cast uuid explicite pour correspondance
-      const clientQueries = clientIds.map(id => 
-        supabase
-          .from('clients')
-          .select('id, user_id')
-          .eq('id', id)
-          .single()
-      );
+      const { data: agentsData } = await supabase
+        .from('agents')
+        .select('id, user_id')
+        .in('id', agentIds);
       
-      const clientResults = await Promise.all(clientQueries);
-      const clientsData = clientResults
-        .filter(r => r.data)
-        .map(r => r.data!);
+      // Charger tous les profils nécessaires
+      const clientUserIds = clientsData?.map(c => c.user_id) || [];
+      const agentUserIds = agentsData?.map(a => a.user_id) || [];
+      const allUserIds = [...clientUserIds, ...agentUserIds].filter(Boolean);
       
-      const clientUserIds = clientsData.map(c => c.user_id);
-      
-      // Charger les agents
-      const agentQueries = agentIds.map(id => 
-        supabase
-          .from('agents')
-          .select('id, user_id')
-          .eq('id', id)
-          .single()
-      );
-      
-      const agentResults = await Promise.all(agentQueries);
-      const agentsData = agentResults
-        .filter(r => r.data)
-        .map(r => r.data!);
-      
-      const agentUserIds = agentsData.map(a => a.user_id);
-      
-      // Charger tous les profils
-      const allUserIds = [...clientUserIds, ...agentUserIds];
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('id, prenom, nom, email')
         .in('id', allUserIds);
       
-      // Créer les maps pour accès rapide - utiliser string comme clé pour correspondance
-      const clientsMap = new Map(clientsData.map(c => [c.id.toString(), c.user_id]));
-      const agentsMap = new Map(agentsData.map(a => [a.id.toString(), a.user_id]));
+      // Créer les maps pour accès rapide
+      const clientsMap = new Map(clientsData?.map(c => [c.id, c.user_id]));
+      const agentsMap = new Map(agentsData?.map(a => [a.id, a.user_id]));
       const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
       
       // Enrichir les conversations avec les noms
@@ -231,14 +210,14 @@ const Messagerie = () => {
               onClick={() => setSelectedConv(conv.id)}
               className={`p-4 border-b cursor-pointer hover:bg-muted/50 ${selectedConv === conv.id ? 'bg-muted' : ''}`}
             >
-              <div className="flex items-start justify-between mb-1">
+              <div className="flex flex-col gap-1">
                 <p className="font-medium text-sm">
-                  {conv.clientName} ↔ {conv.agentName}
+                  {conv.clientName}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Agent: {conv.agentName}
                 </p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {conv.subject || 'Conversation'}
-              </p>
               <p className="text-xs text-muted-foreground">
                 {new Date(conv.last_message_at).toLocaleDateString('fr-FR')}
               </p>
