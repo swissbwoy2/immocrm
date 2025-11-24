@@ -2,15 +2,24 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Calendar, TrendingUp, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Calendar, TrendingUp, AlertCircle, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from "@/utils/calculations";
+import { toast } from "sonner";
 
 const Mandats = () => {
   const [clients, setClients] = useState<any[]>([]);
   const [agents, setAgents] = useState<any[]>([]);
   const [renouvellements, setRenouvellements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [renewalDialogOpen, setRenewalDialogOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [renewalReason, setRenewalReason] = useState("");
+  const [isRenewing, setIsRenewing] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -39,6 +48,48 @@ const Mandats = () => {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRenewMandate = async () => {
+    if (!selectedClient) return;
+    
+    setIsRenewing(true);
+    try {
+      // 1. Créer l'entrée de renouvellement
+      const { error: renewalError } = await supabase
+        .from('renouvellements_mandat')
+        .insert({
+          client_id: selectedClient.id,
+          agent_id: selectedClient.agent_id,
+          date_ancien_mandat: selectedClient.date_ajout,
+          raison: renewalReason || 'Renouvellement standard'
+        });
+
+      if (renewalError) throw renewalError;
+
+      // 2. Mettre à jour la date_ajout du client
+      const { error: updateError } = await supabase
+        .from('clients')
+        .update({ date_ajout: new Date().toISOString() })
+        .eq('id', selectedClient.id);
+
+      if (updateError) throw updateError;
+
+      // 3. Recharger les données et fermer le dialog
+      await loadData();
+      setRenewalDialogOpen(false);
+      setRenewalReason("");
+      setSelectedClient(null);
+      
+      toast.success("Mandat renouvelé avec succès !", {
+        description: `Le mandat de ${selectedClient.profiles?.prenom} ${selectedClient.profiles?.nom} a été renouvelé pour 90 jours.`
+      });
+    } catch (error) {
+      console.error('Error renewing mandate:', error);
+      toast.error("Erreur lors du renouvellement du mandat");
+    } finally {
+      setIsRenewing(false);
     }
   };
 
@@ -155,12 +206,93 @@ const Mandats = () => {
                         <span className="font-medium ml-2">Budget:</span> CHF {client.budget_max?.toLocaleString()}
                       </div>
                     </div>
+
+                    {daysRemaining <= 30 && (
+                      <div className="pt-4 border-t">
+                        <Button
+                          onClick={() => {
+                            setSelectedClient(client);
+                            setRenewalDialogOpen(true);
+                          }}
+                          variant="outline"
+                          className="w-full sm:w-auto"
+                        >
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Renouveler le mandat
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </Card>
               );
             })}
           </div>
         </div>
+
+        <Dialog open={renewalDialogOpen} onOpenChange={setRenewalDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Renouveler le mandat</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Client: <span className="font-medium text-foreground">
+                    {selectedClient?.profiles?.prenom} {selectedClient?.profiles?.nom}
+                  </span>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Mandat actuel: <span className="font-medium text-foreground">
+                    {selectedClient?.date_ajout ? new Date(selectedClient.date_ajout).toLocaleDateString('fr-CH') : '-'}
+                  </span>
+                </p>
+                {selectedClient && calculateDaysRemaining(selectedClient.date_ajout || selectedClient.created_at) <= 0 && (
+                  <p className="text-sm text-destructive font-medium">
+                    ⚠️ Ce mandat a expiré
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reason">Raison du renouvellement (optionnel)</Label>
+                <Textarea
+                  id="reason"
+                  placeholder="Ex: Client toujours en recherche active, budget ajusté, nouvelles disponibilités..."
+                  value={renewalReason}
+                  onChange={(e) => setRenewalReason(e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-md">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  📅 Le nouveau mandat débutera aujourd'hui et sera valable pour 90 jours supplémentaires.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setRenewalDialogOpen(false);
+                  setRenewalReason("");
+                  setSelectedClient(null);
+                }}
+                disabled={isRenewing}
+              >
+                Annuler
+              </Button>
+              <Button
+                onClick={handleRenewMandate}
+                disabled={isRenewing}
+              >
+                {isRenewing ? "Renouvellement..." : "Confirmer le renouvellement"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   };
