@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Send } from "lucide-react";
+import { Send, Home, Heart, Calendar, ExternalLink, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -20,8 +21,10 @@ const removeAccents = (str: string) => {
 const Messagerie = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [conversations, setConversations] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
+  const [offresMap, setOffresMap] = useState<Record<string, any>>({});
   const [agentsMap, setAgentsMap] = useState<Record<string, string>>({});
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
@@ -142,13 +145,22 @@ const Messagerie = () => {
     try {
       const { data, error } = await supabase
         .from('messages')
-        .select('*')
+        .select('*, offres(*)')
         .eq('conversation_id', convId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
 
       setMessages(data || []);
+
+      // Create map of offers for quick access
+      const offresMapping: Record<string, any> = {};
+      data?.forEach(msg => {
+        if (msg.offre_id && msg.offres) {
+          offresMapping[msg.offre_id] = msg.offres;
+        }
+      });
+      setOffresMap(offresMapping);
 
       // Mark messages as read
       await supabase
@@ -198,11 +210,155 @@ const Messagerie = () => {
     }
   };
 
+  const handleOffreAction = async (offreId: string, action: string) => {
+    if (!user) return;
+
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id, agent_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!clientData) return;
+
+      if (action === 'interesse') {
+        await supabase
+          .from('offres')
+          .update({ statut: 'interesse' })
+          .eq('id', offreId);
+
+        await supabase.from('messages').insert({
+          conversation_id: selectedConv,
+          sender_id: user.id,
+          sender_type: 'client',
+          content: `✅ Je suis intéressé(e) par cette offre !`
+        });
+
+        toast({ title: "Succès", description: "Agent notifié de votre intérêt" });
+        
+      } else if (action === 'visite') {
+        navigate(`/client/offres-recues?offre=${offreId}&action=visite`);
+        
+      } else if (action === 'details') {
+        navigate(`/client/offres-recues?offre=${offreId}`);
+        
+      } else if (action === 'refuser') {
+        await supabase
+          .from('offres')
+          .update({ statut: 'refusee' })
+          .eq('id', offreId);
+
+        await supabase.from('messages').insert({
+          conversation_id: selectedConv,
+          sender_id: user.id,
+          sender_type: 'client',
+          content: `❌ Cette offre ne correspond pas à mes critères.`
+        });
+
+        toast({ title: "Succès", description: "Offre refusée" });
+      }
+
+      loadMessages(selectedConv!);
+      
+    } catch (error) {
+      console.error('Error handling offer action:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible d'effectuer cette action",
+        variant: "destructive"
+      });
+    }
+  };
+
   const getAgentName = (agentId: string) => {
     return agentsMap[agentId] || "Mon agent";
   };
 
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
+
+  const OffreCard = ({ offre }: { offre: any }) => (
+    <div className="mt-2 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+      <div className="flex items-start gap-2 mb-2">
+        <Home className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+        <div className="flex-1">
+          <p className="font-semibold text-sm">{offre.adresse}</p>
+          <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
+            <span>💰 {offre.prix.toLocaleString()} CHF</span>
+            <span>📐 {offre.surface} m²</span>
+            <span>🏠 {offre.pieces} pcs</span>
+          </div>
+        </div>
+      </div>
+      {offre.lien_annonce && (
+        <a 
+          href={offre.lien_annonce} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-2"
+        >
+          <ExternalLink className="h-3 w-3" />
+          Voir l'annonce complète
+        </a>
+      )}
+    </div>
+  );
+
+  const OffreActions = ({ offre, onAction }: { offre: any, onAction: (action: string) => void }) => {
+    if (!offre) return null;
+
+    if (['acceptee', 'refusee', 'candidature_deposee', 'interesse'].includes(offre.statut)) {
+      return (
+        <div className="mt-3 p-3 bg-muted rounded-lg">
+          <p className="text-xs text-muted-foreground">
+            {offre.statut === 'acceptee' && '✅ Vous avez accepté cette offre'}
+            {offre.statut === 'refusee' && '❌ Vous avez refusé cette offre'}
+            {offre.statut === 'candidature_deposee' && '📝 Candidature déposée'}
+            {offre.statut === 'interesse' && '✅ Vous êtes intéressé(e) par cette offre'}
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button 
+          size="sm" 
+          variant="default"
+          onClick={() => onAction('interesse')}
+          className="flex-1"
+        >
+          <Heart className="h-4 w-4 mr-1" />
+          Intéressé(e)
+        </Button>
+        <Button 
+          size="sm" 
+          variant="outline"
+          onClick={() => onAction('visite')}
+          className="flex-1"
+        >
+          <Calendar className="h-4 w-4 mr-1" />
+          Visite
+        </Button>
+        <Button 
+          size="sm" 
+          variant="outline"
+          onClick={() => onAction('details')}
+        >
+          <ExternalLink className="h-4 w-4 mr-1" />
+          Détails
+        </Button>
+        <Button 
+          size="sm" 
+          variant="ghost"
+          onClick={() => onAction('refuser')}
+        >
+          <X className="h-4 w-4 mr-1" />
+          Refuser
+        </Button>
+      </div>
+    );
+  };
 
   return (
     <div className="flex-1 flex overflow-hidden">
@@ -288,6 +444,15 @@ const Messagerie = () => {
                           size={msg.attachment_size || 0}
                         />
                       </div>
+                    )}
+                    {msg.offre_id && offresMap[msg.offre_id] && (
+                      <>
+                        <OffreCard offre={offresMap[msg.offre_id]} />
+                        <OffreActions 
+                          offre={offresMap[msg.offre_id]} 
+                          onAction={(action) => handleOffreAction(msg.offre_id, action)}
+                        />
+                      </>
                     )}
                   </Card>
                 ))}

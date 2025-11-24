@@ -397,6 +397,7 @@ export type Database = {
           conversation_id: string
           created_at: string | null
           id: string
+          offre_id: string | null
           read: boolean | null
           sender_id: string
           sender_type: string
@@ -410,6 +411,7 @@ export type Database = {
           conversation_id: string
           created_at?: string | null
           id?: string
+          offre_id?: string | null
           read?: boolean | null
           sender_id: string
           sender_type: string
@@ -423,6 +425,7 @@ export type Database = {
           conversation_id?: string
           created_at?: string | null
           id?: string
+          offre_id?: string | null
           read?: boolean | null
           sender_id?: string
           sender_type?: string
@@ -433,6 +436,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
             referencedColumns: ["id"]
           },
         ]
