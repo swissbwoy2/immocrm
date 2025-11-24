@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { KPICard } from '@/components/KPICard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
@@ -436,39 +437,38 @@ export default function ClientDashboard() {
 
           {/* KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-sm font-medium text-muted-foreground">Offres reçues</p>
-                <h3 className="text-2xl font-bold mt-2">{stats.offresRecues}</h3>
-                {stats.offresNonVues > 0 && (
-                  <p className="text-xs text-primary font-medium mt-1">{stats.offresNonVues} nouvelles</p>
-                )}
-              </CardContent>
-            </Card>
+            <KPICard
+              title="Offres reçues"
+              value={stats.offresRecues}
+              icon={Home}
+              subtitle={stats.offresNonVues > 0 ? `${stats.offresNonVues} nouvelles` : undefined}
+              variant={stats.offresNonVues > 0 ? 'warning' : 'default'}
+              onClick={() => navigate('/client/offres-recues')}
+            />
 
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-sm font-medium text-muted-foreground">Visites à venir</p>
-                <h3 className="text-2xl font-bold mt-2">{stats.visitesAVenir}</h3>
-              </CardContent>
-            </Card>
+            <KPICard
+              title="Visites à venir"
+              value={stats.visitesAVenir}
+              icon={Calendar}
+              onClick={() => navigate('/client/visites')}
+            />
 
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-sm font-medium text-muted-foreground">Visites effectuées</p>
-                <h3 className="text-2xl font-bold mt-2">{stats.visitesEffectuees}</h3>
-              </CardContent>
-            </Card>
+            <KPICard
+              title="Visites effectuées"
+              value={stats.visitesEffectuees}
+              icon={Calendar}
+              variant="success"
+              onClick={() => navigate('/client/visites')}
+            />
 
-            <Card>
-              <CardContent className="p-6">
-                <p className="text-sm font-medium text-muted-foreground">Candidatures</p>
-                <h3 className="text-2xl font-bold mt-2">{stats.candidaturesDeposees}</h3>
-                {stats.candidaturesEnAttente > 0 && (
-                  <p className="text-xs text-warning font-medium mt-1">{stats.candidaturesEnAttente} en attente</p>
-                )}
-              </CardContent>
-            </Card>
+            <KPICard
+              title="Candidatures"
+              value={stats.candidaturesDeposees}
+              icon={FileCheck}
+              subtitle={stats.candidaturesEnAttente > 0 ? `${stats.candidaturesEnAttente} en attente` : undefined}
+              variant={stats.candidaturesEnAttente > 0 ? 'warning' : 'default'}
+              onClick={() => navigate('/client/mes-candidatures')}
+            />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
