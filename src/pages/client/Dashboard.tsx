@@ -518,7 +518,7 @@ export default function ClientDashboard() {
                   />
                   <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>Début: {new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</span>
-                    <span>{daysRemaining > 0 ? `${daysRemaining} jours restants` : 'Expiré'}</span>
+                    <span>{daysRemaining > 0 ? `${Math.floor(daysRemaining)} jours restants` : 'Expiré'}</span>
                   </div>
                 </div>
               </CardContent>
