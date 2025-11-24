@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Send } from "lucide-react";
+import { Send, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -15,6 +15,7 @@ const Messagerie = () => {
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     loadConversations();
@@ -199,16 +200,32 @@ const Messagerie = () => {
       .eq('id', selectedConv);
   };
 
+  const filteredConversations = conversations.filter(conv => {
+    const searchTerm = searchQuery.toLowerCase();
+    const clientName = (conv.clientName || '').toLowerCase();
+    const agentName = (conv.agentName || '').toLowerCase();
+    return clientName.includes(searchTerm) || agentName.includes(searchTerm);
+  });
+
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
 
   return (
     <div className="flex-1 flex overflow-hidden">
       <div className="w-80 border-r border-border bg-card">
-        <div className="p-4 border-b">
+        <div className="p-4 border-b space-y-2">
           <h2 className="font-semibold">Conversations</h2>
+          <div className="relative">
+            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher par client ou agent..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8"
+            />
+          </div>
         </div>
         <ScrollArea className="h-[calc(100vh-73px)]">
-          {conversations.map((conv) => (
+          {filteredConversations.map((conv) => (
             <div
               key={conv.id}
               onClick={() => setSelectedConv(conv.id)}
