@@ -1,15 +1,14 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Paperclip, Image, Video, FileText, Mic, X, Upload, Loader2 } from "lucide-react";
+import { Image, Video, FileText, Mic, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface AttachmentData {
   url: string;
@@ -160,7 +159,7 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1">
       <input
         ref={fileInputRef}
         type="file"
@@ -183,31 +182,53 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
           <Mic className="h-4 w-4 animate-pulse" />
         </Button>
       ) : (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <Paperclip className="h-4 w-4" />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" title="Ajouter une pièce jointe">
+              <Image className="h-4 w-4" />
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => triggerFileInput('image/*')}>
-              <Image className="h-4 w-4 mr-2" />
-              Photo
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => triggerFileInput('video/*')}>
-              <Video className="h-4 w-4 mr-2" />
-              Vidéo
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => triggerFileInput('.pdf,.doc,.docx,.xls,.xlsx,.txt')}>
-              <FileText className="h-4 w-4 mr-2" />
-              Document
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={startRecording}>
-              <Mic className="h-4 w-4 mr-2" />
-              Message vocal
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </PopoverTrigger>
+          <PopoverContent className="w-48 p-2" align="start">
+            <div className="flex flex-col gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start"
+                onClick={() => triggerFileInput('image/*')}
+              >
+                <Image className="h-4 w-4 mr-2" />
+                Photo
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start"
+                onClick={() => triggerFileInput('video/*')}
+              >
+                <Video className="h-4 w-4 mr-2" />
+                Vidéo
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start"
+                onClick={() => triggerFileInput('.pdf,.doc,.docx,.xls,.xlsx,.txt')}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Document
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start"
+                onClick={startRecording}
+              >
+                <Mic className="h-4 w-4 mr-2" />
+                Message vocal
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
       )}
     </div>
   );
