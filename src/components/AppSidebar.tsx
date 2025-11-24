@@ -32,6 +32,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Tableau de bord', icon: LayoutDashboard, path: '/admin' },
         { name: 'Agents', icon: UserCog, path: '/admin/agents' },
         { name: 'Clients', icon: Users, path: '/admin/clients' },
+        { name: 'Mandats', icon: Clipboard, path: '/admin/mandats' },
         { name: 'Transactions', icon: DollarSign, path: '/admin/transactions' },
         { name: 'Assignations', icon: UserCog, path: '/admin/assignations' },
         { name: 'Messagerie', icon: MessageSquare, path: '/admin/messagerie' },
