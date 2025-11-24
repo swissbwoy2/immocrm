@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Square, Home, ExternalLink, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User } from "lucide-react";
+import { MapPin, Calendar, Square, Home, ExternalLink, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateChances } from "@/utils/chanceCalculator";
@@ -16,18 +16,10 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const OffresRecues = () => {
   const { toast } = useToast();
@@ -50,6 +42,7 @@ const OffresRecues = () => {
   const [clientData, setClientData] = useState<any>(null);
   const [visites, setVisites] = useState<any[]>([]);
   const [documentsStats, setDocumentsStats] = useState<any>({});
+  const [proposedSlots, setProposedSlots] = useState<any[]>([]);
 
   useEffect(() => {
     loadOffres();
@@ -580,9 +573,25 @@ const OffresRecues = () => {
     setDetailsDialogOpen(true);
   };
 
-  const handlePlanVisit = (offre: any) => {
+  const handlePlanVisit = async (offre: any) => {
     setSelectedOffre(offre);
     setSelectedDate("");
+    
+    // Charger les créneaux proposés par l'agent pour cette offre
+    const { data: slots, error } = await supabase
+      .from('visites')
+      .select('*')
+      .eq('offre_id', offre.id)
+      .eq('statut', 'planifiee')
+      .order('date_visite', { ascending: true });
+    
+    if (error) {
+      console.error('Error loading proposed slots:', error);
+      setProposedSlots([]);
+    } else {
+      setProposedSlots(slots || []);
+    }
+    
     setVisitDialogOpen(true);
   };
 
@@ -1081,7 +1090,7 @@ const OffresRecues = () => {
             <DialogHeader>
               <DialogTitle>Planifier une visite</DialogTitle>
               <DialogDescription>
-                Choisissez une date et heure pour visiter ce bien
+                Sélectionnez un créneau proposé par votre agent
               </DialogDescription>
             </DialogHeader>
             
@@ -1092,69 +1101,109 @@ const OffresRecues = () => {
                   <p className="text-2xl font-bold text-primary">CHF {selectedOffre.prix.toLocaleString()}/mois</p>
                 </div>
 
-                <div className="space-y-3">
-                  <div>
-                    <Label>Date de visite</Label>
-                    <CalendarComponent
-                      mode="single"
-                      selected={selectedDate ? new Date(selectedDate) : undefined}
-                      onSelect={(date) => {
-                        if (date) {
-                          // Garder l'heure existante si déjà définie, sinon 10h00
-                          const time = selectedDate ? new Date(selectedDate).toTimeString().slice(0, 5) : "10:00";
-                          const newDate = new Date(date);
-                          const [hours, minutes] = time.split(':');
-                          newDate.setHours(parseInt(hours), parseInt(minutes));
-                          setSelectedDate(newDate.toISOString());
-                        }
-                      }}
-                      disabled={(date) => date < new Date() || date < new Date(new Date().setHours(0, 0, 0, 0))}
-                      className="rounded-md border pointer-events-auto"
-                    />
-                  </div>
-
-                  <div>
-                    <Label>Heure de visite</Label>
-                    <Select 
-                      value={selectedDate ? new Date(selectedDate).toTimeString().slice(0, 5) : ""}
-                      onValueChange={(time) => {
-                        const date = selectedDate ? new Date(selectedDate) : new Date();
-                        const [hours, minutes] = time.split(':');
-                        date.setHours(parseInt(hours), parseInt(minutes));
-                        setSelectedDate(date.toISOString());
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner une heure" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="09:00">09:00</SelectItem>
-                        <SelectItem value="10:00">10:00</SelectItem>
-                        <SelectItem value="11:00">11:00</SelectItem>
-                        <SelectItem value="12:00">12:00</SelectItem>
-                        <SelectItem value="13:00">13:00</SelectItem>
-                        <SelectItem value="14:00">14:00</SelectItem>
-                        <SelectItem value="15:00">15:00</SelectItem>
-                        <SelectItem value="16:00">16:00</SelectItem>
-                        <SelectItem value="17:00">17:00</SelectItem>
-                        <SelectItem value="18:00">18:00</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
+                <div className="space-y-4">
+                  <Label className="text-base font-semibold">
+                    {proposedSlots.length > 0 
+                      ? "Choisissez un créneau proposé par votre agent" 
+                      : "Aucun créneau proposé"}
+                  </Label>
+                  
+                  {proposedSlots.length === 0 ? (
+                    <div className="p-6 bg-muted rounded-lg text-center space-y-3">
+                      <Calendar className="w-12 h-12 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        Votre agent n'a pas encore proposé de créneaux de visite pour cette offre.
+                      </p>
+                      <Button 
+                        variant="default"
+                        size="sm" 
+                        className="mt-2"
+                        onClick={() => {
+                          setVisitDialogOpen(false);
+                          handleDeleguerVisite(selectedOffre);
+                        }}
+                      >
+                        <User className="mr-2 h-4 w-4" />
+                        Demander à l'agent d'organiser
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {proposedSlots.map((slot) => (
+                        <Button
+                          key={slot.id}
+                          variant={selectedDate === slot.date_visite ? "default" : "outline"}
+                          className="w-full justify-start text-left h-auto py-4"
+                          onClick={() => setSelectedDate(slot.date_visite)}
+                        >
+                          <div className="flex items-start gap-3 w-full">
+                            <Calendar className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="font-semibold">
+                                {new Date(slot.date_visite).toLocaleDateString('fr-FR', {
+                                  weekday: 'long',
+                                  day: 'numeric',
+                                  month: 'long',
+                                  year: 'numeric'
+                                })}
+                              </div>
+                              <div className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                                <Clock className="h-3 w-3" />
+                                {new Date(slot.date_visite).toLocaleTimeString('fr-FR', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                            </div>
+                            {selectedDate === slot.date_visite && (
+                              <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
+                            )}
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {proposedSlots.length > 0 && (
+                    <div className="text-xs text-muted-foreground pt-3 border-t space-y-2">
+                      <p className="flex items-center gap-1">
+                        <Info className="h-3 w-3" />
+                        Aucun créneau ne vous convient ?
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full"
+                        onClick={() => {
+                          setVisitDialogOpen(false);
+                          handleDeleguerVisite(selectedOffre);
+                        }}
+                      >
+                        <User className="mr-2 h-4 w-4" />
+                        Déléguer l'organisation à votre agent
+                      </Button>
+                    </div>
+                  )}
+                  
                   {selectedDate && (
-                    <div className="p-3 bg-muted rounded-md">
+                    <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+                      <p className="text-sm font-medium mb-1">✅ Créneau sélectionné :</p>
                       <p className="text-sm">
-                        <strong>Visite prévue le :</strong><br />
-                        {new Date(selectedDate).toLocaleDateString('fr-FR', { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })} à {new Date(selectedDate).toLocaleTimeString('fr-FR', { 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}
+                        <strong>
+                          {new Date(selectedDate).toLocaleDateString('fr-FR', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}
+                        </strong>
+                        {' à '}
+                        <strong>
+                          {new Date(selectedDate).toLocaleTimeString('fr-FR', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </strong>
                       </p>
                     </div>
                   )}
