@@ -11,6 +11,11 @@ import { useToast } from "@/hooks/use-toast";
 import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploader";
 import { MessageAttachment } from "@/components/MessageAttachment";
 
+// Fonction pour retirer les accents des chaînes pour une recherche plus flexible
+const removeAccents = (str: string) => {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+};
+
 const Messagerie = () => {
   const { user } = useAuth();
   const { toast } = useToast();

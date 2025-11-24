@@ -11,6 +11,11 @@ import { useToast } from "@/hooks/use-toast";
 import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploader";
 import { MessageAttachment } from "@/components/MessageAttachment";
 
+// Fonction pour retirer les accents des chaînes pour une recherche plus flexible
+const removeAccents = (str: string) => {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+};
+
 const Messagerie = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -195,8 +200,9 @@ const Messagerie = () => {
   };
 
   const filteredConversations = conversations.filter(conv => {
-    const clientName = getClientName(conv.client_id).toLowerCase();
-    return clientName.includes(searchQuery.toLowerCase());
+    const searchTerm = removeAccents(searchQuery.toLowerCase());
+    const clientName = removeAccents(getClientName(conv.client_id).toLowerCase());
+    return clientName.includes(searchTerm);
   });
 
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
