@@ -432,6 +432,87 @@ const OffresRecues = () => {
     }
   };
 
+  const handlePostulerDirect = async (offre: any) => {
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id, agent_id')
+        .eq('user_id', user!.id)
+        .maybeSingle();
+
+      if (!clientData) {
+        toast({
+          title: 'Erreur',
+          description: 'Client introuvable',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // 1. Créer une candidature avec dossier_complet: false
+      await supabase.from('candidatures').insert({
+        offre_id: offre.id,
+        client_id: clientData.id,
+        message_client: 'Le client demande l\'aide de l\'agent pour postuler à ce bien.',
+        dossier_complet: false
+      });
+
+      // 2. Marquer l'offre comme candidature en cours
+      await supabase
+        .from('offres')
+        .update({ statut: 'candidature_deposee' })
+        .eq('id', offre.id);
+
+      // 3. Notifier l'agent via messagerie
+      if (clientData.agent_id) {
+        let { data: conv } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('client_id', clientData.id)
+          .eq('agent_id', clientData.agent_id)
+          .maybeSingle();
+
+        if (!conv) {
+          const { data: newConv } = await supabase
+            .from('conversations')
+            .insert({
+              client_id: clientData.id,
+              agent_id: clientData.agent_id,
+              subject: 'Messages'
+            })
+            .select()
+            .maybeSingle();
+          conv = newConv;
+        }
+
+        if (conv) {
+          await supabase.from('messages').insert({
+            conversation_id: conv.id,
+            sender_id: user!.id,
+            sender_type: 'client',
+            content: `🆘 **DEMANDE D'AIDE POUR POSTULATION**\n\n🏠 **Bien concerné:**\n- Adresse: ${offre.adresse}\n- Loyer: ${offre.prix.toLocaleString()} CHF/mois\n- Type: ${offre.type_bien || 'N/A'}\n\n💼 **Le client souhaite que vous postuliez pour lui à ce bien.**\n\nMerci de prendre en charge la postulation avec les documents du client disponibles dans son dossier.`
+          });
+        }
+      }
+
+      await loadOffres();
+      refreshData();
+
+      toast({
+        title: '✅ Demande envoyée',
+        description: 'Votre agent a été notifié et s\'occupera de la postulation pour vous.'
+      });
+
+    } catch (error) {
+      console.error('Error requesting direct application:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible d\'envoyer la demande',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const confirmCandidature = async () => {
     if (!selectedOffre || !accepteConditions) {
       toast({
@@ -817,9 +898,9 @@ const OffresRecues = () => {
                         <Calendar className="mr-2 h-4 w-4" />
                         Déléguer à l'agent
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => handleDeposerCandidature(offre)}>
-                        <FileCheck className="mr-2 h-4 w-4" />
-                        Postuler direct
+                      <Button size="sm" variant="secondary" onClick={() => handlePostulerDirect(offre)}>
+                        <User className="mr-2 h-4 w-4" />
+                        Demander aide agent
                       </Button>
                       {offre.statut !== 'interesse' && (
                         <>
