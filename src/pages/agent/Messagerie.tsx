@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploader";
 import { MessageAttachment } from "@/components/MessageAttachment";
 import { NewConversationDialog } from "@/components/NewConversationDialog";
+import { parseMessageWithLinks } from "@/lib/utils";
 
 // Fonction pour retirer les accents des chaînes pour une recherche plus flexible
 const removeAccents = (str: string) => {
@@ -286,7 +287,25 @@ const Messagerie = () => {
                         {new Date(msg.created_at).toLocaleString('fr-FR')}
                       </p>
                     </div>
-                    {msg.content && <p className="text-sm whitespace-pre-wrap">{msg.content}</p>}
+                    {msg.content && (
+                      <div className="text-sm whitespace-pre-wrap">
+                        {parseMessageWithLinks(msg.content).map((part, index) => 
+                          part.type === 'link' ? (
+                            <a
+                              key={index}
+                              href={part.content}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              {part.content}
+                            </a>
+                          ) : (
+                            <span key={index}>{part.content}</span>
+                          )
+                        )}
+                      </div>
+                    )}
                     {msg.attachment_url && (
                       <div className="mt-2">
                         <MessageAttachment

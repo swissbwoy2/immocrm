@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploader";
 import { MessageAttachment } from "@/components/MessageAttachment";
+import { parseMessageWithLinks } from "@/lib/utils";
 
 // Fonction pour retirer les accents des chaînes pour une recherche plus flexible
 const removeAccents = (str: string) => {
@@ -273,7 +274,25 @@ const Messagerie = () => {
                         {new Date(msg.created_at).toLocaleString('fr-FR')}
                       </p>
                     </div>
-                    {msg.content && <p className="text-sm whitespace-pre-line">{msg.content}</p>}
+                    {msg.content && (
+                      <div className="text-sm whitespace-pre-line">
+                        {parseMessageWithLinks(msg.content).map((part, index) => 
+                          part.type === 'link' ? (
+                            <a
+                              key={index}
+                              href={part.content}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              {part.content}
+                            </a>
+                          ) : (
+                            <span key={index}>{part.content}</span>
+                          )
+                        )}
+                      </div>
+                    )}
                     {msg.attachment_url && (
                       <div className="mt-2">
                         <MessageAttachment
