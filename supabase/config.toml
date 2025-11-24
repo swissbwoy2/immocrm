@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.invite-client]
 verify_jwt = false
+
+[functions.migrate-documents-to-storage]
+verify_jwt = false
