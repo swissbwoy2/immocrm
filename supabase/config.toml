@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.create-client-auth]
 verify_jwt = false
+
+[functions.invite-client]
+verify_jwt = false

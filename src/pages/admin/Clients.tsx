@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Calendar, Users, DollarSign, Upload, Trash2, Pencil } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, DollarSign, Upload, Trash2, Pencil, Send } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { useNavigate } from "react-router-dom";
@@ -61,6 +61,7 @@ const Clients = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
+  const [invitingClientId, setInvitingClientId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -261,6 +262,34 @@ const Clients = () => {
     }
   };
 
+  const handleInviteClient = async (email: string, clientId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      setInvitingClientId(clientId);
+
+      const { error } = await supabase.functions.invoke('invite-client', {
+        body: { email, clientId }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Invitation envoyée',
+        description: `Une invitation a été envoyée à ${email}`,
+      });
+    } catch (error) {
+      console.error('Error inviting client:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible d\'envoyer l\'invitation',
+        variant: 'destructive',
+      });
+    } finally {
+      setInvitingClientId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -409,6 +438,18 @@ const Clients = () => {
               >
                 {/* Boutons d'actions */}
                 <div className="absolute top-2 right-2 flex gap-1">
+                  {/* Bouton Renvoyer invitation */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
+                    onClick={(e) => handleInviteClient(profile.email, client.id, e)}
+                    disabled={invitingClientId === client.id}
+                    title="Renvoyer l'invitation"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+
                   {/* Bouton Modifier */}
                   <Button
                     variant="ghost"
