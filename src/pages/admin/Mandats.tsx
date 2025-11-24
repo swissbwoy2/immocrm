@@ -18,10 +18,10 @@ const Mandats = () => {
 
   const loadData = async () => {
     try {
-      const { data: clientsData } = await supabase
-        .from('clients')
-        .select('*')
-        .order('date_ajout', { ascending: false });
+    const { data: clientsData } = await supabase
+      .from('clients')
+      .select('*, profiles!clients_user_id_fkey(prenom, nom, email)')
+      .order('date_ajout', { ascending: false });
 
       const { data: agentsData } = await supabase
         .from('agents')
@@ -98,7 +98,11 @@ const Mandats = () => {
                     <div className="flex items-start justify-between">
                       <div>
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-xl font-semibold">Client</h3>
+                          <h3 className="text-xl font-semibold">
+                            {client.profiles 
+                              ? `${client.profiles.prenom} ${client.profiles.nom}` 
+                              : 'Client (sans profil)'}
+                          </h3>
                           <Badge variant={status.variant}>{status.label}</Badge>
                           {renewed && (
                             <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-200">
