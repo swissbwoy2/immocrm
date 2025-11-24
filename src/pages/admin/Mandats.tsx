@@ -116,10 +116,10 @@ const Mandats = () => {
                       </div>
                       <div className="text-right">
                         <div className={`text-3xl font-bold ${status.color}`}>
-                          J+{daysElapsed}
+                          J+{Math.floor(daysElapsed)}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {daysRemaining > 0 ? `${daysRemaining} jours restants` : "Mandat expiré"}
+                          {daysRemaining > 0 ? `${Math.floor(daysRemaining)} jours restants` : "Mandat expiré"}
                         </p>
                       </div>
                     </div>
