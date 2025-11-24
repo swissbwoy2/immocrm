@@ -525,12 +525,12 @@ export default function ClientDashboard() {
             </Card>
 
             {/* Mon agent */}
-            {agent && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>👤 Mon agent</CardTitle>
-                </CardHeader>
-                <CardContent>
+            <Card>
+              <CardHeader>
+                <CardTitle>👤 Mon agent</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {agent ? (
                   <div className="flex items-start gap-4">
                     <div className="p-3 bg-primary/10 rounded-full">
                       <User className="w-6 h-6 text-primary" />
@@ -550,9 +550,19 @@ export default function ClientDashboard() {
                       </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                ) : (
+                  <div className="text-center py-6">
+                    <div className="p-4 bg-muted/50 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4">
+                      <User className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <p className="text-muted-foreground font-medium">Aucun agent assigné</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Un agent vous sera bientôt attribué pour vous accompagner dans votre recherche.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Prochaines visites */}
