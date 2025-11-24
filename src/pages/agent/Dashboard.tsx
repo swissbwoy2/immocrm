@@ -266,30 +266,32 @@ export default function AgentDashboard() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg font-semibold">💰 Projection financière (3 derniers mois)</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {projectionFinanciere.slice(0, 5).map(proj => {
-                  const client = clients.find(c => c.id === proj.clientId);
-                  const profile = client ? profiles.get(client.user_id) : null;
-                  const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client';
-                  
-                  return (
-                    <div key={proj.clientId} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{clientName}</p>
-                        <p className="text-xs text-muted-foreground">Budget: {proj.budgetMax.toLocaleString()} CHF</p>
+              <CardContent>
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+                  {projectionFinanciere.map(proj => {
+                    const client = clients.find(c => c.id === proj.clientId);
+                    const profile = client ? profiles.get(client.user_id) : null;
+                    const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client';
+                    
+                    return (
+                      <div key={proj.clientId} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{clientName}</p>
+                          <p className="text-xs text-muted-foreground">Budget: {proj.budgetMax.toLocaleString()} CHF</p>
+                        </div>
+                        <div className="text-right ml-3">
+                          <p className="font-bold text-success">{proj.partAgent.toLocaleString()} CHF</p>
+                          <p className="text-xs text-muted-foreground">{proj.splitAgent}%</p>
+                        </div>
                       </div>
-                      <div className="text-right ml-3">
-                        <p className="font-bold text-success">{proj.partAgent.toLocaleString()} CHF</p>
-                        <p className="text-xs text-muted-foreground">{proj.splitAgent}%</p>
-                      </div>
+                    );
+                  })}
+                  {projectionFinanciere.length === 0 && (
+                    <div className="text-center py-6 text-muted-foreground text-sm">
+                      Aucune projection disponible
                     </div>
-                  );
-                })}
-                {projectionFinanciere.length === 0 && (
-                  <div className="text-center py-6 text-muted-foreground text-sm">
-                    Aucune projection disponible
-                  </div>
-                )}
+                  )}
+                </div>
                 {projectionFinanciere.length > 0 && (
                   <div className="pt-3 border-t">
                     <div className="flex items-center justify-between">
@@ -306,68 +308,70 @@ export default function AgentDashboard() {
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg font-semibold">⚠️ Deadlines critiques</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {clientsCritiques.length > 0 ? (
-                  clientsCritiques.slice(0, 5).map(client => {
-                    const dateAjout = client.date_ajout || client.created_at;
-                    const daysElapsed = calculateDaysElapsed(dateAjout);
-                    const daysRemaining = 90 - daysElapsed;
-                    const isExpired = daysRemaining <= 0;
-                    const isWarning = daysRemaining > 0 && daysRemaining <= 30;
-                    const profile = profiles.get(client.user_id);
-                    const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client';
+              <CardContent>
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+                  {clientsCritiques.length > 0 ? (
+                    clientsCritiques.map(client => {
+                      const dateAjout = client.date_ajout || client.created_at;
+                      const daysElapsed = calculateDaysElapsed(dateAjout);
+                      const daysRemaining = 90 - daysElapsed;
+                      const isExpired = daysRemaining <= 0;
+                      const isWarning = daysRemaining > 0 && daysRemaining <= 30;
+                      const profile = profiles.get(client.user_id);
+                      const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client';
 
-                    return (
-                      <div 
-                        key={client.id}
-                        className={`p-3 rounded-lg border ${
-                          isExpired 
-                            ? 'bg-destructive/10 border-destructive/20' 
-                            : isWarning 
-                            ? 'bg-warning/10 border-warning/20'
-                            : 'bg-muted/30 border-border'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">{clientName}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              Inscrit le {new Date(dateAjout).toLocaleDateString('fr-CH')}
-                            </p>
+                      return (
+                        <div 
+                          key={client.id}
+                          className={`p-3 rounded-lg border ${
+                            isExpired 
+                              ? 'bg-destructive/10 border-destructive/20' 
+                              : isWarning 
+                              ? 'bg-warning/10 border-warning/20'
+                              : 'bg-muted/30 border-border'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm truncate">{clientName}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Inscrit le {new Date(dateAjout).toLocaleDateString('fr-CH')}
+                              </p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className={`text-sm font-bold ${
+                                isExpired ? 'text-destructive' : isWarning ? 'text-warning' : 'text-foreground'
+                              }`}>
+                                {isExpired ? 'Expiré' : `${daysRemaining}j`}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {isExpired ? 'J+90' : 'restants'}
+                              </p>
+                            </div>
                           </div>
-                          <div className="text-right flex-shrink-0">
-                            <p className={`text-sm font-bold ${
-                              isExpired ? 'text-destructive' : isWarning ? 'text-warning' : 'text-foreground'
-                            }`}>
-                              {isExpired ? 'Expiré' : `${daysRemaining}j`}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {isExpired ? 'J+90' : 'restants'}
-                            </p>
-                          </div>
+                          {isExpired && (
+                            <div className="mt-2 pt-2 border-t border-destructive/20">
+                              <p className="text-xs text-destructive font-medium">⚠️ Mandat expiré - Action requise</p>
+                            </div>
+                          )}
+                          {isWarning && !isExpired && (
+                            <div className="mt-2 pt-2 border-t border-warning/20">
+                              <p className="text-xs text-warning font-medium">⏰ Moins de 30 jours restants</p>
+                            </div>
+                          )}
                         </div>
-                        {isExpired && (
-                          <div className="mt-2 pt-2 border-t border-destructive/20">
-                            <p className="text-xs text-destructive font-medium">⚠️ Mandat expiré - Action requise</p>
-                          </div>
-                        )}
-                        {isWarning && !isExpired && (
-                          <div className="mt-2 pt-2 border-t border-warning/20">
-                            <p className="text-xs text-warning font-medium">⏰ Moins de 30 jours restants</p>
-                          </div>
-                        )}
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
+                        <CheckCircle className="w-6 h-6" />
                       </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
-                      <CheckCircle className="w-6 h-6" />
+                      <p className="text-sm font-medium">Aucune deadline critique</p>
+                      <p className="text-xs mt-1">Tous vos clients sont à jour</p>
                     </div>
-                    <p className="text-sm font-medium">Aucune deadline critique</p>
-                    <p className="text-xs mt-1">Tous vos clients sont à jour</p>
-                  </div>
-                )}
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
