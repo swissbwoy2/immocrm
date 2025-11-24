@@ -20,6 +20,7 @@ export default function AgentDashboard() {
   const [offres, setOffres] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [renouvellements, setRenouvellements] = useState<any[]>([]);
+  const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -50,6 +51,20 @@ export default function AgentDashboard() {
         .select('*');
       
       setClients(clientsData || []);
+
+      // Récupérer les profils des clients
+      if (clientsData && clientsData.length > 0) {
+        const clientUserIds = clientsData.map(c => c.user_id);
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, prenom, nom')
+          .in('id', clientUserIds);
+        
+        if (profilesData) {
+          const profilesMap = new Map(profilesData.map(p => [p.id, p]));
+          setProfiles(profilesMap);
+        }
+      }
 
       // Récupérer les offres de l'agent
       if (agentData) {
@@ -205,10 +220,13 @@ export default function AgentDashboard() {
               <CardContent className="space-y-3">
                 {projectionFinanciere.slice(0, 5).map(proj => {
                   const client = clients.find(c => c.id === proj.clientId);
+                  const profile = client ? profiles.get(client.user_id) : null;
+                  const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client';
+                  
                   return (
                     <div key={proj.clientId} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">Client</p>
+                        <p className="font-medium text-sm truncate">{clientName}</p>
                         <p className="text-xs text-muted-foreground">Budget: {proj.budgetMax.toLocaleString()} CHF</p>
                       </div>
                       <div className="text-right ml-3">
@@ -247,6 +265,8 @@ export default function AgentDashboard() {
                     const daysRemaining = 90 - daysElapsed;
                     const isExpired = daysRemaining <= 0;
                     const isWarning = daysRemaining > 0 && daysRemaining <= 30;
+                    const profile = profiles.get(client.user_id);
+                    const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client';
 
                     return (
                       <div 
@@ -261,7 +281,7 @@ export default function AgentDashboard() {
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">Client</p>
+                            <p className="font-medium text-sm truncate">{clientName}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">
                               Inscrit le {new Date(dateAjout).toLocaleDateString('fr-CH')}
                             </p>
