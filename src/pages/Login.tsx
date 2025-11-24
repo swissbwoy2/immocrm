@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -13,6 +14,9 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, userRole } = useAuth();
@@ -64,6 +68,35 @@ export default function Login() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendInvitation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResendLoading(true);
+
+    try {
+      const { error } = await supabase.functions.invoke('invite-client', {
+        body: { email: resendEmail }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Invitation envoyée',
+        description: `Un email d'invitation a été envoyé à ${resendEmail}. Vérifiez votre boîte de réception.`,
+      });
+
+      setDialogOpen(false);
+      setResendEmail('');
+    } catch (error: any) {
+      toast({
+        title: 'Erreur',
+        description: error.message || 'Impossible d\'envoyer l\'invitation',
+        variant: 'destructive',
+      });
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -120,6 +153,39 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Connexion...' : 'Se connecter'}
             </Button>
+
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="link" className="w-full text-sm text-muted-foreground" type="button">
+                  Vous n'avez pas reçu votre invitation ?
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Renvoyer l'invitation</DialogTitle>
+                  <DialogDescription>
+                    Entrez votre adresse email pour recevoir un nouveau lien d'invitation.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleResendInvitation} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="resend-email">Email</Label>
+                    <Input
+                      id="resend-email"
+                      type="email"
+                      placeholder="votre.email@example.ch"
+                      value={resendEmail}
+                      onChange={(e) => setResendEmail(e.target.value)}
+                      required
+                      disabled={resendLoading}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={resendLoading}>
+                    {resendLoading ? 'Envoi...' : 'Renvoyer l\'invitation'}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
           </form>
         </CardContent>
       </Card>
