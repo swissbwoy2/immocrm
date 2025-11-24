@@ -64,10 +64,11 @@ export default function ConclureAffaire() {
       
       setAgent(agentData);
 
-      // Récupérer les clients assignés
+      // Récupérer les clients assignés à cet agent
       const { data: clientsData } = await supabase
         .from('clients')
         .select('*')
+        .eq('agent_id', agentData.id)
         .eq('statut', 'actif');
       
       setClients(clientsData || []);
@@ -151,11 +152,11 @@ export default function ConclureAffaire() {
       });
 
       navigate('/agent');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur création transaction:', error);
       toast({
         title: "Erreur",
-        description: "Impossible d'enregistrer la transaction",
+        description: error.message || "Impossible d'enregistrer la transaction",
         variant: "destructive",
       });
     } finally {
