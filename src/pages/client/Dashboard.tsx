@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send } from 'lucide-react';
+import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,17 +49,40 @@ export default function ClientDashboard() {
 
   const loadData = async () => {
     if (!user) {
+      console.error('LoadData called but user is null');
+      setLoading(false);
+      return;
+    }
+
+    console.log('Loading data for user:', user.id);
+
+    // Vérifier la session
+    const { data: { session } } = await supabase.auth.getSession();
+    console.log('Current session:', {
+      hasSession: !!session,
+      userId: session?.user?.id,
+      matchesUser: session?.user?.id === user.id
+    });
+
+    if (!session) {
+      console.error('No active session found');
       setLoading(false);
       return;
     }
 
     try {
-      // Load client
+      // Load client avec log détaillé
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
+
+      console.log('Client query result:', {
+        found: !!clientData,
+        error: clientError,
+        userId: user.id
+      });
 
       if (clientError) {
         console.error('Error loading client:', clientError);
@@ -67,7 +90,7 @@ export default function ClientDashboard() {
       }
       
       if (!clientData) {
-        console.log('No client data found for user');
+        console.error('No client data found for user:', user.id);
         setLoading(false);
         return;
       }
@@ -276,22 +299,25 @@ export default function ClientDashboard() {
     if (!user) return;
     
     try {
+      // Utiliser upsert pour gérer le cas où le client existe déjà
       const { error } = await supabase
         .from('clients')
-        .insert({
+        .upsert({
           user_id: user.id,
           date_ajout: new Date().toISOString(),
           statut: 'actif',
           priorite: 'moyenne'
+        }, {
+          onConflict: 'user_id'
         });
 
       if (error) throw error;
 
-      toast.success('Votre profil client a été initialisé');
+      toast.success('Votre profil client a été chargé');
       loadData();
     } catch (error) {
       console.error('Error initializing profile:', error);
-      toast.error('Impossible d\'initialiser votre profil');
+      toast.error('Impossible de charger votre profil');
     }
   };
 
@@ -301,13 +327,19 @@ export default function ClientDashboard() {
         <Card className="max-w-md">
           <CardContent className="pt-6 text-center">
             <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-orange-500" />
-            <h2 className="text-xl font-semibold mb-2">Profil incomplet</h2>
+            <h2 className="text-xl font-semibold mb-2">Profil non chargé</h2>
             <p className="text-muted-foreground mb-4">
-              Votre profil client n'est pas encore configuré. Cliquez sur le bouton ci-dessous pour l'initialiser.
+              Impossible de charger votre profil client. Cliquez sur le bouton ci-dessous pour réessayer.
             </p>
-            <Button onClick={handleInitializeProfile}>
-              Initialiser mon profil
-            </Button>
+            <div className="space-y-2">
+              <Button onClick={loadData} className="w-full">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Rafraîchir
+              </Button>
+              <Button onClick={handleInitializeProfile} variant="outline" className="w-full">
+                Forcer le chargement
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
