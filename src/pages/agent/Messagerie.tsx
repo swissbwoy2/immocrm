@@ -8,6 +8,8 @@ import { Send, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploader";
+import { MessageAttachment } from "@/components/MessageAttachment";
 
 const Messagerie = () => {
   const { user } = useAuth();
@@ -19,6 +21,12 @@ const Messagerie = () => {
   const [agentId, setAgentId] = useState<string | null>(null);
   const [clientsMap, setClientsMap] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [pendingAttachment, setPendingAttachment] = useState<{
+    url: string;
+    type: string;
+    name: string;
+    size: number;
+  } | null>(null);
 
   useEffect(() => {
     loadAgentAndConversations();
@@ -146,7 +154,7 @@ const Messagerie = () => {
   };
 
   const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedConv || !user || !agentId) return;
+    if ((!messageText.trim() && !pendingAttachment) || !selectedConv || !user || !agentId) return;
 
     try {
       const { error } = await supabase
@@ -155,7 +163,11 @@ const Messagerie = () => {
           conversation_id: selectedConv,
           sender_id: user.id,
           sender_type: 'agent',
-          content: messageText,
+          content: messageText || null,
+          attachment_url: pendingAttachment?.url || null,
+          attachment_type: pendingAttachment?.type || null,
+          attachment_name: pendingAttachment?.name || null,
+          attachment_size: pendingAttachment?.size || null,
         });
 
       if (error) throw error;
@@ -167,6 +179,7 @@ const Messagerie = () => {
         .eq('id', selectedConv);
 
       setMessageText("");
+      setPendingAttachment(null);
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -253,20 +266,36 @@ const Messagerie = () => {
                         {new Date(msg.created_at).toLocaleString('fr-FR')}
                       </p>
                     </div>
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    {msg.content && <p className="text-sm whitespace-pre-wrap">{msg.content}</p>}
+                    {msg.attachment_url && (
+                      <div className="mt-2">
+                        <MessageAttachment
+                          url={msg.attachment_url}
+                          type={msg.attachment_type || ''}
+                          name={msg.attachment_name || 'Fichier'}
+                          size={msg.attachment_size || 0}
+                        />
+                      </div>
+                    )}
                   </Card>
                 ))}
               </div>
             </ScrollArea>
             <div className="p-4 border-t bg-card">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Écrire un message..."
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                />
-                <Button onClick={handleSendMessage}>
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <MessageAttachmentUploader
+                    conversationId={selectedConv}
+                    onAttachmentReady={setPendingAttachment}
+                  />
+                  <Input
+                    placeholder="Écrire un message..."
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  />
+                </div>
+                <Button onClick={handleSendMessage} disabled={!messageText.trim() && !pendingAttachment}>
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
