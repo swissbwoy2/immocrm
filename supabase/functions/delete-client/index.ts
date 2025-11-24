@@ -31,6 +31,49 @@ serve(async (req) => {
       }
     );
 
+    // Get client ID first to delete related data
+    const { data: clientData } = await supabaseAdmin
+      .from('clients')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+
+    if (clientData) {
+      // Get conversation IDs for this client
+      const { data: conversations } = await supabaseAdmin
+        .from('conversations')
+        .select('id')
+        .eq('client_id', clientData.id);
+
+      if (conversations && conversations.length > 0) {
+        const conversationIds = conversations.map(c => c.id);
+        
+        // Delete messages in these conversations
+        const { error: msgError } = await supabaseAdmin
+          .from('messages')
+          .delete()
+          .in('conversation_id', conversationIds);
+
+        if (msgError) {
+          console.error('Messages delete error:', msgError);
+        } else {
+          console.log('Messages deleted');
+        }
+      }
+
+      // Delete conversations
+      const { error: convError } = await supabaseAdmin
+        .from('conversations')
+        .delete()
+        .eq('client_id', clientData.id);
+
+      if (convError) {
+        console.error('Conversation delete error:', convError);
+      } else {
+        console.log('Conversations deleted');
+      }
+    }
+
     // Delete from clients table
     const { error: clientError } = await supabaseAdmin
       .from('clients')
