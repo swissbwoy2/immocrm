@@ -84,12 +84,12 @@ serve(async (req) => {
 
     console.log('Role assigned');
 
-    // Create agent record
+    // Create agent record with 'en_attente' status until they accept invitation
     const { error: agentError } = await supabaseAdmin
       .from('agents')
       .insert({
         user_id: authData.user.id,
-        statut: 'actif',
+        statut: 'en_attente',
         nombre_clients_assignes: 0,
       });
 

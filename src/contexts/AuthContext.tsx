@@ -62,6 +62,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
       setUserRole(data.role as 'admin' | 'agent' | 'client');
+
+      // If this is an agent, activate them on first login
+      if (data.role === 'agent') {
+        const { data: agentData } = await supabase
+          .from('agents')
+          .select('statut')
+          .eq('user_id', userId)
+          .single();
+
+        if (agentData?.statut === 'en_attente') {
+          await supabase
+            .from('agents')
+            .update({ statut: 'actif' })
+            .eq('user_id', userId);
+        }
+      }
     } catch (error) {
       console.error('Error fetching user role:', error);
       setUserRole(null);
