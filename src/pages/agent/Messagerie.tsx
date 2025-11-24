@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploader";
 import { MessageAttachment } from "@/components/MessageAttachment";
+import { NewConversationDialog } from "@/components/NewConversationDialog";
 
 // Fonction pour retirer les accents des chaînes pour une recherche plus flexible
 const removeAccents = (str: string) => {
@@ -207,11 +208,24 @@ const Messagerie = () => {
 
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
 
+  const handleConversationCreated = async (conversationId: string) => {
+    await loadAgentAndConversations();
+    setSelectedConv(conversationId);
+  };
+
   return (
     <div className="flex-1 flex overflow-hidden">
       <div className="w-80 border-r border-border bg-card">
         <div className="p-4 border-b space-y-2">
-          <h2 className="font-semibold">Mes Conversations</h2>
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="font-semibold">Mes Conversations</h2>
+            {agentId && (
+              <NewConversationDialog 
+                agentId={agentId} 
+                onConversationCreated={handleConversationCreated}
+              />
+            )}
+          </div>
           <div className="relative">
             <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
