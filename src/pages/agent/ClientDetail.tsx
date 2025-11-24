@@ -8,9 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, 
-  FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download, Eye
+  FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download, Eye, Upload
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -96,6 +97,10 @@ export default function ClientDetail() {
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [documentType, setDocumentType] = useState<string>('autre');
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -211,6 +216,55 @@ export default function ClientDetail() {
         description: 'Impossible de mettre à jour les informations',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleUploadDocument = async () => {
+    if (!selectedFile || !client) return;
+    
+    setIsUploading(true);
+    try {
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `${client.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('client-documents')
+        .upload(fileName, selectedFile);
+
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase
+        .from('documents')
+        .insert({
+          user_id: client.user_id,
+          client_id: client.id,
+          nom: selectedFile.name,
+          type: selectedFile.type,
+          type_document: documentType,
+          taille: selectedFile.size,
+          url: fileName,
+        });
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: 'Document uploadé',
+        description: 'Le document a été ajouté avec succès',
+      });
+
+      setUploadDialogOpen(false);
+      setSelectedFile(null);
+      setDocumentType('autre');
+      loadClientData();
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible d\'uploader le document',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -752,10 +806,73 @@ export default function ClientDetail() {
       {/* Documents section */}
       <Card className="col-span-full">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Documents du client ({documents.length})
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Documents du client ({documents.length})
+            </CardTitle>
+            <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Ajouter un document
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Ajouter un document</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="file">Fichier</Label>
+                    <Input
+                      id="file"
+                      type="file"
+                      onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                    />
+                    {selectedFile && (
+                      <p className="text-sm text-muted-foreground">
+                        {selectedFile.name} ({(selectedFile.size / 1024).toFixed(2)} KB)
+                      </p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="doc-type">Type de document</Label>
+                    <select
+                      id="doc-type"
+                      value={documentType}
+                      onChange={(e) => setDocumentType(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="fiche_salaire">Fiche de salaire</option>
+                      <option value="extrait_poursuites">Extrait des poursuites</option>
+                      <option value="piece_identite">Pièce d'identité</option>
+                      <option value="autre">Autre</option>
+                    </select>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setUploadDialogOpen(false);
+                        setSelectedFile(null);
+                      }}
+                      disabled={isUploading}
+                    >
+                      Annuler
+                    </Button>
+                    <Button
+                      onClick={handleUploadDocument}
+                      disabled={!selectedFile || isUploading}
+                    >
+                      {isUploading ? 'Upload en cours...' : 'Uploader'}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
           {documents.length > 0 ? (
