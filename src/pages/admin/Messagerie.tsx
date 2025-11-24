@@ -10,6 +10,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploader";
 import { MessageAttachment } from "@/components/MessageAttachment";
 
+// Fonction pour retirer les accents des chaînes pour une recherche plus flexible
+const removeAccents = (str: string) => {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+};
+
 const Messagerie = () => {
   const { user } = useAuth();
   const [conversations, setConversations] = useState<any[]>([]);
@@ -187,9 +192,9 @@ const Messagerie = () => {
   };
 
   const filteredConversations = conversations.filter(conv => {
-    const searchTerm = searchQuery.toLowerCase();
-    const clientName = (conv.clientName || '').toLowerCase();
-    const agentName = (conv.agentName || '').toLowerCase();
+    const searchTerm = removeAccents(searchQuery.toLowerCase());
+    const clientName = removeAccents((conv.clientName || '').toLowerCase());
+    const agentName = removeAccents((conv.agentName || '').toLowerCase());
     return clientName.includes(searchTerm) || agentName.includes(searchTerm);
   });
 
