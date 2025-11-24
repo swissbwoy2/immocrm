@@ -313,6 +313,27 @@ export default function Dossier() {
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   };
 
+  const calculateAnciennete = (dateEngagement: string | null, ancienneteMois: number | null) => {
+    if (ancienneteMois) {
+      const years = Math.floor(ancienneteMois / 12);
+      const months = ancienneteMois % 12;
+      if (years > 0) return `${years} an${years > 1 ? 's' : ''} ${months} mois`;
+      return `${months} mois`;
+    }
+    
+    if (dateEngagement) {
+      const start = new Date(dateEngagement);
+      const now = new Date();
+      const diffMs = now.getTime() - start.getTime();
+      const years = Math.floor(diffMs / (365.25 * 24 * 60 * 60 * 1000));
+      const months = Math.floor((diffMs % (365.25 * 24 * 60 * 60 * 1000)) / (30.44 * 24 * 60 * 60 * 1000));
+      if (years > 0) return `${years} an${years > 1 ? 's' : ''} ${months} mois`;
+      return `${months} mois`;
+    }
+    
+    return null;
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -476,6 +497,75 @@ export default function Dossier() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Détails des charges */}
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="text-base">📊 Détails des charges</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Loyer actuel</p>
+                    <p className="font-medium">
+                      {client.loyer_actuel ? `${client.loyer_actuel.toLocaleString('fr-CH')} CHF/mois` : '-'}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm text-muted-foreground">Charges mensuelles</p>
+                    <p className="font-medium">
+                      {client.charges_mensuelles ? `${client.charges_mensuelles.toLocaleString('fr-CH')} CHF/mois` : '-'}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm text-muted-foreground">Charges extraordinaires</p>
+                    <p className="font-medium">
+                      {client.charges_extraordinaires 
+                        ? `Oui${client.montant_charges_extra ? ` (${client.montant_charges_extra.toLocaleString('fr-CH')} CHF)` : ''}`
+                        : 'Non'}
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm text-muted-foreground">Autres crédits en cours</p>
+                    <p className="font-medium">{client.autres_credits ? 'Oui' : 'Non'}</p>
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm text-muted-foreground">Apport personnel disponible</p>
+                    <p className="font-medium">
+                      {client.apport_personnel ? `${client.apport_personnel.toLocaleString('fr-CH')} CHF` : '-'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Solvabilité */}
+            <Card className="mt-4">
+              <CardHeader>
+                <CardTitle className="text-base">⚠️ Solvabilité</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">Poursuites / Actes de défaut</p>
+                    <Badge variant={client.poursuites ? "destructive" : "secondary"} className={client.poursuites ? "" : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"}>
+                      {client.poursuites ? '⚠️ Oui' : '✅ Aucune'}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">Sous curatelle</p>
+                    <Badge variant={client.curatelle ? "destructive" : "secondary"} className={client.curatelle ? "" : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"}>
+                      {client.curatelle ? '⚠️ Oui' : '✅ Non'}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Informations personnelles */}
@@ -522,23 +612,59 @@ export default function Dossier() {
           <div>
             <h2 className="text-xl font-semibold mb-4">💼 Situation professionnelle</h2>
             <Card>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                <div className="flex items-start gap-3">
-                  <Briefcase className="w-5 h-5 text-muted-foreground mt-1" />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Profession</p>
-                    <p className="font-medium">{client.profession || 'Non renseigné'}</p>
+              <CardHeader>
+                <CardTitle className="text-base">👔 Emploi et revenus</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-start gap-3">
+                    <Briefcase className="w-5 h-5 text-muted-foreground mt-1" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Profession</p>
+                      <p className="font-medium">{client.profession || '-'}</p>
+                    </div>
                   </div>
-                </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground">Secteur d'activité</p>
-                  <p className="font-medium">{client.secteur_activite || 'Non renseigné'}</p>
-                </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Employeur</p>
+                    <p className="font-medium">{client.employeur || '-'}</p>
+                  </div>
 
-                <div>
-                  <p className="text-sm text-muted-foreground">Revenu mensuel net</p>
-                  <p className="font-medium">{(client.revenus_mensuels || 0).toLocaleString('fr-CH')} CHF</p>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Secteur d'activité</p>
+                    <p className="font-medium">{client.secteur_activite || '-'}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">Type de contrat</p>
+                    <p className="font-medium">{client.type_contrat || '-'}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">Date d'engagement</p>
+                    <p className="font-medium">
+                      {client.date_engagement 
+                        ? new Date(client.date_engagement).toLocaleDateString('fr-CH')
+                        : '-'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ancienneté</p>
+                    <p className="font-medium">
+                      {calculateAnciennete(client.date_engagement, client.anciennete_mois) || '-'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">Source des revenus</p>
+                    <p className="font-medium">{client.source_revenus || '-'}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">Revenu mensuel net</p>
+                    <p className="font-medium">{(client.revenus_mensuels || 0).toLocaleString('fr-CH')} CHF</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
