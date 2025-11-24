@@ -178,6 +178,7 @@ const EnvoyerOffre = () => {
           sender_id: agent.id,
           sender_type: 'agent',
           content: messageContent,
+          offre_id: offre.id,
         });
 
       if (messageError) throw messageError;
