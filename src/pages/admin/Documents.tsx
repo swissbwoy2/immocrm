@@ -100,6 +100,33 @@ export default function AdminDocuments() {
     setSelectedDocument(document);
     
     try {
+      // Gérer les data URLs (documents en base64 dans la DB)
+      if (document.url.startsWith('data:')) {
+        if (document.type === 'application/pdf') {
+          // Convertir base64 en Blob pour les PDFs
+          const base64Data = document.url.split(',')[1];
+          const binaryString = atob(base64Data);
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          const blobUrl = URL.createObjectURL(blob);
+          
+          setPreviewUrl(blobUrl);
+          setPreviewDialogOpen(true);
+        } else {
+          // Pour les images, utiliser directement la data URL
+          setPreviewUrl(document.url);
+          setPreviewDialogOpen(true);
+        }
+        return;
+      }
+
+      // Créer une signed URL pour les fichiers dans Storage
       const { data } = await supabase.storage
         .from('client-documents')
         .createSignedUrl(document.url, 3600);
@@ -116,6 +143,17 @@ export default function AdminDocuments() {
 
   const handleDownload = async (document: any) => {
     try {
+      // Gérer les data URLs (documents en base64 dans la DB)
+      if (document.url.startsWith('data:')) {
+        const link = window.document.createElement('a');
+        link.href = document.url;
+        link.download = document.nom;
+        link.click();
+        toast.success('Téléchargement démarré');
+        return;
+      }
+
+      // Créer une signed URL pour les fichiers dans Storage
       const { data } = await supabase.storage
         .from('client-documents')
         .createSignedUrl(document.url, 60);
@@ -276,7 +314,13 @@ export default function AdminDocuments() {
       </div>
 
       {/* Dialog d'aperçu */}
-      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+      <Dialog open={previewDialogOpen} onOpenChange={(open) => {
+        setPreviewDialogOpen(open);
+        // Libérer le Blob URL quand on ferme pour éviter les fuites mémoire
+        if (!open && previewUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(previewUrl);
+        }
+      }}>
         <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>{selectedDocument?.nom}</DialogTitle>
