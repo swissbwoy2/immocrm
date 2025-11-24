@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Calendar, TrendingUp, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { calculateDaysElapsed, calculateDaysRemaining } from "@/utils/calculations";
+import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from "@/utils/calculations";
 
 const Mandats = () => {
   const [clients, setClients] = useState<any[]>([]);
@@ -119,7 +119,7 @@ const Mandats = () => {
                           J+{Math.floor(daysElapsed)}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {daysRemaining > 0 ? `${Math.floor(daysRemaining)} jours restants` : "Mandat expiré"}
+                          {daysRemaining > 0 ? formatTimeRemaining(daysRemaining) : "Mandat expiré"}
                         </p>
                       </div>
                     </div>
