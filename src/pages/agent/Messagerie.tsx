@@ -215,7 +215,7 @@ const Messagerie = () => {
   };
 
   return (
-    <div className="flex-1 flex overflow-hidden">
+    <div className="flex-1 flex overflow-hidden h-[calc(100vh-64px)]">
       <div className="w-80 border-r border-border bg-card">
         <div className="p-4 border-b space-y-2">
           <div className="flex items-center justify-between mb-2">
@@ -267,15 +267,15 @@ const Messagerie = () => {
         </ScrollArea>
       </div>
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0">
         {selectedConv ? (
           <>
-            <div className="p-4 border-b bg-card">
+            <div className="p-4 border-b bg-card flex-shrink-0">
               <h2 className="font-semibold">
                 {getClientName(conversations.find(c => c.id === selectedConv)?.client_id)}
               </h2>
             </div>
-            <ScrollArea className="flex-1 p-4">
+            <div className="flex-1 overflow-y-auto p-4">
               <div className="space-y-4">
                 {selectedMessages.map((msg) => (
                   <Card key={msg.id} className={`p-4 ${msg.sender_type === 'agent' ? 'ml-auto max-w-[70%] bg-primary/10' : 'mr-auto max-w-[70%]'}`}>
@@ -319,7 +319,7 @@ const Messagerie = () => {
                   </Card>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
             <div className="p-4 border-t bg-card">
               <div className="flex gap-2 items-end">
                 <div className="flex-1">
