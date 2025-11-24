@@ -25,8 +25,8 @@ export default function AdminDashboard() {
 
   const [agents, setAgents] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
-  const [transactions] = useState<any[]>([]);
-  const [offres] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [offres, setOffres] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -84,6 +84,31 @@ export default function AdminDashboard() {
       })) || [];
       
       setClients(transformedClients);
+
+      // Load transactions
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('*');
+
+      if (transactionsError) throw transactionsError;
+
+      const transformedTransactions = transactionsData?.map(t => ({
+        ...t,
+        dateConclusion: t.date_transaction,
+        partAgence: t.part_agence,
+        commissionTotale: t.commission_totale,
+      })) || [];
+
+      setTransactions(transformedTransactions);
+
+      // Load offres
+      const { data: offresData, error: offresError } = await supabase
+        .from('offres')
+        .select('*');
+
+      if (offresError) throw offresError;
+
+      setOffres(offresData || []);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -104,20 +129,20 @@ export default function AdminDashboard() {
   const totalOffresEnvoyees = offres.length;
   const transactionsEnCours = transactions.filter(t => t.statut === 'en_cours').length;
   const transactionsConcluesMois = transactions.filter(t => {
-    if (t.statut !== 'conclue' || !t.dateConclusion) return false;
-    const conclusionDate = new Date(t.dateConclusion);
+    if (t.statut !== 'conclue' || !t.date_transaction) return false;
+    const conclusionDate = new Date(t.date_transaction);
     const now = new Date();
     return conclusionDate.getMonth() === now.getMonth() && conclusionDate.getFullYear() === now.getFullYear();
   }).length;
   const deadlinesCritiques = clients.filter(c => calculateDaysElapsed(c.dateInscription) >= 90).length;
   const revenusAgenceMois = transactions
     .filter(t => {
-      if (t.statut !== 'conclue' || !t.dateConclusion) return false;
-      const conclusionDate = new Date(t.dateConclusion);
+      if (t.statut !== 'conclue' || !t.date_transaction) return false;
+      const conclusionDate = new Date(t.date_transaction);
       const now = new Date();
       return conclusionDate.getMonth() === now.getMonth() && conclusionDate.getFullYear() === now.getFullYear();
     })
-    .reduce((sum, t) => sum + t.partAgence, 0);
+    .reduce((sum, t) => sum + (t.part_agence || 0), 0);
 
   const clientsSansAgent = clients.filter(c => !c.agentId).length;
   const clientsJ60 = clients.filter(c => {
