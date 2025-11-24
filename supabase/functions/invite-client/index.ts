@@ -34,40 +34,60 @@ serve(async (req) => {
       }
     );
 
-    // Check if user exists in profiles
-    const { data: existingProfile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('id, email')
-      .eq('email', email)
-      .single();
+    // Check if user already exists in auth.users
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(u => u.email === email);
 
-    if (profileError && profileError.code !== 'PGRST116') {
-      throw profileError;
-    }
+    console.log('Existing user:', existingUser ? { id: existingUser.id, email: existingUser.email } : null);
 
-    console.log('Existing profile:', existingProfile);
+    let userId: string;
+    let message: string;
 
-    // Invite user by email (this will send an invitation email)
-    // If user already exists, it will resend the invitation
-    const { data: authData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-      email,
-      {
-        redirectTo: 'https://immocrm.lovable.app/first-login',
+    if (existingUser) {
+      // User exists - send password reset email instead
+      console.log('User exists, sending password reset email');
+      
+      const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(
+        email,
+        {
+          redirectTo: 'https://immocrm.lovable.app/first-login',
+        }
+      );
+
+      if (resetError) {
+        console.error('Error sending reset email:', resetError);
+        throw resetError;
       }
-    );
 
-    if (inviteError) {
-      console.error('Error inviting user:', inviteError);
-      throw inviteError;
+      userId = existingUser.id;
+      message = 'Email de réinitialisation envoyé avec succès';
+    } else {
+      // New user - invite them
+      console.log('New user, sending invitation');
+      
+      const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+        email,
+        {
+          redirectTo: 'https://immocrm.lovable.app/first-login',
+        }
+      );
+
+      if (inviteError) {
+        console.error('Error inviting user:', inviteError);
+        throw inviteError;
+      }
+
+      userId = inviteData.user.id;
+      message = 'Invitation envoyée avec succès';
     }
 
-    console.log('Invitation sent successfully');
+    console.log('Email sent successfully to user:', userId);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Invitation envoyée avec succès',
-        user: authData.user 
+        message: message,
+        userId: userId
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
