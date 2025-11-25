@@ -20,6 +20,7 @@ import AdminTransactions from "./pages/admin/Transactions";
 import AdminDocuments from "./pages/admin/Documents";
 import AdminMessagerie from "./pages/admin/Messagerie";
 import AdminMigrateDocuments from "./pages/admin/MigrateDocuments";
+import AdminNotifications from "./pages/admin/Notifications";
 import AgentDashboard from "./pages/agent/Dashboard";
 import AgentMesClients from "./pages/agent/MesClients";
 import AgentClientDetail from "./pages/agent/ClientDetail";
@@ -29,6 +30,7 @@ import AgentMessagerie from "./pages/agent/Messagerie";
 import AgentVisites from "./pages/agent/Visites";
 import AgentDocuments from "./pages/agent/Documents";
 import AgentConclureAffaire from "./pages/agent/ConclureAffaire";
+import AgentNotifications from "./pages/agent/Notifications";
 import ClientDashboard from "./pages/client/Dashboard";
 import ClientDossier from "./pages/client/Dossier";
 import ClientOffresRecues from "./pages/client/OffresRecues";
@@ -37,6 +39,7 @@ import ClientMesCandidatures from "./pages/client/MesCandidatures";
 import ClientMessagerie from "./pages/client/Messagerie";
 import ClientDocuments from "./pages/client/Documents";
 import ClientVisitesDeleguees from "./pages/client/VisitesDeleguees";
+import ClientNotifications from "./pages/client/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -66,6 +69,7 @@ const App = () => (
             <Route path="/admin/documents" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminDocuments /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/migrate-documents" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMigrateDocuments /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/messagerie" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMessagerie /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminNotifications /></AppLayout></ProtectedRoute>} />
 
             {/* Agent Routes */}
             <Route path="/agent" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDashboard /></AppLayout></ProtectedRoute>} />
@@ -77,6 +81,7 @@ const App = () => (
             <Route path="/agent/documents" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDocuments /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/messagerie" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentMessagerie /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/conclure-affaire" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentConclureAffaire /></AppLayout></ProtectedRoute>} />
+            <Route path="/agent/notifications" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentNotifications /></AppLayout></ProtectedRoute>} />
 
             {/* Client Routes */}
             <Route path="/client" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDashboard /></AppLayout></ProtectedRoute>} />
@@ -87,6 +92,7 @@ const App = () => (
             <Route path="/client/mes-candidatures" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientMesCandidatures /></AppLayout></ProtectedRoute>} />
             <Route path="/client/messagerie" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientMessagerie /></AppLayout></ProtectedRoute>} />
             <Route path="/client/documents" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDocuments /></AppLayout></ProtectedRoute>} />
+            <Route path="/client/notifications" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientNotifications /></AppLayout></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

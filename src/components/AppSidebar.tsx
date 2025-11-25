@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -24,42 +24,46 @@ import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect } from 'react';
+import { NotificationBadge } from './NotificationBadge';
+import { NotificationBell } from './NotificationBell';
+import { useNotifications } from '@/hooks/useNotifications';
 
 const getMenuForRole = (role: string) => {
   switch (role) {
     case 'admin':
       return [
-        { name: 'Tableau de bord', icon: LayoutDashboard, path: '/admin' },
-        { name: 'Agents', icon: UserCog, path: '/admin/agents' },
-        { name: 'Clients', icon: Users, path: '/admin/clients' },
-        { name: 'Mandats', icon: Clipboard, path: '/admin/mandats' },
-        { name: 'Transactions', icon: DollarSign, path: '/admin/transactions' },
-        { name: 'Assignations', icon: UserCog, path: '/admin/assignations' },
-        { name: 'Messagerie', icon: MessageSquare, path: '/admin/messagerie' },
-        { name: 'Documents', icon: FileText, path: '/admin/documents' },
-        { name: 'Paramètres', icon: Settings, path: '/admin/parametres' },
+        { name: 'Tableau de bord', icon: LayoutDashboard, path: '/admin', notifKey: null },
+        { name: 'Agents', icon: UserCog, path: '/admin/agents', notifKey: null },
+        { name: 'Clients', icon: Users, path: '/admin/clients', notifKey: 'new_client_activated' },
+        { name: 'Mandats', icon: Clipboard, path: '/admin/mandats', notifKey: null },
+        { name: 'Transactions', icon: DollarSign, path: '/admin/transactions', notifKey: null },
+        { name: 'Assignations', icon: UserCog, path: '/admin/assignations', notifKey: null },
+        { name: 'Messagerie', icon: MessageSquare, path: '/admin/messagerie', notifKey: 'new_message' },
+        { name: 'Documents', icon: FileText, path: '/admin/documents', notifKey: null },
+        { name: 'Notifications', icon: Bell, path: '/admin/notifications', notifKey: 'total' },
       ];
     case 'agent':
       return [
-        { name: 'Tableau de bord', icon: LayoutDashboard, path: '/agent' },
-        { name: 'Mes clients', icon: Users, path: '/agent/mes-clients' },
-        { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre' },
-        { name: 'Offres envoyées', icon: Mail, path: '/agent/offres-envoyees' },
-        { name: 'Visites', icon: Calendar, path: '/agent/visites' },
-        { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie' },
-        { name: 'Documents', icon: FileText, path: '/agent/documents' },
-        { name: 'Paramètres', icon: Settings, path: '/agent/parametres' },
+        { name: 'Tableau de bord', icon: LayoutDashboard, path: '/agent', notifKey: null },
+        { name: 'Mes clients', icon: Users, path: '/agent/mes-clients', notifKey: 'client_assigned' },
+        { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre', notifKey: null },
+        { name: 'Offres envoyées', icon: Mail, path: '/agent/offres-envoyees', notifKey: null },
+        { name: 'Visites', icon: Calendar, path: '/agent/visites', notifKey: 'new_visit' },
+        { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie', notifKey: 'new_message' },
+        { name: 'Documents', icon: FileText, path: '/agent/documents', notifKey: null },
+        { name: 'Notifications', icon: Bell, path: '/agent/notifications', notifKey: 'total' },
       ];
     case 'client':
       return [
-        { name: 'Dashboard', icon: LayoutDashboard, path: '/client' },
-        { name: 'Mon dossier', icon: User, path: '/client/dossier' },
-        { name: 'Offres reçues', icon: Home, path: '/client/offres-recues' },
-        { name: 'Prochaines visites', icon: Calendar, path: '/client/visites' },
-        { name: 'Visites déléguées', icon: HandHeart, path: '/client/visites-deleguees' },
-        { name: 'Mes candidatures', icon: Clipboard, path: '/client/mes-candidatures' },
-        { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie' },
-        { name: 'Mes documents', icon: FileText, path: '/client/documents' },
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/client', notifKey: null },
+        { name: 'Mon dossier', icon: User, path: '/client/dossier', notifKey: null },
+        { name: 'Offres reçues', icon: Home, path: '/client/offres-recues', notifKey: 'new_offer' },
+        { name: 'Prochaines visites', icon: Calendar, path: '/client/visites', notifKey: 'new_visit' },
+        { name: 'Visites déléguées', icon: HandHeart, path: '/client/visites-deleguees', notifKey: null },
+        { name: 'Mes candidatures', icon: Clipboard, path: '/client/mes-candidatures', notifKey: null },
+        { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
+        { name: 'Mes documents', icon: FileText, path: '/client/documents', notifKey: null },
+        { name: 'Notifications', icon: Bell, path: '/client/notifications', notifKey: 'total' },
       ];
     default:
       return [];
@@ -72,6 +76,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { user, userRole } = useAuth();
   const [profile, setProfile] = useState<any>(null);
+  const { counts } = useNotifications();
   
   useEffect(() => {
     if (user) {
@@ -106,6 +111,11 @@ export function AppSidebar() {
     window.location.href = '/login';
   };
 
+  const getNotificationCount = (notifKey: string | null): number => {
+    if (!notifKey) return 0;
+    return counts[notifKey as keyof typeof counts] || 0;
+  };
+
   return (
     <Sidebar collapsible="icon">
       {/* Logo */}
@@ -117,11 +127,12 @@ export function AppSidebar() {
             className="h-10 w-auto object-contain flex-shrink-0"
           />
           {!collapsed && (
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h1 className="text-lg font-bold text-sidebar-foreground truncate">ImmoCRM</h1>
               <p className="text-xs text-sidebar-foreground/60 truncate">Immo-Rama.ch</p>
             </div>
           )}
+          {!collapsed && <NotificationBell />}
         </div>
       </SidebarHeader>
 
@@ -141,37 +152,50 @@ export function AppSidebar() {
           {!collapsed && <SidebarGroupLabel>Navigation</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
-              {menu.map((item) => (
-                <SidebarMenuItem key={item.path}>
-                  {collapsed ? (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <NavLink
-                          to={item.path}
-                          end={item.path === '/admin' || item.path === '/agent' || item.path === '/client'}
-                          className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors"
-                          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-                        >
-                          <item.icon className="w-5 h-5 flex-shrink-0" />
-                        </NavLink>
-                      </TooltipTrigger>
-                      <TooltipContent side="right">
-                        <p>{item.name}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  ) : (
-                    <NavLink
-                      to={item.path}
-                      end={item.path === '/admin' || item.path === '/agent' || item.path === '/client'}
-                      className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-                    >
-                      <item.icon className="w-5 h-5 flex-shrink-0" />
-                      <span className="truncate">{item.name}</span>
-                    </NavLink>
-                  )}
-                </SidebarMenuItem>
-              ))}
+              {menu.map((item) => {
+                const notifCount = getNotificationCount(item.notifKey);
+                
+                return (
+                  <SidebarMenuItem key={item.path}>
+                    {collapsed ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <NavLink
+                            to={item.path}
+                            end={item.path === '/admin' || item.path === '/agent' || item.path === '/client'}
+                            className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors relative"
+                            activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                          >
+                            <item.icon className="w-5 h-5 flex-shrink-0" />
+                            {notifCount > 0 && (
+                              <NotificationBadge 
+                                count={notifCount} 
+                                className="absolute -top-1 -right-1"
+                              />
+                            )}
+                          </NavLink>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          <p>{item.name} {notifCount > 0 && `(${notifCount})`}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <NavLink
+                        to={item.path}
+                        end={item.path === '/admin' || item.path === '/agent' || item.path === '/client'}
+                        className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors"
+                        activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                      >
+                        <item.icon className="w-5 h-5 flex-shrink-0" />
+                        <span className="truncate flex-1">{item.name}</span>
+                        {notifCount > 0 && (
+                          <NotificationBadge count={notifCount} />
+                        )}
+                      </NavLink>
+                    )}
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
