@@ -447,6 +447,50 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          link: string | null
+          message: string | null
+          metadata: Json | null
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          link?: string | null
+          message?: string | null
+          metadata?: Json | null
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          link?: string | null
+          message?: string | null
+          metadata?: Json | null
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offres: {
         Row: {
           adresse: string
@@ -781,6 +825,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_notification: {
+        Args: {
+          p_link?: string
+          p_message: string
+          p_metadata?: Json
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       get_client_agent_id: {
         Args: { _client_user_id: string }
         Returns: string
