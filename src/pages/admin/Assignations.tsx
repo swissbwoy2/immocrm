@@ -77,11 +77,11 @@ export default function Assignations() {
       const clientProfilesMap = new Map(clientProfilesData?.map(p => [p.id, p]) || []);
       setClientProfiles(clientProfilesMap);
 
-      // Load agents
+      // Load agents (actif ou en_attente)
       const { data: agentsData, error: agentsError } = await supabase
         .from('agents')
         .select('id, user_id, statut')
-        .eq('statut', 'actif');
+        .in('statut', ['actif', 'en_attente']);
 
       if (agentsError) throw agentsError;
 
