@@ -35,11 +35,14 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
     return `${bytes} B`;
   };
 
-  const isPDF = type === 'application/pdf' || name.toLowerCase().endsWith('.pdf');
+  const isPDF = type === 'application/pdf' || name.toLowerCase().endsWith('.pdf') || type === 'document' && name.toLowerCase().endsWith('.pdf');
   const isOfficeDoc = /\.(doc|docx|xls|xlsx|ppt|pptx)$/i.test(name);
+  const isImage = type.startsWith('image/') || type === 'image';
+  const isVideo = type.startsWith('video/') || type === 'video' || /\.(mov|mp4|webm|avi|mkv)$/i.test(name);
+  const isAudio = type.startsWith('audio/') || type === 'audio' || /\.(mp3|wav|ogg|m4a|webm)$/i.test(name);
 
   // Image
-  if (type.startsWith('image/')) {
+  if (isImage) {
     return (
       <>
         <div 
@@ -80,7 +83,15 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
   }
 
   // Video
-  if (type.startsWith('video/')) {
+  if (isVideo) {
+    // Determine video MIME type from extension if not provided
+    const videoMimeType = type.startsWith('video/') ? type : 
+      name.toLowerCase().endsWith('.mov') ? 'video/quicktime' :
+      name.toLowerCase().endsWith('.mp4') ? 'video/mp4' :
+      name.toLowerCase().endsWith('.webm') ? 'video/webm' :
+      name.toLowerCase().endsWith('.avi') ? 'video/x-msvideo' :
+      'video/mp4';
+
     return (
       <>
         <Card className="max-w-md overflow-hidden">
@@ -90,7 +101,7 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
               className="w-full max-h-64 object-contain bg-black"
               preload="metadata"
             >
-              <source src={url} type={type} />
+              <source src={url} type={videoMimeType} />
               Votre navigateur ne supporte pas la lecture vidéo.
             </video>
           </div>
@@ -100,10 +111,10 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
               <p className="text-xs text-muted-foreground">{formatSize(size)}</p>
             </div>
             <div className="flex gap-1">
-              <Button variant="ghost" size="sm" onClick={() => setPreviewOpen(true)}>
+              <Button variant="ghost" size="sm" onClick={() => setPreviewOpen(true)} title="Plein écran">
                 <Maximize2 className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={handleDownload}>
+              <Button variant="ghost" size="sm" onClick={handleDownload} title="Télécharger">
                 <Download className="h-4 w-4" />
               </Button>
             </div>
@@ -117,7 +128,7 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
               autoPlay
               className="w-full max-h-[85vh] object-contain bg-black"
             >
-              <source src={url} type={type} />
+              <source src={url} type={videoMimeType} />
             </video>
           </DialogContent>
         </Dialog>
@@ -126,7 +137,14 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
   }
 
   // Audio
-  if (type.startsWith('audio/')) {
+  if (isAudio) {
+    const audioMimeType = type.startsWith('audio/') ? type :
+      name.toLowerCase().endsWith('.mp3') ? 'audio/mpeg' :
+      name.toLowerCase().endsWith('.wav') ? 'audio/wav' :
+      name.toLowerCase().endsWith('.ogg') ? 'audio/ogg' :
+      name.toLowerCase().endsWith('.m4a') ? 'audio/mp4' :
+      'audio/webm';
+
     return (
       <Card className="p-4 max-w-sm">
         <div className="flex items-center gap-3 mb-2">
@@ -142,7 +160,7 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
           </Button>
         </div>
         <audio controls className="w-full h-10">
-          <source src={url} type={type} />
+          <source src={url} type={audioMimeType} />
           Votre navigateur ne supporte pas la lecture audio.
         </audio>
       </Card>
