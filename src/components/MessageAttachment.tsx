@@ -19,6 +19,7 @@ interface MessageAttachmentProps {
 export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentProps) => {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [videoError, setVideoError] = useState(false);
 
   const handleDownload = () => {
     const a = document.createElement('a');
@@ -92,6 +93,30 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
       name.toLowerCase().endsWith('.avi') ? 'video/x-msvideo' :
       'video/mp4';
 
+    // Si erreur de lecture, afficher une carte avec téléchargement
+    if (videoError) {
+      return (
+        <Card className="p-4 max-w-sm">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+              <Video className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{name}</p>
+              <p className="text-xs text-muted-foreground">{formatSize(size)}</p>
+              <p className="text-xs text-orange-500 mt-1">
+                Format non supporté par le navigateur
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" className="w-full mt-3" onClick={handleDownload}>
+            <Download className="h-4 w-4 mr-2" />
+            Télécharger la vidéo
+          </Button>
+        </Card>
+      );
+    }
+
     return (
       <>
         <Card className="max-w-md overflow-hidden">
@@ -100,6 +125,7 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
               controls 
               className="w-full max-h-64 object-contain bg-black"
               preload="metadata"
+              onError={() => setVideoError(true)}
             >
               <source src={url} type={videoMimeType} />
               Votre navigateur ne supporte pas la lecture vidéo.
@@ -127,6 +153,7 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
               controls 
               autoPlay
               className="w-full max-h-[85vh] object-contain bg-black"
+              onError={() => setVideoError(true)}
             >
               <source src={url} type={videoMimeType} />
             </video>
