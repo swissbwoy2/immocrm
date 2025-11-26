@@ -20,6 +20,7 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [videoError, setVideoError] = useState(false);
+  const [videoLoaded, setVideoLoaded] = useState(false);
 
   const handleDownload = () => {
     const a = document.createElement('a');
@@ -85,9 +86,6 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
 
   // Video
   if (isVideo) {
-    // Detect unsupported formats that most browsers can't play
-    const isUnsupportedFormat = /\.(mov|avi|mkv|wmv|flv)$/i.test(name);
-    
     // Determine video MIME type from extension if not provided
     const videoMimeType = type.startsWith('video/') ? type : 
       name.toLowerCase().endsWith('.mov') ? 'video/quicktime' :
@@ -96,64 +94,33 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
       name.toLowerCase().endsWith('.avi') ? 'video/x-msvideo' :
       'video/mp4';
 
-    // Pour les formats non supportés ou si erreur, afficher une carte avec téléchargement
-    if (isUnsupportedFormat || videoError) {
-      return (
-        <>
-          <Card className="p-4 max-w-sm">
-            <div className="flex items-center gap-3">
-              <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                <Video className="h-7 w-7 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{name}</p>
-                <p className="text-xs text-muted-foreground">{formatSize(size)}</p>
-                {isUnsupportedFormat && (
-                  <p className="text-xs text-orange-500 mt-1">
-                    Format {name.split('.').pop()?.toUpperCase()} - téléchargez pour visionner
-                  </p>
-                )}
-              </div>
+    // Card de téléchargement pour vidéos non supportées
+    const VideoDownloadCard = () => (
+      <>
+        <Card className="p-4 max-w-sm">
+          <div className="flex items-center gap-3">
+            <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <Video className="h-7 w-7 text-white" />
             </div>
-            <div className="flex gap-2 mt-3">
-              <Button variant="outline" size="sm" className="flex-1" onClick={() => setPreviewOpen(true)}>
-                <Eye className="h-4 w-4 mr-1" />
-                Aperçu
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1" onClick={handleDownload}>
-                <Download className="h-4 w-4 mr-1" />
-                Télécharger
-              </Button>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{name}</p>
+              <p className="text-xs text-muted-foreground">{formatSize(size)}</p>
+              <p className="text-xs text-orange-500 mt-1">
+                Format {name.split('.').pop()?.toUpperCase()} - téléchargez pour visionner
+              </p>
             </div>
-          </Card>
+          </div>
+          <Button variant="outline" className="w-full mt-3" onClick={handleDownload}>
+            <Download className="h-4 w-4 mr-2" />
+            Télécharger la vidéo
+          </Button>
+        </Card>
+      </>
+    );
 
-          <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Video className="h-5 w-5" />
-                  Aperçu vidéo
-                </DialogTitle>
-              </DialogHeader>
-              <div className="flex flex-col items-center py-6">
-                <div className="h-24 w-24 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mb-4">
-                  <Video className="h-12 w-12 text-white" />
-                </div>
-                <p className="text-lg font-medium text-center mb-1">{name}</p>
-                <p className="text-sm text-muted-foreground mb-4">{formatSize(size)}</p>
-                <p className="text-sm text-center text-muted-foreground mb-6">
-                  Ce format vidéo ({name.split('.').pop()?.toUpperCase()}) n'est pas supporté par votre navigateur. 
-                  Téléchargez le fichier pour le visionner avec un lecteur vidéo.
-                </p>
-                <Button onClick={handleDownload} className="w-full">
-                  <Download className="h-4 w-4 mr-2" />
-                  Télécharger la vidéo
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </>
-      );
+    // Si erreur de lecture, afficher le card de téléchargement
+    if (videoError) {
+      return <VideoDownloadCard />;
     }
 
     return (
@@ -165,10 +132,19 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
               className="w-full max-h-64 object-contain bg-black"
               preload="metadata"
               onError={() => setVideoError(true)}
+              onLoadedData={() => setVideoLoaded(true)}
             >
               <source src={url} type={videoMimeType} />
               Votre navigateur ne supporte pas la lecture vidéo.
             </video>
+            {!videoLoaded && !videoError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                <div className="text-center text-white">
+                  <Video className="h-8 w-8 mx-auto mb-2 animate-pulse" />
+                  <p className="text-xs">Chargement...</p>
+                </div>
+              </div>
+            )}
           </div>
           <div className="p-2 flex items-center justify-between border-t">
             <div className="min-w-0 flex-1">
@@ -192,7 +168,10 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
               controls 
               autoPlay
               className="w-full max-h-[85vh] object-contain bg-black"
-              onError={() => setVideoError(true)}
+              onError={() => {
+                setVideoError(true);
+                setPreviewOpen(false);
+              }}
             >
               <source src={url} type={videoMimeType} />
             </video>
