@@ -836,6 +836,10 @@ export type Database = {
         }
         Returns: string
       }
+      decrement_agent_clients: {
+        Args: { agent_uuid: string }
+        Returns: undefined
+      }
       get_client_agent_id: {
         Args: { _client_user_id: string }
         Returns: string
@@ -847,6 +851,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_agent_clients: {
+        Args: { agent_uuid: string }
+        Returns: undefined
       }
       is_agent_of_client: { Args: { profile_id: string }; Returns: boolean }
       is_agent_of_client_record: {

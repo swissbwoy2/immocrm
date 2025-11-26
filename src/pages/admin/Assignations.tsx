@@ -148,7 +148,7 @@ export default function Assignations() {
       if (error) throw error;
 
       // Update agent's nombre_clients_assignes
-      await supabase.rpc('increment_agent_clients', { agent_uuid: selectedAgent });
+      await (supabase.rpc as any)('increment_agent_clients', { agent_uuid: selectedAgent });
 
       // Update local state
       setClients(clients.map(c => 
@@ -191,7 +191,7 @@ export default function Assignations() {
 
       // Decrement previous agent's count
       if (previousAgentId) {
-        await supabase.rpc('decrement_agent_clients', { agent_uuid: previousAgentId });
+        await (supabase.rpc as any)('decrement_agent_clients', { agent_uuid: previousAgentId });
       }
 
       // Update local state
@@ -218,6 +218,7 @@ export default function Assignations() {
 
     try {
       const commissionValue = editSplit === '45-55' ? 45 : 60;
+      const previousAgentId = editingClient.agent_id;
 
       const { error } = await supabase
         .from('clients')
@@ -228,6 +229,12 @@ export default function Assignations() {
         .eq('id', editingClient.id);
 
       if (error) throw error;
+
+      // Update agent counts if agent changed
+      if (previousAgentId && previousAgentId !== editAgent) {
+        await (supabase.rpc as any)('decrement_agent_clients', { agent_uuid: previousAgentId });
+        await (supabase.rpc as any)('increment_agent_clients', { agent_uuid: editAgent });
+      }
 
       // Update local state
       setClients(clients.map(c => 
