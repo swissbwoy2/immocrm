@@ -8,10 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "lucide-react";
+import { Link, Paperclip } from "lucide-react";
 import logoImmoRama from "@/assets/logo-immo-rama.png";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { OfferAttachmentUploader, AttachmentData } from "@/components/OfferAttachmentUploader";
 
 const EnvoyerOffre = () => {
   const location = useLocation();
@@ -20,6 +21,7 @@ const EnvoyerOffre = () => {
   const { user } = useAuth();
   const [agent, setAgent] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
+  const [attachments, setAttachments] = useState<AttachmentData[]>([]);
   
   // Lire le clientId depuis les query params de l'URL
   const searchParams = new URLSearchParams(location.search);
@@ -169,19 +171,52 @@ const EnvoyerOffre = () => {
       }
 
       // Send message with offer
-      const messageContent = `Nouvelle Offre pour Votre Recherche d'Appartement\n\nBonjour ${selectedClient?.profiles?.prenom} ${selectedClient?.profiles?.nom} 👋,\n\nNous avons trouvé une offre qui pourrait correspondre à vos critères de recherche ! Voici les détails de ce bien immobilier :\n\n📍 Localisation : ${formData.localisation}\n💰 Prix : ${formData.prix} CHF\n📐 Surface : ${formData.surface} m²\n🏠 Nombre de pièces : ${formData.nombrePieces}\n🏢 Étage : ${formData.etage}\n📅 Disponibilité : ${formData.disponibilite}\n\nDescription :\n${formData.description}${formData.datesVisite.filter(d => d).length > 0 ? `\n\nDates de visite proposées :\n${formData.datesVisite.filter(d => d).map((d, i) => `• ${d}`).join('\n')}` : ''}${formData.lienAnnonce ? `\n\n🔗 Voir l'annonce complète : ${formData.lienAnnonce}` : ''}\n\nPour toute question, n'hésitez pas à nous appeler au +41 21 634 28 39 ou à répondre directement à cet email.\n\nCordialement,\nL'équipe Immo-rama.ch`;
+      const messageContent = `Nouvelle Offre pour Votre Recherche d'Appartement\n\nBonjour ${selectedClient?.profiles?.prenom} ${selectedClient?.profiles?.nom} 👋,\n\nNous avons trouvé une offre qui pourrait correspondre à vos critères de recherche ! Voici les détails de ce bien immobilier :\n\n📍 Localisation : ${formData.localisation}\n💰 Prix : ${formData.prix} CHF\n📐 Surface : ${formData.surface} m²\n🏠 Nombre de pièces : ${formData.nombrePieces}\n🏢 Étage : ${formData.etage}\n📅 Disponibilité : ${formData.disponibilite}\n\nDescription :\n${formData.description}${formData.datesVisite.filter(d => d).length > 0 ? `\n\nDates de visite proposées :\n${formData.datesVisite.filter(d => d).map((d, i) => `• ${d}`).join('\n')}` : ''}${formData.lienAnnonce ? `\n\n🔗 Voir l'annonce complète : ${formData.lienAnnonce}` : ''}${attachments.length > 0 ? `\n\n📎 ${attachments.length} pièce(s) jointe(s)` : ''}\n\nPour toute question, n'hésitez pas à nous appeler au +41 21 634 28 39 ou à répondre directement à cet email.\n\nCordialement,\nL'équipe Immo-rama.ch`;
 
-      const { error: messageError } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: agent.id,
-          sender_type: 'agent',
-          content: messageContent,
-          offre_id: offre.id,
-        });
+      // If we have attachments, send each as a separate message
+      if (attachments.length > 0) {
+        // First send the main message
+        const { error: messageError } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            sender_id: agent.id,
+            sender_type: 'agent',
+            content: messageContent,
+            offre_id: offre.id,
+          });
 
-      if (messageError) throw messageError;
+        if (messageError) throw messageError;
+
+        // Then send each attachment as a separate message
+        for (const attachment of attachments) {
+          await supabase
+            .from('messages')
+            .insert({
+              conversation_id: conversationId,
+              sender_id: agent.id,
+              sender_type: 'agent',
+              content: `📎 Pièce jointe: ${attachment.name}`,
+              offre_id: offre.id,
+              attachment_url: attachment.url,
+              attachment_type: attachment.type,
+              attachment_name: attachment.name,
+              attachment_size: attachment.size,
+            });
+        }
+      } else {
+        const { error: messageError } = await supabase
+          .from('messages')
+          .insert({
+            conversation_id: conversationId,
+            sender_id: agent.id,
+            sender_type: 'agent',
+            content: messageContent,
+            offre_id: offre.id,
+          });
+
+        if (messageError) throw messageError;
+      }
 
       // Create visits if dates are provided
       const validDates = formData.datesVisite.filter(d => d);
@@ -363,6 +398,17 @@ const EnvoyerOffre = () => {
               />
             </Card>
 
+            <Card className="p-6">
+              <Label className="flex items-center gap-2 mb-4">
+                <Paperclip className="h-4 w-4" />
+                Pièces jointes
+              </Label>
+              <OfferAttachmentUploader 
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
+              />
+            </Card>
+
             <Button onClick={handleSubmit} className="w-full" size="lg">
               Envoyer
             </Button>
@@ -422,6 +468,26 @@ const EnvoyerOffre = () => {
                         })}</li>
                       ))}
                     </ul>
+                  </div>
+                )}
+
+                {attachments.length > 0 && (
+                  <div>
+                    <p className="font-semibold text-sm">📎 Pièces jointes ({attachments.length}) :</p>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      {attachments.map((att, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs bg-muted p-2 rounded">
+                          {att.type.startsWith('image/') ? (
+                            <img src={att.url} alt={att.name} className="h-8 w-8 object-cover rounded" />
+                          ) : att.type.startsWith('video/') ? (
+                            <span>🎬</span>
+                          ) : (
+                            <span>📄</span>
+                          )}
+                          <span className="truncate">{att.name}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
