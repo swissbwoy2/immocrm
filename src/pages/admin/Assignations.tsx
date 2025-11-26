@@ -147,6 +147,9 @@ export default function Assignations() {
 
       if (error) throw error;
 
+      // Update agent's nombre_clients_assignes
+      await supabase.rpc('increment_agent_clients', { agent_uuid: selectedAgent });
+
       // Update local state
       setClients(clients.map(c => 
         c.id === selectedClient
@@ -173,6 +176,10 @@ export default function Assignations() {
 
   const handleReassign = async (clientId: string) => {
     try {
+      // Get current agent before unassigning
+      const client = clients.find(c => c.id === clientId);
+      const previousAgentId = client?.agent_id;
+
       const { error } = await supabase
         .from('clients')
         .update({
@@ -181,6 +188,11 @@ export default function Assignations() {
         .eq('id', clientId);
 
       if (error) throw error;
+
+      // Decrement previous agent's count
+      if (previousAgentId) {
+        await supabase.rpc('decrement_agent_clients', { agent_uuid: previousAgentId });
+      }
 
       // Update local state
       setClients(clients.map(c => 
