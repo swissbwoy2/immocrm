@@ -85,6 +85,9 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
 
   // Video
   if (isVideo) {
+    // Detect unsupported formats that most browsers can't play
+    const isUnsupportedFormat = /\.(mov|avi|mkv|wmv|flv)$/i.test(name);
+    
     // Determine video MIME type from extension if not provided
     const videoMimeType = type.startsWith('video/') ? type : 
       name.toLowerCase().endsWith('.mov') ? 'video/quicktime' :
@@ -93,20 +96,22 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
       name.toLowerCase().endsWith('.avi') ? 'video/x-msvideo' :
       'video/mp4';
 
-    // Si erreur de lecture, afficher une carte avec téléchargement
-    if (videoError) {
+    // Pour les formats non supportés ou si erreur, afficher une carte avec téléchargement
+    if (isUnsupportedFormat || videoError) {
       return (
         <Card className="p-4 max-w-sm">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-              <Video className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+            <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+              <Video className="h-7 w-7 text-white" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{name}</p>
               <p className="text-xs text-muted-foreground">{formatSize(size)}</p>
-              <p className="text-xs text-orange-500 mt-1">
-                Format non supporté par le navigateur
-              </p>
+              {isUnsupportedFormat && (
+                <p className="text-xs text-orange-500 mt-1">
+                  Format {name.split('.').pop()?.toUpperCase()} - téléchargez pour visionner
+                </p>
+              )}
             </div>
           </div>
           <Button variant="outline" className="w-full mt-3" onClick={handleDownload}>
