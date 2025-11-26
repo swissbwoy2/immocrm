@@ -39,12 +39,12 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
   const { toast } = useToast();
 
   const handleFileSelect = async (file: File, type: 'image' | 'video' | 'document') => {
-    // Validation de taille
-    const maxSize = type === 'video' ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+    // Validation de taille - 1GB max pour tous les fichiers
+    const maxSize = 1024 * 1024 * 1024; // 1GB
     if (file.size > maxSize) {
       toast({
         title: "Fichier trop volumineux",
-        description: `Taille max: ${type === 'video' ? '50MB' : '10MB'}`,
+        description: "Taille max: 1GB",
         variant: "destructive",
       });
       return;
@@ -156,7 +156,13 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
             <FileText className="h-8 w-8 text-muted-foreground" />
           )}
           <p className="text-xs text-muted-foreground mt-1">{preview.name}</p>
-          <p className="text-xs text-muted-foreground">{(preview.size / 1024).toFixed(0)} KB</p>
+          <p className="text-xs text-muted-foreground">
+            {preview.size >= 1024 * 1024 * 1024 
+              ? `${(preview.size / (1024 * 1024 * 1024)).toFixed(2)} GB`
+              : preview.size >= 1024 * 1024 
+                ? `${(preview.size / (1024 * 1024)).toFixed(1)} MB`
+                : `${(preview.size / 1024).toFixed(0)} KB`}
+          </p>
         </div>
         <Button variant="ghost" size="sm" onClick={handleCancel}>
           <X className="h-4 w-4" />
