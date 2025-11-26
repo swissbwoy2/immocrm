@@ -143,16 +143,16 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
     return (
       <Card className="p-3 mb-2 flex items-center gap-3">
         <div className="flex-1">
-          {preview.type.startsWith('image/') && (
+          {preview.type === 'image' && (
             <img src={preview.url} alt={preview.name} className="h-16 w-16 object-cover rounded" />
           )}
-          {preview.type.startsWith('video/') && (
+          {preview.type === 'video' && (
             <Video className="h-8 w-8 text-muted-foreground" />
           )}
-          {preview.type.startsWith('audio/') && (
+          {preview.type === 'audio' && (
             <Mic className="h-8 w-8 text-muted-foreground" />
           )}
-          {!preview.type.startsWith('image/') && !preview.type.startsWith('video/') && !preview.type.startsWith('audio/') && (
+          {preview.type === 'document' && (
             <FileText className="h-8 w-8 text-muted-foreground" />
           )}
           <p className="text-xs text-muted-foreground mt-1">{preview.name}</p>
