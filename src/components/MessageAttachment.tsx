@@ -99,26 +99,60 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
     // Pour les formats non supportés ou si erreur, afficher une carte avec téléchargement
     if (isUnsupportedFormat || videoError) {
       return (
-        <Card className="p-4 max-w-sm">
-          <div className="flex items-center gap-3">
-            <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-              <Video className="h-7 w-7 text-white" />
+        <>
+          <Card className="p-4 max-w-sm">
+            <div className="flex items-center gap-3">
+              <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <Video className="h-7 w-7 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{name}</p>
+                <p className="text-xs text-muted-foreground">{formatSize(size)}</p>
+                {isUnsupportedFormat && (
+                  <p className="text-xs text-orange-500 mt-1">
+                    Format {name.split('.').pop()?.toUpperCase()} - téléchargez pour visionner
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{name}</p>
-              <p className="text-xs text-muted-foreground">{formatSize(size)}</p>
-              {isUnsupportedFormat && (
-                <p className="text-xs text-orange-500 mt-1">
-                  Format {name.split('.').pop()?.toUpperCase()} - téléchargez pour visionner
+            <div className="flex gap-2 mt-3">
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => setPreviewOpen(true)}>
+                <Eye className="h-4 w-4 mr-1" />
+                Aperçu
+              </Button>
+              <Button variant="outline" size="sm" className="flex-1" onClick={handleDownload}>
+                <Download className="h-4 w-4 mr-1" />
+                Télécharger
+              </Button>
+            </div>
+          </Card>
+
+          <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Video className="h-5 w-5" />
+                  Aperçu vidéo
+                </DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-col items-center py-6">
+                <div className="h-24 w-24 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mb-4">
+                  <Video className="h-12 w-12 text-white" />
+                </div>
+                <p className="text-lg font-medium text-center mb-1">{name}</p>
+                <p className="text-sm text-muted-foreground mb-4">{formatSize(size)}</p>
+                <p className="text-sm text-center text-muted-foreground mb-6">
+                  Ce format vidéo ({name.split('.').pop()?.toUpperCase()}) n'est pas supporté par votre navigateur. 
+                  Téléchargez le fichier pour le visionner avec un lecteur vidéo.
                 </p>
-              )}
-            </div>
-          </div>
-          <Button variant="outline" className="w-full mt-3" onClick={handleDownload}>
-            <Download className="h-4 w-4 mr-2" />
-            Télécharger la vidéo
-          </Button>
-        </Card>
+                <Button onClick={handleDownload} className="w-full">
+                  <Download className="h-4 w-4 mr-2" />
+                  Télécharger la vidéo
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </>
       );
     }
 
