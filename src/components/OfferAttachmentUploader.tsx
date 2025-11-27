@@ -68,7 +68,17 @@ export const OfferAttachmentUploader = ({ onAttachmentsChange, attachments }: Of
             title: "Conversion en cours",
             description: `Conversion de ${file.name} en MP4...`,
           });
-          fileToUpload = await convertToMp4(file);
+          const result = await convertToMp4(file);
+          fileToUpload = result.file;
+          
+          // If conversion was skipped, show warning
+          if (result.skipped && result.reason) {
+            toast({
+              title: "Conversion impossible",
+              description: result.reason,
+              variant: "default",
+            });
+          }
         }
 
         const fileExt = fileToUpload.name.split('.').pop();

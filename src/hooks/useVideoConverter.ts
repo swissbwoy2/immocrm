@@ -8,10 +8,20 @@ const BROWSER_SUPPORTED_FORMATS = ['video/mp4', 'video/webm', 'video/ogg'];
 // Extensions qui nécessitent une conversion
 const NEEDS_CONVERSION_EXTENSIONS = ['mov', 'avi', 'mkv', 'wmv', 'flv', '3gp', 'm4v', 'mpeg', 'mpg'];
 
+// Limite de taille pour la conversion côté client (50 MB)
+const MAX_CONVERSION_SIZE = 50 * 1024 * 1024;
+
 export interface ConversionProgress {
-  stage: 'loading' | 'converting' | 'done' | 'error';
+  stage: 'loading' | 'converting' | 'done' | 'error' | 'skipped';
   progress: number; // 0-100
   message: string;
+}
+
+export interface ConversionResult {
+  file: File;
+  converted: boolean;
+  skipped: boolean;
+  reason?: string;
 }
 
 export const useVideoConverter = () => {
@@ -73,9 +83,32 @@ export const useVideoConverter = () => {
     return ffmpeg;
   }, []);
 
-  const convertToMp4 = useCallback(async (file: File): Promise<File> => {
+  // Check if file is too large for client-side conversion
+  const isFileTooLarge = useCallback((file: File): boolean => {
+    return file.size > MAX_CONVERSION_SIZE;
+  }, []);
+
+  const convertToMp4 = useCallback(async (file: File): Promise<ConversionResult> => {
+    // If no conversion needed, return original
     if (!needsConversion(file)) {
-      return file;
+      return { file, converted: false, skipped: false };
+    }
+
+    // If file is too large for client-side conversion, skip with warning
+    if (isFileTooLarge(file)) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      console.warn(`Video file ${file.name} (${sizeMB} MB) is too large for browser conversion. Max: 50 MB.`);
+      setConversionProgress({
+        stage: 'skipped',
+        progress: 0,
+        message: `Fichier trop volumineux (${sizeMB} MB) pour la conversion navigateur. Le format original sera conservé.`
+      });
+      return { 
+        file, 
+        converted: false, 
+        skipped: true, 
+        reason: `Le fichier (${sizeMB} MB) dépasse la limite de 50 MB pour la conversion. Le format ${file.name.split('.').pop()?.toUpperCase()} pourrait ne pas être lisible sur tous les navigateurs.`
+      };
     }
 
     setIsConverting(true);
@@ -122,7 +155,6 @@ export const useVideoConverter = () => {
       await ffmpeg.deleteFile(outputFileName);
 
       // Create a new File from the converted data
-      // Create a copy of the Uint8Array to ensure proper ArrayBuffer type
       const uint8Array = new Uint8Array(data as Uint8Array);
       const convertedBlob = new Blob([uint8Array], { type: 'video/mp4' });
       const originalName = file.name.replace(/\.[^/.]+$/, '');
@@ -136,20 +168,25 @@ export const useVideoConverter = () => {
         message: 'Conversion terminée!'
       });
 
-      return convertedFile;
+      return { file: convertedFile, converted: true, skipped: false };
     } catch (error) {
       console.error('Video conversion error:', error);
+      const extension = file.name.split('.').pop()?.toUpperCase();
       setConversionProgress({
         stage: 'error',
         progress: 0,
-        message: 'Erreur lors de la conversion. Le fichier original sera utilisé.'
+        message: `Échec de la conversion. Le format ${extension} sera conservé mais pourrait ne pas être lisible.`
       });
-      // Return original file if conversion fails
-      return file;
+      return { 
+        file, 
+        converted: false, 
+        skipped: true, 
+        reason: `La conversion a échoué. Le format ${extension} pourrait ne pas être lisible sur tous les navigateurs.`
+      };
     } finally {
       setIsConverting(false);
     }
-  }, [loadFFmpeg, needsConversion]);
+  }, [loadFFmpeg, needsConversion, isFileTooLarge]);
 
   const resetProgress = useCallback(() => {
     setConversionProgress(null);
@@ -160,6 +197,8 @@ export const useVideoConverter = () => {
     isConverting,
     conversionProgress,
     needsConversion,
-    resetProgress
+    isFileTooLarge,
+    resetProgress,
+    MAX_CONVERSION_SIZE
   };
 };
