@@ -163,6 +163,20 @@ export function SendEmailDialog({
       return;
     }
 
+    // Check attachment size limit (25 MB)
+    const MAX_ATTACHMENT_SIZE = 25 * 1024 * 1024; // 25 MB
+    const selectedDocs = documents.filter(d => selectedDocuments.includes(d.id));
+    const totalSize = selectedDocs.reduce((acc, d) => acc + (d.taille || 0), 0);
+    
+    if (totalSize > MAX_ATTACHMENT_SIZE) {
+      toast({
+        title: "Pièces jointes trop volumineuses",
+        description: `La taille totale des pièces jointes (${formatFileSize(totalSize)}) dépasse la limite de 25 MB`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSending(true);
     try {
       // Get auth token
