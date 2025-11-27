@@ -16,6 +16,8 @@ export default function AgentParametres() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [telephone, setTelephone] = useState('');
+  const [prenom, setPrenom] = useState('');
+  const [nom, setNom] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -38,6 +40,8 @@ export default function AgentParametres() {
       
       setProfile(data);
       setTelephone(data.telephone || '');
+      setPrenom(data.prenom || '');
+      setNom(data.nom || '');
     } catch (error) {
       console.error('Error loading profile:', error);
       toast.error('Erreur lors du chargement du profil');
@@ -102,22 +106,27 @@ export default function AgentParametres() {
     }
   };
 
-  const handleSaveTelephone = async () => {
+  const handleSaveProfile = async () => {
     if (!user) return;
+    
+    if (!prenom.trim() || !nom.trim()) {
+      toast.error('Le prénom et le nom sont obligatoires');
+      return;
+    }
 
     setSaving(true);
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ telephone })
+        .update({ telephone, prenom: prenom.trim(), nom: nom.trim() })
         .eq('id', user.id);
 
       if (error) throw error;
 
-      toast.success('Téléphone mis à jour');
+      toast.success('Profil mis à jour');
       loadProfile();
     } catch (error) {
-      console.error('Error updating telephone:', error);
+      console.error('Error updating profile:', error);
       toast.error('Erreur lors de la mise à jour');
     } finally {
       setSaving(false);
@@ -189,13 +198,21 @@ export default function AgentParametres() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Prénom</Label>
-                  <div className="font-medium mt-1">{profile?.prenom}</div>
+                <div className="space-y-2">
+                  <Label>Prénom</Label>
+                  <Input
+                    value={prenom}
+                    onChange={(e) => setPrenom(e.target.value)}
+                    placeholder="Prénom"
+                  />
                 </div>
-                <div>
-                  <Label className="text-muted-foreground">Nom</Label>
-                  <div className="font-medium mt-1">{profile?.nom}</div>
+                <div className="space-y-2">
+                  <Label>Nom</Label>
+                  <Input
+                    value={nom}
+                    onChange={(e) => setNom(e.target.value)}
+                    placeholder="Nom"
+                  />
                 </div>
               </div>
               <div>
@@ -205,28 +222,25 @@ export default function AgentParametres() {
                 </Label>
                 <div className="font-medium mt-1">{profile?.email}</div>
               </div>
-              <div>
+              <div className="space-y-2">
                 <Label className="flex items-center gap-1">
                   <Phone className="w-4 h-4" />
                   Téléphone
                 </Label>
-                <div className="flex gap-2 mt-1">
-                  <Input
-                    value={telephone}
-                    onChange={(e) => setTelephone(e.target.value)}
-                    placeholder="+41 XX XXX XX XX"
-                    className="max-w-xs"
-                  />
-                  <Button 
-                    onClick={handleSaveTelephone}
-                    disabled={saving || telephone === profile?.telephone}
-                    size="sm"
-                  >
-                    <Save className="w-4 h-4 mr-1" />
-                    {saving ? 'Sauvegarde...' : 'Sauvegarder'}
-                  </Button>
-                </div>
+                <Input
+                  value={telephone}
+                  onChange={(e) => setTelephone(e.target.value)}
+                  placeholder="+41 XX XXX XX XX"
+                  className="max-w-xs"
+                />
               </div>
+              <Button 
+                onClick={handleSaveProfile}
+                disabled={saving || (telephone === profile?.telephone && prenom === profile?.prenom && nom === profile?.nom)}
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {saving ? 'Sauvegarde...' : 'Sauvegarder les modifications'}
+              </Button>
             </CardContent>
           </Card>
 
