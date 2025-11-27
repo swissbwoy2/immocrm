@@ -47,6 +47,7 @@ import ClientMessagerie from "./pages/client/Messagerie";
 import ClientDocuments from "./pages/client/Documents";
 import ClientVisitesDeleguees from "./pages/client/VisitesDeleguees";
 import ClientNotifications from "./pages/client/Notifications";
+import DownloadFiles from "./pages/DownloadFiles";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -107,6 +108,9 @@ const App = () => (
             <Route path="/client/messagerie" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientMessagerie /></AppLayout></ProtectedRoute>} />
             <Route path="/client/documents" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDocuments /></AppLayout></ProtectedRoute>} />
             <Route path="/client/notifications" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientNotifications /></AppLayout></ProtectedRoute>} />
+
+            {/* Public Routes */}
+            <Route path="/download/:token" element={<DownloadFiles />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
