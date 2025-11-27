@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import nodemailer from "https://esm.sh/nodemailer@6.9.8";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -64,12 +64,7 @@ serve(async (req) => {
       throw new Error('recipient_email, subject, and body_html are required');
     }
 
-    // IMPORTANT: Port 587 STARTTLS does not work reliably in Supabase Edge Functions
-    // Force port 465 with direct TLS for reliability
-    const smtpPort = 465;
-    const useTls = true;
-
-    console.log(`Sending email to ${recipient_email} via ${emailConfig.smtp_host}:${smtpPort} (TLS: ${useTls})`);
+    console.log(`Sending email to ${recipient_email} via ${emailConfig.smtp_host}:465 (SSL)`);
 
     // Build email body with signature
     let fullBodyHtml = body_html.replace(/\n/g, '<br/>');
@@ -101,30 +96,31 @@ serve(async (req) => {
       }
     }
 
-    // Create SMTP client with port 465 (direct SSL/TLS)
-    const client = new SMTPClient({
-      connection: {
-        hostname: emailConfig.smtp_host,
-        port: smtpPort,
-        tls: useTls,
-        auth: {
-          username: emailConfig.smtp_user,
-          password: emailConfig.smtp_password,
-        },
+    // Create nodemailer transporter with port 465 (direct SSL/TLS)
+    const transporter = nodemailer.createTransport({
+      host: emailConfig.smtp_host,
+      port: 465,
+      secure: true, // true for port 465 (direct SSL)
+      auth: {
+        user: emailConfig.smtp_user,
+        pass: emailConfig.smtp_password,
+      },
+      tls: {
+        rejectUnauthorized: false, // Allow self-signed certificates
       },
     });
 
     // Build from address
     const fromAddress = emailConfig.display_name 
-      ? `${emailConfig.display_name} <${emailConfig.email_from}>`
+      ? `"${emailConfig.display_name}" <${emailConfig.email_from}>`
       : emailConfig.email_from;
 
     const toAddress = recipient_name 
-      ? `${recipient_name} <${recipient_email}>`
+      ? `"${recipient_name}" <${recipient_email}>`
       : recipient_email;
 
-    // Send email
-    await client.send({
+    // Prepare mail options
+    const mailOptions: nodemailer.SendMailOptions = {
       from: fromAddress,
       to: toAddress,
       subject: subject,
@@ -133,13 +129,12 @@ serve(async (req) => {
         filename: att.filename,
         content: att.content,
         contentType: att.contentType,
-        encoding: 'binary',
       })),
-    });
+    };
 
-    await client.close();
-
-    console.log('Email sent successfully');
+    // Send email
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent successfully:', info.messageId);
 
     // Log sent email
     const { error: logError } = await supabase
@@ -160,7 +155,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Email sent successfully' }),
+      JSON.stringify({ success: true, message: 'Email sent successfully', messageId: info.messageId }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
