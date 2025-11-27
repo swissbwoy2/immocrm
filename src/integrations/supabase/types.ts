@@ -805,6 +805,27 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_transactions_agent"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_transactions_client"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_transactions_offre"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "transactions_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false

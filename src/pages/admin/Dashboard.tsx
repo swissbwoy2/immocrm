@@ -187,6 +187,7 @@ export default function AdminDashboard() {
               title="Offres envoyées" 
               value={totalOffresEnvoyees} 
               icon={Send}
+              onClick={() => navigate('/admin/offres-envoyees')}
             />
             <KPICard 
               title="Transactions en cours" 
