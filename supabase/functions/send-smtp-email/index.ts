@@ -64,7 +64,9 @@ serve(async (req) => {
       throw new Error('recipient_email, subject, and body_html are required');
     }
 
-    console.log(`Sending email to ${recipient_email} via ${emailConfig.smtp_host}:${emailConfig.smtp_port}`);
+    // Port 587 uses STARTTLS (not direct TLS), Port 465 uses direct TLS
+    const useTls = emailConfig.smtp_port === 465;
+    console.log(`Sending email to ${recipient_email} via ${emailConfig.smtp_host}:${emailConfig.smtp_port} (TLS: ${useTls})`);
 
     // Build email body with signature
     let fullBodyHtml = body_html;
@@ -97,12 +99,12 @@ serve(async (req) => {
       }
     }
 
-    // Create SMTP client
+    // Create SMTP client - Port 587 needs STARTTLS (tls: false), Port 465 needs direct TLS (tls: true)
     const client = new SMTPClient({
       connection: {
         hostname: emailConfig.smtp_host,
         port: emailConfig.smtp_port,
-        tls: emailConfig.smtp_secure,
+        tls: useTls,
         auth: {
           username: emailConfig.smtp_user,
           password: emailConfig.smtp_password,
