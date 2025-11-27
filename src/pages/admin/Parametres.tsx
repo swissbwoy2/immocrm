@@ -8,6 +8,7 @@ import { Camera, Save, Mail, Phone, User, Settings, Shield } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { EmailConfigurationDialog } from '@/components/EmailConfigurationDialog';
 
 export default function AdminParametres() {
   const { user } = useAuth();
@@ -18,6 +19,7 @@ export default function AdminParametres() {
   const [telephone, setTelephone] = useState('');
   const [prenom, setPrenom] = useState('');
   const [nom, setNom] = useState('');
+  const [emailConfigOpen, setEmailConfigOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -256,7 +258,7 @@ export default function AdminParametres() {
               <p className="text-sm text-muted-foreground mb-4">
                 Configurez votre serveur SMTP pour envoyer des emails directement depuis l'application.
               </p>
-              <Button variant="outline" onClick={() => window.dispatchEvent(new CustomEvent('open-email-config'))}>
+              <Button variant="outline" onClick={() => setEmailConfigOpen(true)}>
                 Configurer l'email
               </Button>
             </CardContent>
@@ -279,6 +281,11 @@ export default function AdminParametres() {
           </Card>
         </div>
       </div>
+      
+      <EmailConfigurationDialog 
+        open={emailConfigOpen} 
+        onOpenChange={setEmailConfigOpen} 
+      />
     </div>
   );
 }
