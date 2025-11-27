@@ -64,12 +64,15 @@ serve(async (req) => {
       throw new Error('recipient_email, subject, and body_html are required');
     }
 
-    // Port 587 uses STARTTLS (not direct TLS), Port 465 uses direct TLS
-    const useTls = emailConfig.smtp_port === 465;
-    console.log(`Sending email to ${recipient_email} via ${emailConfig.smtp_host}:${emailConfig.smtp_port} (TLS: ${useTls})`);
+    // IMPORTANT: Port 587 STARTTLS does not work reliably in Supabase Edge Functions
+    // Force port 465 with direct TLS for reliability
+    const smtpPort = 465;
+    const useTls = true;
+
+    console.log(`Sending email to ${recipient_email} via ${emailConfig.smtp_host}:${smtpPort} (TLS: ${useTls})`);
 
     // Build email body with signature
-    let fullBodyHtml = body_html;
+    let fullBodyHtml = body_html.replace(/\n/g, '<br/>');
     if (emailConfig.signature_html) {
       fullBodyHtml += `<br/><br/>${emailConfig.signature_html}`;
     }
@@ -80,7 +83,6 @@ serve(async (req) => {
     if (attachments && attachments.length > 0) {
       for (const attachment of attachments) {
         try {
-          // Download file from URL
           const response = await fetch(attachment.url);
           if (response.ok) {
             const arrayBuffer = await response.arrayBuffer();
@@ -99,11 +101,11 @@ serve(async (req) => {
       }
     }
 
-    // Create SMTP client - Port 587 needs STARTTLS (tls: false), Port 465 needs direct TLS (tls: true)
+    // Create SMTP client with port 465 (direct SSL/TLS)
     const client = new SMTPClient({
       connection: {
         hostname: emailConfig.smtp_host,
-        port: emailConfig.smtp_port,
+        port: smtpPort,
         tls: useTls,
         auth: {
           username: emailConfig.smtp_user,
