@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Notification {
   id: string;
@@ -25,6 +26,7 @@ export interface NotificationCounts {
 
 export const useNotifications = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [counts, setCounts] = useState<NotificationCounts>({
     total: 0,
@@ -180,6 +182,7 @@ export const useNotifications = () => {
 
     const channel = supabase
       .channel('notifications-realtime')
+      // Écouter les nouvelles notifications
       .on(
         'postgres_changes',
         {
@@ -199,6 +202,50 @@ export const useNotifications = () => {
             updateCounts(updated);
             return updated;
           });
+
+          // Afficher un toast pour la nouvelle notification
+          toast({
+            title: newNotification.title,
+            description: newNotification.message || undefined,
+          });
+        }
+      )
+      // Écouter les mises à jour (mark as read depuis autre appareil)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          setNotifications(prev => {
+            const updated = prev.map(n => 
+              n.id === payload.new.id 
+                ? { ...payload.new, metadata: payload.new.metadata as Record<string, any> | null } as Notification 
+                : n
+            );
+            updateCounts(updated);
+            return updated;
+          });
+        }
+      )
+      // Écouter les suppressions
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          setNotifications(prev => {
+            const updated = prev.filter(n => n.id !== payload.old.id);
+            updateCounts(updated);
+            return updated;
+          });
         }
       )
       .subscribe();
@@ -206,7 +253,7 @@ export const useNotifications = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, toast]);
 
   return {
     notifications,
