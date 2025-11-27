@@ -445,68 +445,438 @@ export default function ClientDetail() {
                   Modifier
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+              <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Modifier les informations du client</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label>Budget maximum (CHF)</Label>
-                      <Input
-                        type="number"
-                        value={editFormData.budget_max || ''}
-                        onChange={(e) => setEditFormData({ ...editFormData, budget_max: parseFloat(e.target.value) })}
-                      />
+                <div className="space-y-6 py-4">
+                  {/* Informations personnelles */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg border-b pb-2">Informations personnelles</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Nationalité</Label>
+                        <Input
+                          value={editFormData.nationalite || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, nationalite: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Type de permis</Label>
+                        <Select
+                          value={editFormData.type_permis || ''}
+                          onValueChange={(value) => setEditFormData({ ...editFormData, type_permis: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="C">Permis C</SelectItem>
+                            <SelectItem value="B">Permis B</SelectItem>
+                            <SelectItem value="L">Permis L</SelectItem>
+                            <SelectItem value="G">Permis G</SelectItem>
+                            <SelectItem value="F">Permis F</SelectItem>
+                            <SelectItem value="N">Permis N</SelectItem>
+                            <SelectItem value="S">Permis S</SelectItem>
+                            <SelectItem value="Suisse">Suisse</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Date de naissance</Label>
+                        <Input
+                          type="date"
+                          value={editFormData.date_naissance || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, date_naissance: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>État civil</Label>
+                        <Select
+                          value={editFormData.etat_civil || ''}
+                          onValueChange={(value) => setEditFormData({ ...editFormData, etat_civil: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="celibataire">Célibataire</SelectItem>
+                            <SelectItem value="marie">Marié(e)</SelectItem>
+                            <SelectItem value="divorce">Divorcé(e)</SelectItem>
+                            <SelectItem value="veuf">Veuf/Veuve</SelectItem>
+                            <SelectItem value="concubinage">Concubinage</SelectItem>
+                            <SelectItem value="pacs">PACS</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Situation familiale</Label>
+                        <Input
+                          value={editFormData.situation_familiale || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, situation_familiale: e.target.value })}
+                        />
+                      </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Pièces souhaitées</Label>
+                      <Label>Adresse</Label>
                       <Input
-                        type="number"
-                        value={editFormData.pieces || ''}
-                        onChange={(e) => setEditFormData({ ...editFormData, pieces: parseFloat(e.target.value) })}
+                        value={editFormData.adresse || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, adresse: e.target.value })}
                       />
+                    </div>
+                  </div>
+
+                  {/* Situation professionnelle */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg border-b pb-2">Situation professionnelle</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Profession</Label>
+                        <Input
+                          value={editFormData.profession || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, profession: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Employeur</Label>
+                        <Input
+                          value={editFormData.employeur || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, employeur: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Secteur d'activité</Label>
+                        <Input
+                          value={editFormData.secteur_activite || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, secteur_activite: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Type de contrat</Label>
+                        <Select
+                          value={editFormData.type_contrat || ''}
+                          onValueChange={(value) => setEditFormData({ ...editFormData, type_contrat: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="CDI">CDI</SelectItem>
+                            <SelectItem value="CDD">CDD</SelectItem>
+                            <SelectItem value="Indépendant">Indépendant</SelectItem>
+                            <SelectItem value="Temporaire">Temporaire</SelectItem>
+                            <SelectItem value="Retraité">Retraité</SelectItem>
+                            <SelectItem value="Étudiant">Étudiant</SelectItem>
+                            <SelectItem value="Chômage">Chômage</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Date d'engagement</Label>
+                        <Input
+                          type="date"
+                          value={editFormData.date_engagement || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, date_engagement: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Situation financière */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg border-b pb-2">Situation financière</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Revenus mensuels nets (CHF)</Label>
+                        <Input
+                          type="number"
+                          value={editFormData.revenus_mensuels || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, revenus_mensuels: parseFloat(e.target.value) || null })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Source de revenus</Label>
+                        <Input
+                          value={editFormData.source_revenus || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, source_revenus: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Charges mensuelles (CHF)</Label>
+                        <Input
+                          type="number"
+                          value={editFormData.charges_mensuelles || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, charges_mensuelles: parseFloat(e.target.value) || null })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Apport personnel (CHF)</Label>
+                        <Input
+                          type="number"
+                          value={editFormData.apport_personnel || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, apport_personnel: parseFloat(e.target.value) || null })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Situation financière</Label>
+                        <Input
+                          value={editFormData.situation_financiere || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, situation_financiere: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Garanties</Label>
+                        <Input
+                          value={editFormData.garanties || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, garanties: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="autres_credits"
+                          checked={editFormData.autres_credits || false}
+                          onChange={(e) => setEditFormData({ ...editFormData, autres_credits: e.target.checked })}
+                          className="h-4 w-4"
+                        />
+                        <Label htmlFor="autres_credits">Autres crédits en cours</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="poursuites"
+                          checked={editFormData.poursuites || false}
+                          onChange={(e) => setEditFormData({ ...editFormData, poursuites: e.target.checked })}
+                          className="h-4 w-4"
+                        />
+                        <Label htmlFor="poursuites">Poursuites</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="curatelle"
+                          checked={editFormData.curatelle || false}
+                          onChange={(e) => setEditFormData({ ...editFormData, curatelle: e.target.checked })}
+                          className="h-4 w-4"
+                        />
+                        <Label htmlFor="curatelle">Curatelle</Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Logement actuel */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg border-b pb-2">Logement actuel</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Gérance actuelle</Label>
+                        <Input
+                          value={editFormData.gerance_actuelle || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, gerance_actuelle: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Contact gérance</Label>
+                        <Input
+                          value={editFormData.contact_gerance || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, contact_gerance: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Loyer actuel (CHF)</Label>
+                        <Input
+                          type="number"
+                          value={editFormData.loyer_actuel || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, loyer_actuel: parseFloat(e.target.value) || null })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Pièces actuel</Label>
+                        <Input
+                          type="number"
+                          step="0.5"
+                          value={editFormData.pieces_actuel || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, pieces_actuel: parseFloat(e.target.value) || null })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Depuis le</Label>
+                        <Input
+                          type="date"
+                          value={editFormData.depuis_le || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, depuis_le: e.target.value })}
+                        />
+                      </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Nombre d'occupants</Label>
-                      <Input
-                        type="number"
-                        value={editFormData.nombre_occupants || ''}
-                        onChange={(e) => setEditFormData({ ...editFormData, nombre_occupants: parseInt(e.target.value) })}
+                      <Label>Motif du changement</Label>
+                      <Textarea
+                        value={editFormData.motif_changement || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, motif_changement: e.target.value })}
+                        rows={2}
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Région de recherche</Label>
-                    <Input
-                      value={editFormData.region_recherche || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, region_recherche: e.target.value })}
-                    />
+
+                  {/* Critères de recherche */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg border-b pb-2">Critères de recherche</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Budget maximum (CHF)</Label>
+                        <Input
+                          type="number"
+                          value={editFormData.budget_max || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, budget_max: parseFloat(e.target.value) || null })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Pièces souhaitées</Label>
+                        <Input
+                          type="number"
+                          step="0.5"
+                          value={editFormData.pieces || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, pieces: parseFloat(e.target.value) || null })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nombre d'occupants</Label>
+                        <Input
+                          type="number"
+                          value={editFormData.nombre_occupants || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, nombre_occupants: parseInt(e.target.value) || null })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Région de recherche</Label>
+                        <Input
+                          value={editFormData.region_recherche || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, region_recherche: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Type de bien</Label>
+                        <Input
+                          value={editFormData.type_bien || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, type_bien: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="animaux"
+                          checked={editFormData.animaux || false}
+                          onChange={(e) => setEditFormData({ ...editFormData, animaux: e.target.checked })}
+                          className="h-4 w-4"
+                        />
+                        <Label htmlFor="animaux">Animaux</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="instrument_musique"
+                          checked={editFormData.instrument_musique || false}
+                          onChange={(e) => setEditFormData({ ...editFormData, instrument_musique: e.target.checked })}
+                          className="h-4 w-4"
+                        />
+                        <Label htmlFor="instrument_musique">Instrument de musique</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="vehicules"
+                          checked={editFormData.vehicules || false}
+                          onChange={(e) => setEditFormData({ ...editFormData, vehicules: e.target.checked })}
+                          className="h-4 w-4"
+                        />
+                        <Label htmlFor="vehicules">Véhicules</Label>
+                      </div>
+                    </div>
+                    {editFormData.vehicules && (
+                      <div className="space-y-2">
+                        <Label>Numéro de plaques</Label>
+                        <Input
+                          value={editFormData.numero_plaques || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, numero_plaques: e.target.value })}
+                        />
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <Label>Souhaits particuliers</Label>
+                      <Textarea
+                        value={editFormData.souhaits_particuliers || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, souhaits_particuliers: e.target.value })}
+                        rows={3}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Type de bien</Label>
-                    <Input
-                      value={editFormData.type_bien || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, type_bien: e.target.value })}
-                    />
+
+                  {/* Gestion du dossier */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg border-b pb-2">Gestion du dossier</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>État d'avancement</Label>
+                        <Select
+                          value={editFormData.etat_avancement || ''}
+                          onValueChange={(value) => setEditFormData({ ...editFormData, etat_avancement: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="nouveau">Nouveau</SelectItem>
+                            <SelectItem value="en_recherche">En recherche</SelectItem>
+                            <SelectItem value="visites_en_cours">Visites en cours</SelectItem>
+                            <SelectItem value="dossier_depose">Dossier déposé</SelectItem>
+                            <SelectItem value="en_attente_reponse">En attente de réponse</SelectItem>
+                            <SelectItem value="accepte">Accepté</SelectItem>
+                            <SelectItem value="termine">Terminé</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Priorité</Label>
+                        <Select
+                          value={editFormData.priorite || 'moyenne'}
+                          onValueChange={(value) => setEditFormData({ ...editFormData, priorite: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="haute">Haute</SelectItem>
+                            <SelectItem value="moyenne">Moyenne</SelectItem>
+                            <SelectItem value="basse">Basse</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Notes de l'agent</Label>
+                      <Textarea
+                        value={editFormData.note_agent || ''}
+                        onChange={(e) => setEditFormData({ ...editFormData, note_agent: e.target.value })}
+                        rows={3}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Souhaits particuliers</Label>
-                    <Textarea
-                      value={editFormData.souhaits_particuliers || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, souhaits_particuliers: e.target.value })}
-                      rows={3}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Notes de l'agent</Label>
-                    <Textarea
-                      value={editFormData.note_agent || ''}
-                      onChange={(e) => setEditFormData({ ...editFormData, note_agent: e.target.value })}
-                      rows={3}
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2 pt-4">
+
+                  <div className="flex justify-end gap-2 pt-4 border-t">
                     <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
                       Annuler
                     </Button>

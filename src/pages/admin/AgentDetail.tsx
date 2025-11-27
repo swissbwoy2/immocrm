@@ -5,8 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Mail, Phone, Users, Calendar, Pencil, Save, X, Camera } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Users, Calendar, Pencil, Save, X, Camera, Power } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
@@ -180,6 +181,34 @@ const AgentDetail = () => {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleActif = async () => {
+    if (!agent || !profile) return;
+
+    try {
+      const newActif = !profile.actif;
+      const { error } = await supabase
+        .from('profiles')
+        .update({ actif: newActif })
+        .eq('id', agent.user_id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Succès",
+        description: `Agent ${newActif ? 'activé' : 'désactivé'}`,
+      });
+      
+      fetchAgentDetails();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de modifier le statut",
+        variant: "destructive",
+      });
+    } finally {
     }
   };
 
@@ -378,6 +407,18 @@ const AgentDetail = () => {
                       </Button>
                     </div>
                     <p className="text-muted-foreground">Agent immobilier</p>
+                    <div className="flex items-center gap-3 mt-3 pt-3 border-t">
+                      <Power className="h-4 w-4 text-muted-foreground" />
+                      <Label htmlFor="agent-actif" className="text-sm">Statut de l'agent</Label>
+                      <Switch
+                        id="agent-actif"
+                        checked={profile.actif}
+                        onCheckedChange={handleToggleActif}
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        {profile.actif ? 'Actif' : 'Inactif'}
+                      </span>
+                    </div>
                   </>
                 )}
               </div>
