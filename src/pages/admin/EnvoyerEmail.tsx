@@ -7,10 +7,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Send, Paperclip, FileText, Image, File, Settings, CheckCircle, AlertCircle, Mail } from "lucide-react";
+import { Loader2, Send, Paperclip, FileText, Image, File, Settings, CheckCircle, AlertCircle, Mail, Link2, Info } from "lucide-react";
 import { EmailConfigurationDialog } from "@/components/EmailConfigurationDialog";
 
 interface Document {
@@ -32,6 +33,8 @@ interface Client {
   };
 }
 
+const MAX_DIRECT_ATTACHMENT_SIZE = 25 * 1024 * 1024; // 25 MB
+
 export default function EnvoyerEmail() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -45,6 +48,9 @@ export default function EnvoyerEmail() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [sendSuccess, setSendSuccess] = useState(false);
+  const [attachmentMode, setAttachmentMode] = useState<'direct' | 'link'>('direct');
+  const [linkExpirationDays, setLinkExpirationDays] = useState<number>(7);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   
   const [email, setEmail] = useState({
     recipient_email: "",
@@ -78,6 +84,21 @@ export default function EnvoyerEmail() {
     }
   }, [selectedClientId, clients]);
 
+  // Auto-switch to link mode if size exceeds limit
+  useEffect(() => {
+    const totalSize = documents
+      .filter(d => selectedDocuments.includes(d.id))
+      .reduce((acc, d) => acc + (d.taille || 0), 0);
+    
+    if (totalSize > MAX_DIRECT_ATTACHMENT_SIZE && attachmentMode === 'direct') {
+      setAttachmentMode('link');
+      toast({
+        title: "Mode lien activé automatiquement",
+        description: "La taille des fichiers dépasse 25 MB, le mode lien a été activé.",
+      });
+    }
+  }, [selectedDocuments, documents]);
+
   const checkEmailConfiguration = async () => {
     try {
       const { data, error } = await supabase
@@ -107,7 +128,6 @@ export default function EnvoyerEmail() {
 
       if (error) throw error;
 
-      // Get profiles for clients
       const userIds = clientsData?.map(c => c.user_id) || [];
       if (userIds.length === 0) {
         setClients([]);
@@ -157,6 +177,7 @@ export default function EnvoyerEmail() {
         ? prev.filter(id => id !== docId)
         : [...prev, docId]
     );
+    setGeneratedLink(null);
   };
 
   const selectAllDocuments = () => {
@@ -165,6 +186,7 @@ export default function EnvoyerEmail() {
     } else {
       setSelectedDocuments(documents.map(d => d.id));
     }
+    setGeneratedLink(null);
   };
 
   const getDocumentIcon = (type: string) => {
@@ -177,7 +199,8 @@ export default function EnvoyerEmail() {
     if (!bytes) return '';
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
 
   const resetForm = () => {
@@ -191,6 +214,55 @@ export default function EnvoyerEmail() {
     setSelectedDocuments([]);
     setDocuments([]);
     setSendSuccess(false);
+    setGeneratedLink(null);
+    setAttachmentMode('direct');
+  };
+
+  const generateShareLink = async () => {
+    if (selectedDocuments.length === 0) {
+      toast({
+        title: "Aucun document sélectionné",
+        description: "Veuillez sélectionner au moins un document",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-share-link`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+          body: JSON.stringify({
+            documentIds: selectedDocuments,
+            clientId: selectedClientId || null,
+            expiresInDays: linkExpirationDays,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      const downloadUrl = `${window.location.origin}/download/${result.token}`;
+      setGeneratedLink(downloadUrl);
+      return downloadUrl;
+    } catch (error: any) {
+      console.error('Error generating share link:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de générer le lien de partage",
+        variant: "destructive",
+      });
+      return null;
+    }
   };
 
   const handleSend = async () => {
@@ -213,35 +285,58 @@ export default function EnvoyerEmail() {
       return;
     }
 
-    // Check attachment size limit (25 MB)
-    const MAX_ATTACHMENT_SIZE = 25 * 1024 * 1024; // 25 MB
     const selectedDocs = documents.filter(d => selectedDocuments.includes(d.id));
     const totalSize = selectedDocs.reduce((acc, d) => acc + (d.taille || 0), 0);
-    
-    if (totalSize > MAX_ATTACHMENT_SIZE) {
-      toast({
-        title: "Pièces jointes trop volumineuses",
-        description: `La taille totale des pièces jointes (${formatFileSize(totalSize)}) dépasse la limite de 25 MB`,
-        variant: "destructive",
-      });
-      return;
-    }
 
     setSending(true);
     try {
-      // Prepare attachments
-      const attachments = documents
-        .filter(d => selectedDocuments.includes(d.id) && d.url)
-        .map(d => ({
-          filename: d.nom,
-          url: d.url!,
-          content_type: d.type,
-        }));
+      let finalBodyHtml = email.body_html;
+      let attachments: any[] = [];
 
-      // Call edge function
+      if (selectedDocuments.length > 0) {
+        if (attachmentMode === 'link') {
+          let linkToUse = generatedLink;
+          if (!linkToUse) {
+            linkToUse = await generateShareLink();
+          }
+          
+          if (!linkToUse) {
+            setSending(false);
+            return;
+          }
+
+          const expirationText = linkExpirationDays > 0 
+            ? `Ce lien expire dans ${linkExpirationDays} jour${linkExpirationDays > 1 ? 's' : ''}.`
+            : 'Ce lien n\'a pas de date d\'expiration.';
+
+          finalBodyHtml += `\n\n<hr style="margin: 20px 0;"/>\n<p><strong>📎 Documents joints (${selectedDocs.length} fichier${selectedDocs.length > 1 ? 's' : ''}):</strong></p>\n<p><a href="${linkToUse}" style="color: #3b82f6; text-decoration: underline;">${linkToUse}</a></p>\n<p style="font-size: 12px; color: #666;">${expirationText}</p>`;
+        } else {
+          if (totalSize > MAX_DIRECT_ATTACHMENT_SIZE) {
+            toast({
+              title: "Pièces jointes trop volumineuses",
+              description: `La taille totale (${formatFileSize(totalSize)}) dépasse 25 MB. Utilisez le mode "Envoyer par lien".`,
+              variant: "destructive",
+            });
+            setSending(false);
+            return;
+          }
+
+          attachments = selectedDocs
+            .filter(d => d.url)
+            .map(d => ({
+              filename: d.nom,
+              url: d.url!,
+              content_type: d.type,
+            }));
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke('send-smtp-email', {
         body: {
-          ...email,
+          recipient_email: email.recipient_email,
+          recipient_name: email.recipient_name,
+          subject: email.subject,
+          body_html: finalBodyHtml,
           attachments,
           client_id: selectedClientId || null,
         },
@@ -266,6 +361,12 @@ export default function EnvoyerEmail() {
       setSending(false);
     }
   };
+
+  const totalSelectedSize = documents
+    .filter(d => selectedDocuments.includes(d.id))
+    .reduce((acc, d) => acc + (d.taille || 0), 0);
+
+  const exceedsDirectLimit = totalSelectedSize > MAX_DIRECT_ATTACHMENT_SIZE;
 
   if (sendSuccess) {
     return (
@@ -295,7 +396,7 @@ export default function EnvoyerEmail() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Envoyer un email</h1>
-            <p className="text-muted-foreground">Envoyez des emails à n'importe quel destinataire (clients, propriétaires, régies, etc.)</p>
+            <p className="text-muted-foreground">Envoyez des emails avec pièces jointes ou liens de téléchargement</p>
           </div>
           <Button variant="outline" onClick={() => setShowConfigDialog(true)}>
             <Settings className="h-4 w-4 mr-2" />
@@ -311,9 +412,6 @@ export default function EnvoyerEmail() {
               <p className="text-muted-foreground mb-4">
                 Vous devez d'abord configurer vos paramètres SMTP pour pouvoir envoyer des emails.
               </p>
-              <p className="text-sm text-muted-foreground mb-6">
-                N'oubliez pas d'ajouter votre signature HTML dans la configuration pour qu'elle apparaisse automatiquement dans vos emails.
-              </p>
               <Button onClick={() => setShowConfigDialog(true)}>
                 Configurer mes emails
               </Button>
@@ -321,15 +419,13 @@ export default function EnvoyerEmail() {
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-3">
-            {/* Main form */}
             <div className="md:col-span-2 space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Composer l'email</CardTitle>
-                  <CardDescription>Entrez l'adresse email du destinataire ou sélectionnez un client existant</CardDescription>
+                  <CardDescription>Entrez l'adresse email ou sélectionnez un client</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Recipient - FIRST */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Email destinataire *</Label>
@@ -350,7 +446,6 @@ export default function EnvoyerEmail() {
                     </div>
                   </div>
 
-                  {/* Client selection - OPTIONAL helper */}
                   <div className="space-y-2">
                     <Label className="text-muted-foreground text-sm">Ou sélectionner un client pour pré-remplir</Label>
                     <Select 
@@ -371,7 +466,6 @@ export default function EnvoyerEmail() {
                     </Select>
                   </div>
 
-                  {/* Subject */}
                   <div className="space-y-2">
                     <Label>Objet *</Label>
                     <Input
@@ -381,7 +475,6 @@ export default function EnvoyerEmail() {
                     />
                   </div>
 
-                  {/* Body */}
                   <div className="space-y-2">
                     <Label>Message *</Label>
                     <Textarea
@@ -392,7 +485,6 @@ export default function EnvoyerEmail() {
                     />
                   </div>
 
-                  {/* Signature preview */}
                   {signature ? (
                     <div className="p-3 border rounded-md bg-muted/50">
                       <Label className="text-xs text-muted-foreground">Signature (ajoutée automatiquement) :</Label>
@@ -417,7 +509,6 @@ export default function EnvoyerEmail() {
                 </CardContent>
               </Card>
 
-              {/* Send button */}
               <div className="flex justify-end gap-4">
                 <Button variant="outline" onClick={resetForm}>
                   Réinitialiser
@@ -433,7 +524,6 @@ export default function EnvoyerEmail() {
               </div>
             </div>
 
-            {/* Documents sidebar */}
             <div className="space-y-6">
               <Card>
                 <CardHeader>
@@ -443,25 +533,12 @@ export default function EnvoyerEmail() {
                   </CardTitle>
                   <CardDescription>
                     {selectedClientId 
-                      ? (
-                        <>
-                          {selectedDocuments.length}/{documents.length} document(s) sélectionné(s)
-                          {selectedDocuments.length > 0 && (
-                            <span className={`block mt-1 ${
-                              documents.filter(d => selectedDocuments.includes(d.id)).reduce((acc, d) => acc + (d.taille || 0), 0) > 25 * 1024 * 1024
-                                ? 'text-destructive font-medium'
-                                : ''
-                            }`}>
-                              Taille: {formatFileSize(documents.filter(d => selectedDocuments.includes(d.id)).reduce((acc, d) => acc + (d.taille || 0), 0))} / 25 MB
-                            </span>
-                          )}
-                        </>
-                      )
-                      : "Sélectionnez un client pour voir ses documents"
+                      ? `${selectedDocuments.length}/${documents.length} document(s)`
+                      : "Sélectionnez un client"
                     }
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                   {loading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -472,18 +549,104 @@ export default function EnvoyerEmail() {
                     </p>
                   ) : documents.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-8">
-                      Aucun document disponible pour ce client
+                      Aucun document disponible
                     </p>
                   ) : (
                     <>
+                      {selectedDocuments.length > 0 && (
+                        <div className={`p-3 rounded-md text-sm ${
+                          exceedsDirectLimit 
+                            ? 'bg-amber-500/10 border border-amber-500/20' 
+                            : 'bg-muted'
+                        }`}>
+                          <div className="flex items-center gap-2">
+                            <Info className="h-4 w-4" />
+                            <span className="font-medium">
+                              Taille: {formatFileSize(totalSelectedSize)}
+                            </span>
+                          </div>
+                          {exceedsDirectLimit && (
+                            <p className="text-xs mt-1 text-amber-600">
+                              Dépasse 25 MB - utilisez le mode lien
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {selectedDocuments.length > 0 && (
+                        <div className="space-y-3">
+                          <Label className="text-sm font-medium">Mode d'envoi</Label>
+                          <RadioGroup 
+                            value={attachmentMode} 
+                            onValueChange={(v) => setAttachmentMode(v as 'direct' | 'link')}
+                          >
+                            <div className={`flex items-start space-x-3 p-3 rounded-md border ${
+                              exceedsDirectLimit ? 'opacity-50' : ''
+                            }`}>
+                              <RadioGroupItem 
+                                value="direct" 
+                                id="direct" 
+                                disabled={exceedsDirectLimit}
+                              />
+                              <div className="space-y-1">
+                                <Label htmlFor="direct" className="cursor-pointer flex items-center gap-2">
+                                  <Paperclip className="h-4 w-4" />
+                                  Pièces jointes directes
+                                </Label>
+                                <p className="text-xs text-muted-foreground">
+                                  Max 25 MB • Fichiers attachés à l'email
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-start space-x-3 p-3 rounded-md border">
+                              <RadioGroupItem value="link" id="link" />
+                              <div className="space-y-1">
+                                <Label htmlFor="link" className="cursor-pointer flex items-center gap-2">
+                                  <Link2 className="h-4 w-4" />
+                                  Envoyer par lien
+                                </Label>
+                                <p className="text-xs text-muted-foreground">
+                                  Taille illimitée • Lien de téléchargement
+                                </p>
+                              </div>
+                            </div>
+                          </RadioGroup>
+
+                          {attachmentMode === 'link' && (
+                            <div className="space-y-2 pt-2">
+                              <Label className="text-xs">Expiration du lien</Label>
+                              <Select 
+                                value={String(linkExpirationDays)} 
+                                onValueChange={(v) => {
+                                  setLinkExpirationDays(Number(v));
+                                  setGeneratedLink(null);
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="3">3 jours</SelectItem>
+                                  <SelectItem value="7">7 jours</SelectItem>
+                                  <SelectItem value="14">14 jours</SelectItem>
+                                  <SelectItem value="30">30 jours</SelectItem>
+                                  <SelectItem value="0">Jamais</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <Button 
                         variant="ghost" 
                         size="sm"
                         onClick={selectAllDocuments}
-                        className="w-full mb-2"
+                        className="w-full"
                       >
                         {selectedDocuments.length === documents.length ? "Tout désélectionner" : "Tout sélectionner"}
                       </Button>
+                      
                       <ScrollArea className="h-64">
                         <div className="space-y-2">
                           {documents.map(doc => (

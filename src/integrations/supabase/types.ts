@@ -763,6 +763,50 @@ export type Database = {
           },
         ]
       }
+      shared_file_links: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          created_by: string
+          document_ids: string[]
+          download_count: number | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          token: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          created_by: string
+          document_ids: string[]
+          download_count?: number | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          token: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          created_by?: string
+          document_ids?: string[]
+          download_count?: number | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_file_links_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           agent_id: string | null
