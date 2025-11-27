@@ -134,19 +134,26 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
                   </Button>
                 </DialogTitle>
               </DialogHeader>
-              <div className="flex-1 flex items-center justify-center bg-black">
-                <video 
-                  controls 
-                  autoPlay
-                  className="w-full max-h-[80vh] object-contain"
-                >
-                  <source src={url} type={videoMimeType} />
-                  <div className="text-white text-center p-8">
-                    <Video className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                    <p>Ce format vidéo n'est pas supporté par votre navigateur.</p>
-                    <p className="text-sm text-muted-foreground mt-2">Veuillez télécharger le fichier pour le visionner.</p>
+              <div className="flex-1 flex items-center justify-center bg-black p-8">
+                <div className="text-center text-white max-w-md">
+                  <div className="h-24 w-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <Video className="h-12 w-12 text-white" />
                   </div>
-                </video>
+                  <h3 className="text-xl font-semibold mb-2">{name}</h3>
+                  <p className="text-white/70 mb-4">{formatSize(size)}</p>
+                  <div className="bg-orange-500/20 border border-orange-500/50 rounded-lg p-4 mb-6">
+                    <p className="text-orange-300">
+                      Le format <strong>{name.split('.').pop()?.toUpperCase()}</strong> n'est pas supporté par votre navigateur.
+                    </p>
+                    <p className="text-sm text-orange-200/70 mt-1">
+                      Téléchargez le fichier pour le visionner avec un lecteur vidéo.
+                    </p>
+                  </div>
+                  <Button onClick={handleDownload} className="w-full">
+                    <Download className="h-4 w-4 mr-2" />
+                    Télécharger la vidéo
+                  </Button>
+                </div>
               </div>
             </DialogContent>
           </Dialog>
