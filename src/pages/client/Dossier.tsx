@@ -33,6 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 
 export default function Dossier() {
   const navigate = useNavigate();
@@ -47,7 +48,6 @@ export default function Dossier() {
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [editProfileDialogOpen, setEditProfileDialogOpen] = useState(false);
-  const [editProfileData, setEditProfileData] = useState<any>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
 
@@ -267,38 +267,7 @@ export default function Dossier() {
   };
 
   const handleEditProfileClick = () => {
-    setEditProfileData({
-      nom: profile?.nom,
-      prenom: profile?.prenom,
-      telephone: profile?.telephone,
-    });
     setEditProfileDialogOpen(true);
-  };
-
-  const handleEditProfileSave = async () => {
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(editProfileData)
-        .eq('id', user?.id);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Succès',
-        description: 'Vos informations ont été mises à jour',
-      });
-
-      setEditProfileDialogOpen(false);
-      loadData();
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de mettre à jour vos informations',
-        variant: 'destructive',
-      });
-    }
   };
 
   const getFileIcon = (type: string) => {
@@ -891,46 +860,13 @@ export default function Dossier() {
       </AlertDialog>
 
       {/* Edit Profile Dialog */}
-      <Dialog open={editProfileDialogOpen} onOpenChange={setEditProfileDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Modifier mes informations</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Prénom</Label>
-                <Input
-                  value={editProfileData.prenom || ''}
-                  onChange={(e) => setEditProfileData({ ...editProfileData, prenom: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Nom</Label>
-                <Input
-                  value={editProfileData.nom || ''}
-                  onChange={(e) => setEditProfileData({ ...editProfileData, nom: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Téléphone</Label>
-              <Input
-                value={editProfileData.telephone || ''}
-                onChange={(e) => setEditProfileData({ ...editProfileData, telephone: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditProfileDialogOpen(false)}>
-              Annuler
-            </Button>
-            <Button onClick={handleEditProfileSave}>
-              Enregistrer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditClientProfileDialog
+        open={editProfileDialogOpen}
+        onOpenChange={setEditProfileDialogOpen}
+        client={client}
+        profile={profile}
+        onSaved={loadData}
+      />
     </div>
   );
 }
