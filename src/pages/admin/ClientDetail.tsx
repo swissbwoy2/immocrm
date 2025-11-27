@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { calculateDaysElapsed } from '@/utils/calculations';
+import { SendEmailDialog } from '@/components/SendEmailDialog';
 
 interface Client {
   id: string;
@@ -95,6 +96,7 @@ export default function ClientDetail() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<any>({});
   const [deleting, setDeleting] = useState(false);
+  const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
 
   useEffect(() => {
     loadClientData();
@@ -307,6 +309,10 @@ export default function ClientDetail() {
           </div>
 
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setSendEmailDialogOpen(true)}>
+              <MailPlus className="w-4 h-4 mr-2" />
+              Envoyer dossier
+            </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" disabled={deleting}>
@@ -1086,6 +1092,15 @@ export default function ClientDetail() {
           </Card>
         </div>
       </div>
+
+      {/* Send Email Dialog */}
+      <SendEmailDialog
+        open={sendEmailDialogOpen}
+        onOpenChange={setSendEmailDialogOpen}
+        clientId={client.id}
+        clientName={`${profile.prenom} ${profile.nom}`}
+        clientEmail={profile.email}
+      />
     </div>
   );
 }

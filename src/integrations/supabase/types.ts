@@ -387,6 +387,54 @@ export type Database = {
           },
         ]
       }
+      email_configurations: {
+        Row: {
+          created_at: string | null
+          display_name: string | null
+          email_from: string
+          id: string
+          is_active: boolean | null
+          signature_html: string | null
+          smtp_host: string
+          smtp_password: string
+          smtp_port: number
+          smtp_secure: boolean | null
+          smtp_user: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_name?: string | null
+          email_from: string
+          id?: string
+          is_active?: boolean | null
+          signature_html?: string | null
+          smtp_host: string
+          smtp_password: string
+          smtp_port?: number
+          smtp_secure?: boolean | null
+          smtp_user: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string | null
+          email_from?: string
+          id?: string
+          is_active?: boolean | null
+          signature_html?: string | null
+          smtp_host?: string
+          smtp_password?: string
+          smtp_port?: number
+          smtp_secure?: boolean | null
+          smtp_user?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           attachment_name: string | null
@@ -655,6 +703,56 @@ export type Database = {
           },
           {
             foreignKeyName: "renouvellements_mandat_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sent_emails: {
+        Row: {
+          attachments: Json | null
+          body_html: string | null
+          client_id: string | null
+          error_message: string | null
+          id: string
+          recipient_email: string
+          recipient_name: string | null
+          sender_id: string
+          sent_at: string | null
+          status: string | null
+          subject: string
+        }
+        Insert: {
+          attachments?: Json | null
+          body_html?: string | null
+          client_id?: string | null
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          recipient_name?: string | null
+          sender_id: string
+          sent_at?: string | null
+          status?: string | null
+          subject: string
+        }
+        Update: {
+          attachments?: Json | null
+          body_html?: string | null
+          client_id?: string | null
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          recipient_name?: string | null
+          sender_id?: string
+          sent_at?: string | null
+          status?: string | null
+          subject?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sent_emails_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"

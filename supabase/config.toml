@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.migrate-documents-to-storage]
 verify_jwt = false
+
+[functions.send-smtp-email]
+verify_jwt = false

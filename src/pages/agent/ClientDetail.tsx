@@ -11,8 +11,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, 
-  FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download, Eye, Upload
+  FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download, Eye, Upload, MailPlus
 } from 'lucide-react';
+import { SendEmailDialog } from '@/components/SendEmailDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -101,6 +102,7 @@ export default function ClientDetail() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState<string>('autre');
   const [isUploading, setIsUploading] = useState(false);
+  const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -432,6 +434,10 @@ export default function ClientDetail() {
           </div>
 
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setSendEmailDialogOpen(true)}>
+              <MailPlus className="w-4 h-4 mr-2" />
+              Envoyer dossier
+            </Button>
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
               <DialogTrigger asChild>
                 <Button onClick={handleEditClick}>
@@ -1073,6 +1079,15 @@ export default function ClientDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Send Email Dialog */}
+      <SendEmailDialog
+        open={sendEmailDialogOpen}
+        onOpenChange={setSendEmailDialogOpen}
+        clientId={client.id}
+        clientName={`${profile.prenom} ${profile.nom}`}
+        clientEmail={profile.email}
+      />
     </main>
   );
 }
