@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from '@/utils/calculations';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import { toast } from 'sonner';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
@@ -108,7 +109,8 @@ export default function ClientDashboard() {
               prenom,
               nom,
               email,
-              telephone
+              telephone,
+              avatar_url
             )
           `)
           .eq('id', clientData.agent_id)
@@ -121,6 +123,7 @@ export default function ClientDashboard() {
             nom: agentData.profile.nom || '',
             email: agentData.profile.email || '',
             telephone: agentData.profile.telephone || '',
+            avatar_url: agentData.profile.avatar_url || null,
           });
         }
       }
