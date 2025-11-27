@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Image, Video, FileText, Mic, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useVideoConverter } from "@/hooks/useVideoConverter";
+import { VideoConversionProgress } from "@/components/VideoConversionProgress";
 import {
   Popover,
   PopoverContent,
@@ -37,8 +39,11 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
+  const { convertToMp4, isConverting, conversionProgress, needsConversion, resetProgress } = useVideoConverter();
 
   const handleFileSelect = async (file: File, type: 'image' | 'video' | 'document') => {
+    // Reset conversion progress from previous uploads
+    resetProgress();
     // Validation de taille - 1GB max pour tous les fichiers
     const maxSize = 1024 * 1024 * 1024; // 1GB
     if (file.size > maxSize) {
@@ -52,12 +57,23 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
+      let fileToUpload = file;
+      
+      // Convert video if needed
+      if (type === 'video' && needsConversion(file)) {
+        toast({
+          title: "Conversion en cours",
+          description: "La vidéo sera convertie en MP4 pour une meilleure compatibilité.",
+        });
+        fileToUpload = await convertToMp4(file);
+      }
+      
+      const fileExt = fileToUpload.name.split('.').pop();
       const filePath = `${conversationId}/${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('message-attachments')
-        .upload(filePath, file);
+        .upload(filePath, fileToUpload);
 
       if (uploadError) throw uploadError;
 
@@ -67,9 +83,9 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
 
       const attachment: AttachmentData = {
         url: urlData.publicUrl,
-        type: normalizeAttachmentType(file.type),
-        name: file.name,
-        size: file.size,
+        type: normalizeAttachmentType(fileToUpload.type),
+        name: fileToUpload.name,
+        size: fileToUpload.size,
       };
 
       setPreview(attachment);
@@ -138,6 +154,15 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
       fileInputRef.current.click();
     }
   };
+
+  // Show conversion progress
+  if (isConverting && conversionProgress) {
+    return (
+      <div className="mb-2">
+        <VideoConversionProgress progress={conversionProgress} />
+      </div>
+    );
+  }
 
   if (preview) {
     return (

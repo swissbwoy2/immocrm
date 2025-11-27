@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Image, Video, FileText, X, Loader2, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useVideoConverter } from "@/hooks/useVideoConverter";
+import { VideoConversionProgress } from "@/components/VideoConversionProgress";
 
 export interface AttachmentData {
   url: string;
@@ -36,6 +38,7 @@ export const OfferAttachmentUploader = ({ onAttachmentsChange, attachments }: Of
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { convertToMp4, isConverting, conversionProgress, needsConversion, resetProgress } = useVideoConverter();
 
   const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -44,6 +47,7 @@ export const OfferAttachmentUploader = ({ onAttachmentsChange, attachments }: Of
     const newAttachments: AttachmentData[] = [];
 
     setUploading(true);
+    resetProgress();
     
     try {
       for (const file of Array.from(files)) {
@@ -56,18 +60,29 @@ export const OfferAttachmentUploader = ({ onAttachmentsChange, attachments }: Of
           continue;
         }
 
-        const fileExt = file.name.split('.').pop();
+        let fileToUpload = file;
+        
+        // Convert video if needed
+        if (file.type.startsWith('video/') && needsConversion(file)) {
+          toast({
+            title: "Conversion en cours",
+            description: `Conversion de ${file.name} en MP4...`,
+          });
+          fileToUpload = await convertToMp4(file);
+        }
+
+        const fileExt = fileToUpload.name.split('.').pop();
         const filePath = `offers/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from('message-attachments')
-          .upload(filePath, file);
+          .upload(filePath, fileToUpload);
 
         if (uploadError) {
           console.error('Upload error:', uploadError);
           toast({
             title: "Erreur d'upload",
-            description: `Impossible d'uploader ${file.name}`,
+            description: `Impossible d'uploader ${fileToUpload.name}`,
             variant: "destructive",
           });
           continue;
@@ -79,9 +94,9 @@ export const OfferAttachmentUploader = ({ onAttachmentsChange, attachments }: Of
 
         newAttachments.push({
           url: urlData.publicUrl,
-          type: file.type,
-          name: file.name,
-          size: file.size,
+          type: fileToUpload.type,
+          name: fileToUpload.name,
+          size: fileToUpload.size,
         });
       }
 
@@ -123,6 +138,11 @@ export const OfferAttachmentUploader = ({ onAttachmentsChange, attachments }: Of
         onChange={(e) => handleFileSelect(e.target.files)}
       />
 
+      {/* Show conversion progress */}
+      {isConverting && conversionProgress && (
+        <VideoConversionProgress progress={conversionProgress} />
+      )}
+
       {attachments.length > 0 && (
         <div className="space-y-2">
           {attachments.map((attachment, index) => (
@@ -155,12 +175,12 @@ export const OfferAttachmentUploader = ({ onAttachmentsChange, attachments }: Of
         variant="outline"
         className="w-full"
         onClick={() => fileInputRef.current?.click()}
-        disabled={uploading}
+        disabled={uploading || isConverting}
       >
-        {uploading ? (
+        {uploading || isConverting ? (
           <>
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Upload en cours...
+            {isConverting ? 'Conversion...' : 'Upload en cours...'}
           </>
         ) : (
           <>
@@ -171,7 +191,7 @@ export const OfferAttachmentUploader = ({ onAttachmentsChange, attachments }: Of
       </Button>
       
       <p className="text-xs text-muted-foreground text-center">
-        Photos, vidéos, PDF, documents Word/Excel acceptés
+        Photos, vidéos (conversion auto en MP4), PDF, documents Word/Excel acceptés
       </p>
     </div>
   );
