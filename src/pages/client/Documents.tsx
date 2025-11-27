@@ -113,11 +113,11 @@ export default function Documents() {
   };
 
   const validateFile = (file: File): boolean => {
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 1024 * 1024 * 1024; // 1GB
     if (file.size > maxSize) {
       toast({
         title: 'Fichier trop volumineux',
-        description: 'La taille maximale est de 10 MB',
+        description: 'La taille maximale est de 1 GB',
         variant: 'destructive',
       });
       return false;
