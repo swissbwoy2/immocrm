@@ -113,9 +113,13 @@ serve(async (req) => {
     }
 
     // Create SMTP client with denomailer
-    // Determine connection type based on port
+    // Use smtp_secure setting, or default to TLS for port 465
     const port = emailConfig.smtp_port || 465;
-    const useTLS = port === 465;
+    // IMPORTANT: Use implicit TLS when smtp_secure is true OR when using port 465
+    // This bypasses STARTTLS which has issues in Deno edge functions
+    const useTLS = emailConfig.smtp_secure === true || port === 465;
+    
+    console.log(`SMTP connection settings: host=${emailConfig.smtp_host}, port=${port}, tls=${useTLS}`);
     
     client = new SMTPClient({
       connection: {
