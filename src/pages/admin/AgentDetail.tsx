@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Mail, Phone, Users, Calendar } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Users, Calendar, Pencil, Save, X, Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
@@ -46,12 +48,32 @@ const AgentDetail = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [editForm, setEditForm] = useState({
+    prenom: '',
+    nom: '',
+    telephone: ''
+  });
 
   useEffect(() => {
     if (agentId) {
       fetchAgentDetails();
     }
   }, [agentId]);
+
+  useEffect(() => {
+    if (profile) {
+      setEditForm({
+        prenom: profile.prenom || '',
+        nom: profile.nom || '',
+        telephone: profile.telephone || ''
+      });
+    }
+  }, [profile]);
 
   const fetchAgentDetails = async () => {
     try {
@@ -118,6 +140,128 @@ const AgentDetail = () => {
     }
   };
 
+  const handleSave = async () => {
+    if (!agent || !profile) return;
+    
+    if (!editForm.prenom.trim() || !editForm.nom.trim()) {
+      toast({
+        title: "Erreur",
+        description: "Le prénom et le nom sont obligatoires",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          prenom: editForm.prenom.trim(),
+          nom: editForm.nom.trim(),
+          telephone: editForm.telephone.trim()
+        })
+        .eq('id', agent.user_id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Succès",
+        description: "Informations de l'agent mises à jour",
+      });
+      
+      setIsEditing(false);
+      fetchAgentDetails();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour les informations",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !agent) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner une image",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Erreur",
+        description: "L'image ne doit pas dépasser 5 Mo",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const filePath = `${agent.user_id}/avatar.${fileExt}`;
+
+      // Delete old avatar if exists
+      await supabase.storage
+        .from('profile-avatars')
+        .remove([`${agent.user_id}/avatar.png`, `${agent.user_id}/avatar.jpg`, `${agent.user_id}/avatar.jpeg`, `${agent.user_id}/avatar.webp`]);
+
+      // Upload new avatar
+      const { error: uploadError } = await supabase.storage
+        .from('profile-avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('profile-avatars')
+        .getPublicUrl(filePath);
+
+      // Update profile with new avatar URL
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: urlData.publicUrl + '?t=' + Date.now() })
+        .eq('id', agent.user_id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: "Succès",
+        description: "Photo de profil mise à jour",
+      });
+      fetchAgentDetails();
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du téléchargement de l'image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    if (profile) {
+      setEditForm({
+        prenom: profile.prenom || '',
+        nom: profile.nom || '',
+        telephone: profile.telephone || ''
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -155,54 +299,121 @@ const AgentDetail = () => {
           {/* Header Card */}
           <Card className="p-6">
             <div className="flex items-start gap-6 mb-6">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={profile.avatar_url || undefined} alt={`${profile.prenom} ${profile.nom}`} />
-                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                  {profile.prenom?.[0]}{profile.nom?.[0]}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src={profile.avatar_url || undefined} alt={`${profile.prenom} ${profile.nom}`} />
+                  <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                    {profile.prenom?.[0]}{profile.nom?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  className="hidden"
+                />
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                >
+                  <Camera className="h-4 w-4" />
+                </Button>
+              </div>
               <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-3xl font-bold">
-                    {profile.prenom} {profile.nom}
-                  </h1>
-                  <Badge variant={profile.actif ? "default" : "secondary"}>
-                    {profile.actif ? "Actif" : "Inactif"}
-                  </Badge>
-                </div>
-                <p className="text-muted-foreground">Agent immobilier</p>
+                {isEditing ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Prénom</Label>
+                        <Input
+                          value={editForm.prenom}
+                          onChange={(e) => setEditForm({ ...editForm, prenom: e.target.value })}
+                          placeholder="Prénom"
+                        />
+                      </div>
+                      <div>
+                        <Label>Nom</Label>
+                        <Input
+                          value={editForm.nom}
+                          onChange={(e) => setEditForm({ ...editForm, nom: e.target.value })}
+                          placeholder="Nom"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Téléphone</Label>
+                      <Input
+                        value={editForm.telephone}
+                        onChange={(e) => setEditForm({ ...editForm, telephone: e.target.value })}
+                        placeholder="+41 XX XXX XX XX"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={handleSave} disabled={saving}>
+                        <Save className="h-4 w-4 mr-2" />
+                        {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+                      </Button>
+                      <Button variant="outline" onClick={handleCancel} disabled={saving}>
+                        <X className="h-4 w-4 mr-2" />
+                        Annuler
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3 mb-2">
+                      <h1 className="text-3xl font-bold">
+                        {profile.prenom} {profile.nom}
+                      </h1>
+                      <Badge variant={profile.actif ? "default" : "secondary"}>
+                        {profile.actif ? "Actif" : "Inactif"}
+                      </Badge>
+                      <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Modifier
+                      </Button>
+                    </div>
+                    <p className="text-muted-foreground">Agent immobilier</p>
+                  </>
+                )}
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Email:</span>
-                  <span>{profile.email}</span>
+            {!isEditing && (
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Email:</span>
+                    <span>{profile.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Téléphone:</span>
+                    <span>{profile.telephone || 'Non renseigné'}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Téléphone:</span>
-                  <span>{profile.telephone}</span>
-                </div>
-              </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Clients assignés:</span>
-                  <span>{agent.nombre_clients_assignes}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">Créé le:</span>
-                  <span>
-                    {format(new Date(agent.created_at), "d MMMM yyyy", { locale: fr })}
-                  </span>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Clients assignés:</span>
+                    <span>{agent.nombre_clients_assignes}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Créé le:</span>
+                    <span>
+                      {format(new Date(agent.created_at), "d MMMM yyyy", { locale: fr })}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </Card>
 
           {/* Clients Card */}
