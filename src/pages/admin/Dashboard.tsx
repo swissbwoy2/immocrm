@@ -37,11 +37,10 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
 
-      // Load agents
+      // Load agents (tous les agents, pas seulement actifs)
       const { data: agentsData, error: agentsError } = await supabase
         .from('agents')
-        .select('id, user_id, statut')
-        .eq('statut', 'actif');
+        .select('id, user_id, statut');
 
       if (agentsError) throw agentsError;
 
