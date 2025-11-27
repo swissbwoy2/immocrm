@@ -94,33 +94,64 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
       name.toLowerCase().endsWith('.avi') ? 'video/x-msvideo' :
       'video/mp4';
 
-    // Card de téléchargement pour vidéos non supportées
-    const VideoDownloadCard = () => (
-      <>
-        <Card className="p-4 max-w-sm">
-          <div className="flex items-center gap-3">
-            <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-              <Video className="h-7 w-7 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{name}</p>
-              <p className="text-xs text-muted-foreground">{formatSize(size)}</p>
-              <p className="text-xs text-orange-500 mt-1">
-                Format {name.split('.').pop()?.toUpperCase()} - téléchargez pour visionner
-              </p>
-            </div>
-          </div>
-          <Button variant="outline" className="w-full mt-3" onClick={handleDownload}>
-            <Download className="h-4 w-4 mr-2" />
-            Télécharger la vidéo
-          </Button>
-        </Card>
-      </>
-    );
-
-    // Si erreur de lecture, afficher le card de téléchargement
+    // Si erreur de lecture, afficher le card avec aperçu et téléchargement
     if (videoError) {
-      return <VideoDownloadCard />;
+      return (
+        <>
+          <Card className="p-4 max-w-sm">
+            <div className="flex items-center gap-3">
+              <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <Video className="h-7 w-7 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{name}</p>
+                <p className="text-xs text-muted-foreground">{formatSize(size)}</p>
+                <p className="text-xs text-orange-500 mt-1">
+                  Format {name.split('.').pop()?.toUpperCase()} - téléchargez pour visionner
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-3">
+              <Button variant="outline" size="sm" className="flex-1" onClick={() => setPreviewOpen(true)}>
+                <Eye className="h-4 w-4 mr-1" />
+                Aperçu
+              </Button>
+              <Button variant="outline" size="sm" className="flex-1" onClick={handleDownload}>
+                <Download className="h-4 w-4 mr-1" />
+                Télécharger
+              </Button>
+            </div>
+          </Card>
+
+          <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+            <DialogContent className="max-w-5xl h-[90vh] p-0 overflow-hidden">
+              <DialogHeader className="p-4 border-b">
+                <DialogTitle className="flex items-center justify-between">
+                  <span className="truncate">{name}</span>
+                  <Button variant="outline" size="sm" onClick={handleDownload}>
+                    <Download className="h-4 w-4 mr-1" />
+                    Télécharger
+                  </Button>
+                </DialogTitle>
+              </DialogHeader>
+              <div className="flex-1 flex items-center justify-center bg-black">
+                <video 
+                  controls 
+                  autoPlay
+                  className="w-full max-h-[80vh] object-contain"
+                >
+                  <source src={url} type={videoMimeType} />
+                  <div className="text-white text-center p-8">
+                    <Video className="h-16 w-16 mx-auto mb-4 opacity-50" />
+                    <p>Ce format vidéo n'est pas supporté par votre navigateur.</p>
+                    <p className="text-sm text-muted-foreground mt-2">Veuillez télécharger le fichier pour le visionner.</p>
+                  </div>
+                </video>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </>
+      );
     }
 
     return (
