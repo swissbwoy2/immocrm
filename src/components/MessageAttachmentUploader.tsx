@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Image, Video, FileText, Mic, X, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useVideoConverter } from "@/hooks/useVideoConverter";
+import { useVideoConverter, ConversionResult } from "@/hooks/useVideoConverter";
 import { VideoConversionProgress } from "@/components/VideoConversionProgress";
 import {
   Popover,
@@ -35,15 +35,48 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
   const [uploading, setUploading] = useState(false);
   const [recording, setRecording] = useState(false);
   const [preview, setPreview] = useState<AttachmentData | null>(null);
+  const [pendingFile, setPendingFile] = useState<{ file: File; type: 'image' | 'video' | 'document'; result: ConversionResult } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
   const { convertToMp4, isConverting, conversionProgress, needsConversion, resetProgress } = useVideoConverter();
 
+  const uploadFile = async (fileToUpload: File) => {
+    const fileExt = fileToUpload.name.split('.').pop();
+    const filePath = `${conversationId}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('message-attachments')
+      .upload(filePath, fileToUpload);
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = supabase.storage
+      .from('message-attachments')
+      .getPublicUrl(filePath);
+
+    const attachment: AttachmentData = {
+      url: urlData.publicUrl,
+      type: normalizeAttachmentType(fileToUpload.type),
+      name: fileToUpload.name,
+      size: fileToUpload.size,
+    };
+
+    setPreview(attachment);
+    onAttachmentReady(attachment);
+
+    toast({
+      title: "Fichier uploadé",
+      description: "Vous pouvez maintenant envoyer le message",
+    });
+  };
+
   const handleFileSelect = async (file: File, type: 'image' | 'video' | 'document') => {
-    // Reset conversion progress from previous uploads
+    // Reset state from previous uploads
     resetProgress();
+    setPendingFile(null);
+    
     // Validation de taille - 1GB max pour tous les fichiers
     const maxSize = 1024 * 1024 * 1024; // 1GB
     if (file.size > maxSize) {
@@ -57,44 +90,26 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
 
     setUploading(true);
     try {
-      let fileToUpload = file;
-      
       // Convert video if needed
       if (type === 'video' && needsConversion(file)) {
         toast({
           title: "Conversion en cours",
           description: "La vidéo sera convertie en MP4 pour une meilleure compatibilité.",
         });
-        fileToUpload = await convertToMp4(file);
+        
+        const result = await convertToMp4(file);
+        
+        // If conversion was skipped or failed, ask user what to do
+        if (result.skipped && result.reason) {
+          setPendingFile({ file: result.file, type, result });
+          setUploading(false);
+          return;
+        }
+        
+        await uploadFile(result.file);
+      } else {
+        await uploadFile(file);
       }
-      
-      const fileExt = fileToUpload.name.split('.').pop();
-      const filePath = `${conversationId}/${Date.now()}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('message-attachments')
-        .upload(filePath, fileToUpload);
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from('message-attachments')
-        .getPublicUrl(filePath);
-
-      const attachment: AttachmentData = {
-        url: urlData.publicUrl,
-        type: normalizeAttachmentType(fileToUpload.type),
-        name: fileToUpload.name,
-        size: fileToUpload.size,
-      };
-
-      setPreview(attachment);
-      onAttachmentReady(attachment);
-
-      toast({
-        title: "Fichier uploadé",
-        description: "Vous pouvez maintenant envoyer le message",
-      });
     } catch (error) {
       console.error('Upload error:', error);
       toast({
@@ -105,6 +120,36 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleContinueWithOriginal = async () => {
+    if (!pendingFile) return;
+    
+    setUploading(true);
+    try {
+      await uploadFile(pendingFile.file);
+      toast({
+        title: "Attention",
+        description: "La vidéo a été uploadée mais pourrait ne pas être lisible sur certains navigateurs.",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Erreur d'upload",
+        description: "Impossible d'uploader le fichier",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      setPendingFile(null);
+      resetProgress();
+    }
+  };
+
+  const handleCancelUpload = () => {
+    setPendingFile(null);
+    resetProgress();
   };
 
   const startRecording = async () => {
@@ -155,11 +200,25 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId }:
     }
   };
 
-  // Show conversion progress
+  // Show conversion progress or warning with actions
   if (isConverting && conversionProgress) {
     return (
       <div className="mb-2">
         <VideoConversionProgress progress={conversionProgress} />
+      </div>
+    );
+  }
+
+  // Show warning with action buttons when conversion was skipped/failed
+  if (pendingFile && conversionProgress && (conversionProgress.stage === 'skipped' || conversionProgress.stage === 'error')) {
+    return (
+      <div className="mb-2">
+        <VideoConversionProgress 
+          progress={conversionProgress} 
+          onContinue={handleContinueWithOriginal}
+          onCancel={handleCancelUpload}
+          showActions={true}
+        />
       </div>
     );
   }

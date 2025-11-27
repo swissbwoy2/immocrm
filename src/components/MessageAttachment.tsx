@@ -94,6 +94,9 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
       name.toLowerCase().endsWith('.avi') ? 'video/x-msvideo' :
       'video/mp4';
 
+    const extension = name.split('.').pop()?.toUpperCase() || 'MOV';
+    const isMovFile = extension === 'MOV';
+    
     // Si erreur de lecture, afficher le card avec aperçu et téléchargement
     if (videoError) {
       return (
@@ -107,16 +110,19 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
                 <p className="text-sm font-medium truncate">{name}</p>
                 <p className="text-xs text-muted-foreground">{formatSize(size)}</p>
                 <p className="text-xs text-orange-500 mt-1">
-                  Format {name.split('.').pop()?.toUpperCase()} - téléchargez pour visionner
+                  {isMovFile 
+                    ? "Vidéo iPhone (.MOV) - non lisible dans le navigateur"
+                    : `Format ${extension} - téléchargez pour visionner`
+                  }
                 </p>
               </div>
             </div>
             <div className="flex gap-2 mt-3">
               <Button variant="outline" size="sm" className="flex-1" onClick={() => setPreviewOpen(true)}>
                 <Eye className="h-4 w-4 mr-1" />
-                Aperçu
+                Détails
               </Button>
-              <Button variant="outline" size="sm" className="flex-1" onClick={handleDownload}>
+              <Button variant="default" size="sm" className="flex-1" onClick={handleDownload}>
                 <Download className="h-4 w-4 mr-1" />
                 Télécharger
               </Button>
@@ -124,31 +130,52 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
           </Card>
 
           <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-            <DialogContent className="max-w-5xl h-[90vh] p-0 overflow-hidden">
+            <DialogContent className="max-w-lg p-0 overflow-hidden">
               <DialogHeader className="p-4 border-b">
                 <DialogTitle className="flex items-center justify-between">
                   <span className="truncate">{name}</span>
-                  <Button variant="outline" size="sm" onClick={handleDownload}>
-                    <Download className="h-4 w-4 mr-1" />
-                    Télécharger
-                  </Button>
                 </DialogTitle>
               </DialogHeader>
-              <div className="flex-1 flex items-center justify-center bg-black p-8">
-                <div className="text-center text-white max-w-md">
-                  <div className="h-24 w-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                    <Video className="h-12 w-12 text-white" />
+              <div className="flex items-center justify-center bg-muted/50 p-8">
+                <div className="text-center max-w-md">
+                  <div className="h-20 w-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <Video className="h-10 w-10 text-white" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">{name}</h3>
-                  <p className="text-white/70 mb-4">{formatSize(size)}</p>
-                  <div className="bg-orange-500/20 border border-orange-500/50 rounded-lg p-4 mb-6">
-                    <p className="text-orange-300">
-                      Le format <strong>{name.split('.').pop()?.toUpperCase()}</strong> n'est pas supporté par votre navigateur.
-                    </p>
-                    <p className="text-sm text-orange-200/70 mt-1">
-                      Téléchargez le fichier pour le visionner avec un lecteur vidéo.
-                    </p>
+                  <h3 className="text-lg font-semibold mb-2">{name}</h3>
+                  <p className="text-muted-foreground mb-4">{formatSize(size)}</p>
+                  
+                  <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 mb-4 text-left">
+                    {isMovFile ? (
+                      <>
+                        <p className="text-sm font-medium text-orange-700 dark:text-orange-300 mb-2">
+                          📱 Vidéo enregistrée sur iPhone
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Les fichiers <strong>.MOV</strong> utilisent souvent le codec HEVC (H.265) qui n'est pas supporté par tous les navigateurs.
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          <strong>Solutions :</strong>
+                        </p>
+                        <ul className="text-sm text-muted-foreground list-disc list-inside mt-1">
+                          <li>Téléchargez et visionnez avec VLC ou QuickTime</li>
+                          <li>Sur iPhone, envoyez des vidéos &lt;50 MB pour conversion auto</li>
+                        </ul>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-medium text-orange-700 dark:text-orange-300 mb-2">
+                          Format vidéo non supporté
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Le format <strong>{extension}</strong> n'est pas lisible dans le navigateur.
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Téléchargez le fichier pour le visionner avec un lecteur vidéo (VLC recommandé).
+                        </p>
+                      </>
+                    )}
                   </div>
+                  
                   <Button onClick={handleDownload} className="w-full">
                     <Download className="h-4 w-4 mr-2" />
                     Télécharger la vidéo
