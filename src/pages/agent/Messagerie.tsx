@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Send, Search, Mail } from "lucide-react";
+import { Send, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -12,7 +12,6 @@ import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploade
 import { MessageAttachment } from "@/components/MessageAttachment";
 import { NewConversationDialog } from "@/components/NewConversationDialog";
 import { parseMessageWithLinks } from "@/lib/utils";
-import { SendEmailDialog } from "@/components/SendEmailDialog";
 
 // Fonction pour retirer les accents des chaînes pour une recherche plus flexible
 const removeAccents = (str: string) => {
@@ -35,7 +34,6 @@ const [pendingAttachment, setPendingAttachment] = useState<{
     name: string;
     size: number;
   } | null>(null);
-  const [sendEmailOpen, setSendEmailOpen] = useState(false);
 
   useEffect(() => {
     loadAgentAndConversations();
@@ -222,22 +220,12 @@ const [pendingAttachment, setPendingAttachment] = useState<{
         <div className="p-4 border-b space-y-2">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-semibold">Mes Conversations</h2>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setSendEmailOpen(true)}
-              >
-                <Mail className="h-4 w-4 mr-1" />
-                Email
-              </Button>
-              {agentId && (
-                <NewConversationDialog 
-                  agentId={agentId} 
-                  onConversationCreated={handleConversationCreated}
-                />
-              )}
-            </div>
+            {agentId && (
+              <NewConversationDialog 
+                agentId={agentId} 
+                onConversationCreated={handleConversationCreated}
+              />
+            )}
           </div>
           <div className="relative">
             <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -358,11 +346,6 @@ const [pendingAttachment, setPendingAttachment] = useState<{
           </div>
         )}
       </div>
-
-      <SendEmailDialog 
-        open={sendEmailOpen} 
-        onOpenChange={setSendEmailOpen}
-      />
     </div>
   );
 };
