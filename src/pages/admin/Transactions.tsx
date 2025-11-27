@@ -24,30 +24,36 @@ const Transactions = () => {
 
   const loadTransactions = async () => {
     try {
-      // Récupérer toutes les transactions
-      const { data: transactionsData } = await supabase
+      // Récupérer toutes les transactions avec les relations via foreign keys explicites
+      const { data: transactionsData, error: transError } = await supabase
         .from('transactions')
-        .select('*, clients(user_id), agents(user_id)')
+        .select('*, clients!fk_transactions_client(user_id), agents!fk_transactions_agent(user_id)')
         .order('date_transaction', { ascending: false });
+      
+      if (transError) {
+        console.error('Erreur transactions:', transError);
+      }
       
       setTransactions(transactionsData || []);
 
       // Récupérer tous les profils nécessaires
       if (transactionsData && transactionsData.length > 0) {
         const userIds = new Set<string>();
-        transactionsData.forEach(t => {
+        transactionsData.forEach((t: any) => {
           if (t.clients?.user_id) userIds.add(t.clients.user_id);
           if (t.agents?.user_id) userIds.add(t.agents.user_id);
         });
 
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('id, prenom, nom')
-          .in('id', Array.from(userIds));
-        
-        if (profilesData) {
-          const profilesMap = new Map(profilesData.map(p => [p.id, p]));
-          setProfiles(profilesMap);
+        if (userIds.size > 0) {
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, prenom, nom')
+            .in('id', Array.from(userIds));
+          
+          if (profilesData) {
+            const profilesMap = new Map(profilesData.map(p => [p.id, p]));
+            setProfiles(profilesMap);
+          }
         }
       }
     } catch (error) {

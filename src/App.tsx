@@ -17,6 +17,7 @@ import AdminClientDetail from "./pages/admin/ClientDetail";
 import AdminAssignations from "./pages/admin/Assignations";
 import AdminMandats from "./pages/admin/Mandats";
 import AdminTransactions from "./pages/admin/Transactions";
+import AdminOffresEnvoyees from "./pages/admin/OffresEnvoyees";
 import AdminDocuments from "./pages/admin/Documents";
 import AdminMessagerie from "./pages/admin/Messagerie";
 import AdminMigrateDocuments from "./pages/admin/MigrateDocuments";
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/admin/assignations" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAssignations /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/mandats" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMandats /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/transactions" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminTransactions /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/offres-envoyees" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminOffresEnvoyees /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/documents" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminDocuments /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/migrate-documents" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMigrateDocuments /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/messagerie" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMessagerie /></AppLayout></ProtectedRoute>} />
