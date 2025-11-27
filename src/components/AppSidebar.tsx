@@ -42,6 +42,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Messagerie', icon: MessageSquare, path: '/admin/messagerie', notifKey: 'new_message' },
         { name: 'Documents', icon: FileText, path: '/admin/documents', notifKey: null },
         { name: 'Notifications', icon: Bell, path: '/admin/notifications', notifKey: 'total' },
+        { name: 'Paramètres', icon: Settings, path: '/admin/parametres', notifKey: null },
       ];
     case 'agent':
       return [
@@ -53,6 +54,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie', notifKey: 'new_message' },
         { name: 'Documents', icon: FileText, path: '/agent/documents', notifKey: null },
         { name: 'Notifications', icon: Bell, path: '/agent/notifications', notifKey: 'total' },
+        { name: 'Paramètres', icon: Settings, path: '/agent/parametres', notifKey: null },
       ];
     case 'client':
       return [

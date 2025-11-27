@@ -635,6 +635,7 @@ export type Database = {
       profiles: {
         Row: {
           actif: boolean | null
+          avatar_url: string | null
           created_at: string | null
           email: string
           id: string
@@ -645,6 +646,7 @@ export type Database = {
         }
         Insert: {
           actif?: boolean | null
+          avatar_url?: string | null
           created_at?: string | null
           email: string
           id: string
@@ -655,6 +657,7 @@ export type Database = {
         }
         Update: {
           actif?: boolean | null
+          avatar_url?: string | null
           created_at?: string | null
           email?: string
           id?: string

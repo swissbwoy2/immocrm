@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Mail, Phone, Users, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -23,6 +24,7 @@ interface Profile {
   email: string;
   telephone: string;
   actif: boolean;
+  avatar_url: string | null;
 }
 
 interface Client {
@@ -98,7 +100,8 @@ const AgentDetail = () => {
             prenom: '',
             email: '',
             telephone: '',
-            actif: false
+            actif: false,
+            avatar_url: null
           }
         })) || [];
 
@@ -151,8 +154,14 @@ const AgentDetail = () => {
         <div className="space-y-6">
           {/* Header Card */}
           <Card className="p-6">
-            <div className="flex items-start justify-between mb-6">
-              <div>
+            <div className="flex items-start gap-6 mb-6">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={profile.avatar_url || undefined} alt={`${profile.prenom} ${profile.nom}`} />
+                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                  {profile.prenom?.[0]}{profile.nom?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h1 className="text-3xl font-bold">
                     {profile.prenom} {profile.nom}

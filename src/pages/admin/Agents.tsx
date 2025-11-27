@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Mail, Phone, Users, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface AgentWithProfile {
   id: string;
@@ -21,6 +22,7 @@ interface AgentWithProfile {
     email: string;
     telephone: string;
     actif: boolean;
+    avatar_url: string | null;
   };
 }
 
@@ -55,7 +57,7 @@ const Agents = () => {
       const userIds = agentsData?.map(a => a.user_id) || [];
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, nom, prenom, email, telephone, actif')
+        .select('id, nom, prenom, email, telephone, actif, avatar_url')
         .in('id', userIds);
 
       if (profilesError) throw profilesError;
@@ -68,7 +70,8 @@ const Agents = () => {
           prenom: '',
           email: '',
           telephone: '',
-          actif: false
+          actif: false,
+          avatar_url: null
         }
       })) || [];
 
@@ -241,13 +244,20 @@ const Agents = () => {
                   onClick={() => navigate(`/admin/agents/${agent.id}`)}
                 >
                   <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <h3 className="text-xl font-semibold">{agent.profiles.prenom} {agent.profiles.nom}</h3>
-                        <Badge variant={agent.profiles.actif ? "default" : "secondary"}>
-                          {agent.profiles.actif ? "Actif" : "Inactif"}
-                        </Badge>
-                      </div>
+                    <div className="flex items-start gap-4 flex-1">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={agent.profiles.avatar_url || undefined} alt={`${agent.profiles.prenom} ${agent.profiles.nom}`} />
+                        <AvatarFallback className="bg-primary/10 text-primary">
+                          {agent.profiles.prenom?.[0]}{agent.profiles.nom?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          <h3 className="text-xl font-semibold">{agent.profiles.prenom} {agent.profiles.nom}</h3>
+                          <Badge variant={agent.profiles.actif ? "default" : "secondary"}>
+                            {agent.profiles.actif ? "Actif" : "Inactif"}
+                          </Badge>
+                        </div>
                       <div className="space-y-2 text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <Mail className="h-4 w-4" />
@@ -261,6 +271,7 @@ const Agents = () => {
                           <Users className="h-4 w-4" />
                           {agent.nombre_clients_assignes} client{agent.nombre_clients_assignes > 1 ? 's' : ''} assigné{agent.nombre_clients_assignes > 1 ? 's' : ''}
                         </div>
+                      </div>
                       </div>
                     </div>
                     <div className="flex gap-2">
