@@ -291,7 +291,7 @@ export default function EnvoyerEmail() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Envoyer un email</h1>
-            <p className="text-muted-foreground">Composez et envoyez des emails à vos clients ou contacts</p>
+            <p className="text-muted-foreground">Envoyez des emails à n'importe quel destinataire (clients, propriétaires, régies, etc.)</p>
           </div>
           <Button variant="outline" onClick={() => setShowConfigDialog(true)}>
             <Settings className="h-4 w-4 mr-2" />
@@ -304,8 +304,11 @@ export default function EnvoyerEmail() {
             <CardContent className="py-12 text-center">
               <AlertCircle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
               <h2 className="text-xl font-semibold mb-2">Configuration email requise</h2>
-              <p className="text-muted-foreground mb-6">
+              <p className="text-muted-foreground mb-4">
                 Vous devez d'abord configurer vos paramètres SMTP pour pouvoir envoyer des emails.
+              </p>
+              <p className="text-sm text-muted-foreground mb-6">
+                N'oubliez pas d'ajouter votre signature HTML dans la configuration pour qu'elle apparaisse automatiquement dans vos emails.
               </p>
               <Button onClick={() => setShowConfigDialog(true)}>
                 Configurer mes emails
@@ -319,31 +322,10 @@ export default function EnvoyerEmail() {
               <Card>
                 <CardHeader>
                   <CardTitle>Composer l'email</CardTitle>
-                  <CardDescription>Remplissez les informations de votre email</CardDescription>
+                  <CardDescription>Entrez l'adresse email du destinataire ou sélectionnez un client existant</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {/* Client selection */}
-                  <div className="space-y-2">
-                    <Label>Sélectionner un client (optionnel)</Label>
-                    <Select 
-                      value={selectedClientId || "__none__"} 
-                      onValueChange={(val) => setSelectedClientId(val === "__none__" ? "" : val)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choisir un client pour pré-remplir..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Aucun client</SelectItem>
-                        {clients.map(client => (
-                          <SelectItem key={client.id} value={client.id}>
-                            {client.profile.prenom} {client.profile.nom} ({client.profile.email})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Recipient */}
+                  {/* Recipient - FIRST */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Email destinataire *</Label>
@@ -351,7 +333,7 @@ export default function EnvoyerEmail() {
                         type="email"
                         value={email.recipient_email}
                         onChange={(e) => setEmail(prev => ({ ...prev, recipient_email: e.target.value }))}
-                        placeholder="destinataire@example.com"
+                        placeholder="exemple@domaine.com"
                       />
                     </div>
                     <div className="space-y-2">
@@ -362,6 +344,27 @@ export default function EnvoyerEmail() {
                         placeholder="Nom du destinataire"
                       />
                     </div>
+                  </div>
+
+                  {/* Client selection - OPTIONAL helper */}
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground text-sm">Ou sélectionner un client pour pré-remplir</Label>
+                    <Select 
+                      value={selectedClientId || "__none__"} 
+                      onValueChange={(val) => setSelectedClientId(val === "__none__" ? "" : val)}
+                    >
+                      <SelectTrigger className="bg-muted/30">
+                        <SelectValue placeholder="Choisir un client..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Aucun client</SelectItem>
+                        {clients.map(client => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.profile.prenom} {client.profile.nom} ({client.profile.email})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   {/* Subject */}
@@ -386,13 +389,25 @@ export default function EnvoyerEmail() {
                   </div>
 
                   {/* Signature preview */}
-                  {signature && (
+                  {signature ? (
                     <div className="p-3 border rounded-md bg-muted/50">
                       <Label className="text-xs text-muted-foreground">Signature (ajoutée automatiquement) :</Label>
                       <div 
-                        className="mt-1 text-sm"
+                        className="mt-1 text-sm overflow-auto max-h-48"
                         dangerouslySetInnerHTML={{ __html: signature }}
                       />
+                    </div>
+                  ) : (
+                    <div className="p-3 border border-dashed rounded-md bg-muted/20">
+                      <p className="text-sm text-muted-foreground">
+                        Aucune signature configurée. <button 
+                          type="button"
+                          onClick={() => setShowConfigDialog(true)}
+                          className="underline hover:text-primary"
+                        >
+                          Ajouter une signature
+                        </button>
+                      </p>
                     </div>
                   )}
                 </CardContent>
