@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { Buffer } from "node:buffer";
-import nodemailer from "https://esm.sh/nodemailer@6.9.8";
-
-// Polyfill Buffer for nodemailer
-(globalThis as any).Buffer = Buffer;
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,6 +25,8 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  let client: SMTPClient | null = null;
 
   try {
     const authHeader = req.headers.get('Authorization');
@@ -68,7 +66,7 @@ serve(async (req) => {
       throw new Error('recipient_email, subject, and body_html are required');
     }
 
-    console.log(`Sending email to ${recipient_email} via ${emailConfig.smtp_host}:465 (SSL)`);
+    console.log(`Sending email to ${recipient_email} via ${emailConfig.smtp_host}:${emailConfig.smtp_port}`);
 
     // Build email body with signature
     let fullBodyHtml = body_html.replace(/\n/g, '<br/>');
@@ -82,7 +80,21 @@ serve(async (req) => {
     if (attachments && attachments.length > 0) {
       for (const attachment of attachments) {
         try {
-          const response = await fetch(attachment.url);
+          // Handle Supabase storage URLs
+          let fetchUrl = attachment.url;
+          
+          // If it's a storage path, get signed URL
+          if (attachment.url.startsWith('client-documents/')) {
+            const { data: signedUrlData } = await supabase.storage
+              .from('client-documents')
+              .createSignedUrl(attachment.url.replace('client-documents/', ''), 300);
+            
+            if (signedUrlData?.signedUrl) {
+              fetchUrl = signedUrlData.signedUrl;
+            }
+          }
+
+          const response = await fetch(fetchUrl);
           if (response.ok) {
             const arrayBuffer = await response.arrayBuffer();
             emailAttachments.push({
@@ -90,9 +102,9 @@ serve(async (req) => {
               content: new Uint8Array(arrayBuffer),
               contentType: attachment.content_type || 'application/octet-stream',
             });
-            console.log(`Attached: ${attachment.filename}`);
+            console.log(`Attached: ${attachment.filename} (${arrayBuffer.byteLength} bytes)`);
           } else {
-            console.warn(`Failed to download attachment: ${attachment.filename}`);
+            console.warn(`Failed to download attachment: ${attachment.filename} - ${response.status}`);
           }
         } catch (err) {
           console.warn(`Error downloading attachment ${attachment.filename}:`, err);
@@ -100,45 +112,54 @@ serve(async (req) => {
       }
     }
 
-    // Create nodemailer transporter with port 465 (direct SSL/TLS)
-    const transporter = nodemailer.createTransport({
-      host: emailConfig.smtp_host,
-      port: 465,
-      secure: true, // true for port 465 (direct SSL)
-      auth: {
-        user: emailConfig.smtp_user,
-        pass: emailConfig.smtp_password,
-      },
-      tls: {
-        rejectUnauthorized: false, // Allow self-signed certificates
+    // Create SMTP client with denomailer
+    // Determine connection type based on port
+    const port = emailConfig.smtp_port || 465;
+    const useTLS = port === 465;
+    
+    client = new SMTPClient({
+      connection: {
+        hostname: emailConfig.smtp_host,
+        port: port,
+        tls: useTLS,
+        auth: {
+          username: emailConfig.smtp_user,
+          password: emailConfig.smtp_password,
+        },
       },
     });
 
     // Build from address
     const fromAddress = emailConfig.display_name 
-      ? `"${emailConfig.display_name}" <${emailConfig.email_from}>`
+      ? `${emailConfig.display_name} <${emailConfig.email_from}>`
       : emailConfig.email_from;
 
     const toAddress = recipient_name 
-      ? `"${recipient_name}" <${recipient_email}>`
+      ? `${recipient_name} <${recipient_email}>`
       : recipient_email;
 
-    // Prepare mail options
-    const mailOptions: nodemailer.SendMailOptions = {
+    // Prepare attachments for denomailer
+    const denomailerAttachments = emailAttachments.map(att => ({
+      filename: att.filename,
+      content: att.content,
+      contentType: att.contentType,
+      encoding: "binary" as const,
+    }));
+
+    // Send email
+    await client.send({
       from: fromAddress,
       to: toAddress,
       subject: subject,
       html: fullBodyHtml,
-      attachments: emailAttachments.map(att => ({
-        filename: att.filename,
-        content: att.content,
-        contentType: att.contentType,
-      })),
-    };
+      attachments: denomailerAttachments.length > 0 ? denomailerAttachments : undefined,
+    });
 
-    // Send email
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully:', info.messageId);
+    console.log('Email sent successfully');
+
+    // Close connection
+    await client.close();
+    client = null;
 
     // Log sent email
     const { error: logError } = await supabase
@@ -159,13 +180,22 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: 'Email sent successfully', messageId: info.messageId }),
+      JSON.stringify({ success: true, message: 'Email sent successfully' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error sending email:', error);
+    
+    // Try to close client if open
+    if (client) {
+      try {
+        await client.close();
+      } catch (e) {
+        console.error('Error closing SMTP client:', e);
+      }
+    }
     
     return new Response(
       JSON.stringify({ success: false, error: errorMessage }),
