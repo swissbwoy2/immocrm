@@ -315,12 +315,15 @@ export default function EnvoyerEmail() {
                   {/* Client selection */}
                   <div className="space-y-2">
                     <Label>Sélectionner un client (optionnel)</Label>
-                    <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                    <Select 
+                      value={selectedClientId || "__none__"} 
+                      onValueChange={(val) => setSelectedClientId(val === "__none__" ? "" : val)}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Choisir un client pour pré-remplir..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Aucun client</SelectItem>
+                        <SelectItem value="__none__">Aucun client</SelectItem>
                         {clients.map(client => (
                           <SelectItem key={client.id} value={client.id}>
                             {client.profile.prenom} {client.profile.nom} ({client.profile.email})
