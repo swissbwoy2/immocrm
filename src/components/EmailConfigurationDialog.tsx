@@ -15,13 +15,15 @@ interface EmailConfigurationDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Port 465 uses direct SSL/TLS which works reliably
+// Port 587 uses STARTTLS which has issues in Supabase Edge Functions
 const SMTP_PRESETS = [
-  { name: "Gmail", host: "smtp.gmail.com", port: 587, secure: true },
+  { name: "Gmail", host: "smtp.gmail.com", port: 465, secure: true },
   { name: "Outlook/Office 365", host: "smtp.office365.com", port: 587, secure: true },
-  { name: "Infomaniak", host: "mail.infomaniak.com", port: 587, secure: true },
+  { name: "Infomaniak", host: "mail.infomaniak.com", port: 465, secure: true },
   { name: "OVH", host: "ssl0.ovh.net", port: 465, secure: true },
-  { name: "Yahoo", host: "smtp.mail.yahoo.com", port: 587, secure: true },
-  { name: "Personnalisé", host: "", port: 587, secure: true },
+  { name: "Yahoo", host: "smtp.mail.yahoo.com", port: 465, secure: true },
+  { name: "Personnalisé", host: "", port: 465, secure: true },
 ];
 
 export function EmailConfigurationDialog({ open, onOpenChange }: EmailConfigurationDialogProps) {
