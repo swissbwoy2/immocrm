@@ -224,10 +224,22 @@ export default function ClientDetail() {
   const handleUploadDocument = async () => {
     if (!selectedFile || !client) return;
     
+    // Limite de 1GB
+    const maxSize = 1024 * 1024 * 1024;
+    if (selectedFile.size > maxSize) {
+      toast({
+        title: 'Fichier trop volumineux',
+        description: 'La taille maximale est de 1 GB',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setIsUploading(true);
     try {
       const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${client.id}/${Date.now()}.${fileExt}`;
+      // Utiliser user_id du client (pas client.id) pour correspondre aux politiques RLS du storage
+      const fileName = `${client.user_id}/${Date.now()}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('client-documents')
