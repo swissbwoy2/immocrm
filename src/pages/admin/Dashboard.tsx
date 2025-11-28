@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send, Bell } from 'lucide-react';
+import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send, Bell, Power } from 'lucide-react';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { calculateDaysElapsed } from '@/utils/calculations';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
+import { toast } from 'sonner';
 
 const adminMenu = [
   { name: 'Tableau de bord', icon: Users, path: '/admin' },
@@ -37,18 +39,18 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
 
-      // Load agents (tous les agents, pas seulement actifs)
+      // Load agents (tous les agents)
       const { data: agentsData, error: agentsError } = await supabase
         .from('agents')
         .select('id, user_id, statut');
 
       if (agentsError) throw agentsError;
 
-      // Load profiles separately
+      // Load profiles separately (inclure actif)
       const userIds = agentsData?.map(a => a.user_id) || [];
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, nom, prenom')
+        .select('id, nom, prenom, actif')
         .in('id', userIds);
 
       if (profilesError) throw profilesError;
@@ -59,7 +61,8 @@ export default function AdminDashboard() {
         const profile = profilesMap.get(agent.user_id);
         return {
           id: agent.id,
-          actif: agent.statut === 'actif',
+          user_id: agent.user_id,
+          actif: profile?.actif ?? false, // Utiliser profiles.actif comme source de vérité
           prenom: profile?.prenom || '',
           nom: profile?.nom || '',
         };
@@ -115,6 +118,29 @@ export default function AdminDashboard() {
     }
   };
 
+  const toggleAgentStatus = async (agentUserId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ actif: !currentStatus })
+        .eq('id', agentUserId);
+
+      if (error) throw error;
+
+      // Mettre à jour l'état local
+      setAgents(prev => prev.map(agent => 
+        agent.user_id === agentUserId 
+          ? { ...agent, actif: !currentStatus }
+          : agent
+      ));
+
+      toast.success(`Agent ${!currentStatus ? 'activé' : 'désactivé'} avec succès`);
+    } catch (error) {
+      console.error('Error toggling agent status:', error);
+      toast.error('Erreur lors du changement de statut');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -124,7 +150,8 @@ export default function AdminDashboard() {
   }
 
   const clientsActifs = clients.filter(c => calculateDaysElapsed(c.dateInscription) <= 90).length;
-  const totalAgents = agents.filter(a => a.actif).length;
+  const totalAgents = agents.length; // Compter TOUS les agents
+  const agentsActifs = agents.filter(a => a.actif).length;
   const totalOffresEnvoyees = offres.length;
   const transactionsEnCours = transactions.filter(t => t.statut === 'en_cours').length;
   const transactionsConcluesMois = transactions.filter(t => {
@@ -178,7 +205,8 @@ export default function AdminDashboard() {
             />
             <KPICard 
               title="Agents" 
-              value={totalAgents} 
+              value={totalAgents}
+              subtitle={`${agentsActifs} actif(s)`}
               icon={UserCog}
               onClick={() => navigate('/admin/agents')}
             />
@@ -228,6 +256,7 @@ export default function AdminDashboard() {
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Agent</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Statut</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Clients</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Critiques</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Commission pot.</th>
@@ -242,7 +271,19 @@ export default function AdminDashboard() {
 
                       return (
                         <tr key={agent.id} className="border-b hover:bg-muted/50">
-                          <td className="py-3 px-4 text-sm">{agent.prenom} {agent.nom}</td>
+                          <td className="py-3 px-4 text-sm">
+                            <button 
+                              onClick={() => navigate(`/admin/agents/${agent.id}`)}
+                              className="hover:underline text-left"
+                            >
+                              {agent.prenom} {agent.nom}
+                            </button>
+                          </td>
+                          <td className="py-3 px-4 text-sm">
+                            <Badge variant={agent.actif ? 'default' : 'secondary'}>
+                              {agent.actif ? 'Actif' : 'Inactif'}
+                            </Badge>
+                          </td>
                           <td className="py-3 px-4 text-sm">{agentClients.length}</td>
                           <td className="py-3 px-4 text-sm">
                             {critiques > 0 ? (
@@ -253,9 +294,15 @@ export default function AdminDashboard() {
                           </td>
                           <td className="py-3 px-4 text-sm">{commissionPot.toLocaleString()} CHF</td>
                           <td className="py-3 px-4 text-sm">
-                            <Button variant="ghost" size="sm" onClick={() => navigate('/admin/assignations')}>
-                              Redistribuer
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Switch
+                                checked={agent.actif}
+                                onCheckedChange={() => toggleAgentStatus(agent.user_id, agent.actif)}
+                              />
+                              <Button variant="ghost" size="sm" onClick={() => navigate('/admin/assignations')}>
+                                Redistribuer
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       );
