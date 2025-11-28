@@ -232,43 +232,33 @@ export default function Documents() {
   };
 
   const handlePreview = async (document: any) => {
-    setPreviewDocument(document);
-    
     try {
+      let url: string;
+      
       // Si l'URL est une data URL (base64)
-      if (document.url.startsWith('data:')) {
-        // Pour les PDFs en base64, on doit créer un Blob URL
+      if (document.url?.startsWith('data:')) {
         if (document.type === 'application/pdf') {
-          try {
-            const base64Data = document.url.split(',')[1];
-            const binaryString = atob(base64Data);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            
-            for (let i = 0; i < len; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
-            }
-            
-            const blob = new Blob([bytes], { type: 'application/pdf' });
-            const blobUrl = URL.createObjectURL(blob);
-            
-            setPreviewUrl(blobUrl);
-            setPreviewDialogOpen(true);
-          } catch (error) {
-            console.error('Error converting base64 to Blob:', error);
-            toast({
-              title: 'Erreur',
-              description: 'Erreur lors de la conversion du document',
-              variant: 'destructive',
-            });
-            return;
+          // Pour les PDFs base64, créer un blob et ouvrir dans un nouvel onglet
+          const base64Data = document.url.split(',')[1];
+          const binaryString = atob(base64Data);
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
           }
+          
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          url = URL.createObjectURL(blob);
+          window.open(url, '_blank');
+          return;
         } else {
-          // Pour les images, utiliser directement la data URL
+          // Pour les images base64, afficher dans le dialog
+          setPreviewDocument(document);
           setPreviewUrl(document.url);
           setPreviewDialogOpen(true);
+          return;
         }
-        return;
       }
 
       // Sinon, créer une URL signée depuis le storage
@@ -279,8 +269,15 @@ export default function Documents() {
       if (error) throw error;
 
       if (data?.signedUrl) {
-        setPreviewUrl(data.signedUrl);
-        setPreviewDialogOpen(true);
+        if (document.type === 'application/pdf') {
+          // Ouvrir les PDFs dans un nouvel onglet pour éviter les blocages
+          window.open(data.signedUrl, '_blank');
+        } else {
+          // Afficher les images dans le dialog
+          setPreviewDocument(document);
+          setPreviewUrl(data.signedUrl);
+          setPreviewDialogOpen(true);
+        }
       }
     } catch (error) {
       console.error('Error creating preview URL:', error);
@@ -599,7 +596,7 @@ export default function Documents() {
         </DialogContent>
       </Dialog>
 
-      {/* Preview Dialog */}
+      {/* Preview Dialog (Images only - PDFs open in new tab) */}
       <Dialog 
         open={previewDialogOpen} 
         onOpenChange={(open) => {
@@ -613,18 +610,12 @@ export default function Documents() {
           <DialogHeader>
             <DialogTitle>{previewDocument?.nom}</DialogTitle>
           </DialogHeader>
-          <div className="overflow-auto max-h-[calc(90vh-120px)]">
-            {previewDocument?.type.includes('pdf') ? (
-              <iframe
-                src={previewUrl}
-                className="w-full h-[600px] rounded-lg"
-                title="Document preview"
-              />
-            ) : previewDocument?.type.includes('image') ? (
+          <div className="overflow-auto max-h-[calc(90vh-120px)] flex justify-center">
+            {previewDocument?.type?.includes('image') ? (
               <img 
                 src={previewUrl} 
                 alt={previewDocument?.nom}
-                className="w-full h-auto rounded-lg"
+                className="max-w-full h-auto rounded-lg"
               />
             ) : (
               <p className="text-center text-muted-foreground py-8">
