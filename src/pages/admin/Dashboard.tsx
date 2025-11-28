@@ -79,7 +79,8 @@ export default function AdminDashboard() {
       
       const transformedClients = clientsData?.map(client => ({
         ...client,
-        dateInscription: client.date_ajout || client.created_at,
+        // Utiliser date_engagement pour le calcul du mandat, sinon date_ajout
+        dateInscription: client.date_engagement || client.date_ajout || client.created_at,
         agentId: client.agent_id,
         budgetMax: client.budget_max || 0,
         notificationJ60Envoyee: false,
