@@ -104,6 +104,9 @@ export default function ClientDetail() {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedDocType, setSelectedDocType] = useState<string>('autre');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [previewDocument, setPreviewDocument] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -289,6 +292,65 @@ export default function ClientDetail() {
       toast({
         title: 'Erreur',
         description: 'Impossible de supprimer le document',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handlePreviewDocument = async (doc: any) => {
+    setPreviewDocument(doc);
+    
+    try {
+      // Si l'URL est une data URL (base64)
+      if (doc.url?.startsWith('data:')) {
+        if (doc.type === 'application/pdf') {
+          try {
+            const base64Data = doc.url.split(',')[1];
+            const binaryString = atob(base64Data);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            
+            for (let i = 0; i < len; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+            const blobUrl = URL.createObjectURL(blob);
+            
+            setPreviewUrl(blobUrl);
+            setPreviewDialogOpen(true);
+          } catch (error) {
+            console.error('Error converting base64 to Blob:', error);
+            toast({
+              title: 'Erreur',
+              description: 'Erreur lors de la conversion du document',
+              variant: 'destructive',
+            });
+            return;
+          }
+        } else {
+          setPreviewUrl(doc.url);
+          setPreviewDialogOpen(true);
+        }
+        return;
+      }
+
+      // Sinon, créer une URL signée depuis le storage
+      const { data, error } = await supabase.storage
+        .from('client-documents')
+        .createSignedUrl(doc.url, 3600);
+
+      if (error) throw error;
+
+      if (data?.signedUrl) {
+        setPreviewUrl(data.signedUrl);
+        setPreviewDialogOpen(true);
+      }
+    } catch (error) {
+      console.error('Error creating preview URL:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de prévisualiser le document',
         variant: 'destructive',
       });
     }
@@ -1292,6 +1354,11 @@ export default function ClientDetail() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
+                          {(doc.type?.includes('image') || doc.type === 'application/pdf') && (
+                            <Button variant="ghost" size="sm" onClick={() => handlePreviewDocument(doc)}>
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          )}
                           <Button variant="ghost" size="sm" onClick={() => handleDownloadDocument(doc)}>
                             <Download className="w-4 h-4" />
                           </Button>
@@ -1358,6 +1425,39 @@ export default function ClientDetail() {
             <Button onClick={handleUploadDocument} disabled={!selectedFile || isUploading}>
               {isUploading ? 'Upload en cours...' : 'Ajouter'}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Document Dialog */}
+      <Dialog open={previewDialogOpen} onOpenChange={(open) => {
+        setPreviewDialogOpen(open);
+        if (!open && previewUrl && !previewUrl.startsWith('data:')) {
+          URL.revokeObjectURL(previewUrl);
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle>{previewDocument?.nom || 'Aperçu du document'}</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4 max-h-[70vh] overflow-auto">
+            {previewDocument?.type?.includes('image') ? (
+              <img 
+                src={previewUrl} 
+                alt={previewDocument?.nom}
+                className="w-full h-auto rounded-lg"
+              />
+            ) : previewDocument?.type === 'application/pdf' ? (
+              <iframe
+                src={previewUrl}
+                className="w-full h-[65vh] rounded-lg border"
+                title={previewDocument?.nom}
+              />
+            ) : (
+              <p className="text-center text-muted-foreground py-8">
+                Aperçu non disponible pour ce type de fichier
+              </p>
+            )}
           </div>
         </DialogContent>
       </Dialog>
