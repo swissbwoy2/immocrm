@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Building2 } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
+import logoImmorama from '@/assets/logo-immorama-2023.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -105,9 +106,7 @@ export default function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-            <div className="p-3 bg-primary/10 rounded-2xl">
-              <Building2 className="w-12 h-12 text-primary" />
-            </div>
+            <img src={logoImmorama} alt="Immo-Rama" className="h-20 object-contain" />
           </div>
           <div>
             <CardTitle className="text-2xl">ImmoCRM</CardTitle>
