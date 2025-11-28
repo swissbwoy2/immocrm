@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -97,6 +97,14 @@ export default function ClientDetail() {
   const [editFormData, setEditFormData] = useState<any>({});
   const [deleting, setDeleting] = useState(false);
   const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
+  
+  // Documents state
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedDocType, setSelectedDocType] = useState<string>('autre');
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadClientData();
@@ -150,6 +158,163 @@ export default function ClientDetail() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Load documents
+  const loadDocuments = async () => {
+    if (!client) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('client_id', client.id)
+        .order('date_upload', { ascending: false });
+
+      if (error) throw error;
+      setDocuments(data || []);
+    } catch (error) {
+      console.error('Error loading documents:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (client) {
+      loadDocuments();
+    }
+  }, [client]);
+
+  const handleUploadDocument = async () => {
+    if (!selectedFile || !client) return;
+
+    const maxSize = 1024 * 1024 * 1024; // 1GB
+    if (selectedFile.size > maxSize) {
+      toast({
+        title: 'Fichier trop volumineux',
+        description: 'La taille maximale est de 1 GB',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `${client.user_id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('client-documents')
+        .upload(fileName, selectedFile);
+
+      if (uploadError) throw uploadError;
+
+      const { error: dbError } = await supabase
+        .from('documents')
+        .insert({
+          nom: selectedFile.name,
+          type: selectedFile.type,
+          taille: selectedFile.size,
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          client_id: client.id,
+          type_document: selectedDocType,
+          url: fileName,
+        });
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: 'Document ajouté',
+        description: 'Le document a été uploadé avec succès',
+      });
+
+      setUploadDialogOpen(false);
+      setSelectedFile(null);
+      setSelectedDocType('autre');
+      loadDocuments();
+    } catch (error) {
+      console.error('Error uploading document:', error);
+      toast({
+        title: 'Erreur',
+        description: "Impossible d'uploader le document",
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDownloadDocument = async (doc: any) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('client-documents')
+        .download(doc.url);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.nom;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de télécharger le document',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteDocument = async (docId: string, docUrl: string) => {
+    try {
+      await supabase.storage.from('client-documents').remove([docUrl]);
+      
+      const { error } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', docId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Document supprimé',
+        description: 'Le document a été supprimé avec succès',
+      });
+
+      loadDocuments();
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de supprimer le document',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const getDocTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      'fiche_salaire': '💰 Fiche salaire',
+      'extrait_poursuites': '📋 Extrait poursuites',
+      'piece_identite': '🪪 Pièce ID',
+      'autre': '📄 Autre'
+    };
+    return labels[type] || '📄 Autre';
+  };
+
+  const getFileIcon = (type: string) => {
+    if (type?.includes('pdf')) return FileText;
+    if (type?.includes('image')) return ImageIcon;
+    return File;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (!bytes) return '0 B';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   };
 
   const handleEditClick = () => {
@@ -1090,8 +1255,112 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </Card>
+
+          {/* Documents */}
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Documents ({documents.length})
+                </CardTitle>
+                <Button onClick={() => setUploadDialogOpen(true)}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Ajouter un document
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {documents.length > 0 ? (
+                <div className="space-y-3">
+                  {documents.map((doc) => {
+                    const Icon = getFileIcon(doc.type);
+                    return (
+                      <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
+                        <div className="flex items-center gap-3">
+                          <Icon className="w-8 h-8 text-primary" />
+                          <div>
+                            <p className="font-medium text-sm">{doc.nom}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Badge variant="outline" className="text-xs">
+                                {getDocTypeLabel(doc.type_document)}
+                              </Badge>
+                              <span>{formatFileSize(doc.taille)}</span>
+                              <span>•</span>
+                              <span>{new Date(doc.date_upload).toLocaleDateString('fr-CH')}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleDownloadDocument(doc)}>
+                            <Download className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteDocument(doc.id, doc.url)}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>Aucun document</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      {/* Upload Document Dialog */}
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ajouter un document</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Type de document</Label>
+              <Select value={selectedDocType} onValueChange={setSelectedDocType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner le type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fiche_salaire">Fiche de salaire</SelectItem>
+                  <SelectItem value="extrait_poursuites">Extrait des poursuites</SelectItem>
+                  <SelectItem value="piece_identite">Pièce d'identité</SelectItem>
+                  <SelectItem value="autre">Autre</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Fichier</Label>
+              <Input
+                type="file"
+                ref={fileInputRef}
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                accept=".pdf,.jpg,.jpeg,.png"
+              />
+              <p className="text-xs text-muted-foreground">Formats acceptés: PDF, JPG, PNG (max 1GB)</p>
+            </div>
+            {selectedFile && (
+              <p className="text-sm text-muted-foreground">
+                Fichier sélectionné: {selectedFile.name}
+              </p>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleUploadDocument} disabled={!selectedFile || isUploading}>
+              {isUploading ? 'Upload en cours...' : 'Ajouter'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Send Email Dialog */}
       <SendEmailDialog
