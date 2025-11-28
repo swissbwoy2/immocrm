@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { FileText, Download, Eye, User, Calendar, File } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { FileText, Download, Eye, User, Calendar, File, Pencil } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -15,6 +17,9 @@ export default function AgentDocuments() {
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [documentToRename, setDocumentToRename] = useState<any>(null);
+  const [newDocumentName, setNewDocumentName] = useState('');
 
   useEffect(() => {
     loadDocuments();
@@ -100,70 +105,65 @@ export default function AgentDocuments() {
     setSelectedDocument(document);
     
     try {
+      let blobUrl: string;
+      
       // Si l'URL est une data URL (base64)
       if (document.url.startsWith('data:')) {
-        console.log('Processing base64 document, type:', document.type);
+        const base64Data = document.url.split(',')[1];
+        const binaryString = atob(base64Data);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
         
-        // Pour les PDFs en base64, on doit créer un Blob URL
-        if (document.type === 'application/pdf') {
-          try {
-            // Extraire le base64 pur (enlever le préfixe data:...)
-            const base64Data = document.url.split(',')[1];
-            console.log('Base64 data length:', base64Data?.length);
-            
-            // Décoder le base64
-            const binaryString = atob(base64Data);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            
-            for (let i = 0; i < len; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
-            }
-            
-            // Créer un Blob avec le bon type MIME
-            const blob = new Blob([bytes], { type: 'application/pdf' });
-            console.log('Blob created, size:', blob.size, 'type:', blob.type);
-            
-            // Créer une URL pour le Blob
-            const blobUrl = URL.createObjectURL(blob);
-            console.log('Blob URL created:', blobUrl);
-            
-            setPreviewUrl(blobUrl);
-            setPreviewDialogOpen(true);
-          } catch (error) {
-            console.error('Error converting base64 to Blob:', error);
-            toast.error('Erreur lors de la conversion du document');
-            return;
-          }
-        } else {
-          // Pour les images, utiliser directement la data URL
-          console.log('Using data URL directly for image');
-          setPreviewUrl(document.url);
-          setPreviewDialogOpen(true);
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
         }
-        return;
+        
+        const blob = new Blob([bytes], { type: document.type });
+        blobUrl = URL.createObjectURL(blob);
+      } else {
+        // Extraire le chemin du fichier
+        let filePath = document.url;
+        if (filePath.includes('/storage/v1/object/')) {
+          const parts = filePath.split('/client-documents/');
+          filePath = parts[1] || filePath;
+        }
+
+        // Télécharger le fichier en blob depuis le storage
+        const { data, error } = await supabase.storage
+          .from('client-documents')
+          .download(filePath);
+
+        if (error) throw error;
+        blobUrl = URL.createObjectURL(data);
       }
 
-      // Sinon, extraire le chemin du fichier et créer une URL signée
-      let filePath = document.url;
-      if (filePath.includes('/storage/v1/object/')) {
-        const parts = filePath.split('/client-documents/');
-        filePath = parts[1] || filePath;
-      }
-
-      const { data, error } = await supabase.storage
-        .from('client-documents')
-        .createSignedUrl(filePath, 3600);
-
-      if (error) throw error;
-
-      if (data?.signedUrl) {
-        setPreviewUrl(data.signedUrl);
-        setPreviewDialogOpen(true);
-      }
+      setPreviewUrl(blobUrl);
+      setPreviewDialogOpen(true);
     } catch (error) {
       console.error('Error creating preview URL:', error);
       toast.error('Impossible de prévisualiser le document');
+    }
+  };
+
+  const handleRename = async () => {
+    if (!documentToRename || !newDocumentName.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from('documents')
+        .update({ nom: newDocumentName.trim() })
+        .eq('id', documentToRename.id);
+
+      if (error) throw error;
+
+      toast.success('Document renommé avec succès');
+      setRenameDialogOpen(false);
+      setDocumentToRename(null);
+      setNewDocumentName('');
+      loadDocuments();
+    } catch (error) {
+      console.error('Error renaming document:', error);
+      toast.error('Impossible de renommer le document');
     }
   };
 
@@ -307,6 +307,17 @@ export default function AgentDocuments() {
                           ) : null}
                           <Button
                             size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setDocumentToRename(doc);
+                              setNewDocumentName(doc.nom);
+                              setRenameDialogOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
                             onClick={() => handleDownload(doc)}
                             className="flex-1"
                           >
@@ -339,43 +350,69 @@ export default function AgentDocuments() {
           URL.revokeObjectURL(previewUrl);
         }
       }}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogContent className="max-w-5xl max-h-[95vh]">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>{selectedDocument?.nom}</span>
-              {selectedDocument?.type.includes('pdf') && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open(previewUrl, '_blank')}
-                >
-                  Ouvrir dans un nouvel onglet
-                </Button>
-              )}
-            </DialogTitle>
+            <DialogTitle>{selectedDocument?.nom}</DialogTitle>
             <DialogDescription>
               Aperçu du document
             </DialogDescription>
           </DialogHeader>
-          <div className="overflow-auto max-h-[70vh]">
-            {selectedDocument?.type.includes('image') ? (
-              <img
-                src={previewUrl}
-                alt={selectedDocument?.nom}
-                className="w-full h-auto"
-              />
-            ) : selectedDocument?.type.includes('pdf') ? (
-              <embed
-                src={previewUrl}
+          <div className="h-[80vh]">
+            {selectedDocument?.type.includes('pdf') ? (
+              <object
+                data={previewUrl}
                 type="application/pdf"
-                className="w-full h-[70vh]"
-              />
+                className="w-full h-full rounded-lg"
+              >
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <p className="mb-4">Impossible d'afficher le PDF dans le navigateur.</p>
+                  <Button onClick={() => handleDownload(selectedDocument)}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Télécharger le PDF
+                  </Button>
+                </div>
+              </object>
+            ) : selectedDocument?.type.includes('image') ? (
+              <div className="h-full overflow-auto flex justify-center items-start">
+                <img
+                  src={previewUrl}
+                  alt={selectedDocument?.nom}
+                  className="max-w-full h-auto rounded-lg"
+                />
+              </div>
             ) : (
               <p className="text-center text-muted-foreground py-8">
                 Aperçu non disponible pour ce type de fichier
               </p>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Dialog */}
+      <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Renommer le document</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nouveau nom</Label>
+              <Input
+                value={newDocumentName}
+                onChange={(e) => setNewDocumentName(e.target.value)}
+                placeholder="Nom du document"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleRename} disabled={!newDocumentName.trim()}>
+              Renommer
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
