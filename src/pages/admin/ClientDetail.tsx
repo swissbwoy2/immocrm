@@ -298,41 +298,33 @@ export default function ClientDetail() {
   };
 
   const handlePreviewDocument = async (doc: any) => {
-    setPreviewDocument(doc);
-    
     try {
+      let url: string;
+      
       // Si l'URL est une data URL (base64)
       if (doc.url?.startsWith('data:')) {
         if (doc.type === 'application/pdf') {
-          try {
-            const base64Data = doc.url.split(',')[1];
-            const binaryString = atob(base64Data);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            
-            for (let i = 0; i < len; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
-            }
-            
-            const blob = new Blob([bytes], { type: 'application/pdf' });
-            const blobUrl = URL.createObjectURL(blob);
-            
-            setPreviewUrl(blobUrl);
-            setPreviewDialogOpen(true);
-          } catch (error) {
-            console.error('Error converting base64 to Blob:', error);
-            toast({
-              title: 'Erreur',
-              description: 'Erreur lors de la conversion du document',
-              variant: 'destructive',
-            });
-            return;
+          // Pour les PDFs base64, créer un blob et ouvrir dans un nouvel onglet
+          const base64Data = doc.url.split(',')[1];
+          const binaryString = atob(base64Data);
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
           }
+          
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          url = URL.createObjectURL(blob);
+          window.open(url, '_blank');
+          return;
         } else {
+          // Pour les images base64, afficher dans le dialog
+          setPreviewDocument(doc);
           setPreviewUrl(doc.url);
           setPreviewDialogOpen(true);
+          return;
         }
-        return;
       }
 
       // Sinon, créer une URL signée depuis le storage
@@ -343,8 +335,15 @@ export default function ClientDetail() {
       if (error) throw error;
 
       if (data?.signedUrl) {
-        setPreviewUrl(data.signedUrl);
-        setPreviewDialogOpen(true);
+        if (doc.type === 'application/pdf') {
+          // Ouvrir les PDFs dans un nouvel onglet pour éviter les blocages
+          window.open(data.signedUrl, '_blank');
+        } else {
+          // Afficher les images dans le dialog
+          setPreviewDocument(doc);
+          setPreviewUrl(data.signedUrl);
+          setPreviewDialogOpen(true);
+        }
       }
     } catch (error) {
       console.error('Error creating preview URL:', error);
@@ -1429,7 +1428,7 @@ export default function ClientDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Preview Document Dialog */}
+      {/* Preview Document Dialog (Images only - PDFs open in new tab) */}
       <Dialog open={previewDialogOpen} onOpenChange={(open) => {
         setPreviewDialogOpen(open);
         if (!open && previewUrl && !previewUrl.startsWith('data:')) {
@@ -1440,18 +1439,12 @@ export default function ClientDetail() {
           <DialogHeader>
             <DialogTitle>{previewDocument?.nom || 'Aperçu du document'}</DialogTitle>
           </DialogHeader>
-          <div className="mt-4 max-h-[70vh] overflow-auto">
+          <div className="mt-4 max-h-[70vh] overflow-auto flex justify-center">
             {previewDocument?.type?.includes('image') ? (
               <img 
                 src={previewUrl} 
                 alt={previewDocument?.nom}
-                className="w-full h-auto rounded-lg"
-              />
-            ) : previewDocument?.type === 'application/pdf' ? (
-              <iframe
-                src={previewUrl}
-                className="w-full h-[65vh] rounded-lg border"
-                title={previewDocument?.nom}
+                className="max-w-full h-auto rounded-lg"
               />
             ) : (
               <p className="text-center text-muted-foreground py-8">
