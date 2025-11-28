@@ -71,10 +71,11 @@ export default function Documents() {
       
       setClientId(clientData.id);
 
+      // Charger TOUS les documents du client (y compris ceux uploadés par admin/agent)
       const { data: docsData, error } = await supabase
         .from('documents')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('client_id', clientData.id)
         .order('date_upload', { ascending: false });
 
       if (error) throw error;
