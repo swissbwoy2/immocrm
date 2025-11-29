@@ -10,16 +10,21 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export default function Visites() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { markTypeAsRead } = useNotifications();
   const [visites, setVisites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadVisites();
+    // Mark visit notifications as read when visiting this page
+    markTypeAsRead('new_visit');
+    markTypeAsRead('visit_reminder');
     
     // Écouter les changements en temps réel sur les visites
     const channel = supabase

@@ -11,9 +11,11 @@ import { Calendar, Clock, User, MessageSquare, ThumbsUp, ThumbsDown, Minus, Aler
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export default function AgentVisites() {
   const { user } = useAuth();
+  const { markTypeAsRead } = useNotifications();
   const [visites, setVisites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
@@ -29,6 +31,9 @@ export default function AgentVisites() {
 
   useEffect(() => {
     loadVisites();
+    // Mark visit notifications as read when visiting this page
+    markTypeAsRead('new_visit');
+    markTypeAsRead('visit_reminder');
   }, [user]);
 
   const loadVisites = async () => {

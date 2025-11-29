@@ -19,11 +19,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { useToast } from "@/hooks/use-toast";
+import { useNotifications } from "@/hooks/useNotifications";
 
 const MesClients = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { markTypeAsRead } = useNotifications();
   
   const [allClients, setAllClients] = useState<any[]>([]);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
@@ -36,6 +38,8 @@ const MesClients = () => {
 
   useEffect(() => {
     loadAgentAndClients();
+    // Mark client_assigned notifications as read when visiting this page
+    markTypeAsRead('client_assigned');
   }, [user]);
 
   const loadAgentAndClients = async () => {

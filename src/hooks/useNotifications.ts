@@ -22,6 +22,7 @@ export interface NotificationCounts {
   new_message: number;
   new_offer: number;
   new_visit: number;
+  visit_reminder: number;
 }
 
 export const useNotifications = () => {
@@ -35,6 +36,7 @@ export const useNotifications = () => {
     new_message: 0,
     new_offer: 0,
     new_visit: 0,
+    visit_reminder: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -75,6 +77,7 @@ export const useNotifications = () => {
       new_message: unread.filter(n => n.type === 'new_message').length,
       new_offer: unread.filter(n => n.type === 'new_offer').length,
       new_visit: unread.filter(n => n.type === 'new_visit').length,
+      visit_reminder: unread.filter(n => n.type === 'visit_reminder').length,
     });
   };
 

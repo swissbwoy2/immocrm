@@ -25,6 +25,8 @@ const getNotificationIcon = (type: string) => {
       return '🏠';
     case 'new_visit':
       return '📅';
+    case 'visit_reminder':
+      return '⏰';
     default:
       return '🔔';
   }
