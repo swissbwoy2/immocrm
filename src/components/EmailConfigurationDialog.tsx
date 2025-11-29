@@ -15,11 +15,11 @@ interface EmailConfigurationDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-// Port 465 uses direct SSL/TLS which works reliably
-// Port 587 uses STARTTLS which has issues in Supabase Edge Functions
+// Port 465 uses direct SSL/TLS which works reliably in edge functions
+// Port 587 uses STARTTLS which has known issues in Deno edge functions
 const SMTP_PRESETS = [
   { name: "Gmail", host: "smtp.gmail.com", port: 465, secure: true },
-  { name: "Outlook/Office 365", host: "smtp.office365.com", port: 587, secure: true },
+  { name: "Outlook/Office 365", host: "smtp-mail.outlook.com", port: 587, secure: false },
   { name: "Infomaniak", host: "mail.infomaniak.com", port: 465, secure: true },
   { name: "OVH", host: "ssl0.ovh.net", port: 465, secure: true },
   { name: "Yahoo", host: "smtp.mail.yahoo.com", port: 465, secure: true },
@@ -299,6 +299,17 @@ export function EmailConfigurationDialog({ open, onOpenChange }: EmailConfigurat
               />
               <Label>Configuration active</Label>
             </div>
+
+            {/* Warning for port 587 */}
+            {config.smtp_port === 587 && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-md text-sm">
+                <p className="font-medium text-amber-600 dark:text-amber-400">⚠️ Port 587 (STARTTLS)</p>
+                <p className="text-muted-foreground mt-1">
+                  Le port 587 utilise STARTTLS qui peut être instable. Si vous rencontrez des erreurs d'envoi, 
+                  essayez d'utiliser le <strong>port 465</strong> avec TLS activé pour une connexion plus fiable.
+                </p>
+              </div>
+            )}
 
             {/* Help text for Gmail */}
             {selectedPreset === "Gmail" && (
