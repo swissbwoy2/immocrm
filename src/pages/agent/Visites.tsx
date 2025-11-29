@@ -323,8 +323,8 @@ export default function AgentVisites() {
     <div className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Visites clients</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Visites clients</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             {visitesAVenir.length} à venir • {visitesPassees.length} passée{visitesPassees.length > 1 ? 's' : ''}
           </p>
         </div>
