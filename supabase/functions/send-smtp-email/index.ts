@@ -14,7 +14,8 @@ interface EmailRequest {
   body_html: string;
   attachments?: Array<{
     filename: string;
-    url: string;
+    url?: string;
+    content?: string; // base64 encoded content for local files
     content_type?: string;
   }>;
   client_id?: string;
@@ -74,40 +75,56 @@ serve(async (req) => {
       fullBodyHtml += `<br/><br/>${emailConfig.signature_html}`;
     }
 
-    // Download attachments from Supabase Storage
+    // Process attachments (from URL or base64 content)
     const emailAttachments: Array<{ filename: string; content: Uint8Array; contentType: string }> = [];
     
     if (attachments && attachments.length > 0) {
       for (const attachment of attachments) {
         try {
-          // Handle Supabase storage URLs
-          let fetchUrl = attachment.url;
-          
-          // If it's a storage path, get signed URL
-          if (attachment.url.startsWith('client-documents/')) {
-            const { data: signedUrlData } = await supabase.storage
-              .from('client-documents')
-              .createSignedUrl(attachment.url.replace('client-documents/', ''), 300);
-            
-            if (signedUrlData?.signedUrl) {
-              fetchUrl = signedUrlData.signedUrl;
+          // Check if it's a base64-encoded local file
+          if (attachment.content) {
+            // Decode base64 to Uint8Array
+            const binaryString = atob(attachment.content);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
             }
-          }
-
-          const response = await fetch(fetchUrl);
-          if (response.ok) {
-            const arrayBuffer = await response.arrayBuffer();
             emailAttachments.push({
               filename: attachment.filename,
-              content: new Uint8Array(arrayBuffer),
+              content: bytes,
               contentType: attachment.content_type || 'application/octet-stream',
             });
-            console.log(`Attached: ${attachment.filename} (${arrayBuffer.byteLength} bytes)`);
-          } else {
-            console.warn(`Failed to download attachment: ${attachment.filename} - ${response.status}`);
+            console.log(`Attached (base64): ${attachment.filename} (${bytes.length} bytes)`);
+          } else if (attachment.url) {
+            // Handle Supabase storage URLs
+            let fetchUrl = attachment.url;
+            
+            // If it's a storage path, get signed URL
+            if (attachment.url.startsWith('client-documents/')) {
+              const { data: signedUrlData } = await supabase.storage
+                .from('client-documents')
+                .createSignedUrl(attachment.url.replace('client-documents/', ''), 300);
+              
+              if (signedUrlData?.signedUrl) {
+                fetchUrl = signedUrlData.signedUrl;
+              }
+            }
+
+            const response = await fetch(fetchUrl);
+            if (response.ok) {
+              const arrayBuffer = await response.arrayBuffer();
+              emailAttachments.push({
+                filename: attachment.filename,
+                content: new Uint8Array(arrayBuffer),
+                contentType: attachment.content_type || 'application/octet-stream',
+              });
+              console.log(`Attached (URL): ${attachment.filename} (${arrayBuffer.byteLength} bytes)`);
+            } else {
+              console.warn(`Failed to download attachment: ${attachment.filename} - ${response.status}`);
+            }
           }
         } catch (err) {
-          console.warn(`Error downloading attachment ${attachment.filename}:`, err);
+          console.warn(`Error processing attachment ${attachment.filename}:`, err);
         }
       }
     }
