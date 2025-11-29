@@ -40,6 +40,8 @@ const OffresRecues = () => {
   const [messageClient, setMessageClient] = useState('');
   const [accepteConditions, setAccepteConditions] = useState(false);
   const [delegateDialogOpen, setDelegateDialogOpen] = useState(false);
+  const [delegateDate, setDelegateDate] = useState<string>("");
+  const [delegateProposedSlots, setDelegateProposedSlots] = useState<any[]>([]);
   
   const [clientData, setClientData] = useState<any>(null);
   const [visites, setVisites] = useState<any[]>([]);
@@ -346,13 +348,39 @@ const OffresRecues = () => {
     setCandidatureDialogOpen(true);
   };
 
-  const handleDeleguerVisite = (offre: any) => {
+  const handleDeleguerVisite = async (offre: any) => {
     setSelectedOffre(offre);
+    setDelegateDate("");
+    
+    // Charger les créneaux proposés par l'agent pour cette offre
+    const { data: slots, error } = await supabase
+      .from('visites')
+      .select('*')
+      .eq('offre_id', offre.id)
+      .eq('statut', 'planifiee')
+      .order('date_visite', { ascending: true });
+    
+    if (error) {
+      console.error('Error loading proposed slots:', error);
+      setDelegateProposedSlots([]);
+    } else {
+      setDelegateProposedSlots(slots || []);
+    }
+    
     setDelegateDialogOpen(true);
   };
 
   const confirmDeleguerVisite = async () => {
     if (!selectedOffre) return;
+    
+    if (!delegateDate) {
+      toast({
+        title: 'Erreur',
+        description: 'Veuillez sélectionner une date et heure pour la visite',
+        variant: 'destructive'
+      });
+      return;
+    }
 
     try {
       const { data: clientData } = await supabase
@@ -370,13 +398,13 @@ const OffresRecues = () => {
         return;
       }
 
-      // Créer une visite déléguée
+      // Créer une visite déléguée avec la date sélectionnée
       await supabase.from('visites').insert({
         offre_id: selectedOffre.id,
         client_id: clientData.id,
         agent_id: clientData.agent_id,
         adresse: selectedOffre.adresse,
-        date_visite: new Date().toISOString(),
+        date_visite: delegateDate,
         statut: 'planifiee',
         est_deleguee: true,
         notes: 'Visite déléguée à l\'agent par le client'
@@ -410,11 +438,23 @@ const OffresRecues = () => {
       }
 
       if (conv) {
+        const visitDate = new Date(delegateDate);
+        const formattedDate = visitDate.toLocaleDateString('fr-FR', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        });
+        const formattedTime = visitDate.toLocaleTimeString('fr-FR', {
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
         await supabase.from('messages').insert({
           conversation_id: conv.id,
           sender_id: user!.id,
           sender_type: 'client',
-          content: `🏠 **Demande de visite déléguée à l'agent**\n\n📍 Adresse: ${selectedOffre.adresse}\n💰 Loyer: ${selectedOffre.prix.toLocaleString()} CHF/mois\n\nLe client souhaite que vous organisiez la visite pour ce bien.`
+          content: `🏠 **Demande de visite déléguée à l'agent**\n\n📍 Adresse: ${selectedOffre.adresse}\n💰 Loyer: ${selectedOffre.prix.toLocaleString()} CHF/mois\n📅 Date souhaitée: ${formattedDate} à ${formattedTime}\n\nLe client souhaite que vous effectuiez la visite pour lui à cette date.`
         });
       }
 
@@ -1469,11 +1509,11 @@ const OffresRecues = () => {
 
         {/* Dialog de délégation de visite */}
         <Dialog open={delegateDialogOpen} onOpenChange={setDelegateDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Déléguer la visite à votre agent</DialogTitle>
               <DialogDescription>
-                Votre agent organisera et effectuera la visite pour vous
+                Choisissez une date et votre agent effectuera la visite pour vous
               </DialogDescription>
             </DialogHeader>
 
@@ -1487,13 +1527,114 @@ const OffresRecues = () => {
                   </p>
                 </div>
 
+                {/* Sélection de date/heure */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold">📅 Choisissez une date de visite</h4>
+                  
+                  {delegateProposedSlots.length === 0 ? (
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">
+                        Aucun créneau proposé par l'agent. Veuillez choisir une date :
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="delegateDate">Date</Label>
+                          <Input
+                            id="delegateDate"
+                            type="date"
+                            value={delegateDate ? delegateDate.split('T')[0] : ''}
+                            min={new Date().toISOString().split('T')[0]}
+                            onChange={(e) => {
+                              const time = delegateDate ? delegateDate.split('T')[1]?.slice(0, 5) : '10:00';
+                              setDelegateDate(`${e.target.value}T${time}:00`);
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="delegateTime">Heure</Label>
+                          <Input
+                            id="delegateTime"
+                            type="time"
+                            value={delegateDate ? delegateDate.split('T')[1]?.slice(0, 5) : '10:00'}
+                            onChange={(e) => {
+                              const date = delegateDate ? delegateDate.split('T')[0] : new Date().toISOString().split('T')[0];
+                              setDelegateDate(`${date}T${e.target.value}:00`);
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        Créneaux proposés par l'agent :
+                      </p>
+                      {delegateProposedSlots.map((slot) => (
+                        <Button
+                          key={slot.id}
+                          variant={delegateDate === slot.date_visite ? "default" : "outline"}
+                          className="w-full justify-start text-left h-auto py-3"
+                          onClick={() => setDelegateDate(slot.date_visite)}
+                        >
+                          <div className="flex items-start gap-3 w-full">
+                            <Calendar className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <div className="font-semibold">
+                                {new Date(slot.date_visite).toLocaleDateString('fr-FR', {
+                                  weekday: 'long',
+                                  day: 'numeric',
+                                  month: 'long',
+                                  year: 'numeric'
+                                })}
+                              </div>
+                              <div className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
+                                <Clock className="h-3 w-3" />
+                                {new Date(slot.date_visite).toLocaleTimeString('fr-FR', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                            </div>
+                            {delegateDate === slot.date_visite && (
+                              <CheckCircle className="h-5 w-5 text-primary-foreground flex-shrink-0" />
+                            )}
+                          </div>
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {delegateDate && (
+                    <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                      <p className="text-sm font-medium">✅ Date sélectionnée :</p>
+                      <p className="text-sm mt-1">
+                        <strong>
+                          {new Date(delegateDate).toLocaleDateString('fr-FR', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                          })}
+                        </strong>
+                        {' à '}
+                        <strong>
+                          {new Date(delegateDate).toLocaleTimeString('fr-FR', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                          })}
+                        </strong>
+                      </p>
+                    </div>
+                  )}
+                </div>
+
                 <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
                     <strong>📋 Comment ça marche :</strong>
                     <ul className="list-disc list-inside mt-2 space-y-1">
                       <li>Votre agent sera notifié de votre demande</li>
-                      <li>Il organisera la visite avec le propriétaire</li>
-                      <li>Il effectuera la visite et vous fera un compte-rendu détaillé</li>
+                      <li>Il confirmera la visite à la date choisie</li>
+                      <li>Il effectuera la visite et vous fera un compte-rendu</li>
                       <li>Vous pourrez ensuite décider de postuler ou non</li>
                     </ul>
                   </p>
@@ -1505,7 +1646,7 @@ const OffresRecues = () => {
               <Button variant="outline" onClick={() => setDelegateDialogOpen(false)}>
                 Annuler
               </Button>
-              <Button onClick={confirmDeleguerVisite}>
+              <Button onClick={confirmDeleguerVisite} disabled={!delegateDate}>
                 Confirmer la délégation
               </Button>
             </DialogFooter>

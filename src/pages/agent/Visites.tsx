@@ -111,7 +111,7 @@ export default function AgentVisites() {
           title: `Visite déléguée - ${selectedVisite.adresse}`,
           description: `Visite déléguée pour ${selectedVisite.client_profile?.prenom || ''} ${selectedVisite.client_profile?.nom || ''}\n\nAdresse: ${selectedVisite.adresse}\n${selectedVisite.offres ? `${selectedVisite.offres.pieces} pièces • ${selectedVisite.offres.surface}m² • ${selectedVisite.offres.prix} CHF/mois` : ''}`,
           event_date: dateTime.toISOString(),
-          event_type: 'visite',
+          event_type: 'rendez_vous',
           agent_id: agentId,
           client_id: selectedVisite.client_id,
           created_by: user.id,
