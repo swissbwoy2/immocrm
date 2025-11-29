@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AppLayout } from '@/components/AppLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,6 +62,9 @@ export default function BoiteReception() {
   // Reply/Forward state
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
   const [replyMode, setReplyMode] = useState<'reply' | 'forward'>('reply');
+  
+  // Ref for auto-scroll to top of email content
+  const emailTopRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user) {
@@ -226,6 +229,10 @@ export default function BoiteReception() {
   const selectEmail = (email: ReceivedEmail) => {
     setSelectedEmail(email);
     markAsRead(email);
+    // Scroll to top of email content
+    setTimeout(() => {
+      emailTopRef.current?.scrollIntoView({ behavior: 'instant', block: 'start' });
+    }, 0);
   };
 
   const handleReply = () => {
@@ -472,6 +479,7 @@ export default function BoiteReception() {
 
               {/* Email Body */}
               <ScrollArea className="flex-1 p-4">
+                <div ref={emailTopRef} />
                 {selectedEmail.body_html ? (
                   <div 
                     className="prose prose-sm max-w-none dark:prose-invert"
