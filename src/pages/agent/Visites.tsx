@@ -7,12 +7,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
 import { Calendar, Clock, User, MessageSquare, ThumbsUp, ThumbsDown, Minus, AlertTriangle, Bell, History, CheckCircle, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useNotifications } from '@/hooks/useNotifications';
+
 
 export default function AgentVisites() {
   const { user } = useAuth();
@@ -25,8 +25,6 @@ export default function AgentVisites() {
   const [selectedVisite, setSelectedVisite] = useState<any>(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [recommandation, setRecommandation] = useState<'recommande' | 'neutre' | 'deconseille'>('neutre');
-  const [proposedDate, setProposedDate] = useState('');
-  const [proposedTime, setProposedTime] = useState('');
   const [agentId, setAgentId] = useState<string | null>(null);
 
   const handleOpenDetail = (visite: any) => {
@@ -36,10 +34,6 @@ export default function AgentVisites() {
 
   const handleOpenConfirmDialog = (visite: any) => {
     setSelectedVisite(visite);
-    // Pre-fill with the requested date if available
-    const visiteDate = new Date(visite.date_visite);
-    setProposedDate(visiteDate.toISOString().split('T')[0]);
-    setProposedTime(visiteDate.toTimeString().slice(0, 5));
     setConfirmDialogOpen(true);
   };
 
@@ -94,21 +88,18 @@ export default function AgentVisites() {
 
   // Accepter une visite déléguée
   const handleAcceptDelegatedVisit = async () => {
-    if (!selectedVisite || !proposedDate || !proposedTime || !agentId || !user) {
-      toast.error('Veuillez remplir tous les champs');
+    if (!selectedVisite || !agentId || !user) {
+      toast.error('Erreur: visite non sélectionnée');
       return;
     }
 
     try {
-      const dateTime = new Date(`${proposedDate}T${proposedTime}`);
+      const dateTime = new Date(selectedVisite.date_visite);
       
-      // Mettre à jour la visite avec le statut confirmé et la nouvelle date
+      // Mettre à jour la visite avec le statut confirmé
       const { error: updateError } = await supabase
         .from('visites')
-        .update({ 
-          statut: 'confirmee',
-          date_visite: dateTime.toISOString()
-        })
+        .update({ statut: 'confirmee' })
         .eq('id', selectedVisite.id);
 
       if (updateError) throw updateError;
@@ -985,29 +976,20 @@ export default function AgentVisites() {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="proposedDate">Date</Label>
-                  <Input
-                    id="proposedDate"
-                    type="date"
-                    value={proposedDate}
-                    onChange={(e) => setProposedDate(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="proposedTime">Heure</Label>
-                  <Input
-                    id="proposedTime"
-                    type="time"
-                    value={proposedTime}
-                    onChange={(e) => setProposedTime(e.target.value)}
-                  />
-                </div>
+              <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-200">📅 Date et heure prévues</p>
+                <p className="text-lg font-semibold mt-1">
+                  {new Date(selectedVisite.date_visite).toLocaleDateString('fr-CH', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })} à {new Date(selectedVisite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+                </p>
               </div>
 
               <p className="text-xs text-muted-foreground">
-                ℹ️ Le client sera automatiquement notifié de votre confirmation.
+                ℹ️ Le client sera automatiquement notifié et la visite sera ajoutée à votre calendrier.
               </p>
             </div>
           )}
@@ -1016,7 +998,7 @@ export default function AgentVisites() {
             <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
               Annuler
             </Button>
-            <Button onClick={handleAcceptDelegatedVisit} disabled={!proposedDate || !proposedTime}>
+            <Button onClick={handleAcceptDelegatedVisit}>
               <CheckCircle className="mr-2 h-4 w-4" />
               Confirmer la visite
             </Button>
