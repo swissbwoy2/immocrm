@@ -33,6 +33,7 @@ const getMenuForRole = (role: string) => {
     case 'admin':
       return [
         { name: 'Tableau de bord', icon: LayoutDashboard, path: '/admin', notifKey: null },
+        { name: 'Calendrier', icon: Calendar, path: '/admin/calendrier', notifKey: null },
         { name: 'Agents', icon: UserCog, path: '/admin/agents', notifKey: null },
         { name: 'Clients', icon: Users, path: '/admin/clients', notifKey: 'new_client_activated' },
         { name: 'Mandats', icon: Clipboard, path: '/admin/mandats', notifKey: null },
