@@ -258,7 +258,7 @@ export function EmailConfigurationDialog({ open, onOpenChange }: EmailConfigurat
             </div>
 
             {/* SMTP Server settings */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <Server className="h-4 w-4" />
@@ -289,7 +289,7 @@ export function EmailConfigurationDialog({ open, onOpenChange }: EmailConfigurat
             </div>
 
             {/* Authentication */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
                   <User className="h-4 w-4" />
@@ -316,7 +316,7 @@ export function EmailConfigurationDialog({ open, onOpenChange }: EmailConfigurat
             </div>
 
             {/* From address */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Email d'envoi *</Label>
                 <Input
@@ -424,11 +424,11 @@ export function EmailConfigurationDialog({ open, onOpenChange }: EmailConfigurat
               </div>
             )}
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => onOpenChange(false)}>
                 Annuler
               </Button>
-              <Button onClick={handleSave} disabled={saving}>
+              <Button className="w-full sm:w-auto" onClick={handleSave} disabled={saving}>
                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 Enregistrer
               </Button>
