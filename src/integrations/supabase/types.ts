@@ -435,6 +435,48 @@ export type Database = {
         }
         Relationships: []
       }
+      imap_configurations: {
+        Row: {
+          created_at: string | null
+          id: string
+          imap_host: string
+          imap_password: string
+          imap_port: number
+          imap_secure: boolean | null
+          imap_user: string
+          is_active: boolean | null
+          last_sync_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          imap_host: string
+          imap_password: string
+          imap_port?: number
+          imap_secure?: boolean | null
+          imap_user: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          imap_host?: string
+          imap_password?: string
+          imap_port?: number
+          imap_secure?: boolean | null
+          imap_user?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           attachment_name: string | null
@@ -665,6 +707,60 @@ export type Database = {
           prenom?: string
           telephone?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      received_emails: {
+        Row: {
+          attachments: Json | null
+          body_html: string | null
+          body_text: string | null
+          created_at: string | null
+          folder: string | null
+          from_email: string
+          from_name: string | null
+          id: string
+          is_read: boolean | null
+          is_starred: boolean | null
+          message_id: string
+          received_at: string | null
+          subject: string | null
+          to_email: string
+          user_id: string
+        }
+        Insert: {
+          attachments?: Json | null
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string | null
+          folder?: string | null
+          from_email: string
+          from_name?: string | null
+          id?: string
+          is_read?: boolean | null
+          is_starred?: boolean | null
+          message_id: string
+          received_at?: string | null
+          subject?: string | null
+          to_email: string
+          user_id: string
+        }
+        Update: {
+          attachments?: Json | null
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string | null
+          folder?: string | null
+          from_email?: string
+          from_name?: string | null
+          id?: string
+          is_read?: boolean | null
+          is_starred?: boolean | null
+          message_id?: string
+          received_at?: string | null
+          subject?: string | null
+          to_email?: string
+          user_id?: string
         }
         Relationships: []
       }

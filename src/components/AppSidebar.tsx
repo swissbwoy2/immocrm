@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Messagerie', icon: MessageSquare, path: '/admin/messagerie', notifKey: 'new_message' },
         { name: 'Envoyer Email', icon: MailPlus, path: '/admin/envoyer-email', notifKey: null },
         { name: 'Historique Emails', icon: History, path: '/admin/historique-emails', notifKey: null },
+        { name: 'Boîte de réception', icon: Inbox, path: '/admin/boite-reception', notifKey: null },
         { name: 'Documents', icon: FileText, path: '/admin/documents', notifKey: null },
         { name: 'Notifications', icon: Bell, path: '/admin/notifications', notifKey: 'total' },
         { name: 'Paramètres', icon: Settings, path: '/admin/parametres', notifKey: null },
@@ -56,6 +57,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie', notifKey: 'new_message' },
         { name: 'Envoyer Email', icon: MailPlus, path: '/agent/envoyer-email', notifKey: null },
         { name: 'Historique Emails', icon: History, path: '/agent/historique-emails', notifKey: null },
+        { name: 'Boîte de réception', icon: Inbox, path: '/agent/boite-reception', notifKey: null },
         { name: 'Documents', icon: FileText, path: '/agent/documents', notifKey: null },
         { name: 'Notifications', icon: Bell, path: '/agent/notifications', notifKey: 'total' },
         { name: 'Paramètres', icon: Settings, path: '/agent/parametres', notifKey: null },
