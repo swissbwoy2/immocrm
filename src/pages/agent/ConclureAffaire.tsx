@@ -8,8 +8,22 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, User, Building2, Banknote, Building, Calendar, FileText } from 'lucide-react';
+
+const TYPES_BIEN = [
+  { value: 'appartement', label: 'Appartement' },
+  { value: 'maison', label: 'Maison' },
+  { value: 'studio', label: 'Studio' },
+  { value: 'villa', label: 'Villa' },
+  { value: 'bureau', label: 'Bureau' },
+  { value: 'commerce', label: 'Commerce' },
+  { value: 'loft', label: 'Loft' },
+  { value: 'duplex', label: 'Duplex' },
+  { value: 'attique', label: 'Attique' },
+];
 
 export default function ConclureAffaire() {
   const navigate = useNavigate();
@@ -23,13 +37,28 @@ export default function ConclureAffaire() {
   const [submitting, setSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
+    // Client
     clientId: '',
+    // Informations du bien
     adresse: '',
-    loyerMensuel: '',
+    typeBien: '',
     surface: '',
     pieces: '',
+    etage: '',
+    // Informations financières
+    loyerMensuel: '',
     dateConclusion: new Date().toISOString().split('T')[0],
-    commentaires: '',
+    // Informations de la régie
+    regieNom: '',
+    regieContact: '',
+    regieTelephone: '',
+    regieEmail: '',
+    // Dates du bail
+    dateDebutBail: '',
+    dateEtatLieux: '',
+    etatLieuxADefinir: false,
+    // Notes
+    notesInternes: '',
   });
 
   useEffect(() => {
@@ -115,7 +144,7 @@ export default function ConclureAffaire() {
       const partAgent = Math.round(commissionTotale * (splitAgent / 100));
       const partAgence = commissionTotale - partAgent;
 
-      // Insérer la transaction
+      // Insérer la transaction avec toutes les nouvelles colonnes
       const { error } = await supabase
         .from('transactions')
         .insert({
@@ -127,6 +156,20 @@ export default function ConclureAffaire() {
           part_agence: partAgence,
           statut: 'conclue',
           date_transaction: formData.dateConclusion,
+          // Nouvelles colonnes
+          adresse: formData.adresse,
+          surface: formData.surface ? parseFloat(formData.surface) : null,
+          pieces: formData.pieces ? parseFloat(formData.pieces) : null,
+          type_bien: formData.typeBien || null,
+          etage: formData.etage || null,
+          regie_nom: formData.regieNom || null,
+          regie_contact: formData.regieContact || null,
+          regie_telephone: formData.regieTelephone || null,
+          regie_email: formData.regieEmail || null,
+          date_debut_bail: formData.dateDebutBail || null,
+          date_etat_lieux: formData.etatLieuxADefinir ? null : (formData.dateEtatLieux || null),
+          etat_lieux_confirme: !formData.etatLieuxADefinir && !!formData.dateEtatLieux,
+          notes_internes: formData.notesInternes || null,
         });
 
       if (error) throw error;
@@ -141,7 +184,9 @@ export default function ConclureAffaire() {
           prix: loyerMensuel,
           surface: parseFloat(formData.surface) || null,
           pieces: parseFloat(formData.pieces) || null,
-          commentaires: formData.commentaires,
+          type_bien: formData.typeBien || null,
+          etage: formData.etage || null,
+          commentaires: formData.notesInternes,
           statut: 'acceptee',
           date_envoi: formData.dateConclusion,
         });
@@ -172,6 +217,8 @@ export default function ConclureAffaire() {
     );
   }
 
+  const selectedClient = clients.find(c => c.id === formData.clientId);
+
   return (
     <main className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto">
@@ -180,23 +227,23 @@ export default function ConclureAffaire() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Conclure une affaire</h1>
-            <p className="text-muted-foreground mt-1">Enregistrez une transaction conclue</p>
+            <h1 className="text-2xl md:text-3xl font-bold">Conclure une affaire</h1>
+            <p className="text-muted-foreground mt-1 text-sm md:text-base">Enregistrez une transaction conclue</p>
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Détails de la transaction</CardTitle>
-            <CardDescription>
-              Remplissez les informations du bien trouvé pour le client
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Sélection du client */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Section Client */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <User className="w-5 h-5 text-primary" />
+                Client
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-2">
-                <Label htmlFor="clientId">Client *</Label>
+                <Label htmlFor="clientId">Sélectionner un client *</Label>
                 <Select
                   value={formData.clientId}
                   onValueChange={(value) => setFormData({ ...formData, clientId: value })}
@@ -217,45 +264,65 @@ export default function ConclureAffaire() {
                     })}
                   </SelectContent>
                 </Select>
+                {clients.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Aucun client actif assigné</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section Informations du bien */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Building2 className="w-5 h-5 text-primary" />
+                Informations du bien
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="adresse">Adresse du bien *</Label>
+                <Input
+                  id="adresse"
+                  value={formData.adresse}
+                  onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
+                  placeholder="Rue de la Paix 12, 1202 Genève"
+                  required
+                />
               </div>
 
-              {/* Détails du bien */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="adresse">Adresse du bien *</Label>
-                  <Input
-                    id="adresse"
-                    value={formData.adresse}
-                    onChange={(e) => setFormData({ ...formData, adresse: e.target.value })}
-                    placeholder="Rue de la Paix 12, 1202 Genève"
-                    required
-                  />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="typeBien">Type de bien</Label>
+                  <Select
+                    value={formData.typeBien}
+                    onValueChange={(value) => setFormData({ ...formData, typeBien: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TYPES_BIEN.map(type => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="loyerMensuel">Loyer mensuel brut (CHF) *</Label>
+                  <Label htmlFor="etage">Étage</Label>
                   <Input
-                    id="loyerMensuel"
-                    type="number"
-                    step="0.01"
-                    value={formData.loyerMensuel}
-                    onChange={(e) => setFormData({ ...formData, loyerMensuel: e.target.value })}
-                    placeholder="2500"
-                    required
+                    id="etage"
+                    value={formData.etage}
+                    onChange={(e) => setFormData({ ...formData, etage: e.target.value })}
+                    placeholder="3ème étage"
                   />
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="dateConclusion">Date de conclusion *</Label>
-                  <Input
-                    id="dateConclusion"
-                    type="date"
-                    value={formData.dateConclusion}
-                    onChange={(e) => setFormData({ ...formData, dateConclusion: e.target.value })}
-                    required
-                  />
-                </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="surface">Surface (m²)</Label>
                   <Input
@@ -280,81 +347,233 @@ export default function ConclureAffaire() {
                   />
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="space-y-2">
-                <Label htmlFor="commentaires">Commentaires</Label>
-                <Textarea
-                  id="commentaires"
-                  value={formData.commentaires}
-                  onChange={(e) => setFormData({ ...formData, commentaires: e.target.value })}
-                  placeholder="Notes additionnelles sur la transaction..."
-                  rows={4}
-                />
+          {/* Section Informations financières */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Banknote className="w-5 h-5 text-primary" />
+                Informations financières
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="loyerMensuel">Loyer mensuel brut (CHF) *</Label>
+                  <Input
+                    id="loyerMensuel"
+                    type="number"
+                    step="0.01"
+                    value={formData.loyerMensuel}
+                    onChange={(e) => setFormData({ ...formData, loyerMensuel: e.target.value })}
+                    placeholder="2500"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dateConclusion">Date de conclusion *</Label>
+                  <Input
+                    id="dateConclusion"
+                    type="date"
+                    value={formData.dateConclusion}
+                    onChange={(e) => setFormData({ ...formData, dateConclusion: e.target.value })}
+                    required
+                  />
+                </div>
               </div>
 
               {/* Aperçu des commissions */}
               {formData.clientId && formData.loyerMensuel && (
-                <Card className="bg-muted/50">
-                  <CardContent className="pt-6">
-                    <h3 className="font-semibold mb-4">Aperçu des commissions</h3>
-                    <div className="space-y-3">
-                      {(() => {
-                        const client = clients.find(c => c.id === formData.clientId);
-                        const loyerMensuel = parseFloat(formData.loyerMensuel);
-                        const montantTotal = loyerMensuel * 12;
-                        const commissionTotale = loyerMensuel;
-                        const splitAgent = client?.commission_split || 50;
-                        const partAgent = Math.round(commissionTotale * (splitAgent / 100));
-                        const partAgence = commissionTotale - partAgent;
+                <div className="mt-4 p-4 bg-muted/50 rounded-lg space-y-3">
+                  <h4 className="font-semibold text-sm">Aperçu des commissions</h4>
+                  {(() => {
+                    const loyerMensuel = parseFloat(formData.loyerMensuel);
+                    const montantTotal = loyerMensuel * 12;
+                    const commissionTotale = loyerMensuel;
+                    const splitAgent = selectedClient?.commission_split || 50;
+                    const partAgent = Math.round(commissionTotale * (splitAgent / 100));
+                    const partAgence = commissionTotale - partAgent;
 
-                        return (
-                          <>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Loyer annuel:</span>
-                              <span className="font-semibold">{montantTotal.toLocaleString()} CHF</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Commission totale (1 mois):</span>
-                              <span className="font-semibold">{commissionTotale.toLocaleString()} CHF</span>
-                            </div>
-                            <div className="flex justify-between text-success">
-                              <span>Votre part ({splitAgent}%):</span>
-                              <span className="font-bold">{partAgent.toLocaleString()} CHF</span>
-                            </div>
-                            <div className="flex justify-between text-muted-foreground">
-                              <span>Part agence ({100 - splitAgent}%):</span>
-                              <span>{partAgence.toLocaleString()} CHF</span>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </CardContent>
-                </Card>
+                    return (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Loyer annuel:</span>
+                          <span className="font-semibold">{montantTotal.toLocaleString()} CHF</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Commission totale (1 mois):</span>
+                          <span className="font-semibold">{commissionTotale.toLocaleString()} CHF</span>
+                        </div>
+                        <Separator />
+                        <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
+                          <span>Votre part ({splitAgent}%):</span>
+                          <span className="font-bold">{partAgent.toLocaleString()} CHF</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-muted-foreground">
+                          <span>Part agence ({100 - splitAgent}%):</span>
+                          <span>{partAgence.toLocaleString()} CHF</span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
               )}
+            </CardContent>
+          </Card>
 
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/agent')}
-                  disabled={submitting}
-                  className="flex-1"
-                >
-                  Annuler
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex-1 gap-2"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  {submitting ? 'Enregistrement...' : 'Conclure l\'affaire'}
-                </Button>
+          {/* Section Informations de la régie */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Building className="w-5 h-5 text-primary" />
+                Informations de la régie
+              </CardTitle>
+              <CardDescription>Coordonnées de la régie immobilière (optionnel)</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="regieNom">Nom de la régie</Label>
+                  <Input
+                    id="regieNom"
+                    value={formData.regieNom}
+                    onChange={(e) => setFormData({ ...formData, regieNom: e.target.value })}
+                    placeholder="Régie du Lac SA"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="regieContact">Personne de contact</Label>
+                  <Input
+                    id="regieContact"
+                    value={formData.regieContact}
+                    onChange={(e) => setFormData({ ...formData, regieContact: e.target.value })}
+                    placeholder="Marie Dupont"
+                  />
+                </div>
               </div>
-            </form>
-          </CardContent>
-        </Card>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="regieTelephone">Téléphone</Label>
+                  <Input
+                    id="regieTelephone"
+                    type="tel"
+                    value={formData.regieTelephone}
+                    onChange={(e) => setFormData({ ...formData, regieTelephone: e.target.value })}
+                    placeholder="+41 22 123 45 67"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="regieEmail">Email</Label>
+                  <Input
+                    id="regieEmail"
+                    type="email"
+                    value={formData.regieEmail}
+                    onChange={(e) => setFormData({ ...formData, regieEmail: e.target.value })}
+                    placeholder="contact@regie.ch"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section Dates du bail */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Calendar className="w-5 h-5 text-primary" />
+                Dates du bail
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="dateDebutBail">Date de début du bail</Label>
+                  <Input
+                    id="dateDebutBail"
+                    type="date"
+                    value={formData.dateDebutBail}
+                    onChange={(e) => setFormData({ ...formData, dateDebutBail: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dateEtatLieux">Date et heure de l'état des lieux</Label>
+                  <Input
+                    id="dateEtatLieux"
+                    type="datetime-local"
+                    value={formData.dateEtatLieux}
+                    onChange={(e) => setFormData({ ...formData, dateEtatLieux: e.target.value })}
+                    disabled={formData.etatLieuxADefinir}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="etatLieuxADefinir"
+                  checked={formData.etatLieuxADefinir}
+                  onCheckedChange={(checked) => setFormData({ 
+                    ...formData, 
+                    etatLieuxADefinir: checked as boolean,
+                    dateEtatLieux: checked ? '' : formData.dateEtatLieux
+                  })}
+                />
+                <Label htmlFor="etatLieuxADefinir" className="text-sm font-normal cursor-pointer">
+                  Date d'état des lieux à confirmer ultérieurement
+                </Label>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Section Notes */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <FileText className="w-5 h-5 text-primary" />
+                Notes internes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="notesInternes">Commentaires et notes</Label>
+                <Textarea
+                  id="notesInternes"
+                  value={formData.notesInternes}
+                  onChange={(e) => setFormData({ ...formData, notesInternes: e.target.value })}
+                  placeholder="Notes additionnelles sur la transaction, conditions particulières, remarques..."
+                  rows={4}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Boutons d'action */}
+          <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate('/agent')}
+              disabled={submitting}
+              className="w-full sm:w-auto sm:flex-1"
+            >
+              Annuler
+            </Button>
+            <Button
+              type="submit"
+              disabled={submitting || !formData.clientId || !formData.loyerMensuel || !formData.adresse}
+              className="w-full sm:w-auto sm:flex-1 gap-2"
+            >
+              <CheckCircle className="w-4 h-4" />
+              {submitting ? 'Enregistrement...' : 'Conclure l\'affaire'}
+            </Button>
+          </div>
+        </form>
       </div>
     </main>
   );

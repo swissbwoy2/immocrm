@@ -974,45 +974,84 @@ export type Database = {
       }
       transactions: {
         Row: {
+          adresse: string | null
           agent_id: string | null
           client_id: string | null
           commission_totale: number
           created_at: string | null
+          date_debut_bail: string | null
+          date_etat_lieux: string | null
           date_transaction: string | null
+          etage: string | null
+          etat_lieux_confirme: boolean | null
           id: string
           montant_total: number
+          notes_internes: string | null
           offre_id: string | null
           part_agence: number
           part_agent: number
+          pieces: number | null
+          regie_contact: string | null
+          regie_email: string | null
+          regie_nom: string | null
+          regie_telephone: string | null
           statut: string | null
+          surface: number | null
+          type_bien: string | null
           updated_at: string | null
         }
         Insert: {
+          adresse?: string | null
           agent_id?: string | null
           client_id?: string | null
           commission_totale: number
           created_at?: string | null
+          date_debut_bail?: string | null
+          date_etat_lieux?: string | null
           date_transaction?: string | null
+          etage?: string | null
+          etat_lieux_confirme?: boolean | null
           id?: string
           montant_total: number
+          notes_internes?: string | null
           offre_id?: string | null
           part_agence: number
           part_agent: number
+          pieces?: number | null
+          regie_contact?: string | null
+          regie_email?: string | null
+          regie_nom?: string | null
+          regie_telephone?: string | null
           statut?: string | null
+          surface?: number | null
+          type_bien?: string | null
           updated_at?: string | null
         }
         Update: {
+          adresse?: string | null
           agent_id?: string | null
           client_id?: string | null
           commission_totale?: number
           created_at?: string | null
+          date_debut_bail?: string | null
+          date_etat_lieux?: string | null
           date_transaction?: string | null
+          etage?: string | null
+          etat_lieux_confirme?: boolean | null
           id?: string
           montant_total?: number
+          notes_internes?: string | null
           offre_id?: string | null
           part_agence?: number
           part_agent?: number
+          pieces?: number | null
+          regie_contact?: string | null
+          regie_email?: string | null
+          regie_nom?: string | null
+          regie_telephone?: string | null
           statut?: string | null
+          surface?: number | null
+          type_bien?: string | null
           updated_at?: string | null
         }
         Relationships: [
