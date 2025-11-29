@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -68,6 +68,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Dashboard', icon: LayoutDashboard, path: '/client', notifKey: null },
         { name: 'Mon dossier', icon: User, path: '/client/dossier', notifKey: null },
         { name: 'Offres reçues', icon: Home, path: '/client/offres-recues', notifKey: 'new_offer' },
+        { name: 'Mes visites', icon: CalendarCheck, path: '/client/visites', notifKey: 'new_visit' },
         { name: 'Calendrier', icon: Calendar, path: '/client/calendrier', notifKey: 'visit_combined' },
         { name: 'Visites déléguées', icon: HandHeart, path: '/client/visites-deleguees', notifKey: null },
         { name: 'Mes candidatures', icon: Clipboard, path: '/client/mes-candidatures', notifKey: null },
