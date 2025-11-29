@@ -335,7 +335,8 @@ export default function AgentVisites() {
                       <div className="flex items-center gap-2 text-sm">
                         <User className="h-4 w-4" />
                         <span>
-                          {visite.client_profile.prenom} {visite.client_profile.nom}
+                          {visite.est_deleguee && <span className="text-muted-foreground">Visite effectuée pour </span>}
+                          <span className="font-medium">{visite.client_profile.prenom} {visite.client_profile.nom}</span>
                         </span>
                       </div>
                     )}
