@@ -53,6 +53,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Tableau de bord', icon: LayoutDashboard, path: '/agent', notifKey: null },
         { name: 'Calendrier', icon: Calendar, path: '/agent/calendrier', notifKey: 'visit_combined' },
         { name: 'Mes clients', icon: Users, path: '/agent/mes-clients', notifKey: 'client_assigned' },
+        { name: 'Visites', icon: CalendarCheck, path: '/agent/visites', notifKey: 'new_visit' },
         { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre', notifKey: null },
         { name: 'Offres envoyées', icon: Mail, path: '/agent/offres-envoyees', notifKey: null },
         { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie', notifKey: 'new_message' },
