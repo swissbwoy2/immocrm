@@ -8,11 +8,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Send, Paperclip, FileText, Image, File, Settings, CheckCircle, AlertCircle, Mail, Link2, Info, User, Upload, X } from "lucide-react";
+import { Loader2, Send, Paperclip, FileText, Image, File, Settings, CheckCircle, AlertCircle, Mail, Link2, Info, User, Upload, X, Eye, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { EmailConfigurationDialog } from "@/components/EmailConfigurationDialog";
+import { AttachmentPreviewDialog } from "@/components/AttachmentPreviewDialog";
 
 interface Document {
   id: string;
@@ -36,6 +38,7 @@ interface Client {
 interface LocalFile {
   file: File;
   id: string;
+  previewUrl?: string;
 }
 
 const MAX_DIRECT_ATTACHMENT_SIZE = 25 * 1024 * 1024; // 25 MB
@@ -44,14 +47,15 @@ export default function EnvoyerEmail() {
   const { user } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [hasEmailConfig, setHasEmailConfig] = useState(false);
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [signature, setSignature] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
-  const [selectedClientId, setSelectedClientId] = useState<string>(""); // For pre-filling recipient
-  const [documentSourceClientId, setDocumentSourceClientId] = useState<string>(""); // For document selection
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [documentSourceClientId, setDocumentSourceClientId] = useState<string>("");
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [localFiles, setLocalFiles] = useState<LocalFile[]>([]);
@@ -59,6 +63,13 @@ export default function EnvoyerEmail() {
   const [attachmentMode, setAttachmentMode] = useState<'direct' | 'link'>('direct');
   const [linkExpirationDays, setLinkExpirationDays] = useState<number>(7);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [previewFile, setPreviewFile] = useState<LocalFile | null>(null);
+  const [showCcBcc, setShowCcBcc] = useState(false);
+  const [ccEmails, setCcEmails] = useState<string[]>([]);
+  const [bccEmails, setBccEmails] = useState<string[]>([]);
+  const [ccInput, setCcInput] = useState("");
+  const [bccInput, setBccInput] = useState("");
   
   const [email, setEmail] = useState({
     recipient_email: "",
@@ -74,7 +85,6 @@ export default function EnvoyerEmail() {
     }
   }, [user]);
 
-  // Pre-fill recipient info when selecting a client (optional helper)
   useEffect(() => {
     if (selectedClientId) {
       const client = clients.find(c => c.id === selectedClientId);
@@ -88,11 +98,9 @@ export default function EnvoyerEmail() {
     }
   }, [selectedClientId, clients]);
 
-  // Load documents when document source changes
   useEffect(() => {
     if (documentSourceClientId) {
       loadClientDocuments(documentSourceClientId);
-      // Update subject to reflect the document source client
       const sourceClient = clients.find(c => c.id === documentSourceClientId);
       if (sourceClient) {
         setEmail(prev => ({
@@ -106,7 +114,6 @@ export default function EnvoyerEmail() {
     }
   }, [documentSourceClientId, clients]);
 
-  // Auto-switch to link mode if size exceeds limit
   useEffect(() => {
     const clientDocsSize = documents
       .filter(d => selectedDocuments.includes(d.id))
@@ -122,6 +129,15 @@ export default function EnvoyerEmail() {
       });
     }
   }, [selectedDocuments, documents, localFiles]);
+
+  // Cleanup preview URLs on unmount
+  useEffect(() => {
+    return () => {
+      localFiles.forEach(f => {
+        if (f.previewUrl) URL.revokeObjectURL(f.previewUrl);
+      });
+    };
+  }, []);
 
   const checkEmailConfiguration = async () => {
     try {
@@ -238,6 +254,11 @@ export default function EnvoyerEmail() {
   };
 
   const resetForm = () => {
+    // Cleanup preview URLs
+    localFiles.forEach(f => {
+      if (f.previewUrl) URL.revokeObjectURL(f.previewUrl);
+    });
+    
     setEmail({
       recipient_email: "",
       recipient_name: "",
@@ -252,25 +273,70 @@ export default function EnvoyerEmail() {
     setSendSuccess(false);
     setGeneratedLink(null);
     setAttachmentMode('direct');
+    setCcEmails([]);
+    setBccEmails([]);
+    setCcInput("");
+    setBccInput("");
+    setShowCcBcc(false);
+  };
+
+  const addFilesWithPreview = (files: FileList | File[]) => {
+    const newFiles: LocalFile[] = Array.from(files).map(file => ({
+      file,
+      id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      previewUrl: file.type.startsWith('image/') || file.type === 'application/pdf' 
+        ? URL.createObjectURL(file) 
+        : undefined,
+    }));
+    setLocalFiles(prev => [...prev, ...newFiles]);
   };
 
   const handleLocalFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    
-    const newFiles: LocalFile[] = Array.from(files).map(file => ({
-      file,
-      id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    }));
-    
-    setLocalFiles(prev => [...prev, ...newFiles]);
+    addFilesWithPreview(files);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
   const removeLocalFile = (id: string) => {
+    const file = localFiles.find(f => f.id === id);
+    if (file?.previewUrl) {
+      URL.revokeObjectURL(file.previewUrl);
+    }
     setLocalFiles(prev => prev.filter(f => f.id !== id));
+  };
+
+  // Drag and drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget === dropZoneRef.current) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      addFilesWithPreview(files);
+    }
   };
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -279,12 +345,50 @@ export default function EnvoyerEmail() {
       reader.readAsDataURL(file);
       reader.onload = () => {
         const result = reader.result as string;
-        // Remove data URL prefix (e.g., "data:application/pdf;base64,")
         const base64 = result.split(',')[1];
         resolve(base64);
       };
       reader.onerror = error => reject(error);
     });
+  };
+
+  // CC/BCC handlers
+  const addCcEmail = (emailToAdd: string) => {
+    const trimmed = emailToAdd.trim().toLowerCase();
+    if (trimmed && !ccEmails.includes(trimmed) && trimmed.includes('@')) {
+      setCcEmails(prev => [...prev, trimmed]);
+      setCcInput("");
+    }
+  };
+
+  const addBccEmail = (emailToAdd: string) => {
+    const trimmed = emailToAdd.trim().toLowerCase();
+    if (trimmed && !bccEmails.includes(trimmed) && trimmed.includes('@')) {
+      setBccEmails(prev => [...prev, trimmed]);
+      setBccInput("");
+    }
+  };
+
+  const removeCcEmail = (emailToRemove: string) => {
+    setCcEmails(prev => prev.filter(e => e !== emailToRemove));
+  };
+
+  const removeBccEmail = (emailToRemove: string) => {
+    setBccEmails(prev => prev.filter(e => e !== emailToRemove));
+  };
+
+  const addClientToCc = (clientId: string) => {
+    const client = clients.find(c => c.id === clientId);
+    if (client && !ccEmails.includes(client.profile.email.toLowerCase())) {
+      setCcEmails(prev => [...prev, client.profile.email.toLowerCase()]);
+    }
+  };
+
+  const addClientToBcc = (clientId: string) => {
+    const client = clients.find(c => c.id === clientId);
+    if (client && !bccEmails.includes(client.profile.email.toLowerCase())) {
+      setBccEmails(prev => [...prev, client.profile.email.toLowerCase()]);
+    }
   };
 
   const generateShareLink = async () => {
@@ -320,7 +424,6 @@ export default function EnvoyerEmail() {
         throw new Error(result.error);
       }
 
-      // Build proper download URL using window.location.origin
       const downloadUrl = `${window.location.origin}/download/${result.token}`;
       setGeneratedLink(downloadUrl);
       return downloadUrl;
@@ -370,7 +473,6 @@ export default function EnvoyerEmail() {
 
       if (hasClientDocs || hasLocalFiles) {
         if (attachmentMode === 'link' && hasClientDocs) {
-          // Generate share link for client docs and add to email body
           let linkToUse = generatedLink;
           if (!linkToUse) {
             linkToUse = await generateShareLink();
@@ -387,7 +489,6 @@ export default function EnvoyerEmail() {
 
           finalBodyHtml += `\n\n<hr style="margin: 20px 0;"/>\n<p><strong>📎 Documents joints (${selectedDocs.length} fichier${selectedDocs.length > 1 ? 's' : ''}):</strong></p>\n<p><a href="${linkToUse}" style="color: #3b82f6; text-decoration: underline;">${linkToUse}</a></p>\n<p style="font-size: 12px; color: #666;">${expirationText}</p>`;
         } else if (attachmentMode === 'direct' || hasLocalFiles) {
-          // Direct attachments - check size limit
           if (totalSize > MAX_DIRECT_ATTACHMENT_SIZE) {
             toast({
               title: "Pièces jointes trop volumineuses",
@@ -398,7 +499,6 @@ export default function EnvoyerEmail() {
             return;
           }
 
-          // Add client documents (URL-based)
           if (attachmentMode === 'direct') {
             attachments = selectedDocs
               .filter(d => d.url)
@@ -409,7 +509,6 @@ export default function EnvoyerEmail() {
               }));
           }
 
-          // Add local files (base64-based)
           for (const localFile of localFiles) {
             const base64Content = await fileToBase64(localFile.file);
             attachments.push({
@@ -421,7 +520,6 @@ export default function EnvoyerEmail() {
         }
       }
 
-      // Call edge function
       const { data, error } = await supabase.functions.invoke('send-smtp-email', {
         body: {
           recipient_email: email.recipient_email,
@@ -430,6 +528,8 @@ export default function EnvoyerEmail() {
           body_html: finalBodyHtml,
           attachments,
           client_id: documentSourceClientId || null,
+          cc: ccEmails.length > 0 ? ccEmails : undefined,
+          bcc: bccEmails.length > 0 ? bccEmails : undefined,
         },
       });
 
@@ -471,6 +571,8 @@ export default function EnvoyerEmail() {
             <h2 className="text-2xl font-bold mb-2">Email envoyé avec succès !</h2>
             <p className="text-muted-foreground mb-6">
               Votre email a été envoyé à {email.recipient_email}
+              {ccEmails.length > 0 && ` (CC: ${ccEmails.length})`}
+              {bccEmails.length > 0 && ` (BCC: ${bccEmails.length})`}
             </p>
             <div className="flex gap-4 justify-center">
               <Button onClick={resetForm}>
@@ -563,6 +665,138 @@ export default function EnvoyerEmail() {
                     </Select>
                   </div>
 
+                  {/* CC/BCC Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setShowCcBcc(!showCcBcc)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showCcBcc ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    {showCcBcc ? "Masquer CC/BCC" : "Ajouter CC/BCC"}
+                    {(ccEmails.length > 0 || bccEmails.length > 0) && (
+                      <Badge variant="secondary" className="ml-1">
+                        {ccEmails.length + bccEmails.length}
+                      </Badge>
+                    )}
+                  </button>
+
+                  {/* CC/BCC Fields */}
+                  {showCcBcc && (
+                    <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
+                      {/* CC */}
+                      <div className="space-y-2">
+                        <Label className="text-sm">CC (Copie)</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="email"
+                            value={ccInput}
+                            onChange={(e) => setCcInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                addCcEmail(ccInput);
+                              }
+                            }}
+                            placeholder="Ajouter un email..."
+                            className="flex-1"
+                          />
+                          <Select onValueChange={addClientToCc}>
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue placeholder="Client..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {clients.map(client => (
+                                <SelectItem key={client.id} value={client.id}>
+                                  {client.profile.prenom} {client.profile.nom}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => addCcEmail(ccInput)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        {ccEmails.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {ccEmails.map(ccEmail => (
+                              <Badge key={ccEmail} variant="secondary" className="gap-1">
+                                {ccEmail}
+                                <button
+                                  type="button"
+                                  onClick={() => removeCcEmail(ccEmail)}
+                                  className="ml-1 hover:text-destructive"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* BCC */}
+                      <div className="space-y-2">
+                        <Label className="text-sm">BCC (Copie cachée)</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="email"
+                            value={bccInput}
+                            onChange={(e) => setBccInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                addBccEmail(bccInput);
+                              }
+                            }}
+                            placeholder="Ajouter un email..."
+                            className="flex-1"
+                          />
+                          <Select onValueChange={addClientToBcc}>
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue placeholder="Client..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {clients.map(client => (
+                                <SelectItem key={client.id} value={client.id}>
+                                  {client.profile.prenom} {client.profile.nom}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => addBccEmail(bccInput)}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        {bccEmails.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {bccEmails.map(bccEmail => (
+                              <Badge key={bccEmail} variant="secondary" className="gap-1">
+                                {bccEmail}
+                                <button
+                                  type="button"
+                                  onClick={() => removeBccEmail(bccEmail)}
+                                  className="ml-1 hover:text-destructive"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Subject */}
                   <div className="space-y-2">
                     <Label>Objet *</Label>
@@ -634,11 +868,11 @@ export default function EnvoyerEmail() {
                     Pièces jointes
                   </CardTitle>
                   <CardDescription>
-                    Sélectionnez les documents d'un client à joindre
+                    Glissez-déposez vos fichiers ou sélectionnez des documents client
                   </CardDescription>
                 </CardHeader>
-              <CardContent className="space-y-4">
-                  {/* Local file upload */}
+                <CardContent className="space-y-4">
+                  {/* Drag & Drop zone */}
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2 text-sm font-medium">
                       <Upload className="h-4 w-4" />
@@ -651,15 +885,29 @@ export default function EnvoyerEmail() {
                       onChange={handleLocalFileSelect}
                       className="hidden"
                     />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
+                    <div
+                      ref={dropZoneRef}
+                      onDragEnter={handleDragEnter}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
                       onClick={() => fileInputRef.current?.click()}
+                      className={`
+                        border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all
+                        ${isDragging 
+                          ? 'border-primary bg-primary/10 scale-[1.02]' 
+                          : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50'
+                        }
+                      `}
                     >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Ajouter des fichiers
-                    </Button>
+                      <Upload className={`h-8 w-8 mx-auto mb-2 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
+                      <p className="text-sm font-medium">
+                        {isDragging ? 'Déposez les fichiers ici' : 'Glissez vos fichiers ici'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        ou cliquez pour sélectionner
+                      </p>
+                    </div>
                     
                     {localFiles.length > 0 && (
                       <div className="space-y-2 mt-2">
@@ -675,12 +923,29 @@ export default function EnvoyerEmail() {
                                 {formatFileSize(localFile.file.size)}
                               </p>
                             </div>
+                            {localFile.previewUrl && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewFile(localFile);
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
                               className="h-6 w-6 p-0"
-                              onClick={() => removeLocalFile(localFile.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeLocalFile(localFile.id);
+                              }}
                             >
                               <X className="h-4 w-4" />
                             </Button>
@@ -726,7 +991,6 @@ export default function EnvoyerEmail() {
                     </p>
                   ) : documentSourceClientId && documents.length > 0 ? (
                     <>
-                      {/* Document count */}
                       <div className="text-sm text-muted-foreground">
                         {selectedDocuments.length}/{documents.length} document(s) client sélectionné(s)
                       </div>
@@ -773,24 +1037,24 @@ export default function EnvoyerEmail() {
 
                   {/* Size indicator */}
                   {hasAnyAttachments && (
-                        <div className={`p-3 rounded-md text-sm ${
-                          exceedsDirectLimit 
-                            ? 'bg-amber-500/10 border border-amber-500/20' 
-                            : 'bg-muted'
-                        }`}>
-                          <div className="flex items-center gap-2">
-                            <Info className="h-4 w-4" />
-                            <span className="font-medium">
-                              Taille: {formatFileSize(totalSelectedSize)}
-                            </span>
-                          </div>
-                          {exceedsDirectLimit && (
-                            <p className="text-xs mt-1 text-amber-600">
-                              Dépasse 25 MB - utilisez le mode lien
-                            </p>
-                          )}
-                        </div>
+                    <div className={`p-3 rounded-md text-sm ${
+                      exceedsDirectLimit 
+                        ? 'bg-amber-500/10 border border-amber-500/20' 
+                        : 'bg-muted'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        <Info className="h-4 w-4" />
+                        <span className="font-medium">
+                          Taille: {formatFileSize(totalSelectedSize)}
+                        </span>
+                      </div>
+                      {exceedsDirectLimit && (
+                        <p className="text-xs mt-1 text-amber-600">
+                          Dépasse 25 MB - utilisez le mode lien
+                        </p>
                       )}
+                    </div>
+                  )}
 
                   {/* Attachment mode selector */}
                   {selectedDocuments.length > 0 && (
@@ -832,7 +1096,6 @@ export default function EnvoyerEmail() {
                         </div>
                       </RadioGroup>
 
-                      {/* Link expiration setting */}
                       {attachmentMode === 'link' && (
                         <div className="space-y-2 pt-2">
                           <Label className="text-xs">Expiration du lien</Label>
@@ -871,6 +1134,13 @@ export default function EnvoyerEmail() {
           setShowConfigDialog(open);
           if (!open) checkEmailConfiguration();
         }} 
+      />
+
+      <AttachmentPreviewDialog
+        open={!!previewFile}
+        onOpenChange={(open) => !open && setPreviewFile(null)}
+        file={previewFile?.file || null}
+        previewUrl={previewFile?.previewUrl || null}
       />
     </div>
   );

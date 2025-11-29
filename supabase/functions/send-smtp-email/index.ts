@@ -19,6 +19,8 @@ interface EmailRequest {
     content_type?: string;
   }>;
   client_id?: string;
+  cc?: string[];
+  bcc?: string[];
 }
 
 serve(async (req) => {
@@ -61,13 +63,19 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { recipient_email, recipient_name, subject, body_html, attachments, client_id }: EmailRequest = await req.json();
+    const { recipient_email, recipient_name, subject, body_html, attachments, client_id, cc, bcc }: EmailRequest = await req.json();
 
     if (!recipient_email || !subject || !body_html) {
       throw new Error('recipient_email, subject, and body_html are required');
     }
 
     console.log(`Sending email to ${recipient_email} via ${emailConfig.smtp_host}:${emailConfig.smtp_port}`);
+    if (cc && cc.length > 0) {
+      console.log(`CC recipients: ${cc.join(', ')}`);
+    }
+    if (bcc && bcc.length > 0) {
+      console.log(`BCC recipients: ${bcc.length} addresses`);
+    }
 
     // Build email body with signature
     let fullBodyHtml = body_html.replace(/\n/g, '<br/>');
@@ -130,18 +138,7 @@ serve(async (req) => {
     }
 
     // Determine TLS mode based on port
-    // Port 465: Implicit TLS (connect with TLS immediately) - RECOMMENDED
-    // Port 587: STARTTLS (connect plain, then upgrade) - has issues in Deno edge functions
-    // Port 25: No TLS (not recommended)
     const port = emailConfig.smtp_port || 465;
-    
-    // IMPORTANT: In Deno edge functions, STARTTLS (port 587) often fails with "InvalidContentType" error
-    // This is because the STARTTLS handshake doesn't work properly in the edge runtime
-    // We STRONGLY recommend using port 465 with implicit TLS
-    
-    // For port 465: use tls: true (implicit TLS)
-    // For port 587: use tls: false (will try STARTTLS after connection, but may fail)
-    // For port 25: use tls: false (no encryption)
     const useTLS = port === 465;
     
     console.log(`SMTP connection: host=${emailConfig.smtp_host}, port=${port}, implicitTLS=${useTLS}`);
@@ -179,14 +176,27 @@ serve(async (req) => {
       encoding: "binary" as const,
     }));
 
-    // Send email
-    await client.send({
+    // Build email options
+    const emailOptions: any = {
       from: fromAddress,
       to: toAddress,
       subject: subject,
       html: fullBodyHtml,
       attachments: denomailerAttachments.length > 0 ? denomailerAttachments : undefined,
-    });
+    };
+
+    // Add CC recipients if provided
+    if (cc && cc.length > 0) {
+      emailOptions.cc = cc.join(', ');
+    }
+
+    // Add BCC recipients if provided
+    if (bcc && bcc.length > 0) {
+      emailOptions.bcc = bcc.join(', ');
+    }
+
+    // Send email
+    await client.send(emailOptions);
 
     console.log('Email sent successfully');
 
