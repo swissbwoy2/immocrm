@@ -39,8 +39,6 @@ serve(async (req) => {
     console.log(`Testing SMTP connection to ${smtp_host}:${smtp_port}`);
 
     // Determine TLS mode based on port
-    // Port 465: Implicit TLS (connect with TLS immediately) - RECOMMENDED
-    // Port 587: STARTTLS (connect plain, then upgrade) - has issues in Deno edge functions
     const port = smtp_port || 465;
     const useTLS = port === 465;
     
@@ -63,55 +61,66 @@ serve(async (req) => {
       },
     });
 
-    // Try to connect - this will throw if connection fails
-    // We just need to verify the connection works, then close it
-    console.log('Attempting SMTP connection...');
+    // Test by sending an email to self - this forces connection and auth
+    // Use a minimal test that will validate credentials
+    console.log('Attempting SMTP connection and authentication...');
     
-    // The SMTPClient connects automatically when you try to send
-    // But we can test by calling close which will connect first if needed
+    // Send a test email to the sender's own address
+    await client.send({
+      from: email_from,
+      to: email_from,
+      subject: '[Test] Connexion SMTP vérifiée',
+      content: 'Ce message confirme que votre configuration SMTP fonctionne correctement.',
+    });
+    
+    console.log('SMTP test email sent successfully');
+    
+    // Close the connection
     await client.close();
     client = null;
-
-    console.log('SMTP connection test successful');
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Connexion SMTP réussie ! Vos paramètres sont corrects.' 
+        message: 'Connexion SMTP réussie ! Un email de test a été envoyé à votre adresse.' 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('SMTP connection test failed:', error);
+    console.error('SMTP connection test failed:', errorMessage);
     
-    // Try to close client if open
+    // Try to close client if it exists
     if (client) {
       try {
         await client.close();
-      } catch (e) {
-        console.error('Error closing SMTP client:', e);
+      } catch (closeError) {
+        // Ignore close errors - connection might not be established
+        console.log('Note: Could not close client (may not have connected)');
       }
     }
     
-    // Provide helpful error messages
+    // Provide helpful error messages in French
     let userFriendlyMessage = errorMessage;
     
     if (errorMessage.includes('InvalidContentType') || errorMessage.includes('corrupt message')) {
       userFriendlyMessage = 'Erreur de connexion TLS. Essayez le port 465 avec TLS activé.';
-    } else if (errorMessage.includes('535') || errorMessage.includes('Invalid login') || errorMessage.includes('authentication')) {
-      userFriendlyMessage = 'Identifiants incorrects. Vérifiez votre email et mot de passe SMTP.';
+    } else if (errorMessage.includes('535') || errorMessage.includes('Invalid login') || errorMessage.includes('authentication') || errorMessage.includes('password')) {
+      userFriendlyMessage = 'Identifiants incorrects. Vérifiez votre email et mot de passe SMTP. Pour certains fournisseurs (Gmail, Infomaniak), un mot de passe d\'application spécifique peut être nécessaire.';
     } else if (errorMessage.includes('Connection refused') || errorMessage.includes('ECONNREFUSED')) {
       userFriendlyMessage = 'Impossible de se connecter au serveur SMTP. Vérifiez l\'adresse et le port.';
     } else if (errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT')) {
       userFriendlyMessage = 'Délai de connexion dépassé. Vérifiez l\'adresse du serveur.';
+    } else if (errorMessage.includes('getaddrinfo') || errorMessage.includes('ENOTFOUND')) {
+      userFriendlyMessage = 'Serveur SMTP introuvable. Vérifiez l\'adresse du serveur.';
     }
     
+    // Return with 200 status so frontend can properly parse the JSON response
     return new Response(
       JSON.stringify({ success: false, error: userFriendlyMessage }),
       { 
-        status: 400,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
