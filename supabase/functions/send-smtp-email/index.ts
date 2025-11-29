@@ -112,14 +112,26 @@ serve(async (req) => {
       }
     }
 
-    // Create SMTP client with denomailer
-    // Use smtp_secure setting, or default to TLS for port 465
+    // Determine TLS mode based on port
+    // Port 465: Implicit TLS (connect with TLS immediately) - RECOMMENDED
+    // Port 587: STARTTLS (connect plain, then upgrade) - has issues in Deno edge functions
+    // Port 25: No TLS (not recommended)
     const port = emailConfig.smtp_port || 465;
-    // IMPORTANT: Use implicit TLS when smtp_secure is true OR when using port 465
-    // This bypasses STARTTLS which has issues in Deno edge functions
-    const useTLS = emailConfig.smtp_secure === true || port === 465;
     
-    console.log(`SMTP connection settings: host=${emailConfig.smtp_host}, port=${port}, tls=${useTLS}`);
+    // IMPORTANT: In Deno edge functions, STARTTLS (port 587) often fails with "InvalidContentType" error
+    // This is because the STARTTLS handshake doesn't work properly in the edge runtime
+    // We STRONGLY recommend using port 465 with implicit TLS
+    
+    // For port 465: use tls: true (implicit TLS)
+    // For port 587: use tls: false (will try STARTTLS after connection, but may fail)
+    // For port 25: use tls: false (no encryption)
+    const useTLS = port === 465;
+    
+    console.log(`SMTP connection: host=${emailConfig.smtp_host}, port=${port}, implicitTLS=${useTLS}`);
+    
+    if (port === 587) {
+      console.warn('WARNING: Port 587 (STARTTLS) may not work reliably. Consider using port 465 with implicit TLS.');
+    }
     
     client = new SMTPClient({
       connection: {
@@ -201,8 +213,14 @@ serve(async (req) => {
       }
     }
     
+    // Provide helpful error message for common TLS issues
+    let userFriendlyMessage = errorMessage;
+    if (errorMessage.includes('InvalidContentType') || errorMessage.includes('corrupt message')) {
+      userFriendlyMessage = 'Erreur de connexion SMTP. Si vous utilisez le port 587, essayez de passer au port 465 avec TLS activé dans vos paramètres email.';
+    }
+    
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
+      JSON.stringify({ success: false, error: userFriendlyMessage }),
       { 
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
