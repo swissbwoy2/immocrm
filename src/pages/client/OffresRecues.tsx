@@ -1509,8 +1509,8 @@ const OffresRecues = () => {
 
         {/* Dialog de délégation de visite */}
         <Dialog open={delegateDialogOpen} onOpenChange={setDelegateDialogOpen}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
+          <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>Déléguer la visite à votre agent</DialogTitle>
               <DialogDescription>
                 Choisissez une date et votre agent effectuera la visite pour vous
@@ -1518,7 +1518,7 @@ const OffresRecues = () => {
             </DialogHeader>
 
             {selectedOffre && (
-              <div className="space-y-4 py-4">
+              <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-2">
                 <div className="p-4 bg-muted rounded-lg">
                   <h4 className="font-semibold mb-2">Bien concerné</h4>
                   <p className="text-sm">{selectedOffre.adresse}</p>
@@ -1642,7 +1642,7 @@ const OffresRecues = () => {
               </div>
             )}
 
-            <DialogFooter>
+            <DialogFooter className="flex-shrink-0 pt-4 border-t">
               <Button variant="outline" onClick={() => setDelegateDialogOpen(false)}>
                 Annuler
               </Button>
