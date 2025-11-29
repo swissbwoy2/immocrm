@@ -61,7 +61,8 @@ serve(async (req) => {
     const remindersToSend: Array<{
       visite: VisiteWithDetails;
       reminderType: string;
-      recipients: string[];
+      recipientId: string;
+      recipientRole: 'agent' | 'client' | 'admin';
       urgencyLevel: "critical" | "high" | "normal";
     }> = [];
 
@@ -97,8 +98,7 @@ serve(async (req) => {
       }
 
       for (const reminder of remindersNeeded) {
-        // Récupérer les destinataires
-        const recipients: string[] = [];
+        // Récupérer les destinataires avec leurs rôles
 
         // Agent
         const { data: agent } = await supabase
@@ -108,7 +108,24 @@ serve(async (req) => {
           .single();
         
         if (agent?.user_id) {
-          recipients.push(agent.user_id);
+          // Vérifier si rappel déjà envoyé
+          const { data: existingReminder } = await supabase
+            .from("visit_reminders")
+            .select("id")
+            .eq("visite_id", visite.id)
+            .eq("user_id", agent.user_id)
+            .eq("reminder_type", reminder.type)
+            .maybeSingle();
+
+          if (!existingReminder) {
+            remindersToSend.push({
+              visite: visite as VisiteWithDetails,
+              reminderType: reminder.type,
+              recipientId: agent.user_id,
+              recipientRole: 'agent',
+              urgencyLevel: reminder.urgency,
+            });
+          }
         }
 
         // Client assigné à la visite
@@ -120,7 +137,23 @@ serve(async (req) => {
             .single();
           
           if (client?.user_id) {
-            recipients.push(client.user_id);
+            const { data: existingReminder } = await supabase
+              .from("visit_reminders")
+              .select("id")
+              .eq("visite_id", visite.id)
+              .eq("user_id", client.user_id)
+              .eq("reminder_type", reminder.type)
+              .maybeSingle();
+
+            if (!existingReminder) {
+              remindersToSend.push({
+                visite: visite as VisiteWithDetails,
+                reminderType: reminder.type,
+                recipientId: client.user_id,
+                recipientRole: 'client',
+                urgencyLevel: reminder.urgency,
+              });
+            }
           }
         }
 
@@ -131,18 +164,11 @@ serve(async (req) => {
           .eq("role", "admin");
         
         for (const admin of admins || []) {
-          if (!recipients.includes(admin.user_id)) {
-            recipients.push(admin.user_id);
-          }
-        }
-
-        // Vérifier si le rappel a déjà été envoyé pour chaque destinataire
-        for (const recipientId of recipients) {
           const { data: existingReminder } = await supabase
             .from("visit_reminders")
             .select("id")
             .eq("visite_id", visite.id)
-            .eq("user_id", recipientId)
+            .eq("user_id", admin.user_id)
             .eq("reminder_type", reminder.type)
             .maybeSingle();
 
@@ -150,7 +176,8 @@ serve(async (req) => {
             remindersToSend.push({
               visite: visite as VisiteWithDetails,
               reminderType: reminder.type,
-              recipients: [recipientId],
+              recipientId: admin.user_id,
+              recipientRole: 'admin',
               urgencyLevel: reminder.urgency,
             });
           }
@@ -162,7 +189,7 @@ serve(async (req) => {
 
     // Envoyer les notifications
     for (const reminder of remindersToSend) {
-      const { visite, reminderType, recipients, urgencyLevel } = reminder;
+      const { visite, reminderType, recipientId, recipientRole, urgencyLevel } = reminder;
       const visiteDate = new Date(visite.date_visite);
 
       // Formater le message selon l'urgence
@@ -187,39 +214,40 @@ serve(async (req) => {
           message = getReminderMessage(reminderType, visite, visiteDate);
       }
 
-      for (const recipientId of recipients) {
-        // Créer la notification
-        const { error: notifError } = await supabase.rpc("create_notification", {
-          p_user_id: recipientId,
-          p_type: "visit_reminder",
-          p_title: title,
-          p_message: message,
-          p_link: getRecipientLink(recipientId, visite),
-          p_metadata: {
-            visite_id: visite.id,
-            reminder_type: reminderType,
-            urgency: urgencyLevel,
-          },
-        });
+      // Générer le lien selon le rôle
+      const link = getRecipientLink(recipientRole);
 
-        if (notifError) {
-          console.error(`Error creating notification for ${recipientId}:`, notifError);
-          continue;
-        }
-
-        // Marquer le rappel comme envoyé
-        const { error: insertError } = await supabase.from("visit_reminders").insert({
+      // Créer la notification
+      const { error: notifError } = await supabase.rpc("create_notification", {
+        p_user_id: recipientId,
+        p_type: "visit_reminder",
+        p_title: title,
+        p_message: message,
+        p_link: link,
+        p_metadata: {
           visite_id: visite.id,
-          user_id: recipientId,
           reminder_type: reminderType,
-        });
+          urgency: urgencyLevel,
+        },
+      });
 
-        if (insertError && !insertError.message.includes("duplicate")) {
-          console.error(`Error inserting reminder record:`, insertError);
-        }
-
-        console.log(`Sent ${reminderType} reminder to ${recipientId} for visit ${visite.id}`);
+      if (notifError) {
+        console.error(`Error creating notification for ${recipientId}:`, notifError);
+        continue;
       }
+
+      // Marquer le rappel comme envoyé
+      const { error: insertError } = await supabase.from("visit_reminders").insert({
+        visite_id: visite.id,
+        user_id: recipientId,
+        reminder_type: reminderType,
+      });
+
+      if (insertError && !insertError.message.includes("duplicate")) {
+        console.error(`Error inserting reminder record:`, insertError);
+      }
+
+      console.log(`Sent ${reminderType} reminder to ${recipientId} (${recipientRole}) for visit ${visite.id}`);
     }
 
     return new Response(
@@ -281,8 +309,15 @@ function getReminderMessage(
   }
 }
 
-async function getRecipientLink(userId: string, visite: VisiteWithDetails): Promise<string> {
-  // Par défaut, retourner le lien selon le contexte
-  // Les clients vont vers /client/visites, les agents vers /agent/visites
-  return "/agent/visites"; // Sera ajusté côté frontend selon le rôle
+function getRecipientLink(role: 'agent' | 'client' | 'admin'): string {
+  switch (role) {
+    case 'agent':
+      return '/agent/visites';
+    case 'client':
+      return '/client/visites';
+    case 'admin':
+      return '/admin/clients';
+    default:
+      return '/';
+  }
 }

@@ -52,7 +52,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Mes clients', icon: Users, path: '/agent/mes-clients', notifKey: 'client_assigned' },
         { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre', notifKey: null },
         { name: 'Offres envoyées', icon: Mail, path: '/agent/offres-envoyees', notifKey: null },
-        { name: 'Visites', icon: Calendar, path: '/agent/visites', notifKey: 'new_visit' },
+        { name: 'Visites', icon: Calendar, path: '/agent/visites', notifKey: 'visit_combined' },
         { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie', notifKey: 'new_message' },
         { name: 'Envoyer Email', icon: MailPlus, path: '/agent/envoyer-email', notifKey: null },
         { name: 'Historique Emails', icon: History, path: '/agent/historique-emails', notifKey: null },
@@ -65,7 +65,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Dashboard', icon: LayoutDashboard, path: '/client', notifKey: null },
         { name: 'Mon dossier', icon: User, path: '/client/dossier', notifKey: null },
         { name: 'Offres reçues', icon: Home, path: '/client/offres-recues', notifKey: 'new_offer' },
-        { name: 'Prochaines visites', icon: Calendar, path: '/client/visites', notifKey: 'new_visit' },
+        { name: 'Prochaines visites', icon: Calendar, path: '/client/visites', notifKey: 'visit_combined' },
         { name: 'Visites déléguées', icon: HandHeart, path: '/client/visites-deleguees', notifKey: null },
         { name: 'Mes candidatures', icon: Clipboard, path: '/client/mes-candidatures', notifKey: null },
         { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
@@ -120,6 +120,10 @@ export function AppSidebar() {
 
   const getNotificationCount = (notifKey: string | null): number => {
     if (!notifKey) return 0;
+    // Combine new_visit and visit_reminder for the visites menu
+    if (notifKey === 'visit_combined') {
+      return (counts.new_visit || 0) + (counts.visit_reminder || 0);
+    }
     return counts[notifKey as keyof typeof counts] || 0;
   };
 

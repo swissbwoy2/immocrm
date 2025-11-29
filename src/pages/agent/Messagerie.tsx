@@ -12,6 +12,7 @@ import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploade
 import { MessageAttachment } from "@/components/MessageAttachment";
 import { NewConversationDialog } from "@/components/NewConversationDialog";
 import { parseMessageWithLinks } from "@/lib/utils";
+import { useNotifications } from "@/hooks/useNotifications";
 
 // Fonction pour retirer les accents des chaînes pour une recherche plus flexible
 const removeAccents = (str: string) => {
@@ -21,6 +22,7 @@ const removeAccents = (str: string) => {
 const Messagerie = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { markTypeAsRead } = useNotifications();
   const [conversations, setConversations] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
@@ -37,6 +39,8 @@ const [pendingAttachment, setPendingAttachment] = useState<{
 
   useEffect(() => {
     loadAgentAndConversations();
+    // Mark new_message notifications as read when visiting this page
+    markTypeAsRead('new_message');
   }, [user]);
 
   useEffect(() => {

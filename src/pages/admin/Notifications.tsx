@@ -22,6 +22,8 @@ const getNotificationIcon = (type: string) => {
       return '🏠';
     case 'new_visit':
       return '📅';
+    case 'visit_reminder':
+      return '⏰';
     default:
       return '🔔';
   }
@@ -39,6 +41,8 @@ const getNotificationTypeName = (type: string) => {
       return 'Offre';
     case 'new_visit':
       return 'Visite';
+    case 'visit_reminder':
+      return 'Rappel visite';
     default:
       return 'Autre';
   }

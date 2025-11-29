@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateChances } from "@/utils/chanceCalculator";
 import { ChanceIndicator } from "@/components/ChanceIndicator";
+import { useNotifications } from "@/hooks/useNotifications";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 const OffresRecues = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { markTypeAsRead } = useNotifications();
   const [offres, setOffres] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOffre, setSelectedOffre] = useState<any | null>(null);
@@ -49,6 +51,8 @@ const OffresRecues = () => {
     loadClientData();
     loadVisites();
     loadDocumentsStats();
+    // Mark new_offer notifications as read when visiting this page
+    markTypeAsRead('new_offer');
   }, [user]);
 
   const loadOffres = async () => {

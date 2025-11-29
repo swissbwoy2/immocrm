@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploader";
 import { MessageAttachment } from "@/components/MessageAttachment";
 import { parseMessageWithLinks } from "@/lib/utils";
+import { useNotifications } from "@/hooks/useNotifications";
 
 // Fonction pour retirer les accents des chaînes pour une recherche plus flexible
 const removeAccents = (str: string) => {
@@ -22,6 +23,7 @@ const Messagerie = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { markTypeAsRead } = useNotifications();
   const [conversations, setConversations] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [offresMap, setOffresMap] = useState<Record<string, any>>({});
@@ -38,6 +40,8 @@ const Messagerie = () => {
 
   useEffect(() => {
     loadClientAndConversations();
+    // Mark new_message notifications as read when visiting this page
+    markTypeAsRead('new_message');
   }, [user]);
 
   useEffect(() => {
