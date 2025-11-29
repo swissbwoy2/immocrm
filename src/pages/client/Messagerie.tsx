@@ -13,6 +13,7 @@ import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploade
 import { MessageAttachment } from "@/components/MessageAttachment";
 import { parseMessageWithLinks } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
+import { MessagingLayout } from "@/components/MessagingLayout";
 
 // Fonction pour retirer les accents des chaînes pour une recherche plus flexible
 const removeAccents = (str: string) => {
@@ -280,6 +281,7 @@ const Messagerie = () => {
   };
 
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
+  const currentConversation = conversations.find(c => c.id === selectedConv);
 
   const OffreCard = ({ offre }: { offre: any }) => (
     <div className="mt-2 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-lg border-2 border-blue-200 dark:border-blue-800">
@@ -364,131 +366,138 @@ const Messagerie = () => {
     );
   };
 
-  return (
-    <div className="flex-1 flex overflow-hidden">
-      <div className="w-80 border-r border-border bg-card">
-        <div className="p-4 border-b">
-          <h2 className="font-semibold">Messages</h2>
-        </div>
-        <ScrollArea className="h-[calc(100vh-73px)]">
-          {conversations.map((conv) => {
-            const convMessages = messages.filter(m => m.conversation_id === conv.id);
-            const lastMessage = convMessages[convMessages.length - 1];
-            const unreadCount = convMessages.filter(m => !m.read && m.sender_type === 'agent').length;
-            
-            return (
-              <div
-                key={conv.id}
-                onClick={() => setSelectedConv(conv.id)}
-                className={`p-4 border-b cursor-pointer hover:bg-muted/50 ${selectedConv === conv.id ? 'bg-muted' : ''}`}
-              >
-                <div className="flex items-start justify-between mb-1">
-                  <p className="font-medium text-sm">{getAgentName(conv.agent_id)}</p>
-                  {unreadCount > 0 && (
-                    <Badge variant="default" className="ml-2">{unreadCount}</Badge>
+  const conversationsList = (
+    <>
+      <div className="p-4 border-b">
+        <h2 className="font-semibold">Messages</h2>
+      </div>
+      <ScrollArea className="flex-1">
+        {conversations.map((conv) => {
+          const convMessages = messages.filter(m => m.conversation_id === conv.id);
+          const lastMessage = convMessages[convMessages.length - 1];
+          const unreadCount = convMessages.filter(m => !m.read && m.sender_type === 'agent').length;
+          
+          return (
+            <div
+              key={conv.id}
+              onClick={() => setSelectedConv(conv.id)}
+              className={`p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors ${selectedConv === conv.id ? 'bg-muted' : ''}`}
+            >
+              <div className="flex items-start justify-between mb-1">
+                <p className="font-medium text-sm">{getAgentName(conv.agent_id)}</p>
+                {unreadCount > 0 && (
+                  <Badge variant="default" className="ml-2">{unreadCount}</Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                {lastMessage?.content?.substring(0, 50) || conv.subject}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {new Date(conv.last_message_at || conv.created_at).toLocaleDateString('fr-FR')}
+              </p>
+            </div>
+          );
+        })}
+      </ScrollArea>
+    </>
+  );
+
+  const chatHeader = currentConversation && (
+    <h2 className="font-semibold truncate">
+      {getAgentName(currentConversation.agent_id)}
+    </h2>
+  );
+
+  const chatView = selectedConv ? (
+    <div className="flex-1 flex flex-col min-h-0">
+      <ScrollArea className="flex-1 p-4">
+        <div className="space-y-4">
+          {selectedMessages.map((msg) => (
+            <Card key={msg.id} className={`p-4 ${msg.sender_type === 'client' ? 'ml-auto max-w-[70%] bg-primary/10' : 'mr-auto max-w-[70%]'}`}>
+              <div className="flex items-start justify-between mb-2">
+                <p className="font-medium text-sm">
+                  {msg.sender_type === 'client' ? 'Vous' : getAgentName(currentConversation?.agent_id)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(msg.created_at).toLocaleString('fr-FR')}
+                </p>
+              </div>
+              {msg.content && (
+                <div className="text-sm whitespace-pre-wrap">
+                  {parseMessageWithLinks(msg.content).map((part, index) => 
+                    part.type === 'link' ? (
+                      <a
+                        key={index}
+                        href={part.content}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        {part.content}
+                      </a>
+                    ) : (
+                      <span key={index}>{part.content}</span>
+                    )
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground line-clamp-2">
-                  {lastMessage?.content?.substring(0, 50) || conv.subject}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {new Date(conv.last_message_at || conv.created_at).toLocaleDateString('fr-FR')}
-                </p>
-              </div>
-            );
-          })}
-        </ScrollArea>
-      </div>
-
-      <div className="flex-1 flex flex-col">
-        {selectedConv ? (
-          <>
-            <div className="p-4 border-b bg-card">
-              <h2 className="font-semibold">
-                {getAgentName(conversations.find(c => c.id === selectedConv)?.agent_id)}
-              </h2>
-            </div>
-            <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
-                {selectedMessages.map((msg) => (
-                  <Card key={msg.id} className={`p-4 ${msg.sender_type === 'client' ? 'ml-auto max-w-[70%] bg-primary/10' : 'mr-auto max-w-[70%]'}`}>
-                    <div className="flex items-start justify-between mb-2">
-                      <p className="font-medium text-sm">
-                        {msg.sender_type === 'client' ? 'Vous' : getAgentName(conversations.find(c => c.id === selectedConv)?.agent_id)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(msg.created_at).toLocaleString('fr-FR')}
-                      </p>
-                    </div>
-                    {msg.content && (
-                      <div className="text-sm whitespace-pre-wrap">
-                        {parseMessageWithLinks(msg.content).map((part, index) => 
-                          part.type === 'link' ? (
-                            <a
-                              key={index}
-                              href={part.content}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline"
-                            >
-                              {part.content}
-                            </a>
-                          ) : (
-                            <span key={index}>{part.content}</span>
-                          )
-                        )}
-                      </div>
-                    )}
-                    {msg.attachment_url && (
-                      <div className="mt-2">
-                        <MessageAttachment
-                          url={msg.attachment_url}
-                          type={msg.attachment_type || ''}
-                          name={msg.attachment_name || 'Fichier'}
-                          size={msg.attachment_size || 0}
-                        />
-                      </div>
-                    )}
-                    {msg.offre_id && offresMap[msg.offre_id] && (
-                      <>
-                        <OffreCard offre={offresMap[msg.offre_id]} />
-                        <OffreActions 
-                          offre={offresMap[msg.offre_id]} 
-                          onAction={(action) => handleOffreAction(msg.offre_id, action)}
-                        />
-                      </>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            </ScrollArea>
-            <div className="p-4 border-t bg-card">
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <MessageAttachmentUploader
-                    conversationId={selectedConv}
-                    onAttachmentReady={setPendingAttachment}
-                  />
-                  <Input
-                    placeholder="Écrire un message..."
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              )}
+              {msg.attachment_url && (
+                <div className="mt-2">
+                  <MessageAttachment
+                    url={msg.attachment_url}
+                    type={msg.attachment_type || ''}
+                    name={msg.attachment_name || 'Fichier'}
+                    size={msg.attachment_size || 0}
                   />
                 </div>
-                <Button onClick={handleSendMessage} disabled={!messageText.trim() && !pendingAttachment}>
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            Sélectionnez une conversation
+              )}
+              {msg.offre_id && offresMap[msg.offre_id] && (
+                <>
+                  <OffreCard offre={offresMap[msg.offre_id]} />
+                  <OffreActions 
+                    offre={offresMap[msg.offre_id]} 
+                    onAction={(action) => handleOffreAction(msg.offre_id, action)}
+                  />
+                </>
+              )}
+            </Card>
+          ))}
+        </div>
+      </ScrollArea>
+      <div className="p-4 border-t bg-card">
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <MessageAttachmentUploader
+              conversationId={selectedConv}
+              onAttachmentReady={setPendingAttachment}
+            />
+            <Input
+              placeholder="Écrire un message..."
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            />
           </div>
-        )}
+          <Button onClick={handleSendMessage} disabled={!messageText.trim() && !pendingAttachment}>
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
+  ) : (
+    <div className="flex items-center justify-center h-full text-muted-foreground">
+      Sélectionnez une conversation
+    </div>
+  );
+
+  return (
+    <MessagingLayout
+      conversationsList={conversationsList}
+      chatView={chatView}
+      selectedConversation={selectedConv}
+      onSelectConversation={setSelectedConv}
+      chatHeader={chatHeader}
+    />
   );
 };
 

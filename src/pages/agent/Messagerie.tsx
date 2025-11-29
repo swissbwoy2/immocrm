@@ -13,6 +13,7 @@ import { MessageAttachment } from "@/components/MessageAttachment";
 import { NewConversationDialog } from "@/components/NewConversationDialog";
 import { parseMessageWithLinks } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
+import { MessagingLayout } from "@/components/MessagingLayout";
 
 // Fonction pour retirer les accents des chaînes pour une recherche plus flexible
 const removeAccents = (str: string) => {
@@ -30,7 +31,7 @@ const Messagerie = () => {
   const [agentId, setAgentId] = useState<string | null>(null);
   const [clientsMap, setClientsMap] = useState<Record<string, string>>({});
   const [searchQuery, setSearchQuery] = useState("");
-const [pendingAttachment, setPendingAttachment] = useState<{
+  const [pendingAttachment, setPendingAttachment] = useState<{
     url: string;
     type: string;
     name: string;
@@ -218,139 +219,148 @@ const [pendingAttachment, setPendingAttachment] = useState<{
     setSelectedConv(conversationId);
   };
 
-  return (
-    <div className="flex-1 flex overflow-hidden h-[calc(100vh-64px)]">
-      <div className="w-80 border-r border-border bg-card">
-        <div className="p-4 border-b space-y-2">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="font-semibold">Mes Conversations</h2>
-            {agentId && (
-              <NewConversationDialog 
-                agentId={agentId} 
-                onConversationCreated={handleConversationCreated}
-              />
-            )}
-          </div>
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher un client..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8"
+  const currentConversation = conversations.find(c => c.id === selectedConv);
+
+  const conversationsList = (
+    <>
+      <div className="p-4 border-b space-y-2">
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="font-semibold">Mes Conversations</h2>
+          {agentId && (
+            <NewConversationDialog 
+              agentId={agentId} 
+              onConversationCreated={handleConversationCreated}
             />
-          </div>
+          )}
         </div>
-        <ScrollArea className="h-[calc(100vh-73px)]">
-          {filteredConversations.map((conv) => {
-            const convMessages = messages.filter(m => m.conversation_id === conv.id);
-            const lastMessage = convMessages[convMessages.length - 1];
-            const unreadCount = convMessages.filter(m => !m.read && m.sender_type === 'client').length;
-            
-            return (
-              <div
-                key={conv.id}
-                onClick={() => setSelectedConv(conv.id)}
-                className={`p-4 border-b cursor-pointer hover:bg-muted/50 ${selectedConv === conv.id ? 'bg-muted' : ''}`}
-              >
-                <div className="flex items-start justify-between mb-1">
-                  <p className="font-medium text-sm">{getClientName(conv.client_id)}</p>
-                  {unreadCount > 0 && (
-                    <Badge variant="default" className="ml-2">{unreadCount}</Badge>
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher un client..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+      </div>
+      <ScrollArea className="flex-1">
+        {filteredConversations.map((conv) => {
+          const convMessages = messages.filter(m => m.conversation_id === conv.id);
+          const lastMessage = convMessages[convMessages.length - 1];
+          const unreadCount = convMessages.filter(m => !m.read && m.sender_type === 'client').length;
+          
+          return (
+            <div
+              key={conv.id}
+              onClick={() => setSelectedConv(conv.id)}
+              className={`p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors ${selectedConv === conv.id ? 'bg-muted' : ''}`}
+            >
+              <div className="flex items-start justify-between mb-1">
+                <p className="font-medium text-sm">{getClientName(conv.client_id)}</p>
+                {unreadCount > 0 && (
+                  <Badge variant="default" className="ml-2">{unreadCount}</Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                {lastMessage?.content?.substring(0, 50) || conv.subject}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {new Date(conv.last_message_at || conv.created_at).toLocaleDateString('fr-FR')}
+              </p>
+            </div>
+          );
+        })}
+      </ScrollArea>
+    </>
+  );
+
+  const chatHeader = currentConversation && (
+    <h2 className="font-semibold truncate">
+      {getClientName(currentConversation.client_id)}
+    </h2>
+  );
+
+  const chatView = selectedConv ? (
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="space-y-4">
+          {selectedMessages.map((msg) => (
+            <Card key={msg.id} className={`p-4 ${msg.sender_type === 'agent' ? 'ml-auto max-w-[70%] bg-primary/10' : 'mr-auto max-w-[70%]'}`}>
+              <div className="flex items-start justify-between mb-2">
+                <p className="font-medium text-sm">
+                  {msg.sender_type === 'agent' ? 'Vous' : getClientName(currentConversation?.client_id)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(msg.created_at).toLocaleString('fr-FR')}
+                </p>
+              </div>
+              {msg.content && (
+                <div className="text-sm whitespace-pre-wrap">
+                  {parseMessageWithLinks(msg.content).map((part, index) => 
+                    part.type === 'link' ? (
+                      <a
+                        key={index}
+                        href={part.content}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        {part.content}
+                      </a>
+                    ) : (
+                      <span key={index}>{part.content}</span>
+                    )
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground line-clamp-2">
-                  {lastMessage?.content?.substring(0, 50) || conv.subject}
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {new Date(conv.last_message_at || conv.created_at).toLocaleDateString('fr-FR')}
-                </p>
-              </div>
-            );
-          })}
-        </ScrollArea>
-      </div>
-
-      <div className="flex-1 flex flex-col min-h-0">
-        {selectedConv ? (
-          <>
-            <div className="p-4 border-b bg-card flex-shrink-0">
-              <h2 className="font-semibold">
-                {getClientName(conversations.find(c => c.id === selectedConv)?.client_id)}
-              </h2>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4">
-              <div className="space-y-4">
-                {selectedMessages.map((msg) => (
-                  <Card key={msg.id} className={`p-4 ${msg.sender_type === 'agent' ? 'ml-auto max-w-[70%] bg-primary/10' : 'mr-auto max-w-[70%]'}`}>
-                    <div className="flex items-start justify-between mb-2">
-                      <p className="font-medium text-sm">
-                        {msg.sender_type === 'agent' ? 'Vous' : getClientName(conversations.find(c => c.id === selectedConv)?.client_id)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(msg.created_at).toLocaleString('fr-FR')}
-                      </p>
-                    </div>
-                    {msg.content && (
-                      <div className="text-sm whitespace-pre-wrap">
-                        {parseMessageWithLinks(msg.content).map((part, index) => 
-                          part.type === 'link' ? (
-                            <a
-                              key={index}
-                              href={part.content}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline"
-                            >
-                              {part.content}
-                            </a>
-                          ) : (
-                            <span key={index}>{part.content}</span>
-                          )
-                        )}
-                      </div>
-                    )}
-                    {msg.attachment_url && (
-                      <div className="mt-2">
-                        <MessageAttachment
-                          url={msg.attachment_url}
-                          type={msg.attachment_type || ''}
-                          name={msg.attachment_name || 'Fichier'}
-                          size={msg.attachment_size || 0}
-                        />
-                      </div>
-                    )}
-                  </Card>
-                ))}
-              </div>
-            </div>
-            <div className="p-4 border-t bg-card">
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <MessageAttachmentUploader
-                    conversationId={selectedConv}
-                    onAttachmentReady={setPendingAttachment}
-                  />
-                  <Input
-                    placeholder="Écrire un message..."
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              )}
+              {msg.attachment_url && (
+                <div className="mt-2">
+                  <MessageAttachment
+                    url={msg.attachment_url}
+                    type={msg.attachment_type || ''}
+                    name={msg.attachment_name || 'Fichier'}
+                    size={msg.attachment_size || 0}
                   />
                 </div>
-                <Button onClick={handleSendMessage} disabled={!messageText.trim() && !pendingAttachment}>
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            Sélectionnez une conversation
+              )}
+            </Card>
+          ))}
+        </div>
+      </div>
+      <div className="p-4 border-t bg-card">
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <MessageAttachmentUploader
+              conversationId={selectedConv}
+              onAttachmentReady={setPendingAttachment}
+            />
+            <Input
+              placeholder="Écrire un message..."
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            />
           </div>
-        )}
+          <Button onClick={handleSendMessage} disabled={!messageText.trim() && !pendingAttachment}>
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
+  ) : (
+    <div className="flex items-center justify-center h-full text-muted-foreground">
+      Sélectionnez une conversation
+    </div>
+  );
+
+  return (
+    <MessagingLayout
+      conversationsList={conversationsList}
+      chatView={chatView}
+      selectedConversation={selectedConv}
+      onSelectConversation={setSelectedConv}
+      chatHeader={chatHeader}
+    />
   );
 };
 
