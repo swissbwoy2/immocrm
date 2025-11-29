@@ -7,7 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, User, MessageSquare, ThumbsUp, ThumbsDown, Minus, AlertTriangle, Bell, History } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Calendar, Clock, User, MessageSquare, ThumbsUp, ThumbsDown, Minus, AlertTriangle, Bell, History, CheckCircle, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -20,13 +21,26 @@ export default function AgentVisites() {
   const [loading, setLoading] = useState(true);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedVisite, setSelectedVisite] = useState<any>(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [recommandation, setRecommandation] = useState<'recommande' | 'neutre' | 'deconseille'>('neutre');
+  const [proposedDate, setProposedDate] = useState('');
+  const [proposedTime, setProposedTime] = useState('');
+  const [agentId, setAgentId] = useState<string | null>(null);
 
   const handleOpenDetail = (visite: any) => {
     setSelectedVisite(visite);
     setDetailDialogOpen(true);
+  };
+
+  const handleOpenConfirmDialog = (visite: any) => {
+    setSelectedVisite(visite);
+    // Pre-fill with the requested date if available
+    const visiteDate = new Date(visite.date_visite);
+    setProposedDate(visiteDate.toISOString().split('T')[0]);
+    setProposedTime(visiteDate.toTimeString().slice(0, 5));
+    setConfirmDialogOpen(true);
   };
 
   useEffect(() => {
@@ -47,6 +61,8 @@ export default function AgentVisites() {
         .single();
 
       if (!agentData) return;
+      
+      setAgentId(agentData.id);
 
       const { data: visitesData } = await supabase
         .from('visites')
@@ -73,6 +89,128 @@ export default function AgentVisites() {
       console.error('Error loading visites:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Accepter une visite déléguée
+  const handleAcceptDelegatedVisit = async () => {
+    if (!selectedVisite || !proposedDate || !proposedTime || !agentId || !user) {
+      toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+
+    try {
+      const dateTime = new Date(`${proposedDate}T${proposedTime}`);
+      
+      // Mettre à jour la visite avec le statut confirmé et la nouvelle date
+      const { error: updateError } = await supabase
+        .from('visites')
+        .update({ 
+          statut: 'confirmee',
+          date_visite: dateTime.toISOString()
+        })
+        .eq('id', selectedVisite.id);
+
+      if (updateError) throw updateError;
+
+      // Créer un événement dans le calendrier de l'agent
+      const { error: eventError } = await supabase
+        .from('calendar_events')
+        .insert({
+          title: `Visite déléguée - ${selectedVisite.adresse}`,
+          description: `Visite déléguée pour ${selectedVisite.client_profile?.prenom || ''} ${selectedVisite.client_profile?.nom || ''}\n\nAdresse: ${selectedVisite.adresse}\n${selectedVisite.offres ? `${selectedVisite.offres.pieces} pièces • ${selectedVisite.offres.surface}m² • ${selectedVisite.offres.prix} CHF/mois` : ''}`,
+          event_date: dateTime.toISOString(),
+          event_type: 'visite',
+          agent_id: agentId,
+          client_id: selectedVisite.client_id,
+          created_by: user.id,
+          status: 'planifie',
+          priority: 'haute'
+        });
+
+      if (eventError) throw eventError;
+
+      // Notifier le client via la messagerie
+      const { data: conv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('client_id', selectedVisite.client_id)
+        .eq('agent_id', agentId)
+        .maybeSingle();
+
+      if (conv) {
+        await supabase.from('messages').insert({
+          conversation_id: conv.id,
+          sender_id: user.id,
+          sender_type: 'agent',
+          content: `✅ **Visite déléguée confirmée**\n\n📍 ${selectedVisite.adresse}\n📅 ${dateTime.toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long' })}\n🕐 ${dateTime.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}\n\nJe me rends à la visite pour vous et vous ferai un retour détaillé.`
+        });
+      }
+
+      // Créer une notification pour le client
+      if (selectedVisite.clients?.user_id) {
+        await supabase.from('notifications').insert({
+          user_id: selectedVisite.clients.user_id,
+          type: 'visit_confirmed',
+          title: 'Visite déléguée confirmée',
+          message: `Votre agent a confirmé la visite du bien au ${selectedVisite.adresse} pour le ${dateTime.toLocaleDateString('fr-CH')} à ${dateTime.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}`,
+          link: '/client/visites-deleguees'
+        });
+      }
+
+      toast.success('✅ Visite confirmée et ajoutée au calendrier');
+      setConfirmDialogOpen(false);
+      await loadVisites();
+    } catch (error) {
+      console.error('Error accepting visit:', error);
+      toast.error('❌ Erreur lors de la confirmation');
+    }
+  };
+
+  // Refuser une visite déléguée
+  const handleRefuseDelegatedVisit = async (visite: any) => {
+    if (!agentId || !user) return;
+
+    try {
+      // Mettre à jour la visite avec le statut refusé
+      await supabase
+        .from('visites')
+        .update({ statut: 'refusee' })
+        .eq('id', visite.id);
+
+      // Notifier le client
+      const { data: conv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('client_id', visite.client_id)
+        .eq('agent_id', agentId)
+        .maybeSingle();
+
+      if (conv) {
+        await supabase.from('messages').insert({
+          conversation_id: conv.id,
+          sender_id: user.id,
+          sender_type: 'agent',
+          content: `❌ **Visite déléguée non disponible**\n\n📍 ${visite.adresse}\n\nJe ne suis malheureusement pas disponible pour effectuer cette visite. Vous pouvez essayer une autre date ou effectuer la visite vous-même.`
+        });
+      }
+
+      // Créer une notification pour le client
+      if (visite.clients?.user_id) {
+        await supabase.from('notifications').insert({
+          user_id: visite.clients.user_id,
+          type: 'visit_refused',
+          title: 'Visite déléguée non disponible',
+          message: `Votre agent n'est pas disponible pour la visite du bien au ${visite.adresse}`,
+          link: '/client/visites-deleguees'
+        });
+      }
+
+      toast.success('Visite refusée, le client a été notifié');
+      await loadVisites();
+    } catch (error) {
+      console.error('Error refusing visit:', error);
+      toast.error('❌ Erreur lors du refus');
     }
   };
 
@@ -209,12 +347,19 @@ export default function AgentVisites() {
   };
 
   // Séparer les visites
-  const visitesDeleguees = visites.filter(v => v.est_deleguee && v.statut === 'planifiee');
-  const visitesAVenir = visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now);
-  const visitesPassees = visites.filter(v => v.statut === 'effectuee' || (v.statut === 'planifiee' && new Date(v.date_visite) < now));
+  // Visites déléguées en attente de confirmation (statut = planifiee mais pas encore confirmée)
+  const visitesDelegueesPending = visites.filter(v => v.est_deleguee && v.statut === 'planifiee' && !v.feedback_agent);
+  // Visites déléguées confirmées à venir
+  const visitesDeleguees = visites.filter(v => v.est_deleguee && v.statut === 'confirmee' && new Date(v.date_visite) >= now);
+  // Toutes les visites à venir (normales + déléguées confirmées)
+  const visitesAVenir = visites.filter(v => (v.statut === 'planifiee' || v.statut === 'confirmee') && new Date(v.date_visite) >= now && !v.est_deleguee);
+  const visitesPassees = visites.filter(v => v.statut === 'effectuee' || v.statut === 'refusee' || ((v.statut === 'planifiee' || v.statut === 'confirmee') && new Date(v.date_visite) < now));
+  
+  // Combiner pour le tri par urgence (inclure les visites déléguées confirmées)
+  const toutesVisitesAVenir = [...visitesAVenir, ...visitesDeleguees];
   
   // Trier par urgence
-  const visitesAVenirTriees = [...visitesAVenir].sort((a, b) => 
+  const visitesAVenirTriees = [...toutesVisitesAVenir].sort((a, b) => 
     new Date(a.date_visite).getTime() - new Date(b.date_visite).getTime()
   );
   
@@ -325,7 +470,8 @@ export default function AgentVisites() {
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Visites clients</h1>
           <p className="text-muted-foreground text-sm sm:text-base">
-            {visitesAVenir.length} à venir • {visitesPassees.length} passée{visitesPassees.length > 1 ? 's' : ''}
+            {visitesDelegueesPending.length > 0 && `${visitesDelegueesPending.length} demande${visitesDelegueesPending.length > 1 ? 's' : ''} en attente • `}
+            {toutesVisitesAVenir.length} à venir • {visitesPassees.length} passée{visitesPassees.length > 1 ? 's' : ''}
           </p>
         </div>
 
@@ -357,11 +503,104 @@ export default function AgentVisites() {
           </TabsList>
 
           <TabsContent value="a-venir" className="space-y-6 mt-4">
-            {/* Visites déléguées */}
+            {/* Visites déléguées en attente de confirmation */}
+            {visitesDelegueesPending.length > 0 && (
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2 text-amber-800 dark:text-amber-200">
+                  ⏳ Demandes de visites déléguées
+                  <Badge variant="secondary">{visitesDelegueesPending.length}</Badge>
+                </h3>
+                <p className="text-sm text-amber-700 dark:text-amber-300 mb-4">
+                  Vos clients vous demandent d'effectuer ces visites pour eux
+                </p>
+                <div className="grid gap-3">
+                  {visitesDelegueesPending.map(visite => (
+                    <Card 
+                      key={visite.id} 
+                      className="border-amber-300 dark:border-amber-700 cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => handleOpenDetail(visite)}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="flex items-center gap-2 flex-wrap">
+                              <span className="truncate">{visite.adresse}</span>
+                              <Badge variant="outline" className="shrink-0 bg-amber-100 text-amber-800 border-amber-300">
+                                En attente
+                              </Badge>
+                            </CardTitle>
+                            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-4 w-4" />
+                                {new Date(visite.date_visite).toLocaleDateString('fr-CH', {
+                                  weekday: 'short',
+                                  day: 'numeric',
+                                  month: 'short'
+                                })}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-4 w-4" />
+                                {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {visite.client_profile && (
+                          <div className="flex items-center gap-2 p-2 bg-muted rounded-lg text-sm">
+                            <User className="h-4 w-4 shrink-0" />
+                            <span className="font-medium truncate">
+                              Demandé par {visite.client_profile.prenom} {visite.client_profile.nom}
+                            </span>
+                          </div>
+                        )}
+                        {visite.offres && (
+                          <div className="text-sm text-muted-foreground">
+                            {visite.offres.pieces} pièces • {visite.offres.surface}m² • {visite.offres.prix} CHF/mois
+                          </div>
+                        )}
+                        {visite.notes && (
+                          <p className="text-sm bg-yellow-50 dark:bg-yellow-950 p-2 rounded-lg">
+                            💡 {visite.notes}
+                          </p>
+                        )}
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenConfirmDialog(visite);
+                            }}
+                            className="flex-1"
+                            variant="default"
+                          >
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Accepter
+                          </Button>
+                          <Button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRefuseDelegatedVisit(visite);
+                            }}
+                            variant="outline"
+                            className="flex-1"
+                          >
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Refuser
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Visites déléguées confirmées */}
             {visitesDeleguees.length > 0 && (
               <div>
                 <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  🤝 Visites déléguées
+                  🤝 Visites déléguées confirmées
                   <Badge variant="secondary">{visitesDeleguees.length}</Badge>
                 </h3>
                 <div className="grid gap-3">
@@ -383,7 +622,7 @@ export default function AgentVisites() {
               </div>
             )}
 
-            {visitesNormales.length === 0 && visitesDeleguees.length === 0 && visitesUrgentes.length === 0 && (
+            {visitesNormales.length === 0 && visitesDeleguees.length === 0 && visitesDelegueesPending.length === 0 && visitesUrgentes.length === 0 && (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
                   Aucune visite à venir
@@ -692,14 +931,95 @@ export default function AgentVisites() {
             <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
               Fermer
             </Button>
-            {selectedVisite?.statut === 'planifiee' && (
+            {selectedVisite?.statut === 'planifiee' && !selectedVisite?.est_deleguee && (
               <Button onClick={() => {
                 setDetailDialogOpen(false);
                 handleMarquerEffectuee(selectedVisite);
               }}>
-                {selectedVisite.est_deleguee ? 'Donner mon feedback' : 'Marquer effectuée'}
+                Marquer effectuée
               </Button>
             )}
+            {selectedVisite?.statut === 'planifiee' && selectedVisite?.est_deleguee && (
+              <Button onClick={() => {
+                setDetailDialogOpen(false);
+                handleOpenConfirmDialog(selectedVisite);
+              }}>
+                Accepter la demande
+              </Button>
+            )}
+            {selectedVisite?.statut === 'confirmee' && selectedVisite?.est_deleguee && (
+              <Button onClick={() => {
+                setDetailDialogOpen(false);
+                handleMarquerEffectuee(selectedVisite);
+              }}>
+                Donner mon feedback
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de confirmation de visite déléguée */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmer la visite déléguée</DialogTitle>
+            <DialogDescription>
+              Confirmez la date et l'heure pour cette visite. Un événement sera automatiquement ajouté à votre calendrier.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedVisite && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <h4 className="font-semibold">{selectedVisite.adresse}</h4>
+                {selectedVisite.client_profile && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Pour {selectedVisite.client_profile.prenom} {selectedVisite.client_profile.nom}
+                  </p>
+                )}
+                {selectedVisite.offres && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {selectedVisite.offres.pieces} pièces • {selectedVisite.offres.surface}m² • {selectedVisite.offres.prix} CHF/mois
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="proposedDate">Date</Label>
+                  <Input
+                    id="proposedDate"
+                    type="date"
+                    value={proposedDate}
+                    onChange={(e) => setProposedDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="proposedTime">Heure</Label>
+                  <Input
+                    id="proposedTime"
+                    type="time"
+                    value={proposedTime}
+                    onChange={(e) => setProposedTime(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                ℹ️ Le client sera automatiquement notifié de votre confirmation.
+              </p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleAcceptDelegatedVisit} disabled={!proposedDate || !proposedTime}>
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Confirmer la visite
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
