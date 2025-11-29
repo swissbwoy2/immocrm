@@ -525,7 +525,13 @@ serve(async (req) => {
         }
         
         const messageCount = await client.selectInbox();
-        const startMsg = Math.max(1, messageCount - 29); // Fetch last 30 emails
+        
+        // Support for full_sync and custom count
+        const { full_sync = false, count = 100 } = body || {};
+        const emailsToFetch = full_sync ? Math.min(messageCount, 500) : Math.min(count, messageCount);
+        const startMsg = Math.max(1, messageCount - emailsToFetch + 1);
+        
+        console.log(`[IMAP] Fetching ${emailsToFetch} emails (full_sync: ${full_sync}, total: ${messageCount})`);
         const fetchedEmails = await client.fetchEmails(startMsg, messageCount, imapConfig.imap_user);
         
         await client.logout();
@@ -581,7 +587,7 @@ serve(async (req) => {
           .select('*')
           .eq('user_id', user.id)
           .order('received_at', { ascending: false })
-          .limit(100);
+          .limit(500);
 
         return new Response(
           JSON.stringify({ 

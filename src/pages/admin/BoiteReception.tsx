@@ -112,11 +112,11 @@ export default function BoiteReception() {
     }
   };
 
-  const syncEmails = async () => {
+  const syncEmails = async (fullSync = false) => {
     setSyncing(true);
     try {
       const { data, error } = await supabase.functions.invoke('fetch-imap-emails', {
-        body: { action: 'fetch_emails' }
+        body: { action: 'fetch_emails', full_sync: fullSync, count: fullSync ? 500 : 100 }
       });
 
       if (error) throw error;
@@ -127,7 +127,7 @@ export default function BoiteReception() {
       } else if (data.success) {
         setEmails(data.emails || []);
         setLastSync(new Date().toISOString());
-        toast.success(`${data.fetched_count} email(s) synchronisé(s)`);
+        toast.success(`${data.fetched_count} email(s) synchronisé(s) sur ${data.total_on_server} disponibles`);
       } else if (data.error) {
         toast.error(data.message || data.error);
         if (data.emails?.length) {
@@ -315,7 +315,7 @@ export default function BoiteReception() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={syncEmails}
+                  onClick={() => syncEmails(false)}
                   disabled={syncing}
                   className="h-8 sm:h-9"
                 >
@@ -325,6 +325,17 @@ export default function BoiteReception() {
                     <RefreshCw className="h-4 w-4" />
                   )}
                   <span className="ml-1.5 hidden sm:inline">Sync</span>
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => syncEmails(true)}
+                  disabled={syncing}
+                  className="h-8 sm:h-9"
+                  title="Synchroniser jusqu'à 500 emails"
+                >
+                  <Inbox className="h-4 w-4" />
+                  <span className="ml-1.5 hidden lg:inline">Tout</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -388,7 +399,7 @@ export default function BoiteReception() {
                     : 'Synchronisez pour récupérer vos emails'}
                 </p>
                 {!searchTerm && (
-                  <Button onClick={syncEmails} disabled={syncing} size="sm">
+                  <Button onClick={() => syncEmails(false)} disabled={syncing} size="sm">
                     <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
                     Synchroniser
                   </Button>
