@@ -581,14 +581,15 @@ export default function EnvoyerEmail() {
   return (
     <div className="flex-1 p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Envoyer un email</h1>
-            <p className="text-muted-foreground">Envoyez des emails avec pièces jointes ou liens de téléchargement</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">Envoyer un email</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">Envoyez des emails avec pièces jointes ou liens de téléchargement</p>
           </div>
-          <Button variant="outline" onClick={() => setShowConfigDialog(true)}>
-            <Settings className="h-4 w-4 mr-2" />
-            Configuration SMTP
+          <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowConfigDialog(true)}>
+            <Settings className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Configuration SMTP</span>
+            <span className="sm:hidden">Config SMTP</span>
           </Button>
         </div>
 
@@ -616,7 +617,7 @@ export default function EnvoyerEmail() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Recipient */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Email destinataire *</Label>
                       <Input
@@ -678,7 +679,7 @@ export default function EnvoyerEmail() {
                       {/* CC */}
                       <div className="space-y-2">
                         <Label className="text-sm">CC (Copie)</Label>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <Input
                             type="email"
                             value={ccInput}
@@ -692,26 +693,28 @@ export default function EnvoyerEmail() {
                             placeholder="Ajouter un email..."
                             className="flex-1"
                           />
-                          <Select onValueChange={addClientToCc}>
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue placeholder="Client..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {clients.map(client => (
-                                <SelectItem key={client.id} value={client.id}>
-                                  {client.profile.prenom} {client.profile.nom}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => addCcEmail(ccInput)}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-2">
+                            <Select onValueChange={addClientToCc}>
+                              <SelectTrigger className="w-full sm:w-[140px]">
+                                <SelectValue placeholder="Client..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {clients.map(client => (
+                                  <SelectItem key={client.id} value={client.id}>
+                                    {client.profile.prenom} {client.profile.nom}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => addCcEmail(ccInput)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                         {ccEmails.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
@@ -734,7 +737,7 @@ export default function EnvoyerEmail() {
                       {/* BCC */}
                       <div className="space-y-2">
                         <Label className="text-sm">BCC (Copie cachée)</Label>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                           <Input
                             type="email"
                             value={bccInput}
@@ -748,26 +751,28 @@ export default function EnvoyerEmail() {
                             placeholder="Ajouter un email..."
                             className="flex-1"
                           />
-                          <Select onValueChange={addClientToBcc}>
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue placeholder="Client..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {clients.map(client => (
-                                <SelectItem key={client.id} value={client.id}>
-                                  {client.profile.prenom} {client.profile.nom}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => addBccEmail(bccInput)}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-2">
+                            <Select onValueChange={addClientToBcc}>
+                              <SelectTrigger className="w-full sm:w-[140px]">
+                                <SelectValue placeholder="Client..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {clients.map(client => (
+                                  <SelectItem key={client.id} value={client.id}>
+                                    {client.profile.prenom} {client.profile.nom}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => addBccEmail(bccInput)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                         {bccEmails.length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
