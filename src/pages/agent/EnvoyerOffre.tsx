@@ -220,7 +220,7 @@ const EnvoyerOffre = () => {
 
       // Create visits if dates are provided
       const validDates = formData.datesVisite.filter(d => d);
-      if (validDates.length > 0 && formData.etageVisite && formData.codeImmeuble && offre) {
+      if (validDates.length > 0 && offre) {
         for (const dateStr of validDates) {
           await supabase
             .from('visites')
