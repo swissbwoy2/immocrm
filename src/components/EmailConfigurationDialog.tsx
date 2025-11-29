@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Mail, Server, Key, User } from "lucide-react";
+import { Loader2, Mail, Server, Key, User, CheckCircle2, XCircle, Wifi } from "lucide-react";
 
 interface EmailConfigurationDialogProps {
   open: boolean;
@@ -30,6 +30,8 @@ export function EmailConfigurationDialog({ open, onOpenChange }: EmailConfigurat
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [selectedPreset, setSelectedPreset] = useState("Personnalisé");
   
   const [config, setConfig] = useState({
@@ -92,6 +94,7 @@ export function EmailConfigurationDialog({ open, onOpenChange }: EmailConfigurat
 
   const handlePresetChange = (presetName: string) => {
     setSelectedPreset(presetName);
+    setTestResult(null); // Reset test result when preset changes
     const preset = SMTP_PRESETS.find(p => p.name === presetName);
     if (preset && preset.host) {
       setConfig(prev => ({
@@ -100,6 +103,68 @@ export function EmailConfigurationDialog({ open, onOpenChange }: EmailConfigurat
         smtp_port: preset.port,
         smtp_secure: preset.secure,
       }));
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!config.smtp_host || !config.smtp_user || !config.smtp_password || !config.email_from) {
+      toast({
+        title: "Champs manquants",
+        description: "Veuillez remplir tous les champs obligatoires avant de tester",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setTesting(true);
+    setTestResult(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Non authentifié");
+
+      const response = await supabase.functions.invoke('test-smtp-connection', {
+        body: {
+          smtp_host: config.smtp_host,
+          smtp_port: config.smtp_port,
+          smtp_secure: config.smtp_secure,
+          smtp_user: config.smtp_user,
+          smtp_password: config.smtp_password,
+          email_from: config.email_from,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Erreur lors du test');
+      }
+
+      const result = response.data;
+      
+      if (result.success) {
+        setTestResult({ success: true, message: result.message });
+        toast({
+          title: "Connexion réussie",
+          description: result.message,
+        });
+      } else {
+        setTestResult({ success: false, message: result.error });
+        toast({
+          title: "Échec de la connexion",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error('Test connection error:', error);
+      const errorMessage = error.message || "Erreur lors du test de connexion";
+      setTestResult({ success: false, message: errorMessage });
+      toast({
+        title: "Erreur",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -298,6 +363,41 @@ export function EmailConfigurationDialog({ open, onOpenChange }: EmailConfigurat
                 onCheckedChange={(checked) => setConfig(prev => ({ ...prev, is_active: checked }))}
               />
               <Label>Configuration active</Label>
+            </div>
+
+            {/* Test connection button and result */}
+            <div className="space-y-3">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleTestConnection} 
+                disabled={testing || !config.smtp_host || !config.smtp_user || !config.smtp_password || !config.email_from}
+                className="w-full"
+              >
+                {testing ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Wifi className="h-4 w-4 mr-2" />
+                )}
+                Tester la connexion SMTP
+              </Button>
+              
+              {testResult && (
+                <div className={`p-3 rounded-md text-sm flex items-start gap-2 ${
+                  testResult.success 
+                    ? 'bg-green-500/10 border border-green-500/20' 
+                    : 'bg-destructive/10 border border-destructive/20'
+                }`}>
+                  {testResult.success ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+                  )}
+                  <p className={testResult.success ? 'text-green-700 dark:text-green-300' : 'text-destructive'}>
+                    {testResult.message}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Warning for port 587 */}
