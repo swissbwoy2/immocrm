@@ -6,7 +6,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Calendar, Clock, User, MessageSquare, ThumbsUp, ThumbsDown, Minus } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Calendar, Clock, User, MessageSquare, ThumbsUp, ThumbsDown, Minus, AlertTriangle, Bell, History } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -177,9 +178,141 @@ export default function AgentVisites() {
   }
 
   const now = new Date();
+  
+  // Helper pour calculer l'urgence d'une visite
+  const getVisiteUrgency = (dateVisite: string) => {
+    const visiteDate = new Date(dateVisite);
+    const timeDiff = visiteDate.getTime() - now.getTime();
+    const minutesDiff = Math.floor(timeDiff / (1000 * 60));
+    const hoursDiff = Math.floor(timeDiff / (1000 * 60 * 60));
+    const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+
+    if (minutesDiff <= 30 && minutesDiff > 0) {
+      return { level: 'critical', label: '30 min!', color: 'destructive' as const };
+    } else if (minutesDiff <= 60) {
+      return { level: 'critical', label: '1h', color: 'destructive' as const };
+    } else if (hoursDiff <= 3) {
+      return { level: 'critical', label: `${hoursDiff}h`, color: 'destructive' as const };
+    } else if (daysDiff === 0) {
+      return { level: 'high', label: "Aujourd'hui", color: 'default' as const };
+    } else if (daysDiff === 1) {
+      return { level: 'high', label: 'Demain', color: 'secondary' as const };
+    } else if (daysDiff <= 7) {
+      return { level: 'normal', label: `${daysDiff}j`, color: 'outline' as const };
+    }
+    return { level: 'normal', label: `${daysDiff}j`, color: 'outline' as const };
+  };
+
+  // Séparer les visites
   const visitesDeleguees = visites.filter(v => v.est_deleguee && v.statut === 'planifiee');
-  const visitesNormalesAVenir = visites.filter(v => !v.est_deleguee && v.statut === 'planifiee' && new Date(v.date_visite) >= now);
-  const visitesEffectuees = visites.filter(v => v.statut === 'effectuee');
+  const visitesAVenir = visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now);
+  const visitesPassees = visites.filter(v => v.statut === 'effectuee' || (v.statut === 'planifiee' && new Date(v.date_visite) < now));
+  
+  // Trier par urgence
+  const visitesAVenirTriees = [...visitesAVenir].sort((a, b) => 
+    new Date(a.date_visite).getTime() - new Date(b.date_visite).getTime()
+  );
+  
+  // Visites urgentes (aujourd'hui ou dans les 3h)
+  const visitesUrgentes = visitesAVenirTriees.filter(v => {
+    const urgency = getVisiteUrgency(v.date_visite);
+    return urgency.level === 'critical' || urgency.level === 'high';
+  });
+
+  // Visites à venir non urgentes
+  const visitesNormales = visitesAVenirTriees.filter(v => {
+    const urgency = getVisiteUrgency(v.date_visite);
+    return urgency.level === 'normal';
+  });
+
+  const renderVisiteCard = (visite: any, showUrgency = true) => {
+    const urgency = getVisiteUrgency(visite.date_visite);
+    const isUrgent = urgency.level === 'critical';
+    
+    return (
+      <Card 
+        key={visite.id} 
+        className={`cursor-pointer hover:shadow-md transition-shadow ${
+          isUrgent ? 'border-destructive/50 bg-destructive/5' : 
+          visite.est_deleguee ? 'border-primary/50' : ''
+        }`}
+        onClick={() => handleOpenDetail(visite)}
+      >
+        <CardHeader className="pb-2">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <CardTitle className="flex items-center gap-2 flex-wrap">
+                <span className="truncate">{visite.adresse}</span>
+                {visite.est_deleguee && (
+                  <Badge variant="outline" className="shrink-0">Déléguée</Badge>
+                )}
+              </CardTitle>
+              <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  {new Date(visite.date_visite).toLocaleDateString('fr-CH', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short'
+                  })}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {showUrgency && (
+                <Badge variant={urgency.color} className={isUrgent ? 'animate-pulse' : ''}>
+                  {isUrgent && <AlertTriangle className="h-3 w-3 mr-1" />}
+                  {urgency.label}
+                </Badge>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {visite.client_profile && (
+            <div className="flex items-center gap-2 p-2 bg-muted rounded-lg text-sm">
+              <User className="h-4 w-4 shrink-0" />
+              <span className="font-medium truncate">
+                {visite.est_deleguee && <span className="text-muted-foreground">Pour </span>}
+                {visite.client_profile.prenom} {visite.client_profile.nom}
+              </span>
+            </div>
+          )}
+          {visite.offres && (
+            <div className="text-sm text-muted-foreground">
+              {visite.offres.pieces} pièces • {visite.offres.surface}m² • {visite.offres.prix} CHF/mois
+            </div>
+          )}
+          {visite.notes && (
+            <p className="text-sm bg-yellow-50 dark:bg-yellow-950 p-2 rounded-lg">
+              💡 {visite.notes}
+            </p>
+          )}
+          <Button 
+            onClick={(e) => {
+              e.stopPropagation();
+              handleMarquerEffectuee(visite);
+            }}
+            className="w-full"
+            variant={isUrgent ? "destructive" : "default"}
+          >
+            {visite.est_deleguee ? (
+              <>
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Donner mon feedback
+              </>
+            ) : (
+              'Marquer comme effectuée'
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -187,189 +320,137 @@ export default function AgentVisites() {
         <div>
           <h1 className="text-3xl font-bold">Visites clients</h1>
           <p className="text-muted-foreground">
-            {visitesDeleguees.length} visite{visitesDeleguees.length > 1 ? 's' : ''} déléguée{visitesDeleguees.length > 1 ? 's' : ''} • {visitesNormalesAVenir.length} visite{visitesNormalesAVenir.length > 1 ? 's' : ''} normale{visitesNormalesAVenir.length > 1 ? 's' : ''}
+            {visitesAVenir.length} à venir • {visitesPassees.length} passée{visitesPassees.length > 1 ? 's' : ''}
           </p>
         </div>
 
-        {/* Visites déléguées */}
-        {visitesDeleguees.length > 0 && (
-          <div>
-            <h2 className="text-xl font-semibold mb-4">🤝 Visites déléguées par les clients</h2>
-            <div className="grid gap-4">
-              {visitesDeleguees.map(visite => (
-                <Card key={visite.id} className="border-primary/50 cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleOpenDetail(visite)}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="flex items-center gap-2">
-                          {visite.adresse}
-                          <Badge variant="outline" className="ml-2">Déléguée</Badge>
-                        </CardTitle>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            Demandée le {new Date(visite.created_at).toLocaleDateString('fr-CH')}
-                          </div>
-                        </div>
-                      </div>
-                      <Badge>À faire</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {visite.client_profile && (
-                      <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                        <User className="h-4 w-4" />
-                        <span className="font-medium">
-                          {visite.client_profile.prenom} {visite.client_profile.nom}
-                        </span>
-                      </div>
-                    )}
-                    {visite.offres && (
-                      <div className="text-sm text-muted-foreground">
-                        {visite.offres.pieces} pièces • {visite.offres.surface}m² • {visite.offres.prix} CHF/mois
-                      </div>
-                    )}
-                    {visite.notes && (
-                      <p className="text-sm bg-yellow-50 dark:bg-yellow-950 p-3 rounded-lg">
-                        💡 {visite.notes}
-                      </p>
-                    )}
-                    <Button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMarquerEffectuee(visite);
-                      }}
-                      className="w-full"
-                    >
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      Visite effectuée - Donner mon feedback
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
+        {/* Alerte visites urgentes */}
+        {visitesUrgentes.length > 0 && (
+          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              <h2 className="font-semibold text-destructive">
+                {visitesUrgentes.length} visite{visitesUrgentes.length > 1 ? 's' : ''} urgente{visitesUrgentes.length > 1 ? 's' : ''}
+              </h2>
+            </div>
+            <div className="grid gap-3">
+              {visitesUrgentes.map(visite => renderVisiteCard(visite, true))}
             </div>
           </div>
         )}
 
-        {/* Visites normales à venir */}
-        {visitesNormalesAVenir.length > 0 && (
-          <div>
-            <h2 className="text-xl font-semibold mb-4">📅 Visites planifiées</h2>
-            <div className="grid gap-4">
-              {visitesNormalesAVenir.map(visite => (
-                <Card key={visite.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleOpenDetail(visite)}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle>{visite.adresse}</CardTitle>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            {new Date(visite.date_visite).toLocaleDateString('fr-CH')}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        </div>
-                      </div>
-                      <Badge variant="default">Planifiée</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {visite.client_profile && (
-                      <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                        <User className="h-4 w-4" />
-                        <span className="font-medium">
-                          {visite.client_profile.prenom} {visite.client_profile.nom}
-                        </span>
-                      </div>
-                    )}
-                    {visite.offres && (
-                      <div className="text-sm text-muted-foreground">
-                        {visite.offres.pieces} pièces • {visite.offres.surface}m² • {visite.offres.prix} CHF/mois
-                      </div>
-                    )}
-                    {visite.notes && (
-                      <p className="text-sm bg-yellow-50 dark:bg-yellow-950 p-3 rounded-lg">
-                        💡 {visite.notes}
-                      </p>
-                    )}
-                    <Button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMarquerEffectuee(visite);
-                      }}
-                      className="w-full"
-                    >
-                      Marquer comme effectuée
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
+        <Tabs defaultValue="a-venir" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="a-venir" className="flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              À venir ({visitesNormales.length})
+            </TabsTrigger>
+            <TabsTrigger value="passees" className="flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Passées ({visitesPassees.length})
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Visites effectuées */}
-        <div>
-          <h2 className="text-xl font-semibold mb-4">✅ Visites effectuées</h2>
-          {visitesEffectuees.length > 0 ? (
-            <div className="grid gap-4">
-              {visitesEffectuees.slice(0, 10).map(visite => (
-                <Card key={visite.id} className="opacity-75 cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleOpenDetail(visite)}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="flex items-center gap-2">
-                          {visite.adresse}
-                          {visite.est_deleguee && (
-                            <Badge variant="outline" className="text-xs">Déléguée</Badge>
-                          )}
-                        </CardTitle>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            {new Date(visite.date_visite).toLocaleDateString('fr-CH')}
-                          </div>
-                          {visite.recommandation_agent && (
+          <TabsContent value="a-venir" className="space-y-6 mt-4">
+            {/* Visites déléguées */}
+            {visitesDeleguees.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  🤝 Visites déléguées
+                  <Badge variant="secondary">{visitesDeleguees.length}</Badge>
+                </h3>
+                <div className="grid gap-3">
+                  {visitesDeleguees.map(visite => renderVisiteCard(visite, true))}
+                </div>
+              </div>
+            )}
+
+            {/* Visites planifiées normales */}
+            {visitesNormales.filter(v => !v.est_deleguee).length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  📅 Visites planifiées
+                  <Badge variant="secondary">{visitesNormales.filter(v => !v.est_deleguee).length}</Badge>
+                </h3>
+                <div className="grid gap-3">
+                  {visitesNormales.filter(v => !v.est_deleguee).map(visite => renderVisiteCard(visite, true))}
+                </div>
+              </div>
+            )}
+
+            {visitesNormales.length === 0 && visitesDeleguees.length === 0 && visitesUrgentes.length === 0 && (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  Aucune visite à venir
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="passees" className="mt-4">
+            {visitesPassees.length > 0 ? (
+              <div className="grid gap-3">
+                {visitesPassees.map(visite => (
+                  <Card 
+                    key={visite.id} 
+                    className="opacity-75 cursor-pointer hover:shadow-md transition-shadow" 
+                    onClick={() => handleOpenDetail(visite)}
+                  >
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="flex items-center gap-2 flex-wrap">
+                            <span className="truncate">{visite.adresse}</span>
+                            {visite.est_deleguee && (
+                              <Badge variant="outline" className="text-xs">Déléguée</Badge>
+                            )}
+                          </CardTitle>
+                          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
                             <div className="flex items-center gap-1">
-                              {getRecommandationBadge(visite.recommandation_agent)}
+                              <Calendar className="h-4 w-4" />
+                              {new Date(visite.date_visite).toLocaleDateString('fr-CH')}
                             </div>
-                          )}
+                            {visite.recommandation_agent && (
+                              <div className="flex items-center gap-1">
+                                {getRecommandationBadge(visite.recommandation_agent)}
+                              </div>
+                            )}
+                          </div>
                         </div>
+                        <Badge variant={visite.statut === 'effectuee' ? 'secondary' : 'destructive'}>
+                          {visite.statut === 'effectuee' ? 'Effectuée' : 'Manquée'}
+                        </Badge>
                       </div>
-                      <Badge variant="secondary">Effectuée</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {visite.client_profile && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <User className="h-4 w-4" />
-                        <span>
-                          {visite.est_deleguee && <span className="text-muted-foreground">Visite effectuée pour </span>}
-                          <span className="font-medium">{visite.client_profile.prenom} {visite.client_profile.nom}</span>
-                        </span>
-                      </div>
-                    )}
-                    {visite.feedback_agent && (
-                      <div className="text-sm bg-muted p-3 rounded-lg">
-                        <p className="font-medium mb-1">📝 Feedback:</p>
-                        <p className="text-muted-foreground">{visite.feedback_agent}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                Aucune visite effectuée
-              </CardContent>
-            </Card>
-          )}
-        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {visite.client_profile && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <User className="h-4 w-4" />
+                          <span>
+                            {visite.est_deleguee && <span className="text-muted-foreground">Visite effectuée pour </span>}
+                            <span className="font-medium">{visite.client_profile.prenom} {visite.client_profile.nom}</span>
+                          </span>
+                        </div>
+                      )}
+                      {visite.feedback_agent && (
+                        <div className="text-sm bg-muted p-3 rounded-lg">
+                          <p className="font-medium mb-1">📝 Feedback:</p>
+                          <p className="text-muted-foreground">{visite.feedback_agent}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  Aucune visite passée
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Dialog de feedback */}

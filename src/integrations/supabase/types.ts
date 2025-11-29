@@ -916,6 +916,48 @@ export type Database = {
         }
         Relationships: []
       }
+      visit_reminders: {
+        Row: {
+          created_at: string
+          id: string
+          reminder_type: string
+          sent_at: string
+          user_id: string
+          visite_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reminder_type: string
+          sent_at?: string
+          user_id: string
+          visite_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reminder_type?: string
+          sent_at?: string
+          user_id?: string
+          visite_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visit_reminders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_reminders_visite_id_fkey"
+            columns: ["visite_id"]
+            isOneToOne: false
+            referencedRelation: "visites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visites: {
         Row: {
           adresse: string

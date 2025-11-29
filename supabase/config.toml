@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.get-shared-files]
 verify_jwt = false
+
+[functions.send-visit-reminders]
+verify_jwt = false
