@@ -405,11 +405,11 @@ export default function ClientDetail() {
   return (
     <main className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8 space-y-6">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-3xl font-bold">
+        {/* Header - Responsive */}
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold">
                 {profile.prenom} {profile.nom}
               </h1>
               <Badge variant="outline">{client.nationalite || 'N/A'}</Badge>
@@ -445,16 +445,18 @@ export default function ClientDetail() {
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setSendEmailDialogOpen(true)}>
-              <MailPlus className="w-4 h-4 mr-2" />
-              Envoyer dossier
+          {/* Boutons d'action - Responsive grid sur mobile */}
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:flex-nowrap w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSendEmailDialogOpen(true)}>
+              <MailPlus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Envoyer dossier</span>
+              <span className="sm:hidden">Dossier</span>
             </Button>
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
               <DialogTrigger asChild>
-                <Button onClick={handleEditClick}>
-                  <Edit className="w-4 h-4 mr-2" />
-                  Modifier
+                <Button className="w-full sm:w-auto" onClick={handleEditClick}>
+                  <Edit className="w-4 h-4 sm:mr-2" />
+                  <span>Modifier</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
@@ -899,9 +901,9 @@ export default function ClientDetail() {
                 </div>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" onClick={() => navigate('/agent/mes-clients')}>
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Retour
+            <Button variant="outline" className="w-full sm:w-auto col-span-2 sm:col-span-1" onClick={() => navigate('/agent/mes-clients')}>
+              <ArrowLeft className="w-4 h-4 sm:mr-2" />
+              <span>Retour</span>
             </Button>
           </div>
         </div>
