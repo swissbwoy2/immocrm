@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.send-visit-reminders]
 verify_jwt = false
+
+[functions.sync-all-imap-emails]
+verify_jwt = false
