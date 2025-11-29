@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Loader2, Send, Paperclip, FileText, Image, File, Settings, CheckCircle, AlertCircle, Mail, Link2, Info } from "lucide-react";
+import { Loader2, Send, Paperclip, FileText, Image, File, Settings, CheckCircle, AlertCircle, Mail, Link2, Info, User } from "lucide-react";
 import { EmailConfigurationDialog } from "@/components/EmailConfigurationDialog";
 
 interface Document {
@@ -44,7 +44,8 @@ export default function EnvoyerEmail() {
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [signature, setSignature] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
-  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [selectedClientId, setSelectedClientId] = useState<string>(""); // For pre-filling recipient
+  const [documentSourceClientId, setDocumentSourceClientId] = useState<string>(""); // For document selection
   const [documents, setDocuments] = useState<Document[]>([]);
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [sendSuccess, setSendSuccess] = useState(false);
@@ -66,23 +67,37 @@ export default function EnvoyerEmail() {
     }
   }, [user]);
 
+  // Pre-fill recipient info when selecting a client (optional helper)
   useEffect(() => {
     if (selectedClientId) {
-      loadClientDocuments(selectedClientId);
       const client = clients.find(c => c.id === selectedClientId);
       if (client) {
         setEmail(prev => ({
           ...prev,
           recipient_email: client.profile.email,
           recipient_name: `${client.profile.prenom} ${client.profile.nom}`,
-          subject: `Dossier de candidature - ${client.profile.prenom} ${client.profile.nom}`,
+        }));
+      }
+    }
+  }, [selectedClientId, clients]);
+
+  // Load documents when document source changes
+  useEffect(() => {
+    if (documentSourceClientId) {
+      loadClientDocuments(documentSourceClientId);
+      // Update subject to reflect the document source client
+      const sourceClient = clients.find(c => c.id === documentSourceClientId);
+      if (sourceClient) {
+        setEmail(prev => ({
+          ...prev,
+          subject: `Dossier de candidature - ${sourceClient.profile.prenom} ${sourceClient.profile.nom}`,
         }));
       }
     } else {
       setDocuments([]);
       setSelectedDocuments([]);
     }
-  }, [selectedClientId, clients]);
+  }, [documentSourceClientId, clients]);
 
   // Auto-switch to link mode if size exceeds limit
   useEffect(() => {
@@ -164,6 +179,8 @@ export default function EnvoyerEmail() {
 
       if (error) throw error;
       setDocuments(data || []);
+      setSelectedDocuments([]);
+      setGeneratedLink(null);
     } catch (error) {
       console.error('Error loading documents:', error);
     } finally {
@@ -211,6 +228,7 @@ export default function EnvoyerEmail() {
       body_html: "",
     });
     setSelectedClientId("");
+    setDocumentSourceClientId("");
     setSelectedDocuments([]);
     setDocuments([]);
     setSendSuccess(false);
@@ -239,7 +257,7 @@ export default function EnvoyerEmail() {
           },
           body: JSON.stringify({
             documentIds: selectedDocuments,
-            clientId: selectedClientId || null,
+            clientId: documentSourceClientId || null,
             expiresInDays: linkExpirationDays,
           }),
         }
@@ -338,7 +356,7 @@ export default function EnvoyerEmail() {
           subject: email.subject,
           body_html: finalBodyHtml,
           attachments,
-          client_id: selectedClientId || null,
+          client_id: documentSourceClientId || null,
         },
       });
 
@@ -423,7 +441,7 @@ export default function EnvoyerEmail() {
               <Card>
                 <CardHeader>
                   <CardTitle>Composer l'email</CardTitle>
-                  <CardDescription>Entrez l'adresse email ou sélectionnez un client</CardDescription>
+                  <CardDescription>Entrez l'adresse email manuellement ou sélectionnez un client</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -447,7 +465,7 @@ export default function EnvoyerEmail() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label className="text-muted-foreground text-sm">Ou sélectionner un client pour pré-remplir</Label>
+                    <Label className="text-muted-foreground text-sm">Ou pré-remplir depuis un client</Label>
                     <Select 
                       value={selectedClientId || "__none__"} 
                       onValueChange={(val) => setSelectedClientId(val === "__none__" ? "" : val)}
@@ -532,27 +550,53 @@ export default function EnvoyerEmail() {
                     Pièces jointes
                   </CardTitle>
                   <CardDescription>
-                    {selectedClientId 
-                      ? `${selectedDocuments.length}/${documents.length} document(s)`
-                      : "Sélectionnez un client"
-                    }
+                    Sélectionnez les documents d'un client à joindre
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Document source client selector */}
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2 text-sm font-medium">
+                      <User className="h-4 w-4" />
+                      Documents de quel client ?
+                    </Label>
+                    <Select 
+                      value={documentSourceClientId || "__none__"} 
+                      onValueChange={(val) => setDocumentSourceClientId(val === "__none__" ? "" : val)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choisir un client source..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">-- Sélectionner --</SelectItem>
+                        {clients.map(client => (
+                          <SelectItem key={client.id} value={client.id}>
+                            {client.profile.prenom} {client.profile.nom}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {loading ? (
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
-                  ) : !selectedClientId ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">
-                      Sélectionnez un client pour attacher ses documents
+                  ) : !documentSourceClientId ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Sélectionnez un client pour voir ses documents
                     </p>
                   ) : documents.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">
-                      Aucun document disponible
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Aucun document disponible pour ce client
                     </p>
                   ) : (
                     <>
+                      {/* Document count */}
+                      <div className="text-sm text-muted-foreground">
+                        {selectedDocuments.length}/{documents.length} document(s) sélectionné(s)
+                      </div>
+
                       {selectedDocuments.length > 0 && (
                         <div className={`p-3 rounded-md text-sm ${
                           exceedsDirectLimit 
