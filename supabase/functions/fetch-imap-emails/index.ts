@@ -6,14 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface ImapConfig {
-  imap_host: string;
-  imap_port: number;
-  imap_user: string;
-  imap_password: string;
-  imap_secure: boolean;
-}
-
 interface ParsedEmail {
   message_id: string;
   from_email: string;
@@ -42,14 +34,13 @@ class SimpleImapClient {
       hostname: host,
       port: port,
     });
-    // Read greeting
     await this.readResponse();
     console.log('Connected to IMAP server');
   }
 
   private async readResponse(): Promise<string[]> {
     const lines: string[] = [];
-    const buf = new Uint8Array(8192);
+    const buf = new Uint8Array(16384);
     
     while (true) {
       const n = await this.conn!.read(buf);
@@ -63,17 +54,15 @@ class SimpleImapClient {
         this.buffer = this.buffer.substring(idx + 2);
         lines.push(line);
         
-        // Check if we got a tagged response (OK, NO, BAD) or untagged
         if (line.match(/^[A-Z]\d+ (OK|NO|BAD)/)) {
           return lines;
         }
         if (line.startsWith('* OK') && lines.length === 1) {
-          return lines; // Greeting
+          return lines;
         }
       }
       
-      // Timeout protection
-      if (lines.length > 500) break;
+      if (lines.length > 1000) break;
     }
     
     return lines;
@@ -94,9 +83,6 @@ class SimpleImapClient {
     const response = await this.sendCommand(`LOGIN "${user}" "${password}"`);
     const success = response.some(line => line.includes('OK'));
     console.log(`Login ${success ? 'successful' : 'failed'}`);
-    if (!success) {
-      console.log('Login response:', response.join('\n'));
-    }
     return success;
   }
 
@@ -121,119 +107,15 @@ class SimpleImapClient {
 
     console.log(`Fetching emails ${start}:${end}...`);
     
-    // Fetch using BODYSTRUCTURE for better parsing
-    const response = await this.sendCommand(
-      `FETCH ${start}:${end} (FLAGS UID ENVELOPE BODY.PEEK[HEADER] BODY.PEEK[TEXT])`
-    );
-
-    // Join all response lines
-    const fullResponse = response.join('\n');
-    
-    // Split by FETCH responses
-    const fetchMatches = fullResponse.split(/\* \d+ FETCH/);
-    
-    for (const fetchBlock of fetchMatches) {
-      if (!fetchBlock.trim()) continue;
-      
-      const email: ParsedEmail = {
-        message_id: '',
-        from_email: imapUser,
-        from_name: null,
-        to_email: imapUser,
-        to_name: null,
-        subject: null,
-        body_text: '',
-        body_html: null,
-        received_at: null,
-        is_read: false,
-        flags: [],
-      };
-
-      // Parse FLAGS
-      const flagsMatch = fetchBlock.match(/FLAGS \(([^)]*)\)/);
-      if (flagsMatch) {
-        email.flags = flagsMatch[1].split(' ').filter(f => f);
-        email.is_read = email.flags.includes('\\Seen');
-      }
-
-      // Parse UID
-      const uidMatch = fetchBlock.match(/UID (\d+)/);
-      if (uidMatch) {
-        email.message_id = uidMatch[1];
-      }
-
-      // Parse ENVELOPE - this is the complex part
-      const envelopeStart = fetchBlock.indexOf('ENVELOPE (');
-      if (envelopeStart !== -1) {
-        const envelopeData = extractEnvelope(fetchBlock.substring(envelopeStart + 9));
-        if (envelopeData) {
-          email.received_at = envelopeData.date;
-          email.subject = envelopeData.subject;
-          email.from_email = envelopeData.fromEmail || imapUser;
-          email.from_name = envelopeData.fromName;
-          email.to_email = envelopeData.toEmail || imapUser;
-          email.to_name = envelopeData.toName;
+    // Fetch emails one by one for better reliability
+    for (let msgNum = end; msgNum >= start && emails.length < 50; msgNum--) {
+      try {
+        const email = await this.fetchSingleEmail(msgNum, imapUser);
+        if (email) {
+          emails.push(email);
         }
-      }
-
-      // Parse BODY[HEADER] for additional info
-      const headerMatch = fetchBlock.match(/BODY\[HEADER\] \{(\d+)\}\r?\n([\s\S]*?)(?=BODY\[TEXT\]|$)/i);
-      if (headerMatch) {
-        const headers = headerMatch[2];
-        
-        // Extract Subject if not from ENVELOPE
-        if (!email.subject) {
-          const subjectMatch = headers.match(/^Subject:\s*(.+?)(?:\r?\n(?!\s)|$)/mi);
-          if (subjectMatch) {
-            email.subject = decodeImapString(subjectMatch[1].trim());
-          }
-        }
-        
-        // Extract From if not from ENVELOPE
-        if (email.from_email === imapUser) {
-          const fromMatch = headers.match(/^From:\s*(.+?)(?:\r?\n(?!\s)|$)/mi);
-          if (fromMatch) {
-            const parsed = parseEmailAddress(fromMatch[1].trim());
-            email.from_email = parsed.email || imapUser;
-            email.from_name = parsed.name;
-          }
-        }
-        
-        // Extract To
-        const toMatch = headers.match(/^To:\s*(.+?)(?:\r?\n(?!\s)|$)/mi);
-        if (toMatch) {
-          const parsed = parseEmailAddress(toMatch[1].trim());
-          email.to_email = parsed.email || imapUser;
-          email.to_name = parsed.name;
-        }
-        
-        // Extract Date if not from ENVELOPE
-        if (!email.received_at) {
-          const dateMatch = headers.match(/^Date:\s*(.+?)(?:\r?\n|$)/mi);
-          if (dateMatch) {
-            try {
-              email.received_at = new Date(dateMatch[1].trim()).toISOString();
-            } catch (e) {
-              email.received_at = new Date().toISOString();
-            }
-          }
-        }
-      }
-
-      // Parse BODY[TEXT]
-      const textMatch = fetchBlock.match(/BODY\[TEXT\] (?:\{(\d+)\}\r?\n)?([\s\S]*?)(?=\)\r?\n[A-Z]\d+|$)/i);
-      if (textMatch) {
-        let bodyContent = textMatch[2] || '';
-        
-        // Clean and decode the body
-        const decoded = decodeEmailBody(bodyContent);
-        email.body_text = decoded.text;
-        email.body_html = decoded.html;
-      }
-
-      // Only add if we have a valid message_id
-      if (email.message_id) {
-        emails.push(email);
+      } catch (e) {
+        console.error(`Error fetching email ${msgNum}:`, e);
       }
     }
 
@@ -241,168 +123,171 @@ class SimpleImapClient {
     return emails;
   }
 
+  private async fetchSingleEmail(msgNum: number, imapUser: string): Promise<ParsedEmail | null> {
+    // First fetch FLAGS, UID, and headers
+    const headerResponse = await this.sendCommand(
+      `FETCH ${msgNum} (FLAGS UID BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE)])`
+    );
+    
+    const email: ParsedEmail = {
+      message_id: '',
+      from_email: imapUser,
+      from_name: null,
+      to_email: imapUser,
+      to_name: null,
+      subject: null,
+      body_text: '',
+      body_html: null,
+      received_at: null,
+      is_read: false,
+      flags: [],
+    };
+
+    const headerText = headerResponse.join('\n');
+    
+    // Parse FLAGS
+    const flagsMatch = headerText.match(/FLAGS \(([^)]*)\)/);
+    if (flagsMatch) {
+      email.flags = flagsMatch[1].split(' ').filter(f => f);
+      email.is_read = email.flags.includes('\\Seen');
+    }
+
+    // Parse UID
+    const uidMatch = headerText.match(/UID (\d+)/);
+    if (uidMatch) {
+      email.message_id = uidMatch[1];
+    } else {
+      email.message_id = `msg_${msgNum}_${Date.now()}`;
+    }
+
+    // Parse headers
+    const fromMatch = headerText.match(/^From:\s*(.+?)(?:\r?\n(?!\s)|$)/mi);
+    if (fromMatch) {
+      const parsed = parseEmailAddress(decodeHeaderValue(fromMatch[1].trim()));
+      email.from_email = parsed.email || imapUser;
+      email.from_name = parsed.name;
+    }
+
+    const toMatch = headerText.match(/^To:\s*(.+?)(?:\r?\n(?!\s)|$)/mi);
+    if (toMatch) {
+      const parsed = parseEmailAddress(decodeHeaderValue(toMatch[1].trim()));
+      email.to_email = parsed.email || imapUser;
+      email.to_name = parsed.name;
+    }
+
+    const subjectMatch = headerText.match(/^Subject:\s*(.+?)(?:\r?\n(?!\s)|$)/mi);
+    if (subjectMatch) {
+      email.subject = decodeHeaderValue(subjectMatch[1].trim());
+    }
+
+    const dateMatch = headerText.match(/^Date:\s*(.+?)(?:\r?\n|$)/mi);
+    if (dateMatch) {
+      try {
+        email.received_at = new Date(dateMatch[1].trim()).toISOString();
+      } catch (e) {
+        email.received_at = new Date().toISOString();
+      }
+    } else {
+      email.received_at = new Date().toISOString();
+    }
+
+    // Now fetch body
+    const bodyResponse = await this.sendCommand(
+      `FETCH ${msgNum} (BODY.PEEK[TEXT])`
+    );
+    
+    const bodyText = bodyResponse.join('\n');
+    
+    // Extract body content
+    const bodyContentMatch = bodyText.match(/BODY\[TEXT\]\s*(?:\{(\d+)\})?\s*\r?\n?([\s\S]*?)(?:\)\r?\n[A-Z]\d+|$)/i);
+    if (bodyContentMatch) {
+      let content = bodyContentMatch[2] || '';
+      
+      // Remove trailing ) if present
+      content = content.replace(/\)\s*$/, '');
+      
+      // Decode the body
+      const decoded = decodeEmailBody(content, headerText);
+      email.body_text = decoded.text;
+      email.body_html = decoded.html;
+    }
+
+    return email;
+  }
+
   async logout(): Promise<void> {
     try {
       await this.sendCommand('LOGOUT');
     } catch (e) {
-      // Ignore errors on logout
+      // Ignore
     }
     this.conn?.close();
   }
 }
 
-// Extract ENVELOPE data from IMAP response
-function extractEnvelope(envelopeStr: string): {
-  date: string | null;
-  subject: string | null;
-  fromEmail: string | null;
-  fromName: string | null;
-  toEmail: string | null;
-  toName: string | null;
-} | null {
+// Decode header value (handles =?UTF-8?B?...?= and =?UTF-8?Q?...?= formats)
+function decodeHeaderValue(value: string): string {
+  if (!value) return value;
+  
+  // Handle encoded words: =?charset?encoding?text?=
+  const regex = /=\?([^?]+)\?([BQ])\?([^?]*)\?=/gi;
+  
+  let result = value.replace(regex, (match, charset, encoding, text) => {
+    try {
+      if (encoding.toUpperCase() === 'B') {
+        // Base64
+        const decoded = atob(text);
+        return decodeUTF8Bytes(decoded);
+      } else if (encoding.toUpperCase() === 'Q') {
+        // Quoted-printable
+        const decoded = text
+          .replace(/_/g, ' ')
+          .replace(/=([0-9A-Fa-f]{2})/g, (_: string, hex: string) => 
+            String.fromCharCode(parseInt(hex, 16))
+          );
+        return decodeUTF8Bytes(decoded);
+      }
+    } catch (e) {
+      console.error('Header decode error:', e);
+    }
+    return text;
+  });
+  
+  // Handle consecutive encoded words
+  result = result.replace(/\?=\s*=\?/g, '');
+  
+  return result;
+}
+
+// Decode UTF-8 byte sequence from a string
+function decodeUTF8Bytes(str: string): string {
   try {
-    const result = {
-      date: null as string | null,
-      subject: null as string | null,
-      fromEmail: null as string | null,
-      fromName: null as string | null,
-      toEmail: null as string | null,
-      toName: null as string | null,
-    };
-
-    // Parse using position-based approach
-    // ENVELOPE format: (date subject from sender reply-to to cc bcc in-reply-to message-id)
-    
-    let pos = 0;
-    const parts: string[] = [];
-    let depth = 0;
-    let current = '';
-    let inQuote = false;
-    
-    // Find the closing parenthesis of ENVELOPE
-    for (let i = 0; i < envelopeStr.length && parts.length < 10; i++) {
-      const char = envelopeStr[i];
-      
-      if (char === '"' && envelopeStr[i-1] !== '\\') {
-        inQuote = !inQuote;
-        current += char;
-      } else if (char === '(' && !inQuote) {
-        depth++;
-        current += char;
-      } else if (char === ')' && !inQuote) {
-        depth--;
-        if (depth < 0) {
-          // End of envelope
-          if (current.trim()) parts.push(current.trim());
-          break;
-        }
-        current += char;
-        if (depth === 0) {
-          parts.push(current.trim());
-          current = '';
-        }
-      } else if (char === ' ' && depth === 0 && !inQuote) {
-        if (current.trim()) {
-          parts.push(current.trim());
-          current = '';
-        }
-      } else {
-        current += char;
-      }
+    // Convert string to byte array
+    const bytes = new Uint8Array(str.length);
+    for (let i = 0; i < str.length; i++) {
+      bytes[i] = str.charCodeAt(i);
     }
-
-    // Parse date (first part)
-    if (parts[0] && parts[0] !== 'NIL') {
-      const dateStr = parts[0].replace(/^"|"$/g, '');
-      try {
-        result.date = new Date(dateStr).toISOString();
-      } catch (e) {
-        result.date = new Date().toISOString();
-      }
-    }
-
-    // Parse subject (second part)
-    if (parts[1] && parts[1] !== 'NIL') {
-      const subject = parts[1].replace(/^"|"$/g, '');
-      result.subject = decodeImapString(subject);
-    }
-
-    // Parse from (third part) - format: ((name route mailbox host))
-    if (parts[2] && parts[2] !== 'NIL') {
-      const fromParsed = parseAddressList(parts[2]);
-      if (fromParsed.length > 0) {
-        result.fromEmail = fromParsed[0].email;
-        result.fromName = fromParsed[0].name;
-      }
-    }
-
-    // Parse to (sixth part)
-    if (parts[5] && parts[5] !== 'NIL') {
-      const toParsed = parseAddressList(parts[5]);
-      if (toParsed.length > 0) {
-        result.toEmail = toParsed[0].email;
-        result.toName = toParsed[0].name;
-      }
-    }
-
-    return result;
+    // Decode as UTF-8
+    return new TextDecoder('utf-8').decode(bytes);
   } catch (e) {
-    console.error('Error parsing envelope:', e);
-    return null;
+    return str;
   }
 }
 
-// Parse IMAP address list format: ((name NIL mailbox host)(name NIL mailbox host))
-function parseAddressList(addressStr: string): Array<{ email: string; name: string | null }> {
-  const addresses: Array<{ email: string; name: string | null }> = [];
-  
-  // Match individual addresses: (name NIL mailbox host)
-  const addressRegex = /\(([^()]*(?:\([^()]*\)[^()]*)*)\)/g;
-  let match;
-  
-  while ((match = addressRegex.exec(addressStr)) !== null) {
-    const parts = match[1];
-    
-    // Extract parts: "name" NIL "mailbox" "host"
-    const partMatches = parts.match(/(?:"([^"]*)"|NIL)/g);
-    
-    if (partMatches && partMatches.length >= 4) {
-      const name = partMatches[0] === 'NIL' ? null : partMatches[0].replace(/^"|"$/g, '');
-      const mailbox = partMatches[2] === 'NIL' ? '' : partMatches[2].replace(/^"|"$/g, '');
-      const host = partMatches[3] === 'NIL' ? '' : partMatches[3].replace(/^"|"$/g, '');
-      
-      if (mailbox && host) {
-        addresses.push({
-          email: `${mailbox}@${host}`,
-          name: name ? decodeImapString(name) : null,
-        });
-      }
-    }
-  }
-  
-  return addresses;
-}
-
-// Parse email address from header format: "Name" <email@domain.com> or email@domain.com
+// Parse email address from header format
 function parseEmailAddress(addr: string): { email: string | null; name: string | null } {
-  addr = decodeImapString(addr.trim());
+  addr = addr.trim();
   
-  // Format: "Name" <email>
+  // Format: "Name" <email> or Name <email>
   const match1 = addr.match(/^"?([^"<]+)"?\s*<([^>]+)>/);
   if (match1) {
     return { name: match1[1].trim(), email: match1[2].trim() };
   }
   
-  // Format: Name <email>
-  const match2 = addr.match(/^([^<]+)<([^>]+)>/);
-  if (match2) {
-    return { name: match2[1].trim(), email: match2[2].trim() };
-  }
-  
   // Format: <email>
-  const match3 = addr.match(/<([^>]+)>/);
-  if (match3) {
-    return { name: null, email: match3[1].trim() };
+  const match2 = addr.match(/<([^>]+)>/);
+  if (match2) {
+    return { name: null, email: match2[1].trim() };
   }
   
   // Just email
@@ -413,18 +298,26 @@ function parseEmailAddress(addr: string): { email: string | null; name: string |
   return { name: null, email: null };
 }
 
-// Decode email body (handle MIME, quoted-printable, base64)
-function decodeEmailBody(body: string): { text: string; html: string | null } {
+// Decode email body
+function decodeEmailBody(body: string, headers: string): { text: string; html: string | null } {
   let text = body;
   let html: string | null = null;
 
-  // Remove IMAP literal marker
-  text = text.replace(/^\{\d+\}\r?\n/, '');
-
-  // Check if it's multipart
-  const boundaryMatch = body.match(/boundary="?([^"\s\r\n]+)"?/i);
+  // Check content type from the full message headers
+  const contentTypeMatch = headers.match(/Content-Type:\s*([^;\r\n]+)/i);
+  const contentType = contentTypeMatch ? contentTypeMatch[1].toLowerCase().trim() : 'text/plain';
   
+  // Check transfer encoding
+  const encodingMatch = body.match(/Content-Transfer-Encoding:\s*(\S+)/i) || 
+                        headers.match(/Content-Transfer-Encoding:\s*(\S+)/i);
+  const encoding = encodingMatch ? encodingMatch[1].toLowerCase().trim() : '';
+
+  // Check for multipart
+  const boundaryMatch = body.match(/boundary="?([^"\s\r\n;]+)"?/i) ||
+                        headers.match(/boundary="?([^"\s\r\n;]+)"?/i);
+
   if (boundaryMatch) {
+    // Multipart message
     const boundary = boundaryMatch[1];
     const parts = body.split(new RegExp(`--${escapeRegex(boundary)}`));
     
@@ -432,29 +325,32 @@ function decodeEmailBody(body: string): { text: string; html: string | null } {
     let htmlText = '';
     
     for (const part of parts) {
-      const contentTypeMatch = part.match(/Content-Type:\s*([^;\r\n]+)/i);
-      const contentType = contentTypeMatch ? contentTypeMatch[1].toLowerCase().trim() : '';
+      if (part.trim() === '' || part.trim() === '--') continue;
       
-      // Get content after headers
-      const headerEnd = part.indexOf('\r\n\r\n');
-      if (headerEnd === -1) continue;
+      const partContentTypeMatch = part.match(/Content-Type:\s*([^;\r\n]+)/i);
+      const partType = partContentTypeMatch ? partContentTypeMatch[1].toLowerCase().trim() : '';
       
-      let content = part.substring(headerEnd + 4);
+      const partEncodingMatch = part.match(/Content-Transfer-Encoding:\s*(\S+)/i);
+      const partEncoding = partEncodingMatch ? partEncodingMatch[1].toLowerCase().trim() : '';
       
-      // Check transfer encoding
-      const encodingMatch = part.match(/Content-Transfer-Encoding:\s*(\S+)/i);
-      const encoding = encodingMatch ? encodingMatch[1].toLowerCase() : '';
+      // Find content after headers (empty line separator)
+      const headerEndIndex = part.indexOf('\r\n\r\n');
+      const altHeaderEnd = part.indexOf('\n\n');
+      const contentStart = headerEndIndex !== -1 ? headerEndIndex + 4 : 
+                          (altHeaderEnd !== -1 ? altHeaderEnd + 2 : 0);
       
-      // Decode based on encoding
-      if (encoding === 'quoted-printable') {
+      let content = part.substring(contentStart);
+      
+      // Decode content
+      if (partEncoding === 'quoted-printable') {
         content = decodeQuotedPrintable(content);
-      } else if (encoding === 'base64') {
-        content = decodeBase64(content);
+      } else if (partEncoding === 'base64') {
+        content = decodeBase64UTF8(content);
       }
       
-      if (contentType.includes('text/plain')) {
+      if (partType.includes('text/plain')) {
         plainText = content;
-      } else if (contentType.includes('text/html')) {
+      } else if (partType.includes('text/html')) {
         htmlText = content;
       }
     }
@@ -462,25 +358,24 @@ function decodeEmailBody(body: string): { text: string; html: string | null } {
     text = plainText || stripHtml(htmlText);
     html = htmlText || null;
   } else {
-    // Single part email
-    const contentTypeMatch = body.match(/Content-Type:\s*([^;\r\n]+)/i);
-    const encodingMatch = body.match(/Content-Transfer-Encoding:\s*(\S+)/i);
+    // Single part
     
-    // Remove headers if present
+    // Remove any headers from body if present
     const headerEnd = body.indexOf('\r\n\r\n');
-    if (headerEnd !== -1) {
+    const altHeaderEnd = body.indexOf('\n\n');
+    if (headerEnd !== -1 && headerEnd < 500) {
       text = body.substring(headerEnd + 4);
+    } else if (altHeaderEnd !== -1 && altHeaderEnd < 500) {
+      text = body.substring(altHeaderEnd + 2);
     }
     
     // Decode
-    const encoding = encodingMatch ? encodingMatch[1].toLowerCase() : '';
     if (encoding === 'quoted-printable') {
       text = decodeQuotedPrintable(text);
     } else if (encoding === 'base64') {
-      text = decodeBase64(text);
+      text = decodeBase64UTF8(text);
     }
     
-    const contentType = contentTypeMatch ? contentTypeMatch[1].toLowerCase() : '';
     if (contentType.includes('text/html')) {
       html = text;
       text = stripHtml(text);
@@ -488,42 +383,48 @@ function decodeEmailBody(body: string): { text: string; html: string | null } {
   }
 
   // Final cleanup
-  text = cleanEmailText(text);
+  text = cleanText(text);
 
   return { text, html };
 }
 
-// Decode quoted-printable encoding
+// Decode quoted-printable with proper UTF-8 handling
 function decodeQuotedPrintable(str: string): string {
-  return str
-    // Handle soft line breaks (= at end of line)
-    .replace(/=\r?\n/g, '')
-    // Decode =XX hex codes
-    .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => {
-      return String.fromCharCode(parseInt(hex, 16));
-    });
+  // First handle soft line breaks
+  let result = str.replace(/=\r?\n/g, '');
+  
+  // Then decode hex codes
+  result = result.replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => {
+    return String.fromCharCode(parseInt(hex, 16));
+  });
+  
+  // Convert to proper UTF-8
+  return decodeUTF8Bytes(result);
 }
 
-// Decode base64 encoding
-function decodeBase64(str: string): string {
+// Decode base64 with UTF-8 support
+function decodeBase64UTF8(str: string): string {
   try {
-    // Remove line breaks and whitespace
     const cleaned = str.replace(/[\r\n\s]/g, '');
-    return atob(cleaned);
+    const decoded = atob(cleaned);
+    return decodeUTF8Bytes(decoded);
   } catch (e) {
     console.error('Base64 decode error:', e);
     return str;
   }
 }
 
-// Strip HTML tags for plain text
+// Strip HTML tags
 function stripHtml(html: string): string {
+  if (!html) return '';
   return html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n\n')
     .replace(/<\/div>/gi, '\n')
+    .replace(/<\/tr>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ')
     .replace(/&amp;/g, '&')
@@ -531,68 +432,27 @@ function stripHtml(html: string): string {
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(parseInt(code)))
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
-// Clean email text content
-function cleanEmailText(text: string): string {
+// Clean text
+function cleanText(text: string): string {
   return text
-    // Remove MIME boundaries
-    .replace(/--[A-Za-z0-9_-]+(?:--)?/g, '')
-    // Remove Content-* headers that might have been left
-    .replace(/Content-[A-Za-z-]+:.*(?:\r?\n(?:\s+.*)?)*/gi, '')
-    // Remove excessive whitespace
+    .replace(/--[A-Za-z0-9_=-]+--?/g, '') // Remove MIME boundaries
+    .replace(/Content-[A-Za-z-]+:.*(?:\r?\n(?:\s+.*)?)*\r?\n/gi, '') // Remove Content-* headers
     .replace(/\r\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 
-// Escape regex special characters
+// Escape regex
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Decode IMAP encoded strings (=?UTF-8?B?...?= or =?UTF-8?Q?...?=)
-function decodeImapString(str: string): string {
-  if (!str) return str;
-  
-  // Handle =?charset?encoding?text?= format
-  const regex = /=\?([^?]+)\?([BQ])\?([^?]+)\?=/gi;
-  
-  let result = str.replace(regex, (match, charset, encoding, text) => {
-    try {
-      if (encoding.toUpperCase() === 'B') {
-        // Base64
-        const decoded = atob(text);
-        // Try to handle UTF-8
-        try {
-          return decodeURIComponent(escape(decoded));
-        } catch {
-          return decoded;
-        }
-      } else if (encoding.toUpperCase() === 'Q') {
-        // Quoted-printable
-        return text
-          .replace(/_/g, ' ')
-          .replace(/=([0-9A-F]{2})/gi, (m: string, hex: string) => 
-            String.fromCharCode(parseInt(hex, 16))
-          );
-      }
-    } catch (e) {
-      console.error('Decode error:', e);
-    }
-    return text;
-  });
-  
-  // Handle consecutive encoded words (should be joined without space)
-  result = result.replace(/\?=\s*=\?/g, '');
-  
-  return result;
-}
-
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -611,7 +471,6 @@ serve(async (req) => {
       }
     );
 
-    // Get current user
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
       throw new Error('Unauthorized');
@@ -622,7 +481,6 @@ serve(async (req) => {
     console.log(`Processing IMAP action: ${action} for user: ${user.id}`);
 
     if (action === 'fetch_emails') {
-      // Get IMAP configuration
       const { data: imapConfig, error: configError } = await supabaseClient
         .from('imap_configurations')
         .select('*')
@@ -638,7 +496,7 @@ serve(async (req) => {
           JSON.stringify({ 
             success: false, 
             error: 'no_config',
-            message: 'Aucune configuration IMAP trouvée. Veuillez configurer votre boîte de réception.' 
+            message: 'Aucune configuration IMAP trouvée.' 
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -649,24 +507,20 @@ serve(async (req) => {
       const client = new SimpleImapClient();
       
       try {
-        // Connect and authenticate
         await client.connect(imapConfig.imap_host, imapConfig.imap_port);
         const loginSuccess = await client.login(imapConfig.imap_user, imapConfig.imap_password);
         
         if (!loginSuccess) {
-          throw new Error('Échec de l\'authentification IMAP. Vérifiez vos identifiants.');
+          throw new Error('Échec de l\'authentification IMAP.');
         }
         
-        // Select inbox and get message count
         const messageCount = await client.selectInbox();
-        
-        // Fetch last 50 emails (or less if not enough)
         const startMsg = Math.max(1, messageCount - 49);
         const fetchedEmails = await client.fetchEmails(startMsg, messageCount, imapConfig.imap_user);
         
         await client.logout();
         
-        // Store emails in database
+        // Store emails
         const emailsToInsert = fetchedEmails.map(email => ({
           user_id: user.id,
           message_id: `${imapConfig.imap_user}_${email.message_id}`,
@@ -683,13 +537,12 @@ serve(async (req) => {
           attachments: [],
         }));
 
-        // Upsert emails (avoid duplicates)
         if (emailsToInsert.length > 0) {
           const { error: insertError } = await supabaseClient
             .from('received_emails')
             .upsert(emailsToInsert, {
               onConflict: 'user_id,message_id',
-              ignoreDuplicates: false // Update existing
+              ignoreDuplicates: false
             });
 
           if (insertError) {
@@ -699,14 +552,12 @@ serve(async (req) => {
           }
         }
 
-        // Update last sync time
         await supabaseClient
           .from('imap_configurations')
           .update({ last_sync_at: new Date().toISOString() })
           .eq('user_id', user.id);
 
-        // Get all stored emails
-        const { data: emails, error: emailsError } = await supabaseClient
+        const { data: emails } = await supabaseClient
           .from('received_emails')
           .select('*')
           .eq('user_id', user.id)
@@ -726,9 +577,8 @@ serve(async (req) => {
         
       } catch (imapError: unknown) {
         console.error('IMAP error:', imapError);
-        const errorMessage = imapError instanceof Error ? imapError.message : 'Erreur de connexion IMAP';
+        const errorMessage = imapError instanceof Error ? imapError.message : 'Erreur IMAP';
         
-        // Still return stored emails even if sync fails
         const { data: emails } = await supabaseClient
           .from('received_emails')
           .select('*')
@@ -741,7 +591,7 @@ serve(async (req) => {
             success: false, 
             error: errorMessage,
             emails: emails || [],
-            message: `Erreur de synchronisation: ${errorMessage}`
+            message: `Erreur: ${errorMessage}`
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -750,15 +600,12 @@ serve(async (req) => {
 
     if (action === 'mark_read') {
       const { email_id, is_read } = body;
-
       const { error } = await supabaseClient
         .from('received_emails')
         .update({ is_read })
         .eq('id', email_id)
         .eq('user_id', user.id);
-
       if (error) throw error;
-
       return new Response(
         JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -767,15 +614,12 @@ serve(async (req) => {
 
     if (action === 'toggle_star') {
       const { email_id, is_starred } = body;
-
       const { error } = await supabaseClient
         .from('received_emails')
         .update({ is_starred })
         .eq('id', email_id)
         .eq('user_id', user.id);
-
       if (error) throw error;
-
       return new Response(
         JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -784,15 +628,12 @@ serve(async (req) => {
 
     if (action === 'delete_email') {
       const { email_id } = body;
-
       const { error } = await supabaseClient
         .from('received_emails')
         .delete()
         .eq('id', email_id)
         .eq('user_id', user.id);
-
       if (error) throw error;
-
       return new Response(
         JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
