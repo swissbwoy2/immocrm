@@ -81,12 +81,18 @@ const getMenuForRole = (role: string) => {
 };
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, setOpenMobile, isMobile } = useSidebar();
   const collapsed = state === 'collapsed';
   const location = useLocation();
   const { user, userRole } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const { counts } = useNotifications();
+
+  const handleNavClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
   
   useEffect(() => {
     if (user) {
@@ -179,6 +185,7 @@ export function AppSidebar() {
                             end={item.path === '/admin' || item.path === '/agent' || item.path === '/client'}
                             className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors relative"
                             activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                            onClick={handleNavClick}
                           >
                             <item.icon className="w-5 h-5 flex-shrink-0" />
                             {notifCount > 0 && (
@@ -199,6 +206,7 @@ export function AppSidebar() {
                         end={item.path === '/admin' || item.path === '/agent' || item.path === '/client'}
                         className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors"
                         activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                        onClick={handleNavClick}
                       >
                         <item.icon className="w-5 h-5 flex-shrink-0" />
                         <span className="truncate flex-1">{item.name}</span>
