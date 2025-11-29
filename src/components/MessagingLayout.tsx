@@ -1,0 +1,131 @@
+import { ReactNode, useState, useEffect } from 'react';
+import { ChevronLeft, Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
+
+interface MessagingLayoutProps {
+  conversationsList: ReactNode;
+  chatView: ReactNode;
+  selectedConversation: string | null;
+  onSelectConversation?: (id: string | null) => void;
+  chatHeader?: ReactNode;
+}
+
+export function MessagingLayout({
+  conversationsList,
+  chatView,
+  selectedConversation,
+  onSelectConversation,
+  chatHeader,
+}: MessagingLayoutProps) {
+  const isMobile = useIsMobile();
+  const [showConversations, setShowConversations] = useState(true);
+
+  // Fermer automatiquement le panneau quand une conversation est sélectionnée sur mobile
+  useEffect(() => {
+    if (isMobile && selectedConversation) {
+      setShowConversations(false);
+    }
+  }, [selectedConversation, isMobile]);
+
+  // Ouvrir le panneau si aucune conversation n'est sélectionnée sur mobile
+  useEffect(() => {
+    if (isMobile && !selectedConversation) {
+      setShowConversations(true);
+    }
+  }, [isMobile, selectedConversation]);
+
+  // Swipe gestures
+  useSwipeGesture({
+    onSwipeRight: () => {
+      if (isMobile && !showConversations) {
+        setShowConversations(true);
+      }
+    },
+    onSwipeLeft: () => {
+      if (isMobile && showConversations) {
+        setShowConversations(false);
+      }
+    },
+    threshold: 60,
+    edgeThreshold: 40,
+  });
+
+  const handleBackToList = () => {
+    setShowConversations(true);
+    onSelectConversation?.(null);
+  };
+
+  return (
+    <div className="flex-1 flex overflow-hidden h-[calc(100vh-64px)] lg:h-[calc(100vh-0px)] relative">
+      {/* Overlay pour mobile */}
+      {isMobile && showConversations && selectedConversation && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300 lg:hidden"
+          onClick={() => setShowConversations(false)}
+        />
+      )}
+
+      {/* Panneau des conversations */}
+      <div
+        className={cn(
+          "bg-card border-r border-border flex flex-col",
+          // Desktop: toujours visible
+          "lg:relative lg:w-80 lg:translate-x-0",
+          // Mobile: panneau coulissant
+          "fixed lg:static inset-y-0 left-0 z-50 w-[85%] max-w-[320px]",
+          "transition-transform duration-300 ease-out",
+          isMobile && !showConversations && "-translate-x-full"
+        )}
+      >
+        {conversationsList}
+      </div>
+
+      {/* Zone de chat */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header mobile avec bouton retour */}
+        {isMobile && selectedConversation && (
+          <div className="flex items-center gap-2 p-3 border-b bg-card lg:hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleBackToList}
+              className="shrink-0"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex-1 min-w-0">
+              {chatHeader}
+            </div>
+          </div>
+        )}
+
+        {/* Header desktop */}
+        {!isMobile && selectedConversation && chatHeader && (
+          <div className="p-4 border-b bg-card">
+            {chatHeader}
+          </div>
+        )}
+
+        {/* Bouton pour ouvrir les conversations sur mobile quand aucune n'est sélectionnée */}
+        {isMobile && !selectedConversation && !showConversations && (
+          <div className="p-4 border-b bg-card lg:hidden">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowConversations(true)}
+              className="gap-2"
+            >
+              <Menu className="h-4 w-4" />
+              Voir les conversations
+            </Button>
+          </div>
+        )}
+
+        {chatView}
+      </div>
+    </div>
+  );
+}
