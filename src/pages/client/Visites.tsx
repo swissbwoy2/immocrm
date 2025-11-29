@@ -252,8 +252,8 @@ export default function Visites() {
       <div className="p-4 md:p-8 space-y-6">
           {/* Header */}
           <div>
-            <h1 className="text-3xl font-bold">Prochaines visites</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold">Prochaines visites</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
               {visites.length} visite{visites.length > 1 ? 's' : ''} planifiée{visites.length > 1 ? 's' : ''}
             </p>
           </div>
@@ -264,9 +264,9 @@ export default function Visites() {
               {visites.map((visite) => (
                 <Card key={visite.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-xl mb-2">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-lg sm:text-xl mb-2">
                           {visite.adresse}
                         </CardTitle>
                         <div className="flex flex-wrap gap-2">
@@ -277,8 +277,8 @@ export default function Visites() {
                         </div>
                       </div>
                       {visite.offres && (
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-primary">
+                        <div className="text-left sm:text-right">
+                          <p className="text-xl sm:text-2xl font-bold text-primary">
                             {visite.offres.prix.toLocaleString('fr-CH')} CHF
                           </p>
                           <p className="text-sm text-muted-foreground">par mois</p>
@@ -428,9 +428,10 @@ export default function Visites() {
                           <p className="text-sm font-medium text-center">
                             Suite à cette visite, souhaitez-vous donner suite à cette offre ?
                           </p>
-                          <div className="grid grid-cols-3 gap-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                             <Button 
                               variant="default"
+                              className="w-full"
                               onClick={() => accepterOffre(visite)}
                             >
                               <Check className="mr-2 h-4 w-4" />
@@ -438,6 +439,7 @@ export default function Visites() {
                             </Button>
                             <Button 
                               variant="outline"
+                              className="w-full"
                               onClick={() => navigate('/client/offres-recues')}
                             >
                               <FileCheck className="mr-2 h-4 w-4" />
@@ -445,6 +447,7 @@ export default function Visites() {
                             </Button>
                             <Button 
                               variant="destructive"
+                              className="w-full"
                               onClick={() => refuserOffre(visite)}
                             >
                               <X className="mr-2 h-4 w-4" />
