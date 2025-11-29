@@ -16,9 +16,15 @@ export default function AgentVisites() {
   const [visites, setVisites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [selectedVisite, setSelectedVisite] = useState<any>(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [recommandation, setRecommandation] = useState<'recommande' | 'neutre' | 'deconseille'>('neutre');
+
+  const handleOpenDetail = (visite: any) => {
+    setSelectedVisite(visite);
+    setDetailDialogOpen(true);
+  };
 
   useEffect(() => {
     loadVisites();
@@ -191,7 +197,7 @@ export default function AgentVisites() {
             <h2 className="text-xl font-semibold mb-4">🤝 Visites déléguées par les clients</h2>
             <div className="grid gap-4">
               {visitesDeleguees.map(visite => (
-                <Card key={visite.id} className="border-primary/50">
+                <Card key={visite.id} className="border-primary/50 cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleOpenDetail(visite)}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -229,7 +235,10 @@ export default function AgentVisites() {
                       </p>
                     )}
                     <Button 
-                      onClick={() => handleMarquerEffectuee(visite)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarquerEffectuee(visite);
+                      }}
                       className="w-full"
                     >
                       <MessageSquare className="mr-2 h-4 w-4" />
@@ -248,7 +257,7 @@ export default function AgentVisites() {
             <h2 className="text-xl font-semibold mb-4">📅 Visites planifiées</h2>
             <div className="grid gap-4">
               {visitesNormalesAVenir.map(visite => (
-                <Card key={visite.id}>
+                <Card key={visite.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleOpenDetail(visite)}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -287,7 +296,10 @@ export default function AgentVisites() {
                       </p>
                     )}
                     <Button 
-                      onClick={() => handleMarquerEffectuee(visite)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarquerEffectuee(visite);
+                      }}
                       className="w-full"
                     >
                       Marquer comme effectuée
@@ -305,7 +317,7 @@ export default function AgentVisites() {
           {visitesEffectuees.length > 0 ? (
             <div className="grid gap-4">
               {visitesEffectuees.slice(0, 10).map(visite => (
-                <Card key={visite.id} className="opacity-75">
+                <Card key={visite.id} className="opacity-75 cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleOpenDetail(visite)}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -441,6 +453,167 @@ export default function AgentVisites() {
             <Button onClick={handleSaveFeedback} disabled={!feedbackText.trim()}>
               Enregistrer et notifier le client
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de détail de visite */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              Détails de la visite
+              {selectedVisite?.est_deleguee && (
+                <Badge variant="outline">Déléguée</Badge>
+              )}
+              {selectedVisite?.statut === 'effectuee' && (
+                <Badge variant="secondary">Effectuée</Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedVisite && (
+            <div className="space-y-4">
+              {/* Adresse */}
+              <div className="p-4 bg-muted rounded-lg">
+                <h4 className="font-semibold text-lg">{selectedVisite.adresse}</h4>
+                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    {new Date(selectedVisite.date_visite).toLocaleDateString('fr-CH')}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {new Date(selectedVisite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Client */}
+              {selectedVisite.client_profile && (
+                <div className="space-y-2">
+                  <h5 className="font-medium flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    {selectedVisite.est_deleguee ? 'Visite déléguée pour' : 'Client'}
+                  </h5>
+                  <div className="p-3 border rounded-lg">
+                    <p className="font-medium">
+                      {selectedVisite.client_profile.prenom} {selectedVisite.client_profile.nom}
+                    </p>
+                    {selectedVisite.client_profile.email && (
+                      <p className="text-sm text-muted-foreground">{selectedVisite.client_profile.email}</p>
+                    )}
+                    {selectedVisite.client_profile.telephone && (
+                      <p className="text-sm text-muted-foreground">{selectedVisite.client_profile.telephone}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Détails de l'offre */}
+              {selectedVisite.offres && (
+                <div className="space-y-2">
+                  <h5 className="font-medium">📋 Détails du bien</h5>
+                  <div className="p-3 border rounded-lg space-y-2">
+                    <div className="grid grid-cols-3 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Pièces:</span>
+                        <span className="ml-1 font-medium">{selectedVisite.offres.pieces}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Surface:</span>
+                        <span className="ml-1 font-medium">{selectedVisite.offres.surface}m²</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Prix:</span>
+                        <span className="ml-1 font-medium">{selectedVisite.offres.prix} CHF/mois</span>
+                      </div>
+                    </div>
+                    {selectedVisite.offres.etage && (
+                      <p className="text-sm">
+                        <span className="text-muted-foreground">Étage:</span>
+                        <span className="ml-1">{selectedVisite.offres.etage}</span>
+                      </p>
+                    )}
+                    {selectedVisite.offres.disponibilite && (
+                      <p className="text-sm">
+                        <span className="text-muted-foreground">Disponibilité:</span>
+                        <span className="ml-1">{selectedVisite.offres.disponibilite}</span>
+                      </p>
+                    )}
+                    {selectedVisite.offres.description && (
+                      <p className="text-sm text-muted-foreground mt-2">{selectedVisite.offres.description}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Notes du client (pour visites déléguées) */}
+              {selectedVisite.notes && (
+                <div className="space-y-2">
+                  <h5 className="font-medium">💬 Notes du client</h5>
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <p className="text-sm">{selectedVisite.notes}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Feedback agent (si visite effectuée) */}
+              {selectedVisite.statut === 'effectuee' && selectedVisite.feedback_agent && (
+                <div className="space-y-2">
+                  <h5 className="font-medium flex items-center gap-2">
+                    📝 Mon feedback
+                    {selectedVisite.recommandation_agent && getRecommandationBadge(selectedVisite.recommandation_agent)}
+                  </h5>
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-sm">{selectedVisite.feedback_agent}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Infos pratiques */}
+              {selectedVisite.offres && (selectedVisite.offres.code_immeuble || selectedVisite.offres.concierge_nom || selectedVisite.offres.locataire_nom) && (
+                <div className="space-y-2">
+                  <h5 className="font-medium">🔑 Informations pratiques</h5>
+                  <div className="p-3 border rounded-lg space-y-2 text-sm">
+                    {selectedVisite.offres.code_immeuble && (
+                      <p>
+                        <span className="text-muted-foreground">Code immeuble:</span>
+                        <span className="ml-1 font-mono bg-muted px-2 py-0.5 rounded">{selectedVisite.offres.code_immeuble}</span>
+                      </p>
+                    )}
+                    {selectedVisite.offres.concierge_nom && (
+                      <p>
+                        <span className="text-muted-foreground">Concierge:</span>
+                        <span className="ml-1">{selectedVisite.offres.concierge_nom}</span>
+                        {selectedVisite.offres.concierge_tel && <span className="ml-1">({selectedVisite.offres.concierge_tel})</span>}
+                      </p>
+                    )}
+                    {selectedVisite.offres.locataire_nom && (
+                      <p>
+                        <span className="text-muted-foreground">Locataire actuel:</span>
+                        <span className="ml-1">{selectedVisite.offres.locataire_nom}</span>
+                        {selectedVisite.offres.locataire_tel && <span className="ml-1">({selectedVisite.offres.locataire_tel})</span>}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
+              Fermer
+            </Button>
+            {selectedVisite?.statut === 'planifiee' && (
+              <Button onClick={() => {
+                setDetailDialogOpen(false);
+                handleMarquerEffectuee(selectedVisite);
+              }}>
+                {selectedVisite.est_deleguee ? 'Donner mon feedback' : 'Marquer effectuée'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
