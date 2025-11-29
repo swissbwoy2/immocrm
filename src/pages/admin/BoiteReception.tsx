@@ -1,19 +1,18 @@
 import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/AppLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { ImapConfigurationDialog } from '@/components/ImapConfigurationDialog';
+import { ReplyEmailDialog } from '@/components/ReplyEmailDialog';
 import { 
   Inbox, 
   Mail, 
-  MailOpen, 
   Star, 
   StarOff, 
   Trash2, 
@@ -23,7 +22,9 @@ import {
   Paperclip,
   Loader2,
   AlertCircle,
-  ChevronLeft
+  ChevronLeft,
+  Reply,
+  Forward
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -57,6 +58,10 @@ export default function BoiteReception() {
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [hasConfig, setHasConfig] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
+  
+  // Reply/Forward state
+  const [replyDialogOpen, setReplyDialogOpen] = useState(false);
+  const [replyMode, setReplyMode] = useState<'reply' | 'forward'>('reply');
 
   useEffect(() => {
     if (user) {
@@ -118,8 +123,14 @@ export default function BoiteReception() {
         toast.info(data.message);
       } else if (data.success) {
         setEmails(data.emails || []);
-        setLastSync(data.last_sync);
-        toast.success('Synchronisation terminée');
+        setLastSync(new Date().toISOString());
+        toast.success(`${data.fetched_count} emails synchronisés`);
+      } else if (data.error) {
+        toast.error(data.message || data.error);
+        // Still update emails if we got some
+        if (data.emails?.length) {
+          setEmails(data.emails);
+        }
       }
     } catch (error: any) {
       console.error('Error syncing emails:', error);
@@ -178,6 +189,11 @@ export default function BoiteReception() {
       setEmails(prev => prev.map(e => 
         e.id === email.id ? { ...e, is_starred: !e.is_starred } : e
       ));
+      
+      // Update selected email if it's the same
+      if (selectedEmail?.id === email.id) {
+        setSelectedEmail(prev => prev ? { ...prev, is_starred: !prev.is_starred } : null);
+      }
     } catch (error) {
       console.error('Error toggling star:', error);
     }
@@ -212,7 +228,26 @@ export default function BoiteReception() {
     markAsRead(email);
   };
 
+  const handleReply = () => {
+    if (!selectedEmail) return;
+    setReplyMode('reply');
+    setReplyDialogOpen(true);
+  };
+
+  const handleForward = () => {
+    if (!selectedEmail) return;
+    setReplyMode('forward');
+    setReplyDialogOpen(true);
+  };
+
   const unreadCount = emails.filter(e => !e.is_read).length;
+
+  // Get preview text (clean from HTML)
+  const getPreviewText = (email: ReceivedEmail) => {
+    const text = email.body_text || '';
+    // Remove excessive whitespace and limit length
+    return text.replace(/\s+/g, ' ').trim().substring(0, 100);
+  };
 
   return (
     <AppLayout>
@@ -346,7 +381,7 @@ export default function BoiteReception() {
                           {email.subject || '(Sans objet)'}
                         </div>
                         <div className="text-sm text-muted-foreground truncate">
-                          {email.body_text?.substring(0, 100) || 'Pas de contenu texte'}
+                          {getPreviewText(email) || 'Pas de contenu texte'}
                         </div>
                         {email.attachments && Array.isArray(email.attachments) && email.attachments.length > 0 && (
                           <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
@@ -374,46 +409,63 @@ export default function BoiteReception() {
           {selectedEmail && (
             <div className="flex-1 flex flex-col">
               {/* Detail Header */}
-              <div className="p-4 border-b flex items-center gap-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="md:hidden"
-                  onClick={() => setSelectedEmail(null)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-lg font-semibold truncate">
-                    {selectedEmail.subject || '(Sans objet)'}
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    De: {selectedEmail.from_name ? `${selectedEmail.from_name} <${selectedEmail.from_email}>` : selectedEmail.from_email}
-                  </p>
-                  {selectedEmail.received_at && (
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(selectedEmail.received_at), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
-                    </p>
-                  )}
-                </div>
-                <div className="flex gap-2">
+              <div className="p-4 border-b">
+                <div className="flex items-center gap-4 mb-3">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={(e) => toggleStar(selectedEmail, e)}
+                    className="md:hidden"
+                    onClick={() => setSelectedEmail(null)}
                   >
-                    {selectedEmail.is_starred ? (
-                      <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                    ) : (
-                      <StarOff className="h-4 w-4" />
-                    )}
+                    <ChevronLeft className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => deleteEmail(selectedEmail, e)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg font-semibold truncate">
+                      {selectedEmail.subject || '(Sans objet)'}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      De: {selectedEmail.from_name ? `${selectedEmail.from_name} <${selectedEmail.from_email}>` : selectedEmail.from_email}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      À: {selectedEmail.to_email}
+                    </p>
+                    {selectedEmail.received_at && (
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(selectedEmail.received_at), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => toggleStar(selectedEmail, e)}
+                    >
+                      {selectedEmail.is_starred ? (
+                        <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                      ) : (
+                        <StarOff className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => deleteEmail(selectedEmail, e)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Action buttons */}
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleReply}>
+                    <Reply className="h-4 w-4 mr-2" />
+                    Répondre
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleForward}>
+                    <Forward className="h-4 w-4 mr-2" />
+                    Transférer
                   </Button>
                 </div>
               </div>
@@ -464,6 +516,16 @@ export default function BoiteReception() {
         onConfigSaved={() => {
           setHasConfig(true);
           syncEmails();
+        }}
+      />
+
+      <ReplyEmailDialog
+        open={replyDialogOpen}
+        onOpenChange={setReplyDialogOpen}
+        email={selectedEmail}
+        mode={replyMode}
+        onSent={() => {
+          toast.success(`Email ${replyMode === 'reply' ? 'envoyé' : 'transféré'} avec succès`);
         }}
       />
     </AppLayout>
