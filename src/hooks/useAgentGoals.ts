@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfDay, startOfWeek, startOfMonth, startOfQuarter, startOfYear, endOfDay, endOfWeek, endOfMonth, endOfQuarter, endOfYear } from 'date-fns';
 
 interface AgentGoal {
   id: string;
@@ -17,22 +16,55 @@ interface GoalWithProgress extends AgentGoal {
   percentage: number;
 }
 
+// Helper function to get UTC-based period ranges
 function getPeriodRange(period: string): { start: Date; end: Date } {
   const now = new Date();
+  const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
+  const today = new Date(todayStr + 'T00:00:00.000Z');
   
   switch (period) {
-    case 'daily':
-      return { start: startOfDay(now), end: endOfDay(now) };
-    case 'weekly':
-      return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
-    case 'monthly':
-      return { start: startOfMonth(now), end: endOfMonth(now) };
-    case 'quarterly':
-      return { start: startOfQuarter(now), end: endOfQuarter(now) };
-    case 'yearly':
-      return { start: startOfYear(now), end: endOfYear(now) };
+    case 'daily': {
+      const start = new Date(todayStr + 'T00:00:00.000Z');
+      const end = new Date(todayStr + 'T23:59:59.999Z');
+      return { start, end };
+    }
+    case 'weekly': {
+      // Get Monday of current week in UTC
+      const dayOfWeek = today.getUTCDay();
+      const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const monday = new Date(today);
+      monday.setUTCDate(today.getUTCDate() - diffToMonday);
+      monday.setUTCHours(0, 0, 0, 0);
+      
+      const sunday = new Date(monday);
+      sunday.setUTCDate(monday.getUTCDate() + 6);
+      sunday.setUTCHours(23, 59, 59, 999);
+      
+      return { start: monday, end: sunday };
+    }
+    case 'monthly': {
+      const year = today.getUTCFullYear();
+      const month = today.getUTCMonth();
+      const start = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+      const end = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
+      return { start, end };
+    }
+    case 'quarterly': {
+      const year = today.getUTCFullYear();
+      const month = today.getUTCMonth();
+      const quarterStart = Math.floor(month / 3) * 3;
+      const start = new Date(Date.UTC(year, quarterStart, 1, 0, 0, 0, 0));
+      const end = new Date(Date.UTC(year, quarterStart + 3, 0, 23, 59, 59, 999));
+      return { start, end };
+    }
+    case 'yearly': {
+      const year = today.getUTCFullYear();
+      const start = new Date(Date.UTC(year, 0, 1, 0, 0, 0, 0));
+      const end = new Date(Date.UTC(year, 11, 31, 23, 59, 59, 999));
+      return { start, end };
+    }
     default:
-      return { start: startOfMonth(now), end: endOfMonth(now) };
+      return getPeriodRange('monthly');
   }
 }
 
