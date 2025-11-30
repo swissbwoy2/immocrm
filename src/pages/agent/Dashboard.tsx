@@ -675,66 +675,233 @@ export default function AgentDashboard() {
             </CardContent>
           </Card>
 
-          {/* Documents clients */}
+          {/* Documents clients - Amélioré */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold">📄 Documents clients</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg font-semibold">📄 Documents clients</CardTitle>
+                <Button variant="outline" size="sm" onClick={() => navigate('/agent/documents')}>
+                  Voir tout
+                </Button>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {documents.length > 0 ? (
-                <>
-                  {documents.slice(0, 5).map(doc => {
-                    const getDocIcon = (type: string) => {
-                      if (type.includes('pdf')) return '📄';
-                      if (type.includes('image')) return '🖼️';
-                      if (type.includes('word')) return '📝';
-                      return '📎';
-                    };
+            <CardContent className="space-y-4">
+              {(() => {
+                // Regrouper les documents par client
+                const documentsByClient: Record<string, any[]> = documents.reduce((acc: Record<string, any[]>, doc) => {
+                  const clientId = doc.user_id;
+                  if (!acc[clientId]) {
+                    acc[clientId] = [];
+                  }
+                  acc[clientId].push(doc);
+                  return acc;
+                }, {});
 
-                    return (
-                      <div 
-                        key={doc.id}
-                        className="p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xl">{getDocIcon(doc.type)}</span>
-                              <p className="font-medium text-sm truncate">{doc.nom}</p>
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Uploadé le {new Date(doc.created_at).toLocaleDateString('fr-CH')}
-                            </p>
-                            {doc.taille && (
-                              <p className="text-xs text-muted-foreground">
-                                {(doc.taille / 1024).toFixed(0)} KB
-                              </p>
-                            )}
-                          </div>
-                          {doc.url && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => window.open(doc.url, '_blank')}
-                            >
-                              <Download className="h-4 w-4 mr-1" />
-                              Télécharger
-                            </Button>
-                          )}
-                        </div>
+                // Types de documents requis
+                const requiredTypes = ['fiche_salaire', 'extrait_poursuites', 'piece_identite'];
+                
+                // Calculer la complétude par client
+                const clientsWithDocs = Object.entries(documentsByClient).map(([userId, docs]: [string, any[]]) => {
+                  const client = clients.find(c => c.user_id === userId);
+                  const profile = profiles.get(userId);
+                  const uploadedTypes = [...new Set(docs.map((d: any) => d.type_document).filter(Boolean))] as string[];
+                  const completeness = Math.round((uploadedTypes.filter((t: string) => requiredTypes.includes(t)).length / requiredTypes.length) * 100);
+                  const recentDocs = docs.filter((d: any) => {
+                    const uploadDate = new Date(d.created_at);
+                    const daysSince = Math.floor((Date.now() - uploadDate.getTime()) / (1000 * 60 * 60 * 24));
+                    return daysSince <= 7;
+                  });
+                  
+                  return {
+                    userId,
+                    client,
+                    profile,
+                    docs,
+                    completeness,
+                    recentDocs,
+                    latestUpload: docs[0]?.created_at
+                  };
+                }).sort((a, b) => {
+                  // Trier par uploads récents d'abord, puis par complétude
+                  if (a.recentDocs.length !== b.recentDocs.length) {
+                    return b.recentDocs.length - a.recentDocs.length;
+                  }
+                  return a.completeness - b.completeness;
+                });
+
+                const getDocIcon = (type: string) => {
+                  if (type?.includes('pdf')) return '📄';
+                  if (type?.includes('image')) return '🖼️';
+                  if (type?.includes('word')) return '📝';
+                  return '📎';
+                };
+
+                const getTypeLabel = (type: string) => {
+                  const labels: Record<string, string> = {
+                    'fiche_salaire': 'Fiche salaire',
+                    'extrait_poursuites': 'Extrait poursuites',
+                    'piece_identite': 'Pièce ID',
+                    'autre': 'Autre'
+                  };
+                  return labels[type] || type || 'Autre';
+                };
+
+                const getTypeColor = (type: string) => {
+                  const colors: Record<string, string> = {
+                    'fiche_salaire': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+                    'extrait_poursuites': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+                    'piece_identite': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+                    'autre': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+                  };
+                  return colors[type] || colors['autre'];
+                };
+
+                if (clientsWithDocs.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
+                        <FileText className="w-6 h-6" />
                       </div>
-                    );
-                  })}
-                </>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-3">
-                    <FileText className="w-6 h-6" />
-                  </div>
-                  <p className="text-sm font-medium">Aucun document</p>
-                  <p className="text-xs mt-1">Les documents des clients apparaîtront ici</p>
-                </div>
-              )}
+                      <p className="text-sm font-medium">Aucun document</p>
+                      <p className="text-xs mt-1">Les documents des clients apparaîtront ici</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <>
+                    {/* Résumé global */}
+                    <div className="grid grid-cols-3 gap-3 pb-3 border-b">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">{documents.length}</p>
+                        <p className="text-xs text-muted-foreground">Documents</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-green-600">
+                          {clientsWithDocs.filter(c => c.completeness === 100).length}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Dossiers complets</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-amber-600">
+                          {documents.filter(d => {
+                            const days = Math.floor((Date.now() - new Date(d.created_at).getTime()) / (1000 * 60 * 60 * 24));
+                            return days <= 7;
+                          }).length}
+                        </p>
+                        <p className="text-xs text-muted-foreground">Cette semaine</p>
+                      </div>
+                    </div>
+
+                    {/* Liste par client */}
+                    <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                      {clientsWithDocs.slice(0, 5).map(({ userId, client, profile, docs, completeness, recentDocs }) => {
+                        const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client';
+                        const isComplete = completeness === 100;
+                        const hasRecentUploads = recentDocs.length > 0;
+                        
+                        return (
+                          <div 
+                            key={userId}
+                            className={`p-3 rounded-lg border transition-colors ${
+                              hasRecentUploads 
+                                ? 'bg-primary/5 border-primary/30' 
+                                : isComplete 
+                                ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' 
+                                : 'bg-muted/30 border-border'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-3 mb-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-sm truncate">{clientName}</p>
+                                  {hasRecentUploads && (
+                                    <Badge variant="default" className="text-xs animate-pulse">
+                                      Nouveau
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {docs.length} document{docs.length > 1 ? 's' : ''}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <div className={`text-sm font-bold ${
+                                  isComplete ? 'text-green-600' : completeness >= 66 ? 'text-amber-600' : 'text-red-600'
+                                }`}>
+                                  {completeness}%
+                                </div>
+                                <p className="text-xs text-muted-foreground">complet</p>
+                              </div>
+                            </div>
+
+                            {/* Barre de progression */}
+                            <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden mb-2">
+                              <div 
+                                className={`h-full transition-all ${
+                                  isComplete ? 'bg-green-500' : completeness >= 66 ? 'bg-amber-500' : 'bg-red-500'
+                                }`}
+                                style={{ width: `${completeness}%` }}
+                              />
+                            </div>
+
+                            {/* Types de documents */}
+                            <div className="flex flex-wrap gap-1">
+                              {([...new Set(docs.map((d: any) => d.type_document).filter(Boolean))] as string[]).slice(0, 4).map((type: string, i: number) => (
+                                <Badge key={i} variant="outline" className={`text-xs ${getTypeColor(type)}`}>
+                                  {getTypeLabel(type)}
+                                </Badge>
+                              ))}
+                              {docs.filter((d: any) => !d.type_document || d.type_document === 'autre').length > 0 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{docs.filter((d: any) => !d.type_document || d.type_document === 'autre').length} autre
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* Documents récents */}
+                            {recentDocs.length > 0 && (
+                              <div className="mt-2 pt-2 border-t border-border/50">
+                                <p className="text-xs text-muted-foreground mb-1">Récemment ajoutés:</p>
+                                {recentDocs.slice(0, 2).map(doc => (
+                                  <div key={doc.id} className="flex items-center gap-2 text-xs py-0.5">
+                                    <span>{getDocIcon(doc.type)}</span>
+                                    <span className="truncate flex-1">{doc.nom}</span>
+                                    <span className="text-muted-foreground">
+                                      {new Date(doc.created_at).toLocaleDateString('fr-CH')}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Bouton voir détails */}
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="w-full mt-2 h-7 text-xs"
+                              onClick={() => navigate(`/agent/clients/${client?.id}`)}
+                            >
+                              Voir le profil client
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {clientsWithDocs.length > 5 && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full"
+                        onClick={() => navigate('/agent/documents')}
+                      >
+                        Voir tous les documents ({documents.length})
+                      </Button>
+                    )}
+                  </>
+                );
+              })()}
             </CardContent>
           </Card>
 
