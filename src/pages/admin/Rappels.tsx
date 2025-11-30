@@ -132,7 +132,7 @@ export default function AdminRappels() {
   const uniqueTypes = [...new Set(reminders.map(r => r.reminder_type))];
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto px-4 py-4 md:py-6 space-y-4 md:space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Rappels envoyés</h1>
@@ -145,7 +145,7 @@ export default function AdminRappels() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">

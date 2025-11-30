@@ -238,7 +238,7 @@ export default function AgentDashboard() {
           </div>
 
           {/* KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 md:gap-4">
             <KPICard 
               title="Clients actifs" 
               value={clientsActifs} 
