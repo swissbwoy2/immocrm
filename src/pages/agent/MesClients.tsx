@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Trash2, Upload, Trash } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Trash2, Upload, Trash, Shield, CheckCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -81,30 +81,72 @@ const MesClients = () => {
 
       const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
 
+      // Load candidates for all clients
+      const clientIds = clientsData?.map(c => c.id) || [];
+      const { data: candidatesData } = await supabase
+        .from('client_candidates')
+        .select('*')
+        .in('client_id', clientIds);
+
+      // Group candidates by client_id
+      const candidatesMap = new Map<string, any[]>();
+      candidatesData?.forEach(candidate => {
+        const existing = candidatesMap.get(candidate.client_id) || [];
+        existing.push(candidate);
+        candidatesMap.set(candidate.client_id, existing);
+      });
+
+      // Types cumulatifs pour le calcul du revenu total
+      const CUMULATIVE_TYPES = ['titulaire_principal', 'co_titulaire', 'co_locataire'];
+
       // Transform data to match expected format
       const transformedClients = clientsData?.map(client => {
         const profile = profilesMap.get(client.user_id);
+        const candidates = candidatesMap.get(client.id) || [];
+        
+        // Calculate total revenue including cumulative candidates
+        const clientRevenu = Number(client.revenus_mensuels) || 0;
+        const candidatesRevenu = candidates
+          .filter(c => CUMULATIVE_TYPES.includes(c.type))
+          .reduce((sum, c) => sum + (Number(c.revenus_mensuels) || 0), 0);
+        const totalRevenus = clientRevenu + candidatesRevenu;
+        
+        // Calculate budget possible (33% of total revenue)
+        const budgetPossible = Math.round(totalRevenus / 3);
+        
+        // Find valid guarantor
+        const garant = candidates.find(c => {
+          if (c.type !== 'garant') return false;
+          const garantRevenu = Number(c.revenus_mensuels) || 0;
+          const budgetDemande = Number(client.budget_max) || 0;
+          return garantRevenu >= budgetDemande * 3;
+        });
+
         return {
           id: client.id,
           prenom: profile?.prenom || '',
           nom: profile?.nom || '',
           email: profile?.email || '',
           telephone: profile?.telephone || '',
-        adresse: '', // Not in DB
-        nationalite: client.nationalite,
-        typePermis: client.type_permis,
-        etatCivil: client.situation_familiale,
-        profession: client.profession,
-        employeur: client.secteur_activite,
-        revenuMensuel: client.revenus_mensuels,
-        budgetMax: client.budget_max,
-        nombrePiecesSouhaite: client.pieces?.toString() || '',
-        regions: client.region_recherche ? [client.region_recherche] : [],
+          adresse: '', // Not in DB
+          nationalite: client.nationalite,
+          typePermis: client.type_permis,
+          etatCivil: client.situation_familiale,
+          profession: client.profession,
+          employeur: client.secteur_activite,
+          revenuMensuel: client.revenus_mensuels,
+          totalRevenus,
+          budgetPossible,
+          budgetMax: client.budget_max,
+          nombrePiecesSouhaite: client.pieces?.toString() || '',
+          regions: client.region_recherche ? [client.region_recherche] : [],
           animaux: false,
           vehicules: false,
           dateInscription: client.date_ajout || client.created_at,
           agentId: client.agent_id,
           typeBien: client.type_bien,
+          garant: garant ? { nom: garant.nom, prenom: garant.prenom, revenus: garant.revenus_mensuels } : null,
+          candidates,
         };
       }) || [];
 
@@ -388,17 +430,34 @@ const MesClients = () => {
                     <div className="flex items-start gap-2 bg-muted/30 p-2 rounded">
                       <DollarSign className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Revenu mensuel</p>
-                        <p className="text-sm font-semibold">CHF {client.revenuMensuel?.toLocaleString() || 0}</p>
+                        <p className="text-xs text-muted-foreground">Revenu total (dossier)</p>
+                        <p className="text-sm font-semibold">CHF {client.totalRevenus?.toLocaleString() || 0}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-2 bg-primary/10 p-2 rounded">
                       <DollarSign className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Budget maximum</p>
-                        <p className="text-sm font-semibold text-primary">CHF {client.budgetMax?.toLocaleString() || 0}</p>
+                        <p className="text-xs text-muted-foreground">Budget possible</p>
+                        <p className={`text-sm font-semibold ${client.budgetPossible >= (client.budgetMax || 0) ? 'text-green-600' : 'text-primary'}`}>
+                          CHF {client.budgetPossible?.toLocaleString() || 0}
+                        </p>
                       </div>
                     </div>
+                    {client.garant && (
+                      <div className="flex items-start gap-2 bg-green-500/10 p-2 rounded">
+                        <Shield className="h-4 w-4 mt-0.5 text-green-600 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground">Garant valide</p>
+                          <p className="text-sm font-semibold text-green-600">
+                            {client.garant.prenom} {client.garant.nom}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            CHF {Number(client.garant.revenus)?.toLocaleString() || 0}/mois
+                          </p>
+                        </div>
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                      </div>
+                    )}
                   </div>
 
                   {/* Contact */}
