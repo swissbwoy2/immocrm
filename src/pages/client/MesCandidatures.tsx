@@ -10,16 +10,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
   MapPin, Calendar, Square, Home, FileText, ThumbsUp, ThumbsDown, ExternalLink, 
   PartyPopper, AlertTriangle, Clock, Check, Key, Star, Mail, MapPinned, Sparkles,
-  FileSignature, Building2, CalendarCheck, AlertCircle
+  FileSignature, Building2, CalendarCheck, AlertCircle, ChevronDown, ChevronUp,
+  MessageSquare, User, Phone
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { CandidatureWorkflowTimeline } from "@/components/CandidatureWorkflowTimeline";
+import { useNavigate } from "react-router-dom";
 
 const WORKFLOW_STATUTS = {
   envoyee: { label: 'Offre envoyée', color: 'secondary', step: 1 },
@@ -57,6 +61,7 @@ interface DateProposee {
 const MesCandidatures = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [offres, setOffres] = useState<any[]>([]);
   const [candidatures, setCandidatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +70,19 @@ const MesCandidatures = () => {
   const [recommendationEmails, setRecommendationEmails] = useState(['', '', '', '', '']);
   const [sendingRecommendation, setSendingRecommendation] = useState(false);
   const [currentCandidatureId, setCurrentCandidatureId] = useState<string | null>(null);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+
+  const toggleCard = (offreId: string) => {
+    setExpandedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(offreId)) {
+        newSet.delete(offreId);
+      } else {
+        newSet.add(offreId);
+      }
+      return newSet;
+    });
+  };
 
   useEffect(() => {
     loadData();
@@ -345,52 +363,106 @@ const MesCandidatures = () => {
               const candidature = candidatures.find(c => c.offre_id === offre.id);
               const statut = candidature?.statut || offre.statut;
               const datesProposees = candidature?.dates_signature_proposees as DateProposee[] | null;
+              const isExpanded = expandedCards.has(offre.id);
 
               return (
-                <Card key={offre.id} className={statut === 'acceptee' ? 'border-green-500 border-2' : ''}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2 flex-wrap">
-                          <CardTitle className="text-xl">{offre.adresse}</CardTitle>
-                          <Badge variant={getStatutBadgeVariant(statut)}>
-                            {getStatutLabel(statut)}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-4 w-4" />
-                            Envoyée le {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
+                <Collapsible key={offre.id} open={isExpanded} onOpenChange={() => toggleCard(offre.id)}>
+                  <Card className={`${statut === 'acceptee' ? 'border-green-500 border-2' : ''} transition-all duration-200 hover:shadow-md`}>
+                    <CollapsibleTrigger asChild>
+                      <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors rounded-t-lg">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2 flex-wrap">
+                              <CardTitle className="text-xl">{offre.adresse}</CardTitle>
+                              <Badge variant={getStatutBadgeVariant(statut)}>
+                                {getStatutLabel(statut)}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-4 w-4" />
+                                Envoyée le {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Home className="h-4 w-4" />
+                                {offre.pieces} pièces
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Square className="h-4 w-4" />
+                                {offre.surface} m²
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-4">
+                            <div className="text-right">
+                              <p className="text-2xl font-bold text-primary">CHF {offre.prix?.toLocaleString()}</p>
+                              <p className="text-sm text-muted-foreground">par mois</p>
+                            </div>
+                            <div className="p-2 text-muted-foreground">
+                              {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-primary">CHF {offre.prix?.toLocaleString()}</p>
-                        <p className="text-sm text-muted-foreground">par mois</p>
-                      </div>
-                    </div>
-                  </CardHeader>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {isExpanded ? 'Cliquez pour réduire' : 'Cliquez pour voir les détails et options'}
+                        </p>
+                      </CardHeader>
+                    </CollapsibleTrigger>
 
-                  <CardContent className="space-y-4">
-                    {/* Property info */}
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="flex items-center gap-2">
-                        <Home className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{offre.pieces} pièces</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Square className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{offre.surface} m²</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{offre.etage} étage</span>
-                      </div>
-                    </div>
+                    <CollapsibleContent>
+                      <CardContent className="space-y-4 pt-0">
+                        {/* Timeline */}
+                        {candidature && (
+                          <div className="pb-4 border-b">
+                            <CandidatureWorkflowTimeline currentStatut={statut} />
+                          </div>
+                        )}
 
-                    {offre.description && (
-                      <p className="text-sm text-muted-foreground">{offre.description}</p>
-                    )}
+                        {/* Property details */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <Home className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{offre.pieces} pièces</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Square className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{offre.surface} m²</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{offre.etage || '-'} étage</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{offre.type_bien || 'Appartement'}</span>
+                          </div>
+                        </div>
+
+                        {offre.description && (
+                          <p className="text-sm text-muted-foreground">{offre.description}</p>
+                        )}
+
+                        {/* Quick actions */}
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); navigate('/client/messagerie'); }}
+                          >
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Contacter mon agent
+                          </Button>
+                          {offre.lien_annonce && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={(e) => { e.stopPropagation(); window.open(offre.lien_annonce, '_blank'); }}
+                            >
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Voir l'annonce
+                            </Button>
+                          )}
+                        </div>
 
                     {/* WORKFLOW SECTIONS */}
                     
@@ -664,16 +736,10 @@ const MesCandidatures = () => {
                         </p>
                       </div>
                     )}
-
-                    {/* View listing button */}
-                    {offre.lien_annonce && (
-                      <Button variant="outline" onClick={() => window.open(offre.lien_annonce, '_blank')} className="w-full">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Voir l'annonce
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
               );
             })}
           </div>
