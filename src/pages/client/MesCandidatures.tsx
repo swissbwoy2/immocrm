@@ -2,50 +2,75 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Calendar, Square, Home, FileText, Building, ThumbsUp, ThumbsDown, ExternalLink } from "lucide-react";
+import { 
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger 
+} from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { 
+  MapPin, Calendar, Square, Home, FileText, ThumbsUp, ThumbsDown, ExternalLink, 
+  PartyPopper, AlertTriangle, Clock, Check, Key, Star, Mail, MapPinned, Sparkles,
+  FileSignature, Building2, CalendarCheck, AlertCircle
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+
+const WORKFLOW_STATUTS = {
+  envoyee: { label: 'Offre envoyée', color: 'secondary', step: 1 },
+  vue: { label: 'Offre vue', color: 'outline', step: 1 },
+  interesse: { label: 'Intéressé', color: 'default', step: 2 },
+  visite_planifiee: { label: 'Visite planifiée', color: 'default', step: 3 },
+  visite_effectuee: { label: 'Visite effectuée', color: 'default', step: 4 },
+  candidature_deposee: { label: 'Candidature déposée', color: 'default', step: 5 },
+  en_attente: { label: 'En attente réponse', color: 'secondary', step: 6 },
+  acceptee: { label: '🎉 Acceptée', color: 'default', step: 7 },
+  refusee: { label: 'Refusée', color: 'destructive', step: 0 },
+  bail_conclu: { label: 'Bail conclu', color: 'default', step: 8 },
+  attente_bail: { label: 'Attente bail régie', color: 'secondary', step: 9 },
+  bail_recu: { label: 'Bail reçu - Choisir date', color: 'default', step: 10 },
+  signature_planifiee: { label: 'Signature planifiée', color: 'default', step: 11 },
+  signature_effectuee: { label: 'Bail signé', color: 'default', step: 12 },
+  etat_lieux_fixe: { label: 'État des lieux fixé', color: 'default', step: 13 },
+  cles_remises: { label: '🔑 Clés remises', color: 'default', step: 14 },
+};
 
 const getStatutLabel = (statut: string) => {
-  switch (statut) {
-    case 'envoyee': return 'Envoyée';
-    case 'vue': return 'Vue';
-    case 'interesse': return 'Intéressé';
-    case 'visite_planifiee': return 'Visite planifiée';
-    case 'visite_effectuee': return 'Visite effectuée';
-    case 'candidature_deposee': return 'Candidature déposée';
-    case 'acceptee': return 'Acceptée ✓';
-    case 'refusee': return 'Refusée';
-    default: return statut;
-  }
+  return WORKFLOW_STATUTS[statut as keyof typeof WORKFLOW_STATUTS]?.label || statut;
 };
 
 const getStatutBadgeVariant = (statut: string): "default" | "secondary" | "destructive" | "outline" => {
-  switch (statut) {
-    case 'envoyee': return 'secondary';
-    case 'vue': return 'outline';
-    case 'interesse': return 'default';
-    case 'visite_planifiee': return 'default';
-    case 'visite_effectuee': return 'default';
-    case 'candidature_deposee': return 'default';
-    case 'acceptee': return 'default';
-    case 'refusee': return 'destructive';
-    default: return 'secondary';
-  }
+  const config = WORKFLOW_STATUTS[statut as keyof typeof WORKFLOW_STATUTS];
+  return (config?.color as any) || 'secondary';
 };
+
+interface DateProposee {
+  date: string;
+  lieu: string;
+}
 
 const MesCandidatures = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [offres, setOffres] = useState<any[]>([]);
+  const [candidatures, setCandidatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDateIndex, setSelectedDateIndex] = useState<number | null>(null);
+  const [showRecommendationDialog, setShowRecommendationDialog] = useState(false);
+  const [recommendationEmails, setRecommendationEmails] = useState(['', '', '', '', '']);
+  const [sendingRecommendation, setSendingRecommendation] = useState(false);
+  const [currentCandidatureId, setCurrentCandidatureId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadOffres();
+    loadData();
   }, [user]);
 
-  const loadOffres = async () => {
+  const loadData = async () => {
     if (!user) return;
 
     try {
@@ -56,38 +81,27 @@ const MesCandidatures = () => {
         .maybeSingle();
 
       if (!clientData) {
-        console.log('No client data found');
+        setLoading(false);
         return;
       }
 
       // Load offres
-      const { data: offresData, error } = await supabase
+      const { data: offresData } = await supabase
         .from('offres')
         .select('*')
         .eq('client_id', clientData.id)
         .order('date_envoi', { ascending: false });
 
-      if (error) throw error;
-
-      // Also load candidatures to get real candidature status
+      // Load candidatures with all new fields
       const { data: candidaturesData } = await supabase
         .from('candidatures')
-        .select('offre_id, statut, date_depot, dossier_complet')
+        .select('*')
         .eq('client_id', clientData.id);
 
-      // Merge offres with candidature status
-      const offresWithCandidatures = (offresData || []).map(offre => {
-        const candidature = candidaturesData?.find(c => c.offre_id === offre.id);
-        return {
-          ...offre,
-          candidature_statut: candidature?.statut || null,
-          candidature_date: candidature?.date_depot || null,
-        };
-      });
-
-      setOffres(offresWithCandidatures);
+      setOffres(offresData || []);
+      setCandidatures(candidaturesData || []);
     } catch (error) {
-      console.error('Error loading offres:', error);
+      console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
@@ -105,7 +119,7 @@ const MesCandidatures = () => {
 
       if (error) throw error;
 
-      // Créer un message automatique pour notifier l'agent
+      // Notify agent
       const { data: clientData } = await supabase
         .from('clients')
         .select('id, agent_id')
@@ -113,7 +127,6 @@ const MesCandidatures = () => {
         .maybeSingle();
 
       if (clientData?.agent_id) {
-        // Trouver ou créer une conversation
         let { data: conv } = await supabase
           .from('conversations')
           .select('id')
@@ -136,36 +149,178 @@ const MesCandidatures = () => {
 
         if (conv) {
           const messageContent = newStatut === 'interesse' 
-            ? `✅ Le client est intéressé par l'offre : ${offre.adresse} (${offre.prix} CHF/mois)`
-            : `❌ Le client a refusé l'offre : ${offre.adresse}`;
+            ? `✅ Je suis intéressé par l'offre : ${offre.adresse} (${offre.prix} CHF/mois)`
+            : `❌ Je ne suis pas intéressé par l'offre : ${offre.adresse}`;
 
-          await supabase
-            .from('messages')
-            .insert({
-              conversation_id: conv.id,
-              sender_id: user?.id,
-              sender_type: 'client',
-              content: messageContent,
-            });
+          await supabase.from('messages').insert({
+            conversation_id: conv.id,
+            sender_id: user?.id,
+            sender_type: 'client',
+            content: messageContent,
+          });
         }
       }
 
-      setOffres(prev => 
-        prev.map(o => o.id === offreId ? { ...o, statut: newStatut } : o)
-      );
+      setOffres(prev => prev.map(o => o.id === offreId ? { ...o, statut: newStatut } : o));
 
       toast({
         title: "Statut mis à jour",
-        description: `L'offre a été ${newStatut === 'interesse' ? 'approuvée' : 'refusée'} et l'agent a été notifié.`,
+        description: `L'offre a été ${newStatut === 'interesse' ? 'marquée comme intéressante' : 'refusée'}.`,
       });
     } catch (error) {
-      console.error('Error updating statut:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour le statut.",
-        variant: "destructive",
-      });
+      console.error('Error:', error);
+      toast({ title: "Erreur", variant: "destructive" });
     }
+  };
+
+  const handleAccepterConclure = async (candidatureId: string) => {
+    try {
+      const { error } = await supabase
+        .from('candidatures')
+        .update({ 
+          statut: 'bail_conclu',
+          client_accepte_conclure: true,
+          client_accepte_conclure_at: new Date().toISOString()
+        })
+        .eq('id', candidatureId);
+
+      if (error) throw error;
+
+      // Notify agent
+      const candidature = candidatures.find(c => c.id === candidatureId);
+      const offre = offres.find(o => o.id === candidature?.offre_id);
+      
+      if (offre?.agent_id) {
+        const { data: agent } = await supabase
+          .from('agents')
+          .select('user_id')
+          .eq('id', offre.agent_id)
+          .maybeSingle();
+
+        if (agent) {
+          await supabase.from('notifications').insert({
+            user_id: agent.user_id,
+            type: 'bail_conclu',
+            title: '🎉 Client accepte de conclure le bail',
+            message: `Le client souhaite conclure le bail pour ${offre.adresse}`,
+            link: '/agent/candidatures',
+          });
+        }
+      }
+
+      await loadData();
+      toast({ title: "Bail accepté", description: "Votre agent va valider avec la régie." });
+    } catch (error) {
+      console.error('Error:', error);
+      toast({ title: "Erreur", variant: "destructive" });
+    }
+  };
+
+  const handleChoisirDate = async (candidatureId: string, dateIndex: number) => {
+    try {
+      const candidature = candidatures.find(c => c.id === candidatureId);
+      const dates = candidature?.dates_signature_proposees as DateProposee[] | null;
+      if (!dates || !dates[dateIndex]) return;
+
+      const selectedDate = dates[dateIndex];
+
+      const { error } = await supabase
+        .from('candidatures')
+        .update({ 
+          statut: 'signature_planifiee',
+          date_signature_choisie: selectedDate.date,
+        })
+        .eq('id', candidatureId);
+
+      if (error) throw error;
+
+      // Create calendar event
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id, agent_id')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      const offre = offres.find(o => o.id === candidature?.offre_id);
+
+      if (clientData) {
+        await supabase.from('calendar_events').insert({
+          title: `Signature bail - ${offre?.adresse || 'Bail'}`,
+          event_type: 'signature',
+          event_date: selectedDate.date,
+          description: `Lieu: ${selectedDate.lieu}`,
+          client_id: clientData.id,
+          agent_id: clientData.agent_id,
+          created_by: user?.id,
+        });
+
+        // Notify agent
+        if (clientData.agent_id) {
+          const { data: agent } = await supabase
+            .from('agents')
+            .select('user_id')
+            .eq('id', clientData.agent_id)
+            .maybeSingle();
+
+          if (agent) {
+            await supabase.from('notifications').insert({
+              user_id: agent.user_id,
+              type: 'date_signature_choisie',
+              title: '📅 Date de signature choisie',
+              message: `Le client a choisi la date du ${format(new Date(selectedDate.date), 'dd/MM/yyyy à HH:mm', { locale: fr })}`,
+              link: '/agent/candidatures',
+            });
+          }
+        }
+      }
+
+      await loadData();
+      toast({ title: "Date choisie", description: "Le rendez-vous a été ajouté à votre agenda." });
+    } catch (error) {
+      console.error('Error:', error);
+      toast({ title: "Erreur", variant: "destructive" });
+    }
+  };
+
+  const handleSendRecommendations = async () => {
+    const validEmails = recommendationEmails.filter(e => e.trim() && e.includes('@'));
+    if (validEmails.length === 0) {
+      toast({ title: "Aucun email valide", variant: "destructive" });
+      return;
+    }
+
+    setSendingRecommendation(true);
+    try {
+      const { error } = await supabase.functions.invoke('send-recommendation-email', {
+        body: { emails: validEmails, userId: user?.id }
+      });
+
+      if (error) throw error;
+
+      if (currentCandidatureId) {
+        await supabase
+          .from('candidatures')
+          .update({ 
+            recommandation_envoyee: true,
+            emails_recommandation: validEmails
+          })
+          .eq('id', currentCandidatureId);
+      }
+
+      setShowRecommendationDialog(false);
+      setRecommendationEmails(['', '', '', '', '']);
+      await loadData();
+      toast({ title: "Recommandations envoyées", description: `${validEmails.length} email(s) envoyé(s)` });
+    } catch (error) {
+      console.error('Error:', error);
+      toast({ title: "Erreur d'envoi", variant: "destructive" });
+    } finally {
+      setSendingRecommendation(false);
+    }
+  };
+
+  const openGoogleMaps = () => {
+    window.open('https://g.page/r/CQpCCH4CyVqsEBM/review', '_blank');
   };
 
   if (loading) {
@@ -186,117 +341,341 @@ const MesCandidatures = () => {
 
         {offres.length > 0 ? (
           <div className="grid gap-6">
-            {offres.map((offre) => (
-              <Card key={offre.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <CardTitle className="text-xl">{offre.adresse}</CardTitle>
-                        <Badge variant={getStatutBadgeVariant(offre.candidature_statut || offre.statut)}>
-                          {getStatutLabel(offre.candidature_statut || offre.statut)}
-                        </Badge>
-                        {offre.candidature_statut && offre.candidature_date && (
-                          <span className="text-xs text-muted-foreground">
-                            Candidature déposée le {new Date(offre.candidature_date).toLocaleDateString('fr-CH')}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          Envoyée le {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
+            {offres.map((offre) => {
+              const candidature = candidatures.find(c => c.offre_id === offre.id);
+              const statut = candidature?.statut || offre.statut;
+              const datesProposees = candidature?.dates_signature_proposees as DateProposee[] | null;
+
+              return (
+                <Card key={offre.id} className={statut === 'acceptee' ? 'border-green-500 border-2' : ''}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                          <CardTitle className="text-xl">{offre.adresse}</CardTitle>
+                          <Badge variant={getStatutBadgeVariant(statut)}>
+                            {getStatutLabel(statut)}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            Envoyée le {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-primary">CHF {offre.prix.toLocaleString()}</p>
-                      <p className="text-sm text-muted-foreground">par mois</p>
-                    </div>
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="flex items-center gap-2">
-                      <Home className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{offre.pieces} pièces</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Square className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{offre.surface} m²</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{offre.etage} étage</span>
-                    </div>
-                  </div>
-
-                  {offre.description && (
-                    <p className="text-sm text-muted-foreground">{offre.description}</p>
-                  )}
-
-                  {offre.commentaires && (
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <FileText className="h-4 w-4" />
-                        <span className="font-medium text-sm">Commentaires</span>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-primary">CHF {offre.prix?.toLocaleString()}</p>
+                        <p className="text-sm text-muted-foreground">par mois</p>
                       </div>
-                      <p className="text-sm">{offre.commentaires}</p>
                     </div>
-                  )}
+                  </CardHeader>
 
-                  <div className="space-y-3 pt-4">
-                    {offre.statut === 'envoyee' && (
-                      <>
-                        <Button 
-                          onClick={() => updateStatut(offre.id, 'interesse')}
-                          className="w-full"
-                        >
+                  <CardContent className="space-y-4">
+                    {/* Property info */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="flex items-center gap-2">
+                        <Home className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{offre.pieces} pièces</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Square className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{offre.surface} m²</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{offre.etage} étage</span>
+                      </div>
+                    </div>
+
+                    {offre.description && (
+                      <p className="text-sm text-muted-foreground">{offre.description}</p>
+                    )}
+
+                    {/* WORKFLOW SECTIONS */}
+                    
+                    {/* Initial offer - Accept/Refuse */}
+                    {statut === 'envoyee' && (
+                      <div className="space-y-3 pt-4 border-t">
+                        <Button onClick={() => updateStatut(offre.id, 'interesse')} className="w-full">
                           <ThumbsUp className="h-4 w-4 mr-2" />
                           Je suis intéressé
                         </Button>
-                        <Button 
-                          onClick={() => updateStatut(offre.id, 'refusee')}
-                          variant="destructive"
-                          className="w-full"
-                        >
+                        <Button onClick={() => updateStatut(offre.id, 'refusee')} variant="destructive" className="w-full">
                           <ThumbsDown className="h-4 w-4 mr-2" />
                           Pas intéressé
                         </Button>
-                      </>
+                      </div>
                     )}
-                    
-                    {offre.statut === 'interesse' && (
+
+                    {/* Interested - waiting for visit */}
+                    {statut === 'interesse' && (
                       <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
                         <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                          ℹ️ Vous avez marqué cette offre comme intéressante. Votre agent va organiser une visite et gérer la suite du processus.
+                          ℹ️ Vous avez marqué cette offre comme intéressante. Votre agent va organiser une visite.
                         </p>
                       </div>
                     )}
-                    
-                    {['visite_planifiee', 'visite_effectuee', 'candidature_deposee'].includes(offre.statut) && (
+
+                    {/* Visit/Candidature in progress */}
+                    {['visite_planifiee', 'visite_effectuee', 'candidature_deposee', 'en_attente'].includes(statut) && (
+                      <div className="p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <p className="text-sm font-medium text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          Votre agent gère activement cette candidature.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* 🎉 ACCEPTED - Celebration + Conclude button */}
+                    {statut === 'acceptee' && (
+                      <div className="space-y-4 pt-4 border-t">
+                        <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border border-green-300 dark:border-green-700 rounded-xl text-center">
+                          <PartyPopper className="h-12 w-12 mx-auto text-green-600 mb-3" />
+                          <h3 className="text-xl font-bold text-green-800 dark:text-green-200 mb-2">
+                            🎉 Félicitations ! Votre candidature a été acceptée !
+                          </h3>
+                          <p className="text-green-700 dark:text-green-300">
+                            Vous pouvez maintenant conclure le bail pour ce logement.
+                          </p>
+                        </div>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button className="w-full" size="lg">
+                              <FileSignature className="h-5 w-5 mr-2" />
+                              Conclure le bail
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="flex items-center gap-2">
+                                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                                Avertissement important
+                              </AlertDialogTitle>
+                              <AlertDialogDescription className="text-left space-y-3">
+                                <p>
+                                  En acceptant de conclure ce bail, vous vous engagez à respecter les conditions suivantes :
+                                </p>
+                                <div className="p-4 bg-amber-50 dark:bg-amber-950 rounded-lg border border-amber-200 dark:border-amber-800">
+                                  <p className="font-medium text-amber-800 dark:text-amber-200">
+                                    ⚠️ Des frais pourront être facturés en cas de désistement par la régie ou le propriétaire 
+                                    de l'offre, en alignement avec leurs conditions générales.
+                                  </p>
+                                </div>
+                                <p>Êtes-vous sûr de vouloir continuer ?</p>
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Annuler</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => candidature && handleAccepterConclure(candidature.id)}>
+                                J'accepte et je conclus
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    )}
+
+                    {/* Bail conclu - waiting for régie */}
+                    {statut === 'bail_conclu' && (
+                      <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2">
+                          <Building2 className="h-4 w-4" />
+                          Votre agent valide avec la régie. Vous serez notifié dès réception du bail.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Attente bail */}
+                    {statut === 'attente_bail' && (
+                      <div className="p-4 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <p className="text-sm font-medium text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          En attente de la réception du bail par la régie...
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Bail reçu - Choose signature date */}
+                    {statut === 'bail_recu' && datesProposees && datesProposees.length > 0 && (
+                      <div className="space-y-4 pt-4 border-t">
+                        <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                          <h4 className="font-semibold text-green-800 dark:text-green-200 flex items-center gap-2 mb-3">
+                            <CalendarCheck className="h-5 w-5" />
+                            Le bail est prêt ! Choisissez une date de signature :
+                          </h4>
+                          <p className="text-sm text-green-700 dark:text-green-300 mb-4">
+                            📍 Lieu : {candidature?.lieu_signature || 'Chemin de l\'Esparcette 5, 1023 Crissier'}
+                          </p>
+                          <RadioGroup 
+                            value={selectedDateIndex?.toString()} 
+                            onValueChange={(val) => setSelectedDateIndex(parseInt(val))}
+                            className="space-y-3"
+                          >
+                            {datesProposees.map((d, idx) => (
+                              <div key={idx} className="flex items-center space-x-3 p-3 bg-white dark:bg-gray-800 rounded-lg border">
+                                <RadioGroupItem value={idx.toString()} id={`date-${idx}`} />
+                                <Label htmlFor={`date-${idx}`} className="flex-1 cursor-pointer">
+                                  <span className="font-medium">
+                                    {format(new Date(d.date), 'EEEE dd MMMM yyyy à HH:mm', { locale: fr })}
+                                  </span>
+                                </Label>
+                              </div>
+                            ))}
+                          </RadioGroup>
+                          <Button 
+                            className="w-full mt-4" 
+                            disabled={selectedDateIndex === null}
+                            onClick={() => candidature && selectedDateIndex !== null && handleChoisirDate(candidature.id, selectedDateIndex)}
+                          >
+                            <Check className="h-4 w-4 mr-2" />
+                            Confirmer cette date
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Signature planifiée */}
+                    {statut === 'signature_planifiee' && (
+                      <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <h4 className="font-semibold text-blue-800 dark:text-blue-200 flex items-center gap-2 mb-2">
+                          <CalendarCheck className="h-5 w-5" />
+                          Signature prévue
+                        </h4>
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          📅 {candidature?.date_signature_choisie && format(new Date(candidature.date_signature_choisie), 'EEEE dd MMMM yyyy à HH:mm', { locale: fr })}
+                        </p>
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          📍 {candidature?.lieu_signature || 'Chemin de l\'Esparcette 5, 1023 Crissier'}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Signature effectuée - waiting for état des lieux */}
+                    {statut === 'signature_effectuee' && (
                       <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-                        <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                          ✅ Votre agent gère activement cette candidature. Consultez la messagerie pour plus d'informations.
+                        <p className="text-sm font-medium text-green-800 dark:text-green-200 flex items-center gap-2">
+                          <Check className="h-4 w-4" />
+                          ✅ Bail signé ! En attente de la date de l'état des lieux...
                         </p>
                       </div>
                     )}
-                    
+
+                    {/* État des lieux fixé - IMPORTANT ALERT */}
+                    {statut === 'etat_lieux_fixe' && (
+                      <div className="space-y-4 pt-4 border-t">
+                        <div className="p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                          <h4 className="font-semibold text-blue-800 dark:text-blue-200 flex items-center gap-2 mb-2">
+                            <Key className="h-5 w-5" />
+                            État des lieux et remise des clés
+                          </h4>
+                          <p className="text-sm text-blue-700 dark:text-blue-300">
+                            📅 {candidature?.date_etat_lieux && format(new Date(candidature.date_etat_lieux), 'EEEE dd MMMM yyyy', { locale: fr })}
+                            {candidature?.heure_etat_lieux && ` à ${candidature.heure_etat_lieux}`}
+                          </p>
+                        </div>
+
+                        <div className="p-5 bg-red-50 dark:bg-red-950 border-2 border-red-300 dark:border-red-700 rounded-xl">
+                          <h4 className="font-bold text-red-800 dark:text-red-200 flex items-center gap-2 mb-3">
+                            <AlertCircle className="h-5 w-5" />
+                            ⚠️ IMPORTANT - À préparer AVANT l'état des lieux
+                          </h4>
+                          <p className="text-sm text-red-700 dark:text-red-300 mb-4">
+                            Pour l'obtention de vos clés à l'état des lieux, il vous faut <strong>impérativement</strong> :
+                          </p>
+                          <ul className="space-y-2 text-sm text-red-700 dark:text-red-300">
+                            <li className="flex items-center gap-2">
+                              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                              <span>✅ Avoir souscrit une <strong>garantie de loyer</strong></span>
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                              <span>✅ Avoir payé le <strong>premier loyer</strong></span>
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                              <span>✅ Avoir souscrit une <strong>assurance RC</strong> (si vous n'en avez pas déjà une)</span>
+                            </li>
+                          </ul>
+                          <p className="text-sm text-red-800 dark:text-red-200 mt-4 font-medium">
+                            🚫 Sans l'un de ces éléments, la régie pourrait refuser de vous remettre les clés !
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Clés remises - Recommendation */}
+                    {statut === 'cles_remises' && (
+                      <div className="space-y-4 pt-4 border-t">
+                        <div className="p-6 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border border-purple-200 dark:border-purple-700 rounded-xl text-center">
+                          <Key className="h-12 w-12 mx-auto text-purple-600 mb-3" />
+                          <h3 className="text-xl font-bold text-purple-800 dark:text-purple-200 mb-2">
+                            🔑 Bienvenue chez vous !
+                          </h3>
+                          <p className="text-purple-700 dark:text-purple-300 mb-4">
+                            Félicitations ! Vous avez reçu les clés de votre nouveau logement.
+                          </p>
+                          
+                          {!candidature?.recommandation_envoyee && (
+                            <div className="space-y-3">
+                              <p className="text-sm text-purple-600 dark:text-purple-400">
+                                Aidez-nous à aider d'autres personnes comme vous !
+                              </p>
+                              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                                <Button 
+                                  variant="outline" 
+                                  onClick={() => {
+                                    setCurrentCandidatureId(candidature?.id);
+                                    setShowRecommendationDialog(true);
+                                  }}
+                                  className="border-purple-300 text-purple-700 hover:bg-purple-50"
+                                >
+                                  <Mail className="h-4 w-4 mr-2" />
+                                  Recommander à 5 amis
+                                </Button>
+                                <Button 
+                                  variant="outline"
+                                  onClick={openGoogleMaps}
+                                  className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                                >
+                                  <Star className="h-4 w-4 mr-2" />
+                                  Noter sur Google
+                                </Button>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {candidature?.recommandation_envoyee && (
+                            <p className="text-sm text-green-600 flex items-center justify-center gap-2">
+                              <Sparkles className="h-4 w-4" />
+                              Merci pour vos recommandations !
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Refused */}
+                    {statut === 'refusee' && (
+                      <div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
+                        <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                          ❌ Cette candidature a été refusée. Contactez votre agent pour plus d'informations.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* View listing button */}
                     {offre.lien_annonce && (
-                      <Button 
-                        variant="outline"
-                        onClick={() => window.open(offre.lien_annonce, '_blank')}
-                        className="w-full"
-                      >
+                      <Button variant="outline" onClick={() => window.open(offre.lien_annonce, '_blank')} className="w-full">
                         <ExternalLink className="h-4 w-4 mr-2" />
                         Voir l'annonce
                       </Button>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         ) : (
           <Card>
@@ -306,6 +685,46 @@ const MesCandidatures = () => {
           </Card>
         )}
       </div>
+
+      {/* Recommendation Dialog */}
+      <Dialog open={showRecommendationDialog} onOpenChange={setShowRecommendationDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Recommander Immo-Rama
+            </DialogTitle>
+            <DialogDescription>
+              Partagez votre expérience avec vos proches ! Entrez jusqu'à 5 adresses email.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-4">
+            {recommendationEmails.map((email, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground w-6">{idx + 1}.</span>
+                <Input
+                  type="email"
+                  placeholder="email@exemple.com"
+                  value={email}
+                  onChange={(e) => {
+                    const newEmails = [...recommendationEmails];
+                    newEmails[idx] = e.target.value;
+                    setRecommendationEmails(newEmails);
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRecommendationDialog(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleSendRecommendations} disabled={sendingRecommendation}>
+              {sendingRecommendation ? 'Envoi...' : 'Envoyer les recommandations'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

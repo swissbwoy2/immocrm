@@ -120,35 +120,92 @@ export type Database = {
       }
       candidatures: {
         Row: {
+          agent_valide_regie: boolean | null
+          agent_valide_regie_at: string | null
+          alerte_cles_vue: boolean | null
+          avis_google_envoye: boolean | null
+          bail_recu: boolean | null
+          bail_recu_at: string | null
+          cles_remises: boolean | null
+          cles_remises_at: string | null
+          client_accepte_conclure: boolean | null
+          client_accepte_conclure_at: string | null
           client_id: string
           created_at: string | null
           date_depot: string | null
+          date_etat_lieux: string | null
+          date_signature_choisie: string | null
+          dates_signature_proposees: Json | null
           dossier_complet: boolean | null
+          emails_recommandation: Json | null
+          heure_etat_lieux: string | null
           id: string
+          lieu_signature: string | null
           message_client: string | null
           offre_id: string
+          recommandation_envoyee: boolean | null
+          signature_effectuee: boolean | null
+          signature_effectuee_at: string | null
           statut: string | null
           updated_at: string | null
         }
         Insert: {
+          agent_valide_regie?: boolean | null
+          agent_valide_regie_at?: string | null
+          alerte_cles_vue?: boolean | null
+          avis_google_envoye?: boolean | null
+          bail_recu?: boolean | null
+          bail_recu_at?: string | null
+          cles_remises?: boolean | null
+          cles_remises_at?: string | null
+          client_accepte_conclure?: boolean | null
+          client_accepte_conclure_at?: string | null
           client_id: string
           created_at?: string | null
           date_depot?: string | null
+          date_etat_lieux?: string | null
+          date_signature_choisie?: string | null
+          dates_signature_proposees?: Json | null
           dossier_complet?: boolean | null
+          emails_recommandation?: Json | null
+          heure_etat_lieux?: string | null
           id?: string
+          lieu_signature?: string | null
           message_client?: string | null
           offre_id: string
+          recommandation_envoyee?: boolean | null
+          signature_effectuee?: boolean | null
+          signature_effectuee_at?: string | null
           statut?: string | null
           updated_at?: string | null
         }
         Update: {
+          agent_valide_regie?: boolean | null
+          agent_valide_regie_at?: string | null
+          alerte_cles_vue?: boolean | null
+          avis_google_envoye?: boolean | null
+          bail_recu?: boolean | null
+          bail_recu_at?: string | null
+          cles_remises?: boolean | null
+          cles_remises_at?: string | null
+          client_accepte_conclure?: boolean | null
+          client_accepte_conclure_at?: string | null
           client_id?: string
           created_at?: string | null
           date_depot?: string | null
+          date_etat_lieux?: string | null
+          date_signature_choisie?: string | null
+          dates_signature_proposees?: Json | null
           dossier_complet?: boolean | null
+          emails_recommandation?: Json | null
+          heure_etat_lieux?: string | null
           id?: string
+          lieu_signature?: string | null
           message_client?: string | null
           offre_id?: string
+          recommandation_envoyee?: boolean | null
+          signature_effectuee?: boolean | null
+          signature_effectuee_at?: string | null
           statut?: string | null
           updated_at?: string | null
         }
