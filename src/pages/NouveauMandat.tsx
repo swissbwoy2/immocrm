@@ -263,6 +263,12 @@ export default function NouveauMandat() {
   const StepComponent = STEPS[currentStep].component;
   const progress = ((currentStep + 1) / STEPS.length) * 100;
 
+  // Callback to jump to candidats step (step 5 = index 4)
+  const handleAddCoBuyer = () => {
+    setCurrentStep(4);
+    window.scrollTo(0, 0);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10 py-8 px-4">
       <div className="max-w-2xl mx-auto">
@@ -291,7 +297,11 @@ export default function NouveauMandat() {
         {/* Form */}
         <Card>
           <CardContent className="pt-6">
-            <StepComponent data={formData} onChange={handleChange} />
+            {currentStep === 3 ? (
+              <MandatFormStep4 data={formData} onChange={handleChange} onAddCoBuyer={handleAddCoBuyer} />
+            ) : (
+              <StepComponent data={formData} onChange={handleChange} />
+            )}
           </CardContent>
 
           <CardFooter className="flex justify-between gap-4 border-t pt-6">

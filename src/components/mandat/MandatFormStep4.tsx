@@ -6,15 +6,18 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { MandatFormData, DECOUVERTES_AGENCE, TYPES_BIEN, PIECES_OPTIONS, REGIONS } from './types';
-import { Home, Building2, AlertCircle, CheckCircle, Calculator, Users, TrendingUp, Wallet, Info } from 'lucide-react';
+import { Home, Building2, AlertCircle, CheckCircle, Calculator, Users, TrendingUp, Wallet, Info, UserPlus } from 'lucide-react';
+import CapacityGauge from './CapacityGauge';
 
 interface Props {
   data: MandatFormData;
   onChange: (data: Partial<MandatFormData>) => void;
+  onAddCoBuyer?: () => void;
 }
 
-export default function MandatFormStep4({ data, onChange }: Props) {
+export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props) {
   const isRental = data.type_recherche === 'Louer';
   const isPurchase = data.type_recherche === 'Acheter';
 
@@ -166,7 +169,19 @@ export default function MandatFormStep4({ data, onChange }: Props) {
                     </span>
                   </div>
                 </div>
-                {!hasCandidates && (
+                {!hasCandidates && revenuManquant > 0 && onAddCoBuyer && (
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3 w-full gap-2 border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-950"
+                    onClick={onAddCoBuyer}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Ajouter un co-acquéreur maintenant
+                  </Button>
+                )}
+                {!hasCandidates && !revenuManquant && (
                   <p className="text-xs text-blue-500 dark:text-blue-600 mt-2">
                     💡 Vous pouvez ajouter des co-acquéreurs à l'étape suivante pour augmenter votre capacité d'emprunt.
                   </p>
@@ -303,6 +318,15 @@ export default function MandatFormStep4({ data, onChange }: Props) {
                     )}
                   </div>
                   
+                  {/* Visual Gauge */}
+                  <div className="flex justify-center mb-6 py-4 bg-background rounded-lg">
+                    <CapacityGauge 
+                      currentValue={tauxEffort}
+                      maxValue={50}
+                      label="Taux d'effort"
+                    />
+                  </div>
+                  
                   {/* Main metrics */}
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     {/* Taux d'effort - Detailed */}
@@ -375,9 +399,22 @@ export default function MandatFormStep4({ data, onChange }: Props) {
                     {revenuManquant > 0 && (
                       <Alert variant="destructive" className="mt-2">
                         <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>
-                          Il vous manque <strong>{revenuManquant.toLocaleString('fr-CH')} CHF/mois</strong> de revenus.
-                          {!hasCandidates && ' Ajoutez un co-acquéreur à l\'étape suivante pour augmenter vos revenus.'}
+                        <AlertDescription className="flex flex-col gap-2">
+                          <span>
+                            Il vous manque <strong>{revenuManquant.toLocaleString('fr-CH')} CHF/mois</strong> de revenus.
+                          </span>
+                          {!hasCandidates && onAddCoBuyer && (
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              size="sm" 
+                              className="w-fit gap-2 border-red-300 bg-white/50 dark:bg-black/20 text-destructive hover:bg-red-100 dark:hover:bg-red-950"
+                              onClick={onAddCoBuyer}
+                            >
+                              <UserPlus className="h-4 w-4" />
+                              Ajouter un co-acquéreur maintenant
+                            </Button>
+                          )}
                         </AlertDescription>
                       </Alert>
                     )}
