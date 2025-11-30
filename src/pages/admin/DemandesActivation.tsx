@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { 
   UserPlus, Clock, Mail, Phone, CheckCircle, XCircle, Search,
   RefreshCw, AlertTriangle, Eye, FileText, CreditCard, Calendar,
-  User, Briefcase, Home
+  User, Briefcase, Home, Receipt, Loader2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -22,6 +22,7 @@ interface DemandeMandat {
   prenom: string;
   nom: string;
   telephone: string;
+  adresse: string;
   statut: string;
   created_at: string;
   type_recherche: string;
@@ -30,6 +31,8 @@ interface DemandeMandat {
   budget_max: number;
   region_recherche: string;
   date_paiement: string | null;
+  abaninja_invoice_id: string | null;
+  abaninja_invoice_ref: string | null;
   [key: string]: any;
 }
 
@@ -49,6 +52,7 @@ export default function DemandesActivation() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [activating, setActivating] = useState<string | null>(null);
+  const [creatingInvoice, setCreatingInvoice] = useState<string | null>(null);
   const [selectedDemande, setSelectedDemande] = useState<DemandeMandat | null>(null);
 
   useEffect(() => {
@@ -81,6 +85,67 @@ export default function DemandesActivation() {
       toast.error('Erreur lors du chargement');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateAbaNinjaInvoice = async (demande: DemandeMandat) => {
+    try {
+      setCreatingInvoice(demande.id);
+
+      // Step 1: Create client in AbaNinja
+      console.log('Creating AbaNinja client...');
+      const { data: clientResult, error: clientError } = await supabase.functions.invoke('create-abaninja-client', {
+        body: {
+          prenom: demande.prenom,
+          nom: demande.nom,
+          email: demande.email,
+          telephone: demande.telephone,
+          adresse: demande.adresse
+        }
+      });
+
+      if (clientError) throw clientError;
+      if (!clientResult.success) throw new Error(clientResult.error);
+
+      console.log('AbaNinja client created:', clientResult.client_uuid);
+
+      // Step 2: Create invoice in AbaNinja
+      console.log('Creating AbaNinja invoice...');
+      const { data: invoiceResult, error: invoiceError } = await supabase.functions.invoke('create-abaninja-invoice', {
+        body: {
+          client_uuid: clientResult.client_uuid,
+          type_recherche: demande.type_recherche,
+          prenom: demande.prenom,
+          nom: demande.nom,
+          email: demande.email,
+          demande_id: demande.id
+        }
+      });
+
+      if (invoiceError) throw invoiceError;
+      if (!invoiceResult.success) throw new Error(invoiceResult.error);
+
+      console.log('AbaNinja invoice created:', invoiceResult.invoice_id);
+
+      // Step 3: Update demande with AbaNinja references
+      const { error: updateError } = await supabase
+        .from('demandes_mandat')
+        .update({
+          statut: 'facture_envoyee',
+          abaninja_invoice_id: invoiceResult.invoice_id,
+          abaninja_invoice_ref: invoiceResult.invoice_number
+        })
+        .eq('id', demande.id);
+
+      if (updateError) throw updateError;
+
+      toast.success('Client et facture créés dans AbaNinja ! Facture envoyée par email.');
+      await loadData();
+    } catch (error: any) {
+      console.error('Error creating AbaNinja invoice:', error);
+      toast.error(error.message || 'Erreur lors de la création de la facture');
+    } finally {
+      setCreatingInvoice(null);
     }
   };
 
@@ -154,7 +219,23 @@ export default function DemandesActivation() {
     }
   };
 
+  const getStatusBadge = (statut: string) => {
+    switch (statut) {
+      case 'en_attente':
+        return <Badge variant="destructive">En attente</Badge>;
+      case 'facture_envoyee':
+        return <Badge variant="outline" className="border-blue-500 text-blue-600">Facture envoyée</Badge>;
+      case 'paye':
+        return <Badge variant="default" className="bg-green-600">Payé - À activer</Badge>;
+      case 'active':
+        return <Badge variant="secondary">Activé</Badge>;
+      default:
+        return <Badge variant="outline">{statut}</Badge>;
+    }
+  };
+
   const newDemandes = demandes.filter(d => d.statut === 'en_attente');
+  const invoicedDemandes = demandes.filter(d => d.statut === 'facture_envoyee');
   const paidDemandes = demandes.filter(d => d.statut === 'paye');
   const activeDemandes = demandes.filter(d => d.statut === 'active');
 
@@ -189,7 +270,7 @@ export default function DemandesActivation() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-orange-100 dark:bg-orange-950">
@@ -197,7 +278,18 @@ export default function DemandesActivation() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{newDemandes.length}</p>
-                <p className="text-xs text-muted-foreground">Nouvelles demandes</p>
+                <p className="text-xs text-muted-foreground">Nouvelles</p>
+              </div>
+            </div>
+          </Card>
+          <Card className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-950">
+                <Receipt className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{invoicedDemandes.length}</p>
+                <p className="text-xs text-muted-foreground">Facturées</p>
               </div>
             </div>
           </Card>
@@ -208,14 +300,14 @@ export default function DemandesActivation() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{paidDemandes.length}</p>
-                <p className="text-xs text-muted-foreground">Payées (à activer)</p>
+                <p className="text-xs text-muted-foreground">Payées</p>
               </div>
             </div>
           </Card>
           <Card className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-950">
-                <CheckCircle className="h-5 w-5 text-blue-600" />
+              <div className="p-2 rounded-full bg-emerald-100 dark:bg-emerald-950">
+                <CheckCircle className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{activeDemandes.length}</p>
@@ -230,7 +322,7 @@ export default function DemandesActivation() {
               </div>
               <div>
                 <p className="text-2xl font-bold">{inactiveProfiles.length}</p>
-                <p className="text-xs text-muted-foreground">Comptes inactifs</p>
+                <p className="text-xs text-muted-foreground">Inactifs</p>
               </div>
             </div>
           </Card>
@@ -239,8 +331,8 @@ export default function DemandesActivation() {
         <Tabs defaultValue="demandes" className="space-y-4">
           <TabsList>
             <TabsTrigger value="demandes">
-              Demandes de mandat {newDemandes.length + paidDemandes.length > 0 && (
-                <Badge variant="destructive" className="ml-2">{newDemandes.length + paidDemandes.length}</Badge>
+              Demandes de mandat {newDemandes.length + invoicedDemandes.length + paidDemandes.length > 0 && (
+                <Badge variant="destructive" className="ml-2">{newDemandes.length + invoicedDemandes.length + paidDemandes.length}</Badge>
               )}
             </TabsTrigger>
             <TabsTrigger value="comptes">Comptes inactifs</TabsTrigger>
@@ -261,6 +353,7 @@ export default function DemandesActivation() {
                         key={demande.id}
                         className={`p-4 rounded-lg border ${
                           demande.statut === 'en_attente' ? 'bg-orange-50/50 border-orange-200 dark:bg-orange-950/20' :
+                          demande.statut === 'facture_envoyee' ? 'bg-blue-50/50 border-blue-200 dark:bg-blue-950/20' :
                           demande.statut === 'paye' ? 'bg-green-50/50 border-green-200 dark:bg-green-950/20' :
                           'bg-muted/30'
                         }`}
@@ -269,13 +362,7 @@ export default function DemandesActivation() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-semibold">{demande.prenom} {demande.nom}</p>
-                              <Badge variant={
-                                demande.statut === 'en_attente' ? 'destructive' :
-                                demande.statut === 'paye' ? 'default' : 'secondary'
-                              }>
-                                {demande.statut === 'en_attente' ? 'En attente paiement' :
-                                 demande.statut === 'paye' ? 'Payé - À activer' : 'Activé'}
-                              </Badge>
+                              {getStatusBadge(demande.statut)}
                               <Badge variant="outline">{demande.type_recherche}</Badge>
                             </div>
                             <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mt-2">
@@ -289,8 +376,17 @@ export default function DemandesActivation() {
                                 <CreditCard className="h-3 w-3" />{demande.montant_acompte} CHF
                               </span>
                             </div>
+                            {demande.abaninja_invoice_ref && (
+                              <p className="text-xs text-blue-600 mt-1">
+                                <Receipt className="h-3 w-3 inline mr-1" />
+                                Facture AbaNinja: {demande.abaninja_invoice_ref}
+                              </p>
+                            )}
                             <p className="text-xs text-muted-foreground mt-2">
                               Soumis le {format(new Date(demande.created_at), 'dd MMM yyyy à HH:mm', { locale: fr })}
+                              {demande.date_paiement && (
+                                <> • Payé le {format(new Date(demande.date_paiement), 'dd MMM yyyy', { locale: fr })}</>
+                              )}
                             </p>
                           </div>
                           <div className="flex flex-col gap-2">
@@ -307,15 +403,48 @@ export default function DemandesActivation() {
                                 <div className="grid grid-cols-2 gap-4 py-4 text-sm">
                                   <div><strong>Email:</strong> {demande.email}</div>
                                   <div><strong>Téléphone:</strong> {demande.telephone}</div>
-                                  <div><strong>Revenus:</strong> {demande.revenus_mensuels?.toLocaleString()} CHF</div>
-                                  <div><strong>Budget:</strong> {demande.budget_max?.toLocaleString()} CHF</div>
-                                  <div><strong>Région:</strong> {demande.region_recherche}</div>
+                                  <div><strong>Adresse:</strong> {demande.adresse}</div>
+                                  <div><strong>Nationalité:</strong> {demande.nationalite}</div>
+                                  <div><strong>Permis:</strong> {demande.type_permis}</div>
+                                  <div><strong>État civil:</strong> {demande.etat_civil}</div>
+                                  <div className="col-span-2 border-t pt-2 mt-2">
+                                    <strong>Situation financière</strong>
+                                  </div>
+                                  <div><strong>Profession:</strong> {demande.profession}</div>
+                                  <div><strong>Employeur:</strong> {demande.employeur}</div>
+                                  <div><strong>Revenus:</strong> {demande.revenus_mensuels?.toLocaleString()} CHF/mois</div>
+                                  <div><strong>Budget max:</strong> {demande.budget_max?.toLocaleString()} CHF</div>
+                                  <div className="col-span-2 border-t pt-2 mt-2">
+                                    <strong>Recherche</strong>
+                                  </div>
                                   <div><strong>Type:</strong> {demande.type_recherche}</div>
+                                  <div><strong>Type de bien:</strong> {demande.type_bien}</div>
+                                  <div><strong>Pièces:</strong> {demande.pieces_recherche}</div>
+                                  <div><strong>Région:</strong> {demande.region_recherche}</div>
+                                  {demande.souhaits_particuliers && (
+                                    <div className="col-span-2">
+                                      <strong>Souhaits:</strong> {demande.souhaits_particuliers}
+                                    </div>
+                                  )}
                                 </div>
                               </DialogContent>
                             </Dialog>
                             
                             {demande.statut === 'en_attente' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleCreateAbaNinjaInvoice(demande)}
+                                disabled={creatingInvoice === demande.id}
+                              >
+                                {creatingInvoice === demande.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <><Receipt className="h-4 w-4 mr-1" />Facturer</>
+                                )}
+                              </Button>
+                            )}
+                            {(demande.statut === 'en_attente' || demande.statut === 'facture_envoyee') && (
                               <Button size="sm" onClick={() => handleMarkAsPaid(demande)}>
                                 <CreditCard className="h-4 w-4 mr-1" />Payé
                               </Button>

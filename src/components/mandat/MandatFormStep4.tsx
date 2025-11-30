@@ -57,7 +57,6 @@ export default function MandatFormStep4({ data, onChange }: Props) {
             <Input
               id="nombre_occupants"
               type="number"
-              min="1"
               value={data.nombre_occupants || ''}
               onChange={(e) => onChange({ nombre_occupants: Number(e.target.value) })}
               required

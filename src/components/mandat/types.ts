@@ -96,7 +96,7 @@ export const ETATS_CIVILS = [
 ];
 
 export const UTILISATIONS_LOGEMENT = [
-  'Principal', 'Secondaire', 'Professionnel'
+  'Professionnel', 'Principal', 'Secondaire'
 ];
 
 export const DECOUVERTES_AGENCE = [

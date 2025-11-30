@@ -122,6 +122,23 @@ export default function MandatFormStep7({ data, onChange }: Props) {
         </div>
       </Card>
 
+      {/* Informations bancaires */}
+      <Card className="p-4 border-dashed">
+        <h3 className="font-semibold mb-3 flex items-center gap-2">
+          <CreditCard className="h-4 w-4" />
+          Informations bancaires pour le paiement
+        </h3>
+        <div className="space-y-2 text-sm">
+          <p><span className="text-muted-foreground">Bénéficiaire:</span> <strong>IMMO-RAMA SA</strong></p>
+          <p><span className="text-muted-foreground">IBAN:</span> <strong>CH93 0076 7000 E525 8472 5</strong></p>
+          <p><span className="text-muted-foreground">BIC:</span> <strong>BCVLCH2LXXX</strong></p>
+          <p><span className="text-muted-foreground">Banque:</span> Banque Cantonale Vaudoise</p>
+          <p className="text-muted-foreground text-xs mt-2">
+            Une facture vous sera envoyée par email après la soumission du formulaire.
+          </p>
+        </div>
+      </Card>
+
       {/* Code promo */}
       <div className="space-y-2">
         <Label htmlFor="code_promo">Code promo (optionnel)</Label>
