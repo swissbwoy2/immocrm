@@ -6,10 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { ArrowUp, ArrowDown, FileText, Image as ImageIcon, AlertTriangle, Loader2, FilePlus } from 'lucide-react';
-import { mergeDocuments, isSupported } from '@/utils/pdfMerger';
+import { Switch } from '@/components/ui/switch';
+import { Card, CardContent } from '@/components/ui/card';
+import { ArrowUp, ArrowDown, FileText, Image as ImageIcon, AlertTriangle, Loader2, FilePlus, User, Shield, Users } from 'lucide-react';
+import { mergeDocuments, mergeDocumentsWithSeparators, isSupported } from '@/utils/pdfMerger';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { ClientCandidate, CANDIDATE_TYPE_LABELS } from '@/hooks/useClientCandidates';
 
 interface Document {
   id: string;
@@ -17,6 +20,7 @@ interface Document {
   url: string;
   type: string;
   type_document?: string;
+  candidate_id?: string;
 }
 
 interface MergeDocumentsDialogProps {
@@ -26,6 +30,7 @@ interface MergeDocumentsDialogProps {
   clientId: string;
   clientUserId: string;
   clientName?: string;
+  candidates?: ClientCandidate[];
   onSuccess: () => void;
 }
 
@@ -36,6 +41,7 @@ export function MergeDocumentsDialog({
   clientId,
   clientUserId,
   clientName,
+  candidates = [],
   onSuccess,
 }: MergeDocumentsDialogProps) {
   const { toast } = useToast();
@@ -43,6 +49,16 @@ export function MergeDocumentsDialog({
   const [fileName, setFileName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0, status: '' });
+  const [addSeparators, setAddSeparators] = useState(true);
+  const [addCoverPage, setAddCoverPage] = useState(true);
+  const [useGroupedMode, setUseGroupedMode] = useState(candidates.length > 0);
+
+  // Documents groupés par personne
+  const clientDocs = documents.filter(d => !d.candidate_id && isSupported(d));
+  const candidateDocsMap = new Map<string, Document[]>();
+  candidates.forEach(c => {
+    candidateDocsMap.set(c.id, documents.filter(d => d.candidate_id === c.id && isSupported(d)));
+  });
 
   // Filtrer les documents supportés
   const supportedDocs = documents.filter(isSupported);
@@ -55,8 +71,9 @@ export function MergeDocumentsDialog({
       const name = clientName?.replace(/\s+/g, '_') || 'Client';
       setFileName(`Dossier_complet_${name}_${date}.pdf`);
       setProgress({ current: 0, total: 0, status: '' });
+      setUseGroupedMode(candidates.length > 0);
     }
-  }, [open, clientName]);
+  }, [open, clientName, candidates.length]);
 
   const toggleDocument = (doc: Document) => {
     setSelectedDocs(prev => {
@@ -103,82 +120,137 @@ export function MergeDocumentsDialog({
   };
 
   const handleMerge = async () => {
-    if (selectedDocs.length < 2) {
+    if (useGroupedMode) {
+      // Mode groupé avec séparateurs
+      const personsDocuments = [];
+      
+      // Client principal
+      const clientSelectedDocs = selectedDocs.filter(d => !d.candidate_id);
+      if (clientSelectedDocs.length > 0) {
+        personsDocuments.push({
+          personName: clientName || 'Client',
+          personType: 'client',
+          documents: clientSelectedDocs,
+        });
+      }
+      
+      // Candidats
+      for (const candidate of candidates) {
+        const candidateDocs = selectedDocs.filter(d => d.candidate_id === candidate.id);
+        if (candidateDocs.length > 0) {
+          personsDocuments.push({
+            personName: `${candidate.prenom} ${candidate.nom}`,
+            personType: candidate.type,
+            documents: candidateDocs,
+          });
+        }
+      }
+      
+      if (personsDocuments.reduce((sum, p) => sum + p.documents.length, 0) < 2) {
+        toast({
+          title: 'Sélection insuffisante',
+          description: 'Veuillez sélectionner au moins 2 documents',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      setIsProcessing(true);
+      try {
+        const mergedBlob = await mergeDocumentsWithSeparators(
+          personsDocuments,
+          { addSeparators, addCoverPage, mainTitle: `Dossier de ${clientName}` },
+          (current, total, status) => {
+            setProgress({ current, total, status });
+          }
+        );
+        
+        await saveMergedDocument(mergedBlob);
+      } catch (error) {
+        console.error('Error merging documents:', error);
+        toast({
+          title: 'Erreur',
+          description: 'Impossible de créer le dossier complet',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    } else {
+      // Mode simple sans groupement
+      if (selectedDocs.length < 2) {
+        toast({
+          title: 'Sélection insuffisante',
+          description: 'Veuillez sélectionner au moins 2 documents',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setIsProcessing(true);
+      try {
+        const mergedBlob = await mergeDocuments(selectedDocs, (current, total, status) => {
+          setProgress({ current, total, status });
+        });
+
+        await saveMergedDocument(mergedBlob);
+      } catch (error) {
+        console.error('Error merging documents:', error);
+        toast({
+          title: 'Erreur',
+          description: 'Impossible de créer le dossier complet',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+  };
+
+  const saveMergedDocument = async (mergedBlob: Blob) => {
+    // Vérifier la taille du fichier (max 1GB)
+    const maxSize = 1024 * 1024 * 1024;
+    if (mergedBlob.size > maxSize) {
       toast({
-        title: 'Sélection insuffisante',
-        description: 'Veuillez sélectionner au moins 2 documents',
+        title: 'Fichier trop volumineux',
+        description: `Le dossier fusionné fait ${(mergedBlob.size / (1024 * 1024)).toFixed(1)} MB. La limite est de 1 GB.`,
         variant: 'destructive',
       });
       return;
     }
 
-    setIsProcessing(true);
-    try {
-      // Fusionner les documents
-      const mergedBlob = await mergeDocuments(selectedDocs, (current, total, status) => {
-        setProgress({ current, total, status });
-      });
+    const storagePath = `${clientUserId}/${Date.now()}_dossier_complet.pdf`;
 
-      // Vérifier la taille du fichier (max 1GB)
-      const maxSize = 1024 * 1024 * 1024; // 1GB
-      if (mergedBlob.size > maxSize) {
-        toast({
-          title: 'Fichier trop volumineux',
-          description: `Le dossier fusionné fait ${(mergedBlob.size / (1024 * 1024)).toFixed(1)} MB. La limite est de 1 GB. Essayez de sélectionner moins de documents.`,
-          variant: 'destructive',
-        });
-        setIsProcessing(false);
-        return;
-      }
+    const { error: uploadError } = await supabase.storage
+      .from('client-documents')
+      .upload(storagePath, mergedBlob);
 
-      // Uploader le fichier fusionné
-      const fileExt = 'pdf';
-      const storagePath = `${clientUserId}/${Date.now()}_dossier_complet.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('client-documents')
-        .upload(storagePath, mergedBlob);
-
-      if (uploadError) {
-        if (uploadError.message?.includes('size') || uploadError.message?.includes('exceeded')) {
-          throw new Error('Le fichier est trop volumineux. Essayez de sélectionner moins de documents.');
-        }
-        throw uploadError;
-      }
-
-      // Créer l'entrée en base
-      const user = await supabase.auth.getUser();
-      const { error: dbError } = await supabase
-        .from('documents')
-        .insert({
-          user_id: user.data.user?.id || clientUserId,
-          client_id: clientId,
-          nom: fileName,
-          type: 'application/pdf',
-          type_document: 'dossier_complet',
-          taille: mergedBlob.size,
-          url: storagePath,
-        });
-
-      if (dbError) throw dbError;
-
-      toast({
-        title: 'Dossier créé',
-        description: `Le fichier "${fileName}" a été créé avec succès`,
-      });
-
-      onSuccess();
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error merging documents:', error);
-      toast({
-        title: 'Erreur',
-        description: 'Impossible de créer le dossier complet',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsProcessing(false);
+    if (uploadError) {
+      throw uploadError;
     }
+
+    const user = await supabase.auth.getUser();
+    const { error: dbError } = await supabase
+      .from('documents')
+      .insert({
+        user_id: user.data.user?.id || clientUserId,
+        client_id: clientId,
+        nom: fileName,
+        type: 'application/pdf',
+        type_document: 'dossier_complet',
+        taille: mergedBlob.size,
+        url: storagePath,
+      });
+
+    if (dbError) throw dbError;
+
+    toast({
+      title: 'Dossier créé',
+      description: `Le fichier "${fileName}" a été créé avec succès`,
+    });
+
+    onSuccess();
+    onOpenChange(false);
   };
 
   const isDocSelected = (docId: string) => selectedDocs.some(d => d.id === docId);
@@ -206,77 +278,176 @@ export function MergeDocumentsDialog({
             />
           </div>
 
-          {/* Liste des documents */}
-          <div className="space-y-2">
-            <Label>Sélectionnez et ordonnez les documents ({selectedDocs.length} sélectionné{selectedDocs.length > 1 ? 's' : ''})</Label>
-            
-            {supportedDocs.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p>Aucun document compatible (PDF ou image)</p>
-              </div>
-            ) : (
-              <div className="space-y-2 border rounded-lg p-2">
-                {supportedDocs.map((doc) => {
-                  const Icon = getFileIcon(doc.type);
-                  const selected = isDocSelected(doc.id);
-                  const index = selectedIndex(doc.id);
-                  
-                  return (
-                    <div
-                      key={doc.id}
-                      className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                        selected ? 'bg-primary/10 border-primary' : 'bg-background hover:bg-muted/50'
-                      }`}
-                    >
-                      <Checkbox
-                        checked={selected}
-                        onCheckedChange={() => toggleDocument(doc)}
+          {/* Options de fusion */}
+          {candidates.length > 0 && (
+            <Card>
+              <CardContent className="pt-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="grouped-mode" className="cursor-pointer">Mode groupé par personne</Label>
+                  <Switch
+                    id="grouped-mode"
+                    checked={useGroupedMode}
+                    onCheckedChange={setUseGroupedMode}
+                  />
+                </div>
+                {useGroupedMode && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="cover-page" className="cursor-pointer">Page de garde</Label>
+                      <Switch
+                        id="cover-page"
+                        checked={addCoverPage}
+                        onCheckedChange={setAddCoverPage}
                       />
-                      
-                      {selected && (
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() => moveDocument(index, 'up')}
-                            disabled={index === 0}
-                          >
-                            <ArrowUp className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            onClick={() => moveDocument(index, 'down')}
-                            disabled={index === selectedDocs.length - 1}
-                          >
-                            <ArrowDown className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      )}
-                      
-                      {selected && (
-                        <Badge variant="secondary" className="text-xs min-w-[24px] justify-center">
-                          {index + 1}
-                        </Badge>
-                      )}
-                      
-                      <Icon className="w-4 h-4 text-primary flex-shrink-0" />
-                      
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{doc.nom}</p>
-                        <Badge variant="outline" className="text-xs mt-1">
-                          {getDocTypeLabel(doc.type_document)}
-                        </Badge>
-                      </div>
                     </div>
-                  );
-                })}
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="separators" className="cursor-pointer">Pages de séparation</Label>
+                      <Switch
+                        id="separators"
+                        checked={addSeparators}
+                        onCheckedChange={setAddSeparators}
+                      />
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Liste des documents groupée */}
+          {useGroupedMode && candidates.length > 0 ? (
+            <div className="space-y-4">
+              {/* Documents du client */}
+              <div className="border rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <User className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium text-sm">👤 {clientName || 'Client principal'}</span>
+                  <Badge variant="outline" className="text-xs">{clientDocs.length} docs</Badge>
+                </div>
+                <div className="space-y-2">
+                  {clientDocs.map(doc => {
+                    const Icon = getFileIcon(doc.type);
+                    const selected = isDocSelected(doc.id);
+                    return (
+                      <div key={doc.id} className={`flex items-center gap-2 p-2 rounded ${selected ? 'bg-primary/10' : 'hover:bg-muted/50'}`}>
+                        <Checkbox checked={selected} onCheckedChange={() => toggleDocument(doc)} />
+                        <Icon className="w-4 h-4 text-primary" />
+                        <span className="text-sm truncate flex-1">{doc.nom}</span>
+                      </div>
+                    );
+                  })}
+                  {clientDocs.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-2">Aucun document</p>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
+
+              {/* Documents des candidats */}
+              {candidates.map(candidate => {
+                const candidateDocs = candidateDocsMap.get(candidate.id) || [];
+                const TypeIcon = candidate.type === 'garant' ? Shield : Users;
+                const iconColor = candidate.type === 'garant' ? 'text-purple-600' : 'text-green-600';
+                
+                return (
+                  <div key={candidate.id} className="border rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <TypeIcon className={`w-4 h-4 ${iconColor}`} />
+                      <span className="font-medium text-sm">{CANDIDATE_TYPE_LABELS[candidate.type].split(' ')[0]} {candidate.prenom} {candidate.nom}</span>
+                      <Badge variant="outline" className="text-xs">{candidateDocs.length} docs</Badge>
+                    </div>
+                    <div className="space-y-2">
+                      {candidateDocs.map(doc => {
+                        const Icon = getFileIcon(doc.type);
+                        const selected = isDocSelected(doc.id);
+                        return (
+                          <div key={doc.id} className={`flex items-center gap-2 p-2 rounded ${selected ? 'bg-primary/10' : 'hover:bg-muted/50'}`}>
+                            <Checkbox checked={selected} onCheckedChange={() => toggleDocument(doc)} />
+                            <Icon className="w-4 h-4 text-primary" />
+                            <span className="text-sm truncate flex-1">{doc.nom}</span>
+                          </div>
+                        );
+                      })}
+                      {candidateDocs.length === 0 && (
+                        <p className="text-xs text-muted-foreground text-center py-2">Aucun document</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* Mode simple */
+            <div className="space-y-2">
+              <Label>Sélectionnez et ordonnez les documents ({selectedDocs.length} sélectionné{selectedDocs.length > 1 ? 's' : ''})</Label>
+              
+              {supportedDocs.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>Aucun document compatible (PDF ou image)</p>
+                </div>
+              ) : (
+                <div className="space-y-2 border rounded-lg p-2">
+                  {supportedDocs.map((doc) => {
+                    const Icon = getFileIcon(doc.type);
+                    const selected = isDocSelected(doc.id);
+                    const index = selectedIndex(doc.id);
+                    
+                    return (
+                      <div
+                        key={doc.id}
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                          selected ? 'bg-primary/10 border-primary' : 'bg-background hover:bg-muted/50'
+                        }`}
+                      >
+                        <Checkbox
+                          checked={selected}
+                          onCheckedChange={() => toggleDocument(doc)}
+                        />
+                        
+                        {selected && (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => moveDocument(index, 'up')}
+                              disabled={index === 0}
+                            >
+                              <ArrowUp className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => moveDocument(index, 'down')}
+                              disabled={index === selectedDocs.length - 1}
+                            >
+                              <ArrowDown className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                        
+                        {selected && (
+                          <Badge variant="secondary" className="text-xs min-w-[24px] justify-center">
+                            {index + 1}
+                          </Badge>
+                        )}
+                        
+                        <Icon className="w-4 h-4 text-primary flex-shrink-0" />
+                        
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{doc.nom}</p>
+                          <Badge variant="outline" className="text-xs mt-1">
+                            {getDocTypeLabel(doc.type_document)}
+                          </Badge>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Avertissement pour les documents non supportés */}
           {unsupportedDocs.length > 0 && (

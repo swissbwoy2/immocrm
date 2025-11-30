@@ -16,6 +16,11 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AccountActivationModal } from '@/components/AccountActivationModal';
 import { ClientStatsSection } from '@/components/stats/ClientStatsSection';
 import { MissingDocumentsAlert } from '@/components/MissingDocumentsAlert';
+import { ClientCandidatesManager } from '@/components/ClientCandidatesManager';
+import { SolvabilityAlert } from '@/components/SolvabilityAlert';
+import { DossierChecklistCard } from '@/components/DossierChecklistCard';
+import { useClientCandidates } from '@/hooks/useClientCandidates';
+import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
@@ -30,6 +35,7 @@ export default function ClientDashboard() {
   const [loading, setLoading] = useState(true);
   const [profileActif, setProfileActif] = useState<boolean | null>(null);
   const [showActivationModal, setShowActivationModal] = useState(false);
+  const [clientProfile, setClientProfile] = useState<any>(null);
 
   useEffect(() => {
     loadData();
@@ -83,12 +89,13 @@ export default function ClientDashboard() {
       // Check if profile is active
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('actif')
+        .select('actif, prenom, nom')
         .eq('id', user.id)
         .single();
 
       const isActif = profileData?.actif ?? false;
       setProfileActif(isActif);
+      setClientProfile(profileData);
       
       // Show activation modal if profile is not active
       if (!isActif) {
@@ -389,6 +396,10 @@ export default function ClientDashboard() {
     );
   }
 
+  // Hook pour les candidats supplémentaires
+  const { candidates, refresh: refreshCandidates } = useClientCandidates(client?.id);
+  const solvabilityResult = useSolvabilityCheck(client, candidates);
+
   const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
   const daysRemaining = calculateDaysRemaining(client.date_ajout || client.created_at);
   const progressPercent = Math.min((daysElapsed / 90) * 100, 100);
@@ -407,6 +418,8 @@ export default function ClientDashboard() {
     candidaturesDeposees: offres.filter(o => o.statut === 'candidature_deposee').length,
     candidaturesEnAttente: offres.filter(o => ['candidature_deposee', 'visite_effectuee'].includes(o.statut)).length,
   };
+
+  const clientFullName = clientProfile ? `${clientProfile.prenom} ${clientProfile.nom}` : 'Client';
 
   return (
     <>
@@ -558,6 +571,32 @@ export default function ClientDashboard() {
               client={client}
             />
           </div>
+
+          {/* Solvabilité et Candidats */}
+          {profileActif !== false && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              {/* Alerte de solvabilité */}
+              <SolvabilityAlert result={solvabilityResult} />
+              
+              {/* Checklist du dossier */}
+              <DossierChecklistCard
+                clientName={clientFullName}
+                candidates={candidates}
+                documents={documents}
+              />
+            </div>
+          )}
+
+          {/* Gestion des candidats */}
+          {profileActif !== false && (
+            <div className="mb-8">
+              <ClientCandidatesManager
+                clientId={client.id}
+                clientRevenus={client.revenus_mensuels || 0}
+                budgetDemande={client.budget_max || 0}
+              />
+            </div>
+          )}
 
           {/* Candidatures en cours de traitement */}
           {(() => {

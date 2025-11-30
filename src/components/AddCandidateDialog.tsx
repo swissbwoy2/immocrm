@@ -7,8 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Save, User, DollarSign, Briefcase, Home, Users, Loader2 } from 'lucide-react';
+import { Save, User, DollarSign, Briefcase, Home, Users, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ClientCandidate, CandidateType, CANDIDATE_TYPE_LABELS } from '@/hooks/useClientCandidates';
+
+const TABS = ['type', 'personal', 'financial', 'professional', 'housing'] as const;
+type TabValue = typeof TABS[number];
 
 interface AddCandidateDialogProps {
   open: boolean;
@@ -55,9 +58,27 @@ const initialFormData = {
 export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }: AddCandidateDialogProps) {
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState(initialFormData);
+  const [activeTab, setActiveTab] = useState<TabValue>('type');
+
+  const currentTabIndex = TABS.indexOf(activeTab);
+  const isFirstTab = currentTabIndex === 0;
+  const isLastTab = currentTabIndex === TABS.length - 1;
+
+  const goToNextTab = () => {
+    if (!isLastTab) {
+      setActiveTab(TABS[currentTabIndex + 1]);
+    }
+  };
+
+  const goToPrevTab = () => {
+    if (!isFirstTab) {
+      setActiveTab(TABS[currentTabIndex - 1]);
+    }
+  };
 
   useEffect(() => {
     if (open) {
+      setActiveTab('type');
       if (editCandidate) {
         setFormData({
           type: editCandidate.type,
@@ -123,7 +144,7 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
           </DialogTitle>
         </DialogHeader>
         
-        <Tabs defaultValue="type" className="w-full">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabValue)} className="w-full">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="type" className="text-xs"><Users className="w-3 h-3 mr-1" />Type</TabsTrigger>
             <TabsTrigger value="personal" className="text-xs"><User className="w-3 h-3 mr-1" />Personnel</TabsTrigger>
@@ -508,23 +529,47 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
           </ScrollArea>
         </Tabs>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            Annuler
-          </Button>
-          <Button onClick={handleSave} disabled={saving || !formData.prenom.trim() || !formData.nom.trim()}>
-            {saving ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Enregistrement...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4 mr-2" />
-                {editCandidate ? 'Modifier' : 'Ajouter'}
-              </>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <div className="flex gap-2 flex-1">
+            <Button 
+              variant="outline" 
+              onClick={goToPrevTab} 
+              disabled={isFirstTab || saving}
+              className="flex-1 sm:flex-none"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Précédent
+            </Button>
+            {!isLastTab && (
+              <Button 
+                variant="outline" 
+                onClick={goToNextTab}
+                disabled={saving}
+                className="flex-1 sm:flex-none"
+              >
+                Suivant
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
             )}
-          </Button>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
+              Annuler
+            </Button>
+            <Button onClick={handleSave} disabled={saving || !formData.prenom.trim() || !formData.nom.trim()}>
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Enregistrement...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  {editCandidate ? 'Modifier' : 'Ajouter'}
+                </>
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

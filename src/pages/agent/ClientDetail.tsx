@@ -1870,6 +1870,7 @@ export default function ClientDetail() {
         clientId={client.id}
         clientUserId={client.user_id}
         clientName={`${profile.prenom} ${profile.nom}`}
+        candidates={candidates}
         onSuccess={loadClientData}
       />
     </main>
