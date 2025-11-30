@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { calculateDaysElapsed } from '@/utils/calculations';
 import { SendEmailDialog } from '@/components/SendEmailDialog';
+import { MergeDocumentsDialog } from '@/components/MergeDocumentsDialog';
 
 interface Client {
   id: string;
@@ -111,6 +112,7 @@ export default function ClientDetail() {
   const [documentToRename, setDocumentToRename] = useState<any>(null);
   const [newDocumentName, setNewDocumentName] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
 
   useEffect(() => {
     loadClientData();
@@ -1338,15 +1340,23 @@ export default function ClientDetail() {
           {/* Documents */}
           <Card className="lg:col-span-2">
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="w-5 h-5" />
                   Documents ({documents.length})
                 </CardTitle>
-                <Button onClick={() => setUploadDialogOpen(true)}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Ajouter un document
-                </Button>
+                <div className="flex gap-2">
+                  {documents.length >= 2 && (
+                    <Button variant="outline" onClick={() => setMergeDialogOpen(true)}>
+                      <FilePlus className="w-4 h-4 mr-2" />
+                      Créer dossier complet
+                    </Button>
+                  )}
+                  <Button onClick={() => setUploadDialogOpen(true)}>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Ajouter un document
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -1530,6 +1540,17 @@ export default function ClientDetail() {
         clientId={client.id}
         clientName={`${profile.prenom} ${profile.nom}`}
         clientEmail={profile.email}
+      />
+
+      {/* Merge Documents Dialog */}
+      <MergeDocumentsDialog
+        open={mergeDialogOpen}
+        onOpenChange={setMergeDialogOpen}
+        documents={documents}
+        clientId={client.id}
+        clientUserId={client.user_id}
+        clientName={`${profile.prenom} ${profile.nom}`}
+        onSuccess={loadDocuments}
       />
     </div>
   );

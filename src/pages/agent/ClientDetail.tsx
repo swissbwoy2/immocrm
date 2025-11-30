@@ -12,10 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, 
   FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download, Eye, Upload, MailPlus,
-  FileCheck, CheckCircle, XCircle, Clock, Pencil, Trash2
+  FileCheck, CheckCircle, XCircle, Clock, Pencil, Trash2, FilePlus
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SendDossierDialog } from '@/components/SendDossierDialog';
+import { MergeDocumentsDialog } from '@/components/MergeDocumentsDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -112,6 +113,7 @@ export default function ClientDetail() {
   const [documentToDelete, setDocumentToDelete] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -1301,18 +1303,25 @@ export default function ClientDetail() {
       {/* Documents section */}
       <Card className="col-span-full">
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="flex items-center gap-2">
               <FileText className="w-5 h-5" />
               Documents du client ({documents.length})
             </CardTitle>
-            <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Ajouter un document
+            <div className="flex gap-2">
+              {documents.length >= 2 && (
+                <Button variant="outline" onClick={() => setMergeDialogOpen(true)}>
+                  <FilePlus className="w-4 h-4 mr-2" />
+                  Créer dossier complet
                 </Button>
-              </DialogTrigger>
+              )}
+              <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Ajouter un document
+                  </Button>
+                </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Ajouter un document</DialogTitle>
@@ -1366,7 +1375,8 @@ export default function ClientDetail() {
                   </div>
                 </div>
               </DialogContent>
-            </Dialog>
+              </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -1804,6 +1814,17 @@ export default function ClientDetail() {
         clientEmail={profile.email}
         offres={offres}
         onCandidatureCreated={loadClientData}
+      />
+
+      {/* Merge Documents Dialog */}
+      <MergeDocumentsDialog
+        open={mergeDialogOpen}
+        onOpenChange={setMergeDialogOpen}
+        documents={documents}
+        clientId={client.id}
+        clientUserId={client.user_id}
+        clientName={`${profile.prenom} ${profile.nom}`}
+        onSuccess={loadClientData}
       />
     </main>
   );
