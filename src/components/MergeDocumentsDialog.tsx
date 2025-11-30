@@ -119,12 +119,12 @@ export function MergeDocumentsDialog({
         setProgress({ current, total, status });
       });
 
-      // Vérifier la taille du fichier (max 50MB pour Supabase Storage par défaut)
-      const maxSize = 50 * 1024 * 1024; // 50MB
+      // Vérifier la taille du fichier (max 1GB)
+      const maxSize = 1024 * 1024 * 1024; // 1GB
       if (mergedBlob.size > maxSize) {
         toast({
           title: 'Fichier trop volumineux',
-          description: `Le dossier fusionné fait ${(mergedBlob.size / (1024 * 1024)).toFixed(1)} MB. La limite est de 50 MB. Essayez de sélectionner moins de documents.`,
+          description: `Le dossier fusionné fait ${(mergedBlob.size / (1024 * 1024)).toFixed(1)} MB. La limite est de 1 GB. Essayez de sélectionner moins de documents.`,
           variant: 'destructive',
         });
         setIsProcessing(false);
