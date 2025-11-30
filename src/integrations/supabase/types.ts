@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_goals: {
+        Row: {
+          agent_id: string
+          created_at: string | null
+          end_date: string | null
+          goal_type: string
+          id: string
+          is_active: boolean | null
+          period: string
+          start_date: string | null
+          target_value: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string | null
+          end_date?: string | null
+          goal_type: string
+          id?: string
+          is_active?: boolean | null
+          period: string
+          start_date?: string | null
+          target_value?: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string | null
+          end_date?: string | null
+          goal_type?: string
+          id?: string
+          is_active?: boolean | null
+          period?: string
+          start_date?: string | null
+          target_value?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_goals_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agents: {
         Row: {
           created_at: string | null

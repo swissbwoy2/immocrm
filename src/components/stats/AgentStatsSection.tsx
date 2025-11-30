@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react';
-import { subDays, isWithinInterval, subMonths } from 'date-fns';
-import { Send, CheckCircle, DollarSign, Users, Target, TrendingUp, Calendar, FileCheck } from 'lucide-react';
+import { subDays, isWithinInterval } from 'date-fns';
+import { Send, CheckCircle, DollarSign, Users, Target, TrendingUp, Calendar, FileCheck, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateRangeFilter, DateRange, getDefaultDateRange } from './DateRangeFilter';
 import { StatsCard } from './StatsCard';
 import { PerformanceChart, MultiSeriesChart } from './PerformanceChart';
 import { GoalProgress } from './GoalProgress';
+import { useAgentGoals } from '@/hooks/useAgentGoals';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface AgentStatsSectionProps {
   offres: any[];
@@ -15,13 +17,34 @@ interface AgentStatsSectionProps {
   agentId: string;
 }
 
+const goalTypeToIcon: Record<string, 'target' | 'trophy' | 'flame' | 'star'> = {
+  offres: 'flame',
+  transactions: 'trophy',
+  commissions: 'star',
+  clients: 'target',
+  visites: 'target',
+  candidatures: 'target',
+};
+
+const periodLabels: Record<string, string> = {
+  daily: 'du jour',
+  weekly: 'de la semaine',
+  monthly: 'du mois',
+  quarterly: 'du trimestre',
+  yearly: "de l'année",
+};
+
 export function AgentStatsSection({
   offres,
   transactions,
   candidatures,
   clients,
+  agentId,
 }: AgentStatsSectionProps) {
   const [dateRange, setDateRange] = useState<DateRange>(getDefaultDateRange());
+  
+  // Fetch personalized goals
+  const { data: personalizedGoals = [], isLoading: goalsLoading } = useAgentGoals(agentId);
 
   // Calculate previous period for comparison
   const periodLength = Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24));
@@ -135,7 +158,7 @@ export function AgentStatsSection({
     },
   ], [currentOffres, currentCandidatures, currentTransactions]);
 
-  // Monthly goals (example targets - could be configurable)
+  // Fallback monthly goals if no personalized goals
   const currentMonth = new Date();
   const monthlyOffres = offres.filter(o => {
     const date = new Date(o.date_envoi);
@@ -158,6 +181,8 @@ export function AgentStatsSection({
     })
     .reduce((sum, t) => sum + (t.part_agent || 0), 0);
 
+  const hasPersonalizedGoals = personalizedGoals.length > 0;
+
   return (
     <div className="space-y-6">
       {/* Header with date filter */}
@@ -172,38 +197,68 @@ export function AgentStatsSection({
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
       </div>
 
-      {/* Monthly Goals */}
+      {/* Personalized Goals or Default Goals */}
       <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
-            <Target className="h-5 w-5 text-primary" />
-            Objectifs du mois
+            {hasPersonalizedGoals ? (
+              <>
+                <Sparkles className="h-5 w-5 text-primary" />
+                Mes objectifs personnalisés
+              </>
+            ) : (
+              <>
+                <Target className="h-5 w-5 text-primary" />
+                Objectifs du mois
+              </>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <GoalProgress
-              title="Offres envoyées"
-              current={monthlyOffres}
-              goal={20}
-              unit="offres"
-              icon="flame"
-            />
-            <GoalProgress
-              title="Affaires conclues"
-              current={monthlyTransactions}
-              goal={3}
-              unit="affaires"
-              icon="trophy"
-            />
-            <GoalProgress
-              title="Commissions"
-              current={monthlyCommissions}
-              goal={5000}
-              unit="CHF"
-              icon="star"
-            />
-          </div>
+          {goalsLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+            </div>
+          ) : hasPersonalizedGoals ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {personalizedGoals.map((goal) => (
+                <GoalProgress
+                  key={goal.id}
+                  title={`${goal.title} (${periodLabels[goal.period]})`}
+                  current={goal.current}
+                  goal={goal.target_value}
+                  unit={goal.goal_type === 'commissions' ? 'CHF' : ''}
+                  icon={goalTypeToIcon[goal.goal_type] || 'target'}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <GoalProgress
+                title="Offres envoyées"
+                current={monthlyOffres}
+                goal={20}
+                unit="offres"
+                icon="flame"
+              />
+              <GoalProgress
+                title="Affaires conclues"
+                current={monthlyTransactions}
+                goal={3}
+                unit="affaires"
+                icon="trophy"
+              />
+              <GoalProgress
+                title="Commissions"
+                current={monthlyCommissions}
+                goal={5000}
+                unit="CHF"
+                icon="star"
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 
