@@ -3,14 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SolvabilityResult } from '@/hooks/useSolvabilityCheck';
+import { cn } from '@/lib/utils';
 
 interface SolvabilityAlertProps {
   result: SolvabilityResult;
   onAddCandidate?: () => void;
   compact?: boolean;
+  className?: string;
 }
 
-export function SolvabilityAlert({ result, onAddCandidate, compact = false }: SolvabilityAlertProps) {
+export function SolvabilityAlert({ result, onAddCandidate, compact = false, className }: SolvabilityAlertProps) {
   const { isSolvable, problems, budgetPossible, budgetDemande, hasValidGarant, garantInfo } = result;
 
   // Si tout est OK et pas de budget demandé, ne rien afficher
@@ -67,7 +69,7 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false }: So
 
   // Affichage complet
   return (
-    <Card className={isSolvable ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/10' : 'border-red-500/50 bg-red-50/30 dark:bg-red-950/10'}>
+    <Card className={cn(isSolvable ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/10' : 'border-red-500/50 bg-red-50/30 dark:bg-red-950/10', className)}>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           {isSolvable ? (

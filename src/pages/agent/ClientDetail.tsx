@@ -19,6 +19,7 @@ import { SendDossierDialog } from '@/components/SendDossierDialog';
 import { MergeDocumentsDialog } from '@/components/MergeDocumentsDialog';
 import { ClientCandidatesManager } from '@/components/ClientCandidatesManager';
 import { SolvabilityAlert } from '@/components/SolvabilityAlert';
+import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSection';
 import { useClientCandidates } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
 import { supabase } from '@/integrations/supabase/client';
@@ -1304,11 +1305,35 @@ export default function ClientDetail() {
                     <p className="text-sm text-muted-foreground">Comment a découvert l'agence</p>
                     <p className="font-medium">{client.decouverte_agence}</p>
                   </div>
-                </>
+              </>
               )}
             </CardContent>
           </Card>
-      {/* Documents section */}
+
+          {/* Alerte de solvabilité */}
+          <SolvabilityAlert result={solvabilityResult} className="col-span-full" />
+
+          {/* Candidats supplémentaires */}
+          <div className="col-span-full">
+            <ClientCandidatesManager
+              clientId={client.id}
+              clientRevenus={client.revenus_mensuels || 0}
+              budgetDemande={client.budget_max || 0}
+            />
+          </div>
+
+          {/* Documents groupés par personne */}
+          <div className="col-span-full">
+            <CandidateDocumentsSection
+              clientId={client.id}
+              clientUserId={client.user_id}
+              clientName={`${profile.prenom} ${profile.nom}`}
+              candidates={candidates}
+              onDocumentsChange={loadClientData}
+            />
+          </div>
+
+      {/* Documents section (existante - pour référence) */}
       <Card className="col-span-full">
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-2">
