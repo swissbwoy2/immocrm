@@ -12,13 +12,15 @@ interface ClientCandidatesManagerProps {
   clientRevenus?: number;
   budgetDemande?: number;
   onDocumentsClick?: (candidate: ClientCandidate) => void;
+  onCandidatesChange?: () => void;
 }
 
 export function ClientCandidatesManager({ 
   clientId, 
   clientRevenus = 0, 
   budgetDemande = 0,
-  onDocumentsClick 
+  onDocumentsClick,
+  onCandidatesChange
 }: ClientCandidatesManagerProps) {
   const { candidates, loading, addCandidate, updateCandidate, deleteCandidate, getCumulativeIncome } = useClientCandidates(clientId);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -27,10 +29,17 @@ export function ClientCandidatesManager({
   const [candidateToDelete, setCandidateToDelete] = useState<ClientCandidate | null>(null);
 
   const handleSave = async (data: Omit<ClientCandidate, 'id' | 'client_id' | 'created_at' | 'updated_at'>) => {
+    let result;
     if (editCandidate) {
-      return await updateCandidate(editCandidate.id, data);
+      result = await updateCandidate(editCandidate.id, data);
+    } else {
+      result = await addCandidate(data);
     }
-    return await addCandidate(data);
+    // Notifier le parent pour rafraîchir les données
+    if (result && onCandidatesChange) {
+      onCandidatesChange();
+    }
+    return result;
   };
 
   const handleEdit = (candidate: ClientCandidate) => {
@@ -45,9 +54,13 @@ export function ClientCandidatesManager({
 
   const handleDeleteConfirm = async () => {
     if (candidateToDelete) {
-      await deleteCandidate(candidateToDelete.id);
+      const success = await deleteCandidate(candidateToDelete.id);
       setDeleteDialogOpen(false);
       setCandidateToDelete(null);
+      // Notifier le parent pour rafraîchir les données
+      if (success && onCandidatesChange) {
+        onCandidatesChange();
+      }
     }
   };
 
