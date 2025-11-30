@@ -424,8 +424,32 @@ export default function ClientDashboard() {
             </div>
           </div>
 
+          {/* Alerte compte non actif */}
+          {profileActif === false && (
+            <Card className="mb-6 border-orange-500 bg-orange-50 dark:bg-orange-950/30">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <AlertTriangle className="w-5 h-5 text-orange-500 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-foreground">
+                      ⏳ Compte en attente d'activation
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Votre profil n'a pas encore été activé par votre agent. Veuillez patienter ou contacter votre agent pour activer votre compte.
+                    </p>
+                    {agent && (
+                      <Button size="sm" variant="outline" className="mt-4" onClick={() => navigate('/client/messagerie')}>
+                        Contacter mon agent
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Alerte mandat */}
-          {daysRemaining > 0 && daysRemaining <= 30 && (
+          {profileActif !== false && daysRemaining > 0 && daysRemaining <= 30 && (
             <Card className="mb-6 border-warning bg-warning/5">
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
@@ -451,7 +475,7 @@ export default function ClientDashboard() {
             </Card>
           )}
 
-          {daysRemaining <= 0 && (
+          {profileActif !== false && daysRemaining <= 0 && (
             <Card className="mb-6 border-destructive bg-destructive/5">
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
@@ -598,49 +622,90 @@ export default function ClientDashboard() {
                 <CardTitle>📋 Mon mandat</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Date de début</p>
-                    <p className="font-medium">{new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</p>
+                {profileActif === false ? (
+                  /* État compte non actif */
+                  <div className="text-center py-4">
+                    <div className="p-4 bg-orange-100 dark:bg-orange-950/30 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4">
+                      <AlertTriangle className="w-8 h-8 text-orange-500" />
+                    </div>
+                    <p className="font-medium text-foreground mb-2">Compte en attente d'activation</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      La progression de votre mandat sera disponible dès que votre profil sera activé par votre agent.
+                    </p>
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Date d'inscription</p>
+                        <p className="font-medium">{new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Statut</p>
+                        <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-orange-100 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400">
+                          En attente
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-muted-foreground">Progression du mandat</span>
+                        <span className="font-medium text-orange-500">En attente</span>
+                      </div>
+                      <Progress 
+                        value={0} 
+                        className="h-3 bg-orange-100 dark:bg-orange-950/30"
+                      />
+                      <p className="text-xs text-orange-500 mt-2 text-center">
+                        ⏳ Sera activée dès que votre profil sera validé
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Temps restant</p>
-                    <p className="font-medium">{formatTimeRemaining(daysRemaining)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Statut</p>
-                    <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                      daysRemaining > 30 ? 'bg-success/10 text-success' :
-                      daysRemaining > 0 ? 'bg-warning/10 text-warning' :
-                      'bg-destructive/10 text-destructive'
-                    }`}>
-                      {daysRemaining > 0 ? 'Actif' : 'Expiré'}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Budget recherché</p>
-                    <p className="font-medium">{client.budget_max} CHF</p>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span className="text-muted-foreground">Progression du mandat (90 jours)</span>
-                    <span className="font-medium">{Math.round(progressPercent)}%</span>
-                  </div>
-                  <Progress 
-                    value={progressPercent} 
-                    className="h-3"
-                    indicatorClassName={
-                      daysRemaining > 30 ? 'bg-success' :
-                      daysRemaining > 0 ? 'bg-warning' :
-                      'bg-destructive'
-                    }
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                    <span>Début: {new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</span>
-                    <span>{daysRemaining > 0 ? `${Math.floor(daysRemaining)} jours restants` : 'Expiré'}</span>
-                  </div>
-                </div>
+                ) : (
+                  /* État compte actif */
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Date de début</p>
+                        <p className="font-medium">{new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Temps restant</p>
+                        <p className="font-medium">{formatTimeRemaining(daysRemaining)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Statut</p>
+                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                          daysRemaining > 30 ? 'bg-success/10 text-success' :
+                          daysRemaining > 0 ? 'bg-warning/10 text-warning' :
+                          'bg-destructive/10 text-destructive'
+                        }`}>
+                          {daysRemaining > 0 ? 'Actif' : 'Expiré'}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Budget recherché</p>
+                        <p className="font-medium">{client.budget_max} CHF</p>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-muted-foreground">Progression du mandat (90 jours)</span>
+                        <span className="font-medium">{Math.round(progressPercent)}%</span>
+                      </div>
+                      <Progress 
+                        value={progressPercent} 
+                        className="h-3"
+                        indicatorClassName={
+                          daysRemaining > 30 ? 'bg-success' :
+                          daysRemaining > 0 ? 'bg-warning' :
+                          'bg-destructive'
+                        }
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                        <span>Début: {new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</span>
+                        <span>{daysRemaining > 0 ? `${Math.floor(daysRemaining)} jours restants` : 'Expiré'}</span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
