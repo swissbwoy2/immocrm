@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
+import { AdminStatsSection } from '@/components/stats/AdminStatsSection';
 
 const adminMenu = [
   { name: 'Tableau de bord', icon: Users, path: '/admin' },
@@ -260,6 +261,16 @@ export default function AdminDashboard() {
               icon={DollarSign} 
               subtitle="CHF total"
               onClick={() => navigate('/admin/transactions')}
+            />
+          </div>
+
+          {/* Section Statistiques détaillées */}
+          <div className="mb-8">
+            <AdminStatsSection
+              agents={agents}
+              clients={clients}
+              transactions={transactions}
+              offres={offres}
             />
           </div>
 

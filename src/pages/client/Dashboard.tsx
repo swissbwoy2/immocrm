@@ -14,6 +14,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AccountActivationModal } from '@/components/AccountActivationModal';
+import { ClientStatsSection } from '@/components/stats/ClientStatsSection';
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
@@ -524,6 +525,16 @@ export default function ClientDashboard() {
               subtitle={stats.candidaturesEnAttente > 0 ? `${stats.candidaturesEnAttente} en attente` : undefined}
               variant={stats.candidaturesEnAttente > 0 ? 'warning' : 'default'}
               onClick={() => navigate('/client/mes-candidatures')}
+            />
+          </div>
+
+          {/* Section Statistiques détaillées */}
+          <div className="mb-8">
+            <ClientStatsSection
+              offres={offres}
+              visites={visites}
+              candidatures={candidatures}
+              client={client}
             />
           </div>
 
