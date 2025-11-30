@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.create-abaninja-invoice]
 verify_jwt = false
+
+[functions.send-mandat-pdf]
+verify_jwt = false
