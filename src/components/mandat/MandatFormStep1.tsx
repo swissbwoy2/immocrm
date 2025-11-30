@@ -16,6 +16,39 @@ export default function MandatFormStep1({ data, onChange }: Props) {
         <p className="text-sm text-muted-foreground">Vos coordonnées et situation personnelle</p>
       </div>
 
+      {/* Type de recherche */}
+      <div className="space-y-3">
+        <Label>Type de recherche *</Label>
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            type="button"
+            onClick={() => onChange({ type_recherche: 'Louer' })}
+            className={`p-4 rounded-lg border-2 transition-all text-center ${
+              data.type_recherche === 'Louer'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <span className="text-2xl mb-2 block">🏠</span>
+            <span className="font-medium">Louer</span>
+            <p className="text-xs text-muted-foreground mt-1">Un logement à louer</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => onChange({ type_recherche: 'Acheter' })}
+            className={`p-4 rounded-lg border-2 transition-all text-center ${
+              data.type_recherche === 'Acheter'
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border hover:border-primary/50'
+            }`}
+          >
+            <span className="text-2xl mb-2 block">🔑</span>
+            <span className="font-medium">Acheter</span>
+            <p className="text-xs text-muted-foreground mt-1">Un bien immobilier</p>
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="email">E-mail *</Label>
