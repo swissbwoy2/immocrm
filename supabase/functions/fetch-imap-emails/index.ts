@@ -293,7 +293,7 @@ class SimpleImapClient {
       const bodyContent = data.substring(textStart, textStart + Math.min(size, 50000));
       
       // Check if body starts with MIME boundary (--BOUNDARY)
-      const boundaryStartMatch = bodyContent.match(/^--([A-Za-z0-9_=-]+)\r?\n/);
+      const boundaryStartMatch = bodyContent.match(/^--([A-Za-z0-9_.=-]+)\r?\n/);
       
       if (boundaryStartMatch) {
         // Body starts with a MIME boundary - parse as multipart
@@ -316,7 +316,7 @@ class SimpleImapClient {
           email.body_html = html;
         } else {
           // Try to extract text from the text/plain part
-          const textPartMatch = bodyContent.match(/Content-Type:\s*text\/plain[^]*?Content-Transfer-Encoding:\s*(\S+)?[^]*?\r?\n\r?\n([^]*?)(?=--[A-Za-z0-9_=-]+|$)/i);
+          const textPartMatch = bodyContent.match(/Content-Type:\s*text\/plain[^]*?Content-Transfer-Encoding:\s*(\S+)?[^]*?\r?\n\r?\n([^]*?)(?=--[A-Za-z0-9_.=-]+|$)/i);
           if (textPartMatch) {
             const encoding = textPartMatch[1]?.toLowerCase() || '';
             let content = textPartMatch[2];
@@ -459,7 +459,7 @@ function parseMultipart(body: string, boundary: string): { text: string; html: s
     let content = part.substring(contentStart + (part.charAt(contentStart + 1) === '\n' ? 2 : 4));
     
     // Remove trailing boundary remnants
-    content = content.replace(/\r?\n--[A-Za-z0-9_=-]+--?\s*$/g, '').trim();
+    content = content.replace(/\r?\n--[A-Za-z0-9_.=-]+--?\s*$/g, '').trim();
     
     // Decode content based on encoding
     if (partEncoding === 'quoted-printable') {
@@ -540,7 +540,7 @@ function stripHtml(html: string): string {
 function cleanText(text: string): string {
   if (!text) return '';
   return text
-    .replace(/--[A-Za-z0-9_=-]+--?/g, '') // Remove MIME boundaries
+    .replace(/--[A-Za-z0-9_.=-]+--?/g, '') // Remove MIME boundaries
     .replace(/Content-[A-Za-z-]+:.*(?:\r?\n(?:\s+.*)?)*\r?\n/gi, '') // Remove Content-* headers
     .replace(/\r\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
