@@ -240,9 +240,11 @@ export default function NouveauMandat() {
           <img src={logoImmorama} alt="Immo-Rama" className="h-16 mx-auto mb-4" />
           <h1 className="text-2xl font-bold">Mandat de recherche</h1>
           <p className="text-muted-foreground">
-            {formData.type_recherche === 'Acheter' 
-              ? 'Pour un bien immobilier à acheter' 
-              : 'Pour un logement à louer'}
+            {currentStep < 3 
+              ? 'Complétez votre dossier de candidature'
+              : formData.type_recherche === 'Acheter' 
+                ? 'Pour un bien immobilier à acheter' 
+                : 'Pour un logement à louer'}
           </p>
         </div>
 
