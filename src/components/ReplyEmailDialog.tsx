@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Send, Reply, Forward, Settings } from "lucide-react";
+import { Loader2, Send, Reply, Forward, Settings, Paperclip, X, ChevronDown, ChevronUp } from "lucide-react";
 import { EmailConfigurationDialog } from "./EmailConfigurationDialog";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
 
 interface ReceivedEmail {
   id: string;
@@ -20,6 +21,13 @@ interface ReceivedEmail {
   body_text: string | null;
   body_html: string | null;
   received_at: string | null;
+}
+
+interface Attachment {
+  filename: string;
+  content: string; // base64
+  content_type: string;
+  size: number;
 }
 
 interface ReplyEmailDialogProps {
@@ -42,18 +50,25 @@ export function ReplyEmailDialog({
   const [hasEmailConfig, setHasEmailConfig] = useState(false);
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [signature, setSignature] = useState("");
+  const [showCcBcc, setShowCcBcc] = useState(false);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     recipient_email: "",
     recipient_name: "",
     subject: "",
     body_html: "",
+    cc: "",
+    bcc: "",
   });
 
   useEffect(() => {
     if (open && email) {
       checkEmailConfiguration();
       initializeForm();
+      setAttachments([]);
+      setShowCcBcc(false);
     }
   }, [open, email, mode]);
 
@@ -76,6 +91,8 @@ export function ReplyEmailDialog({
       body_html: mode === 'reply' 
         ? `\n\n${quotedHeader}${quotedBody}`
         : `${quotedHeader}${quotedBody}`,
+      cc: "",
+      bcc: "",
     });
   };
 
@@ -100,6 +117,72 @@ export function ReplyEmailDialog({
     }
   };
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const maxSize = 10 * 1024 * 1024; // 10MB per file
+    const maxTotal = 25 * 1024 * 1024; // 25MB total
+
+    const currentTotal = attachments.reduce((sum, att) => sum + att.size, 0);
+
+    for (const file of Array.from(files)) {
+      if (file.size > maxSize) {
+        toast({
+          title: "Fichier trop volumineux",
+          description: `${file.name} dépasse la limite de 10 Mo`,
+          variant: "destructive",
+        });
+        continue;
+      }
+
+      if (currentTotal + file.size > maxTotal) {
+        toast({
+          title: "Limite atteinte",
+          description: "La taille totale des pièces jointes ne peut pas dépasser 25 Mo",
+          variant: "destructive",
+        });
+        break;
+      }
+
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        setAttachments(prev => [...prev, {
+          filename: file.name,
+          content: base64,
+          content_type: file.type || 'application/octet-stream',
+          size: file.size,
+        }]);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} o`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+  };
+
+  const parseEmails = (emailString: string): string[] => {
+    if (!emailString.trim()) return [];
+    return emailString
+      .split(/[,;]/)
+      .map(e => e.trim())
+      .filter(e => e.includes('@'));
+  };
+
   const handleSend = async () => {
     if (!formData.recipient_email || !formData.subject) {
       toast({
@@ -122,13 +205,22 @@ export function ReplyEmailDialog({
 
     setSending(true);
     try {
+      const ccRecipients = parseEmails(formData.cc);
+      const bccRecipients = parseEmails(formData.bcc);
+
       const { data, error } = await supabase.functions.invoke('send-smtp-email', {
         body: {
           recipient_email: formData.recipient_email,
           recipient_name: formData.recipient_name,
           subject: formData.subject,
           body_html: formData.body_html,
-          attachments: [],
+          attachments: attachments.map(att => ({
+            filename: att.filename,
+            content: att.content,
+            content_type: att.content_type,
+          })),
+          cc: ccRecipients.length > 0 ? ccRecipients : undefined,
+          bcc: bccRecipients.length > 0 ? bccRecipients : undefined,
         },
       });
 
@@ -155,6 +247,7 @@ export function ReplyEmailDialog({
 
   const Icon = mode === 'reply' ? Reply : Forward;
   const title = mode === 'reply' ? 'Répondre' : 'Transférer';
+  const totalAttachmentSize = attachments.reduce((sum, att) => sum + att.size, 0);
 
   return (
     <>
@@ -184,10 +277,10 @@ export function ReplyEmailDialog({
             </div>
           ) : (
             <div className="flex-1 overflow-y-auto space-y-4">
-              {/* Recipients */}
+              {/* To recipient */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Email destinataire *</Label>
+                  <Label>À *</Label>
                   <Input
                     type="email"
                     value={formData.recipient_email}
@@ -196,7 +289,7 @@ export function ReplyEmailDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Nom destinataire</Label>
+                  <Label>Nom</Label>
                   <Input
                     value={formData.recipient_name}
                     onChange={(e) => setFormData(prev => ({ ...prev, recipient_name: e.target.value }))}
@@ -204,6 +297,43 @@ export function ReplyEmailDialog({
                   />
                 </div>
               </div>
+
+              {/* CC/BCC toggle */}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowCcBcc(!showCcBcc)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                {showCcBcc ? <ChevronUp className="h-4 w-4 mr-2" /> : <ChevronDown className="h-4 w-4 mr-2" />}
+                Cc / Cci
+              </Button>
+
+              {/* CC and BCC fields */}
+              {showCcBcc && (
+                <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2">
+                  <div className="space-y-2">
+                    <Label>Cc (copie)</Label>
+                    <Input
+                      type="text"
+                      value={formData.cc}
+                      onChange={(e) => setFormData(prev => ({ ...prev, cc: e.target.value }))}
+                      placeholder="email1@ex.com, email2@ex.com"
+                    />
+                    <p className="text-xs text-muted-foreground">Séparez les adresses par des virgules</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Cci (copie cachée)</Label>
+                    <Input
+                      type="text"
+                      value={formData.bcc}
+                      onChange={(e) => setFormData(prev => ({ ...prev, bcc: e.target.value }))}
+                      placeholder="email1@ex.com, email2@ex.com"
+                    />
+                    <p className="text-xs text-muted-foreground">Les destinataires ne verront pas ces adresses</p>
+                  </div>
+                </div>
+              )}
 
               {/* Subject */}
               <div className="space-y-2">
@@ -215,6 +345,55 @@ export function ReplyEmailDialog({
                 />
               </div>
 
+              {/* Attachments */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Pièces jointes</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {totalAttachmentSize > 0 && `${formatFileSize(totalAttachmentSize)} / 25 Mo`}
+                  </span>
+                </div>
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  accept="*/*"
+                />
+                
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Paperclip className="h-4 w-4 mr-2" />
+                    Joindre un fichier
+                  </Button>
+                  
+                  {attachments.map((att, index) => (
+                    <Badge 
+                      key={index} 
+                      variant="secondary" 
+                      className="flex items-center gap-1 py-1 px-2"
+                    >
+                      <Paperclip className="h-3 w-3" />
+                      <span className="max-w-[150px] truncate">{att.filename}</span>
+                      <span className="text-xs text-muted-foreground">({formatFileSize(att.size)})</span>
+                      <button
+                        onClick={() => removeAttachment(index)}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
               {/* Body */}
               <div className="space-y-2">
                 <Label>Message</Label>
@@ -222,7 +401,7 @@ export function ReplyEmailDialog({
                   value={formData.body_html}
                   onChange={(e) => setFormData(prev => ({ ...prev, body_html: e.target.value }))}
                   placeholder="Votre réponse..."
-                  rows={12}
+                  rows={10}
                   className="font-mono text-sm"
                 />
               </div>
