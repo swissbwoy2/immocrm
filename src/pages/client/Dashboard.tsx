@@ -13,6 +13,7 @@ import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } fro
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AccountActivationModal } from '@/components/AccountActivationModal';
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
@@ -24,6 +25,8 @@ export default function ClientDashboard() {
   const [visites, setVisites] = useState<any[]>([]);
   const [candidatures, setCandidatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profileActif, setProfileActif] = useState<boolean | null>(null);
+  const [showActivationModal, setShowActivationModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -74,6 +77,21 @@ export default function ClientDashboard() {
     }
 
     try {
+      // Check if profile is active
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('actif')
+        .eq('id', user.id)
+        .single();
+
+      const isActif = profileData?.actif ?? false;
+      setProfileActif(isActif);
+      
+      // Show activation modal if profile is not active
+      if (!isActif) {
+        setShowActivationModal(true);
+      }
+
       // Load client avec log détaillé
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
@@ -380,8 +398,9 @@ export default function ClientDashboard() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="p-4 md:p-8">
+    <>
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-4 md:p-8">
           <div className="mb-8 flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground">Mon tableau de bord</h1>
@@ -801,5 +820,13 @@ export default function ClientDashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Modal d'activation de compte */}
+      <AccountActivationModal
+        isOpen={showActivationModal}
+        onClose={() => setShowActivationModal(false)}
+        userId={user?.id || ''}
+      />
+    </>
   );
 }
