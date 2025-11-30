@@ -840,8 +840,8 @@ export function ReplyEmailDialog({
                         ) : (
                           <>
                             <p className="text-xs text-muted-foreground">{clientDocuments.length} document(s) disponible(s)</p>
-                            <ScrollArea className="max-h-40">
-                              <div className="space-y-1">
+                            <ScrollArea className="h-48 border rounded-md p-1">
+                              <div className="space-y-1 pr-4">
                                 {clientDocuments.map(doc => (
                                   <div
                                     key={doc.id}
