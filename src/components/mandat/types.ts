@@ -43,6 +43,7 @@ export interface MandatFormData {
   pieces_recherche: string;
   region_recherche: string;
   budget_max: number;
+  apport_personnel: number; // For purchase: available down payment
   souhaits_particuliers: string;
   
   // Candidats
@@ -154,6 +155,7 @@ export const initialFormData: MandatFormData = {
   pieces_recherche: '',
   region_recherche: '',
   budget_max: 0,
+  apport_personnel: 0,
   souhaits_particuliers: '',
   candidats: [],
   documents_uploades: [],

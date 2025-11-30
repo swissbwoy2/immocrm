@@ -1,10 +1,39 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { encode as hexEncode } from "https://deno.land/std@0.168.0/encoding/hex.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-abaninja-signature',
 };
+
+// Helper function to verify HMAC signature
+async function verifySignature(payload: string, signature: string, secret: string): Promise<boolean> {
+  try {
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    
+    const signatureBuffer = await crypto.subtle.sign(
+      "HMAC",
+      key,
+      encoder.encode(payload)
+    );
+    
+    const computedSignature = new TextDecoder().decode(hexEncode(new Uint8Array(signatureBuffer)));
+    
+    // Compare signatures (timing-safe comparison)
+    return signature.toLowerCase() === computedSignature.toLowerCase();
+  } catch (error) {
+    console.error('Error verifying signature:', error);
+    return false;
+  }
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -13,7 +42,32 @@ serve(async (req) => {
   }
 
   try {
-    const payload = await req.json();
+    // Get raw body for signature verification
+    const rawBody = await req.text();
+    
+    // Verify webhook signature
+    const signature = req.headers.get('x-abaninja-signature') || '';
+    const webhookSecret = Deno.env.get('ABANINJA_WEBHOOK_SECRET') || '';
+    
+    if (webhookSecret && signature) {
+      const isValid = await verifySignature(rawBody, signature, webhookSecret);
+      
+      if (!isValid) {
+        console.error('Invalid webhook signature');
+        return new Response(
+          JSON.stringify({ success: false, error: 'Invalid signature' }),
+          {
+            status: 401,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
+      }
+      console.log('Webhook signature verified successfully');
+    } else {
+      console.log('No signature verification (signature or secret missing)');
+    }
+
+    const payload = JSON.parse(rawBody);
     console.log('AbaNinja webhook received:', JSON.stringify(payload, null, 2));
 
     // Initialize Supabase admin client
