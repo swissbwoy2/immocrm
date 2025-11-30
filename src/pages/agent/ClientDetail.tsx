@@ -1623,6 +1623,7 @@ export default function ClientDetail() {
         onOpenChange={setSendDossierDialogOpen}
         clientId={client.id}
         clientName={`${profile.prenom} ${profile.nom}`}
+        clientEmail={profile.email}
         offres={offres}
         onCandidatureCreated={loadClientData}
       />
