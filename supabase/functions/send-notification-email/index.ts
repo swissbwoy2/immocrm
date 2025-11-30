@@ -106,10 +106,10 @@ const generateEmailHtml = (
           <tr>
             <td style="background-color: #f9fafb; padding: 24px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px;">
-                Cet email est une notification automatique d'Immo-Rama
+                Cet email est une notification automatique de Logisorama
               </p>
               <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                © ${new Date().getFullYear()} Immo-Rama - Tous droits réservés
+                © ${new Date().getFullYear()} Logisorama - Tous droits réservés
               </p>
             </td>
           </tr>
@@ -183,8 +183,10 @@ serve(async (req) => {
     const emailHtml = generateEmailHtml(title, message, notification_type, link, userName);
 
     // Send email via Resend
+    const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "Logisorama <support@logisorama.ch>";
+    
     const { data: emailData, error: emailError } = await resend.emails.send({
-      from: "Immo-Rama <notifications@resend.dev>",
+      from: fromEmail,
       to: [profile.email],
       subject: `${getNotificationIcon(notification_type)} ${title}`,
       html: emailHtml,
