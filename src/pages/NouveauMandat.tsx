@@ -193,10 +193,31 @@ export default function NouveauMandat() {
         }
       }
 
+      // Envoyer email de confirmation au client
+      try {
+        await supabase.functions.invoke('send-mandat-confirmation', {
+          body: {
+            email: formData.email,
+            prenom: formData.prenom,
+            nom: formData.nom,
+            type_recherche: formData.type_recherche,
+            montant_acompte: formData.type_recherche === 'Acheter' ? 2500 : 300,
+            region_recherche: formData.region_recherche,
+            type_bien: formData.type_bien,
+            pieces_recherche: formData.pieces_recherche,
+            budget_max: formData.budget_max
+          }
+        });
+        console.log('Confirmation email sent');
+      } catch (emailError) {
+        console.error('Error sending confirmation email:', emailError);
+        // Don't block the flow if email fails
+      }
+
       // Nettoyer le localStorage
       localStorage.removeItem(STORAGE_KEY);
 
-      toast.success('Demande envoyée avec succès !');
+      toast.success('Demande envoyée avec succès ! Un email de confirmation vous a été envoyé.');
       navigate('/login', { state: { mandatSubmitted: true } });
 
     } catch (error: any) {
