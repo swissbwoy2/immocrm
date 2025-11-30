@@ -361,62 +361,83 @@ export default function AgentDashboard() {
             </Card>
           )}
 
-          {/* Candidatures en attente d'action */}
-          {candidatures.filter(c => c.statut === 'bail_conclu').length > 0 && (
-            <Card className="border-green-500/50 bg-green-50 dark:bg-green-950/30">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-semibold flex items-center gap-2 text-green-800 dark:text-green-200">
-                    <FileCheck className="w-5 h-5" />
-                    🎉 Clients prêts à conclure le bail
-                  </CardTitle>
-                  <Badge variant="default" className="bg-green-600 animate-pulse">
-                    {candidatures.filter(c => c.statut === 'bail_conclu').length}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {candidatures.filter(c => c.statut === 'bail_conclu').slice(0, 3).map(cand => {
-                  const client = clients.find(c => c.id === cand.client_id);
-                  const profile = client ? profiles.get(client.user_id) : null;
-                  const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client';
-                  
-                  return (
-                    <div 
-                      key={cand.id}
-                      className="p-4 rounded-lg border border-green-200 dark:border-green-800 bg-white dark:bg-gray-800 cursor-pointer transition-colors hover:bg-green-50 dark:hover:bg-green-900/30"
-                      onClick={() => navigate('/agent/candidatures')}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="font-medium text-sm truncate">{cand.offres?.adresse}</p>
-                            <Badge variant="outline" className="text-xs border-green-500 text-green-700 dark:text-green-300">
-                              Action requise
-                            </Badge>
+          {/* Candidatures nécessitant une action */}
+          {(() => {
+            const statusActionRequired = ['bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe'];
+            const candidaturesAction = candidatures.filter(c => statusActionRequired.includes(c.statut));
+            
+            const getStatusInfo = (statut: string) => {
+              switch (statut) {
+                case 'bail_conclu': return { label: '🎉 Client prêt à conclure', color: 'border-green-500 bg-green-50 dark:bg-green-950/30', badge: 'bg-green-600', textColor: 'text-green-700 dark:text-green-300' };
+                case 'attente_bail': return { label: '📄 En attente du bail', color: 'border-amber-500 bg-amber-50 dark:bg-amber-950/30', badge: 'bg-amber-600', textColor: 'text-amber-700 dark:text-amber-300' };
+                case 'bail_recu': return { label: '✅ Bail reçu', color: 'border-blue-500 bg-blue-50 dark:bg-blue-950/30', badge: 'bg-blue-600', textColor: 'text-blue-700 dark:text-blue-300' };
+                case 'signature_planifiee': return { label: '📝 Signature planifiée', color: 'border-purple-500 bg-purple-50 dark:bg-purple-950/30', badge: 'bg-purple-600', textColor: 'text-purple-700 dark:text-purple-300' };
+                case 'signature_effectuee': return { label: '🖊️ Signature effectuée', color: 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30', badge: 'bg-emerald-600', textColor: 'text-emerald-700 dark:text-emerald-300' };
+                case 'etat_lieux_fixe': return { label: '🏠 État des lieux fixé', color: 'border-cyan-500 bg-cyan-50 dark:bg-cyan-950/30', badge: 'bg-cyan-600', textColor: 'text-cyan-700 dark:text-cyan-300' };
+                default: return { label: 'En cours', color: 'border-gray-500 bg-gray-50 dark:bg-gray-950/30', badge: 'bg-gray-600', textColor: 'text-gray-700 dark:text-gray-300' };
+              }
+            };
+
+            if (candidaturesAction.length === 0) return null;
+
+            return (
+              <Card className="border-2 border-primary/50 bg-gradient-to-r from-primary/5 to-primary/10 shadow-lg">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
+                      <FileCheck className="w-5 h-5" />
+                      🚀 Candidatures en cours de traitement
+                    </CardTitle>
+                    <Badge variant="default" className="animate-pulse text-lg px-3 py-1">
+                      {candidaturesAction.length}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {candidaturesAction.slice(0, 5).map(cand => {
+                    const client = clients.find(c => c.id === cand.client_id);
+                    const profile = client ? profiles.get(client.user_id) : null;
+                    const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client';
+                    const statusInfo = getStatusInfo(cand.statut);
+                    
+                    return (
+                      <div 
+                        key={cand.id}
+                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${statusInfo.color}`}
+                        onClick={() => navigate('/agent/candidatures')}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <p className="font-semibold text-sm truncate">{cand.offres?.adresse}</p>
+                              <Badge className={`text-xs ${statusInfo.badge} text-white`}>
+                                {statusInfo.label}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {cand.offres?.pieces} pièces • {cand.offres?.prix?.toLocaleString()} CHF/mois
+                            </p>
+                            <p className={`text-sm font-bold mt-2 ${statusInfo.textColor}`}>
+                              👤 {clientName}
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {cand.offres?.pieces} pièces • {cand.offres?.prix?.toLocaleString()} CHF/mois
-                          </p>
-                          <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-1">
-                            👤 {clientName} a accepté de conclure
-                          </p>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-                <Button 
-                  variant="default"
-                  size="sm" 
-                  className="w-full mt-2 bg-green-600 hover:bg-green-700"
-                  onClick={() => navigate('/agent/candidatures')}
-                >
-                  Gérer les candidatures
-                </Button>
-              </CardContent>
-            </Card>
-          )}
+                    );
+                  })}
+                  <Button 
+                    variant="default"
+                    size="lg" 
+                    className="w-full mt-3"
+                    onClick={() => navigate('/agent/candidatures')}
+                  >
+                    <FileCheck className="w-4 h-4 mr-2" />
+                    Gérer toutes les candidatures
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           {/* Bouton Conclure une affaire */}
           <div className="flex justify-end">
