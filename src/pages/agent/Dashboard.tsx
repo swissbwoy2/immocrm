@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
+import { AgentStatsSection } from '@/components/stats/AgentStatsSection';
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
@@ -297,6 +298,15 @@ export default function AgentDashboard() {
               onClick={() => navigate('/agent/transactions')}
             />
           </div>
+
+          {/* Section Statistiques détaillées */}
+          <AgentStatsSection
+            offres={offres}
+            transactions={transactions}
+            candidatures={candidatures}
+            clients={clients}
+            agentId={agent?.id || ''}
+          />
 
           {/* Visites déléguées */}
           {visitesDelegues.length > 0 && (
