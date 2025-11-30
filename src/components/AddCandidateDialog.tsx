@@ -49,7 +49,6 @@ const initialFormData = {
   charges_extraordinaires: false,
   montant_charges_extra: '',
   autres_credits: false,
-  apport_personnel: '',
   poursuites: false,
   curatelle: false,
   lien_avec_client: '',
@@ -109,7 +108,6 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
           charges_extraordinaires: editCandidate.charges_extraordinaires || false,
           montant_charges_extra: editCandidate.montant_charges_extra?.toString() || '',
           autres_credits: editCandidate.autres_credits || false,
-          apport_personnel: editCandidate.apport_personnel?.toString() || '',
           poursuites: editCandidate.poursuites || false,
           curatelle: editCandidate.curatelle || false,
           lien_avec_client: editCandidate.lien_avec_client || '',
@@ -136,7 +134,6 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
         revenus_mensuels: parseFloat(formData.revenus_mensuels) || 0,
         charges_mensuelles: parseFloat(formData.charges_mensuelles) || 0,
         montant_charges_extra: parseFloat(formData.montant_charges_extra) || 0,
-        apport_personnel: parseFloat(formData.apport_personnel) || 0,
       };
       await onSave(dataToSave as any);
       onOpenChange(false);
@@ -337,15 +334,6 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                     placeholder="0"
                   />
                 </div>
-              </div>
-              <div>
-                <Label>Apport personnel (CHF)</Label>
-                <Input
-                  type="number"
-                  value={formData.apport_personnel}
-                  onChange={(e) => setFormData({ ...formData, apport_personnel: e.target.value })}
-                  placeholder="0"
-                />
               </div>
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">

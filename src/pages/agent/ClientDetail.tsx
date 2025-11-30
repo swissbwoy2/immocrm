@@ -104,7 +104,7 @@ export default function ClientDetail() {
   const [loading, setLoading] = useState(true);
   
   // Hook pour les candidats supplémentaires
-  const { candidates } = useClientCandidates(id);
+  const { candidates, refresh: refreshCandidates } = useClientCandidates(id);
   const solvabilityResult = useSolvabilityCheck(client, candidates);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<any>({});
@@ -1177,25 +1177,33 @@ export default function ClientDetail() {
               <div className="grid grid-cols-3 gap-4">
                 <Card className="bg-muted/50">
                   <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground mb-1">Revenus mensuels</p>
+                    <p className="text-sm text-muted-foreground mb-1">Revenus totaux</p>
                     <p className="text-2xl font-bold">
-                      CHF {client.revenus_mensuels?.toLocaleString() || '0'}
+                      CHF {solvabilityResult.totalRevenus.toLocaleString()}
                     </p>
+                    {solvabilityResult.candidatesRevenus > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Client: CHF {solvabilityResult.clientRevenus.toLocaleString()} + Candidats: CHF {solvabilityResult.candidatesRevenus.toLocaleString()}
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
                 <Card className="bg-muted/50">
                   <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground mb-1">Budget maximum</p>
+                    <p className="text-sm text-muted-foreground mb-1">Budget demandé</p>
                     <p className="text-2xl font-bold text-primary">
                       CHF {client.budget_max?.toLocaleString() || '0'}
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-muted/50">
+                <Card className={`${solvabilityResult.budgetPossible >= (client.budget_max || 0) ? 'bg-green-50 dark:bg-green-950/20' : 'bg-orange-50 dark:bg-orange-950/20'}`}>
                   <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground mb-1">Budget recommandé</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      CHF {budgetRecommande.toLocaleString()}
+                    <p className="text-sm text-muted-foreground mb-1">Budget possible</p>
+                    <p className={`text-2xl font-bold ${solvabilityResult.budgetPossible >= (client.budget_max || 0) ? 'text-green-600' : 'text-orange-600'}`}>
+                      CHF {solvabilityResult.budgetPossible.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      (Revenus ÷ 3)
                     </p>
                   </CardContent>
                 </Card>
@@ -1319,6 +1327,7 @@ export default function ClientDetail() {
               clientId={client.id}
               clientRevenus={client.revenus_mensuels || 0}
               budgetDemande={client.budget_max || 0}
+              onCandidatesChange={refreshCandidates}
             />
           </div>
 
