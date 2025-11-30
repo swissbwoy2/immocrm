@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.sync-all-imap-emails]
 verify_jwt = false
+
+[functions.send-recommendation-email]
+verify_jwt = false
