@@ -5,8 +5,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { MandatFormData, DECOUVERTES_AGENCE, TYPES_BIEN, PIECES_OPTIONS, REGIONS } from './types';
-import { Home, Building2, AlertCircle, CheckCircle, Calculator } from 'lucide-react';
+import { Home, Building2, AlertCircle, CheckCircle, Calculator, Users, TrendingUp, Wallet, Info } from 'lucide-react';
 
 interface Props {
   data: MandatFormData;
@@ -17,23 +18,47 @@ export default function MandatFormStep4({ data, onChange }: Props) {
   const isRental = data.type_recherche === 'Louer';
   const isPurchase = data.type_recherche === 'Acheter';
 
-  // Calculate rental budget recommendation (1/3 of income)
-  const budgetConseilleLocation = data.revenus_mensuels ? Math.floor(data.revenus_mensuels / 3) : 0;
+  // Calculate total income including candidates
+  const clientRevenus = data.revenus_mensuels || 0;
+  const candidatsRevenus = data.candidats?.reduce((sum, c) => sum + (c.revenus_mensuels || 0), 0) || 0;
+  const totalRevenusMensuels = clientRevenus + candidatsRevenus;
+  const hasCandidates = data.candidats && data.candidats.length > 0;
 
-  // Calculate purchase viability
-  const revenuAnnuelBrut = (data.revenus_mensuels || 0) * 12;
+  // Calculate rental budget recommendation (1/3 of total income)
+  const budgetConseilleLocation = totalRevenusMensuels ? Math.floor(totalRevenusMensuels / 3) : 0;
+
+  // Calculate purchase viability with total income
+  const revenuAnnuelBrut = totalRevenusMensuels * 12;
+  
+  // Prix max finançable = (Revenu annuel × 33%) / 7%
   const prixAchatMax = revenuAnnuelBrut > 0 ? Math.round((revenuAnnuelBrut * 0.33) / 0.07) : 0;
+  
+  // Apport requis = 26% du prix d'achat (20% fonds propres + 6% frais)
   const apportRequis = data.budget_max > 0 ? Math.round(data.budget_max * 0.26) : 0;
   const apportManquant = Math.max(0, apportRequis - (data.apport_personnel || 0));
+  
+  // Charges mensuelles = (Prix × 7%) / 12
   const chargesMensuelles = data.budget_max > 0 ? Math.round((data.budget_max * 0.07) / 12) : 0;
+  
+  // Taux d'effort = Charges annuelles / Revenu annuel × 100
   const tauxEffort = revenuAnnuelBrut > 0 && data.budget_max > 0 
     ? Math.round(((data.budget_max * 0.07) / revenuAnnuelBrut) * 100) 
     : 0;
+  
+  // Revenu minimum requis pour ce prix = (Prix × 7%) / 33%
+  const revenuMinRequis = data.budget_max > 0 ? Math.round((data.budget_max * 0.07) / 0.33) : 0;
+  const revenuMinMensuel = Math.round(revenuMinRequis / 12);
+  
+  // Revenu manquant
+  const revenuManquant = Math.max(0, revenuMinMensuel - totalRevenusMensuels);
 
   // Check permit for purchase eligibility
   const permisEligibleAchat = ['B', 'C', 'Suisse', 'Suisse / Autre'].some(p => 
     data.type_permis?.includes(p) || data.nationalite?.toLowerCase().includes('suisse')
   );
+
+  // Check overall viability
+  const isViable = tauxEffort <= 33 && apportManquant === 0 && permisEligibleAchat;
 
   return (
     <div className="space-y-6">
@@ -108,6 +133,49 @@ export default function MandatFormStep4({ data, onChange }: Props) {
           </Card>
         )}
 
+        {/* Income info for purchase */}
+        {isPurchase && (
+          <Card className="p-4 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+            <div className="flex items-start gap-3">
+              <Users className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-medium text-blue-700 dark:text-blue-400">
+                  Revenus pris en compte
+                </p>
+                <div className="mt-2 space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-blue-600 dark:text-blue-500">Vos revenus:</span>
+                    <span className="font-medium text-blue-700 dark:text-blue-400">
+                      {clientRevenus.toLocaleString('fr-CH')} CHF/mois
+                    </span>
+                  </div>
+                  {hasCandidates && (
+                    <div className="flex justify-between">
+                      <span className="text-blue-600 dark:text-blue-500">
+                        Revenus candidats ({data.candidats.length}):
+                      </span>
+                      <span className="font-medium text-blue-700 dark:text-blue-400">
+                        +{candidatsRevenus.toLocaleString('fr-CH')} CHF/mois
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between pt-2 border-t border-blue-200 dark:border-blue-700">
+                    <span className="font-medium text-blue-700 dark:text-blue-400">Revenu total:</span>
+                    <span className="font-bold text-blue-800 dark:text-blue-300">
+                      {totalRevenusMensuels.toLocaleString('fr-CH')} CHF/mois
+                    </span>
+                  </div>
+                </div>
+                {!hasCandidates && (
+                  <p className="text-xs text-blue-500 dark:text-blue-600 mt-2">
+                    💡 Vous pouvez ajouter des co-acquéreurs à l'étape suivante pour augmenter votre capacité d'emprunt.
+                  </p>
+                )}
+              </div>
+            </div>
+          </Card>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="nombre_occupants">Combien de personnes occuperaient le bien ? *</Label>
@@ -175,7 +243,8 @@ export default function MandatFormStep4({ data, onChange }: Props) {
                 required
               />
               <p className="text-xs text-muted-foreground">
-                Budget conseillé max: {budgetConseilleLocation > 0 ? `${budgetConseilleLocation.toLocaleString()} CHF` : '---'} (1/3 de vos revenus)
+                Budget conseillé max: {budgetConseilleLocation > 0 ? `${budgetConseilleLocation.toLocaleString('fr-CH')} CHF` : '---'} 
+                (1/3 de vos revenus{hasCandidates ? ' + candidats' : ''})
               </p>
             </div>
           )}
@@ -194,7 +263,7 @@ export default function MandatFormStep4({ data, onChange }: Props) {
                   required
                 />
                 <p className="text-xs text-muted-foreground">
-                  Prix max finançable: {prixAchatMax > 0 ? `${prixAchatMax.toLocaleString()} CHF` : '---'}
+                  Avec vos revenus, prix max: <strong>{prixAchatMax > 0 ? `${prixAchatMax.toLocaleString('fr-CH')} CHF` : '---'}</strong>
                 </p>
               </div>
 
@@ -209,58 +278,114 @@ export default function MandatFormStep4({ data, onChange }: Props) {
                   required
                 />
                 <p className="text-xs text-muted-foreground">
-                  Apport requis (26%): {apportRequis > 0 ? `${apportRequis.toLocaleString()} CHF` : '---'}
+                  Apport requis (26%): <strong>{apportRequis > 0 ? `${apportRequis.toLocaleString('fr-CH')} CHF` : '---'}</strong>
                 </p>
               </div>
 
-              {/* Purchase viability analysis */}
+              {/* Purchase viability analysis - Enhanced */}
               {data.budget_max > 0 && (
-                <Card className="md:col-span-2 p-4 bg-muted/30">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Calculator className="h-5 w-5 text-primary" />
-                    <span className="font-medium">Analyse de viabilité</span>
+                <Card className={`md:col-span-2 p-4 ${isViable ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'}`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <Calculator className="h-5 w-5 text-primary" />
+                      <span className="font-semibold">Analyse de financement</span>
+                    </div>
+                    {isViable ? (
+                      <Badge variant="default" className="bg-green-600">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Finançable
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        À revoir
+                      </Badge>
+                    )}
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <p className="text-muted-foreground">Apport requis (26%)</p>
-                      <p className={`font-semibold ${apportManquant > 0 ? 'text-destructive' : 'text-green-600'}`}>
-                        {apportRequis.toLocaleString()} CHF
-                      </p>
+                  
+                  {/* Main metrics */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    {/* Taux d'effort - Detailed */}
+                    <Card className="p-3 bg-background">
+                      <div className="flex items-center gap-2 mb-2">
+                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Taux d'effort</span>
+                      </div>
+                      <div className="text-2xl font-bold mb-1">
+                        <span className={tauxEffort > 33 ? 'text-destructive' : 'text-green-600'}>
+                          {tauxEffort}%
+                        </span>
+                        <span className="text-muted-foreground text-sm font-normal"> / 33% max</span>
+                      </div>
+                      <div className="text-xs space-y-1 text-muted-foreground">
+                        <p>Charges annuelles: {(data.budget_max * 0.07).toLocaleString('fr-CH')} CHF</p>
+                        <p>Revenu annuel: {revenuAnnuelBrut.toLocaleString('fr-CH')} CHF</p>
+                      </div>
+                    </Card>
+
+                    {/* Apport - Detailed */}
+                    <Card className="p-3 bg-background">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Wallet className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Apport personnel</span>
+                      </div>
+                      <div className="text-2xl font-bold mb-1">
+                        <span className={apportManquant > 0 ? 'text-destructive' : 'text-green-600'}>
+                          {(data.apport_personnel || 0).toLocaleString('fr-CH')}
+                        </span>
+                        <span className="text-muted-foreground text-sm font-normal"> / {apportRequis.toLocaleString('fr-CH')} CHF</span>
+                      </div>
                       {apportManquant > 0 && (
-                        <p className="text-xs text-destructive">
-                          Manque: {apportManquant.toLocaleString()} CHF
+                        <p className="text-xs text-destructive font-medium">
+                          ⚠️ Il manque {apportManquant.toLocaleString('fr-CH')} CHF
                         </p>
                       )}
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Charges/mois (7%/an)</p>
-                      <p className="font-semibold">{chargesMensuelles.toLocaleString()} CHF</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Taux d'effort</p>
-                      <p className={`font-semibold ${tauxEffort > 33 ? 'text-destructive' : 'text-green-600'}`}>
-                        {tauxEffort}%
-                      </p>
-                      <p className="text-xs text-muted-foreground">Max: 33%</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Viabilité</p>
-                      {tauxEffort <= 33 && apportManquant === 0 && permisEligibleAchat ? (
-                        <Badge variant="default" className="bg-green-600">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          OK
-                        </Badge>
-                      ) : (
-                        <Badge variant="destructive">
-                          <AlertCircle className="h-3 w-3 mr-1" />
-                          À revoir
-                        </Badge>
-                      )}
-                    </div>
+                    </Card>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-3 border-t pt-3">
-                    💡 Calcul basé sur: intérêts 5% + amortissement 1% + entretien 1% = 7%/an. 
-                    Les charges ne doivent pas dépasser 33% du revenu brut.
+
+                  {/* Requirements summary */}
+                  <div className="bg-background rounded-lg p-3 space-y-2">
+                    <p className="text-sm font-medium flex items-center gap-2">
+                      <Info className="h-4 w-4" />
+                      Exigences pour ce prix d'achat
+                    </p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Revenu mensuel min:</span>
+                        <span className={`font-medium ${revenuManquant > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                          {revenuMinMensuel.toLocaleString('fr-CH')} CHF
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Votre revenu total:</span>
+                        <span className="font-medium">{totalRevenusMensuels.toLocaleString('fr-CH')} CHF</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Apport min (26%):</span>
+                        <span className={`font-medium ${apportManquant > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                          {apportRequis.toLocaleString('fr-CH')} CHF
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Charges mensuelles:</span>
+                        <span className="font-medium">{chargesMensuelles.toLocaleString('fr-CH')} CHF</span>
+                      </div>
+                    </div>
+                    
+                    {revenuManquant > 0 && (
+                      <Alert variant="destructive" className="mt-2">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          Il vous manque <strong>{revenuManquant.toLocaleString('fr-CH')} CHF/mois</strong> de revenus.
+                          {!hasCandidates && ' Ajoutez un co-acquéreur à l\'étape suivante pour augmenter vos revenus.'}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+                    💡 Calcul basé sur les normes bancaires suisses: intérêts théoriques 5% + amortissement 1% + charges 1% = 7%/an.
+                    Les charges ne doivent pas dépasser 33% du revenu brut annuel.
                   </p>
                 </Card>
               )}
