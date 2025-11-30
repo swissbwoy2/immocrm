@@ -33,23 +33,23 @@ const initialFormData = {
   situation_familiale: '',
   gerance_actuelle: '',
   contact_gerance: '',
-  loyer_actuel: 0,
+  loyer_actuel: '',
   depuis_le: '',
-  pieces_actuel: 0,
+  pieces_actuel: '',
   motif_changement: '',
   profession: '',
   employeur: '',
   secteur_activite: '',
   type_contrat: '',
   source_revenus: '',
-  anciennete_mois: 0,
+  anciennete_mois: '',
   date_engagement: '',
-  revenus_mensuels: 0,
-  charges_mensuelles: 0,
+  revenus_mensuels: '',
+  charges_mensuelles: '',
   charges_extraordinaires: false,
-  montant_charges_extra: 0,
+  montant_charges_extra: '',
   autres_credits: false,
-  apport_personnel: 0,
+  apport_personnel: '',
   poursuites: false,
   curatelle: false,
   lien_avec_client: '',
@@ -93,23 +93,23 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
           situation_familiale: editCandidate.situation_familiale || '',
           gerance_actuelle: editCandidate.gerance_actuelle || '',
           contact_gerance: editCandidate.contact_gerance || '',
-          loyer_actuel: editCandidate.loyer_actuel || 0,
+          loyer_actuel: editCandidate.loyer_actuel?.toString() || '',
           depuis_le: editCandidate.depuis_le || '',
-          pieces_actuel: editCandidate.pieces_actuel || 0,
+          pieces_actuel: editCandidate.pieces_actuel?.toString() || '',
           motif_changement: editCandidate.motif_changement || '',
           profession: editCandidate.profession || '',
           employeur: editCandidate.employeur || '',
           secteur_activite: editCandidate.secteur_activite || '',
           type_contrat: editCandidate.type_contrat || '',
           source_revenus: editCandidate.source_revenus || '',
-          anciennete_mois: editCandidate.anciennete_mois || 0,
+          anciennete_mois: editCandidate.anciennete_mois?.toString() || '',
           date_engagement: editCandidate.date_engagement || '',
-          revenus_mensuels: editCandidate.revenus_mensuels || 0,
-          charges_mensuelles: editCandidate.charges_mensuelles || 0,
+          revenus_mensuels: editCandidate.revenus_mensuels?.toString() || '',
+          charges_mensuelles: editCandidate.charges_mensuelles?.toString() || '',
           charges_extraordinaires: editCandidate.charges_extraordinaires || false,
-          montant_charges_extra: editCandidate.montant_charges_extra || 0,
+          montant_charges_extra: editCandidate.montant_charges_extra?.toString() || '',
           autres_credits: editCandidate.autres_credits || false,
-          apport_personnel: editCandidate.apport_personnel || 0,
+          apport_personnel: editCandidate.apport_personnel?.toString() || '',
           poursuites: editCandidate.poursuites || false,
           curatelle: editCandidate.curatelle || false,
           lien_avec_client: editCandidate.lien_avec_client || '',
@@ -127,7 +127,18 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
 
     setSaving(true);
     try {
-      await onSave(formData);
+      // Convertir les strings en nombres pour la base de données
+      const dataToSave = {
+        ...formData,
+        loyer_actuel: parseFloat(formData.loyer_actuel) || 0,
+        pieces_actuel: parseFloat(formData.pieces_actuel) || 0,
+        anciennete_mois: parseInt(formData.anciennete_mois) || 0,
+        revenus_mensuels: parseFloat(formData.revenus_mensuels) || 0,
+        charges_mensuelles: parseFloat(formData.charges_mensuelles) || 0,
+        montant_charges_extra: parseFloat(formData.montant_charges_extra) || 0,
+        apport_personnel: parseFloat(formData.apport_personnel) || 0,
+      };
+      await onSave(dataToSave as any);
       onOpenChange(false);
     } finally {
       setSaving(false);
@@ -312,8 +323,8 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                   <Label>Revenus mensuels nets (CHF)</Label>
                   <Input
                     type="number"
-                    value={formData.revenus_mensuels || ''}
-                    onChange={(e) => setFormData({ ...formData, revenus_mensuels: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                    value={formData.revenus_mensuels}
+                    onChange={(e) => setFormData({ ...formData, revenus_mensuels: e.target.value })}
                     placeholder="0"
                   />
                 </div>
@@ -321,8 +332,8 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                   <Label>Charges mensuelles (CHF)</Label>
                   <Input
                     type="number"
-                    value={formData.charges_mensuelles || ''}
-                    onChange={(e) => setFormData({ ...formData, charges_mensuelles: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                    value={formData.charges_mensuelles}
+                    onChange={(e) => setFormData({ ...formData, charges_mensuelles: e.target.value })}
                     placeholder="0"
                   />
                 </div>
@@ -331,8 +342,8 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                 <Label>Apport personnel (CHF)</Label>
                 <Input
                   type="number"
-                  value={formData.apport_personnel || ''}
-                  onChange={(e) => setFormData({ ...formData, apport_personnel: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                  value={formData.apport_personnel}
+                  onChange={(e) => setFormData({ ...formData, apport_personnel: e.target.value })}
                   placeholder="0"
                 />
               </div>
@@ -350,8 +361,8 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                     <Label>Montant charges extraordinaires (CHF)</Label>
                     <Input
                       type="number"
-                      value={formData.montant_charges_extra || ''}
-                      onChange={(e) => setFormData({ ...formData, montant_charges_extra: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                      value={formData.montant_charges_extra}
+                      onChange={(e) => setFormData({ ...formData, montant_charges_extra: e.target.value })}
                       placeholder="0"
                     />
                   </div>
@@ -466,8 +477,8 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                 <Input
                   type="number"
                   min="0"
-                  value={formData.anciennete_mois || ''}
-                  onChange={(e) => setFormData({ ...formData, anciennete_mois: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+                  value={formData.anciennete_mois}
+                  onChange={(e) => setFormData({ ...formData, anciennete_mois: e.target.value })}
                   placeholder="0"
                 />
               </div>
@@ -497,8 +508,8 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                   <Label>Loyer actuel (CHF)</Label>
                   <Input
                     type="number"
-                    value={formData.loyer_actuel || ''}
-                    onChange={(e) => setFormData({ ...formData, loyer_actuel: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                    value={formData.loyer_actuel}
+                    onChange={(e) => setFormData({ ...formData, loyer_actuel: e.target.value })}
                     placeholder="0"
                   />
                 </div>
@@ -518,8 +529,8 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                     type="number"
                     min="0"
                     step="0.5"
-                    value={formData.pieces_actuel || ''}
-                    onChange={(e) => setFormData({ ...formData, pieces_actuel: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                    value={formData.pieces_actuel}
+                    onChange={(e) => setFormData({ ...formData, pieces_actuel: e.target.value })}
                     placeholder="0"
                   />
                 </div>
