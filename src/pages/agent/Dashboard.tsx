@@ -237,8 +237,8 @@ export default function AgentDashboard() {
             )}
           </div>
 
-          {/* KPIs */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 md:gap-4">
+          {/* KPIs - Plus lisible sur tablette */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 md:gap-4">
             <KPICard 
               title="Clients actifs" 
               value={clientsActifs} 
@@ -267,7 +267,7 @@ export default function AgentDashboard() {
               variant={counts.unreadMessages > 0 ? 'danger' : 'default'}
             />
             <KPICard 
-              title="Deadlines critiques" 
+              title="Deadlines" 
               value={deadlinesCritiques} 
               icon={LayoutDashboard} 
               variant={deadlinesCritiques > 0 ? 'danger' : 'default'}
@@ -275,16 +275,17 @@ export default function AgentDashboard() {
             />
             <KPICard 
               title="Commission pot." 
-              value={`${totalCommissionPotentielle.toLocaleString()} CHF`} 
+              value={`${totalCommissionPotentielle.toLocaleString()}`} 
               icon={DollarSign}
               variant="default"
-              subtitle="3 derniers mois"
+              subtitle="CHF (3 mois)"
             />
             <KPICard 
-              title="Commissions ce mois" 
-              value={`${commissionsCeMois.toLocaleString()} CHF`} 
+              title="Ce mois" 
+              value={`${commissionsCeMois.toLocaleString()}`} 
               icon={CheckCircle}
               variant="success"
+              subtitle="CHF"
             />
           </div>
 

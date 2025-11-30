@@ -24,17 +24,17 @@ export function KPICard({ title, value, icon: Icon, variant = 'default', subtitl
       className={onClick ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}
       onClick={onClick}
     >
-      <CardContent className="p-4 md:p-6">
+      <CardContent className="p-3 sm:p-4 lg:p-6">
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <p className="text-xs md:text-sm font-medium text-muted-foreground truncate">{title}</p>
-            <h3 className="text-lg md:text-2xl font-bold mt-1 md:mt-2 truncate">{value}</h3>
+            <p className="text-[10px] sm:text-xs lg:text-sm font-medium text-muted-foreground truncate leading-tight">{title}</p>
+            <h3 className="text-base sm:text-lg lg:text-2xl font-bold mt-0.5 sm:mt-1 lg:mt-2 truncate">{value}</h3>
             {subtitle && (
-              <p className="text-[10px] md:text-xs text-muted-foreground mt-1 truncate">{subtitle}</p>
+              <p className="text-[9px] sm:text-[10px] lg:text-xs text-muted-foreground mt-0.5 truncate">{subtitle}</p>
             )}
           </div>
-          <div className={cn('p-2 md:p-3 rounded-lg flex-shrink-0', variantClasses[variant])}>
-            <Icon className="w-4 h-4 md:w-6 md:h-6" />
+          <div className={cn('p-1.5 sm:p-2 lg:p-3 rounded-lg flex-shrink-0', variantClasses[variant])}>
+            <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-6 lg:h-6" />
           </div>
         </div>
       </CardContent>

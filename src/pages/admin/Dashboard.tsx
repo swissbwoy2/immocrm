@@ -196,8 +196,8 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* KPIs */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8">
+          {/* KPIs - Optimisé pour tablette */}
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 md:gap-4 mb-8">
             <KPICard 
               title="Clients actifs" 
               value={clientsActifs} 
@@ -212,36 +212,38 @@ export default function AdminDashboard() {
               onClick={() => navigate('/admin/agents')}
             />
             <KPICard 
-              title="Offres envoyées" 
+              title="Offres" 
               value={totalOffresEnvoyees} 
               icon={Send}
               onClick={() => navigate('/admin/offres-envoyees')}
             />
             <KPICard 
-              title="Transactions en cours" 
+              title="Trans. en cours" 
               value={transactionsEnCours} 
               icon={Clock}
               onClick={() => navigate('/admin/transactions')}
             />
             <KPICard 
-              title="Conclues ce mois" 
+              title="Conclues" 
               value={transactionsConcluesMois} 
               icon={CheckCircle} 
               variant="success"
+              subtitle="ce mois"
               onClick={() => navigate('/admin/transactions')}
             />
             <KPICard 
-              title="Deadlines critiques" 
+              title="Deadlines" 
               value={deadlinesCritiques} 
               icon={AlertTriangle} 
               variant={deadlinesCritiques > 0 ? 'danger' : 'default'}
               onClick={() => navigate('/admin/mandats')}
             />
             <KPICard 
-              title="Revenus agence" 
-              value={`${revenusAgenceMois.toLocaleString()} CHF`} 
+              title="Revenus" 
+              value={`${revenusAgenceMois.toLocaleString()}`} 
               icon={DollarSign} 
               variant="success"
+              subtitle="CHF ce mois"
               onClick={() => navigate('/admin/transactions')}
             />
           </div>
@@ -249,11 +251,12 @@ export default function AdminDashboard() {
           {/* Répartition des agents */}
           <Card className="mb-8">
             <CardHeader>
-              <CardTitle>Répartition des clients</CardTitle>
+              <CardTitle className="text-base md:text-lg">Répartition des clients</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              {/* Vue tableau sur desktop, vue cartes sur mobile/tablette */}
+              <div className="hidden lg:block overflow-x-auto">
+                <table className="w-full min-w-[700px]">
                   <thead>
                     <tr className="border-b">
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Agent</th>
@@ -311,51 +314,107 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
+              
+              {/* Vue cartes pour mobile/tablette */}
+              <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {agents.map(agent => {
+                  const agentClients = clients.filter(c => c.agentId === agent.id);
+                  const critiques = agentClients.filter(c => calculateDaysElapsed(c.dateInscription) >= 90).length;
+                  const commissionPot = agentClients.reduce((sum, c) => sum + c.budgetMax, 0);
+
+                  return (
+                    <div 
+                      key={agent.id} 
+                      className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <button 
+                          onClick={() => navigate(`/admin/agents/${agent.id}`)}
+                          className="font-medium hover:underline text-left text-sm"
+                        >
+                          {agent.prenom} {agent.nom}
+                        </button>
+                        <Badge variant={agent.actif ? 'default' : 'secondary'} className="text-xs">
+                          {agent.actif ? 'Actif' : 'Inactif'}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-xs mb-3">
+                        <div>
+                          <p className="text-muted-foreground">Clients</p>
+                          <p className="font-semibold">{agentClients.length}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Critiques</p>
+                          <p className={critiques > 0 ? 'font-semibold text-destructive' : 'text-muted-foreground'}>
+                            {critiques}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Commission</p>
+                          <p className="font-semibold">{commissionPot.toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <div className="flex items-center gap-2">
+                          <Power className="w-3 h-3 text-muted-foreground" />
+                          <Switch
+                            checked={agent.actif}
+                            onCheckedChange={() => toggleAgentStatus(agent.user_id, agent.actif)}
+                          />
+                        </div>
+                        <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => navigate('/admin/assignations')}>
+                          Redistribuer
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
 
           {/* Alertes */}
           <Card>
             <CardHeader>
-              <CardTitle>Alertes</CardTitle>
+              <CardTitle className="text-base md:text-lg">Alertes</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-warning/10 rounded-lg border border-warning/20">
+            <CardContent className="space-y-3 md:space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-warning/10 rounded-lg border border-warning/20">
                 <div className="flex items-center gap-3">
-                  <AlertTriangle className="w-5 h-5 text-warning" />
+                  <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-warning flex-shrink-0" />
                   <div>
-                    <p className="font-medium">{clientsSansAgent} client(s) sans agent</p>
-                    <p className="text-sm text-muted-foreground">Assignez un agent pour commencer le suivi</p>
+                    <p className="font-medium text-sm md:text-base">{clientsSansAgent} client(s) sans agent</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Assignez un agent pour commencer le suivi</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => navigate('/admin/assignations')}>
-                  Assigner maintenant
+                <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto" onClick={() => navigate('/admin/assignations')}>
+                  Assigner
                 </Button>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-primary/10 rounded-lg border border-primary/20">
                 <div className="flex items-center gap-3">
-                  <Clock className="w-5 h-5 text-blue-600" />
+                  <Clock className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
                   <div>
-                    <p className="font-medium">{clientsJ60} client(s) à J+60</p>
-                    <p className="text-sm text-muted-foreground">Notification de renouvellement à envoyer</p>
+                    <p className="font-medium text-sm md:text-base">{clientsJ60} client(s) à J+60</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">Notification de renouvellement à envoyer</p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto">
                   Voir les clients
                 </Button>
               </div>
 
               {deadlinesCritiques > 0 && (
-                <div className="flex items-center justify-between p-4 bg-destructive/10 rounded-lg border border-destructive/20">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-destructive/10 rounded-lg border border-destructive/20">
                   <div className="flex items-center gap-3">
-                    <AlertTriangle className="w-5 h-5 text-destructive" />
+                    <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-destructive flex-shrink-0" />
                     <div>
-                      <p className="font-medium">{deadlinesCritiques} deadline(s) critique(s)</p>
-                      <p className="text-sm text-muted-foreground">Mandats expirés ou sur le point d'expirer</p>
+                      <p className="font-medium text-sm md:text-base">{deadlinesCritiques} deadline(s) critique(s)</p>
+                      <p className="text-xs md:text-sm text-muted-foreground">Mandats expirés ou sur le point d'expirer</p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => navigate('/admin/clients')}>
+                  <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto" onClick={() => navigate('/admin/clients')}>
                     Voir les clients
                   </Button>
                 </div>
