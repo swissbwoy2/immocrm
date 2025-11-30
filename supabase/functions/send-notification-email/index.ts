@@ -154,16 +154,29 @@ serve(async (req) => {
 
     console.log(`Sending notification email for user ${user_id}, type: ${notification_type}`);
 
-    // Get user profile to get email
+    // Get user profile to get email and notification preference
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("email, prenom, nom")
+      .select("email, prenom, nom, notifications_email")
       .eq("id", user_id)
       .single();
 
     if (profileError || !profile) {
       console.error("Profile not found for user:", user_id);
       throw new Error("User profile not found");
+    }
+
+    // Check if user has email notifications enabled
+    if (profile.notifications_email === false) {
+      console.log(`User ${user_id} has email notifications disabled, skipping`);
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: "Email notifications disabled for this user",
+          skipped: true 
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const userName = profile.prenom ? `${profile.prenom}` : undefined;
