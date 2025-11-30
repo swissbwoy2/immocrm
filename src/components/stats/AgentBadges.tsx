@@ -41,7 +41,7 @@ const badgeColors: Record<string, string> = {
   star: 'bg-blue-500/20 text-blue-600 border-blue-500/30',
   trophy: 'bg-purple-500/20 text-purple-600 border-purple-500/30',
   champion: 'bg-red-500/20 text-red-600 border-red-500/30',
-  legend: 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 border-purple-500/30',
+  legend: 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 border-purple-500/30 animate-pulse',
 };
 
 const categoryEmojis: Record<string, string> = {
@@ -52,6 +52,7 @@ const categoryEmojis: Record<string, string> = {
   commissions: '💵',
   streak: '🔥',
   special: '⭐',
+  speed: '⚡',
 };
 
 export function AgentBadges({ agentId, compact = false }: AgentBadgesProps) {
