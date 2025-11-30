@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, 
   FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download, Eye, Upload, MailPlus,
-  FileCheck, CheckCircle, XCircle, Clock, Pencil
+  FileCheck, CheckCircle, XCircle, Clock, Pencil, Trash2
 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SendDossierDialog } from '@/components/SendDossierDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -108,6 +109,9 @@ export default function ClientDetail() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [documentToRename, setDocumentToRename] = useState<any>(null);
   const [newDocumentName, setNewDocumentName] = useState('');
+  const [documentToDelete, setDocumentToDelete] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -335,6 +339,52 @@ export default function ClientDetail() {
     setDocumentToRename(doc);
     setNewDocumentName(doc.nom);
     setRenameDialogOpen(true);
+  };
+
+  const handleDeleteDocument = async () => {
+    if (!documentToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      // Supprimer du storage si ce n'est pas une data URL
+      if (!documentToDelete.url.startsWith('data:')) {
+        const { error: storageError } = await supabase.storage
+          .from('client-documents')
+          .remove([documentToDelete.url]);
+
+        if (storageError) {
+          console.warn('Storage delete warning:', storageError);
+        }
+      }
+
+      // Supprimer de la base de données
+      const { error: dbError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', documentToDelete.id);
+
+      if (dbError) throw dbError;
+
+      // Mettre à jour l'état local
+      setDocuments(documents.filter(d => d.id !== documentToDelete.id));
+
+      toast({
+        title: 'Document supprimé',
+        description: 'Le document a été supprimé avec succès',
+      });
+
+      setDeleteDialogOpen(false);
+      setDocumentToDelete(null);
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de supprimer le document',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handlePreview = async (document: any) => {
@@ -1325,22 +1375,36 @@ export default function ClientDetail() {
               {documents.map((doc: any) => (
                 <Card key={doc.id} className="border">
                   <CardContent className="pt-4">
-                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <FileText className="w-4 h-4 text-primary flex-shrink-0" />
                         <span className="text-sm font-medium truncate">
                           {doc.nom}
                         </span>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 w-6 p-0 flex-shrink-0"
-                        onClick={() => openRenameDialog(doc)}
-                        title="Renommer"
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 flex-shrink-0"
+                          onClick={() => openRenameDialog(doc)}
+                          title="Renommer"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 flex-shrink-0 text-destructive hover:text-destructive"
+                          onClick={() => {
+                            setDocumentToDelete(doc);
+                            setDeleteDialogOpen(true);
+                          }}
+                          title="Supprimer"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Badge variant="outline" className="text-xs">
@@ -1458,6 +1522,30 @@ export default function ClientDetail() {
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Delete Document Dialog */}
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Supprimer le document</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Êtes-vous sûr de vouloir supprimer "{documentToDelete?.nom}" ? Cette action est irréversible.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setDocumentToDelete(null)}>
+                  Annuler
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteDocument}
+                  disabled={isDeleting}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {isDeleting ? 'Suppression...' : 'Supprimer'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
     </div>
