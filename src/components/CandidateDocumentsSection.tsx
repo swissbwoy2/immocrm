@@ -29,6 +29,7 @@ interface CandidateDocumentsSectionProps {
   clientName?: string;
   candidates: ClientCandidate[];
   onDocumentsChange?: () => void;
+  refreshKey?: number;
 }
 
 const REQUIRED_DOCUMENTS = [
@@ -46,6 +47,7 @@ export function CandidateDocumentsSection({
   clientName,
   candidates,
   onDocumentsChange,
+  refreshKey,
 }: CandidateDocumentsSectionProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,7 +84,7 @@ export function CandidateDocumentsSection({
 
   useEffect(() => {
     loadDocuments();
-  }, [clientId]);
+  }, [clientId, refreshKey]);
 
   const handleUpload = async () => {
     if (!selectedFile) return;
