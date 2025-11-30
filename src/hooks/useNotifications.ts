@@ -183,24 +183,6 @@ export const useNotifications = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Function to send notification email
-    const sendNotificationEmail = async (notification: Notification) => {
-      try {
-        await supabase.functions.invoke('send-notification-email', {
-          body: {
-            user_id: notification.user_id,
-            notification_type: notification.type,
-            title: notification.title,
-            message: notification.message || '',
-            link: notification.link
-          }
-        });
-        console.log('Notification email sent for:', notification.title);
-      } catch (error) {
-        console.error('Error sending notification email:', error);
-      }
-    };
-
     const channel = supabase
       .channel('notifications-realtime')
       // Écouter les nouvelles notifications
@@ -229,9 +211,6 @@ export const useNotifications = () => {
             title: newNotification.title,
             description: newNotification.message || undefined,
           });
-
-          // Envoyer l'email de notification
-          sendNotificationEmail(newNotification);
         }
       )
       // Écouter les mises à jour (mark as read depuis autre appareil)

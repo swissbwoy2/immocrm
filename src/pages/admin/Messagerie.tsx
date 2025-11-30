@@ -195,6 +195,77 @@ const Messagerie = () => {
       .from('conversations')
       .update({ last_message_at: new Date().toISOString() })
       .eq('id', selectedConv);
+
+    // Send notifications to client and agent
+    const conversation = conversations.find(c => c.id === selectedConv);
+    if (conversation) {
+      // Get admin name
+      const { data: adminProfile } = await supabase
+        .from('profiles')
+        .select('prenom, nom')
+        .eq('id', user.id)
+        .single();
+
+      const adminName = adminProfile 
+        ? `${adminProfile.prenom} ${adminProfile.nom}`.trim() 
+        : 'L\'administrateur';
+
+      // Notify client
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('user_id')
+        .eq('id', conversation.client_id)
+        .single();
+
+      if (clientData) {
+        await supabase.rpc('create_notification', {
+          p_user_id: clientData.user_id,
+          p_type: 'new_message',
+          p_title: 'Nouveau message',
+          p_message: `${adminName} vous a envoyé un message`,
+          p_link: '/client/messagerie',
+          p_metadata: { conversation_id: selectedConv }
+        });
+
+        await supabase.functions.invoke('send-notification-email', {
+          body: {
+            user_id: clientData.user_id,
+            notification_type: 'new_message',
+            title: 'Nouveau message',
+            message: `${adminName} vous a envoyé un message`,
+            link: '/client/messagerie'
+          }
+        });
+      }
+
+      // Notify agent
+      const { data: agentData } = await supabase
+        .from('agents')
+        .select('user_id')
+        .eq('id', conversation.agent_id)
+        .single();
+
+      if (agentData) {
+        await supabase.rpc('create_notification', {
+          p_user_id: agentData.user_id,
+          p_type: 'new_message',
+          p_title: 'Nouveau message',
+          p_message: `${adminName} a envoyé un message dans une conversation`,
+          p_link: '/agent/messagerie',
+          p_metadata: { conversation_id: selectedConv }
+        });
+
+        await supabase.functions.invoke('send-notification-email', {
+          body: {
+            user_id: agentData.user_id,
+            notification_type: 'new_message',
+            title: 'Nouveau message',
+            message: `${adminName} a envoyé un message dans une conversation`,
+            link: '/agent/messagerie'
+          }
+        });
+      }
+    }
   };
 
   const filteredConversations = conversations.filter(conv => {

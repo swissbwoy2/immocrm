@@ -190,6 +190,50 @@ const Messagerie = () => {
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', selectedConv);
 
+      // Get client user_id to send notification
+      const conversation = conversations.find(c => c.id === selectedConv);
+      if (conversation) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('user_id')
+          .eq('id', conversation.client_id)
+          .single();
+
+        if (clientData) {
+          // Get agent name for notification
+          const { data: agentProfile } = await supabase
+            .from('profiles')
+            .select('prenom, nom')
+            .eq('id', user.id)
+            .single();
+
+          const agentName = agentProfile 
+            ? `${agentProfile.prenom} ${agentProfile.nom}`.trim() 
+            : 'Votre agent';
+
+          // Create notification for client
+          await supabase.rpc('create_notification', {
+            p_user_id: clientData.user_id,
+            p_type: 'new_message',
+            p_title: 'Nouveau message',
+            p_message: `${agentName} vous a envoyé un message`,
+            p_link: '/client/messagerie',
+            p_metadata: { conversation_id: selectedConv }
+          });
+
+          // Also directly call the edge function to ensure email is sent
+          await supabase.functions.invoke('send-notification-email', {
+            body: {
+              user_id: clientData.user_id,
+              notification_type: 'new_message',
+              title: 'Nouveau message',
+              message: `${agentName} vous a envoyé un message`,
+              link: '/client/messagerie'
+            }
+          });
+        }
+      }
+
       setMessageText("");
       setPendingAttachment(null);
     } catch (error) {
