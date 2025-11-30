@@ -208,23 +208,7 @@ const MesCandidatures = () => {
       const candidature = candidatures.find(c => c.id === candidatureId);
       const offre = offres.find(o => o.id === candidature?.offre_id);
       
-      if (offre?.agent_id) {
-        const { data: agent } = await supabase
-          .from('agents')
-          .select('user_id')
-          .eq('id', offre.agent_id)
-          .maybeSingle();
-
-        if (agent) {
-          await supabase.from('notifications').insert({
-            user_id: agent.user_id,
-            type: 'bail_conclu',
-            title: '🎉 Client accepte de conclure le bail',
-            message: `Le client souhaite conclure le bail pour ${offre.adresse}`,
-            link: '/agent/candidatures',
-          });
-        }
-      }
+      // Notification handled by database trigger (notify_on_candidature_status_change)
 
       await loadData();
       toast({ title: "Bail accepté", description: "Votre agent va valider avec la régie." });
@@ -272,24 +256,7 @@ const MesCandidatures = () => {
           created_by: user?.id,
         });
 
-        // Notify agent
-        if (clientData.agent_id) {
-          const { data: agent } = await supabase
-            .from('agents')
-            .select('user_id')
-            .eq('id', clientData.agent_id)
-            .maybeSingle();
-
-          if (agent) {
-            await supabase.from('notifications').insert({
-              user_id: agent.user_id,
-              type: 'date_signature_choisie',
-              title: '📅 Date de signature choisie',
-              message: `Le client a choisi la date du ${format(new Date(selectedDate.date), 'dd/MM/yyyy à HH:mm', { locale: fr })}`,
-              link: '/agent/candidatures',
-            });
-          }
-        }
+        // Notification handled by database trigger (notify_on_candidature_status_change)
       }
 
       await loadData();

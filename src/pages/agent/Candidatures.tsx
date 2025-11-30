@@ -201,31 +201,7 @@ export default function Candidatures() {
         await supabase.from('offres').update({ statut: offreStatut }).eq('id', candidature.offre_id);
       }
 
-      // Send notification to client
-      if (candidature?.clients?.user_id) {
-        const notificationMap: Record<string, { title: string; message: string }> = {
-          'acceptee': { title: '🎉 Candidature acceptée !', message: `Votre candidature pour ${candidature.offres?.adresse} a été acceptée !` },
-          'refusee': { title: 'Candidature refusée', message: `Votre candidature pour ${candidature.offres?.adresse} n'a pas été retenue.` },
-          'bail_conclu': { title: '📋 Confirmation reçue', message: `Votre agent a confirmé votre intérêt pour ${candidature.offres?.adresse}` },
-          'attente_bail': { title: 'Validation régie en cours', message: `Votre agent valide votre intérêt auprès de la régie pour ${candidature.offres?.adresse}` },
-          'bail_recu': { title: '📄 Bail reçu - Choisissez votre date', message: `Le bail est prêt ! Choisissez une date de signature pour ${candidature.offres?.adresse}` },
-          'signature_planifiee': { title: '📅 Date de signature confirmée', message: `La date de signature a été confirmée pour ${candidature.offres?.adresse}` },
-          'signature_effectuee': { title: '✅ Bail signé !', message: `Le bail pour ${candidature.offres?.adresse} a été signé. En attente de la date d'état des lieux.` },
-          'etat_lieux_fixe': { title: '🔑 État des lieux fixé', message: `La date de l'état des lieux pour ${candidature.offres?.adresse} a été fixée.` },
-          'cles_remises': { title: '🏠 Bienvenue chez vous !', message: `Les clés de ${candidature.offres?.adresse} vous ont été remises. Félicitations !` },
-        };
-
-        const notification = notificationMap[newStatut];
-        if (notification) {
-          await supabase.from('notifications').insert({
-            user_id: candidature.clients.user_id,
-            type: `candidature_${newStatut}`,
-            title: notification.title,
-            message: notification.message,
-            link: '/client/mes-candidatures',
-          });
-        }
-      }
+      // Notification handled by database trigger (notify_on_candidature_status_change)
 
       setCandidatures(prev => prev.map(c => c.id === candidatureId ? { ...c, statut: newStatut, ...additionalData } : c));
       toast({ title: 'Statut mis à jour', description: `Candidature marquée comme ${getStatutLabel(newStatut).toLowerCase()}` });
@@ -323,15 +299,7 @@ export default function Candidatures() {
           .eq('id', selectedCandidature.client_id)
           .maybeSingle();
 
-        if (clientData) {
-          await supabase.from('notifications').insert({
-            user_id: clientData.user_id,
-            type: 'etat_lieux_fixe',
-            title: '🔑 État des lieux planifié',
-            message: `État des lieux prévu le ${format(new Date(etatLieuxDate), 'dd/MM/yyyy', { locale: fr })}${etatLieuxHeure ? ` à ${etatLieuxHeure}` : ''}`,
-            link: '/client/calendrier',
-          });
-        }
+        // Notification handled by database trigger (notify_on_candidature_status_change)
       }
     } catch (error) {
       console.error('Error creating calendar event:', error);

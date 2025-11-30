@@ -138,16 +138,7 @@ export default function AgentVisites() {
         });
       }
 
-      // Créer une notification pour le client
-      if (selectedVisite.clients?.user_id) {
-        await supabase.from('notifications').insert({
-          user_id: selectedVisite.clients.user_id,
-          type: 'visit_confirmed',
-          title: 'Visite déléguée confirmée',
-          message: `Votre agent a confirmé la visite du bien au ${selectedVisite.adresse} pour le ${dateTime.toLocaleDateString('fr-CH')} à ${dateTime.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}`,
-          link: '/client/visites-deleguees'
-        });
-      }
+      // Notification handled by database trigger (notify_on_visite_status_change)
 
       toast.success('✅ Visite confirmée et ajoutée au calendrier');
       setConfirmDialogOpen(false);
@@ -186,16 +177,7 @@ export default function AgentVisites() {
         });
       }
 
-      // Créer une notification pour le client
-      if (visite.clients?.user_id) {
-        await supabase.from('notifications').insert({
-          user_id: visite.clients.user_id,
-          type: 'visit_refused',
-          title: 'Visite déléguée non disponible',
-          message: `Votre agent n'est pas disponible pour la visite du bien au ${visite.adresse}`,
-          link: '/client/visites-deleguees'
-        });
-      }
+      // Notification handled by database trigger (notify_on_visite_status_change)
 
       toast.success('Visite refusée, le client a été notifié');
       await loadVisites();
