@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,11 @@ import { useToast } from '@/hooks/use-toast';
 import { calculateDaysElapsed } from '@/utils/calculations';
 import { SendEmailDialog } from '@/components/SendEmailDialog';
 import { MergeDocumentsDialog } from '@/components/MergeDocumentsDialog';
+import { ClientCandidatesManager } from '@/components/ClientCandidatesManager';
+import { SolvabilityAlert } from '@/components/SolvabilityAlert';
+import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSection';
+import { useClientCandidates } from '@/hooks/useClientCandidates';
+import { useSolvabilityCheck, hasStableStatus } from '@/hooks/useSolvabilityCheck';
 
 interface Client {
   id: string;
@@ -98,6 +103,11 @@ export default function ClientDetail() {
   const [editFormData, setEditFormData] = useState<any>({});
   const [deleting, setDeleting] = useState(false);
   const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
+  
+  // Hook pour les candidats supplémentaires et solvabilité
+  const { candidates, refresh: refreshCandidates } = useClientCandidates(id);
+  const solvabilityResult = useSolvabilityCheck(client, candidates);
+  const [documentsRefreshKey, setDocumentsRefreshKey] = useState(0);
   
   // Documents state
   const [documents, setDocuments] = useState<any[]>([]);
@@ -515,6 +525,9 @@ export default function ClientDetail() {
     return years > 0 ? `${years} an${years > 1 ? 's' : ''} ${remainingMonths} mois` : `${remainingMonths} mois`;
   };
 
+  // Check if client has stable status
+  const clientHasStableStatus = hasStableStatus(client.type_permis, client.nationalite);
+
   return (
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8 space-y-6">
@@ -526,7 +539,18 @@ export default function ClientDetail() {
                 {profile.prenom} {profile.nom}
               </h1>
               <Badge variant="outline">{client.nationalite || 'N/A'}</Badge>
-              <Badge variant="secondary">Permis {client.type_permis || 'N/A'}</Badge>
+              <Badge 
+                variant={clientHasStableStatus ? "secondary" : "destructive"}
+                className={clientHasStableStatus ? "" : "animate-pulse"}
+              >
+                Permis {client.type_permis || 'N/A'}
+                {!clientHasStableStatus && " ⚠️"}
+              </Badge>
+              {solvabilityResult.isSolvable ? (
+                <Badge className="bg-green-600 text-white">✓ Solvable</Badge>
+              ) : (
+                <Badge variant="destructive">✗ Non solvable</Badge>
+              )}
             </div>
 
             {/* Progress bar */}
@@ -1001,6 +1025,30 @@ export default function ClientDetail() {
             </Button>
           </div>
         </div>
+
+        {/* Solvability Alert */}
+        <SolvabilityAlert 
+          result={solvabilityResult} 
+          className="mb-6"
+        />
+
+        {/* Candidates Manager */}
+        <ClientCandidatesManager
+          clientId={client.id}
+          clientRevenus={client.revenus_mensuels}
+          budgetDemande={client.budget_max}
+          onCandidatesChange={refreshCandidates}
+        />
+
+        {/* Candidate Documents */}
+        {candidates.length > 0 && (
+          <CandidateDocumentsSection 
+            clientId={client.id}
+            clientUserId={client.user_id}
+            candidates={candidates}
+            key={documentsRefreshKey}
+          />
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Situation financière */}

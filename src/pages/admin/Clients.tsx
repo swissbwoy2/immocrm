@@ -4,13 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Calendar, Users, DollarSign, Upload, Trash2, Pencil, Send, ArrowUpDown, Search } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, DollarSign, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CSVImportDialog } from "@/components/CSVImportDialog";
+import { hasStableStatus } from "@/hooks/useSolvabilityCheck";
+import { CUMULATIVE_TYPES } from "@/hooks/useClientCandidates";
 
 interface Client {
   id: string;
@@ -31,6 +33,17 @@ interface Client {
   residence?: string;
   created_at?: string;
   date_ajout?: string;
+  poursuites?: boolean;
+}
+
+interface ClientCandidate {
+  id: string;
+  client_id: string;
+  type: string;
+  revenus_mensuels?: number;
+  type_permis?: string;
+  nationalite?: string;
+  poursuites?: boolean;
 }
 
 interface Profile {
@@ -53,6 +66,7 @@ const Clients = () => {
   const { toast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
   const [clientProfiles, setClientProfiles] = useState<Map<string, Profile>>(new Map());
+  const [clientCandidates, setClientCandidates] = useState<Map<string, ClientCandidate[]>>(new Map());
   const [agents, setAgents] = useState<Agent[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterAgent, setFilterAgent] = useState<string>("all");
@@ -86,6 +100,8 @@ const Clients = () => {
 
       // Load all client profiles
       const clientUserIds = clientsData?.map(c => c.user_id) || [];
+      const clientIds = clientsData?.map(c => c.id) || [];
+
       if (clientUserIds.length > 0) {
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
@@ -99,6 +115,24 @@ const Clients = () => {
           profilesMap.set(profile.id, profile as Profile);
         });
         setClientProfiles(profilesMap);
+      }
+
+      // Load all client candidates for solvability
+      if (clientIds.length > 0) {
+        const { data: candidatesData, error: candidatesError } = await supabase
+          .from('client_candidates')
+          .select('id, client_id, type, revenus_mensuels, type_permis, nationalite, poursuites')
+          .in('client_id', clientIds);
+
+        if (!candidatesError && candidatesData) {
+          const candidatesMap = new Map<string, ClientCandidate[]>();
+          candidatesData.forEach(candidate => {
+            const existing = candidatesMap.get(candidate.client_id) || [];
+            existing.push(candidate as ClientCandidate);
+            candidatesMap.set(candidate.client_id, existing);
+          });
+          setClientCandidates(candidatesMap);
+        }
       }
 
       // Load agents
@@ -543,13 +577,54 @@ const Clients = () => {
             const profile = clientProfiles.get(client.user_id);
             const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
             const progressPercent = (daysElapsed / 90) * 100;
+            const candidates = clientCandidates.get(client.id) || [];
+
+            // Calculate solvability
+            const clientHasStableStatus = hasStableStatus(client.type_permis, client.nationalite);
+            const clientRevenus = client.revenus_mensuels || 0;
+            const budgetDemande = client.budget_max || 0;
+            
+            // Filter candidates with stable status for cumulative calculation
+            const stableCumulativeCandidates = candidates.filter(c => {
+              if (!CUMULATIVE_TYPES.includes(c.type as any)) return false;
+              if (c.poursuites) return false;
+              return hasStableStatus(c.type_permis, c.nationalite);
+            });
+            
+            const candidatesRevenus = stableCumulativeCandidates.reduce((sum, c) => sum + (c.revenus_mensuels || 0), 0);
+            const totalRevenus = clientHasStableStatus ? clientRevenus + candidatesRevenus : candidatesRevenus;
+            const budgetPossible = Math.round(totalRevenus / 3);
+            
+            // Check for valid guarantor
+            const garants = candidates.filter(c => c.type === 'garant');
+            const validGarant = garants.find(g => 
+              !g.poursuites && 
+              hasStableStatus(g.type_permis, g.nationalite) &&
+              (g.revenus_mensuels || 0) >= budgetDemande * 3
+            );
+            
+            // Determine solvability
+            const hasCriticalProblems = client.poursuites || (!clientHasStableStatus && !validGarant);
+            const budgetOk = budgetDemande === 0 || 
+              (clientHasStableStatus && budgetPossible >= budgetDemande) ||
+              (validGarant && Math.round((validGarant.revenus_mensuels || 0) / 3) >= budgetDemande);
+            const isSolvable = !hasCriticalProblems && budgetOk && (clientHasStableStatus || !!validGarant);
+            
+            // Count excluded candidates
+            const excludedCandidates = candidates.filter(c => 
+              CUMULATIVE_TYPES.includes(c.type as any) && 
+              !c.poursuites &&
+              !hasStableStatus(c.type_permis, c.nationalite)
+            ).length;
 
             if (!profile) return null;
 
             return (
               <Card 
                 key={client.id} 
-                className="p-3 md:p-4 flex flex-col relative cursor-pointer hover:shadow-lg transition-shadow"
+                className={`p-3 md:p-4 flex flex-col relative cursor-pointer hover:shadow-lg transition-shadow ${
+                  !isSolvable ? 'border-red-200 dark:border-red-900' : ''
+                }`}
                 onClick={() => navigate(`/admin/clients/${client.id}`)}
               >
                 {/* Boutons d'actions - plus gros sur mobile */}
@@ -612,36 +687,67 @@ const Clients = () => {
                   </AlertDialog>
                 </div>
 
-                {/* SECTION 1: Identité */}
+                {/* SECTION 1: Identité avec statut solvabilité */}
                 <div className="mb-2 md:mb-3 pb-2 md:pb-3 border-b pr-20">
-                  <h3 className="text-base md:text-lg font-semibold text-primary mb-1 md:mb-2">
-                    {profile.prenom} {profile.nom}
-                  </h3>
+                  <div className="flex items-center gap-2 flex-wrap mb-1 md:mb-2">
+                    <h3 className="text-base md:text-lg font-semibold text-primary">
+                      {profile.prenom} {profile.nom}
+                    </h3>
+                    {isSolvable ? (
+                      <Badge className="bg-green-600 text-white text-[10px]">
+                        <CheckCircle className="w-3 h-3 mr-0.5" />
+                        Solvable
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="text-[10px]">
+                        <AlertTriangle className="w-3 h-3 mr-0.5" />
+                        Non solvable
+                      </Badge>
+                    )}
+                  </div>
                   <div className="space-y-0.5 md:space-y-1 text-xs md:text-sm">
                     <div className="flex items-center gap-1.5 md:gap-2 text-muted-foreground">
                       <MapPin className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
                       <span className="truncate">{client.nationalite || 'Non renseigné'}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 md:gap-2 text-muted-foreground">
-                      <Users className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
-                      <span className="truncate">Permis: {client.type_permis || '-'}</span>
+                    <div className="flex items-center gap-1.5 md:gap-2">
+                      <Users className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0 text-muted-foreground" />
+                      <span className={`truncate ${!clientHasStableStatus ? 'text-orange-600 font-medium' : 'text-muted-foreground'}`}>
+                        Permis: {client.type_permis || '-'}
+                        {!clientHasStableStatus && ' ⚠️'}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                {/* SECTION 2: Finances */}
+                {/* SECTION 2: Finances avec solvabilité */}
                 <div className="mb-2 md:mb-3 pb-2 md:pb-3 border-b">
                   <p className="text-xs md:text-sm font-medium mb-1 md:mb-2">💰 Finances</p>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-muted/30 p-1.5 md:p-2 rounded text-center">
-                      <p className="text-[10px] md:text-xs text-muted-foreground">Revenu</p>
-                      <p className="text-xs md:text-sm font-semibold">CHF {client.revenus_mensuels?.toLocaleString() || 0}</p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground">Revenu total</p>
+                      <p className="text-xs md:text-sm font-semibold">CHF {totalRevenus.toLocaleString()}</p>
                     </div>
-                    <div className="bg-primary/10 p-1.5 md:p-2 rounded text-center">
+                    <div className={`p-1.5 md:p-2 rounded text-center ${budgetOk ? 'bg-primary/10' : 'bg-red-100 dark:bg-red-900/30'}`}>
                       <p className="text-[10px] md:text-xs text-muted-foreground">Budget max</p>
-                      <p className="text-xs md:text-sm font-semibold text-primary">CHF {client.budget_max?.toLocaleString() || 0}</p>
+                      <p className={`text-xs md:text-sm font-semibold ${budgetOk ? 'text-primary' : 'text-red-600'}`}>
+                        CHF {budgetDemande.toLocaleString()}
+                      </p>
                     </div>
                   </div>
+                  {/* Info garant */}
+                  {validGarant && (
+                    <div className="mt-1.5 flex items-center gap-1 text-[10px] text-green-600">
+                      <Shield className="w-3 h-3" />
+                      <span>Garant valide</span>
+                    </div>
+                  )}
+                  {excludedCandidates > 0 && (
+                    <div className="mt-1 flex items-center gap-1 text-[10px] text-orange-600">
+                      <AlertTriangle className="w-3 h-3" />
+                      <span>{excludedCandidates} candidat(s) non comptabilisé(s)</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* SECTION 3: Contact - condensé */}
