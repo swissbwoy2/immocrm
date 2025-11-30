@@ -724,6 +724,7 @@ export type Database = {
           abaninja_invoice_ref: string | null
           adresse: string
           animaux: boolean | null
+          apport_personnel: number | null
           budget_max: number
           candidats: Json | null
           cgv_acceptees: boolean
@@ -780,6 +781,7 @@ export type Database = {
           abaninja_invoice_ref?: string | null
           adresse: string
           animaux?: boolean | null
+          apport_personnel?: number | null
           budget_max?: number
           candidats?: Json | null
           cgv_acceptees?: boolean
@@ -836,6 +838,7 @@ export type Database = {
           abaninja_invoice_ref?: string | null
           adresse?: string
           animaux?: boolean | null
+          apport_personnel?: number | null
           budget_max?: number
           candidats?: Json | null
           cgv_acceptees?: boolean

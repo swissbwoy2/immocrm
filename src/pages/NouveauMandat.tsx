@@ -158,6 +158,7 @@ export default function NouveauMandat() {
         pieces_recherche: formData.pieces_recherche,
         region_recherche: formData.region_recherche,
         budget_max: formData.budget_max,
+        apport_personnel: formData.apport_personnel,
         souhaits_particuliers: formData.souhaits_particuliers,
         candidats: formData.candidats as any,
         documents_uploades: formData.documents_uploades as any,
@@ -238,7 +239,11 @@ export default function NouveauMandat() {
         <div className="text-center mb-8">
           <img src={logoImmorama} alt="Immo-Rama" className="h-16 mx-auto mb-4" />
           <h1 className="text-2xl font-bold">Mandat de recherche</h1>
-          <p className="text-muted-foreground">Pour un logement à louer</p>
+          <p className="text-muted-foreground">
+            {formData.type_recherche === 'Acheter' 
+              ? 'Pour un bien immobilier à acheter' 
+              : 'Pour un logement à louer'}
+          </p>
         </div>
 
         {/* Progress */}

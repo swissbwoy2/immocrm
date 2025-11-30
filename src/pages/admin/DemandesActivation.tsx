@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { 
   UserPlus, Clock, Mail, Phone, CheckCircle, XCircle, Search,
   RefreshCw, AlertTriangle, Eye, FileText, CreditCard, Calendar,
-  User, Briefcase, Home, Receipt, Loader2
+  User, Briefcase, Home, Building2, Receipt, Loader2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -205,6 +205,7 @@ export default function DemandesActivation() {
         pieces_recherche: demande.pieces_recherche,
         region_recherche: demande.region_recherche,
         budget_max: demande.budget_max,
+        apport_personnel: demande.apport_personnel,
         souhaits_particuliers: demande.souhaits_particuliers,
         candidats: demande.candidats || [],
         documents_uploades: demande.documents_uploades || []
@@ -402,7 +403,18 @@ export default function DemandesActivation() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <p className="font-semibold">{demande.prenom} {demande.nom}</p>
                               {getStatusBadge(demande.statut)}
-                              <Badge variant="outline">{demande.type_recherche}</Badge>
+                              {/* Type de recherche avec badge coloré */}
+                              {demande.type_recherche === 'Acheter' ? (
+                                <Badge className="bg-blue-600 hover:bg-blue-700">
+                                  <Building2 className="h-3 w-3 mr-1" />
+                                  Achat
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary">
+                                  <Home className="h-3 w-3 mr-1" />
+                                  Location
+                                </Badge>
+                              )}
                             </div>
                             <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mt-2">
                               <span className="flex items-center gap-1">
@@ -412,8 +424,14 @@ export default function DemandesActivation() {
                                 <Phone className="h-3 w-3" />{demande.telephone}
                               </span>
                               <span className="flex items-center gap-1">
-                                <CreditCard className="h-3 w-3" />{demande.montant_acompte} CHF
+                                <CreditCard className="h-3 w-3" />
+                                {demande.type_recherche === 'Acheter' ? '2\'500' : demande.montant_acompte} CHF
                               </span>
+                              {demande.type_recherche === 'Acheter' && demande.apport_personnel > 0 && (
+                                <span className="flex items-center gap-1 text-blue-600">
+                                  💰 Apport: {demande.apport_personnel?.toLocaleString()} CHF
+                                </span>
+                              )}
                             </div>
                             {demande.abaninja_invoice_ref && (
                               <p className="text-xs text-blue-600 mt-1">
