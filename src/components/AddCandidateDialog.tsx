@@ -312,16 +312,18 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                   <Label>Revenus mensuels nets (CHF)</Label>
                   <Input
                     type="number"
-                    value={formData.revenus_mensuels}
-                    onChange={(e) => setFormData({ ...formData, revenus_mensuels: parseFloat(e.target.value) || 0 })}
+                    value={formData.revenus_mensuels || ''}
+                    onChange={(e) => setFormData({ ...formData, revenus_mensuels: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                    placeholder="0"
                   />
                 </div>
                 <div>
                   <Label>Charges mensuelles (CHF)</Label>
                   <Input
                     type="number"
-                    value={formData.charges_mensuelles}
-                    onChange={(e) => setFormData({ ...formData, charges_mensuelles: parseFloat(e.target.value) || 0 })}
+                    value={formData.charges_mensuelles || ''}
+                    onChange={(e) => setFormData({ ...formData, charges_mensuelles: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                    placeholder="0"
                   />
                 </div>
               </div>
@@ -329,8 +331,9 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                 <Label>Apport personnel (CHF)</Label>
                 <Input
                   type="number"
-                  value={formData.apport_personnel}
-                  onChange={(e) => setFormData({ ...formData, apport_personnel: parseFloat(e.target.value) || 0 })}
+                  value={formData.apport_personnel || ''}
+                  onChange={(e) => setFormData({ ...formData, apport_personnel: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                  placeholder="0"
                 />
               </div>
               <div className="space-y-3">
@@ -347,8 +350,9 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                     <Label>Montant charges extraordinaires (CHF)</Label>
                     <Input
                       type="number"
-                      value={formData.montant_charges_extra}
-                      onChange={(e) => setFormData({ ...formData, montant_charges_extra: parseFloat(e.target.value) || 0 })}
+                      value={formData.montant_charges_extra || ''}
+                      onChange={(e) => setFormData({ ...formData, montant_charges_extra: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                      placeholder="0"
                     />
                   </div>
                 )}
@@ -462,8 +466,9 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                 <Input
                   type="number"
                   min="0"
-                  value={formData.anciennete_mois}
-                  onChange={(e) => setFormData({ ...formData, anciennete_mois: parseInt(e.target.value) || 0 })}
+                  value={formData.anciennete_mois || ''}
+                  onChange={(e) => setFormData({ ...formData, anciennete_mois: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+                  placeholder="0"
                 />
               </div>
             </TabsContent>
@@ -492,8 +497,9 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                   <Label>Loyer actuel (CHF)</Label>
                   <Input
                     type="number"
-                    value={formData.loyer_actuel}
-                    onChange={(e) => setFormData({ ...formData, loyer_actuel: parseFloat(e.target.value) || 0 })}
+                    value={formData.loyer_actuel || ''}
+                    onChange={(e) => setFormData({ ...formData, loyer_actuel: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                    placeholder="0"
                   />
                 </div>
                 <div>
@@ -512,8 +518,9 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                     type="number"
                     min="0"
                     step="0.5"
-                    value={formData.pieces_actuel}
-                    onChange={(e) => setFormData({ ...formData, pieces_actuel: parseFloat(e.target.value) || 0 })}
+                    value={formData.pieces_actuel || ''}
+                    onChange={(e) => setFormData({ ...formData, pieces_actuel: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                    placeholder="0"
                   />
                 </div>
                 <div>
