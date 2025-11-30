@@ -124,8 +124,10 @@ const MesClients = () => {
         
         // Count candidates by type
         const candidatesCount = candidates.length;
-        const garanCount = candidates.filter(c => c.type === 'garant').length;
-        const colocCount = candidates.filter(c => CUMULATIVE_TYPES.includes(c.type)).length;
+        const garantsCount = candidates.filter(c => c.type === 'garant').length;
+        const colocatairesCount = candidates.filter(c => c.type === 'colocataire').length;
+        const coDebiteursCount = candidates.filter(c => c.type === 'co_debiteur').length;
+        const signatairesCount = candidates.filter(c => c.type === 'signataire_solidaire').length;
         
         // Check solvability
         const budgetDemande = Number(client.budget_max) || 0;
@@ -157,8 +159,10 @@ const MesClients = () => {
           garant: garant ? { nom: garant.nom, prenom: garant.prenom, revenus: garant.revenus_mensuels } : null,
           candidates,
           candidatesCount,
-          garanCount,
-          colocCount,
+          garantsCount,
+          colocatairesCount,
+          coDebiteursCount,
+          signatairesCount,
           isSolvable,
         };
       }) || [];
@@ -451,14 +455,29 @@ const MesClients = () => {
                       <Users className="h-4 w-4" />
                       <span>Type de permis: {client.typePermis}</span>
                     </div>
-                    {/* Nombre de candidats */}
+                    {/* Détail des candidats par type */}
                     {client.candidatesCount > 0 && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <Badge variant="outline" className="text-xs">
-                          <Users className="h-3 w-3 mr-1" />
-                          {client.candidatesCount} candidat{client.candidatesCount > 1 ? 's' : ''}
-                          {client.garanCount > 0 && ` (${client.garanCount} garant)`}
-                        </Badge>
+                      <div className="flex flex-wrap items-center gap-1 mt-2">
+                        {client.garantsCount > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            🛡️ {client.garantsCount} garant{client.garantsCount > 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                        {client.colocatairesCount > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            👥 {client.colocatairesCount} colocataire{client.colocatairesCount > 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                        {client.coDebiteursCount > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            🤝 {client.coDebiteursCount} co-débiteur{client.coDebiteursCount > 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                        {client.signatairesCount > 0 && (
+                          <Badge variant="outline" className="text-xs">
+                            ✍️ {client.signatairesCount} signataire{client.signatairesCount > 1 ? 's' : ''} solidaire{client.signatairesCount > 1 ? 's' : ''}
+                          </Badge>
+                        )}
                       </div>
                     )}
                   </div>
