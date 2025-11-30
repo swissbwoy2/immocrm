@@ -202,7 +202,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* KPIs - Optimisé pour tablette */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 md:gap-4 mb-8">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3 md:gap-4 mb-8">
             <KPICard 
               title="Clients actifs" 
               value={clientsActifs} 
@@ -223,17 +223,11 @@ export default function AdminDashboard() {
               onClick={() => navigate('/admin/offres-envoyees')}
             />
             <KPICard 
-              title="Trans. en cours" 
-              value={transactionsEnCours} 
-              icon={Clock}
-              onClick={() => navigate('/admin/transactions')}
-            />
-            <KPICard 
-              title="Conclues" 
-              value={transactionsConcluesMois} 
+              title="Affaires conclues" 
+              value={transactions.filter(t => t.statut === 'conclue').length} 
               icon={CheckCircle} 
               variant="success"
-              subtitle="ce mois"
+              subtitle={`${transactionsConcluesMois} ce mois`}
               onClick={() => navigate('/admin/transactions')}
             />
             <KPICard 
@@ -253,11 +247,18 @@ export default function AdminDashboard() {
               onClick={() => navigate('/admin/mandats')}
             />
             <KPICard 
-              title="Revenus" 
+              title="Revenus agence" 
               value={`${revenusAgenceMois.toLocaleString()}`} 
               icon={DollarSign} 
               variant="success"
               subtitle="CHF ce mois"
+              onClick={() => navigate('/admin/transactions')}
+            />
+            <KPICard 
+              title="Commission totale" 
+              value={`${transactions.filter(t => t.statut === 'conclue').reduce((sum, t) => sum + (t.part_agence || 0), 0).toLocaleString()}`} 
+              icon={DollarSign} 
+              subtitle="CHF total"
               onClick={() => navigate('/admin/transactions')}
             />
           </div>
