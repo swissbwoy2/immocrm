@@ -238,7 +238,7 @@ export default function AgentDashboard() {
           </div>
 
           {/* KPIs - Plus lisible sur tablette */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3 md:gap-4">
             <KPICard 
               title="Clients actifs" 
               value={clientsActifs} 
@@ -274,6 +274,13 @@ export default function AgentDashboard() {
               onClick={() => navigate('/agent/mes-clients')}
             />
             <KPICard 
+              title="Affaires conclues" 
+              value={transactions.filter(t => t.statut === 'conclue').length} 
+              icon={CheckCircle}
+              variant="success"
+              subtitle="total"
+            />
+            <KPICard 
               title="Commission pot." 
               value={`${totalCommissionPotentielle.toLocaleString()}`} 
               icon={DollarSign}
@@ -283,9 +290,9 @@ export default function AgentDashboard() {
             <KPICard 
               title="Ce mois" 
               value={`${commissionsCeMois.toLocaleString()}`} 
-              icon={CheckCircle}
+              icon={DollarSign}
               variant="success"
-              subtitle="CHF"
+              subtitle={`CHF (${transactionsCeMois.length} affaire${transactionsCeMois.length > 1 ? 's' : ''})`}
             />
           </div>
 
