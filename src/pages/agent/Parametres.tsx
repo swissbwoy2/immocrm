@@ -9,6 +9,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { EmailConfigurationDialog } from '@/components/EmailConfigurationDialog';
+import { ChangePasswordCard } from '@/components/ChangePasswordCard';
+
 export default function AgentParametres() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<any>(null);
@@ -262,6 +264,9 @@ export default function AgentParametres() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Changer le mot de passe */}
+          <ChangePasswordCard />
         </div>
       </div>
       

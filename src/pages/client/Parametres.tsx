@@ -4,14 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, Save, Mail, Phone, User, Settings, Shield } from 'lucide-react';
+import { Camera, Save, Mail, Phone, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { EmailConfigurationDialog } from '@/components/EmailConfigurationDialog';
 import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 
-export default function AdminParametres() {
+export default function ClientParametres() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +19,6 @@ export default function AdminParametres() {
   const [telephone, setTelephone] = useState('');
   const [prenom, setPrenom] = useState('');
   const [nom, setNom] = useState('');
-  const [emailConfigOpen, setEmailConfigOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -57,15 +55,13 @@ export default function AdminParametres() {
     const file = event.target.files?.[0];
     if (!file || !user) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('Veuillez sélectionner une image');
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('L\'image ne doit pas dépasser 5 Mo');
+      toast.error("L'image ne doit pas dépasser 5 Mo");
       return;
     }
 
@@ -74,24 +70,20 @@ export default function AdminParametres() {
       const fileExt = file.name.split('.').pop();
       const filePath = `${user.id}/avatar.${fileExt}`;
 
-      // Delete old avatar if exists
       await supabase.storage
         .from('profile-avatars')
         .remove([`${user.id}/avatar.png`, `${user.id}/avatar.jpg`, `${user.id}/avatar.jpeg`, `${user.id}/avatar.webp`]);
 
-      // Upload new avatar
       const { error: uploadError } = await supabase.storage
         .from('profile-avatars')
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: urlData } = supabase.storage
         .from('profile-avatars')
         .getPublicUrl(filePath);
 
-      // Update profile with new avatar URL
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: urlData.publicUrl + '?t=' + Date.now() })
@@ -103,7 +95,7 @@ export default function AdminParametres() {
       loadProfile();
     } catch (error: any) {
       console.error('Error uploading avatar:', error);
-      toast.error('Erreur lors du téléchargement de l\'image');
+      toast.error("Erreur lors du téléchargement de l'image");
     } finally {
       setUploading(false);
     }
@@ -149,7 +141,7 @@ export default function AdminParametres() {
       <div className="p-4 md:p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Paramètres</h1>
-          <p className="text-muted-foreground">Gérez votre profil et les paramètres système</p>
+          <p className="text-muted-foreground">Gérez votre profil et vos préférences</p>
         </div>
 
         <div className="grid gap-6 max-w-2xl">
@@ -247,49 +239,10 @@ export default function AdminParametres() {
             </CardContent>
           </Card>
 
-          {/* Configuration Email */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                Configuration SMTP
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Configurez votre serveur SMTP pour envoyer des emails directement depuis l'application.
-              </p>
-              <Button variant="outline" onClick={() => setEmailConfigOpen(true)}>
-                Configurer l'email
-              </Button>
-            </CardContent>
-          </Card>
-
           {/* Changer le mot de passe */}
           <ChangePasswordCard />
-
-          {/* Rôle administrateur */}
-          <Card className="border-primary/20 bg-primary/5">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-primary">
-                <Shield className="w-5 h-5" />
-                Privilèges administrateur
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                En tant qu'administrateur, vous avez accès à toutes les fonctionnalités de gestion 
-                des agents, clients, mandats et transactions.
-              </p>
-            </CardContent>
-          </Card>
         </div>
       </div>
-      
-      <EmailConfigurationDialog 
-        open={emailConfigOpen} 
-        onOpenChange={setEmailConfigOpen} 
-      />
     </div>
   );
 }

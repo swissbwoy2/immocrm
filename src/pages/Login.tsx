@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Lock, ExternalLink } from 'lucide-react';
 import logoImmorama from '@/assets/logo-immorama-2023.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +18,9 @@ export default function Login() {
   const [resendEmail, setResendEmail] = useState('');
   const [resendLoading, setResendLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, userRole } = useAuth();
@@ -93,11 +96,40 @@ export default function Login() {
     } catch (error: any) {
       toast({
         title: 'Erreur',
-        description: error.message || 'Impossible d\'envoyer l\'invitation',
+        description: error.message || "Impossible d'envoyer l'invitation",
         variant: 'destructive',
       });
     } finally {
       setResendLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Email envoyé',
+        description: `Un email de réinitialisation a été envoyé à ${resetEmail}. Vérifiez votre boîte de réception.`,
+      });
+
+      setResetDialogOpen(false);
+      setResetEmail('');
+    } catch (error: any) {
+      toast({
+        title: 'Erreur',
+        description: error.message || "Impossible d'envoyer l'email de réinitialisation",
+        variant: 'destructive',
+      });
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -109,8 +141,10 @@ export default function Login() {
             <img src={logoImmorama} alt="Immo-Rama" className="h-20 object-contain" />
           </div>
           <div>
-            <CardTitle className="text-2xl">ImmoCRM</CardTitle>
-            <CardDescription className="text-base">Immo-Rama.ch</CardDescription>
+            <CardTitle className="text-2xl">Logisorama</CardTitle>
+            <CardDescription className="text-base mt-2">
+              Logiciel Immobilier pour la recherche de bien immobilier en Suisse.
+            </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
@@ -153,6 +187,41 @@ export default function Login() {
               {loading ? 'Connexion...' : 'Se connecter'}
             </Button>
 
+            {/* Mot de passe oublié */}
+            <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="link" className="w-full text-sm text-muted-foreground" type="button">
+                  Mot de passe oublié ?
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Réinitialiser le mot de passe</DialogTitle>
+                  <DialogDescription>
+                    Entrez votre adresse email pour recevoir un lien de réinitialisation.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email">Email</Label>
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="votre.email@example.ch"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      required
+                      disabled={resetLoading}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={resetLoading}>
+                    {resetLoading ? 'Envoi...' : 'Envoyer le lien'}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            {/* Renvoyer invitation */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="link" className="w-full text-sm text-muted-foreground" type="button">
@@ -180,13 +249,28 @@ export default function Login() {
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={resendLoading}>
-                    {resendLoading ? 'Envoi...' : 'Renvoyer l\'invitation'}
+                    {resendLoading ? 'Envoi...' : "Renvoyer l'invitation"}
                   </Button>
                 </form>
               </DialogContent>
             </Dialog>
+
+            {/* Activer vos recherches */}
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              type="button"
+              onClick={() => window.open('https://immo-rama.ch/formulaire', '_blank')}
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Activer vos recherches
+            </Button>
           </form>
         </CardContent>
+        <CardFooter className="flex flex-col text-center text-xs text-muted-foreground border-t pt-4">
+          <p>Tous droits réservés Immo-Rama.ch</p>
+          <p className="mt-1">Application Fièrement Suisse 🇨🇭</p>
+        </CardFooter>
       </Card>
     </div>
   );

@@ -54,7 +54,9 @@ import ClientMessagerie from "./pages/client/Messagerie";
 import ClientDocuments from "./pages/client/Documents";
 import ClientVisitesDeleguees from "./pages/client/VisitesDeleguees";
 import ClientNotifications from "./pages/client/Notifications";
+import ClientParametres from "./pages/client/Parametres";
 import DownloadFiles from "./pages/DownloadFiles";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -71,6 +73,7 @@ const App = () => (
             <Route path="/setup" element={<Setup />} />
             <Route path="/login" element={<Login />} />
             <Route path="/first-login" element={<FirstLogin />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Admin Routes */}
             <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminDashboard /></AppLayout></ProtectedRoute>} />
@@ -122,6 +125,7 @@ const App = () => (
             <Route path="/client/messagerie" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientMessagerie /></AppLayout></ProtectedRoute>} />
             <Route path="/client/documents" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDocuments /></AppLayout></ProtectedRoute>} />
             <Route path="/client/notifications" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientNotifications /></AppLayout></ProtectedRoute>} />
+            <Route path="/client/parametres" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientParametres /></AppLayout></ProtectedRoute>} />
 
             {/* Public Routes */}
             <Route path="/download/:token" element={<DownloadFiles />} />
