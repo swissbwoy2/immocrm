@@ -114,12 +114,25 @@ const MesClients = () => {
         // Calculate budget possible (33% of total revenue)
         const budgetPossible = Math.round(totalRevenus / 3);
         
-        // Find valid guarantor
+        // Helper function to check if someone has a stable status (permit B/C or Swiss)
+        const hasStableStatus = (permis: string | null, nationalite: string | null) => {
+          const stablePermits = ['B', 'C', 'Suisse', 'Suisse / Autre'];
+          const isSwiss = nationalite?.toLowerCase().includes('suisse') || false;
+          const hasStablePermit = permis ? stablePermits.some(p => permis.includes(p)) : false;
+          return isSwiss || hasStablePermit;
+        };
+        
+        // Check client's stable status
+        const clientHasStableStatus = hasStableStatus(client.type_permis, client.nationalite);
+        
+        // Find valid guarantor (must have sufficient income AND stable status)
         const garant = candidates.find(c => {
           if (c.type !== 'garant') return false;
           const garantRevenu = Number(c.revenus_mensuels) || 0;
           const budgetDemande = Number(client.budget_max) || 0;
-          return garantRevenu >= budgetDemande * 3;
+          const garantHasStableStatus = hasStableStatus(c.type_permis, c.nationalite);
+          // Garant must have 3x budget AND stable status
+          return garantRevenu >= budgetDemande * 3 && garantHasStableStatus;
         });
         
         // Count candidates by type
@@ -129,9 +142,10 @@ const MesClients = () => {
         const coDebiteursCount = candidates.filter(c => c.type === 'co_debiteur').length;
         const signatairesCount = candidates.filter(c => c.type === 'signataire_solidaire').length;
         
-        // Check solvability
+        // Check solvability: budget OK AND (client stable OR valid guarantor)
         const budgetDemande = Number(client.budget_max) || 0;
-        const isSolvable = budgetPossible >= budgetDemande || !!garant;
+        const budgetOk = budgetPossible >= budgetDemande;
+        const isSolvable = budgetOk && (clientHasStableStatus || !!garant);
 
         return {
           id: client.id,
