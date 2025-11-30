@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -26,10 +26,20 @@ import {
   Forward,
   MailOpen,
   Clock,
-  User
+  User,
+  CheckCheck,
+  Archive,
+  MoreHorizontal,
+  Download
 } from 'lucide-react';
-import { format, isToday, isYesterday } from 'date-fns';
+import { format, isToday, isYesterday, formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 import type { Json } from '@/integrations/supabase/types';
 
@@ -49,6 +59,8 @@ interface ReceivedEmail {
   attachments: Json;
 }
 
+type FilterType = 'all' | 'unread' | 'starred';
+
 export default function BoiteReception() {
   const { user } = useAuth();
   const [emails, setEmails] = useState<ReceivedEmail[]>([]);
@@ -60,6 +72,7 @@ export default function BoiteReception() {
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [hasConfig, setHasConfig] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [filter, setFilter] = useState<FilterType>('all');
   
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
   const [replyMode, setReplyMode] = useState<'reply' | 'forward'>('reply');
@@ -75,7 +88,7 @@ export default function BoiteReception() {
 
   useEffect(() => {
     filterEmails();
-  }, [emails, searchTerm]);
+  }, [emails, searchTerm, filter]);
 
   const checkConfig = async () => {
     try {
@@ -128,7 +141,7 @@ export default function BoiteReception() {
       } else if (data.success) {
         setEmails(data.emails || []);
         setLastSync(new Date().toISOString());
-        toast.success(`${data.fetched_count} email(s) synchronisé(s) sur ${data.total_on_server} disponibles`);
+        toast.success(`${data.fetched_count} email(s) synchronisé(s)`);
       } else if (data.error) {
         toast.error(data.message || data.error);
         if (data.emails?.length) {
@@ -144,18 +157,24 @@ export default function BoiteReception() {
   };
 
   const filterEmails = () => {
-    if (!searchTerm) {
-      setFilteredEmails(emails);
-      return;
+    let filtered = [...emails];
+    
+    if (filter === 'unread') {
+      filtered = filtered.filter(e => !e.is_read);
+    } else if (filter === 'starred') {
+      filtered = filtered.filter(e => e.is_starred);
     }
-
-    const term = searchTerm.toLowerCase();
-    const filtered = emails.filter(email => 
-      email.subject?.toLowerCase().includes(term) ||
-      email.from_email.toLowerCase().includes(term) ||
-      email.from_name?.toLowerCase().includes(term) ||
-      email.body_text?.toLowerCase().includes(term)
-    );
+    
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(email => 
+        email.subject?.toLowerCase().includes(term) ||
+        email.from_email.toLowerCase().includes(term) ||
+        email.from_name?.toLowerCase().includes(term) ||
+        email.body_text?.toLowerCase().includes(term)
+      );
+    }
+    
     setFilteredEmails(filtered);
   };
 
@@ -175,6 +194,26 @@ export default function BoiteReception() {
       ));
     } catch (error) {
       console.error('Error marking as read:', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    const unreadIds = emails.filter(e => !e.is_read).map(e => e.id);
+    if (unreadIds.length === 0) return;
+
+    try {
+      const { error } = await supabase
+        .from('received_emails')
+        .update({ is_read: true })
+        .in('id', unreadIds);
+
+      if (error) throw error;
+
+      setEmails(prev => prev.map(e => ({ ...e, is_read: true })));
+      toast.success('Tous les emails marqués comme lus');
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+      toast.error('Erreur lors du marquage');
     }
   };
 
@@ -246,6 +285,7 @@ export default function BoiteReception() {
   };
 
   const unreadCount = emails.filter(e => !e.is_read).length;
+  const starredCount = emails.filter(e => e.is_starred).length;
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '';
@@ -260,9 +300,14 @@ export default function BoiteReception() {
     return format(new Date(dateStr), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr });
   };
 
+  const formatRelativeDate = (dateStr: string | null) => {
+    if (!dateStr) return '';
+    return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: fr });
+  };
+
   const getPreviewText = (email: ReceivedEmail) => {
     const text = email.body_text || '';
-    return text.replace(/\s+/g, ' ').trim().substring(0, 80);
+    return text.replace(/\s+/g, ' ').trim().substring(0, 100);
   };
 
   const getSenderInitials = (email: ReceivedEmail) => {
@@ -274,136 +319,177 @@ export default function BoiteReception() {
     return name.substring(0, 2).toUpperCase();
   };
 
+  const getSenderColor = (email: ReceivedEmail) => {
+    const colors = [
+      'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500',
+      'bg-pink-500', 'bg-teal-500', 'bg-indigo-500', 'bg-red-500'
+    ];
+    const hash = email.from_email.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[hash % colors.length];
+  };
+
   const sanitizeHtml = (html: string) => {
-    // Remove scripts and dangerous content
     return html
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
       .replace(/on\w+="[^"]*"/gi, '')
       .replace(/javascript:/gi, '');
   };
 
-  // Mobile view: show list or detail
   const showEmailList = !selectedEmail;
   const showEmailDetail = !!selectedEmail;
 
   return (
     <AppLayout>
       <div className="h-full flex flex-col bg-background">
-        {/* Header - Always visible */}
+        {/* Header */}
         <div className="shrink-0 border-b bg-card">
-          <div className="p-3 sm:p-4">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                  <Inbox className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+          <div className="p-4">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
+                  <Inbox className="h-5 w-5 text-primary-foreground" />
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-lg sm:text-xl font-semibold truncate">Boîte de réception</h1>
+                  <h1 className="text-xl font-bold">Boîte de réception</h1>
                   {lastSync && (
                     <p className="text-xs text-muted-foreground flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      <span className="truncate">
-                        {format(new Date(lastSync), 'dd MMM HH:mm', { locale: fr })}
-                      </span>
+                      Dernière sync {formatRelativeDate(lastSync)}
                     </p>
                   )}
                 </div>
-                {unreadCount > 0 && (
-                  <Badge variant="default" className="bg-primary shrink-0">
-                    {unreadCount}
-                  </Badge>
-                )}
               </div>
-              <div className="flex gap-1 sm:gap-2 shrink-0">
+              
+              <div className="flex gap-2 shrink-0">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={markAllAsRead} disabled={unreadCount === 0}>
+                      <CheckCheck className="h-4 w-4 mr-2" />
+                      Tout marquer comme lu
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => syncEmails(true)}>
+                      <Archive className="h-4 w-4 mr-2" />
+                      Sync complète (500)
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
                 <Button
-                  variant="outline"
+                  variant="default"
                   size="sm"
                   onClick={() => syncEmails(false)}
                   disabled={syncing}
-                  className="h-8 sm:h-9"
+                  className="h-9"
                 >
                   {syncing ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <RefreshCw className="h-4 w-4" />
                   )}
-                  <span className="ml-1.5 hidden sm:inline">Sync</span>
+                  <span className="ml-2 hidden sm:inline">Synchroniser</span>
                 </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => syncEmails(true)}
-                  disabled={syncing}
-                  className="h-8 sm:h-9"
-                  title="Synchroniser jusqu'à 500 emails"
-                >
-                  <Inbox className="h-4 w-4" />
-                  <span className="ml-1.5 hidden lg:inline">Tout</span>
-                </Button>
+                
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowConfigDialog(true)}
-                  className="h-8 sm:h-9"
+                  className="h-9"
                 >
                   <Settings className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
-            {/* Search */}
-            <div className="mt-3 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-9 bg-background"
-              />
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Rechercher dans les emails..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-9 bg-background"
+                />
+              </div>
+              
+              <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)} className="shrink-0">
+                <TabsList className="h-9">
+                  <TabsTrigger value="all" className="text-xs px-3">
+                    Tous
+                    <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">
+                      {emails.length}
+                    </Badge>
+                  </TabsTrigger>
+                  <TabsTrigger value="unread" className="text-xs px-3">
+                    Non lus
+                    {unreadCount > 0 && (
+                      <Badge variant="default" className="ml-1.5 h-5 px-1.5 text-[10px] bg-primary">
+                        {unreadCount}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                  <TabsTrigger value="starred" className="text-xs px-3">
+                    <Star className="h-3 w-3 mr-1" />
+                    {starredCount > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
+                        {starredCount}
+                      </Badge>
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
           </div>
         </div>
 
-        {/* Content Area */}
+        {/* Content */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Email List - Hidden on mobile when email selected */}
-          <div className={`${showEmailList ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-80 lg:w-96 border-r bg-card`}>
+          {/* Email List */}
+          <div className={`${showEmailList ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-96 lg:w-[420px] border-r bg-card/50`}>
             {loading ? (
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">Chargement...</p>
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">Chargement des emails...</p>
                 </div>
               </div>
             ) : !hasConfig ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <AlertCircle className="h-8 w-8 text-muted-foreground" />
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                <div className="h-20 w-20 rounded-2xl bg-muted flex items-center justify-center mb-6">
+                  <AlertCircle className="h-10 w-10 text-muted-foreground" />
                 </div>
-                <h3 className="font-medium mb-2">Configuration requise</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Configurez votre serveur IMAP pour recevoir vos emails
+                <h3 className="font-semibold text-lg mb-2">Configuration requise</h3>
+                <p className="text-sm text-muted-foreground mb-6 max-w-xs">
+                  Configurez votre serveur IMAP pour recevoir et gérer vos emails
                 </p>
-                <Button onClick={() => setShowConfigDialog(true)} size="sm">
+                <Button onClick={() => setShowConfigDialog(true)}>
                   <Settings className="h-4 w-4 mr-2" />
-                  Configurer
+                  Configurer IMAP
                 </Button>
               </div>
             ) : filteredEmails.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <Mail className="h-8 w-8 text-muted-foreground" />
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                <div className="h-20 w-20 rounded-2xl bg-muted flex items-center justify-center mb-6">
+                  <Mail className="h-10 w-10 text-muted-foreground" />
                 </div>
-                <h3 className="font-medium mb-2">
-                  {searchTerm ? 'Aucun résultat' : 'Aucun email'}
+                <h3 className="font-semibold text-lg mb-2">
+                  {searchTerm ? 'Aucun résultat' : filter !== 'all' ? 'Aucun email' : 'Boîte vide'}
                 </h3>
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-sm text-muted-foreground mb-6 max-w-xs">
                   {searchTerm 
-                    ? 'Aucun email ne correspond' 
+                    ? 'Aucun email ne correspond à votre recherche' 
+                    : filter === 'unread'
+                    ? 'Vous avez lu tous vos emails !'
+                    : filter === 'starred'
+                    ? 'Aucun email favori'
                     : 'Synchronisez pour récupérer vos emails'}
                 </p>
-                {!searchTerm && (
-                  <Button onClick={() => syncEmails(false)} disabled={syncing} size="sm">
+                {!searchTerm && filter === 'all' && (
+                  <Button onClick={() => syncEmails(false)} disabled={syncing}>
                     <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
                     Synchroniser
                   </Button>
@@ -416,45 +502,63 @@ export default function BoiteReception() {
                     <div
                       key={email.id}
                       onClick={() => selectEmail(email)}
-                      className={`p-3 cursor-pointer transition-colors hover:bg-accent/50 ${
-                        !email.is_read ? 'bg-primary/5' : ''
+                      className={`group p-4 cursor-pointer transition-all hover:bg-accent/50 ${
+                        !email.is_read ? 'bg-primary/5 border-l-4 border-l-primary' : 'border-l-4 border-l-transparent'
                       } ${selectedEmail?.id === email.id ? 'bg-accent' : ''}`}
                     >
                       <div className="flex gap-3">
-                        {/* Avatar */}
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center text-xs font-medium shrink-0 ${
-                          !email.is_read ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                        }`}>
+                        <div className={`h-11 w-11 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ${getSenderColor(email)}`}>
                           {getSenderInitials(email)}
                         </div>
 
-                        {/* Content */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-0.5">
-                            <span className={`text-sm truncate ${!email.is_read ? 'font-semibold' : ''}`}>
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className={`text-sm truncate ${!email.is_read ? 'font-bold text-foreground' : 'font-medium'}`}>
                               {email.from_name || email.from_email.split('@')[0]}
                             </span>
                             <span className="text-xs text-muted-foreground shrink-0">
                               {formatDate(email.received_at)}
                             </span>
                           </div>
-                          <div className={`text-sm truncate mb-0.5 ${!email.is_read ? 'font-medium' : 'text-muted-foreground'}`}>
+                          
+                          <div className={`text-sm truncate mb-1 ${!email.is_read ? 'font-semibold' : 'text-muted-foreground'}`}>
                             {email.subject || '(Sans objet)'}
                           </div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            {getPreviewText(email) || 'Pas de contenu'}
+                          
+                          <div className="text-xs text-muted-foreground truncate leading-relaxed">
+                            {getPreviewText(email) || 'Aucun aperçu disponible'}
                           </div>
-                          <div className="flex items-center gap-2 mt-1">
+                          
+                          <div className="flex items-center gap-2 mt-2">
                             {email.is_starred && (
-                              <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                              <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
                             )}
                             {email.attachments && Array.isArray(email.attachments) && email.attachments.length > 0 && (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded">
                                 <Paperclip className="h-3 w-3" />
                                 <span>{email.attachments.length}</span>
                               </div>
                             )}
                           </div>
+                        </div>
+
+                        <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                            onClick={(e) => toggleStar(email, e)}
+                          >
+                            <Star className={`h-3.5 w-3.5 ${email.is_starred ? 'fill-yellow-500 text-yellow-500' : ''}`} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                            onClick={(e) => deleteEmail(email, e)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -469,50 +573,50 @@ export default function BoiteReception() {
             {selectedEmail ? (
               <>
                 {/* Detail Header */}
-                <div className="shrink-0 border-b bg-card p-3 sm:p-4">
-                  <div className="flex items-start gap-3">
-                    {/* Back button (mobile only) */}
+                <div className="shrink-0 border-b bg-card p-4 sm:p-5">
+                  <div className="flex items-start gap-4">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="md:hidden shrink-0 h-8 w-8 p-0"
+                      className="md:hidden shrink-0 h-9 w-9 p-0"
                       onClick={() => setSelectedEmail(null)}
                     >
                       <ArrowLeft className="h-4 w-4" />
                     </Button>
 
-                    {/* Sender Avatar */}
-                    <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium text-primary shrink-0">
+                    <div className={`h-12 w-12 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 ${getSenderColor(selectedEmail)}`}>
                       {getSenderInitials(selectedEmail)}
                     </div>
 
-                    {/* Email Info */}
                     <div className="flex-1 min-w-0">
-                      <h2 className="font-semibold text-base sm:text-lg leading-tight mb-1 line-clamp-2">
+                      <h2 className="font-bold text-lg leading-tight mb-2 line-clamp-2">
                         {selectedEmail.subject || '(Sans objet)'}
                       </h2>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground mb-0.5">
-                        <User className="h-3 w-3 shrink-0" />
-                        <span className="truncate">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                        <div className="flex items-center gap-1.5 text-foreground font-medium">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
                           {selectedEmail.from_name || selectedEmail.from_email}
-                        </span>
+                        </div>
+                        {selectedEmail.from_name && (
+                          <span className="text-muted-foreground text-xs">
+                            &lt;{selectedEmail.from_email}&gt;
+                          </span>
+                        )}
                       </div>
-                      {selectedEmail.from_name && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          &lt;{selectedEmail.from_email}&gt;
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-xs text-muted-foreground mt-1.5 flex items-center gap-1.5">
+                        <Clock className="h-3 w-3" />
                         {formatFullDate(selectedEmail.received_at)}
+                        <span className="text-muted-foreground/60">
+                          ({formatRelativeDate(selectedEmail.received_at)})
+                        </span>
                       </p>
                     </div>
 
-                    {/* Actions */}
                     <div className="flex gap-1 shrink-0">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0"
+                        className="h-9 w-9 p-0"
                         onClick={(e) => toggleStar(selectedEmail, e)}
                       >
                         <Star className={`h-4 w-4 ${selectedEmail.is_starred ? 'fill-yellow-500 text-yellow-500' : ''}`} />
@@ -520,7 +624,7 @@ export default function BoiteReception() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        className="h-9 w-9 p-0 text-destructive hover:text-destructive"
                         onClick={(e) => deleteEmail(selectedEmail, e)}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -528,53 +632,35 @@ export default function BoiteReception() {
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 mt-3">
-                    <Button variant="outline" size="sm" onClick={handleReply} className="h-8">
-                      <Reply className="h-3.5 w-3.5 mr-1.5" />
+                  <div className="flex gap-2 mt-4 pt-4 border-t">
+                    <Button variant="default" size="sm" onClick={handleReply} className="h-9">
+                      <Reply className="h-4 w-4 mr-2" />
                       Répondre
                     </Button>
-                    <Button variant="outline" size="sm" onClick={handleForward} className="h-8">
-                      <Forward className="h-3.5 w-3.5 mr-1.5" />
+                    <Button variant="outline" size="sm" onClick={handleForward} className="h-9">
+                      <Forward className="h-4 w-4 mr-2" />
                       Transférer
                     </Button>
                   </div>
                 </div>
 
-                {/* Email Body */}
                 <ScrollArea className="flex-1" ref={emailContentRef}>
-                  <div className="p-4 sm:p-6">
-                    {selectedEmail.body_html ? (
-                      <div 
-                        className="prose prose-sm max-w-none dark:prose-invert prose-img:max-w-full prose-img:h-auto"
-                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedEmail.body_html) }}
-                      />
-                    ) : selectedEmail.body_text ? (
-                      <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-                        {selectedEmail.body_text}
-                      </pre>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <MailOpen className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                        <p>Aucun contenu disponible</p>
-                      </div>
-                    )}
-
-                    {/* Attachments */}
+                  <div className="p-5 sm:p-8 max-w-4xl mx-auto">
+                    {/* Attachments at top if present */}
                     {selectedEmail.attachments && Array.isArray(selectedEmail.attachments) && selectedEmail.attachments.length > 0 && (
-                      <div className="mt-6 pt-4 border-t">
-                        <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                          <Paperclip className="h-4 w-4" />
-                          Pièces jointes ({selectedEmail.attachments.length})
+                      <div className="mb-6 p-4 rounded-xl bg-muted/30 border">
+                        <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                          <Paperclip className="h-4 w-4 text-primary" />
+                          {selectedEmail.attachments.length} pièce{selectedEmail.attachments.length > 1 ? 's' : ''} jointe{selectedEmail.attachments.length > 1 ? 's' : ''}
                         </h4>
-                        <div className="grid gap-2">
+                        <div className="grid sm:grid-cols-2 gap-2">
                           {selectedEmail.attachments.map((attachment: any, index: number) => (
                             <div
                               key={index}
-                              className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+                              className="flex items-center gap-3 p-3 rounded-lg bg-background hover:bg-accent/50 transition-colors cursor-pointer group"
                             >
-                              <div className="h-8 w-8 rounded bg-primary/10 flex items-center justify-center">
-                                <Paperclip className="h-4 w-4 text-primary" />
+                              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <Paperclip className="h-5 w-5 text-primary" />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className="text-sm font-medium truncate">
@@ -586,23 +672,51 @@ export default function BoiteReception() {
                                   </p>
                                 )}
                               </div>
+                              <Download className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
                           ))}
                         </div>
                       </div>
                     )}
+
+                    {/* Email Content */}
+                    <div className="bg-card rounded-xl border p-6 sm:p-8 shadow-sm">
+                      {selectedEmail.body_html ? (
+                        <div 
+                          className="prose prose-sm max-w-none dark:prose-invert 
+                            prose-headings:font-semibold prose-headings:text-foreground
+                            prose-p:text-foreground prose-p:leading-relaxed
+                            prose-a:text-primary prose-a:no-underline hover:prose-a:underline
+                            prose-img:rounded-lg prose-img:max-w-full prose-img:h-auto
+                            prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:py-1 prose-blockquote:px-4 prose-blockquote:rounded-r
+                            prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm
+                            prose-pre:bg-muted prose-pre:rounded-lg"
+                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(selectedEmail.body_html) }}
+                        />
+                      ) : selectedEmail.body_text ? (
+                        <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-foreground">
+                          {selectedEmail.body_text}
+                        </pre>
+                      ) : (
+                        <div className="text-center py-12 text-muted-foreground">
+                          <MailOpen className="h-16 w-16 mx-auto mb-4 opacity-30" />
+                          <p className="text-lg font-medium">Aucun contenu disponible</p>
+                          <p className="text-sm mt-1">Cet email ne contient pas de texte</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </ScrollArea>
               </>
             ) : (
-              <div className="hidden md:flex flex-1 items-center justify-center">
+              <div className="hidden md:flex flex-1 items-center justify-center bg-muted/20">
                 <div className="text-center">
-                  <div className="h-20 w-20 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                    <Mail className="h-10 w-10 text-muted-foreground" />
+                  <div className="h-24 w-24 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-6">
+                    <Mail className="h-12 w-12 text-muted-foreground" />
                   </div>
-                  <h3 className="font-medium mb-2">Sélectionnez un email</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Choisissez un email dans la liste pour le lire
+                  <h3 className="font-semibold text-lg mb-2">Sélectionnez un email</h3>
+                  <p className="text-sm text-muted-foreground max-w-xs">
+                    Choisissez un email dans la liste pour afficher son contenu
                   </p>
                 </div>
               </div>
@@ -610,7 +724,6 @@ export default function BoiteReception() {
           </div>
         </div>
 
-        {/* Dialogs */}
         <ImapConfigurationDialog
           open={showConfigDialog}
           onOpenChange={setShowConfigDialog}
