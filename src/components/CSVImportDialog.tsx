@@ -179,19 +179,36 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
         throw error;
       }
 
-      const result = data as { created: number; updated: number; failed: number; errors: Array<{ email: string; reason: string }> };
+      const result = data as { 
+        created: number; 
+        updated: number; 
+        activated: number;
+        failed: number; 
+        emailsSent: number;
+        errors: Array<{ email: string; reason: string }> 
+      };
+
+      // Build description message
+      const parts: string[] = [];
+      if (result.created > 0) parts.push(`${result.created} créé(s)`);
+      if (result.activated > 0) parts.push(`${result.activated} activé(s)`);
+      if (result.updated > 0) parts.push(`${result.updated} mis à jour`);
+      if (result.failed > 0) parts.push(`${result.failed} échec(s)`);
+      
+      const description = parts.join(', ');
+      const emailInfo = result.emailsSent > 0 ? ` • ${result.emailsSent} email(s) envoyé(s)` : '';
 
       if (result.errors.length > 0) {
         console.error('Import errors:', result.errors);
         toast({
           title: 'Import partiellement réussi',
-          description: `${result.created} créés, ${result.updated} mis à jour, ${result.failed} échecs`,
+          description: description + emailInfo,
           variant: 'default',
         });
       } else {
         toast({
           title: 'Import réussi',
-          description: `${result.created} créés, ${result.updated} mis à jour`,
+          description: description + emailInfo,
         });
       }
 
