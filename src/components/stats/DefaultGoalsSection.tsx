@@ -4,8 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Target, Flame, Trophy, CheckCircle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { startOfDay, endOfDay } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+
+// Helper function to get UTC day boundaries
+function getUTCDayBoundaries() {
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
+  const todayStart = new Date(todayStr + 'T00:00:00.000Z');
+  const todayEnd = new Date(todayStr + 'T23:59:59.999Z');
+  return { todayStart, todayEnd };
+}
 
 interface DefaultGoal {
   id: string;
@@ -50,37 +58,55 @@ export function DefaultGoalsSection({ agentId, offres, visites, candidatures, cl
     },
   });
 
-  // Calculate current values for today
-  const today = new Date();
-  const todayStart = startOfDay(today);
-  const todayEnd = endOfDay(today);
+  // Calculate current values for today using UTC boundaries
+  const { todayStart, todayEnd } = getUTCDayBoundaries();
 
+  // Filter offers sent today (UTC)
   const todayOffres = offres.filter(o => {
+    if (!o.date_envoi) return false;
     const date = new Date(o.date_envoi);
     return date >= todayStart && date <= todayEnd;
   }).length;
 
+  // Filter visits scheduled today (UTC)
   const todayVisites = visites.filter(v => {
+    if (!v.date_visite) return false;
     const date = new Date(v.date_visite);
     return date >= todayStart && date <= todayEnd;
   }).length;
 
+  // Filter candidatures created today (UTC) - only active ones (exclude completed/refused)
+  const activeStatuts = ['en_attente', 'acceptee', 'dossier_envoye', 'bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee'];
   const todayCandidatures = candidatures.filter(c => {
+    if (!c.created_at) return false;
     const date = new Date(c.created_at);
-    return date >= todayStart && date <= todayEnd;
+    const isToday = date >= todayStart && date <= todayEnd;
+    // For daily goals, count all candidatures created today regardless of status
+    return isToday;
+  }).length;
+
+  // For "dossiers déposés" objective - only count active candidatures created today
+  const todayDossiersDeposes = candidatures.filter(c => {
+    if (!c.created_at) return false;
+    const date = new Date(c.created_at);
+    const isToday = date >= todayStart && date <= todayEnd;
+    // Exclude completed (cles_remises) and refused candidatures
+    const isActive = !['cles_remises', 'refusee', 'annulee'].includes(c.statut);
+    return isToday && isActive;
   }).length;
 
   // Calculate per-client metrics
   const clientCount = clients.length || 1;
   const offresParClient = clientCount > 0 ? todayOffres / clientCount : 0;
   const visitesParClient = clientCount > 0 ? todayVisites / clientCount : 0;
-  const dossiersParClient = clientCount > 0 ? todayCandidatures / clientCount : 0;
+  const dossiersParClient = clientCount > 0 ? todayDossiersDeposes / clientCount : 0;
 
   const getCurrentValue = (goalType: string): number => {
     switch (goalType) {
       case 'offres': return todayOffres;
       case 'visites': return todayVisites;
       case 'candidatures': return todayCandidatures;
+      case 'dossiers_deposes': return todayDossiersDeposes;
       case 'offres_par_client': return offresParClient;
       case 'visites_par_client': return visitesParClient;
       case 'dossiers_par_client': return dossiersParClient;
