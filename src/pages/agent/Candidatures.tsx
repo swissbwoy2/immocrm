@@ -7,15 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   FileCheck, User, MapPin, Calendar, Search, Eye, CheckCircle, XCircle, Clock,
-  Filter, Building2, FileSignature, CalendarCheck, Key, Send, AlertTriangle
+  Filter, Building2, FileSignature, CalendarCheck, Key, Send, AlertTriangle,
+  ChevronDown, ChevronUp, FastForward, Phone
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
 
 const WORKFLOW_STATUTS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   'en_attente': { label: 'En attente', color: 'secondary', icon: <Clock className="h-4 w-4" /> },
@@ -44,6 +47,16 @@ interface Candidature {
   lieu_signature: string | null;
   date_etat_lieux: string | null;
   heure_etat_lieux: string | null;
+  client_accepte_conclure: boolean | null;
+  client_accepte_conclure_at: string | null;
+  agent_valide_regie: boolean | null;
+  agent_valide_regie_at: string | null;
+  bail_recu: boolean | null;
+  bail_recu_at: string | null;
+  signature_effectuee: boolean | null;
+  signature_effectuee_at: string | null;
+  cles_remises: boolean | null;
+  cles_remises_at: string | null;
   offres: {
     adresse: string;
     prix: number;
@@ -60,6 +73,7 @@ interface Profile {
   prenom: string;
   nom: string;
   email: string;
+  telephone: string | null;
 }
 
 export default function Candidatures() {
@@ -72,11 +86,14 @@ export default function Candidatures() {
   const [loading, setLoading] = useState(true);
   const [filterStatut, setFilterStatut] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   // Dialogs
   const [showDatesDialog, setShowDatesDialog] = useState(false);
   const [showEtatLieuxDialog, setShowEtatLieuxDialog] = useState(false);
+  const [showForceDialog, setShowForceDialog] = useState(false);
   const [selectedCandidature, setSelectedCandidature] = useState<Candidature | null>(null);
+  const [forceAction, setForceAction] = useState<{ statut: string; label: string } | null>(null);
   
   // Form states
   const [proposedDates, setProposedDates] = useState(['', '', '']);
@@ -90,6 +107,18 @@ export default function Candidatures() {
     }
     loadCandidatures();
   }, [user, userRole, navigate]);
+
+  const toggleCard = (id: string) => {
+    setExpandedCards(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(id)) {
+        newSet.delete(id);
+      } else {
+        newSet.add(id);
+      }
+      return newSet;
+    });
+  };
 
   const loadCandidatures = async () => {
     if (!user) return;
@@ -136,7 +165,7 @@ export default function Candidatures() {
 
       const { data: profilesData } = await supabase
         .from('profiles')
-        .select('id, prenom, nom, email')
+        .select('id, prenom, nom, email, telephone')
         .in('id', clientUserIds);
 
       if (profilesData) {
@@ -177,8 +206,10 @@ export default function Candidatures() {
         const notificationMap: Record<string, { title: string; message: string }> = {
           'acceptee': { title: '🎉 Candidature acceptée !', message: `Votre candidature pour ${candidature.offres?.adresse} a été acceptée !` },
           'refusee': { title: 'Candidature refusée', message: `Votre candidature pour ${candidature.offres?.adresse} n'a pas été retenue.` },
+          'bail_conclu': { title: '📋 Confirmation reçue', message: `Votre agent a confirmé votre intérêt pour ${candidature.offres?.adresse}` },
           'attente_bail': { title: 'Validation régie en cours', message: `Votre agent valide votre intérêt auprès de la régie pour ${candidature.offres?.adresse}` },
           'bail_recu': { title: '📄 Bail reçu - Choisissez votre date', message: `Le bail est prêt ! Choisissez une date de signature pour ${candidature.offres?.adresse}` },
+          'signature_planifiee': { title: '📅 Date de signature confirmée', message: `La date de signature a été confirmée pour ${candidature.offres?.adresse}` },
           'signature_effectuee': { title: '✅ Bail signé !', message: `Le bail pour ${candidature.offres?.adresse} a été signé. En attente de la date d'état des lieux.` },
           'etat_lieux_fixe': { title: '🔑 État des lieux fixé', message: `La date de l'état des lieux pour ${candidature.offres?.adresse} a été fixée.` },
           'cles_remises': { title: '🏠 Bienvenue chez vous !', message: `Les clés de ${candidature.offres?.adresse} vous ont été remises. Félicitations !` },
@@ -202,6 +233,30 @@ export default function Candidatures() {
       console.error('Error updating status:', error);
       toast({ title: 'Erreur', variant: 'destructive' });
     }
+  };
+
+  const handleForceProgression = (candidature: Candidature, targetStatut: string, label: string) => {
+    setSelectedCandidature(candidature);
+    setForceAction({ statut: targetStatut, label });
+    setShowForceDialog(true);
+  };
+
+  const confirmForceProgression = async () => {
+    if (!selectedCandidature || !forceAction) return;
+
+    const additionalData: any = {};
+    
+    if (forceAction.statut === 'bail_conclu') {
+      additionalData.client_accepte_conclure = true;
+      additionalData.client_accepte_conclure_at = new Date().toISOString();
+    } else if (forceAction.statut === 'signature_planifiee') {
+      additionalData.date_signature_choisie = new Date().toISOString();
+    }
+
+    await handleStatutChange(selectedCandidature.id, forceAction.statut, additionalData);
+    setShowForceDialog(false);
+    setSelectedCandidature(null);
+    setForceAction(null);
   };
 
   const handleProposeDates = async () => {
@@ -284,6 +339,165 @@ export default function Candidatures() {
     );
   }
 
+  const renderExpandedActions = (candidature: Candidature, profile: Profile | null) => {
+    return (
+      <div className="space-y-4 pt-4 border-t">
+        {/* Timeline */}
+        <CandidatureWorkflowTimeline currentStatut={candidature.statut} />
+
+        {/* Detailed info */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div className="space-y-2">
+            <h4 className="font-semibold">Informations client</h4>
+            <p><span className="text-muted-foreground">Email:</span> {profile?.email || 'N/A'}</p>
+            {profile?.telephone && (
+              <p className="flex items-center gap-2">
+                <span className="text-muted-foreground">Tél:</span> 
+                <a href={`tel:${profile.telephone}`} className="text-primary hover:underline flex items-center gap-1">
+                  <Phone className="h-3 w-3" />{profile.telephone}
+                </a>
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <h4 className="font-semibold">Dates importantes</h4>
+            <p><span className="text-muted-foreground">Dépôt:</span> {format(new Date(candidature.date_depot || candidature.created_at), 'dd/MM/yyyy', { locale: fr })}</p>
+            {candidature.client_accepte_conclure_at && (
+              <p><span className="text-muted-foreground">Confirmation client:</span> {format(new Date(candidature.client_accepte_conclure_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
+            )}
+            {candidature.date_signature_choisie && (
+              <p><span className="text-muted-foreground">Signature prévue:</span> {format(new Date(candidature.date_signature_choisie), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
+            )}
+            {candidature.date_etat_lieux && (
+              <p><span className="text-muted-foreground">État des lieux:</span> {format(new Date(candidature.date_etat_lieux), 'dd/MM/yyyy', { locale: fr })} {candidature.heure_etat_lieux}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Actions section */}
+        <div className="space-y-3">
+          <h4 className="font-semibold">Actions disponibles</h4>
+          
+          <div className="flex flex-wrap gap-2">
+            {/* En attente */}
+            {candidature.statut === 'en_attente' && (
+              <>
+                <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatutChange(candidature.id, 'acceptee')}>
+                  <CheckCircle className="h-4 w-4 mr-1" />Accepter
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => handleStatutChange(candidature.id, 'refusee')}>
+                  <XCircle className="h-4 w-4 mr-1" />Refuser
+                </Button>
+              </>
+            )}
+
+            {/* Acceptée - waiting for client */}
+            {candidature.statut === 'acceptee' && (
+              <>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded-md text-sm border border-amber-200 dark:border-amber-800">
+                  <Clock className="h-4 w-4" />
+                  <span>En attente du client (Conclure le bail)</span>
+                </div>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                  onClick={() => handleForceProgression(candidature, 'bail_conclu', 'Conclure pour le client')}
+                >
+                  <FastForward className="h-4 w-4 mr-1" />Forcer progression
+                </Button>
+              </>
+            )}
+
+            {/* Bail conclu */}
+            {candidature.statut === 'bail_conclu' && (
+              <Button size="sm" onClick={() => handleStatutChange(candidature.id, 'attente_bail', { agent_valide_regie: true, agent_valide_regie_at: new Date().toISOString() })}>
+                <Building2 className="h-4 w-4 mr-1" />Valider auprès de la régie
+              </Button>
+            )}
+
+            {/* Attente bail */}
+            {candidature.statut === 'attente_bail' && (
+              <Button size="sm" onClick={() => { setSelectedCandidature(candidature); setShowDatesDialog(true); }}>
+                <FileCheck className="h-4 w-4 mr-1" />Bail reçu - Proposer dates
+              </Button>
+            )}
+
+            {/* Bail reçu - waiting for client */}
+            {candidature.statut === 'bail_recu' && (
+              <>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-md text-sm border border-blue-200 dark:border-blue-800">
+                  <Clock className="h-4 w-4" />
+                  <span>En attente du client (Choix date signature)</span>
+                </div>
+                {candidature.dates_signature_proposees && (
+                  <div className="w-full text-sm text-muted-foreground">
+                    <p className="font-medium mb-1">Dates proposées:</p>
+                    <ul className="list-disc list-inside">
+                      {(candidature.dates_signature_proposees as any[]).map((d: any, i: number) => (
+                        <li key={i}>{format(new Date(d.date), 'EEEE dd MMMM yyyy HH:mm', { locale: fr })}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                  onClick={() => handleForceProgression(candidature, 'signature_planifiee', 'Confirmer date pour le client')}
+                >
+                  <FastForward className="h-4 w-4 mr-1" />Forcer progression
+                </Button>
+              </>
+            )}
+
+            {/* Signature planifiée */}
+            {candidature.statut === 'signature_planifiee' && (
+              <Button size="sm" onClick={() => handleStatutChange(candidature.id, 'signature_effectuee', { signature_effectuee: true, signature_effectuee_at: new Date().toISOString() })}>
+                <FileSignature className="h-4 w-4 mr-1" />Marquer bail signé
+              </Button>
+            )}
+
+            {/* Signature effectuée */}
+            {candidature.statut === 'signature_effectuee' && (
+              <Button size="sm" onClick={() => { setSelectedCandidature(candidature); setShowEtatLieuxDialog(true); }}>
+                <Calendar className="h-4 w-4 mr-1" />Fixer état des lieux
+              </Button>
+            )}
+
+            {/* État des lieux fixé */}
+            {candidature.statut === 'etat_lieux_fixe' && (
+              <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleClesRemises(candidature.id)}>
+                <Key className="h-4 w-4 mr-1" />Clés remises
+              </Button>
+            )}
+
+            {/* Clés remises */}
+            {candidature.statut === 'cles_remises' && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 rounded-md text-sm border border-green-200 dark:border-green-800">
+                <CheckCircle className="h-4 w-4" />
+                <span>✅ Terminé - Dossier complet</span>
+              </div>
+            )}
+
+            {/* Refusée */}
+            {candidature.statut === 'refusee' && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 rounded-md text-sm border border-red-200 dark:border-red-800">
+                <XCircle className="h-4 w-4" />
+                <span>Candidature refusée</span>
+              </div>
+            )}
+
+            {/* View client button always visible */}
+            <Button size="sm" variant="outline" onClick={() => navigate(`/agent/clients/${candidature.client_id}`)}>
+              <Eye className="h-4 w-4 mr-1" />Voir fiche client
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <main className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8 space-y-6">
@@ -293,7 +507,7 @@ export default function Candidatures() {
             <FileCheck className="h-8 w-8" />
             Candidatures déposées
           </h1>
-          <p className="text-muted-foreground mt-1">Gérez le workflow complet des candidatures</p>
+          <p className="text-muted-foreground mt-1">Gérez le workflow complet des candidatures - Cliquez sur une carte pour voir les détails</p>
         </div>
 
         {/* Stats */}
@@ -336,141 +550,75 @@ export default function Candidatures() {
             {filteredCandidatures.map(candidature => {
               const profile = candidature.clients?.user_id ? profiles.get(candidature.clients.user_id) : null;
               const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client inconnu';
+              const isExpanded = expandedCards.has(candidature.id);
 
               return (
-                <Card key={candidature.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-semibold">{clientName}</span>
-                          <Badge variant={getStatutBadgeVariant(candidature.statut)} className="flex items-center gap-1">
-                            {getStatutIcon(candidature.statut)}
-                            {getStatutLabel(candidature.statut)}
-                          </Badge>
-                        </div>
-                        
-                        {candidature.offres && (
-                          <div className="flex items-start gap-2 text-sm text-muted-foreground mb-2">
-                            <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                            <div>
-                              <p className="font-medium text-foreground">{candidature.offres.adresse}</p>
-                              <p>{candidature.offres.prix?.toLocaleString()} CHF {candidature.offres.pieces && `• ${candidature.offres.pieces} pièces`}</p>
+                <Collapsible key={candidature.id} open={isExpanded} onOpenChange={() => toggleCard(candidature.id)}>
+                  <Card className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <CollapsibleTrigger className="w-full text-left">
+                        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              <User className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-semibold">{clientName}</span>
+                              <Badge variant={getStatutBadgeVariant(candidature.statut)} className="flex items-center gap-1">
+                                {getStatutIcon(candidature.statut)}
+                                {getStatutLabel(candidature.statut)}
+                              </Badge>
+                              {/* Waiting indicator */}
+                              {(candidature.statut === 'acceptee' || candidature.statut === 'bail_recu') && (
+                                <Badge variant="outline" className="text-amber-600 border-amber-300">
+                                  <Clock className="h-3 w-3 mr-1" />Attente client
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            {candidature.offres && (
+                              <div className="flex items-start gap-2 text-sm text-muted-foreground mb-2">
+                                <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="font-medium text-foreground">{candidature.offres.adresse}</p>
+                                  <p>{candidature.offres.prix?.toLocaleString()} CHF {candidature.offres.pieces && `• ${candidature.offres.pieces} pièces`}</p>
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                Déposée le {new Date(candidature.date_depot || candidature.created_at).toLocaleDateString('fr-CH')}
+                              </span>
+                              {candidature.date_signature_choisie && (
+                                <span className="flex items-center gap-1 text-blue-600">
+                                  <CalendarCheck className="h-3 w-3" />
+                                  Signature: {format(new Date(candidature.date_signature_choisie), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                                </span>
+                              )}
+                              {candidature.date_etat_lieux && (
+                                <span className="flex items-center gap-1 text-green-600">
+                                  <Key className="h-3 w-3" />
+                                  EDL: {format(new Date(candidature.date_etat_lieux), 'dd/MM/yyyy', { locale: fr })} {candidature.heure_etat_lieux}
+                                </span>
+                              )}
                             </div>
                           </div>
-                        )}
 
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            Déposée le {new Date(candidature.date_depot || candidature.created_at).toLocaleDateString('fr-CH')}
-                          </span>
-                          {candidature.date_signature_choisie && (
-                            <span className="flex items-center gap-1 text-blue-600">
-                              <CalendarCheck className="h-3 w-3" />
-                              Signature: {format(new Date(candidature.date_signature_choisie), 'dd/MM/yyyy HH:mm', { locale: fr })}
-                            </span>
-                          )}
-                          {candidature.date_etat_lieux && (
-                            <span className="flex items-center gap-1 text-green-600">
-                              <Key className="h-3 w-3" />
-                              État des lieux: {format(new Date(candidature.date_etat_lieux), 'dd/MM/yyyy', { locale: fr })} {candidature.heure_etat_lieux}
-                            </span>
-                          )}
+                          {/* Expand indicator */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">{isExpanded ? 'Réduire' : 'Détails'}</span>
+                            {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                          </div>
                         </div>
-                      </div>
+                      </CollapsibleTrigger>
 
-                      {/* Actions */}
-                      <div className="flex flex-wrap gap-2 lg:flex-nowrap">
-                        {/* En attente - Accept/Refuse */}
-                        {candidature.statut === 'en_attente' && (
-                          <>
-                            <Button size="sm" variant="outline" className="text-green-600 border-green-600 hover:bg-green-50" onClick={() => handleStatutChange(candidature.id, 'acceptee')}>
-                              <CheckCircle className="h-4 w-4 mr-1" />Accepter
-                            </Button>
-                            <Button size="sm" variant="outline" className="text-red-600 border-red-600 hover:bg-red-50" onClick={() => handleStatutChange(candidature.id, 'refusee')}>
-                              <XCircle className="h-4 w-4 mr-1" />Refuser
-                            </Button>
-                          </>
-                        )}
-
-                        {/* Acceptée - En attente action client */}
-                        {candidature.statut === 'acceptee' && (
-                          <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded-md text-sm border border-amber-200 dark:border-amber-800">
-                            <Clock className="h-4 w-4" />
-                            <span>Attente client : "Conclure le bail"</span>
-                          </div>
-                        )}
-
-                        {/* Bail conclu - Valider avec régie */}
-                        {candidature.statut === 'bail_conclu' && (
-                          <Button size="sm" onClick={() => handleStatutChange(candidature.id, 'attente_bail', { agent_valide_regie: true, agent_valide_regie_at: new Date().toISOString() })}>
-                            <Building2 className="h-4 w-4 mr-1" />Valider régie
-                          </Button>
-                        )}
-
-                        {/* Attente bail - Bail reçu */}
-                        {candidature.statut === 'attente_bail' && (
-                          <Button size="sm" onClick={() => { setSelectedCandidature(candidature); setShowDatesDialog(true); }}>
-                            <FileCheck className="h-4 w-4 mr-1" />Bail reçu
-                          </Button>
-                        )}
-
-                        {/* Bail reçu - En attente choix client */}
-                        {candidature.statut === 'bail_recu' && (
-                          <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-md text-sm border border-blue-200 dark:border-blue-800">
-                            <Clock className="h-4 w-4" />
-                            <span>Attente client : choix date signature</span>
-                          </div>
-                        )}
-
-                        {/* Signature planifiée - Marquer signé */}
-                        {candidature.statut === 'signature_planifiee' && (
-                          <Button size="sm" onClick={() => handleStatutChange(candidature.id, 'signature_effectuee', { signature_effectuee: true, signature_effectuee_at: new Date().toISOString() })}>
-                            <FileSignature className="h-4 w-4 mr-1" />Signature effectuée
-                          </Button>
-                        )}
-
-                        {/* Signature effectuée - Fixer état des lieux */}
-                        {candidature.statut === 'signature_effectuee' && (
-                          <Button size="sm" onClick={() => { setSelectedCandidature(candidature); setShowEtatLieuxDialog(true); }}>
-                            <Calendar className="h-4 w-4 mr-1" />Fixer état des lieux
-                          </Button>
-                        )}
-
-                        {/* État des lieux fixé - Clés remises */}
-                        {candidature.statut === 'etat_lieux_fixe' && (
-                          <Button size="sm" onClick={() => handleClesRemises(candidature.id)}>
-                            <Key className="h-4 w-4 mr-1" />Clés remises
-                          </Button>
-                        )}
-
-                        {/* Clés remises - Terminé */}
-                        {candidature.statut === 'cles_remises' && (
-                          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 rounded-md text-sm border border-green-200 dark:border-green-800">
-                            <CheckCircle className="h-4 w-4" />
-                            <span>✅ Terminé - Clés remises</span>
-                          </div>
-                        )}
-
-                        {/* Refusée */}
-                        {candidature.statut === 'refusee' && (
-                          <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 rounded-md text-sm border border-red-200 dark:border-red-800">
-                            <XCircle className="h-4 w-4" />
-                            <span>Refusée</span>
-                          </div>
-                        )}
-
-                        {/* Voir client */}
-                        <Button size="sm" variant="ghost" onClick={() => navigate(`/agent/clients/${candidature.client_id}`)}>
-                          <Eye className="h-4 w-4 mr-1" />Voir client
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                      <CollapsibleContent>
+                        {renderExpandedActions(candidature, profile || null)}
+                      </CollapsibleContent>
+                    </CardContent>
+                  </Card>
+                </Collapsible>
               );
             })}
           </div>
@@ -553,6 +701,41 @@ export default function Candidatures() {
             <Button variant="outline" onClick={() => setShowEtatLieuxDialog(false)}>Annuler</Button>
             <Button onClick={handleSetEtatLieux} disabled={!etatLieuxDate}>
               <Send className="h-4 w-4 mr-2" />Notifier le client
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Force progression */}
+      <Dialog open={showForceDialog} onOpenChange={setShowForceDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FastForward className="h-5 w-5 text-orange-500" />
+              Forcer la progression
+            </DialogTitle>
+            <DialogDescription>
+              Cette action permet de passer à l'étape suivante sans attendre la confirmation du client.
+              <br /><br />
+              <strong>À utiliser uniquement si :</strong>
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Le client vous a confirmé par téléphone ou email</li>
+                <li>Le client a des difficultés avec l'application</li>
+                <li>Vous agissez sur demande explicite du client</li>
+              </ul>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="p-3 bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg">
+              <p className="text-sm text-orange-800 dark:text-orange-200">
+                Action: <strong>{forceAction?.label}</strong>
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowForceDialog(false)}>Annuler</Button>
+            <Button onClick={confirmForceProgression} className="bg-orange-600 hover:bg-orange-700">
+              <FastForward className="h-4 w-4 mr-2" />Confirmer
             </Button>
           </DialogFooter>
         </DialogContent>
