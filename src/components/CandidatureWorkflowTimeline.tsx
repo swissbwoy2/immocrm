@@ -34,7 +34,44 @@ export function CandidatureWorkflowTimeline({ currentStatut }: CandidatureWorkfl
 
   return (
     <div className="py-4">
-      <div className="flex items-center justify-between overflow-x-auto pb-2">
+      {/* Mobile: vertical layout */}
+      <div className="flex flex-col gap-2 sm:hidden">
+        {WORKFLOW_STEPS.map((step, index) => {
+          const isPast = index < currentIndex;
+          const isCurrent = index === currentIndex;
+          const isFuture = index > currentIndex;
+
+          return (
+            <div key={step.key} className="flex items-center gap-3">
+              <div className={cn(
+                "w-5 h-5 rounded-full flex items-center justify-center shrink-0",
+                isPast && "bg-primary text-primary-foreground",
+                isCurrent && "bg-primary text-primary-foreground ring-2 ring-primary/20",
+                isFuture && "bg-muted text-muted-foreground"
+              )}>
+                {isPast ? (
+                  <CheckCircle className="h-3 w-3" />
+                ) : isCurrent ? (
+                  <Clock className="h-3 w-3" />
+                ) : (
+                  <Circle className="h-2.5 w-2.5" />
+                )}
+              </div>
+              <span className={cn(
+                "text-xs",
+                isCurrent && "font-semibold text-primary",
+                isPast && "text-muted-foreground",
+                isFuture && "text-muted-foreground/60"
+              )}>
+                {step.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop: horizontal layout */}
+      <div className="hidden sm:flex items-center justify-between">
         {WORKFLOW_STEPS.map((step, index) => {
           const isPast = index < currentIndex;
           const isCurrent = index === currentIndex;
@@ -42,7 +79,6 @@ export function CandidatureWorkflowTimeline({ currentStatut }: CandidatureWorkfl
 
           return (
             <div key={step.key} className="flex flex-col items-center min-w-[70px] relative">
-              {/* Connector line */}
               {index > 0 && (
                 <div 
                   className={cn(
@@ -52,7 +88,6 @@ export function CandidatureWorkflowTimeline({ currentStatut }: CandidatureWorkfl
                 />
               )}
               
-              {/* Circle */}
               <div className={cn(
                 "w-6 h-6 rounded-full flex items-center justify-center transition-all",
                 isPast && "bg-primary text-primary-foreground",
@@ -68,7 +103,6 @@ export function CandidatureWorkflowTimeline({ currentStatut }: CandidatureWorkfl
                 )}
               </div>
 
-              {/* Label */}
               <span className={cn(
                 "text-[10px] mt-1.5 text-center leading-tight max-w-[60px]",
                 isCurrent && "font-semibold text-primary",
