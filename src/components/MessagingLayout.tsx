@@ -21,31 +21,37 @@ export function MessagingLayout({
   chatHeader,
 }: MessagingLayoutProps) {
   const isMobile = useIsMobile();
+  const [isInitialized, setIsInitialized] = useState(false);
   const [showConversations, setShowConversations] = useState(true);
+
+  // Attendre que le hook isMobile soit initialisé avant d'appliquer les effets
+  useEffect(() => {
+    setIsInitialized(true);
+  }, []);
 
   // Fermer automatiquement le panneau quand une conversation est sélectionnée sur mobile
   useEffect(() => {
-    if (isMobile && selectedConversation) {
+    if (isInitialized && isMobile && selectedConversation) {
       setShowConversations(false);
     }
-  }, [selectedConversation, isMobile]);
+  }, [selectedConversation, isMobile, isInitialized]);
 
   // Ouvrir le panneau si aucune conversation n'est sélectionnée sur mobile
   useEffect(() => {
-    if (isMobile && !selectedConversation) {
+    if (isInitialized && isMobile && !selectedConversation) {
       setShowConversations(true);
     }
-  }, [isMobile, selectedConversation]);
+  }, [isMobile, selectedConversation, isInitialized]);
 
   // Swipe gestures
   useSwipeGesture({
     onSwipeRight: () => {
-      if (isMobile && !showConversations) {
+      if (isInitialized && isMobile && !showConversations) {
         setShowConversations(true);
       }
     },
     onSwipeLeft: () => {
-      if (isMobile && showConversations) {
+      if (isInitialized && isMobile && showConversations) {
         setShowConversations(false);
       }
     },
@@ -58,10 +64,13 @@ export function MessagingLayout({
     onSelectConversation?.(null);
   };
 
+  // Pour éviter le flash, utiliser effectiveIsMobile seulement après initialisation
+  const effectiveIsMobile = isInitialized && isMobile;
+
   return (
     <div className="flex-1 flex overflow-hidden h-[calc(100vh-64px)] lg:h-[calc(100vh-0px)] relative">
       {/* Overlay pour mobile */}
-      {isMobile && showConversations && selectedConversation && (
+      {effectiveIsMobile && showConversations && selectedConversation && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity duration-300 lg:hidden"
           onClick={() => setShowConversations(false)}
@@ -77,7 +86,7 @@ export function MessagingLayout({
           // Mobile: panneau coulissant
           "fixed lg:static inset-y-0 left-0 z-50 w-[85%] max-w-[320px]",
           "transition-transform duration-300 ease-out",
-          isMobile && !showConversations && "-translate-x-full"
+          effectiveIsMobile && !showConversations && "-translate-x-full"
         )}
       >
         {conversationsList}
@@ -86,7 +95,7 @@ export function MessagingLayout({
       {/* Zone de chat */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header mobile avec bouton retour */}
-        {isMobile && selectedConversation && (
+        {effectiveIsMobile && selectedConversation && (
           <div className="flex items-center gap-2 p-3 border-b bg-card lg:hidden">
             <Button
               variant="ghost"
@@ -103,14 +112,14 @@ export function MessagingLayout({
         )}
 
         {/* Header desktop */}
-        {!isMobile && selectedConversation && chatHeader && (
+        {!effectiveIsMobile && selectedConversation && chatHeader && (
           <div className="p-4 border-b bg-card">
             {chatHeader}
           </div>
         )}
 
         {/* Bouton pour ouvrir les conversations sur mobile quand aucune n'est sélectionnée */}
-        {isMobile && !selectedConversation && !showConversations && (
+        {effectiveIsMobile && !selectedConversation && !showConversations && (
           <div className="p-4 border-b bg-card lg:hidden">
             <Button
               variant="ghost"
