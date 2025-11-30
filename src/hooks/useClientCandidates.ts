@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { hasStableStatus } from './useSolvabilityCheck';
 
 export interface ClientCandidate {
   id: string;
@@ -154,18 +155,23 @@ export function useClientCandidates(clientId: string | undefined) {
     }
   };
 
-  // Calculer les revenus cumulés (sans garants)
+  // Calculer les revenus cumulés (sans garants) - uniquement les candidats avec statut stable
   const getCumulativeIncome = useCallback(() => {
     return candidates
-      .filter(c => CUMULATIVE_TYPES.includes(c.type))
+      .filter(c => 
+        CUMULATIVE_TYPES.includes(c.type) && 
+        !c.poursuites &&
+        hasStableStatus(c.type_permis, c.nationalite)
+      )
       .reduce((sum, c) => sum + (c.revenus_mensuels || 0), 0);
   }, [candidates]);
 
-  // Récupérer les garants valides
+  // Récupérer les garants valides (avec statut stable)
   const getValidGarants = useCallback(() => {
     return candidates.filter(c => 
       c.type === 'garant' && 
       !c.poursuites && 
+      hasStableStatus(c.type_permis, c.nationalite) &&
       (c.revenus_mensuels || 0) > 0
     );
   }, [candidates]);

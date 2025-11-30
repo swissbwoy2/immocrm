@@ -35,6 +35,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 import { MissingDocumentsAlert } from '@/components/MissingDocumentsAlert';
+import { useClientCandidates, ClientCandidate } from '@/hooks/useClientCandidates';
+import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
+import { SolvabilityAlert } from '@/components/SolvabilityAlert';
+import { ClientCandidatesManager } from '@/components/ClientCandidatesManager';
+import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSection';
 
 export default function Dossier() {
   const navigate = useNavigate();
@@ -51,6 +56,10 @@ export default function Dossier() {
   const [editProfileDialogOpen, setEditProfileDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Hooks pour la gestion des candidats et solvabilité
+  const { candidates, refresh: refreshCandidates } = useClientCandidates(client?.id);
+  const solvabilityResult = useSolvabilityCheck(client, candidates);
 
   useEffect(() => {
     loadData();
@@ -516,10 +525,21 @@ export default function Dossier() {
               </CardContent>
             </Card>
 
-            {/* Solvabilité */}
+            {/* Solvabilité - Alerte détaillée */}
+            <SolvabilityAlert result={solvabilityResult} />
+
+            {/* Gestion des candidats */}
+            <ClientCandidatesManager 
+              clientId={client.id}
+              clientRevenus={client.revenus_mensuels || 0}
+              budgetDemande={client.budget_max || 0}
+              onCandidatesChange={refreshCandidates}
+            />
+
+            {/* Statuts légaux */}
             <Card className="mt-4">
               <CardHeader>
-                <CardTitle className="text-base">⚠️ Solvabilité</CardTitle>
+                <CardTitle className="text-base">⚠️ Statuts légaux</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -871,6 +891,19 @@ export default function Dossier() {
         profile={profile}
         onSaved={loadData}
       />
+
+      {/* Candidate Documents Section - affichée comme section additionnelle */}
+      {client && candidates.length > 0 && (
+        <div className="p-4 md:p-8 pt-0">
+          <CandidateDocumentsSection
+            clientId={client.id}
+            clientUserId={user?.id || ''}
+            clientName={profile ? `${profile.prenom} ${profile.nom}` : ''}
+            candidates={candidates}
+            onDocumentsChange={loadData}
+          />
+        </div>
+      )}
     </div>
   );
 }
