@@ -839,7 +839,24 @@ export function ReplyEmailDialog({
                           </p>
                         ) : (
                           <>
-                            <p className="text-xs text-muted-foreground">{clientDocuments.length} document(s) disponible(s)</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-muted-foreground">{clientDocuments.length} document(s) disponible(s)</p>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => {
+                                  if (selectedDocIds.size === clientDocuments.length) {
+                                    setSelectedDocIds(new Set());
+                                  } else {
+                                    setSelectedDocIds(new Set(clientDocuments.map(d => d.id)));
+                                  }
+                                }}
+                              >
+                                {selectedDocIds.size === clientDocuments.length ? "Tout désélectionner" : "Tout sélectionner"}
+                              </Button>
+                            </div>
                             <ScrollArea className="h-48 border rounded-md p-1">
                               <div className="space-y-1 pr-4">
                                 {clientDocuments.map(doc => (
