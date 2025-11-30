@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Send, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertTriangle, Send, CheckCircle, Loader2, LogOut, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 interface AccountActivationModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface AccountActivationModalProps {
 export function AccountActivationModal({ isOpen, onClose, userId, userName }: AccountActivationModalProps) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const navigate = useNavigate();
 
   const handleContactAdmin = async () => {
     setSending(true);
@@ -62,9 +64,18 @@ export function AccountActivationModal({ isOpen, onClose, userId, userName }: Ac
     }
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/login');
+  };
+
+  const handleOpenFormulaire = () => {
+    window.open('https://immo-rama.ch/formulaire', '_blank');
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 rounded-full bg-warning/20 flex items-center justify-center">
@@ -91,31 +102,46 @@ export function AccountActivationModal({ isOpen, onClose, userId, userName }: Ac
               <span>Demande envoyée ! Nous vous contacterons bientôt.</span>
             </div>
           ) : (
-            <Button 
-              onClick={handleContactAdmin} 
-              disabled={sending}
-              className="w-full"
-              size="lg"
-            >
-              {sending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Envoi en cours...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Contacter l'administrateur
-                </>
-              )}
-            </Button>
+            <>
+              <Button 
+                onClick={handleOpenFormulaire}
+                className="w-full"
+                size="lg"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Activer ma recherche
+              </Button>
+              
+              <Button 
+                onClick={handleContactAdmin} 
+                disabled={sending}
+                variant="outline"
+                className="w-full"
+                size="lg"
+              >
+                {sending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Envoi en cours...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Contacter l'administrateur
+                  </>
+                )}
+              </Button>
+            </>
           )}
           
-          {sent && (
-            <Button variant="outline" onClick={onClose} className="w-full">
-              Fermer
-            </Button>
-          )}
+          <Button 
+            variant="ghost" 
+            onClick={handleLogout} 
+            className="w-full text-muted-foreground"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Se déconnecter
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
