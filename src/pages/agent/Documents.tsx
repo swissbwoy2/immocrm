@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileText, Download, Eye, User, Calendar, File, Pencil } from 'lucide-react';
+import { FileText, Download, Eye, User, Calendar, File, Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export default function AgentDocuments() {
   const { user } = useAuth();
@@ -20,6 +21,9 @@ export default function AgentDocuments() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [documentToRename, setDocumentToRename] = useState<any>(null);
   const [newDocumentName, setNewDocumentName] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadDocuments();
@@ -205,6 +209,48 @@ export default function AgentDocuments() {
     }
   };
 
+  const handleDeleteDocument = async () => {
+    if (!documentToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      // Supprimer du storage si ce n'est pas une data URL
+      if (!documentToDelete.url.startsWith('data:')) {
+        let filePath = documentToDelete.url;
+        if (filePath.includes('/storage/v1/object/')) {
+          const parts = filePath.split('/client-documents/');
+          filePath = parts[1] || filePath;
+        }
+        
+        const { error: storageError } = await supabase.storage
+          .from('client-documents')
+          .remove([filePath]);
+
+        if (storageError) {
+          console.warn('Storage delete warning:', storageError);
+        }
+      }
+
+      // Supprimer de la base de données
+      const { error: dbError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', documentToDelete.id);
+
+      if (dbError) throw dbError;
+
+      toast.success('Document supprimé avec succès');
+      setDeleteDialogOpen(false);
+      setDocumentToDelete(null);
+      loadDocuments();
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast.error('Impossible de supprimer le document');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const getDocumentIcon = (type: string) => {
     if (type.includes('pdf')) return '📄';
     if (type.includes('image')) return '🖼️';
@@ -318,6 +364,17 @@ export default function AgentDocuments() {
                           </Button>
                           <Button
                             size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => {
+                              setDocumentToDelete(doc);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
                             onClick={() => handleDownload(doc)}
                             className="flex-1"
                           >
@@ -415,6 +472,30 @@ export default function AgentDocuments() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer le document</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer "{documentToDelete?.nom}" ? Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDocumentToDelete(null)}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteDocument}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Suppression...' : 'Supprimer'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
