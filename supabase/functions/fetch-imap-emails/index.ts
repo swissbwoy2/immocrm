@@ -135,15 +135,17 @@ class SimpleImapClient {
     const fullResponse = response.join('\n');
     console.log(`[IMAP] Response size: ${fullResponse.length} chars`);
     
-    // Split by FETCH responses
-    const fetchMatches = fullResponse.split(/\* \d+ FETCH/);
+    // Split by FETCH responses - improved regex
+    const fetchMatches = fullResponse.split(/^\* \d+ FETCH/m);
     
-    for (let i = 1; i < fetchMatches.length && emails.length < 50; i++) {
+    console.log(`[IMAP] Found ${fetchMatches.length - 1} FETCH responses`);
+    
+    for (let i = 1; i < fetchMatches.length && emails.length < 200; i++) {
       const fetchData = fetchMatches[i];
       
       try {
         const email = this.parseFetchResponse(fetchData, imapUser);
-        if (email) {
+        if (email && email.message_id) {
           emails.push(email);
         }
       } catch (e) {
@@ -182,40 +184,84 @@ class SimpleImapClient {
       email.is_read = flagsMatch[1].includes('\\Seen');
     }
 
-    // Find HEADER section
-    const headerMatch = data.match(/BODY\[HEADER\]\s*(?:\{\d+\})?\s*\r?\n([\s\S]*?)(?=\r?\n\r?\n|\nBODY\[TEXT\])/i);
+    // Find HEADER section - try multiple patterns
     let headers = '';
-    if (headerMatch) {
-      headers = headerMatch[1];
-    } else {
-      // Try to extract headers from the beginning
-      const headerEnd = data.indexOf('\n\n');
-      if (headerEnd > 0 && headerEnd < 5000) {
-        headers = data.substring(0, headerEnd);
+    
+    // Pattern 1: BODY[HEADER] with literal size
+    const headerMatch1 = data.match(/BODY\[HEADER\]\s*\{(\d+)\}\s*\r?\n([\s\S]*)/i);
+    if (headerMatch1) {
+      const size = parseInt(headerMatch1[1]);
+      headers = headerMatch1[2].substring(0, size);
+    }
+    
+    // Pattern 2: BODY[HEADER] without literal size
+    if (!headers) {
+      const headerMatch2 = data.match(/BODY\[HEADER\]\s*\r?\n([\s\S]*?)(?=BODY\[TEXT\]|$)/i);
+      if (headerMatch2) {
+        headers = headerMatch2[1];
+      }
+    }
+    
+    // Pattern 3: Look for common email headers directly
+    if (!headers) {
+      const fromIdx = data.search(/^From:/mi);
+      if (fromIdx >= 0) {
+        const endIdx = data.indexOf('\n\n', fromIdx);
+        if (endIdx > fromIdx) {
+          headers = data.substring(fromIdx, endIdx);
+        }
       }
     }
 
-    // Parse From header
-    const fromMatch = headers.match(/^From:\s*(.+?)(?=\r?\n[^\s]|\r?\n\r?\n|$)/mi);
-    if (fromMatch) {
-      const fromValue = decodeHeaderValue(fromMatch[1].replace(/\r?\n\s+/g, ' ').trim());
-      const parsed = parseEmailAddress(fromValue);
-      email.from_email = parsed.email || imapUser;
-      email.from_name = parsed.name;
+    // Parse From header with improved regex
+    const fromPatterns = [
+      /^From:\s*(.+?)(?=\r?\n[A-Z][a-zA-Z-]*:|$)/mi,
+      /^From:\s*(.+)/mi
+    ];
+    for (const pattern of fromPatterns) {
+      const fromMatch = headers.match(pattern);
+      if (fromMatch) {
+        const fromValue = decodeHeaderValue(fromMatch[1].replace(/\r?\n\s+/g, ' ').trim());
+        const parsed = parseEmailAddress(fromValue);
+        if (parsed.email) {
+          email.from_email = parsed.email;
+          email.from_name = parsed.name;
+          break;
+        }
+      }
     }
 
     // Parse To header
-    const toMatch = headers.match(/^To:\s*(.+?)(?=\r?\n[^\s]|\r?\n\r?\n|$)/mi);
-    if (toMatch) {
-      const toValue = decodeHeaderValue(toMatch[1].replace(/\r?\n\s+/g, ' ').trim());
-      const parsed = parseEmailAddress(toValue);
-      email.to_email = parsed.email || imapUser;
+    const toPatterns = [
+      /^To:\s*(.+?)(?=\r?\n[A-Z][a-zA-Z-]*:|$)/mi,
+      /^To:\s*(.+)/mi
+    ];
+    for (const pattern of toPatterns) {
+      const toMatch = headers.match(pattern);
+      if (toMatch) {
+        const toValue = decodeHeaderValue(toMatch[1].replace(/\r?\n\s+/g, ' ').trim());
+        const parsed = parseEmailAddress(toValue);
+        if (parsed.email) {
+          email.to_email = parsed.email;
+          break;
+        }
+      }
     }
 
-    // Parse Subject header
-    const subjectMatch = headers.match(/^Subject:\s*(.+?)(?=\r?\n[^\s]|\r?\n\r?\n|$)/mi);
-    if (subjectMatch) {
-      email.subject = decodeHeaderValue(subjectMatch[1].replace(/\r?\n\s+/g, ' ').trim());
+    // Parse Subject header with improved regex
+    const subjectPatterns = [
+      /^Subject:\s*(.+?)(?=\r?\n[A-Z][a-zA-Z-]*:|$)/mi,
+      /^Subject:\s*(.+)/mi
+    ];
+    for (const pattern of subjectPatterns) {
+      const subjectMatch = headers.match(pattern);
+      if (subjectMatch) {
+        const subject = decodeHeaderValue(subjectMatch[1].replace(/\r?\n\s+/g, ' ').trim());
+        if (subject) {
+          email.subject = subject;
+          break;
+        }
+      }
     }
 
     // Parse Date header
