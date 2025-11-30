@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Trash2, Upload, Trash, Shield, CheckCircle } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Trash2, Upload, Trash, Shield, CheckCircle, FileWarning } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +20,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
+import { hasStableStatus } from "@/hooks/useSolvabilityCheck";
+import { CUMULATIVE_TYPES } from "@/hooks/useClientCandidates";
 
 const MesClients = () => {
   const navigate = useNavigate();
@@ -96,42 +98,39 @@ const MesClients = () => {
         candidatesMap.set(candidate.client_id, existing);
       });
 
-      // Types cumulatifs pour le calcul du revenu total (doivent correspondre à useClientCandidates)
-      const CUMULATIVE_TYPES = ['colocataire', 'co_debiteur', 'signataire_solidaire'];
-
       // Transform data to match expected format
       const transformedClients = clientsData?.map(client => {
         const profile = profilesMap.get(client.user_id);
         const candidates = candidatesMap.get(client.id) || [];
         
-        // Calculate total revenue including cumulative candidates
+        // Check client's stable status
+        const clientHasStableStatus = hasStableStatus(client.type_permis, client.nationalite);
+        
+        // Calculate total revenue including ONLY stable cumulative candidates
         const clientRevenu = Number(client.revenus_mensuels) || 0;
-        const candidatesRevenu = candidates
-          .filter(c => CUMULATIVE_TYPES.includes(c.type))
+        const stableCandidatesRevenu = candidates
+          .filter(c => 
+            CUMULATIVE_TYPES.includes(c.type) && 
+            !c.poursuites &&
+            hasStableStatus(c.type_permis, c.nationalite)
+          )
           .reduce((sum, c) => sum + (Number(c.revenus_mensuels) || 0), 0);
-        const totalRevenus = clientRevenu + candidatesRevenu;
+        
+        // If client has stable status, include their revenue; otherwise only count stable candidates
+        const totalRevenus = clientHasStableStatus 
+          ? clientRevenu + stableCandidatesRevenu 
+          : stableCandidatesRevenu;
         
         // Calculate budget possible (33% of total revenue)
         const budgetPossible = Math.round(totalRevenus / 3);
         
-        // Helper function to check if someone has a stable status (permit B/C or Swiss)
-        const hasStableStatus = (permis: string | null, nationalite: string | null) => {
-          const stablePermits = ['B', 'C', 'Suisse', 'Suisse / Autre'];
-          const isSwiss = nationalite?.toLowerCase().includes('suisse') || false;
-          const hasStablePermit = permis ? stablePermits.some(p => permis.includes(p)) : false;
-          return isSwiss || hasStablePermit;
-        };
-        
-        // Check client's stable status
-        const clientHasStableStatus = hasStableStatus(client.type_permis, client.nationalite);
-        
-        // Find valid guarantor (must have sufficient income AND stable status)
+        // Find valid guarantor (must have sufficient income AND stable status AND no poursuites)
         const garant = candidates.find(c => {
           if (c.type !== 'garant') return false;
+          if (c.poursuites) return false;
           const garantRevenu = Number(c.revenus_mensuels) || 0;
           const budgetDemande = Number(client.budget_max) || 0;
           const garantHasStableStatus = hasStableStatus(c.type_permis, c.nationalite);
-          // Garant must have 3x budget AND stable status
           return garantRevenu >= budgetDemande * 3 && garantHasStableStatus;
         });
         
@@ -142,10 +141,54 @@ const MesClients = () => {
         const coDebiteursCount = candidates.filter(c => c.type === 'co_debiteur').length;
         const signatairesCount = candidates.filter(c => c.type === 'signataire_solidaire').length;
         
-        // Check solvability: budget OK AND (client stable OR valid guarantor)
+        // Count unstable candidates (not counted in solvability)
+        const unstableCandidatesCount = candidates.filter(c => 
+          CUMULATIVE_TYPES.includes(c.type) && 
+          !hasStableStatus(c.type_permis, c.nationalite)
+        ).length;
+        
+        // Detect unstable garants
+        const unstableGarants = candidates.filter(c => 
+          c.type === 'garant' && 
+          !c.poursuites &&
+          !hasStableStatus(c.type_permis, c.nationalite)
+        );
+        
+        // Check solvability
         const budgetDemande = Number(client.budget_max) || 0;
-        const budgetOk = budgetPossible >= budgetDemande;
-        const isSolvable = budgetOk && (clientHasStableStatus || !!garant);
+        const hasNoPoursuites = !client.poursuites;
+        
+        // Calculate effective budget possible based on who makes the dossier solvable
+        let effectiveBudgetPossible = budgetPossible;
+        let solvabilitySource: 'client' | 'garant' | 'combined' = 'client';
+        
+        if (!clientHasStableStatus && garant) {
+          // Client unstable but has valid garant - garant's budget makes the decision
+          effectiveBudgetPossible = Math.round((Number(garant.revenus_mensuels) || 0) / 3);
+          solvabilitySource = 'garant';
+        } else if (clientHasStableStatus && garant) {
+          solvabilitySource = 'combined';
+        }
+        
+        const budgetOk = effectiveBudgetPossible >= budgetDemande || budgetDemande === 0;
+        const hasStableStatusOrGarant = clientHasStableStatus || !!garant;
+        const isSolvable = budgetOk && hasStableStatusOrGarant && hasNoPoursuites;
+        
+        // Collect solvability issues for display
+        const solvabilityIssues: string[] = [];
+        
+        if (client.poursuites) {
+          solvabilityIssues.push('Poursuites');
+        }
+        if (!clientHasStableStatus && !garant) {
+          solvabilityIssues.push(`Permis ${client.type_permis || 'non renseigné'}`);
+        }
+        if (!budgetOk && budgetDemande > 0) {
+          solvabilityIssues.push('Budget insuffisant');
+        }
+        if (unstableGarants.length > 0) {
+          solvabilityIssues.push(`Garant non stable (${unstableGarants[0].type_permis || '?'})`);
+        }
 
         return {
           id: client.id,
@@ -153,7 +196,7 @@ const MesClients = () => {
           nom: profile?.nom || '',
           email: profile?.email || '',
           telephone: profile?.telephone || '',
-          adresse: '', // Not in DB
+          adresse: '',
           nationalite: client.nationalite,
           typePermis: client.type_permis,
           etatCivil: client.situation_familiale,
@@ -161,7 +204,7 @@ const MesClients = () => {
           employeur: client.secteur_activite,
           revenuMensuel: client.revenus_mensuels,
           totalRevenus,
-          budgetPossible,
+          budgetPossible: effectiveBudgetPossible,
           budgetMax: client.budget_max,
           nombrePiecesSouhaite: client.pieces?.toString() || '',
           regions: client.region_recherche ? [client.region_recherche] : [],
@@ -170,7 +213,12 @@ const MesClients = () => {
           dateInscription: client.date_ajout || client.created_at,
           agentId: client.agent_id,
           typeBien: client.type_bien,
-          garant: garant ? { nom: garant.nom, prenom: garant.prenom, revenus: garant.revenus_mensuels } : null,
+          garant: garant ? { 
+            nom: garant.nom, 
+            prenom: garant.prenom, 
+            revenus: garant.revenus_mensuels,
+            permis: garant.type_permis,
+          } : null,
           candidates,
           candidatesCount,
           garantsCount,
@@ -178,6 +226,11 @@ const MesClients = () => {
           coDebiteursCount,
           signatairesCount,
           isSolvable,
+          clientHasStableStatus,
+          solvabilitySource,
+          solvabilityIssues,
+          unstableCandidatesCount,
+          unstableGarants,
         };
       }) || [];
 
@@ -447,11 +500,12 @@ const MesClients = () => {
                       <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0">
                         <CheckCircle className="h-3 w-3 mr-1" />
                         Solvable
+                        {client.solvabilitySource === 'garant' && ' (via garant)'}
                       </Badge>
                     ) : (
-                      <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-0">
+                      <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-0">
                         <AlertTriangle className="h-3 w-3 mr-1" />
-                        À valider
+                        Non solvable
                       </Badge>
                     )}
                   </div>
@@ -463,12 +517,50 @@ const MesClients = () => {
                     </h3>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4" />
-                      <span>{client.nationalite}</span>
+                      <span>{client.nationalite || 'Non renseigné'}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                      <Users className="h-4 w-4" />
-                      <span>Type de permis: {client.typePermis}</span>
+                    <div className="flex items-center gap-2 text-sm mt-1">
+                      {client.clientHasStableStatus ? (
+                        <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0 text-xs">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Permis {client.typePermis || 'stable'}
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-0 text-xs">
+                          <FileWarning className="h-3 w-3 mr-1" />
+                          Permis {client.typePermis || 'non stable'}
+                        </Badge>
+                      )}
                     </div>
+                    
+                    {/* Raisons de non-solvabilité */}
+                    {!client.isSolvable && client.solvabilityIssues && client.solvabilityIssues.length > 0 && (
+                      <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800">
+                        <p className="text-xs font-medium text-red-700 dark:text-red-400 mb-1">Problèmes détectés:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {client.solvabilityIssues.map((issue: string, idx: number) => (
+                            <Badge key={idx} variant="outline" className="text-xs border-red-300 text-red-600 dark:border-red-700 dark:text-red-400">
+                              {issue}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Alerte garant non stable */}
+                    {client.unstableGarants && client.unstableGarants.length > 0 && (
+                      <div className="mt-2 p-2 bg-orange-50 dark:bg-orange-900/20 rounded-md border border-orange-200 dark:border-orange-800">
+                        <p className="text-xs font-medium text-orange-700 dark:text-orange-400">
+                          ⚠️ Garant{client.unstableGarants.length > 1 ? 's' : ''} avec permis non stable:
+                        </p>
+                        {client.unstableGarants.map((g: any, idx: number) => (
+                          <p key={idx} className="text-xs text-orange-600 dark:text-orange-500">
+                            {g.prenom} {g.nom} - Permis {g.type_permis || 'non renseigné'}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    
                     {/* Détail des candidats par type */}
                     {client.candidatesCount > 0 && (
                       <div className="flex flex-wrap items-center gap-1 mt-2">
@@ -490,6 +582,11 @@ const MesClients = () => {
                         {client.signatairesCount > 0 && (
                           <Badge variant="outline" className="text-xs">
                             ✍️ {client.signatairesCount} signataire{client.signatairesCount > 1 ? 's' : ''} solidaire{client.signatairesCount > 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                        {client.unstableCandidatesCount > 0 && (
+                          <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">
+                            ⚠️ {client.unstableCandidatesCount} non comptabilisé{client.unstableCandidatesCount > 1 ? 's' : ''}
                           </Badge>
                         )}
                       </div>
@@ -524,10 +621,16 @@ const MesClients = () => {
                           </p>
                           <p className="text-xs text-muted-foreground">
                             CHF {Number(client.garant.revenus)?.toLocaleString() || 0}/mois
+                            {client.garant.permis && ` • Permis ${client.garant.permis}`}
                           </p>
                         </div>
                         <CheckCircle className="h-4 w-4 text-green-600" />
                       </div>
+                    )}
+                    {client.solvabilitySource === 'garant' && client.garant && (
+                      <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                        ✓ Solvabilité basée sur le garant
+                      </p>
                     )}
                   </div>
 

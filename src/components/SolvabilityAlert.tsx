@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle, Shield, UserPlus, AlertCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Shield, UserPlus, AlertCircle, Ban, FileWarning } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,8 +12,26 @@ interface SolvabilityAlertProps {
   className?: string;
 }
 
+const CANDIDATE_TYPE_LABELS: Record<string, string> = {
+  colocataire: 'Colocataire',
+  co_debiteur: 'Co-débiteur',
+  signataire_solidaire: 'Signataire solidaire',
+  garant: 'Garant',
+  occupant: 'Occupant',
+};
+
 export function SolvabilityAlert({ result, onAddCandidate, compact = false, className }: SolvabilityAlertProps) {
-  const { isSolvable, problems, budgetPossible, budgetDemande, hasValidGarant, garantInfo } = result;
+  const { 
+    isSolvable, 
+    problems, 
+    budgetPossible, 
+    budgetDemande, 
+    hasValidGarant, 
+    garantInfo,
+    clientHasStableStatus,
+    excludedCandidates,
+    solvabilitySource,
+  } = result;
 
   // Si tout est OK et pas de budget demandé, ne rien afficher
   if (isSolvable && problems.length === 0 && budgetDemande === 0) {
@@ -39,17 +57,42 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
       );
     }
 
+    // Compact view with first critical problem
+    const criticalProblem = problems.find(p => p.type === 'critical') || problems[0];
+    const warningCount = problems.filter(p => p.type === 'warning').length;
+    const criticalCount = problems.filter(p => p.type === 'critical').length;
+
     return (
       <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-900">
         <div className="flex items-start gap-2">
           <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-red-700 dark:text-red-400">
-              Dossier non solvable
-            </p>
-            <p className="text-xs text-red-600 dark:text-red-500 mt-1">
-              {problems[0]?.message}
-            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-sm font-medium text-red-700 dark:text-red-400">
+                Dossier non solvable
+              </p>
+              {criticalCount > 0 && (
+                <Badge variant="destructive" className="text-xs">
+                  {criticalCount} critique{criticalCount > 1 ? 's' : ''}
+                </Badge>
+              )}
+              {warningCount > 0 && (
+                <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
+                  {warningCount} alerte{warningCount > 1 ? 's' : ''}
+                </Badge>
+              )}
+            </div>
+            {criticalProblem && (
+              <p className="text-xs text-red-600 dark:text-red-500 mt-1">
+                {criticalProblem.message}
+              </p>
+            )}
+            {!clientHasStableStatus && !hasValidGarant && (
+              <p className="text-xs text-orange-600 dark:text-orange-400 mt-1 flex items-center gap-1">
+                <FileWarning className="w-3 h-3" />
+                Permis non stable - garant requis
+              </p>
+            )}
             {onAddCandidate && (
               <Button 
                 size="sm" 
@@ -76,6 +119,11 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
             <>
               <CheckCircle className="w-5 h-5 text-green-600" />
               <span className="text-green-700 dark:text-green-400">Dossier solvable</span>
+              {solvabilitySource === 'garant' && (
+                <Badge variant="outline" className="ml-2 text-green-600 border-green-300">
+                  Via garant
+                </Badge>
+              )}
             </>
           ) : (
             <>
@@ -87,6 +135,21 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
       </CardHeader>
       
       <CardContent className="space-y-4">
+        {/* Statut du permis client */}
+        {!clientHasStableStatus && (
+          <div className="flex items-center gap-3 p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg border border-orange-200 dark:border-orange-800">
+            <FileWarning className="w-5 h-5 text-orange-600" />
+            <div>
+              <p className="text-sm font-medium text-orange-700 dark:text-orange-400">
+                Permis non stable détecté
+              </p>
+              <p className="text-xs text-orange-600 dark:text-orange-500">
+                Un garant avec permis B/C ou nationalité suisse est nécessaire pour valider le dossier
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Récapitulatif budget */}
         <div className="grid grid-cols-2 gap-4 p-3 bg-background/50 rounded-lg">
           <div>
@@ -94,7 +157,9 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
             <p className="text-lg font-semibold">CHF {budgetDemande.toLocaleString()}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Budget possible</p>
+            <p className="text-xs text-muted-foreground">
+              Budget possible {solvabilitySource === 'garant' && '(via garant)'}
+            </p>
             <p className={`text-lg font-semibold ${budgetPossible >= budgetDemande ? 'text-green-600' : 'text-orange-600'}`}>
               CHF {budgetPossible.toLocaleString()}
             </p>
@@ -105,20 +170,54 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
         {hasValidGarant && garantInfo && (
           <div className="flex items-center gap-3 p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
             <Shield className="w-5 h-5 text-green-600" />
-            <div>
+            <div className="flex-1">
               <p className="text-sm font-medium text-green-700 dark:text-green-400">
                 Garant valide: {garantInfo.nom}
               </p>
               <p className="text-xs text-green-600 dark:text-green-500">
                 Revenus: CHF {garantInfo.revenus.toLocaleString()} → Garantit jusqu'à CHF {garantInfo.maxLoyer.toLocaleString()}/mois
+                {garantInfo.permis && ` • Permis ${garantInfo.permis}`}
               </p>
             </div>
+            <Badge className="bg-green-600 text-white">
+              Permis stable
+            </Badge>
+          </div>
+        )}
+
+        {/* Candidats exclus du calcul */}
+        {excludedCandidates.length > 0 && (
+          <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+            <div className="flex items-center gap-2 mb-2">
+              <Ban className="w-4 h-4 text-orange-600" />
+              <p className="text-sm font-medium text-orange-700 dark:text-orange-400">
+                Candidats non comptabilisés ({excludedCandidates.length})
+              </p>
+            </div>
+            <div className="space-y-1">
+              {excludedCandidates.map((candidate, index) => (
+                <div key={index} className="flex items-center justify-between text-xs">
+                  <span className="text-orange-600 dark:text-orange-500">
+                    {candidate.name} ({CANDIDATE_TYPE_LABELS[candidate.type] || candidate.type})
+                  </span>
+                  <span className="text-orange-500 dark:text-orange-600">
+                    {candidate.reason}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-orange-500 mt-2">
+              💡 Ces candidats doivent avoir un permis B, C ou être de nationalité suisse pour que leurs revenus soient pris en compte
+            </p>
           </div>
         )}
 
         {/* Liste des problèmes */}
         {problems.length > 0 && (
           <div className="space-y-3">
+            <p className="text-sm font-medium text-muted-foreground">
+              Problèmes détectés ({problems.length})
+            </p>
             {problems.map((problem, index) => (
               <div 
                 key={index} 
@@ -132,12 +231,24 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
                   <AlertCircle className={`w-4 h-4 mt-0.5 flex-shrink-0 ${
                     problem.type === 'critical' ? 'text-red-600' : 'text-orange-600'
                   }`} />
-                  <div>
-                    <p className={`text-sm font-medium ${
-                      problem.type === 'critical' ? 'text-red-700 dark:text-red-400' : 'text-orange-700 dark:text-orange-400'
-                    }`}>
-                      {problem.message}
-                    </p>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className={`text-sm font-medium ${
+                        problem.type === 'critical' ? 'text-red-700 dark:text-red-400' : 'text-orange-700 dark:text-orange-400'
+                      }`}>
+                        {problem.message}
+                      </p>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${
+                          problem.type === 'critical' 
+                            ? 'border-red-300 text-red-600' 
+                            : 'border-orange-300 text-orange-600'
+                        }`}
+                      >
+                        {problem.type === 'critical' ? 'Critique' : 'Alerte'}
+                      </Badge>
+                    </div>
                     <p className={`text-xs mt-1 ${
                       problem.type === 'critical' ? 'text-red-600 dark:text-red-500' : 'text-orange-600 dark:text-orange-500'
                     }`}>
