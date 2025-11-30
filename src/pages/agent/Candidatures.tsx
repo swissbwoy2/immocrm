@@ -284,12 +284,58 @@ export default function Candidatures() {
   };
 
   const handleSetEtatLieux = async () => {
-    if (!selectedCandidature || !etatLieuxDate) return;
+    if (!selectedCandidature || !etatLieuxDate || !user) return;
 
     await handleStatutChange(selectedCandidature.id, 'etat_lieux_fixe', {
       date_etat_lieux: etatLieuxDate,
       heure_etat_lieux: etatLieuxHeure,
     });
+
+    // Create calendar event for état des lieux
+    try {
+      const { data: agentData } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (agentData) {
+        // Combine date and time
+        let eventDateTime = etatLieuxDate;
+        if (etatLieuxHeure) {
+          eventDateTime = `${etatLieuxDate.split('T')[0]}T${etatLieuxHeure}:00`;
+        }
+
+        await supabase.from('calendar_events').insert({
+          title: `État des lieux - ${selectedCandidature.offres?.adresse || 'Appartement'}`,
+          event_type: 'etat_lieux',
+          event_date: eventDateTime,
+          description: `Remise des clés\n${etatLieuxHeure ? `Heure: ${etatLieuxHeure}` : ''}`,
+          client_id: selectedCandidature.client_id,
+          agent_id: agentData.id,
+          created_by: user.id,
+        });
+
+        // Notify client
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('user_id')
+          .eq('id', selectedCandidature.client_id)
+          .maybeSingle();
+
+        if (clientData) {
+          await supabase.from('notifications').insert({
+            user_id: clientData.user_id,
+            type: 'etat_lieux_fixe',
+            title: '🔑 État des lieux planifié',
+            message: `État des lieux prévu le ${format(new Date(etatLieuxDate), 'dd/MM/yyyy', { locale: fr })}${etatLieuxHeure ? ` à ${etatLieuxHeure}` : ''}`,
+            link: '/client/calendrier',
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error creating calendar event:', error);
+    }
 
     setShowEtatLieuxDialog(false);
     setEtatLieuxDate('');
