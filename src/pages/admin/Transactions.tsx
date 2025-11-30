@@ -93,37 +93,37 @@ const Transactions = () => {
             <p className="text-muted-foreground">Suivi des commissions et transactions</p>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-8">
-            <Card className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg">
-                  <DollarSign className="h-6 w-6 text-primary" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
+            <Card className="p-4 md:p-6">
+              <div className="flex items-center gap-3 md:gap-4">
+                <div className="p-2 md:p-3 bg-primary/10 rounded-lg">
+                  <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Commissions totales</p>
-                  <p className="text-2xl font-bold">CHF {totalCommissions.toLocaleString()}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Commissions totales</p>
+                  <p className="text-lg md:text-2xl font-bold">CHF {totalCommissions.toLocaleString()}</p>
                 </div>
               </div>
             </Card>
-            <Card className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-success/10 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-success" />
+            <Card className="p-4 md:p-6">
+              <div className="flex items-center gap-3 md:gap-4">
+                <div className="p-2 md:p-3 bg-success/10 rounded-lg">
+                  <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-success" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Part agents</p>
-                  <p className="text-2xl font-bold">CHF {totalAgentPart.toLocaleString()}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Part agents</p>
+                  <p className="text-lg md:text-2xl font-bold">CHF {totalAgentPart.toLocaleString()}</p>
                 </div>
               </div>
             </Card>
-            <Card className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-secondary/10 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-secondary-foreground" />
+            <Card className="p-4 md:p-6">
+              <div className="flex items-center gap-3 md:gap-4">
+                <div className="p-2 md:p-3 bg-secondary/10 rounded-lg">
+                  <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-secondary-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Part agence</p>
-                  <p className="text-2xl font-bold">CHF {totalAgencyPart.toLocaleString()}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Part agence</p>
+                  <p className="text-lg md:text-2xl font-bold">CHF {totalAgencyPart.toLocaleString()}</p>
                 </div>
               </div>
             </Card>
@@ -161,25 +161,25 @@ const Transactions = () => {
                         </Badge>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                      <div className="grid grid-cols-2 gap-3 md:gap-4 pt-4 border-t">
                         <div>
-                          <p className="text-sm text-muted-foreground mb-1">Montant total (annuel)</p>
-                          <p className="text-lg font-semibold">CHF {transaction.montant_total.toLocaleString()}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground mb-1">Montant total (annuel)</p>
+                          <p className="text-base md:text-lg font-semibold">CHF {transaction.montant_total.toLocaleString()}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground mb-1">Commission totale</p>
-                          <p className="text-lg font-semibold text-primary">CHF {transaction.commission_totale.toLocaleString()}</p>
+                          <p className="text-xs md:text-sm text-muted-foreground mb-1">Commission totale</p>
+                          <p className="text-base md:text-lg font-semibold text-primary">CHF {transaction.commission_totale.toLocaleString()}</p>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                          <p className="text-sm text-muted-foreground mb-1">Part agent</p>
-                          <p className="text-xl font-bold text-success">CHF {transaction.part_agent.toLocaleString()}</p>
+                      <div className="grid grid-cols-2 gap-3 md:gap-4">
+                        <div className="p-3 md:p-4 bg-muted/50 rounded-lg">
+                          <p className="text-xs md:text-sm text-muted-foreground mb-1">Part agent</p>
+                          <p className="text-lg md:text-xl font-bold text-success">CHF {transaction.part_agent.toLocaleString()}</p>
                         </div>
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                          <p className="text-sm text-muted-foreground mb-1">Part agence</p>
-                          <p className="text-xl font-bold">CHF {transaction.part_agence.toLocaleString()}</p>
+                        <div className="p-3 md:p-4 bg-muted/50 rounded-lg">
+                          <p className="text-xs md:text-sm text-muted-foreground mb-1">Part agence</p>
+                          <p className="text-lg md:text-xl font-bold">CHF {transaction.part_agence.toLocaleString()}</p>
                         </div>
                       </div>
 

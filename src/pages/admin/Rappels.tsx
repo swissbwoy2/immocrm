@@ -6,10 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
-import { Bell, Mail, Clock, CheckCircle, Search, RefreshCw, Filter } from 'lucide-react';
+import { Bell, Mail, Clock, CheckCircle, Search, RefreshCw, Filter, User, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { useViewMode } from '@/hooks/useViewMode';
+import { ViewModeToggle } from '@/components/ViewModeToggle';
 
 interface ReminderWithDetails {
   id: string;
@@ -54,6 +56,7 @@ export default function AdminRappels() {
     thisWeek: 0,
     byType: {} as Record<string, number>,
   });
+  const { viewMode, setViewMode, isTabletOrMobile } = useViewMode();
 
   const loadReminders = async () => {
     setLoading(true);
@@ -131,72 +134,190 @@ export default function AdminRappels() {
 
   const uniqueTypes = [...new Set(reminders.map(r => r.reminder_type))];
 
+  // Card view for mobile/tablet
+  const renderCardView = () => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {loading ? (
+        <div className="col-span-full text-center py-8">
+          <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+          <p className="mt-2 text-muted-foreground">Chargement...</p>
+        </div>
+      ) : filteredReminders.length === 0 ? (
+        <div className="col-span-full text-center py-8">
+          <Mail className="h-12 w-12 mx-auto text-muted-foreground/50" />
+          <p className="mt-2 text-muted-foreground">Aucun rappel trouvé</p>
+        </div>
+      ) : (
+        filteredReminders.map((reminder) => (
+          <Card key={reminder.id} className="p-4">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="font-medium truncate">
+                    {reminder.profile 
+                      ? `${reminder.profile.prenom} ${reminder.profile.nom}`
+                      : 'Utilisateur inconnu'
+                    }
+                  </span>
+                </div>
+                <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 flex-shrink-0">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Envoyé
+                </Badge>
+              </div>
+              
+              <p className="text-sm text-muted-foreground truncate">
+                {reminder.profile?.email || '-'}
+              </p>
+              
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <Badge variant="outline" className={getReminderTypeColor(reminder.reminder_type)}>
+                  {getReminderTypeLabel(reminder.reminder_type)}
+                </Badge>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Calendar className="h-3 w-3" />
+                  {format(new Date(reminder.sent_at), "d MMM yyyy HH:mm", { locale: fr })}
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))
+      )}
+    </div>
+  );
+
+  // Table view for desktop
+  const renderTableView = () => (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Destinataire</TableHead>
+            <TableHead className="hidden sm:table-cell">Email</TableHead>
+            <TableHead>Type de rappel</TableHead>
+            <TableHead className="hidden md:table-cell">Date d'envoi</TableHead>
+            <TableHead>Statut</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center py-8">
+                <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                <p className="mt-2 text-muted-foreground">Chargement...</p>
+              </TableCell>
+            </TableRow>
+          ) : filteredReminders.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center py-8">
+                <Mail className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                <p className="mt-2 text-muted-foreground">Aucun rappel trouvé</p>
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredReminders.map((reminder) => (
+              <TableRow key={reminder.id}>
+                <TableCell className="font-medium">
+                  {reminder.profile 
+                    ? `${reminder.profile.prenom} ${reminder.profile.nom}`
+                    : 'Utilisateur inconnu'
+                  }
+                </TableCell>
+                <TableCell className="text-muted-foreground hidden sm:table-cell">
+                  {reminder.profile?.email || '-'}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className={getReminderTypeColor(reminder.reminder_type)}>
+                    {getReminderTypeLabel(reminder.reminder_type)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {format(new Date(reminder.sent_at), "d MMM yyyy 'à' HH:mm", { locale: fr })}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Envoyé
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  );
+
   return (
     <div className="container mx-auto px-4 py-4 md:py-6 space-y-4 md:space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Rappels envoyés</h1>
-          <p className="text-muted-foreground">Suivi des rappels automatiques envoyés aux clients et agents</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Rappels envoyés</h1>
+          <p className="text-muted-foreground text-sm md:text-base">Suivi des rappels automatiques envoyés aux clients et agents</p>
         </div>
-        <Button onClick={loadReminders} variant="outline" disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Actualiser
-        </Button>
+        <div className="flex items-center gap-2">
+          <ViewModeToggle viewMode={viewMode} onViewModeChange={setViewMode} />
+          <Button onClick={loadReminders} variant="outline" disabled={loading} size="sm">
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline ml-2">Actualiser</span>
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 md:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Total envoyés</p>
-                <p className="text-3xl font-bold">{stats.total}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Total envoyés</p>
+                <p className="text-xl md:text-3xl font-bold">{stats.total}</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Mail className="h-6 w-6 text-primary" />
+              <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Mail className="h-5 w-5 md:h-6 md:w-6 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 md:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Aujourd'hui</p>
-                <p className="text-3xl font-bold">{stats.today}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Aujourd'hui</p>
+                <p className="text-xl md:text-3xl font-bold">{stats.today}</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                <Bell className="h-6 w-6 text-emerald-500" />
+              <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                <Bell className="h-5 w-5 md:h-6 md:w-6 text-emerald-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 md:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Cette semaine</p>
-                <p className="text-3xl font-bold">{stats.thisWeek}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Cette semaine</p>
+                <p className="text-xl md:text-3xl font-bold">{stats.thisWeek}</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <Clock className="h-6 w-6 text-blue-500" />
+              <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <Clock className="h-5 w-5 md:h-6 md:w-6 text-blue-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 md:pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Types différents</p>
-                <p className="text-3xl font-bold">{Object.keys(stats.byType).length}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Types différents</p>
+                <p className="text-xl md:text-3xl font-bold">{Object.keys(stats.byType).length}</p>
               </div>
-              <div className="h-12 w-12 rounded-full bg-violet-500/10 flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-violet-500" />
+              <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-violet-500/10 flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-violet-500" />
               </div>
             </div>
           </CardContent>
@@ -205,20 +326,20 @@ export default function AdminRappels() {
 
       {/* Stats by Type */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Répartition par type</CardTitle>
+        <CardHeader className="pb-2 md:pb-4">
+          <CardTitle className="text-base md:text-lg">Répartition par type</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2 md:gap-3">
             {Object.entries(stats.byType).map(([type, count]) => (
               <div 
                 key={type} 
-                className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-card"
+                className="flex items-center gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-lg border bg-card"
               >
-                <Badge variant="outline" className={getReminderTypeColor(type)}>
+                <Badge variant="outline" className={`${getReminderTypeColor(type)} text-xs md:text-sm`}>
                   {getReminderTypeLabel(type)}
                 </Badge>
-                <span className="font-semibold">{count}</span>
+                <span className="font-semibold text-sm">{count}</span>
               </div>
             ))}
           </div>
@@ -227,19 +348,19 @@ export default function AdminRappels() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
+        <CardContent className="pt-4 md:pt-6">
+          <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Rechercher par nom, email ou type..."
+                placeholder="Rechercher..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full md:w-[250px]">
+              <SelectTrigger className="w-full sm:w-[200px] md:w-[250px]">
                 <Filter className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Filtrer par type" />
               </SelectTrigger>
@@ -256,69 +377,12 @@ export default function AdminRappels() {
         </CardContent>
       </Card>
 
-      {/* Table */}
+      {/* Data display */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Destinataire</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Type de rappel</TableHead>
-                  <TableHead>Date d'envoi</TableHead>
-                  <TableHead>Statut</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
-                      <RefreshCw className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                      <p className="mt-2 text-muted-foreground">Chargement...</p>
-                    </TableCell>
-                  </TableRow>
-                ) : filteredReminders.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8">
-                      <Mail className="h-12 w-12 mx-auto text-muted-foreground/50" />
-                      <p className="mt-2 text-muted-foreground">Aucun rappel trouvé</p>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredReminders.map((reminder) => (
-                    <TableRow key={reminder.id}>
-                      <TableCell className="font-medium">
-                        {reminder.profile 
-                          ? `${reminder.profile.prenom} ${reminder.profile.nom}`
-                          : 'Utilisateur inconnu'
-                        }
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {reminder.profile?.email || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={getReminderTypeColor(reminder.reminder_type)}>
-                          {getReminderTypeLabel(reminder.reminder_type)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(reminder.sent_at), "d MMM yyyy 'à' HH:mm", { locale: fr })}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Envoyé
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+        <CardContent className="pt-4 md:pt-6">
+          {viewMode === 'cards' ? renderCardView() : renderTableView()}
           {filteredReminders.length > 0 && (
-            <p className="text-sm text-muted-foreground mt-4 text-right">
+            <p className="text-xs md:text-sm text-muted-foreground mt-4 text-right">
               {filteredReminders.length} rappel{filteredReminders.length > 1 ? 's' : ''} affiché{filteredReminders.length > 1 ? 's' : ''}
             </p>
           )}
