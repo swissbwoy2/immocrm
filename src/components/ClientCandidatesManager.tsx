@@ -3,9 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { UserPlus, Pencil, Trash2, Shield, Users, DollarSign, AlertTriangle, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { UserPlus, Pencil, Trash2, Shield, Users, DollarSign, AlertTriangle, FileText, CheckCircle, XCircle, Ban } from 'lucide-react';
 import { ClientCandidate, CANDIDATE_TYPE_LABELS, CUMULATIVE_TYPES, useClientCandidates } from '@/hooks/useClientCandidates';
 import { AddCandidateDialog } from './AddCandidateDialog';
+import { hasStableStatus } from '@/hooks/useSolvabilityCheck';
 
 interface ClientCandidatesManagerProps {
   clientId: string;
@@ -73,9 +74,24 @@ export function ClientCandidatesManager({
     return Users;
   };
 
+  // Vérifier si un candidat a un statut stable
+  const candidateHasStableStatus = (candidate: ClientCandidate) => {
+    return hasStableStatus(candidate.type_permis, candidate.nationalite);
+  };
+
+  // Vérifier si un garant est valide (avec statut stable)
   const isGarantValid = (candidate: ClientCandidate) => {
     if (candidate.type !== 'garant') return null;
-    return !candidate.poursuites && (candidate.revenus_mensuels || 0) >= budgetDemande * 3;
+    return !candidate.poursuites && 
+           candidateHasStableStatus(candidate) &&
+           (candidate.revenus_mensuels || 0) >= budgetDemande * 3;
+  };
+
+  // Vérifier si un candidat contribue aux revenus
+  const candidateContributes = (candidate: ClientCandidate) => {
+    return CUMULATIVE_TYPES.includes(candidate.type) && 
+           !candidate.poursuites && 
+           candidateHasStableStatus(candidate);
   };
 
   if (loading) {
@@ -118,8 +134,10 @@ export function ClientCandidatesManager({
             <div className="space-y-3">
               {candidates.map((candidate) => {
                 const TypeIcon = getTypeIcon(candidate.type);
-                const contributes = CUMULATIVE_TYPES.includes(candidate.type);
+                const contributes = candidateContributes(candidate);
                 const garantValid = isGarantValid(candidate);
+                const isStable = candidateHasStableStatus(candidate);
+                const isCumulativeType = CUMULATIVE_TYPES.includes(candidate.type);
                 
                 return (
                   <div 
@@ -127,11 +145,13 @@ export function ClientCandidatesManager({
                     className={`p-4 rounded-lg border ${
                       candidate.poursuites 
                         ? 'border-red-200 bg-red-50/50 dark:bg-red-950/20' 
-                        : garantValid === true
-                          ? 'border-green-200 bg-green-50/50 dark:bg-green-950/20'
-                          : garantValid === false
-                            ? 'border-orange-200 bg-orange-50/50 dark:bg-orange-950/20'
-                            : 'border-border bg-muted/30'
+                        : !isStable && (isCumulativeType || candidate.type === 'garant')
+                          ? 'border-orange-200 bg-orange-50/50 dark:bg-orange-950/20'
+                          : garantValid === true
+                            ? 'border-green-200 bg-green-50/50 dark:bg-green-950/20'
+                            : garantValid === false
+                              ? 'border-orange-200 bg-orange-50/50 dark:bg-orange-950/20'
+                              : 'border-border bg-muted/30'
                     }`}
                   >
                     <div className="flex items-start justify-between">
@@ -158,6 +178,12 @@ export function ClientCandidatesManager({
                                 {candidate.lien_avec_client}
                               </Badge>
                             )}
+                            {/* Badge statut permis */}
+                            {!isStable && (
+                              <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">
+                                Permis non stable
+                              </Badge>
+                            )}
                           </div>
                           
                           <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
@@ -165,6 +191,11 @@ export function ClientCandidatesManager({
                               <DollarSign className="w-3 h-3" />
                               CHF {(candidate.revenus_mensuels || 0).toLocaleString()}
                             </span>
+                            {candidate.type_permis && (
+                              <span className="text-xs">
+                                Permis: {candidate.type_permis}
+                              </span>
+                            )}
                             {candidate.poursuites && (
                               <span className="flex items-center gap-1 text-red-600">
                                 <AlertTriangle className="w-3 h-3" />
@@ -175,7 +206,7 @@ export function ClientCandidatesManager({
 
                           {/* Info contribution */}
                           <div className="mt-2">
-                            {contributes && !candidate.poursuites ? (
+                            {contributes ? (
                               <p className="text-xs text-green-600 flex items-center gap-1">
                                 <CheckCircle className="w-3 h-3" />
                                 +CHF {Math.round((candidate.revenus_mensuels || 0) / 3).toLocaleString()} au budget
@@ -191,14 +222,19 @@ export function ClientCandidatesManager({
                                   <XCircle className="w-3 h-3" />
                                   {candidate.poursuites 
                                     ? 'Garant invalide (poursuites)' 
-                                    : `Revenus insuffisants (min CHF ${(budgetDemande * 3).toLocaleString()} requis)`
+                                    : !isStable
+                                      ? 'Garant invalide (permis non stable)'
+                                      : `Revenus insuffisants (min CHF ${(budgetDemande * 3).toLocaleString()} requis)`
                                   }
                                 </p>
                               )
-                            ) : candidate.poursuites ? (
-                              <p className="text-xs text-red-600 flex items-center gap-1">
-                                <XCircle className="w-3 h-3" />
-                                Non comptabilisé (poursuites)
+                            ) : isCumulativeType ? (
+                              <p className="text-xs text-orange-600 flex items-center gap-1">
+                                <Ban className="w-3 h-3" />
+                                {candidate.poursuites 
+                                  ? 'Non comptabilisé (poursuites)' 
+                                  : 'Non comptabilisé (permis non stable)'
+                                }
                               </p>
                             ) : null}
                           </div>
@@ -248,16 +284,26 @@ export function ClientCandidatesManager({
                   <span>CHF {clientRevenus.toLocaleString()}</span>
                 </div>
                 {candidates
-                  .filter(c => CUMULATIVE_TYPES.includes(c.type) && !c.poursuites)
-                  .map(c => (
-                    <div key={c.id} className="flex justify-between text-green-600">
-                      <span>+ {CANDIDATE_TYPE_LABELS[c.type].split(' ')[1]}: {c.prenom}</span>
-                      <span>CHF {(c.revenus_mensuels || 0).toLocaleString()}</span>
-                    </div>
-                  ))
+                  .filter(c => CUMULATIVE_TYPES.includes(c.type))
+                  .map(c => {
+                    const isContributing = candidateContributes(c);
+                    return (
+                      <div key={c.id} className={`flex justify-between ${isContributing ? 'text-green-600' : 'text-muted-foreground line-through'}`}>
+                        <span>
+                          {isContributing ? '+' : '✗'} {CANDIDATE_TYPE_LABELS[c.type].split(' ')[1]}: {c.prenom}
+                          {!isContributing && (
+                            <span className="text-xs ml-1">
+                              ({c.poursuites ? 'poursuites' : 'permis'})
+                            </span>
+                          )}
+                        </span>
+                        <span>CHF {(c.revenus_mensuels || 0).toLocaleString()}</span>
+                      </div>
+                    );
+                  })
                 }
                 <div className="border-t pt-2 mt-2 flex justify-between font-medium">
-                  <span>Total revenus</span>
+                  <span>Total revenus (comptabilisés)</span>
                   <span>CHF {totalRevenus.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-primary font-semibold">
