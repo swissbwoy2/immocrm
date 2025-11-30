@@ -5,12 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
-import { Camera, Save, Mail, Phone, User, Settings, Shield, Bell } from 'lucide-react';
+import { Camera, Save, Mail, Phone, User, Settings, Shield, Bell, Target } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { EmailConfigurationDialog } from '@/components/EmailConfigurationDialog';
 import { ChangePasswordCard } from '@/components/ChangePasswordCard';
+import { AdminDefaultGoalsManager } from '@/components/stats/AdminDefaultGoalsManager';
 
 export default function AdminParametres() {
   const { user } = useAuth();
@@ -156,6 +157,9 @@ export default function AdminParametres() {
         </div>
 
         <div className="grid gap-6 max-w-2xl">
+          {/* Objectifs par défaut des agents */}
+          <AdminDefaultGoalsManager />
+          
           {/* Photo de profil */}
           <Card>
             <CardHeader>
