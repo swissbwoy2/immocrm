@@ -361,6 +361,63 @@ export default function AgentDashboard() {
             </Card>
           )}
 
+          {/* Candidatures en attente d'action */}
+          {candidatures.filter(c => c.statut === 'bail_conclu').length > 0 && (
+            <Card className="border-green-500/50 bg-green-50 dark:bg-green-950/30">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2 text-green-800 dark:text-green-200">
+                    <FileCheck className="w-5 h-5" />
+                    🎉 Clients prêts à conclure le bail
+                  </CardTitle>
+                  <Badge variant="default" className="bg-green-600 animate-pulse">
+                    {candidatures.filter(c => c.statut === 'bail_conclu').length}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {candidatures.filter(c => c.statut === 'bail_conclu').slice(0, 3).map(cand => {
+                  const client = clients.find(c => c.id === cand.client_id);
+                  const profile = client ? profiles.get(client.user_id) : null;
+                  const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client';
+                  
+                  return (
+                    <div 
+                      key={cand.id}
+                      className="p-4 rounded-lg border border-green-200 dark:border-green-800 bg-white dark:bg-gray-800 cursor-pointer transition-colors hover:bg-green-50 dark:hover:bg-green-900/30"
+                      onClick={() => navigate('/agent/candidatures')}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-sm truncate">{cand.offres?.adresse}</p>
+                            <Badge variant="outline" className="text-xs border-green-500 text-green-700 dark:text-green-300">
+                              Action requise
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {cand.offres?.pieces} pièces • {cand.offres?.prix?.toLocaleString()} CHF/mois
+                          </p>
+                          <p className="text-xs text-green-600 dark:text-green-400 font-medium mt-1">
+                            👤 {clientName} a accepté de conclure
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                <Button 
+                  variant="default"
+                  size="sm" 
+                  className="w-full mt-2 bg-green-600 hover:bg-green-700"
+                  onClick={() => navigate('/agent/candidatures')}
+                >
+                  Gérer les candidatures
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Bouton Conclure une affaire */}
           <div className="flex justify-end">
             <Button 
