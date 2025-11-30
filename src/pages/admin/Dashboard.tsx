@@ -151,7 +151,7 @@ export default function AdminDashboard() {
   }
 
   const clientsActifs = clients.filter(c => calculateDaysElapsed(c.dateInscription) <= 90).length;
-  const totalAgents = agents.length; // Compter TOUS les agents
+  const totalAgents = agents.length;
   const agentsActifs = agents.filter(a => a.actif).length;
   const totalOffresEnvoyees = offres.length;
   const transactionsEnCours = transactions.filter(t => t.statut === 'en_cours').length;
@@ -161,7 +161,16 @@ export default function AdminDashboard() {
     const now = new Date();
     return conclusionDate.getMonth() === now.getMonth() && conclusionDate.getFullYear() === now.getFullYear();
   }).length;
-  const deadlinesCritiques = clients.filter(c => calculateDaysElapsed(c.dateInscription) >= 90).length;
+  
+  // Clients critiques = 30 jours ou moins restants avant expiration (60-89 jours écoulés)
+  const clientsCritiques = clients.filter(c => {
+    const days = calculateDaysElapsed(c.dateInscription);
+    return days >= 60 && days < 90;
+  });
+  
+  // Clients expirés = mandat dépassé (90+ jours)
+  const clientsExpires = clients.filter(c => calculateDaysElapsed(c.dateInscription) >= 90);
+  
   const revenusAgenceMois = transactions
     .filter(t => {
       if (t.statut !== 'conclue' || !t.date_transaction) return false;
@@ -172,10 +181,6 @@ export default function AdminDashboard() {
     .reduce((sum, t) => sum + (t.part_agence || 0), 0);
 
   const clientsSansAgent = clients.filter(c => !c.agentId).length;
-  const clientsJ60 = clients.filter(c => {
-    const days = calculateDaysElapsed(c.dateInscription);
-    return days >= 60 && days < 90 && !c.notificationJ60Envoyee;
-  }).length;
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -232,10 +237,19 @@ export default function AdminDashboard() {
               onClick={() => navigate('/admin/transactions')}
             />
             <KPICard 
-              title="Deadlines" 
-              value={deadlinesCritiques} 
+              title="Critiques" 
+              value={clientsCritiques.length} 
+              icon={Clock} 
+              variant={clientsCritiques.length > 0 ? 'warning' : 'default'}
+              subtitle="≤30j restants"
+              onClick={() => navigate('/admin/mandats')}
+            />
+            <KPICard 
+              title="Expirés" 
+              value={clientsExpires.length} 
               icon={AlertTriangle} 
-              variant={deadlinesCritiques > 0 ? 'danger' : 'default'}
+              variant={clientsExpires.length > 0 ? 'danger' : 'default'}
+              subtitle=">90 jours"
               onClick={() => navigate('/admin/mandats')}
             />
             <KPICard 
@@ -254,7 +268,7 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base md:text-lg">Répartition des clients</CardTitle>
                 <p className="text-xs text-muted-foreground">
-                  Critique = mandat &gt; 90 jours
+                  Critique = ≤30 jours restants
                 </p>
               </div>
             </CardHeader>
@@ -267,7 +281,7 @@ export default function AdminDashboard() {
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Agent</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Statut</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Clients</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Critiques (&gt;90j)</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Critiques (≤30j)</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Commission pot.</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Actions</th>
                     </tr>
@@ -275,7 +289,11 @@ export default function AdminDashboard() {
                   <tbody>
                     {agents.map(agent => {
                       const agentClients = clients.filter(c => c.agentId === agent.id);
-                      const critiquesClients = agentClients.filter(c => calculateDaysElapsed(c.dateInscription) >= 90);
+                      // Critique = 60-89 jours écoulés (30 jours ou moins restants)
+                      const critiquesClients = agentClients.filter(c => {
+                        const days = calculateDaysElapsed(c.dateInscription);
+                        return days >= 60 && days < 90;
+                      });
                       const commissionPot = agentClients.reduce((sum, c) => sum + c.budgetMax, 0);
 
                       return (
@@ -297,18 +315,18 @@ export default function AdminDashboard() {
                           <td className="py-3 px-4 text-sm">
                             {critiquesClients.length > 0 ? (
                               <div className="flex items-center gap-2">
-                                <span className="text-destructive font-medium">{critiquesClients.length}</span>
+                                <span className="text-warning font-medium">{critiquesClients.length}</span>
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
-                                  className="h-6 px-2 text-xs text-destructive"
+                                  className="h-6 px-2 text-xs text-warning"
                                   onClick={() => navigate('/admin/mandats')}
                                 >
                                   Voir
                                 </Button>
                               </div>
                             ) : (
-                              <span className="text-muted-foreground">0</span>
+                              <span className="text-success">0</span>
                             )}
                           </td>
                           <td className="py-3 px-4 text-sm">{commissionPot.toLocaleString()} CHF</td>
@@ -334,7 +352,11 @@ export default function AdminDashboard() {
               <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {agents.map(agent => {
                   const agentClients = clients.filter(c => c.agentId === agent.id);
-                  const critiquesClients = agentClients.filter(c => calculateDaysElapsed(c.dateInscription) >= 90);
+                  // Critique = 60-89 jours écoulés (30 jours ou moins restants)
+                  const critiquesClients = agentClients.filter(c => {
+                    const days = calculateDaysElapsed(c.dateInscription);
+                    return days >= 60 && days < 90;
+                  });
                   const commissionPot = agentClients.reduce((sum, c) => sum + c.budgetMax, 0);
 
                   return (
@@ -359,16 +381,16 @@ export default function AdminDashboard() {
                           <p className="font-semibold">{agentClients.length}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Critiques (&gt;90j)</p>
+                          <p className="text-muted-foreground">Critiques (≤30j)</p>
                           {critiquesClients.length > 0 ? (
                             <button 
                               onClick={() => navigate('/admin/mandats')}
-                              className="font-semibold text-destructive hover:underline"
+                              className="font-semibold text-warning hover:underline"
                             >
                               {critiquesClients.length}
                             </button>
                           ) : (
-                            <p className="text-muted-foreground">0</p>
+                            <p className="text-success">0</p>
                           )}
                         </div>
                         <div>
@@ -406,8 +428,8 @@ export default function AdminDashboard() {
                   <div className="flex items-center gap-3">
                     <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-warning flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-sm md:text-base">{clientsSansAgent} client(s) sans agent assigné</p>
-                      <p className="text-xs md:text-sm text-muted-foreground">Assignez un agent pour commencer le suivi</p>
+                      <p className="font-medium text-sm md:text-base">{clientsSansAgent} client(s) sans agent</p>
+                      <p className="text-xs md:text-sm text-muted-foreground">Assignez un agent pour démarrer le suivi</p>
                     </div>
                   </div>
                   <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto" onClick={() => navigate('/admin/assignations')}>
@@ -416,13 +438,13 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {clientsJ60 > 0 && (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-primary/10 rounded-lg border border-primary/20">
+              {clientsCritiques.length > 0 && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-warning/10 rounded-lg border border-warning/20">
                   <div className="flex items-center gap-3">
-                    <Clock className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
+                    <Clock className="w-4 h-4 md:w-5 md:h-5 text-warning flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-sm md:text-base">{clientsJ60} client(s) entre J+60 et J+90</p>
-                      <p className="text-xs md:text-sm text-muted-foreground">Mandats proches de l'expiration (60-89 jours)</p>
+                      <p className="font-medium text-sm md:text-base">{clientsCritiques.length} mandat(s) critique(s)</p>
+                      <p className="text-xs md:text-sm text-muted-foreground">30 jours ou moins avant expiration</p>
                     </div>
                   </div>
                   <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto" onClick={() => navigate('/admin/mandats')}>
@@ -431,22 +453,22 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {deadlinesCritiques > 0 && (
+              {clientsExpires.length > 0 && (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-destructive/10 rounded-lg border border-destructive/20">
                   <div className="flex items-center gap-3">
                     <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-destructive flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-sm md:text-base">{deadlinesCritiques} mandat(s) expiré(s) (&gt;90 jours)</p>
-                      <p className="text-xs md:text-sm text-muted-foreground">Action urgente requise - renouvellement ou fermeture</p>
+                      <p className="font-medium text-sm md:text-base">{clientsExpires.length} mandat(s) expiré(s)</p>
+                      <p className="text-xs md:text-sm text-muted-foreground">Plus de 90 jours - renouvellement requis</p>
                     </div>
                   </div>
                   <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto text-destructive hover:text-destructive" onClick={() => navigate('/admin/mandats')}>
-                    Gérer les mandats
+                    Gérer
                   </Button>
                 </div>
               )}
 
-              {clientsSansAgent === 0 && clientsJ60 === 0 && deadlinesCritiques === 0 && (
+              {clientsSansAgent === 0 && clientsCritiques.length === 0 && clientsExpires.length === 0 && (
                 <div className="flex items-center gap-3 p-3 md:p-4 bg-success/10 rounded-lg border border-success/20">
                   <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-success flex-shrink-0" />
                   <p className="text-sm text-muted-foreground">Aucune alerte - tout est en ordre</p>
