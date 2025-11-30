@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.send-recommendation-email]
 verify_jwt = false
+
+[functions.send-etat-lieux-reminders]
+verify_jwt = false
