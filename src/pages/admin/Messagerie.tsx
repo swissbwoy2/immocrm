@@ -12,6 +12,7 @@ import { MessageAttachment } from "@/components/MessageAttachment";
 import { parseMessageWithLinks } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
 import { MessagingLayout } from "@/components/MessagingLayout";
+import { AdminNewConversationDialog } from "@/components/AdminNewConversationDialog";
 
 // Fonction pour retirer les accents des chaînes pour une recherche plus flexible
 const removeAccents = (str: string) => {
@@ -95,13 +96,6 @@ const Messagerie = () => {
     }
   }, [selectedConv]);
 
-  // Fonction pour extraire le nom du client depuis le subject
-  const extractClientName = (subject: string) => {
-    // Format attendu : "Conversation avec [Nom]"
-    const match = subject?.match(/Conversation avec (.+)/i);
-    return match ? match[1] : 'Client inconnu';
-  };
-
   const loadConversations = async () => {
     const { data, error } = await supabase
       .from('conversations')
@@ -109,39 +103,64 @@ const Messagerie = () => {
       .order('last_message_at', { ascending: false });
 
     if (data) {
-      // Charger uniquement les agents (la table clients est vide)
+      // Charger les clients et les agents
+      const clientIds = [...new Set(data.map(c => c.client_id).filter(Boolean))];
       const agentIds = [...new Set(data.map(c => c.agent_id).filter(Boolean))];
       
+      // Charger les clients
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('id, user_id')
+        .in('id', clientIds);
+      
+      // Charger les agents
       const { data: agentsData } = await supabase
         .from('agents')
         .select('id, user_id')
         .in('id', agentIds);
       
-      const agentUserIds = agentsData?.map(a => a.user_id) || [];
+      // Récupérer tous les user_ids pour charger les profils
+      const allUserIds = [
+        ...(clientsData?.map(c => c.user_id) || []),
+        ...(agentsData?.map(a => a.user_id) || [])
+      ];
       
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('id, prenom, nom, email')
-        .in('id', agentUserIds);
+        .in('id', allUserIds);
       
+      const clientsMap = new Map(clientsData?.map(c => [c.id, c.user_id]));
       const agentsMap = new Map(agentsData?.map(a => [a.id, a.user_id]));
       const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
       
       // Enrichir les conversations
       const enrichedConvs = data.map(conv => {
+        const clientUserId = clientsMap.get(conv.client_id);
+        const clientProfile = clientUserId ? profilesMap.get(clientUserId) : null;
+        
         const agentUserId = agentsMap.get(conv.agent_id);
         const agentProfile = agentUserId ? profilesMap.get(agentUserId) : null;
         
         return {
           ...conv,
-          clientName: extractClientName(conv.subject), // Extraction depuis subject
-          agentName: agentProfile ? `${agentProfile.prenom} ${agentProfile.nom}` : 'Agent inconnu',
+          clientName: clientProfile 
+            ? `${clientProfile.prenom} ${clientProfile.nom}` 
+            : 'Client inconnu',
+          agentName: agentProfile 
+            ? `${agentProfile.prenom} ${agentProfile.nom}` 
+            : 'Agent inconnu',
         };
       });
       
       setConversations(enrichedConvs);
       setProfiles(profilesMap);
     }
+  };
+
+  const handleConversationCreated = (conversationId: string) => {
+    loadConversations();
+    setSelectedConv(conversationId);
   };
 
   const loadMessages = async (convId: string) => {
@@ -293,8 +312,11 @@ const Messagerie = () => {
 
   const conversationsList = (
     <>
-      <div className="p-4 border-b space-y-2">
-        <h2 className="font-semibold">Conversations</h2>
+      <div className="p-4 border-b space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="font-semibold">Conversations</h2>
+          <AdminNewConversationDialog onConversationCreated={handleConversationCreated} />
+        </div>
         <div className="relative">
           <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -306,25 +328,31 @@ const Messagerie = () => {
         </div>
       </div>
       <ScrollArea className="flex-1">
-        {filteredConversations.map((conv) => (
-          <div
-            key={conv.id}
-            onClick={() => setSelectedConv(conv.id)}
-            className={`p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors ${selectedConv === conv.id ? 'bg-muted' : ''}`}
-          >
-            <div className="flex flex-col gap-1">
-              <p className="font-medium text-sm">
-                {conv.clientName}
-              </p>
+        {filteredConversations.length === 0 ? (
+          <div className="p-4 text-center text-muted-foreground text-sm">
+            Aucune conversation trouvée
+          </div>
+        ) : (
+          filteredConversations.map((conv) => (
+            <div
+              key={conv.id}
+              onClick={() => setSelectedConv(conv.id)}
+              className={`p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors ${selectedConv === conv.id ? 'bg-muted' : ''}`}
+            >
+              <div className="flex flex-col gap-1">
+                <p className="font-medium text-sm">
+                  {conv.clientName}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Agent: {conv.agentName}
+                </p>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Agent: {conv.agentName}
+                {new Date(conv.last_message_at).toLocaleDateString('fr-FR')}
               </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {new Date(conv.last_message_at).toLocaleDateString('fr-FR')}
-            </p>
-          </div>
-        ))}
+          ))
+        )}
       </ScrollArea>
     </>
   );
