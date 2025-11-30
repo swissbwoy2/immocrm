@@ -302,17 +302,19 @@ const Clients = () => {
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8">
         <div className="mb-6">
-          <div className="flex items-center justify-between">
+          {/* Header responsive */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Gestion des Clients</h1>
-              <p className="text-muted-foreground">Vue d'ensemble de tous les clients</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Gestion des Clients</h1>
+              <p className="text-sm md:text-base text-muted-foreground">Vue d'ensemble ({clients.length} clients)</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive" disabled={clients.length === 0 || deleting}>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    {deleting ? 'Suppression...' : 'Supprimer tous les clients'}
+                  <Button variant="destructive" size="sm" disabled={clients.length === 0 || deleting}>
+                    <Trash2 className="w-4 h-4 mr-1 md:mr-2" />
+                    <span className="hidden sm:inline">{deleting ? 'Suppression...' : 'Supprimer tous'}</span>
+                    <span className="sm:hidden">{deleting ? '...' : 'Tout suppr.'}</span>
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -331,26 +333,25 @@ const Clients = () => {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button onClick={() => setShowImportDialog(true)}>
-                <Upload className="h-4 w-4 mr-2" />
-                Importer CSV
+              <Button onClick={() => setShowImportDialog(true)} size="sm">
+                <Upload className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Importer CSV</span>
+                <span className="sm:hidden">Import</span>
               </Button>
             </div>
           </div>
         </div>
 
-        <div className="mb-4">
+        {/* Filtres responsive */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <Input
-            placeholder="Rechercher un client par nom ou email..."
+            placeholder="Rechercher un client..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-md"
+            className="w-full sm:max-w-md"
           />
-        </div>
-
-        <div className="mb-4">
           <Select value={filterAgent} onValueChange={setFilterAgent}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="Filtrer par agent" />
             </SelectTrigger>
             <SelectContent>
@@ -364,8 +365,49 @@ const Clients = () => {
           </Select>
         </div>
 
-        {/* Filtres Régions */}
-        <div className="mb-4">
+        {/* Filtres dépliables sur mobile */}
+        <details className="mb-4 sm:hidden">
+          <summary className="text-sm font-medium cursor-pointer p-2 bg-muted/50 rounded-md">Filtres avancés</summary>
+          <div className="mt-3 space-y-4">
+            {/* Filtres Régions */}
+            <div>
+              <p className="text-xs font-medium mb-2">Régions</p>
+              <div className="flex flex-wrap gap-1.5">
+                {regions.map(region => (
+                  <Button
+                    key={region}
+                    variant={selectedRegions.includes(region) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleRegion(region)}
+                    className="text-[10px] h-7 px-2"
+                  >
+                    {region}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            {/* Filtres Nombre de pièces */}
+            <div>
+              <p className="text-xs font-medium mb-2">Nombre de pièces</p>
+              <div className="flex flex-wrap gap-1.5">
+                {nombrePieces.map(pieces => (
+                  <Button
+                    key={pieces}
+                    variant={selectedPieces.includes(pieces) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => togglePieces(pieces)}
+                    className="text-[10px] h-7 px-2"
+                  >
+                    {pieces}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </details>
+
+        {/* Filtres Régions - desktop */}
+        <div className="mb-4 hidden sm:block">
           <p className="text-sm font-medium mb-2">Régions</p>
           <div className="flex flex-wrap gap-2">
             {regions.map(region => (
@@ -382,8 +424,8 @@ const Clients = () => {
           </div>
         </div>
 
-        {/* Filtres Nombre de pièces */}
-        <div className="mb-4">
+        {/* Filtres Nombre de pièces - desktop */}
+        <div className="mb-4 hidden sm:block">
           <p className="text-sm font-medium mb-2">Nombre de pièces</p>
           <div className="flex flex-wrap gap-2">
             {nombrePieces.map(pieces => (
@@ -401,28 +443,28 @@ const Clients = () => {
         </div>
 
         {/* Tri par date de création */}
-        <div className="mb-6 flex items-center gap-2">
-          <p className="text-sm font-medium">Trier par :</p>
+        <div className="mb-4 md:mb-6 flex flex-wrap items-center gap-2">
+          <p className="text-xs md:text-sm font-medium">Trier :</p>
           <Button
             variant={sortOrder === 'recent' ? "default" : "outline"}
             size="sm"
             onClick={() => setSortOrder('recent')}
-            className="text-xs"
+            className="text-[10px] md:text-xs h-7"
           >
-            Plus récent
+            Récent
           </Button>
           <Button
             variant={sortOrder === 'ancien' ? "default" : "outline"}
             size="sm"
             onClick={() => setSortOrder('ancien')}
-            className="text-xs"
+            className="text-[10px] md:text-xs h-7"
           >
-            Plus ancien
+            Ancien
           </Button>
         </div>
 
-        {/* Grid de clients */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Grid de clients - responsive */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           {sortedClients.map((client) => {
             const profile = clientProfiles.get(client.user_id);
             const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
@@ -433,34 +475,34 @@ const Clients = () => {
             return (
               <Card 
                 key={client.id} 
-                className="p-4 flex flex-col relative cursor-pointer hover:shadow-lg transition-shadow"
+                className="p-3 md:p-4 flex flex-col relative cursor-pointer hover:shadow-lg transition-shadow"
                 onClick={() => navigate(`/admin/clients/${client.id}`)}
               >
-                {/* Boutons d'actions */}
-                <div className="absolute top-2 right-2 flex gap-1">
+                {/* Boutons d'actions - plus gros sur mobile */}
+                <div className="absolute top-2 right-2 flex gap-0.5 md:gap-1">
                   {/* Bouton Renvoyer invitation */}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
+                    className="h-7 w-7 md:h-8 md:w-8 text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
                     onClick={(e) => handleInviteClient(profile.email, client.id, e)}
                     disabled={invitingClientId === client.id}
                     title="Renvoyer l'invitation"
                   >
-                    <Send className="h-4 w-4" />
+                    <Send className="h-3.5 w-3.5 md:h-4 md:w-4" />
                   </Button>
 
                   {/* Bouton Modifier */}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                    className="h-7 w-7 md:h-8 md:w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate(`/admin/clients/${client.id}`);
                     }}
                   >
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className="h-3.5 w-3.5 md:h-4 md:w-4" />
                   </Button>
 
                   {/* Bouton Supprimer */}
@@ -469,14 +511,14 @@ const Clients = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        className="h-7 w-7 md:h-8 md:w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         onClick={(e) => e.stopPropagation()}
                         disabled={deletingClientId === client.user_id}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                    <AlertDialogContent onClick={(e) => e.stopPropagation()} className="max-w-[95vw] sm:max-w-lg">
                       <AlertDialogHeader>
                         <AlertDialogTitle>Supprimer ce client ?</AlertDialogTitle>
                         <AlertDialogDescription>
@@ -497,125 +539,96 @@ const Clients = () => {
                 </div>
 
                 {/* SECTION 1: Identité */}
-                <div className="mb-3 pb-3 border-b">
-                  <h3 className="text-lg font-semibold text-primary mb-2">
+                <div className="mb-2 md:mb-3 pb-2 md:pb-3 border-b pr-20">
+                  <h3 className="text-base md:text-lg font-semibold text-primary mb-1 md:mb-2">
                     {profile.prenom} {profile.nom}
                   </h3>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      <span>Nationalité: {client.nationalite || 'Non renseigné'}</span>
+                  <div className="space-y-0.5 md:space-y-1 text-xs md:text-sm">
+                    <div className="flex items-center gap-1.5 md:gap-2 text-muted-foreground">
+                      <MapPin className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                      <span className="truncate">{client.nationalite || 'Non renseigné'}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <span>Permis: {client.type_permis || 'Non renseigné'}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <span>Situation: {client.situation_familiale || 'Non renseigné'}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <span>Profession: {client.profession || 'Non renseigné'}</span>
+                    <div className="flex items-center gap-1.5 md:gap-2 text-muted-foreground">
+                      <Users className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                      <span className="truncate">Permis: {client.type_permis || '-'}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* SECTION 2: Finances */}
-                <div className="mb-3 pb-3 border-b">
-                  <p className="text-sm font-medium mb-2">💰 Situation financière</p>
-                  <div className="space-y-2">
-                    <div className="flex items-start gap-2 bg-muted/30 p-2 rounded">
-                      <DollarSign className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Revenu mensuel</p>
-                        <p className="text-sm font-semibold">CHF {client.revenus_mensuels?.toLocaleString() || 0}</p>
-                      </div>
+                <div className="mb-2 md:mb-3 pb-2 md:pb-3 border-b">
+                  <p className="text-xs md:text-sm font-medium mb-1 md:mb-2">💰 Finances</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-muted/30 p-1.5 md:p-2 rounded text-center">
+                      <p className="text-[10px] md:text-xs text-muted-foreground">Revenu</p>
+                      <p className="text-xs md:text-sm font-semibold">CHF {client.revenus_mensuels?.toLocaleString() || 0}</p>
                     </div>
-                    <div className="flex items-start gap-2 bg-muted/30 p-2 rounded">
-                      <DollarSign className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Charges mensuelles</p>
-                        <p className="text-sm font-semibold">CHF {client.charges_mensuelles?.toLocaleString() || 0}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2 bg-primary/10 p-2 rounded">
-                      <DollarSign className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Budget maximum</p>
-                        <p className="text-sm font-semibold text-primary">CHF {client.budget_max?.toLocaleString() || 0}</p>
-                      </div>
+                    <div className="bg-primary/10 p-1.5 md:p-2 rounded text-center">
+                      <p className="text-[10px] md:text-xs text-muted-foreground">Budget max</p>
+                      <p className="text-xs md:text-sm font-semibold text-primary">CHF {client.budget_max?.toLocaleString() || 0}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* SECTION 3: Contact */}
-                <div className="mb-3 pb-3 border-b">
-                  <p className="text-sm font-medium mb-2">📞 Contact</p>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Phone className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{profile.telephone || 'Non renseigné'}</span>
+                {/* SECTION 3: Contact - condensé */}
+                <div className="mb-2 md:mb-3 pb-2 md:pb-3 border-b">
+                  <p className="text-xs md:text-sm font-medium mb-1 md:mb-2">📞 Contact</p>
+                  <div className="space-y-0.5 text-xs md:text-sm">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Phone className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                      <span className="truncate">{profile.telephone || '-'}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Mail className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{profile.email}</span>
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Mail className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                      <span className="truncate text-[10px] md:text-xs">{profile.email}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* SECTION 4: Recherche */}
-                <div className="mb-3">
-                  <p className="text-sm font-medium mb-2">🏠 Critères de recherche</p>
-                  <div className="space-y-2">
-                    <div className="flex gap-2 flex-wrap">
-                      <Badge variant="secondary" className="text-xs">
-                        {client.type_bien || 'Location'}
-                      </Badge>
-                      <Badge variant="secondary" className="text-xs">
-                        {client.pieces || 0} pièces
-                      </Badge>
-                    </div>
-                    <div className="flex items-start gap-2 text-xs">
-                      <MapPin className="h-3 w-3 mt-0.5 text-muted-foreground flex-shrink-0" />
-                      <span className="text-muted-foreground">{client.region_recherche || 'Non renseigné'}</span>
-                    </div>
+                <div className="mb-2 md:mb-3">
+                  <p className="text-xs md:text-sm font-medium mb-1 md:mb-2">🏠 Recherche</p>
+                  <div className="flex gap-1.5 flex-wrap">
+                    <Badge variant="secondary" className="text-[10px] md:text-xs">
+                      {client.type_bien || 'Location'}
+                    </Badge>
+                    <Badge variant="secondary" className="text-[10px] md:text-xs">
+                      {client.pieces || 0} pièces
+                    </Badge>
+                    <Badge variant="outline" className="text-[10px] md:text-xs">
+                      {client.region_recherche || 'N/A'}
+                    </Badge>
                   </div>
                 </div>
 
                 {/* Agent assigné */}
-                <div className="space-y-1 mb-3 text-xs text-muted-foreground pt-3 border-t">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <span>Agent: {getAgentName(client.agent_id)}</span>
+                <div className="text-xs text-muted-foreground mb-2 md:mb-3 pb-2 md:pb-3 border-b">
+                  <div className="flex items-center gap-1.5">
+                    <Users className="h-3 w-3 md:h-4 md:w-4" />
+                    <span className="truncate">Agent: {getAgentName(client.agent_id)}</span>
                   </div>
                 </div>
 
                 {/* Date et barre de progression */}
-                <div className="mt-auto pt-3 border-t">
-                  <div className="flex items-center justify-between mb-2 text-xs">
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
+                <div className="mt-auto">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-1 text-muted-foreground text-[10px] md:text-xs">
+                      <Calendar className="h-2.5 w-2.5 md:h-3 md:w-3" />
                       <span>{new Date(client.date_ajout || client.created_at || '').toLocaleDateString('fr-CH')}</span>
                     </div>
-                  </div>
-                  
-                  {/* Temps écoulé avec icône */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                    <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] md:text-xs font-medium ${
                       daysElapsed < 60 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                       daysElapsed < 90 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
                       'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                     }`}>
-                      <Calendar className="h-3 w-3" />
-                      <span>{formatTimeElapsed(daysElapsed)}</span>
+                      <span>J+{Math.floor(daysElapsed)}</span>
                     </div>
                   </div>
 
                   {/* Barre de progression */}
-                  <div className="w-full bg-muted rounded-full h-2 mb-2">
+                  <div className="w-full bg-muted rounded-full h-1.5 md:h-2">
                     <div
-                      className={`h-2 rounded-full transition-all ${
+                      className={`h-1.5 md:h-2 rounded-full transition-all ${
                         daysElapsed < 60 ? 'bg-green-500' :
                         daysElapsed < 90 ? 'bg-orange-500' :
                         'bg-red-500'
@@ -630,8 +643,8 @@ const Clients = () => {
         </div>
 
         {sortedClients.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Aucun client ne correspond aux filtres sélectionnés</p>
+          <div className="text-center py-8 md:py-12">
+            <p className="text-sm md:text-base text-muted-foreground">Aucun client ne correspond aux filtres sélectionnés</p>
           </div>
         )}
       </div>

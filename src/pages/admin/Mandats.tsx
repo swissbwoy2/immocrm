@@ -130,12 +130,41 @@ const Mandats = () => {
   return (
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Gestion des Mandats</h1>
-            <p className="text-muted-foreground">Suivi de la durée des mandats clients</p>
+          <div className="mb-6 md:mb-8">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Gestion des Mandats</h1>
+            <p className="text-sm md:text-base text-muted-foreground">Suivi de la durée des mandats clients</p>
           </div>
 
-          <div className="grid gap-4">
+          {/* Stats résumé */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <Card className="p-3 md:p-4">
+              <p className="text-xs text-muted-foreground">Total clients</p>
+              <p className="text-xl md:text-2xl font-bold">{clients.length}</p>
+            </Card>
+            <Card className="p-3 md:p-4">
+              <p className="text-xs text-muted-foreground">Nouveaux (≤30j)</p>
+              <p className="text-xl md:text-2xl font-bold text-primary">
+                {clients.filter(c => calculateDaysElapsed(c.date_ajout || c.created_at) <= 30).length}
+              </p>
+            </Card>
+            <Card className="p-3 md:p-4">
+              <p className="text-xs text-muted-foreground">En cours (30-60j)</p>
+              <p className="text-xl md:text-2xl font-bold text-warning">
+                {clients.filter(c => {
+                  const days = calculateDaysElapsed(c.date_ajout || c.created_at);
+                  return days > 30 && days <= 60;
+                }).length}
+              </p>
+            </Card>
+            <Card className="p-3 md:p-4">
+              <p className="text-xs text-muted-foreground">Critiques (&gt;60j)</p>
+              <p className="text-xl md:text-2xl font-bold text-destructive">
+                {clients.filter(c => calculateDaysElapsed(c.date_ajout || c.created_at) > 60).length}
+              </p>
+            </Card>
+          </div>
+
+          <div className="grid gap-3 md:gap-4">
             {sortedClients.map((client) => {
               const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
               const daysRemaining = calculateDaysRemaining(client.date_ajout || client.created_at);
@@ -144,71 +173,77 @@ const Mandats = () => {
               const renewed = isRecentlyRenewed(client.id);
               
               return (
-                <Card key={client.id} className="p-6">
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-xl font-semibold">
+                <Card key={client.id} className="p-4 md:p-6">
+                  <div className="space-y-3 md:space-y-4">
+                    {/* Header - empilé sur mobile */}
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h3 className="text-lg md:text-xl font-semibold">
                             {client.profiles 
                               ? `${client.profiles.prenom} ${client.profiles.nom}` 
                               : 'Client (sans profil)'}
                           </h3>
-                          <Badge variant={status.variant}>{status.label}</Badge>
+                          <Badge variant={status.variant} className="text-xs">{status.label}</Badge>
                           {renewed && (
-                            <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-200">
-                              🔄 Renouvelé récemment
+                            <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-200 text-xs">
+                              🔄 Renouvelé
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs md:text-sm text-muted-foreground">
                           Agent: {getAgentName(client.agent_id)}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <div className={`text-3xl font-bold ${status.color}`}>
+                      <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-0">
+                        <div className={`text-2xl md:text-3xl font-bold ${status.color}`}>
                           J+{Math.floor(daysElapsed)}
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          {daysRemaining > 0 ? formatTimeRemaining(daysRemaining) : "Mandat expiré"}
+                        <p className="text-xs md:text-sm text-muted-foreground">
+                          {daysRemaining > 0 ? formatTimeRemaining(daysRemaining) : "Expiré"}
                         </p>
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
+                    {/* Progress bar */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs md:text-sm">
                         <span>Progression du mandat</span>
                         <span>{Math.round(progress)}%</span>
                       </div>
                       <Progress value={progress} className="h-2" />
                     </div>
 
-                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        Début: {new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}
+                    {/* Infos - grille adaptative */}
+                    <div className="flex flex-wrap items-center gap-3 md:gap-6 text-xs md:text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                        <span className="hidden sm:inline">Début:</span> {new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4" />
+                      <div className="flex items-center gap-1.5">
+                        <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4" />
                         Split: {client.commission_split}%
                       </div>
                       {daysElapsed > 60 && (
-                        <div className="flex items-center gap-2 text-destructive">
-                          <AlertCircle className="h-4 w-4" />
-                          Mandat proche de l'expiration
+                        <div className="flex items-center gap-1.5 text-destructive">
+                          <AlertCircle className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                          <span className="hidden sm:inline">Proche expiration</span>
+                          <span className="sm:hidden">Urgent</span>
                         </div>
                       )}
                     </div>
 
-                    <div className="pt-4 border-t">
-                      <div className="text-sm">
-                        <span className="font-medium">Recherche:</span> {client.type_bien} {client.pieces} pièces • 
-                        <span className="font-medium ml-2">Budget:</span> CHF {client.budget_max?.toLocaleString()}
+                    {/* Recherche info */}
+                    <div className="pt-3 border-t">
+                      <div className="text-xs md:text-sm flex flex-wrap gap-x-3 gap-y-1">
+                        <span><span className="font-medium">Recherche:</span> {client.type_bien || 'N/A'} {client.pieces || '-'} pièces</span>
+                        <span><span className="font-medium">Budget:</span> CHF {client.budget_max?.toLocaleString() || 'N/A'}</span>
                       </div>
                     </div>
 
+                    {/* Action bouton */}
                     {daysRemaining <= 30 && (
-                      <div className="pt-4 border-t">
+                      <div className="pt-3 border-t">
                         <Button
                           onClick={() => {
                             setSelectedClient(client);
@@ -216,6 +251,7 @@ const Mandats = () => {
                           }}
                           variant="outline"
                           className="w-full sm:w-auto"
+                          size="sm"
                         >
                           <RefreshCw className="h-4 w-4 mr-2" />
                           Renouveler le mandat

@@ -187,30 +187,33 @@ const Agents = () => {
   return (
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8">
-          <div className="mb-8 flex items-center justify-between">
+          {/* Header responsive */}
+          <div className="mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Gestion des Agents</h1>
-              <p className="text-muted-foreground">Gérez votre équipe d'agents immobiliers</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Gestion des Agents</h1>
+              <p className="text-sm md:text-base text-muted-foreground">Gérez votre équipe ({agents.length} agents)</p>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button size="sm" className="w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
                   Nouvel Agent
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-[95vw] sm:max-w-md">
                 <DialogHeader>
                   <DialogTitle>Ajouter un nouvel agent</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <div>
-                    <Label>Prénom</Label>
-                    <Input value={formData.prenom} onChange={(e) => setFormData({ ...formData, prenom: e.target.value })} />
-                  </div>
-                  <div>
-                    <Label>Nom</Label>
-                    <Input value={formData.nom} onChange={(e) => setFormData({ ...formData, nom: e.target.value })} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label>Prénom</Label>
+                      <Input value={formData.prenom} onChange={(e) => setFormData({ ...formData, prenom: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Nom</Label>
+                      <Input value={formData.nom} onChange={(e) => setFormData({ ...formData, nom: e.target.value })} />
+                    </div>
                   </div>
                   <div>
                     <Label>Email</Label>
@@ -226,57 +229,62 @@ const Agents = () => {
             </Dialog>
           </div>
 
-          <div className="mb-6">
+          <div className="mb-4 md:mb-6">
             <Input
               placeholder="Rechercher un agent..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md"
+              className="w-full sm:max-w-md"
             />
           </div>
 
-          <div className="grid gap-4">
+          <div className="grid gap-3 md:gap-4">
             {filteredAgents.map((agent) => {
               return (
                 <Card 
                   key={agent.id} 
-                  className="p-6 cursor-pointer hover:bg-accent/50 transition-colors"
+                  className="p-4 md:p-6 cursor-pointer hover:bg-accent/50 transition-colors"
                   onClick={() => navigate(`/admin/agents/${agent.id}`)}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4 flex-1">
-                      <Avatar className="h-12 w-12">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                    {/* Avatar et infos */}
+                    <div className="flex items-start gap-3 md:gap-4 flex-1">
+                      <Avatar className="h-10 w-10 md:h-12 md:w-12 flex-shrink-0">
                         <AvatarImage src={agent.profiles.avatar_url || undefined} alt={`${agent.profiles.prenom} ${agent.profiles.nom}`} />
-                        <AvatarFallback className="bg-primary/10 text-primary">
+                        <AvatarFallback className="bg-primary/10 text-primary text-sm md:text-base">
                           {agent.profiles.prenom?.[0]}{agent.profiles.nom?.[0]}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <h3 className="text-xl font-semibold">{agent.profiles.prenom} {agent.profiles.nom}</h3>
-                          <Badge variant={agent.profiles.actif ? "default" : "secondary"}>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <h3 className="text-base md:text-xl font-semibold truncate">{agent.profiles.prenom} {agent.profiles.nom}</h3>
+                          <Badge variant={agent.profiles.actif ? "default" : "secondary"} className="text-xs">
                             {agent.profiles.actif ? "Actif" : "Inactif"}
                           </Badge>
                         </div>
-                      <div className="space-y-2 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          {agent.profiles.email}
+                        <div className="space-y-1 md:space-y-2 text-xs md:text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
+                            <span className="truncate">{agent.profiles.email}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
+                            <span>{agent.profiles.telephone || 'Non renseigné'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Users className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
+                            <span>{agent.nombre_clients_assignes} client{agent.nombre_clients_assignes > 1 ? 's' : ''}</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4" />
-                          {agent.profiles.telephone}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4" />
-                          {agent.nombre_clients_assignes} client{agent.nombre_clients_assignes > 1 ? 's' : ''} assigné{agent.nombre_clients_assignes > 1 ? 's' : ''}
-                        </div>
-                      </div>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    
+                    {/* Boutons d'action - empilés verticalement sur mobile */}
+                    <div className="flex sm:flex-col gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l sm:pl-4">
                       <Button
                         variant={agent.profiles.actif ? "outline" : "default"}
+                        size="sm"
+                        className="flex-1 sm:flex-none text-xs md:text-sm"
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleAgentStatus(agent.id, agent.profiles.actif);
@@ -286,13 +294,15 @@ const Agents = () => {
                       </Button>
                       <Button
                         variant="destructive"
-                        size="icon"
+                        size="sm"
+                        className="flex-1 sm:flex-none text-xs md:text-sm"
                         onClick={(e) => {
                           e.stopPropagation();
                           deleteAgent(agent.user_id);
                         }}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
+                        Supprimer
                       </Button>
                     </div>
                   </div>
