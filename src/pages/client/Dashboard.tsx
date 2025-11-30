@@ -22,6 +22,7 @@ export default function ClientDashboard() {
   const [agent, setAgent] = useState<any>(null);
   const [offres, setOffres] = useState<any[]>([]);
   const [visites, setVisites] = useState<any[]>([]);
+  const [candidatures, setCandidatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -144,6 +145,15 @@ export default function ClientDashboard() {
         .order('date_visite', { ascending: true });
 
       setVisites(visitesData || []);
+
+      // Load candidatures
+      const { data: candidaturesData } = await supabase
+        .from('candidatures')
+        .select('*, offres(adresse, prix, pieces, surface)')
+        .eq('client_id', clientData.id)
+        .order('updated_at', { ascending: false });
+
+      setCandidatures(candidaturesData || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -473,6 +483,94 @@ export default function ClientDashboard() {
               onClick={() => navigate('/client/mes-candidatures')}
             />
           </div>
+
+          {/* Candidatures en cours de traitement */}
+          {(() => {
+            const statusInProgress = ['bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe', 'cles_remises', 'acceptee'];
+            const candidaturesEnCours = candidatures.filter(c => statusInProgress.includes(c.statut));
+            
+            const getStatusInfo = (statut: string) => {
+              switch (statut) {
+                case 'en_attente': return { label: '⏳ En attente', step: 1, color: 'bg-gray-100 dark:bg-gray-800', textColor: 'text-gray-600 dark:text-gray-400', progress: 10 };
+                case 'acceptee': return { label: '✅ Acceptée', step: 2, color: 'bg-green-100 dark:bg-green-900/30', textColor: 'text-green-600 dark:text-green-400', progress: 20 };
+                case 'bail_conclu': return { label: '🎉 Prêt à conclure', step: 3, color: 'bg-emerald-100 dark:bg-emerald-900/30', textColor: 'text-emerald-600 dark:text-emerald-400', progress: 30 };
+                case 'attente_bail': return { label: '📄 Attente bail', step: 4, color: 'bg-amber-100 dark:bg-amber-900/30', textColor: 'text-amber-600 dark:text-amber-400', progress: 40 };
+                case 'bail_recu': return { label: '📋 Bail reçu', step: 5, color: 'bg-blue-100 dark:bg-blue-900/30', textColor: 'text-blue-600 dark:text-blue-400', progress: 50 };
+                case 'signature_planifiee': return { label: '📝 Signature planifiée', step: 6, color: 'bg-purple-100 dark:bg-purple-900/30', textColor: 'text-purple-600 dark:text-purple-400', progress: 60 };
+                case 'signature_effectuee': return { label: '🖊️ Signature effectuée', step: 7, color: 'bg-indigo-100 dark:bg-indigo-900/30', textColor: 'text-indigo-600 dark:text-indigo-400', progress: 70 };
+                case 'etat_lieux_fixe': return { label: '🏠 État des lieux fixé', step: 8, color: 'bg-cyan-100 dark:bg-cyan-900/30', textColor: 'text-cyan-600 dark:text-cyan-400', progress: 85 };
+                case 'cles_remises': return { label: '🔑 Clés remises', step: 9, color: 'bg-teal-100 dark:bg-teal-900/30', textColor: 'text-teal-600 dark:text-teal-400', progress: 100 };
+                default: return { label: statut, step: 0, color: 'bg-gray-100', textColor: 'text-gray-600', progress: 0 };
+              }
+            };
+
+            if (candidaturesEnCours.length === 0) return null;
+
+            return (
+              <Card className="mb-8 border-2 border-primary/50 bg-gradient-to-r from-primary/5 to-primary/10 shadow-lg">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
+                      <FileCheck className="w-5 h-5" />
+                      🚀 Vos candidatures en cours
+                    </CardTitle>
+                    <Badge variant="default" className="animate-pulse text-lg px-3 py-1">
+                      {candidaturesEnCours.length}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {candidaturesEnCours.slice(0, 3).map(cand => {
+                    const statusInfo = getStatusInfo(cand.statut);
+                    
+                    return (
+                      <div 
+                        key={cand.id}
+                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-[1.01] hover:shadow-md ${statusInfo.color}`}
+                        onClick={() => navigate('/client/mes-candidatures')}
+                      >
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold truncate">{cand.offres?.adresse}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {cand.offres?.pieces} pièces • {cand.offres?.prix?.toLocaleString()} CHF/mois
+                            </p>
+                          </div>
+                          <Badge className={`${statusInfo.textColor} border-2 font-bold`} variant="outline">
+                            {statusInfo.label}
+                          </Badge>
+                        </div>
+                        
+                        {/* Barre de progression */}
+                        <div className="mt-3">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-muted-foreground">Progression du dossier</span>
+                            <span className={`font-bold ${statusInfo.textColor}`}>{statusInfo.progress}%</span>
+                          </div>
+                          <Progress 
+                            value={statusInfo.progress} 
+                            className="h-2"
+                          />
+                          <p className={`text-xs mt-2 font-medium ${statusInfo.textColor}`}>
+                            Étape {statusInfo.step}/9 : {statusInfo.label}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <Button 
+                    variant="default"
+                    size="lg" 
+                    className="w-full mt-2"
+                    onClick={() => navigate('/client/mes-candidatures')}
+                  >
+                    <FileCheck className="w-4 h-4 mr-2" />
+                    Voir toutes mes candidatures
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Mon mandat */}
