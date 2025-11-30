@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,11 +34,24 @@ const Messagerie = () => {
     size: number;
   } | null>(null);
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
   useEffect(() => {
     loadConversations();
     // Mark new_message notifications as read when visiting this page
     markTypeAsRead('new_message');
   }, []);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, selectedConv]);
 
   useEffect(() => {
     if (selectedConv) {
@@ -384,6 +397,7 @@ const Messagerie = () => {
               )}
             </Card>
           ))}
+          <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
       <div className="p-4 border-t bg-card">
