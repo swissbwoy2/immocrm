@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Calendrier', icon: Calendar, path: '/admin/calendrier', notifKey: null },
         { name: 'Agents', icon: UserCog, path: '/admin/agents', notifKey: null },
         { name: 'Clients', icon: Users, path: '/admin/clients', notifKey: 'new_client_activated' },
+        { name: 'Demandes activation', icon: UserPlus, path: '/admin/demandes-activation', notifKey: 'activation_request' },
         { name: 'Candidatures', icon: FileCheck, path: '/admin/candidatures', notifKey: 'candidature_admin' },
         { name: 'Mandats', icon: Clipboard, path: '/admin/mandats', notifKey: null },
         { name: 'Transactions', icon: DollarSign, path: '/admin/transactions', notifKey: null },

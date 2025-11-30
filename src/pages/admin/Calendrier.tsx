@@ -192,28 +192,49 @@ export default function AdminCalendrier() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <CalendarIcon className="h-6 w-6" />
+          <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5 md:h-6 md:w-6" />
             Calendrier
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Gérez les rendez-vous, rappels et visites
           </p>
         </div>
-        <Button onClick={() => setShowEventForm(true)}>
+        <Button onClick={() => setShowEventForm(true)} size="sm" className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Nouvel événement
         </Button>
       </div>
 
-      {/* Main content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Filters sidebar */}
-        <div className="lg:col-span-1">
+      {/* Mobile: Filters collapsible */}
+      <details className="lg:hidden">
+        <summary className="text-sm font-medium cursor-pointer p-3 bg-muted/50 rounded-lg">
+          Filtres avancés
+        </summary>
+        <div className="mt-3">
+          <EventFilters
+            agents={agents}
+            clients={clients}
+            selectedAgent={filterAgent}
+            selectedClient={filterClient}
+            selectedEventType={filterEventType}
+            selectedStatus={filterStatus}
+            onAgentChange={setFilterAgent}
+            onClientChange={setFilterClient}
+            onEventTypeChange={setFilterEventType}
+            onStatusChange={setFilterStatus}
+          />
+        </div>
+      </details>
+
+      {/* Main content - responsive grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
+        {/* Filters sidebar - desktop only */}
+        <div className="hidden lg:block lg:col-span-1">
           <EventFilters
             agents={agents}
             clients={clients}
@@ -239,7 +260,7 @@ export default function AdminCalendrier() {
         </div>
 
         {/* Day events */}
-        <div className="lg:col-span-1 h-[600px]">
+        <div className="lg:col-span-1 h-[400px] md:h-[600px]">
           <DayEvents
             date={selectedDate}
             events={selectedDayEvents}

@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Calendar, Users, DollarSign, Upload, Trash2, Pencil, Send } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, DollarSign, Upload, Trash2, Pencil, Send, ArrowUpDown, Search } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { useNavigate } from "react-router-dom";
@@ -45,6 +45,9 @@ interface Agent {
   profile: Profile;
 }
 
+type SortField = 'date' | 'name' | 'agent' | 'budget' | 'days';
+type SortOrder = 'asc' | 'desc';
+
 const Clients = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -55,7 +58,8 @@ const Clients = () => {
   const [filterAgent, setFilterAgent] = useState<string>("all");
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedPieces, setSelectedPieces] = useState<string[]>([]);
-  const [sortOrder, setSortOrder] = useState<'recent' | 'ancien'>('recent');
+  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [loading, setLoading] = useState(true);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -180,18 +184,57 @@ const Clients = () => {
     return matchesSearch && matchesAgent && matchRegion && matchPieces;
   });
 
-  // Trier les clients par date de création
-  const sortedClients = [...filteredClients].sort((a, b) => {
-    const dateA = new Date(a.date_ajout || a.created_at || 0).getTime();
-    const dateB = new Date(b.date_ajout || b.created_at || 0).getTime();
-    return sortOrder === 'recent' ? dateB - dateA : dateA - dateB;
-  });
-
   const getAgentName = (agentId?: string) => {
     if (!agentId) return "Non assigné";
     const agent = agents.find(a => a.id === agentId);
     return agent ? `${agent.profile.prenom} ${agent.profile.nom}` : "Non assigné";
   };
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('desc');
+    }
+  };
+
+  // Trier les clients
+  const sortedClients = useMemo(() => {
+    return [...filteredClients].sort((a, b) => {
+      const profileA = clientProfiles.get(a.user_id);
+      const profileB = clientProfiles.get(b.user_id);
+      let comparison = 0;
+
+      switch (sortField) {
+        case 'date':
+          const dateA = new Date(a.date_ajout || a.created_at || 0).getTime();
+          const dateB = new Date(b.date_ajout || b.created_at || 0).getTime();
+          comparison = dateA - dateB;
+          break;
+        case 'name':
+          const nameA = profileA ? `${profileA.prenom} ${profileA.nom}`.toLowerCase() : '';
+          const nameB = profileB ? `${profileB.prenom} ${profileB.nom}`.toLowerCase() : '';
+          comparison = nameA.localeCompare(nameB);
+          break;
+        case 'agent':
+          const agentA = getAgentName(a.agent_id).toLowerCase();
+          const agentB = getAgentName(b.agent_id).toLowerCase();
+          comparison = agentA.localeCompare(agentB);
+          break;
+        case 'budget':
+          comparison = (a.budget_max || 0) - (b.budget_max || 0);
+          break;
+        case 'days':
+          const daysA = calculateDaysElapsed(a.date_ajout || a.created_at);
+          const daysB = calculateDaysElapsed(b.date_ajout || b.created_at);
+          comparison = daysA - daysB;
+          break;
+      }
+
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  }, [filteredClients, sortField, sortOrder, clientProfiles, agents]);
 
   const handleDeleteAllClients = async () => {
     try {
@@ -442,26 +485,57 @@ const Clients = () => {
           </div>
         </div>
 
-        {/* Tri par date de création */}
+        {/* Tri */}
         <div className="mb-4 md:mb-6 flex flex-wrap items-center gap-2">
-          <p className="text-xs md:text-sm font-medium">Trier :</p>
+          <p className="text-xs md:text-sm font-medium">Trier par:</p>
           <Button
-            variant={sortOrder === 'recent' ? "default" : "outline"}
+            variant={sortField === 'date' ? "default" : "outline"}
             size="sm"
-            onClick={() => setSortOrder('recent')}
+            onClick={() => toggleSort('date')}
             className="text-[10px] md:text-xs h-7"
           >
-            Récent
+            <ArrowUpDown className="h-3 w-3 mr-1" />
+            Date
           </Button>
           <Button
-            variant={sortOrder === 'ancien' ? "default" : "outline"}
+            variant={sortField === 'name' ? "default" : "outline"}
             size="sm"
-            onClick={() => setSortOrder('ancien')}
+            onClick={() => toggleSort('name')}
             className="text-[10px] md:text-xs h-7"
           >
-            Ancien
+            <ArrowUpDown className="h-3 w-3 mr-1" />
+            Nom
+          </Button>
+          <Button
+            variant={sortField === 'agent' ? "default" : "outline"}
+            size="sm"
+            onClick={() => toggleSort('agent')}
+            className="text-[10px] md:text-xs h-7"
+          >
+            <ArrowUpDown className="h-3 w-3 mr-1" />
+            Agent
+          </Button>
+          <Button
+            variant={sortField === 'budget' ? "default" : "outline"}
+            size="sm"
+            onClick={() => toggleSort('budget')}
+            className="text-[10px] md:text-xs h-7"
+          >
+            <ArrowUpDown className="h-3 w-3 mr-1" />
+            Budget
+          </Button>
+          <Button
+            variant={sortField === 'days' ? "default" : "outline"}
+            size="sm"
+            onClick={() => toggleSort('days')}
+            className="text-[10px] md:text-xs h-7"
+          >
+            <ArrowUpDown className="h-3 w-3 mr-1" />
+            Jours
           </Button>
         </div>
+
+        <p className="text-sm text-muted-foreground mb-4">{sortedClients.length} client{sortedClients.length > 1 ? 's' : ''}</p>
 
         {/* Grid de clients - responsive */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
