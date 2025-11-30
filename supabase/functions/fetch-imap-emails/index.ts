@@ -292,30 +292,46 @@ class SimpleImapClient {
       const textStart = data.indexOf('\n', startIdx) + 1;
       const bodyContent = data.substring(textStart, textStart + Math.min(size, 50000));
       
-      // Check for Content-Type in the full data or body
-      if (bodyContent.includes('<html') || bodyContent.includes('<HTML') || 
+      // Check if body starts with MIME boundary (--BOUNDARY)
+      const boundaryStartMatch = bodyContent.match(/^--([A-Za-z0-9_=-]+)\r?\n/);
+      
+      if (boundaryStartMatch) {
+        // Body starts with a MIME boundary - parse as multipart
+        const boundary = boundaryStartMatch[1];
+        const { text, html } = parseMultipart(bodyContent, boundary);
+        email.body_text = text || cleanText(bodyContent);
+        email.body_html = html;
+      } else if (bodyContent.includes('<html') || bodyContent.includes('<HTML') || 
           bodyContent.includes('<body') || bodyContent.includes('<BODY') ||
           bodyContent.includes('<!DOCTYPE html')) {
+        // Direct HTML content
         email.body_html = bodyContent;
         email.body_text = stripHtml(bodyContent);
       } else if (bodyContent.includes('Content-Type:')) {
-        // Multipart - try to parse
+        // Has Content-Type headers - try to find boundary or extract text part
         const boundaryMatch = bodyContent.match(/boundary="?([^"\s\r\n;]+)"?/i);
         if (boundaryMatch) {
           const { text, html } = parseMultipart(bodyContent, boundaryMatch[1]);
-          email.body_text = text;
+          email.body_text = text || cleanText(bodyContent);
           email.body_html = html;
         } else {
-          // Try to extract text from first text part
-          const textPartMatch = bodyContent.match(/Content-Type:\s*text\/plain[^]*?\r?\n\r?\n([^]*?)(?=--[A-Za-z0-9_=-]+|$)/i);
+          // Try to extract text from the text/plain part
+          const textPartMatch = bodyContent.match(/Content-Type:\s*text\/plain[^]*?Content-Transfer-Encoding:\s*(\S+)?[^]*?\r?\n\r?\n([^]*?)(?=--[A-Za-z0-9_=-]+|$)/i);
           if (textPartMatch) {
-            email.body_text = cleanText(textPartMatch[1]);
+            const encoding = textPartMatch[1]?.toLowerCase() || '';
+            let content = textPartMatch[2];
+            if (encoding === 'quoted-printable') {
+              content = decodeQuotedPrintable(content);
+            } else if (encoding === 'base64') {
+              content = decodeBase64UTF8(content);
+            }
+            email.body_text = cleanText(content);
           } else {
             email.body_text = cleanText(bodyContent);
           }
         }
       } else {
-        // Plain text or encoded
+        // Plain text - check for encoding in body
         const encodingMatch = bodyContent.match(/Content-Transfer-Encoding:\s*(\S+)/i);
         const encoding = encodingMatch ? encodingMatch[1].toLowerCase() : '';
         
@@ -420,10 +436,13 @@ function parseMultipart(body: string, boundary: string): { text: string; html: s
   let htmlText = '';
   
   const escapedBoundary = boundary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const parts = body.split(new RegExp(`--${escapedBoundary}`));
+  const parts = body.split(new RegExp(`--${escapedBoundary}(?:--)?`));
+  
+  console.log(`[MULTIPART] Parsing with boundary: ${boundary.substring(0, 20)}..., found ${parts.length} parts`);
   
   for (const part of parts) {
-    if (part.trim() === '' || part.trim() === '--') continue;
+    const trimmedPart = part.trim();
+    if (trimmedPart === '' || trimmedPart === '--') continue;
     
     const partContentTypeMatch = part.match(/Content-Type:\s*([^;\r\n]+)/i);
     const partType = partContentTypeMatch ? partContentTypeMatch[1].toLowerCase().trim() : '';
@@ -431,14 +450,18 @@ function parseMultipart(body: string, boundary: string): { text: string; html: s
     const partEncodingMatch = part.match(/Content-Transfer-Encoding:\s*(\S+)/i);
     const partEncoding = partEncodingMatch ? partEncodingMatch[1].toLowerCase().trim() : '';
     
-    // Find content after headers
+    // Find content after headers (double newline)
     let contentStart = part.indexOf('\r\n\r\n');
     if (contentStart === -1) contentStart = part.indexOf('\n\n');
     if (contentStart === -1) continue;
     
+    // Extract content and trim trailing whitespace/boundaries
     let content = part.substring(contentStart + (part.charAt(contentStart + 1) === '\n' ? 2 : 4));
     
-    // Decode content
+    // Remove trailing boundary remnants
+    content = content.replace(/\r?\n--[A-Za-z0-9_=-]+--?\s*$/g, '').trim();
+    
+    // Decode content based on encoding
     if (partEncoding === 'quoted-printable') {
       content = decodeQuotedPrintable(content);
     } else if (partEncoding === 'base64') {
@@ -456,14 +479,19 @@ function parseMultipart(body: string, boundary: string): { text: string; html: s
     
     if (partType.includes('text/plain') && !plainText) {
       plainText = content;
+      console.log(`[MULTIPART] Found text/plain: ${content.substring(0, 50)}...`);
     } else if (partType.includes('text/html') && !htmlText) {
       htmlText = content;
+      console.log(`[MULTIPART] Found text/html: ${content.substring(0, 50)}...`);
     }
   }
   
   if (!plainText && htmlText) {
     plainText = stripHtml(htmlText);
   }
+  
+  // Final cleanup
+  plainText = plainText.trim();
   
   return { text: plainText, html: htmlText || null };
 }
