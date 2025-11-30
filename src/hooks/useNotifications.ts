@@ -23,6 +23,7 @@ export interface NotificationCounts {
   new_offer: number;
   new_visit: number;
   visit_reminder: number;
+  activation_request: number;
   // Candidature notifications
   candidature_acceptee: number;
   candidature_refusee: number;
@@ -52,6 +53,7 @@ export const useNotifications = () => {
     new_offer: 0,
     new_visit: 0,
     visit_reminder: 0,
+    activation_request: 0,
     candidature_acceptee: 0,
     candidature_refusee: 0,
     candidature_bail_conclu: 0,
@@ -105,6 +107,7 @@ export const useNotifications = () => {
       new_offer: unread.filter(n => n.type === 'new_offer').length,
       new_visit: unread.filter(n => n.type === 'new_visit').length,
       visit_reminder: unread.filter(n => n.type === 'visit_reminder').length,
+      activation_request: unread.filter(n => n.type === 'activation_request').length,
       candidature_acceptee: unread.filter(n => n.type === 'candidature_acceptee').length,
       candidature_refusee: unread.filter(n => n.type === 'candidature_refusee').length,
       candidature_bail_conclu: unread.filter(n => n.type === 'candidature_bail_conclu').length,
