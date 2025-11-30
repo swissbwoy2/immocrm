@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download, Calendar } from 'lucide-react';
+import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download, Calendar, FileCheck } from 'lucide-react';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ export default function AgentDashboard() {
   const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
   const [transactions, setTransactions] = useState<any[]>([]);
   const [visitesDelegues, setVisitesDelegues] = useState<any[]>([]);
+  const [candidatures, setCandidatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -104,6 +105,15 @@ export default function AgentDashboard() {
           .order('created_at', { ascending: false });
         
         setRenouvellements(renouvData || []);
+
+        // Récupérer les candidatures des clients
+        const { data: candidaturesData } = await supabase
+          .from('candidatures')
+          .select('*, offres(adresse, prix, pieces)')
+          .in('client_id', clientIds)
+          .order('created_at', { ascending: false });
+        
+        setCandidatures(candidaturesData || []);
       }
 
       // Récupérer les transactions de l'agent
@@ -228,7 +238,7 @@ export default function AgentDashboard() {
           </div>
 
           {/* KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
             <KPICard 
               title="Clients actifs" 
               value={clientsActifs} 
@@ -240,6 +250,14 @@ export default function AgentDashboard() {
               value={offres.length} 
               icon={Send}
               onClick={() => navigate('/agent/offres-envoyees')}
+            />
+            <KPICard 
+              title="Candidatures" 
+              value={candidatures.length} 
+              icon={FileCheck}
+              onClick={() => navigate('/agent/candidatures')}
+              variant={candidatures.filter(c => c.statut === 'en_attente').length > 0 ? 'warning' : 'default'}
+              subtitle={`${candidatures.filter(c => c.statut === 'en_attente').length} en attente`}
             />
             <KPICard 
               title="Messages non lus" 
