@@ -10,7 +10,7 @@ import { AlertTriangle, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from '@/utils/calculations';
-import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
+import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AccountActivationModal } from '@/components/AccountActivationModal';
@@ -18,7 +18,7 @@ import { AccountActivationModal } from '@/components/AccountActivationModal';
 export default function ClientDashboard() {
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
-  const { counts, markOffersAsViewed } = useRealtimeNotifications(user?.id, userRole);
+  const { counts } = useNotifications();
   const [client, setClient] = useState<any>(null);
   const [agent, setAgent] = useState<any>(null);
   const [offres, setOffres] = useState<any[]>([]);
@@ -407,18 +407,18 @@ export default function ClientDashboard() {
               <p className="text-muted-foreground">Suivez l'avancement de votre recherche</p>
             </div>
             <div className="flex gap-2">
-              {counts.unreadMessages > 0 && (
+              {counts.new_message > 0 && (
                 <Button variant="outline" onClick={() => navigate('/client/messagerie')} className="relative">
                   <Bell className="w-4 h-4 mr-2" />
                   Messages
-                  <Badge variant="destructive" className="ml-2">{counts.unreadMessages}</Badge>
+                  <Badge variant="destructive" className="ml-2">{counts.new_message}</Badge>
                 </Button>
               )}
-              {counts.newOffers > 0 && (
-                <Button variant="outline" onClick={() => { navigate('/client/offres-recues'); markOffersAsViewed(); }} className="relative">
+              {counts.new_offer > 0 && (
+                <Button variant="outline" onClick={() => navigate('/client/offres-recues')} className="relative">
                   <Send className="w-4 h-4 mr-2" />
                   Offres
-                  <Badge variant="destructive" className="ml-2">{counts.newOffers}</Badge>
+                  <Badge variant="destructive" className="ml-2">{counts.new_offer}</Badge>
                 </Button>
               )}
             </div>

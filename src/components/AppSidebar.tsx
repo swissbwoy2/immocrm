@@ -36,6 +36,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Calendrier', icon: Calendar, path: '/admin/calendrier', notifKey: null },
         { name: 'Agents', icon: UserCog, path: '/admin/agents', notifKey: null },
         { name: 'Clients', icon: Users, path: '/admin/clients', notifKey: 'new_client_activated' },
+        { name: 'Candidatures', icon: FileCheck, path: '/admin/candidatures', notifKey: 'candidature_admin' },
         { name: 'Mandats', icon: Clipboard, path: '/admin/mandats', notifKey: null },
         { name: 'Transactions', icon: DollarSign, path: '/admin/transactions', notifKey: null },
         { name: 'Offres envoyées', icon: Send, path: '/admin/offres-envoyees', notifKey: null },
