@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, ExternalLink } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 import logoImmorama from '@/assets/logo-immorama-2023.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -260,9 +260,8 @@ export default function Login() {
               variant="outline" 
               className="w-full" 
               type="button"
-              onClick={() => window.open('https://immo-rama.ch/formulaire', '_blank')}
+              onClick={() => navigate('/nouveau-mandat')}
             >
-              <ExternalLink className="w-4 h-4 mr-2" />
               Activer vos recherches
             </Button>
           </form>

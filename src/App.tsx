@@ -7,6 +7,7 @@ import { AppLayout } from "@/components/AppLayout";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Login from "./pages/Login";
+import NouveauMandat from "./pages/NouveauMandat";
 import FirstLogin from "./pages/FirstLogin";
 import Setup from "./pages/Setup";
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -75,6 +76,7 @@ const App = () => (
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/setup" element={<Setup />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/nouveau-mandat" element={<NouveauMandat />} />
             <Route path="/first-login" element={<FirstLogin />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 

@@ -718,6 +718,185 @@ export type Database = {
         }
         Relationships: []
       }
+      demandes_mandat: {
+        Row: {
+          abaninja_invoice_id: string | null
+          abaninja_invoice_ref: string | null
+          adresse: string
+          animaux: boolean | null
+          budget_max: number
+          candidats: Json | null
+          cgv_acceptees: boolean
+          cgv_acceptees_at: string | null
+          charges_extraordinaires: boolean | null
+          code_promo: string | null
+          contact_gerance: string
+          created_at: string | null
+          curatelle: boolean | null
+          date_engagement: string | null
+          date_naissance: string
+          date_paiement: string | null
+          decouverte_agence: string
+          depuis_le: string
+          documents_uploades: Json | null
+          email: string
+          employeur: string
+          etat_civil: string
+          gerance_actuelle: string
+          id: string
+          instrument_musique: boolean | null
+          loyer_actuel: number
+          montant_acompte: number | null
+          montant_charges_extra: number | null
+          motif_changement: string
+          nationalite: string
+          nom: string
+          nombre_occupants: number
+          notes_admin: string | null
+          numero_plaques: string | null
+          pieces_actuel: number
+          pieces_recherche: string
+          poursuites: boolean | null
+          prenom: string
+          processed_at: string | null
+          processed_by: string | null
+          profession: string
+          region_recherche: string
+          revenus_mensuels: number
+          signature_data: string | null
+          souhaits_particuliers: string | null
+          statut: string | null
+          telephone: string
+          type_bien: string
+          type_permis: string
+          type_recherche: string
+          updated_at: string | null
+          user_id: string | null
+          utilisation_logement: string | null
+          vehicules: boolean | null
+        }
+        Insert: {
+          abaninja_invoice_id?: string | null
+          abaninja_invoice_ref?: string | null
+          adresse: string
+          animaux?: boolean | null
+          budget_max?: number
+          candidats?: Json | null
+          cgv_acceptees?: boolean
+          cgv_acceptees_at?: string | null
+          charges_extraordinaires?: boolean | null
+          code_promo?: string | null
+          contact_gerance: string
+          created_at?: string | null
+          curatelle?: boolean | null
+          date_engagement?: string | null
+          date_naissance: string
+          date_paiement?: string | null
+          decouverte_agence: string
+          depuis_le: string
+          documents_uploades?: Json | null
+          email: string
+          employeur: string
+          etat_civil: string
+          gerance_actuelle: string
+          id?: string
+          instrument_musique?: boolean | null
+          loyer_actuel?: number
+          montant_acompte?: number | null
+          montant_charges_extra?: number | null
+          motif_changement: string
+          nationalite: string
+          nom: string
+          nombre_occupants?: number
+          notes_admin?: string | null
+          numero_plaques?: string | null
+          pieces_actuel?: number
+          pieces_recherche: string
+          poursuites?: boolean | null
+          prenom: string
+          processed_at?: string | null
+          processed_by?: string | null
+          profession: string
+          region_recherche: string
+          revenus_mensuels?: number
+          signature_data?: string | null
+          souhaits_particuliers?: string | null
+          statut?: string | null
+          telephone: string
+          type_bien: string
+          type_permis: string
+          type_recherche?: string
+          updated_at?: string | null
+          user_id?: string | null
+          utilisation_logement?: string | null
+          vehicules?: boolean | null
+        }
+        Update: {
+          abaninja_invoice_id?: string | null
+          abaninja_invoice_ref?: string | null
+          adresse?: string
+          animaux?: boolean | null
+          budget_max?: number
+          candidats?: Json | null
+          cgv_acceptees?: boolean
+          cgv_acceptees_at?: string | null
+          charges_extraordinaires?: boolean | null
+          code_promo?: string | null
+          contact_gerance?: string
+          created_at?: string | null
+          curatelle?: boolean | null
+          date_engagement?: string | null
+          date_naissance?: string
+          date_paiement?: string | null
+          decouverte_agence?: string
+          depuis_le?: string
+          documents_uploades?: Json | null
+          email?: string
+          employeur?: string
+          etat_civil?: string
+          gerance_actuelle?: string
+          id?: string
+          instrument_musique?: boolean | null
+          loyer_actuel?: number
+          montant_acompte?: number | null
+          montant_charges_extra?: number | null
+          motif_changement?: string
+          nationalite?: string
+          nom?: string
+          nombre_occupants?: number
+          notes_admin?: string | null
+          numero_plaques?: string | null
+          pieces_actuel?: number
+          pieces_recherche?: string
+          poursuites?: boolean | null
+          prenom?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          profession?: string
+          region_recherche?: string
+          revenus_mensuels?: number
+          signature_data?: string | null
+          souhaits_particuliers?: string | null
+          statut?: string | null
+          telephone?: string
+          type_bien?: string
+          type_permis?: string
+          type_recherche?: string
+          updated_at?: string | null
+          user_id?: string | null
+          utilisation_logement?: string | null
+          vehicules?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "demandes_mandat_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           candidate_id: string | null
