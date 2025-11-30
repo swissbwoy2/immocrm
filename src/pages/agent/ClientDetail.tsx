@@ -1466,12 +1466,27 @@ export default function ClientDetail() {
 
                 const handleCandidatureStatutChange = async (candidatureId: string, newStatut: string) => {
                   try {
-                    const { error } = await supabase
+                    // 1. Update candidatures table
+                    const { error: candError } = await supabase
                       .from('candidatures')
                       .update({ statut: newStatut })
                       .eq('id', candidatureId);
 
-                    if (error) throw error;
+                    if (candError) throw candError;
+
+                    // 2. Also update offres table to sync status
+                    if (candidature.offre_id) {
+                      const offreStatut = newStatut === 'acceptee' ? 'acceptee' : newStatut === 'refusee' ? 'refusee' : 'candidature_deposee';
+                      await supabase
+                        .from('offres')
+                        .update({ statut: offreStatut })
+                        .eq('id', candidature.offre_id);
+                      
+                      // Also update local offres state
+                      setOffres(prev => 
+                        prev.map(o => o.id === candidature.offre_id ? { ...o, statut: offreStatut } : o)
+                      );
+                    }
 
                     setCandidatures(prev => 
                       prev.map(c => c.id === candidatureId ? { ...c, statut: newStatut } : c)
