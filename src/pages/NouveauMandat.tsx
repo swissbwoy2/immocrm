@@ -194,24 +194,55 @@ export default function NouveauMandat() {
         }
       }
 
-      // Envoyer email de confirmation au client
+      // Envoyer le mandat signé en PDF par email
       try {
-        await supabase.functions.invoke('send-mandat-confirmation', {
+        await supabase.functions.invoke('send-mandat-pdf', {
           body: {
             email: formData.email,
             prenom: formData.prenom,
             nom: formData.nom,
+            telephone: formData.telephone,
+            adresse: formData.adresse,
+            date_naissance: formData.date_naissance,
+            nationalite: formData.nationalite,
+            type_permis: formData.type_permis,
+            etat_civil: formData.etat_civil,
+            gerance_actuelle: formData.gerance_actuelle,
+            contact_gerance: formData.contact_gerance,
+            loyer_actuel: formData.loyer_actuel,
+            depuis_le: formData.depuis_le,
+            pieces_actuel: formData.pieces_actuel,
+            charges_extraordinaires: formData.charges_extraordinaires,
+            montant_charges_extra: formData.montant_charges_extra,
+            poursuites: formData.poursuites,
+            curatelle: formData.curatelle,
+            motif_changement: formData.motif_changement,
+            profession: formData.profession,
+            employeur: formData.employeur,
+            revenus_mensuels: formData.revenus_mensuels,
+            date_engagement: formData.date_engagement,
+            utilisation_logement: formData.utilisation_logement,
+            animaux: formData.animaux,
+            instrument_musique: formData.instrument_musique,
+            vehicules: formData.vehicules,
+            numero_plaques: formData.numero_plaques,
+            decouverte_agence: formData.decouverte_agence,
             type_recherche: formData.type_recherche,
-            montant_acompte: formData.type_recherche === 'Acheter' ? 2500 : 300,
-            region_recherche: formData.region_recherche,
+            nombre_occupants: formData.nombre_occupants,
             type_bien: formData.type_bien,
             pieces_recherche: formData.pieces_recherche,
-            budget_max: formData.budget_max
+            region_recherche: formData.region_recherche,
+            budget_max: formData.budget_max,
+            apport_personnel: formData.apport_personnel,
+            souhaits_particuliers: formData.souhaits_particuliers,
+            candidats: formData.candidats,
+            signature_data: formData.signature_data,
+            code_promo: formData.code_promo
           }
         });
-        console.log('Confirmation email sent');
+        console.log('Mandat PDF email sent');
       } catch (emailError) {
-        console.error('Error sending confirmation email:', emailError);
+        console.error('Error sending mandat PDF email:', emailError);
         // Don't block the flow if email fails
       }
 
