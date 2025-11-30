@@ -34,6 +34,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
+import { MissingDocumentsAlert } from '@/components/MissingDocumentsAlert';
 
 export default function Dossier() {
   const navigate = useNavigate();
@@ -422,6 +423,9 @@ export default function Dossier() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Alerte documents manquants */}
+          <MissingDocumentsAlert documents={documents} />
 
           {/* Situation financière */}
           <div>

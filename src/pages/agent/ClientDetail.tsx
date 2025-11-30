@@ -1349,10 +1349,16 @@ export default function ClientDetail() {
                       onChange={(e) => setDocumentType(e.target.value)}
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
-                      <option value="fiche_salaire">Fiche de salaire</option>
-                      <option value="extrait_poursuites">Extrait des poursuites</option>
-                      <option value="piece_identite">Pièce d'identité</option>
-                      <option value="autre">Autre</option>
+                      <option value="fiche_salaire">💰 Fiche de salaire</option>
+                      <option value="extrait_poursuites">📋 Extrait des poursuites</option>
+                      <option value="piece_identite">🪪 Pièce d'identité</option>
+                      <option value="attestation_domicile">🏠 Attestation de domicile</option>
+                      <option value="rc_menage">🛡️ RC Ménage</option>
+                      <option value="contrat_travail">📝 Contrat de travail</option>
+                      <option value="attestation_employeur">👔 Attestation employeur</option>
+                      <option value="copie_bail">📋 Copie du bail</option>
+                      <option value="attestation_garantie_loyer">🔐 Attestation garantie de loyer</option>
+                      <option value="autre">📄 Autre</option>
                     </select>
                   </div>
                   <div className="flex justify-end gap-2 pt-4">
@@ -1421,6 +1427,13 @@ export default function ClientDetail() {
                         {doc.type_document === 'fiche_salaire' && '💰 Fiche salaire'}
                         {doc.type_document === 'extrait_poursuites' && '📋 Extrait poursuites'}
                         {doc.type_document === 'piece_identite' && '🪪 Pièce ID'}
+                        {doc.type_document === 'attestation_domicile' && '🏠 Attestation domicile'}
+                        {doc.type_document === 'rc_menage' && '🛡️ RC Ménage'}
+                        {doc.type_document === 'contrat_travail' && '📝 Contrat travail'}
+                        {doc.type_document === 'attestation_employeur' && '👔 Attestation employeur'}
+                        {doc.type_document === 'copie_bail' && '📋 Copie bail'}
+                        {doc.type_document === 'attestation_garantie_loyer' && '🔐 Garantie loyer'}
+                        {doc.type_document === 'dossier_complet' && '📎 Dossier complet'}
                         {doc.type_document === 'autre' && '📄 Autre'}
                         {!doc.type_document && '📄 Autre'}
                       </Badge>
