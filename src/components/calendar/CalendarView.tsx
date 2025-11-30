@@ -32,6 +32,8 @@ const eventTypeColors: Record<string, string> = {
   rendez_vous: 'bg-green-500',
   tache: 'bg-orange-500',
   reunion: 'bg-purple-500',
+  signature: 'bg-emerald-600',
+  etat_lieux: 'bg-cyan-500',
   autre: 'bg-gray-500',
 };
 
@@ -164,6 +166,14 @@ export function CalendarView({ events, visites, selectedDate, onDateSelect }: Ca
         <div className="flex items-center gap-1.5">
           <div className={cn('w-3 h-3 rounded', eventTypeColors.visite)} />
           <span className="text-xs text-muted-foreground">Visite</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className={cn('w-3 h-3 rounded', eventTypeColors.signature)} />
+          <span className="text-xs text-muted-foreground">Signature</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className={cn('w-3 h-3 rounded', eventTypeColors.etat_lieux)} />
+          <span className="text-xs text-muted-foreground">État des lieux</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className={cn('w-3 h-3 rounded', eventTypeColors.rappel)} />
