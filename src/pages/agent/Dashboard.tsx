@@ -8,12 +8,12 @@ import { calculateDaysElapsed } from '@/utils/calculations';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
-  const { counts } = useRealtimeNotifications(user?.id, userRole);
+  const { counts } = useNotifications();
   
   const [agent, setAgent] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
@@ -228,11 +228,11 @@ export default function AgentDashboard() {
               <h1 className="text-3xl font-bold">Tableau de bord</h1>
               <p className="text-muted-foreground mt-1">Gérez vos clients et vos offres</p>
             </div>
-            {counts.unreadMessages > 0 && (
+            {counts.new_message > 0 && (
               <Button variant="outline" onClick={() => navigate('/agent/messagerie')} className="relative">
                 <Bell className="w-4 h-4 mr-2" />
                 Messages
-                <Badge variant="destructive" className="ml-2">{counts.unreadMessages}</Badge>
+                <Badge variant="destructive" className="ml-2">{counts.new_message}</Badge>
               </Button>
             )}
           </div>
@@ -261,10 +261,10 @@ export default function AgentDashboard() {
             />
             <KPICard 
               title="Messages non lus" 
-              value={counts.unreadMessages} 
+              value={counts.new_message} 
               icon={MessageSquare}
               onClick={() => navigate('/agent/messagerie')}
-              variant={counts.unreadMessages > 0 ? 'danger' : 'default'}
+              variant={counts.new_message > 0 ? 'danger' : 'default'}
             />
             <KPICard 
               title="Deadlines" 

@@ -23,6 +23,21 @@ export interface NotificationCounts {
   new_offer: number;
   new_visit: number;
   visit_reminder: number;
+  // Candidature notifications
+  candidature_acceptee: number;
+  candidature_refusee: number;
+  candidature_bail_conclu: number;
+  candidature_attente_bail: number;
+  candidature_bail_recu: number;
+  candidature_signature_planifiee: number;
+  candidature_signature_effectuee: number;
+  candidature_etat_lieux_fixe: number;
+  candidature_cles_remises: number;
+  // Admin candidature notifications (all types combined)
+  candidature_admin: number;
+  // Delegated visits
+  visit_confirmed: number;
+  visit_refused: number;
 }
 
 export const useNotifications = () => {
@@ -37,6 +52,18 @@ export const useNotifications = () => {
     new_offer: 0,
     new_visit: 0,
     visit_reminder: 0,
+    candidature_acceptee: 0,
+    candidature_refusee: 0,
+    candidature_bail_conclu: 0,
+    candidature_attente_bail: 0,
+    candidature_bail_recu: 0,
+    candidature_signature_planifiee: 0,
+    candidature_signature_effectuee: 0,
+    candidature_etat_lieux_fixe: 0,
+    candidature_cles_remises: 0,
+    candidature_admin: 0,
+    visit_confirmed: 0,
+    visit_refused: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -78,6 +105,18 @@ export const useNotifications = () => {
       new_offer: unread.filter(n => n.type === 'new_offer').length,
       new_visit: unread.filter(n => n.type === 'new_visit').length,
       visit_reminder: unread.filter(n => n.type === 'visit_reminder').length,
+      candidature_acceptee: unread.filter(n => n.type === 'candidature_acceptee').length,
+      candidature_refusee: unread.filter(n => n.type === 'candidature_refusee').length,
+      candidature_bail_conclu: unread.filter(n => n.type === 'candidature_bail_conclu').length,
+      candidature_attente_bail: unread.filter(n => n.type === 'candidature_attente_bail').length,
+      candidature_bail_recu: unread.filter(n => n.type === 'candidature_bail_recu').length,
+      candidature_signature_planifiee: unread.filter(n => n.type === 'candidature_signature_planifiee').length,
+      candidature_signature_effectuee: unread.filter(n => n.type === 'candidature_signature_effectuee').length,
+      candidature_etat_lieux_fixe: unread.filter(n => n.type === 'candidature_etat_lieux_fixe').length,
+      candidature_cles_remises: unread.filter(n => n.type === 'candidature_cles_remises').length,
+      candidature_admin: unread.filter(n => n.type.includes('_admin') || n.type.startsWith('candidature_')).length,
+      visit_confirmed: unread.filter(n => n.type === 'visit_confirmed').length,
+      visit_refused: unread.filter(n => n.type === 'visit_refused').length,
     });
   };
 

@@ -9,7 +9,7 @@ import { calculateDaysElapsed } from '@/utils/calculations';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
+import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
 
 const adminMenu = [
@@ -23,7 +23,7 @@ const adminMenu = [
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
-  const { counts } = useRealtimeNotifications(user?.id, userRole);
+  const { counts } = useNotifications();
 
   const [agents, setAgents] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
@@ -186,11 +186,11 @@ export default function AdminDashboard() {
                 <h1 className="text-3xl font-bold text-foreground">Tableau de bord</h1>
                 <p className="text-muted-foreground">Vue d'ensemble de l'activité</p>
               </div>
-              {counts.unreadMessages > 0 && (
+              {counts.new_message > 0 && (
                 <Button variant="outline" onClick={() => navigate('/admin/messagerie')} className="relative">
                   <Bell className="w-4 h-4 mr-2" />
                   Messages
-                  <Badge variant="destructive" className="ml-2">{counts.unreadMessages}</Badge>
+                  <Badge variant="destructive" className="ml-2">{counts.new_message}</Badge>
                 </Button>
               )}
             </div>
