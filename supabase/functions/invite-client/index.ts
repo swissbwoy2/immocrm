@@ -9,6 +9,9 @@ const corsHeaders = {
 interface InviteClientRequest {
   email: string;
   clientId?: string;
+  prenom?: string;
+  nom?: string;
+  telephone?: string;
 }
 
 serve(async (req) => {
@@ -18,9 +21,9 @@ serve(async (req) => {
   }
 
   try {
-    const { email, clientId }: InviteClientRequest = await req.json();
+    const { email, clientId, prenom, nom, telephone }: InviteClientRequest = await req.json();
 
-    console.log('Inviting client:', { email, clientId });
+    console.log('Inviting client:', { email, clientId, prenom, nom });
 
     // Initialize Supabase admin client
     const supabaseAdmin = createClient(
@@ -42,6 +45,7 @@ serve(async (req) => {
 
     let userId: string;
     let message: string;
+    let isNewUser = false;
 
     if (existingUser) {
       // User exists - send password reset email instead
@@ -79,6 +83,79 @@ serve(async (req) => {
 
       userId = inviteData.user.id;
       message = 'Invitation envoyée avec succès';
+      isNewUser = true;
+    }
+
+    // Check if profile exists, if not create it with actif = false
+    const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle();
+
+    if (!existingProfile) {
+      console.log('Creating profile for user:', userId);
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .insert({
+          id: userId,
+          email: email,
+          prenom: prenom || email.split('@')[0],
+          nom: nom || '',
+          telephone: telephone || null,
+          actif: false // Account not activated yet
+        });
+
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+        // Don't throw - continue with the flow
+      }
+    }
+
+    // Check if user_role exists, if not create it
+    const { data: existingRole } = await supabaseAdmin
+      .from('user_roles')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!existingRole) {
+      console.log('Creating user_role for user:', userId);
+      const { error: roleError } = await supabaseAdmin
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role: 'client'
+        });
+
+      if (roleError) {
+        console.error('Error creating user_role:', roleError);
+        // Don't throw - continue with the flow
+      }
+    }
+
+    // Check if client record exists, if not create it
+    const { data: existingClient } = await supabaseAdmin
+      .from('clients')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (!existingClient) {
+      console.log('Creating client record for user:', userId);
+      const { error: clientError } = await supabaseAdmin
+        .from('clients')
+        .insert({
+          user_id: userId,
+          date_ajout: new Date().toISOString(),
+          statut: 'en_attente',
+          priorite: 'moyenne'
+        });
+
+      if (clientError) {
+        console.error('Error creating client:', clientError);
+        // Don't throw - continue with the flow
+      }
     }
 
     console.log('Email sent successfully to user:', userId);
@@ -87,7 +164,8 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: message,
-        userId: userId
+        userId: userId,
+        isNewUser: isNewUser
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
