@@ -67,7 +67,6 @@ export default function MandatFormStep2({ data, onChange }: Props) {
             id="pieces_actuel"
             type="number"
             step="0.5"
-            min="1"
             value={data.pieces_actuel || ''}
             onChange={(e) => onChange({ pieces_actuel: Number(e.target.value) })}
             placeholder="Ex: 3.5"

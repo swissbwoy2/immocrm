@@ -38,3 +38,9 @@ verify_jwt = false
 
 [functions.send-notification-email]
 verify_jwt = false
+
+[functions.create-abaninja-client]
+verify_jwt = false
+
+[functions.create-abaninja-invoice]
+verify_jwt = false
