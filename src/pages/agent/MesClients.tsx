@@ -96,8 +96,8 @@ const MesClients = () => {
         candidatesMap.set(candidate.client_id, existing);
       });
 
-      // Types cumulatifs pour le calcul du revenu total
-      const CUMULATIVE_TYPES = ['titulaire_principal', 'co_titulaire', 'co_locataire'];
+      // Types cumulatifs pour le calcul du revenu total (doivent correspondre à useClientCandidates)
+      const CUMULATIVE_TYPES = ['colocataire', 'co_debiteur', 'signataire_solidaire'];
 
       // Transform data to match expected format
       const transformedClients = clientsData?.map(client => {
@@ -121,6 +121,15 @@ const MesClients = () => {
           const budgetDemande = Number(client.budget_max) || 0;
           return garantRevenu >= budgetDemande * 3;
         });
+        
+        // Count candidates by type
+        const candidatesCount = candidates.length;
+        const garanCount = candidates.filter(c => c.type === 'garant').length;
+        const colocCount = candidates.filter(c => CUMULATIVE_TYPES.includes(c.type)).length;
+        
+        // Check solvability
+        const budgetDemande = Number(client.budget_max) || 0;
+        const isSolvable = budgetPossible >= budgetDemande || !!garant;
 
         return {
           id: client.id,
@@ -147,6 +156,10 @@ const MesClients = () => {
           typeBien: client.type_bien,
           garant: garant ? { nom: garant.nom, prenom: garant.prenom, revenus: garant.revenus_mensuels } : null,
           candidates,
+          candidatesCount,
+          garanCount,
+          colocCount,
+          isSolvable,
         };
       }) || [];
 
@@ -410,8 +423,23 @@ const MesClients = () => {
                     </Button>
                   </div>
 
+                  {/* Indicateur de solvabilité */}
+                  <div className="absolute top-3 left-3">
+                    {client.isSolvable ? (
+                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Solvable
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-0">
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        À valider
+                      </Badge>
+                    )}
+                  </div>
+
                   {/* Nom et nationalité */}
-                  <div className="mb-3">
+                  <div className="mb-3 mt-6">
                     <h3 className="text-lg font-semibold text-primary mb-1">
                       {client.prenom} {client.nom}
                     </h3>
@@ -423,6 +451,16 @@ const MesClients = () => {
                       <Users className="h-4 w-4" />
                       <span>Type de permis: {client.typePermis}</span>
                     </div>
+                    {/* Nombre de candidats */}
+                    {client.candidatesCount > 0 && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="outline" className="text-xs">
+                          <Users className="h-3 w-3 mr-1" />
+                          {client.candidatesCount} candidat{client.candidatesCount > 1 ? 's' : ''}
+                          {client.garanCount > 0 && ` (${client.garanCount} garant)`}
+                        </Badge>
+                      </div>
+                    )}
                   </div>
 
                   {/* Finances */}

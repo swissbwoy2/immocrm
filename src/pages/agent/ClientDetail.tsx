@@ -586,7 +586,7 @@ export default function ClientDetail() {
                   {/* Informations personnelles */}
                   <div className="space-y-4">
                     <h3 className="font-semibold text-lg border-b pb-2">Informations personnelles</h3>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>Nationalité</Label>
                         <Input
@@ -624,7 +624,7 @@ export default function ClientDetail() {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>État civil</Label>
                         <Select
@@ -664,7 +664,7 @@ export default function ClientDetail() {
                   {/* Situation professionnelle */}
                   <div className="space-y-4">
                     <h3 className="font-semibold text-lg border-b pb-2">Situation professionnelle</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Profession</Label>
                         <Input
@@ -680,7 +680,7 @@ export default function ClientDetail() {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>Secteur d'activité</Label>
                         <Input
@@ -722,7 +722,7 @@ export default function ClientDetail() {
                   {/* Situation financière */}
                   <div className="space-y-4">
                     <h3 className="font-semibold text-lg border-b pb-2">Situation financière</h3>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>Revenus mensuels nets (CHF)</Label>
                         <Input
@@ -747,7 +747,7 @@ export default function ClientDetail() {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>Apport personnel (CHF)</Label>
                         <Input
@@ -771,7 +771,7 @@ export default function ClientDetail() {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="flex items-center space-x-2">
                         <input
                           type="checkbox"
@@ -808,7 +808,7 @@ export default function ClientDetail() {
                   {/* Logement actuel */}
                   <div className="space-y-4">
                     <h3 className="font-semibold text-lg border-b pb-2">Logement actuel</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Gérance actuelle</Label>
                         <Input
@@ -824,7 +824,7 @@ export default function ClientDetail() {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>Loyer actuel (CHF)</Label>
                         <Input
@@ -864,7 +864,7 @@ export default function ClientDetail() {
                   {/* Critères de recherche */}
                   <div className="space-y-4">
                     <h3 className="font-semibold text-lg border-b pb-2">Critères de recherche</h3>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>Budget maximum (CHF)</Label>
                         <Input
@@ -891,7 +891,7 @@ export default function ClientDetail() {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Région de recherche</Label>
                         <Input
@@ -907,7 +907,7 @@ export default function ClientDetail() {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="flex items-center space-x-2">
                         <input
                           type="checkbox"
@@ -961,7 +961,7 @@ export default function ClientDetail() {
                   {/* Gestion du dossier */}
                   <div className="space-y-4">
                     <h3 className="font-semibold text-lg border-b pb-2">Gestion du dossier</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>État d'avancement</Label>
                         <Select
@@ -1060,7 +1060,7 @@ export default function ClientDetail() {
                 )}
               </div>
               <Separator />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">État civil</p>
                   <p className="font-medium">{client.etat_civil || 'Non renseigné'}</p>
@@ -1086,7 +1086,7 @@ export default function ClientDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Gérance actuelle</p>
                   <p className="font-medium">{client.gerance_actuelle || 'Non renseigné'}</p>
@@ -1097,7 +1097,7 @@ export default function ClientDetail() {
                 </div>
               </div>
               <Separator />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Loyer brut actuel</p>
                   <p className="font-medium text-lg">
@@ -1112,7 +1112,7 @@ export default function ClientDetail() {
                 </div>
               </div>
               <Separator />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Pièces actuel</p>
                   <p className="font-medium">{client.pieces_actuel || 'Non renseigné'}</p>
@@ -1134,7 +1134,7 @@ export default function ClientDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Profession</p>
                   <p className="font-medium">{client.profession || 'Non renseigné'}</p>
@@ -1145,7 +1145,7 @@ export default function ClientDetail() {
                 </div>
               </div>
               <Separator />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Revenus mensuels nets</p>
                   <p className="font-medium text-lg">
@@ -1177,7 +1177,7 @@ export default function ClientDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Card className="bg-muted/50">
                   <CardContent className="pt-6">
                     <p className="text-sm text-muted-foreground mb-1">Revenus totaux</p>
@@ -1244,7 +1244,7 @@ export default function ClientDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">Type de bien</p>
                   <p className="font-medium">{client.type_bien || 'Non renseigné'}</p>
@@ -1293,7 +1293,7 @@ export default function ClientDetail() {
                 </div>
               )}
               <Separator />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full ${client.animaux ? 'bg-green-500' : 'bg-gray-300'}`} />
                   <span className="text-sm">Animaux</span>
@@ -1343,6 +1343,7 @@ export default function ClientDetail() {
               candidates={candidates}
               onDocumentsChange={loadClientData}
               refreshKey={documentsRefreshKey}
+              agentUserId={user?.id}
             />
           </div>
 
