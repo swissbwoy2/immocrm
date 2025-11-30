@@ -714,15 +714,16 @@ export default function Candidatures() {
               <FastForward className="h-5 w-5 text-orange-500" />
               Forcer la progression
             </DialogTitle>
-            <DialogDescription>
-              Cette action permet de passer à l'étape suivante sans attendre la confirmation du client.
-              <br /><br />
-              <strong>À utiliser uniquement si :</strong>
-              <ul className="list-disc list-inside mt-2 space-y-1">
-                <li>Le client vous a confirmé par téléphone ou email</li>
-                <li>Le client a des difficultés avec l'application</li>
-                <li>Vous agissez sur demande explicite du client</li>
-              </ul>
+            <DialogDescription asChild>
+              <div>
+                <p>Cette action permet de passer à l'étape suivante sans attendre la confirmation du client.</p>
+                <p className="mt-2"><strong>À utiliser uniquement si :</strong></p>
+                <ul className="list-disc list-inside mt-2 space-y-1">
+                  <li>Le client vous a confirmé par téléphone ou email</li>
+                  <li>Le client a des difficultés avec l'application</li>
+                  <li>Vous agissez sur demande explicite du client</li>
+                </ul>
+              </div>
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
