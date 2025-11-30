@@ -1,10 +1,14 @@
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Target, Flame, Trophy, CheckCircle, AlertCircle } from 'lucide-react';
+import { Target, Flame, Trophy, CheckCircle, AlertCircle, Clock, History } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DailyGoalsHistory } from './DailyGoalsHistory';
 
 // Helper function to get UTC day boundaries
 function getUTCDayBoundaries() {
@@ -12,7 +16,7 @@ function getUTCDayBoundaries() {
   const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD in UTC
   const todayStart = new Date(todayStr + 'T00:00:00.000Z');
   const todayEnd = new Date(todayStr + 'T23:59:59.999Z');
-  return { todayStart, todayEnd };
+  return { todayStart, todayEnd, lastUpdate: now };
 }
 
 interface DefaultGoal {
@@ -44,6 +48,14 @@ const goalTypeIcons: Record<string, React.ReactNode> = {
 };
 
 export function DefaultGoalsSection({ agentId, offres, visites, candidatures, clients }: DefaultGoalsSectionProps) {
+  const [showHistory, setShowHistory] = useState(false);
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
+
+  // Update the timestamp when data changes
+  useEffect(() => {
+    setLastUpdateTime(new Date());
+  }, [offres, visites, candidatures, clients]);
+
   const { data: defaultGoals = [], isLoading } = useQuery({
     queryKey: ['default-agent-goals'],
     queryFn: async () => {
@@ -152,15 +164,40 @@ export function DefaultGoalsSection({ agentId, offres, visites, candidatures, cl
     );
   }
 
+  // Format last update time in UTC
+  const formatLastUpdate = () => {
+    const hours = lastUpdateTime.getUTCHours().toString().padStart(2, '0');
+    const minutes = lastUpdateTime.getUTCMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes} UTC`;
+  };
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Target className="h-5 w-5 text-primary" />
-          Objectifs journaliers
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              Objectifs journaliers
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                Mis à jour: {formatLastUpdate()}
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowHistory(!showHistory)}
+                className="text-xs"
+              >
+                <History className="h-4 w-4 mr-1" />
+                {showHistory ? 'Masquer' : 'Historique'}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {defaultGoals.map((goal) => {
             const current = getCurrentValue(goal.goal_type);
@@ -226,5 +263,9 @@ export function DefaultGoalsSection({ agentId, offres, visites, candidatures, cl
         </div>
       </CardContent>
     </Card>
+
+    {/* History section */}
+    {showHistory && <DailyGoalsHistory agentId={agentId} />}
+    </div>
   );
 }
