@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Mail, Phone, Users, Calendar, Pencil, Save, X, Camera, Power } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Users, Calendar, Pencil, Save, X, Camera, Power, Target } from "lucide-react";
+import { AgentGoalsDialog } from "@/components/stats/AgentGoalsDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
@@ -405,6 +406,16 @@ const AgentDetail = () => {
                         <Pencil className="h-4 w-4 mr-1" />
                         Modifier
                       </Button>
+                      <AgentGoalsDialog 
+                        agentId={agent.id} 
+                        agentName={`${profile.prenom} ${profile.nom}`}
+                        trigger={
+                          <Button size="sm" variant="outline">
+                            <Target className="h-4 w-4 mr-1" />
+                            Objectifs
+                          </Button>
+                        }
+                      />
                     </div>
                     <p className="text-muted-foreground">Agent immobilier</p>
                     <div className="flex items-center gap-3 mt-3 pt-3 border-t">
