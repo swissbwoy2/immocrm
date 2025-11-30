@@ -10,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { AgentStatsSection } from '@/components/stats/AgentStatsSection';
+import { DefaultGoalsSection } from '@/components/stats/DefaultGoalsSection';
+import { AgentBadges } from '@/components/stats/AgentBadges';
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
@@ -24,6 +26,7 @@ export default function AgentDashboard() {
   const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
   const [transactions, setTransactions] = useState<any[]>([]);
   const [visitesDelegues, setVisitesDelegues] = useState<any[]>([]);
+  const [visites, setVisites] = useState<any[]>([]);
   const [candidatures, setCandidatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -126,6 +129,14 @@ export default function AgentDashboard() {
           .order('date_transaction', { ascending: false });
         
         setTransactions(transactionsData || []);
+
+        // Récupérer toutes les visites de l'agent
+        const { data: allVisitesData } = await supabase
+          .from('visites')
+          .select('*')
+          .eq('agent_id', agentData.id);
+        
+        setVisites(allVisitesData || []);
 
         // Récupérer les visites déléguées
         const { data: visitesData } = await supabase
@@ -307,6 +318,18 @@ export default function AgentDashboard() {
             clients={clients}
             agentId={agent?.id || ''}
           />
+
+          {/* Objectifs journaliers par défaut */}
+          <DefaultGoalsSection
+            agentId={agent?.id || ''}
+            offres={offres}
+            visites={visites}
+            candidatures={candidatures}
+            clients={clients}
+          />
+
+          {/* Badges et récompenses */}
+          <AgentBadges agentId={agent?.id || ''} />
 
           {/* Visites déléguées */}
           {visitesDelegues.length > 0 && (
