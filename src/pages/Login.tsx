@@ -143,7 +143,7 @@ export default function Login() {
           <div>
             <CardTitle className="text-2xl">Logisorama</CardTitle>
             <CardDescription className="text-base mt-2">
-              Logiciel Immobilier pour la recherche de bien immobilier en Suisse.
+              Logiciel Immobilier pour la recherche de bien immobilier en Suisse propulsé par l'agence immobilière Immo-rama.ch
             </CardDescription>
           </div>
         </CardHeader>
