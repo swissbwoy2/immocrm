@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_badges: {
+        Row: {
+          agent_id: string
+          badge_category: string
+          badge_type: string
+          description: string | null
+          earned_at: string | null
+          goal_id: string | null
+          id: string
+          metadata: Json | null
+          title: string
+        }
+        Insert: {
+          agent_id: string
+          badge_category: string
+          badge_type: string
+          description?: string | null
+          earned_at?: string | null
+          goal_id?: string | null
+          id?: string
+          metadata?: Json | null
+          title: string
+        }
+        Update: {
+          agent_id?: string
+          badge_category?: string
+          badge_type?: string
+          description?: string | null
+          earned_at?: string | null
+          goal_id?: string | null
+          id?: string
+          metadata?: Json | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_badges_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_badges_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "agent_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_goals: {
         Row: {
           agent_id: string
@@ -500,6 +551,45 @@ export type Database = {
           last_message_at?: string | null
           status?: string | null
           subject?: string | null
+        }
+        Relationships: []
+      }
+      default_agent_goals: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          goal_type: string
+          id: string
+          is_active: boolean | null
+          period: string
+          target_max: number
+          target_min: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          goal_type: string
+          id?: string
+          is_active?: boolean | null
+          period: string
+          target_max?: number
+          target_min?: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          goal_type?: string
+          id?: string
+          is_active?: boolean | null
+          period?: string
+          target_max?: number
+          target_min?: number
+          title?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
