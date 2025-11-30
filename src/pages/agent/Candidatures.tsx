@@ -396,6 +396,14 @@ export default function Candidatures() {
                           </>
                         )}
 
+                        {/* Acceptée - En attente action client */}
+                        {candidature.statut === 'acceptee' && (
+                          <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded-md text-sm border border-amber-200 dark:border-amber-800">
+                            <Clock className="h-4 w-4" />
+                            <span>Attente client : "Conclure le bail"</span>
+                          </div>
+                        )}
+
                         {/* Bail conclu - Valider avec régie */}
                         {candidature.statut === 'bail_conclu' && (
                           <Button size="sm" onClick={() => handleStatutChange(candidature.id, 'attente_bail', { agent_valide_regie: true, agent_valide_regie_at: new Date().toISOString() })}>
@@ -408,6 +416,14 @@ export default function Candidatures() {
                           <Button size="sm" onClick={() => { setSelectedCandidature(candidature); setShowDatesDialog(true); }}>
                             <FileCheck className="h-4 w-4 mr-1" />Bail reçu
                           </Button>
+                        )}
+
+                        {/* Bail reçu - En attente choix client */}
+                        {candidature.statut === 'bail_recu' && (
+                          <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-md text-sm border border-blue-200 dark:border-blue-800">
+                            <Clock className="h-4 w-4" />
+                            <span>Attente client : choix date signature</span>
+                          </div>
                         )}
 
                         {/* Signature planifiée - Marquer signé */}
@@ -429,6 +445,22 @@ export default function Candidatures() {
                           <Button size="sm" onClick={() => handleClesRemises(candidature.id)}>
                             <Key className="h-4 w-4 mr-1" />Clés remises
                           </Button>
+                        )}
+
+                        {/* Clés remises - Terminé */}
+                        {candidature.statut === 'cles_remises' && (
+                          <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 rounded-md text-sm border border-green-200 dark:border-green-800">
+                            <CheckCircle className="h-4 w-4" />
+                            <span>✅ Terminé - Clés remises</span>
+                          </div>
+                        )}
+
+                        {/* Refusée */}
+                        {candidature.statut === 'refusee' && (
+                          <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 rounded-md text-sm border border-red-200 dark:border-red-800">
+                            <XCircle className="h-4 w-4" />
+                            <span>Refusée</span>
+                          </div>
                         )}
 
                         {/* Voir client */}
