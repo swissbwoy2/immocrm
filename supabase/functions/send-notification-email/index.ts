@@ -27,7 +27,7 @@ const getNotificationIcon = (type: string): string => {
     etat_lieux_reminder: '🔑',
     document_uploaded: '📄',
     candidature_update: '📋',
-    // Candidature status notifications
+    // Candidature status notifications (client)
     candidature_acceptee: '🎉',
     candidature_refusee: '❌',
     candidature_bail_conclu: '📋',
@@ -37,12 +37,25 @@ const getNotificationIcon = (type: string): string => {
     candidature_signature_effectuee: '✅',
     candidature_etat_lieux_fixe: '🔑',
     candidature_cles_remises: '🏠',
+    // Candidature status notifications (admin)
+    candidature_acceptee_admin: '✅',
+    candidature_refusee_admin: '❌',
+    candidature_bail_conclu_admin: '📋',
+    candidature_attente_bail_admin: '⏳',
+    candidature_bail_recu_admin: '📄',
+    candidature_signature_planifiee_admin: '📅',
+    candidature_signature_effectuee_admin: '✅',
+    candidature_etat_lieux_fixe_admin: '🔑',
+    candidature_cles_remises_admin: '🏠',
     // Agent notifications from client actions
     bail_conclu: '🎉',
     date_signature_choisie: '📅',
-    // Visit notifications
+    // Visit notifications (client)
     visit_confirmed: '✅',
     visit_refused: '❌',
+    // Visit notifications (admin)
+    visit_confirmed_admin: '✅',
+    visit_refused_admin: '❌',
   };
   return icons[type] || '🔔';
 };
@@ -57,7 +70,7 @@ const getNotificationColor = (type: string): string => {
     visit_reminder: '#ef4444',
     signature_reminder: '#ec4899',
     etat_lieux_reminder: '#14b8a6',
-    // Candidature status colors
+    // Candidature status colors (client)
     candidature_acceptee: '#10b981',
     candidature_refusee: '#ef4444',
     candidature_bail_conclu: '#3b82f6',
@@ -67,12 +80,25 @@ const getNotificationColor = (type: string): string => {
     candidature_signature_effectuee: '#10b981',
     candidature_etat_lieux_fixe: '#14b8a6',
     candidature_cles_remises: '#10b981',
+    // Candidature status colors (admin)
+    candidature_acceptee_admin: '#10b981',
+    candidature_refusee_admin: '#ef4444',
+    candidature_bail_conclu_admin: '#3b82f6',
+    candidature_attente_bail_admin: '#f59e0b',
+    candidature_bail_recu_admin: '#8b5cf6',
+    candidature_signature_planifiee_admin: '#06b6d4',
+    candidature_signature_effectuee_admin: '#10b981',
+    candidature_etat_lieux_fixe_admin: '#14b8a6',
+    candidature_cles_remises_admin: '#10b981',
     // Agent notifications
     bail_conclu: '#10b981',
     date_signature_choisie: '#3b82f6',
-    // Visit notifications
+    // Visit notifications (client)
     visit_confirmed: '#10b981',
     visit_refused: '#ef4444',
+    // Visit notifications (admin)
+    visit_confirmed_admin: '#10b981',
+    visit_refused_admin: '#ef4444',
   };
   return colors[type] || '#6366f1';
 };
