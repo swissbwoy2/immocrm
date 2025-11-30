@@ -23,6 +23,8 @@ const eventTypeLabels: Record<string, string> = {
   rendez_vous: 'Rendez-vous',
   tache: 'Tâche',
   reunion: 'Réunion',
+  signature: 'Signature bail',
+  etat_lieux: 'État des lieux',
   autre: 'Autre',
 };
 
@@ -32,6 +34,8 @@ const eventTypeColors: Record<string, string> = {
   rendez_vous: 'bg-green-500/10 text-green-700 border-green-500/30',
   tache: 'bg-orange-500/10 text-orange-700 border-orange-500/30',
   reunion: 'bg-purple-500/10 text-purple-700 border-purple-500/30',
+  signature: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30',
+  etat_lieux: 'bg-cyan-500/10 text-cyan-700 border-cyan-500/30',
   autre: 'bg-gray-500/10 text-gray-700 border-gray-500/30',
 };
 

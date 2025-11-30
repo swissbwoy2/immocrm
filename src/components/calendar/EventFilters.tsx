@@ -91,6 +91,8 @@ export function EventFilters({
             <SelectContent>
               <SelectItem value="all">Tous les types</SelectItem>
               <SelectItem value="visite">Visites</SelectItem>
+              <SelectItem value="signature">Signatures bail</SelectItem>
+              <SelectItem value="etat_lieux">États des lieux</SelectItem>
               <SelectItem value="rappel">Rappels</SelectItem>
               <SelectItem value="rendez_vous">Rendez-vous</SelectItem>
               <SelectItem value="tache">Tâches</SelectItem>

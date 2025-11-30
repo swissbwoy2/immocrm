@@ -53,20 +53,61 @@ export default function AdminCalendrier() {
     try {
       setLoading(true);
 
-      // Load all data in parallel
-      const [eventsRes, visitesRes, agentsRes, clientsRes] = await Promise.all([
+      // Load all data in parallel including candidatures with important dates
+      const [eventsRes, visitesRes, agentsRes, clientsRes, candidaturesRes] = await Promise.all([
         supabase.from('calendar_events').select('*').order('event_date', { ascending: true }),
         supabase.from('visites').select('*').order('date_visite', { ascending: true }),
         supabase.from('agents').select('id, user_id, profiles(prenom, nom)'),
         supabase.from('clients').select('id, user_id, profiles(prenom, nom)'),
+        supabase.from('candidatures')
+          .select('id, client_id, offre_id, date_etat_lieux, heure_etat_lieux, date_signature_choisie, statut, clients(id, profiles(prenom, nom)), offres(adresse, agent_id)')
+          .or('date_etat_lieux.not.is.null,date_signature_choisie.not.is.null'),
       ]);
 
       if (eventsRes.error) throw eventsRes.error;
       if (visitesRes.error) throw visitesRes.error;
       if (agentsRes.error) throw agentsRes.error;
       if (clientsRes.error) throw clientsRes.error;
+      if (candidaturesRes.error) throw candidaturesRes.error;
 
-      setEvents(eventsRes.data || []);
+      // Transform candidatures into virtual calendar events
+      const candidatureEvents: CalendarEvent[] = [];
+      (candidaturesRes.data || []).forEach((candidature: any) => {
+        const clientName = candidature.clients?.profiles 
+          ? `${candidature.clients.profiles.prenom} ${candidature.clients.profiles.nom}` 
+          : 'Client';
+        const adresse = candidature.offres?.adresse || 'Adresse inconnue';
+        
+        // Add état des lieux event
+        if (candidature.date_etat_lieux) {
+          candidatureEvents.push({
+            id: `etat-lieux-${candidature.id}`,
+            title: `État des lieux - ${clientName}`,
+            event_date: candidature.date_etat_lieux,
+            event_type: 'etat_lieux',
+            status: candidature.statut === 'cles_remises' ? 'effectue' : 'planifie',
+            client_id: candidature.client_id,
+            agent_id: candidature.offres?.agent_id,
+            description: `Adresse: ${adresse}`,
+          });
+        }
+        
+        // Add signature event
+        if (candidature.date_signature_choisie) {
+          candidatureEvents.push({
+            id: `signature-${candidature.id}`,
+            title: `Signature bail - ${clientName}`,
+            event_date: candidature.date_signature_choisie,
+            event_type: 'signature',
+            status: candidature.statut === 'signature_effectuee' || candidature.statut === 'etat_lieux_fixe' || candidature.statut === 'cles_remises' ? 'effectue' : 'planifie',
+            client_id: candidature.client_id,
+            agent_id: candidature.offres?.agent_id,
+            description: `Adresse: ${adresse}`,
+          });
+        }
+      });
+
+      setEvents([...(eventsRes.data || []), ...candidatureEvents]);
       setVisites(visitesRes.data || []);
       setAgents((agentsRes.data as any) || []);
       setClients((clientsRes.data as any) || []);
