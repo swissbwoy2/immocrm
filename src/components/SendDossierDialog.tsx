@@ -34,6 +34,7 @@ interface SendDossierDialogProps {
   onOpenChange: (open: boolean) => void;
   clientId: string;
   clientName: string;
+  clientEmail?: string;
   offres: Offre[];
   onCandidatureCreated?: () => void;
 }
@@ -43,6 +44,7 @@ export function SendDossierDialog({
   onOpenChange, 
   clientId,
   clientName,
+  clientEmail,
   offres,
   onCandidatureCreated
 }: SendDossierDialogProps) {
@@ -62,23 +64,27 @@ export function SendDossierDialog({
     recipient_name: "",
     subject: "",
     body_html: "",
+    cc: "",
+    bcc: "",
   });
 
   useEffect(() => {
     if (open) {
       checkEmailConfiguration();
       loadClientDocuments();
-      // Reset form
+      // Reset form with client email in BCC by default
       setSelectedOffreId("");
       setEmail({
         recipient_email: "",
         recipient_name: "",
         subject: "",
         body_html: "",
+        cc: "",
+        bcc: clientEmail || "",
       });
       setSelectedDocuments([]);
     }
-  }, [open, clientId]);
+  }, [open, clientId, clientEmail]);
 
   // Auto-fill when offre is selected
   useEffect(() => {
@@ -221,12 +227,21 @@ export function SendDossierDialog({
           content_type: d.type,
         }));
 
+      // Prepare CC/BCC arrays
+      const ccList = email.cc ? email.cc.split(',').map(e => e.trim()).filter(e => e) : [];
+      const bccList = email.bcc ? email.bcc.split(',').map(e => e.trim()).filter(e => e) : [];
+
       // Call edge function to send email
       const { data, error } = await supabase.functions.invoke('send-smtp-email', {
         body: {
-          ...email,
+          recipient_email: email.recipient_email,
+          recipient_name: email.recipient_name,
+          subject: email.subject,
+          body_html: email.body_html,
           attachments,
           client_id: clientId,
+          cc: ccList.length > 0 ? ccList : undefined,
+          bcc: bccList.length > 0 ? bccList : undefined,
         },
       });
 
@@ -347,6 +362,30 @@ export function SendDossierDialog({
                     onChange={(e) => setEmail(prev => ({ ...prev, recipient_name: e.target.value }))}
                     placeholder="Nom de la gérance"
                   />
+                </div>
+              </div>
+
+              {/* CC / BCC */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Copie (CC)</Label>
+                  <Input
+                    type="email"
+                    value={email.cc}
+                    onChange={(e) => setEmail(prev => ({ ...prev, cc: e.target.value }))}
+                    placeholder="email@example.com"
+                  />
+                  <p className="text-xs text-muted-foreground">Le destinataire verra cette adresse</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Copie cachée (BCC)</Label>
+                  <Input
+                    type="email"
+                    value={email.bcc}
+                    onChange={(e) => setEmail(prev => ({ ...prev, bcc: e.target.value }))}
+                    placeholder={clientEmail || "email@example.com"}
+                  />
+                  <p className="text-xs text-muted-foreground">Le destinataire ne verra pas cette adresse</p>
                 </div>
               </div>
 
