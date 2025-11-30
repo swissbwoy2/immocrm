@@ -327,6 +327,131 @@ export type Database = {
           },
         ]
       }
+      client_candidates: {
+        Row: {
+          adresse: string | null
+          anciennete_mois: number | null
+          apport_personnel: number | null
+          autres_credits: boolean | null
+          charges_extraordinaires: boolean | null
+          charges_mensuelles: number | null
+          client_id: string
+          contact_gerance: string | null
+          created_at: string | null
+          curatelle: boolean | null
+          date_engagement: string | null
+          date_naissance: string | null
+          depuis_le: string | null
+          email: string | null
+          employeur: string | null
+          gerance_actuelle: string | null
+          id: string
+          lien_avec_client: string | null
+          loyer_actuel: number | null
+          montant_charges_extra: number | null
+          motif_changement: string | null
+          nationalite: string | null
+          nom: string
+          pieces_actuel: number | null
+          poursuites: boolean | null
+          prenom: string
+          profession: string | null
+          revenus_mensuels: number | null
+          secteur_activite: string | null
+          situation_familiale: string | null
+          source_revenus: string | null
+          telephone: string | null
+          type: string
+          type_contrat: string | null
+          type_permis: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          anciennete_mois?: number | null
+          apport_personnel?: number | null
+          autres_credits?: boolean | null
+          charges_extraordinaires?: boolean | null
+          charges_mensuelles?: number | null
+          client_id: string
+          contact_gerance?: string | null
+          created_at?: string | null
+          curatelle?: boolean | null
+          date_engagement?: string | null
+          date_naissance?: string | null
+          depuis_le?: string | null
+          email?: string | null
+          employeur?: string | null
+          gerance_actuelle?: string | null
+          id?: string
+          lien_avec_client?: string | null
+          loyer_actuel?: number | null
+          montant_charges_extra?: number | null
+          motif_changement?: string | null
+          nationalite?: string | null
+          nom: string
+          pieces_actuel?: number | null
+          poursuites?: boolean | null
+          prenom: string
+          profession?: string | null
+          revenus_mensuels?: number | null
+          secteur_activite?: string | null
+          situation_familiale?: string | null
+          source_revenus?: string | null
+          telephone?: string | null
+          type: string
+          type_contrat?: string | null
+          type_permis?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          anciennete_mois?: number | null
+          apport_personnel?: number | null
+          autres_credits?: boolean | null
+          charges_extraordinaires?: boolean | null
+          charges_mensuelles?: number | null
+          client_id?: string
+          contact_gerance?: string | null
+          created_at?: string | null
+          curatelle?: boolean | null
+          date_engagement?: string | null
+          date_naissance?: string | null
+          depuis_le?: string | null
+          email?: string | null
+          employeur?: string | null
+          gerance_actuelle?: string | null
+          id?: string
+          lien_avec_client?: string | null
+          loyer_actuel?: number | null
+          montant_charges_extra?: number | null
+          motif_changement?: string | null
+          nationalite?: string | null
+          nom?: string
+          pieces_actuel?: number | null
+          poursuites?: boolean | null
+          prenom?: string
+          profession?: string | null
+          revenus_mensuels?: number | null
+          secteur_activite?: string | null
+          situation_familiale?: string | null
+          source_revenus?: string | null
+          telephone?: string | null
+          type?: string
+          type_contrat?: string | null
+          type_permis?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_candidates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           adresse: string | null
@@ -595,6 +720,7 @@ export type Database = {
       }
       documents: {
         Row: {
+          candidate_id: string | null
           client_id: string | null
           created_at: string | null
           date_upload: string | null
@@ -609,6 +735,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          candidate_id?: string | null
           client_id?: string | null
           created_at?: string | null
           date_upload?: string | null
@@ -623,6 +750,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          candidate_id?: string | null
           client_id?: string | null
           created_at?: string | null
           date_upload?: string | null
@@ -637,6 +765,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "documents_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "client_candidates"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "documents_client_id_fkey"
             columns: ["client_id"]
