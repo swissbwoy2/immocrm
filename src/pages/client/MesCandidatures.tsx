@@ -428,7 +428,7 @@ const MesCandidatures = () => {
                     )}
 
                     {/* 🎉 ACCEPTED - Celebration + Conclude button */}
-                    {statut === 'acceptee' && (
+                    {statut === 'acceptee' && candidature && (
                       <div className="space-y-4 pt-4 border-t">
                         <div className="p-6 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border border-green-300 dark:border-green-700 rounded-xl text-center">
                           <PartyPopper className="h-12 w-12 mx-auto text-green-600 mb-3" />
@@ -468,7 +468,7 @@ const MesCandidatures = () => {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Annuler</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => candidature && handleAccepterConclure(candidature.id)}>
+                              <AlertDialogAction onClick={() => handleAccepterConclure(candidature.id)}>
                                 J'accepte et je conclus
                               </AlertDialogAction>
                             </AlertDialogFooter>
