@@ -23,6 +23,7 @@ import {
   AlertCircle,
   ArrowLeft,
   Reply,
+  ReplyAll,
   Forward,
   MailOpen,
   Clock,
@@ -75,7 +76,7 @@ export default function BoiteReception() {
   const [filter, setFilter] = useState<FilterType>('all');
   
   const [replyDialogOpen, setReplyDialogOpen] = useState(false);
-  const [replyMode, setReplyMode] = useState<'reply' | 'forward'>('reply');
+  const [replyMode, setReplyMode] = useState<'reply' | 'replyall' | 'forward'>('reply');
   
   const emailContentRef = useRef<HTMLDivElement>(null);
 
@@ -275,6 +276,12 @@ export default function BoiteReception() {
   const handleReply = () => {
     if (!selectedEmail) return;
     setReplyMode('reply');
+    setReplyDialogOpen(true);
+  };
+
+  const handleReplyAll = () => {
+    if (!selectedEmail) return;
+    setReplyMode('replyall');
     setReplyDialogOpen(true);
   };
 
@@ -636,6 +643,10 @@ export default function BoiteReception() {
                     <Button variant="default" size="sm" onClick={handleReply} className="h-9">
                       <Reply className="h-4 w-4 mr-2" />
                       Répondre
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleReplyAll} className="h-9">
+                      <ReplyAll className="h-4 w-4 mr-2" />
+                      Répondre à tous
                     </Button>
                     <Button variant="outline" size="sm" onClick={handleForward} className="h-9">
                       <Forward className="h-4 w-4 mr-2" />
