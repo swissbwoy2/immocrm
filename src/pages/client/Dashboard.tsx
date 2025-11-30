@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AccountActivationModal } from '@/components/AccountActivationModal';
 import { ClientStatsSection } from '@/components/stats/ClientStatsSection';
+import { MissingDocumentsAlert } from '@/components/MissingDocumentsAlert';
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ export default function ClientDashboard() {
   const [offres, setOffres] = useState<any[]>([]);
   const [visites, setVisites] = useState<any[]>([]);
   const [candidatures, setCandidatures] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [profileActif, setProfileActif] = useState<boolean | null>(null);
   const [showActivationModal, setShowActivationModal] = useState(false);
@@ -173,6 +175,14 @@ export default function ClientDashboard() {
         .order('updated_at', { ascending: false });
 
       setCandidatures(candidaturesData || []);
+
+      // Load documents
+      const { data: docsData } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('client_id', clientData.id);
+
+      setDocuments(docsData || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -447,6 +457,17 @@ export default function ClientDashboard() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Alerte documents manquants */}
+          {profileActif !== false && (
+            <div className="mb-6">
+              <MissingDocumentsAlert 
+                documents={documents} 
+                candidatureStatut={candidatures[0]?.statut}
+                showPostSignature={candidatures.some(c => ['signature_effectuee', 'etat_lieux_fixe'].includes(c.statut))}
+              />
+            </div>
           )}
 
           {/* Alerte mandat */}

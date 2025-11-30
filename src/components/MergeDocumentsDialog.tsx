@@ -84,6 +84,12 @@ export function MergeDocumentsDialog({
       'fiche_salaire': '💰 Fiche salaire',
       'extrait_poursuites': '📋 Extrait poursuites',
       'piece_identite': '🪪 Pièce ID',
+      'attestation_domicile': '🏠 Attestation domicile',
+      'rc_menage': '🛡️ RC Ménage',
+      'contrat_travail': '📝 Contrat de travail',
+      'attestation_employeur': '👔 Attestation employeur',
+      'copie_bail': '📋 Copie du bail',
+      'attestation_garantie_loyer': '🔐 Garantie de loyer',
       'dossier_complet': '📎 Dossier complet',
       'autre': '📄 Autre'
     };
@@ -113,6 +119,18 @@ export function MergeDocumentsDialog({
         setProgress({ current, total, status });
       });
 
+      // Vérifier la taille du fichier (max 50MB pour Supabase Storage par défaut)
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (mergedBlob.size > maxSize) {
+        toast({
+          title: 'Fichier trop volumineux',
+          description: `Le dossier fusionné fait ${(mergedBlob.size / (1024 * 1024)).toFixed(1)} MB. La limite est de 50 MB. Essayez de sélectionner moins de documents.`,
+          variant: 'destructive',
+        });
+        setIsProcessing(false);
+        return;
+      }
+
       // Uploader le fichier fusionné
       const fileExt = 'pdf';
       const storagePath = `${clientUserId}/${Date.now()}_dossier_complet.${fileExt}`;
@@ -121,7 +139,12 @@ export function MergeDocumentsDialog({
         .from('client-documents')
         .upload(storagePath, mergedBlob);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        if (uploadError.message?.includes('size') || uploadError.message?.includes('exceeded')) {
+          throw new Error('Le fichier est trop volumineux. Essayez de sélectionner moins de documents.');
+        }
+        throw uploadError;
+      }
 
       // Créer l'entrée en base
       const user = await supabase.auth.getUser();

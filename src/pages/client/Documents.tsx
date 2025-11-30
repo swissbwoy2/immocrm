@@ -342,6 +342,13 @@ export default function Documents() {
       'fiche_salaire': '💰 Fiche salaire',
       'extrait_poursuites': '📋 Extrait poursuites',
       'piece_identite': '🪪 Pièce ID',
+      'attestation_domicile': '🏠 Attestation domicile',
+      'rc_menage': '🛡️ RC Ménage',
+      'contrat_travail': '📝 Contrat travail',
+      'attestation_employeur': '👔 Attestation employeur',
+      'copie_bail': '📋 Copie bail',
+      'attestation_garantie_loyer': '🔐 Garantie loyer',
+      'dossier_complet': '📎 Dossier complet',
       'autre': '📄 Autre'
     };
     return labels[type] || '📄 Autre';
@@ -535,10 +542,16 @@ export default function Documents() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fiche_salaire">Fiche de salaire</SelectItem>
-                  <SelectItem value="extrait_poursuites">Extrait des poursuites</SelectItem>
-                  <SelectItem value="piece_identite">Pièce d'identité</SelectItem>
-                  <SelectItem value="autre">Autre document</SelectItem>
+                  <SelectItem value="fiche_salaire">💰 Fiche de salaire</SelectItem>
+                  <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
+                  <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
+                  <SelectItem value="attestation_domicile">🏠 Attestation de domicile</SelectItem>
+                  <SelectItem value="rc_menage">🛡️ RC Ménage</SelectItem>
+                  <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
+                  <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
+                  <SelectItem value="copie_bail">📋 Copie du bail</SelectItem>
+                  <SelectItem value="attestation_garantie_loyer">🔐 Attestation garantie de loyer</SelectItem>
+                  <SelectItem value="autre">📄 Autre document</SelectItem>
                 </SelectContent>
               </Select>
             </div>
