@@ -251,7 +251,12 @@ export default function AdminDashboard() {
           {/* Répartition des agents */}
           <Card className="mb-8">
             <CardHeader>
-              <CardTitle className="text-base md:text-lg">Répartition des clients</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base md:text-lg">Répartition des clients</CardTitle>
+                <p className="text-xs text-muted-foreground">
+                  Critique = mandat &gt; 90 jours
+                </p>
+              </div>
             </CardHeader>
             <CardContent>
               {/* Vue tableau sur desktop, vue cartes sur mobile/tablette */}
@@ -262,7 +267,7 @@ export default function AdminDashboard() {
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Agent</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Statut</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Clients</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Critiques</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Critiques (&gt;90j)</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Commission pot.</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Actions</th>
                     </tr>
@@ -270,7 +275,7 @@ export default function AdminDashboard() {
                   <tbody>
                     {agents.map(agent => {
                       const agentClients = clients.filter(c => c.agentId === agent.id);
-                      const critiques = agentClients.filter(c => calculateDaysElapsed(c.dateInscription) >= 90).length;
+                      const critiquesClients = agentClients.filter(c => calculateDaysElapsed(c.dateInscription) >= 90);
                       const commissionPot = agentClients.reduce((sum, c) => sum + c.budgetMax, 0);
 
                       return (
@@ -290,8 +295,18 @@ export default function AdminDashboard() {
                           </td>
                           <td className="py-3 px-4 text-sm">{agentClients.length}</td>
                           <td className="py-3 px-4 text-sm">
-                            {critiques > 0 ? (
-                              <span className="text-destructive font-medium">{critiques}</span>
+                            {critiquesClients.length > 0 ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-destructive font-medium">{critiquesClients.length}</span>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-6 px-2 text-xs text-destructive"
+                                  onClick={() => navigate('/admin/mandats')}
+                                >
+                                  Voir
+                                </Button>
+                              </div>
                             ) : (
                               <span className="text-muted-foreground">0</span>
                             )}
@@ -319,7 +334,7 @@ export default function AdminDashboard() {
               <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {agents.map(agent => {
                   const agentClients = clients.filter(c => c.agentId === agent.id);
-                  const critiques = agentClients.filter(c => calculateDaysElapsed(c.dateInscription) >= 90).length;
+                  const critiquesClients = agentClients.filter(c => calculateDaysElapsed(c.dateInscription) >= 90);
                   const commissionPot = agentClients.reduce((sum, c) => sum + c.budgetMax, 0);
 
                   return (
@@ -344,10 +359,17 @@ export default function AdminDashboard() {
                           <p className="font-semibold">{agentClients.length}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground">Critiques</p>
-                          <p className={critiques > 0 ? 'font-semibold text-destructive' : 'text-muted-foreground'}>
-                            {critiques}
-                          </p>
+                          <p className="text-muted-foreground">Critiques (&gt;90j)</p>
+                          {critiquesClients.length > 0 ? (
+                            <button 
+                              onClick={() => navigate('/admin/mandats')}
+                              className="font-semibold text-destructive hover:underline"
+                            >
+                              {critiquesClients.length}
+                            </button>
+                          ) : (
+                            <p className="text-muted-foreground">0</p>
+                          )}
                         </div>
                         <div>
                           <p className="text-muted-foreground">Commission</p>
@@ -379,49 +401,60 @@ export default function AdminDashboard() {
               <CardTitle className="text-base md:text-lg">Alertes</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 md:space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-warning/10 rounded-lg border border-warning/20">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-warning flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-sm md:text-base">{clientsSansAgent} client(s) sans agent</p>
-                    <p className="text-xs md:text-sm text-muted-foreground">Assignez un agent pour commencer le suivi</p>
+              {clientsSansAgent > 0 && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-warning/10 rounded-lg border border-warning/20">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-warning flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm md:text-base">{clientsSansAgent} client(s) sans agent assigné</p>
+                      <p className="text-xs md:text-sm text-muted-foreground">Assignez un agent pour commencer le suivi</p>
+                    </div>
                   </div>
+                  <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto" onClick={() => navigate('/admin/assignations')}>
+                    Assigner
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto" onClick={() => navigate('/admin/assignations')}>
-                  Assigner
-                </Button>
-              </div>
+              )}
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-primary/10 rounded-lg border border-primary/20">
-                <div className="flex items-center gap-3">
-                  <Clock className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
-                  <div>
-                    <p className="font-medium text-sm md:text-base">{clientsJ60} client(s) à J+60</p>
-                    <p className="text-xs md:text-sm text-muted-foreground">Notification de renouvellement à envoyer</p>
+              {clientsJ60 > 0 && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-primary/10 rounded-lg border border-primary/20">
+                  <div className="flex items-center gap-3">
+                    <Clock className="w-4 h-4 md:w-5 md:h-5 text-primary flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm md:text-base">{clientsJ60} client(s) entre J+60 et J+90</p>
+                      <p className="text-xs md:text-sm text-muted-foreground">Mandats proches de l'expiration (60-89 jours)</p>
+                    </div>
                   </div>
+                  <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto" onClick={() => navigate('/admin/mandats')}>
+                    Voir les mandats
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto">
-                  Voir les clients
-                </Button>
-              </div>
+              )}
 
               {deadlinesCritiques > 0 && (
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-destructive/10 rounded-lg border border-destructive/20">
                   <div className="flex items-center gap-3">
                     <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-destructive flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-sm md:text-base">{deadlinesCritiques} deadline(s) critique(s)</p>
-                      <p className="text-xs md:text-sm text-muted-foreground">Mandats expirés ou sur le point d'expirer</p>
+                      <p className="font-medium text-sm md:text-base">{deadlinesCritiques} mandat(s) expiré(s) (&gt;90 jours)</p>
+                      <p className="text-xs md:text-sm text-muted-foreground">Action urgente requise - renouvellement ou fermeture</p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto" onClick={() => navigate('/admin/clients')}>
-                    Voir les clients
+                  <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto text-destructive hover:text-destructive" onClick={() => navigate('/admin/mandats')}>
+                    Gérer les mandats
                   </Button>
+                </div>
+              )}
+
+              {clientsSansAgent === 0 && clientsJ60 === 0 && deadlinesCritiques === 0 && (
+                <div className="flex items-center gap-3 p-3 md:p-4 bg-success/10 rounded-lg border border-success/20">
+                  <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-success flex-shrink-0" />
+                  <p className="text-sm text-muted-foreground">Aucune alerte - tout est en ordre</p>
                 </div>
               )}
             </CardContent>
           </Card>
+        </div>
       </div>
-    </div>
   );
 }
