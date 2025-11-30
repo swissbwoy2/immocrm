@@ -36,6 +36,10 @@ export default function ClientDashboard() {
   const [profileActif, setProfileActif] = useState<boolean | null>(null);
   const [showActivationModal, setShowActivationModal] = useState(false);
   const [clientProfile, setClientProfile] = useState<any>(null);
+  
+  // Hooks pour les candidats et solvabilité - DOIVENT être au niveau supérieur
+  const { candidates, refresh: refreshCandidates } = useClientCandidates(client?.id);
+  const solvabilityResult = useSolvabilityCheck(client, candidates);
 
   useEffect(() => {
     loadData();
@@ -395,10 +399,6 @@ export default function ClientDashboard() {
       </div>
     );
   }
-
-  // Hook pour les candidats supplémentaires
-  const { candidates, refresh: refreshCandidates } = useClientCandidates(client?.id);
-  const solvabilityResult = useSolvabilityCheck(client, candidates);
 
   const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
   const daysRemaining = calculateDaysRemaining(client.date_ajout || client.created_at);
