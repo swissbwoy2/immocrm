@@ -102,6 +102,7 @@ export default function ClientDetail() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [candidatures, setCandidatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [documentsRefreshKey, setDocumentsRefreshKey] = useState(0);
   
   // Hook pour les candidats supplémentaires
   const { candidates, refresh: refreshCandidates } = useClientCandidates(id);
@@ -378,6 +379,8 @@ export default function ClientDetail() {
 
       // Mettre à jour l'état local
       setDocuments(documents.filter(d => d.id !== documentToDelete.id));
+      // Forcer le rafraîchissement de CandidateDocumentsSection
+      setDocumentsRefreshKey(prev => prev + 1);
 
       toast({
         title: 'Document supprimé',
@@ -1339,6 +1342,7 @@ export default function ClientDetail() {
               clientName={`${profile.prenom} ${profile.nom}`}
               candidates={candidates}
               onDocumentsChange={loadClientData}
+              refreshKey={documentsRefreshKey}
             />
           </div>
 
