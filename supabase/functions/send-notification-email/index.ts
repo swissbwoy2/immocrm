@@ -182,8 +182,10 @@ serve(async (req) => {
     const userName = profile.prenom ? `${profile.prenom}` : undefined;
     const emailHtml = generateEmailHtml(title, message, notification_type, link, userName);
 
-    // Send email via Resend
-    const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "Logisorama <support@logisorama.ch>";
+    // Send email via Resend - use hardcoded value to avoid env variable issues
+    const fromEmail = "Logisorama <support@logisorama.ch>";
+    
+    console.log(`Sending email from: ${fromEmail} to: ${profile.email}`);
     
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: fromEmail,
