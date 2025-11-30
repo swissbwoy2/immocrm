@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { FileText, Download, Eye, User, Calendar, File, Search } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { FileText, Download, Eye, User, Calendar, File, Search, Pencil } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -18,6 +19,9 @@ export default function AdminDocuments() {
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [documentToRename, setDocumentToRename] = useState<any>(null);
+  const [newDocumentName, setNewDocumentName] = useState('');
 
   useEffect(() => {
     loadDocuments();
@@ -171,6 +175,28 @@ export default function AdminDocuments() {
     }
   };
 
+  const handleRename = async () => {
+    if (!documentToRename || !newDocumentName.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from('documents')
+        .update({ nom: newDocumentName.trim() })
+        .eq('id', documentToRename.id);
+
+      if (error) throw error;
+
+      toast.success('Document renommé avec succès');
+      setRenameDialogOpen(false);
+      setDocumentToRename(null);
+      setNewDocumentName('');
+      loadDocuments();
+    } catch (error) {
+      console.error('Error renaming document:', error);
+      toast.error('Impossible de renommer le document');
+    }
+  };
+
   const getDocumentIcon = (type: string) => {
     if (type.includes('pdf')) return '📄';
     if (type.includes('image')) return '🖼️';
@@ -285,6 +311,17 @@ export default function AdminDocuments() {
                           ) : null}
                           <Button
                             size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setDocumentToRename(doc);
+                              setNewDocumentName(doc.nom);
+                              setRenameDialogOpen(true);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
                             onClick={() => handleDownload(doc)}
                             className="flex-1"
                           >
@@ -347,6 +384,33 @@ export default function AdminDocuments() {
               </p>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de renommage */}
+      <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Renommer le document</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nouveau nom</Label>
+              <Input
+                value={newDocumentName}
+                onChange={(e) => setNewDocumentName(e.target.value)}
+                placeholder="Nom du document"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleRename} disabled={!newDocumentName.trim()}>
+              Renommer
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
