@@ -40,6 +40,7 @@ import AgentVisites from "./pages/agent/Visites";
 import AgentCalendrier from "./pages/agent/Calendrier";
 import AgentDocuments from "./pages/agent/Documents";
 import AgentConclureAffaire from "./pages/agent/ConclureAffaire";
+import AgentTransactions from "./pages/agent/Transactions";
 import AgentNotifications from "./pages/agent/Notifications";
 import AgentParametres from "./pages/agent/Parametres";
 import AgentEnvoyerEmail from "./pages/agent/EnvoyerEmail";
@@ -111,6 +112,7 @@ const App = () => (
             <Route path="/agent/documents" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDocuments /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/messagerie" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentMessagerie /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/conclure-affaire" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentConclureAffaire /></AppLayout></ProtectedRoute>} />
+            <Route path="/agent/transactions" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentTransactions /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/notifications" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentNotifications /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/parametres" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentParametres /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/envoyer-email" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentEnvoyerEmail /></AppLayout></ProtectedRoute>} />

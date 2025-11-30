@@ -279,6 +279,7 @@ export default function AgentDashboard() {
               icon={CheckCircle}
               variant="success"
               subtitle="total"
+              onClick={() => navigate('/agent/transactions')}
             />
             <KPICard 
               title="Commission pot." 
@@ -293,6 +294,7 @@ export default function AgentDashboard() {
               icon={DollarSign}
               variant="success"
               subtitle={`CHF (${transactionsCeMois.length} affaire${transactionsCeMois.length > 1 ? 's' : ''})`}
+              onClick={() => navigate('/agent/transactions')}
             />
           </div>
 
