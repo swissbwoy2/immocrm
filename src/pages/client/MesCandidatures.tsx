@@ -60,6 +60,7 @@ const MesCandidatures = () => {
         return;
       }
 
+      // Load offres
       const { data: offresData, error } = await supabase
         .from('offres')
         .select('*')
@@ -68,7 +69,23 @@ const MesCandidatures = () => {
 
       if (error) throw error;
 
-      setOffres(offresData || []);
+      // Also load candidatures to get real candidature status
+      const { data: candidaturesData } = await supabase
+        .from('candidatures')
+        .select('offre_id, statut, date_depot, dossier_complet')
+        .eq('client_id', clientData.id);
+
+      // Merge offres with candidature status
+      const offresWithCandidatures = (offresData || []).map(offre => {
+        const candidature = candidaturesData?.find(c => c.offre_id === offre.id);
+        return {
+          ...offre,
+          candidature_statut: candidature?.statut || null,
+          candidature_date: candidature?.date_depot || null,
+        };
+      });
+
+      setOffres(offresWithCandidatures);
     } catch (error) {
       console.error('Error loading offres:', error);
     } finally {
@@ -174,11 +191,16 @@ const MesCandidatures = () => {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
                         <CardTitle className="text-xl">{offre.adresse}</CardTitle>
-                        <Badge variant={getStatutBadgeVariant(offre.statut)}>
-                          {getStatutLabel(offre.statut)}
+                        <Badge variant={getStatutBadgeVariant(offre.candidature_statut || offre.statut)}>
+                          {getStatutLabel(offre.candidature_statut || offre.statut)}
                         </Badge>
+                        {offre.candidature_statut && offre.candidature_date && (
+                          <span className="text-xs text-muted-foreground">
+                            Candidature déposée le {new Date(offre.candidature_date).toLocaleDateString('fr-CH')}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
