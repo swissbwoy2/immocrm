@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -39,6 +39,14 @@ const Messagerie = () => {
     size: number;
   } | null>(null);
 
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
   useEffect(() => {
     loadClientAndConversations();
     // Mark new_message notifications as read when visiting this page
@@ -50,6 +58,11 @@ const Messagerie = () => {
       loadMessages(selectedConv);
     }
   }, [selectedConv]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, selectedConv]);
 
   // Setup realtime subscription
   useEffect(() => {
@@ -506,6 +519,7 @@ const Messagerie = () => {
               )}
             </Card>
           ))}
+          <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
       <div className="p-4 border-t bg-card">

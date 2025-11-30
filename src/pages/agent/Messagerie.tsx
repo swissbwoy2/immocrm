@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,14 @@ const Messagerie = () => {
     name: string;
     size: number;
   } | null>(null);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
 
   useEffect(() => {
     loadAgentAndConversations();
@@ -49,6 +57,11 @@ const Messagerie = () => {
       loadMessages(selectedConv);
     }
   }, [selectedConv]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, selectedConv]);
 
   // Setup realtime subscription
   useEffect(() => {
@@ -369,6 +382,7 @@ const Messagerie = () => {
               )}
             </Card>
           ))}
+          <div ref={messagesEndRef} />
         </div>
       </div>
       <div className="p-4 border-t bg-card">
