@@ -18,7 +18,7 @@ interface ParsedEmail {
   is_read: boolean;
 }
 
-// Simple IMAP client
+// Simple IMAP client with improved parsing
 class SimpleImapClient {
   private conn: Deno.TlsConn | null = null;
   private encoder = new TextEncoder();
@@ -32,60 +32,53 @@ class SimpleImapClient {
       hostname: host,
       port: port,
     });
-    const greeting = await this.readResponse();
+    const greeting = await this.readUntilTag('*');
     console.log('[IMAP] Connected, greeting received');
-    return;
   }
 
-  private async readResponse(): Promise<string[]> {
-    const lines: string[] = [];
-    const buf = new Uint8Array(32768);
+  // Improved reading function that handles large responses
+  private async readUntilTag(expectedTag: string): Promise<string> {
+    const buf = new Uint8Array(65536); // 64KB buffer
+    let fullResponse = '';
     let attempts = 0;
-    const maxAttempts = 50;
+    const maxAttempts = 500; // Much higher limit
     
     while (attempts < maxAttempts) {
       attempts++;
-      const n = await this.conn!.read(buf);
-      if (n === null) break;
       
-      this.buffer += this.decoder.decode(buf.subarray(0, n));
-      
-      while (this.buffer.includes('\r\n')) {
-        const idx = this.buffer.indexOf('\r\n');
-        const line = this.buffer.substring(0, idx);
-        this.buffer = this.buffer.substring(idx + 2);
-        lines.push(line);
+      try {
+        const n = await this.conn!.read(buf);
+        if (n === null) break;
         
-        // Check for completion
-        if (line.match(/^[A-Z]\d+ (OK|NO|BAD)/)) {
-          return lines;
+        const chunk = this.decoder.decode(buf.subarray(0, n));
+        fullResponse += chunk;
+        
+        // For greeting
+        if (expectedTag === '*' && fullResponse.includes('* OK')) {
+          return fullResponse;
         }
-        if (line.startsWith('* OK') && lines.length === 1) {
-          return lines;
+        
+        // Check if we received the completion tag
+        const tagPattern = new RegExp(`^${expectedTag} (OK|NO|BAD)`, 'm');
+        if (tagPattern.test(fullResponse)) {
+          return fullResponse;
         }
+        
+        // Safeguard for very large responses (10MB max)
+        if (fullResponse.length > 10 * 1024 * 1024) {
+          console.log('[IMAP] Response too large, stopping read');
+          break;
+        }
+      } catch (e) {
+        console.error('[IMAP] Read error:', e);
+        break;
       }
-      
-      // Check if we have a literal coming
-      const lastLine = lines[lines.length - 1] || this.buffer;
-      const literalMatch = lastLine.match(/\{(\d+)\}$/);
-      if (literalMatch) {
-        // Wait for literal data
-        const literalSize = parseInt(literalMatch[1]);
-        while (this.buffer.length < literalSize && attempts < maxAttempts) {
-          attempts++;
-          const n = await this.conn!.read(buf);
-          if (n === null) break;
-          this.buffer += this.decoder.decode(buf.subarray(0, n));
-        }
-      }
-      
-      if (lines.length > 2000) break;
     }
     
-    return lines;
+    return fullResponse;
   }
 
-  private async sendCommand(command: string): Promise<string[]> {
+  private async sendCommand(command: string): Promise<string> {
     const tag = `A${++this.tagCounter}`;
     const fullCommand = `${tag} ${command}\r\n`;
     const safeLog = command.startsWith('LOGIN') 
@@ -93,14 +86,14 @@ class SimpleImapClient {
       : `${tag} ${command.substring(0, 100)}`;
     console.log(`[IMAP] >>> ${safeLog}`);
     await this.conn!.write(this.encoder.encode(fullCommand));
-    const response = await this.readResponse();
-    console.log(`[IMAP] <<< ${response.length} lines received`);
+    const response = await this.readUntilTag(tag);
+    console.log(`[IMAP] <<< Response size: ${response.length} bytes`);
     return response;
   }
 
   async login(user: string, password: string): Promise<boolean> {
     const response = await this.sendCommand(`LOGIN "${user}" "${password}"`);
-    const success = response.some(line => line.includes(' OK '));
+    const success = response.includes(' OK ');
     console.log(`[IMAP] Login ${success ? 'successful' : 'failed'}`);
     return success;
   }
@@ -108,11 +101,9 @@ class SimpleImapClient {
   async selectInbox(): Promise<number> {
     const response = await this.sendCommand('SELECT INBOX');
     let messageCount = 0;
-    for (const line of response) {
-      const match = line.match(/\* (\d+) EXISTS/);
-      if (match) {
-        messageCount = parseInt(match[1]);
-      }
+    const match = response.match(/\* (\d+) EXISTS/);
+    if (match) {
+      messageCount = parseInt(match[1]);
     }
     console.log(`[IMAP] INBOX selected, ${messageCount} messages`);
     return messageCount;
@@ -124,40 +115,76 @@ class SimpleImapClient {
     if (start < 1) start = 1;
     if (end < start) return emails;
 
-    const range = `${start}:${end}`;
-    console.log(`[IMAP] Fetching range ${range}...`);
+    // Fetch in smaller batches to avoid timeouts
+    const batchSize = 25;
+    let currentStart = end; // Start from most recent
     
-    // Fetch all emails in one request with full data
-    const response = await this.sendCommand(
-      `FETCH ${range} (UID FLAGS BODY.PEEK[HEADER] BODY.PEEK[TEXT])`
-    );
-    
-    const fullResponse = response.join('\n');
-    console.log(`[IMAP] Response size: ${fullResponse.length} chars`);
-    
-    // Split by FETCH responses - improved regex
-    const fetchMatches = fullResponse.split(/^\* \d+ FETCH/m);
-    
-    console.log(`[IMAP] Found ${fetchMatches.length - 1} FETCH responses`);
-    
-    for (let i = 1; i < fetchMatches.length && emails.length < 200; i++) {
-      const fetchData = fetchMatches[i];
+    while (currentStart >= start && emails.length < 100) {
+      const currentEnd = currentStart;
+      const batchStart = Math.max(start, currentStart - batchSize + 1);
       
-      try {
-        const email = this.parseFetchResponse(fetchData, imapUser);
-        if (email && email.message_id) {
-          emails.push(email);
-        }
-      } catch (e) {
-        console.error(`[IMAP] Error parsing email ${i}:`, e);
-      }
+      console.log(`[IMAP] Fetching batch ${batchStart}:${currentEnd}...`);
+      
+      const response = await this.sendCommand(
+        `FETCH ${batchStart}:${currentEnd} (UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID)] BODY.PEEK[TEXT])`
+      );
+      
+      // Parse the response to extract individual emails
+      const batchEmails = this.parseAllFetchResponses(response, imapUser);
+      console.log(`[IMAP] Batch parsed: ${batchEmails.length} emails`);
+      
+      emails.push(...batchEmails);
+      
+      currentStart = batchStart - 1;
+      
+      // Safety limit
+      if (emails.length >= 100) break;
     }
 
-    console.log(`[IMAP] Parsed ${emails.length} emails`);
+    console.log(`[IMAP] Total parsed: ${emails.length} emails`);
     return emails;
   }
 
-  private parseFetchResponse(data: string, imapUser: string): ParsedEmail | null {
+  private parseAllFetchResponses(response: string, imapUser: string): ParsedEmail[] {
+    const emails: ParsedEmail[] = [];
+    
+    // Find all FETCH responses using a more robust method
+    // Each FETCH starts with "* NUMBER FETCH"
+    const fetchRegex = /\* (\d+) FETCH \(/g;
+    let match;
+    const fetchPositions: {start: number; msgNum: number}[] = [];
+    
+    while ((match = fetchRegex.exec(response)) !== null) {
+      fetchPositions.push({
+        start: match.index,
+        msgNum: parseInt(match[1])
+      });
+    }
+    
+    console.log(`[IMAP] Found ${fetchPositions.length} FETCH responses`);
+    
+    for (let i = 0; i < fetchPositions.length; i++) {
+      const startPos = fetchPositions[i].start;
+      const endPos = i < fetchPositions.length - 1 
+        ? fetchPositions[i + 1].start 
+        : response.length;
+      
+      const fetchData = response.substring(startPos, endPos);
+      
+      try {
+        const email = this.parseSingleFetch(fetchData, imapUser);
+        if (email && email.from_email && email.from_email !== 'unknown@email.com') {
+          emails.push(email);
+        }
+      } catch (e) {
+        console.error(`[IMAP] Parse error for msg ${fetchPositions[i].msgNum}:`, e);
+      }
+    }
+    
+    return emails;
+  }
+
+  private parseSingleFetch(data: string, imapUser: string): ParsedEmail | null {
     const email: ParsedEmail = {
       message_id: '',
       from_email: imapUser,
@@ -171,157 +198,141 @@ class SimpleImapClient {
     };
 
     // Parse UID
-    const uidMatch = data.match(/UID (\d+)/i);
+    const uidMatch = data.match(/UID\s+(\d+)/i);
     if (uidMatch) {
-      email.message_id = uidMatch[1];
+      email.message_id = `uid_${uidMatch[1]}`;
     } else {
       email.message_id = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
     // Parse FLAGS
-    const flagsMatch = data.match(/FLAGS \(([^)]*)\)/i);
+    const flagsMatch = data.match(/FLAGS\s*\(([^)]*)\)/i);
     if (flagsMatch) {
       email.is_read = flagsMatch[1].includes('\\Seen');
     }
 
-    // Find HEADER section - try multiple patterns
+    // Extract HEADER.FIELDS section
+    // Format: BODY[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID)] {SIZE}\r\nHEADERS...
+    const headerFieldsMatch = data.match(/BODY\[HEADER\.FIELDS[^\]]*\]\s*\{(\d+)\}/i);
     let headers = '';
     
-    // Pattern 1: BODY[HEADER] with literal size
-    const headerMatch1 = data.match(/BODY\[HEADER\]\s*\{(\d+)\}\s*\r?\n([\s\S]*)/i);
-    if (headerMatch1) {
-      const size = parseInt(headerMatch1[1]);
-      headers = headerMatch1[2].substring(0, size);
-    }
-    
-    // Pattern 2: BODY[HEADER] without literal size
-    if (!headers) {
-      const headerMatch2 = data.match(/BODY\[HEADER\]\s*\r?\n([\s\S]*?)(?=BODY\[TEXT\]|$)/i);
-      if (headerMatch2) {
-        headers = headerMatch2[1];
-      }
-    }
-    
-    // Pattern 3: Look for common email headers directly
-    if (!headers) {
-      const fromIdx = data.search(/^From:/mi);
+    if (headerFieldsMatch) {
+      const size = parseInt(headerFieldsMatch[1]);
+      const startIdx = data.indexOf(headerFieldsMatch[0]) + headerFieldsMatch[0].length;
+      // Skip the \r\n after {SIZE}
+      const headerStart = data.indexOf('\n', startIdx) + 1;
+      headers = data.substring(headerStart, headerStart + size);
+      console.log(`[IMAP-DEBUG] Headers extracted (${headers.length}/${size} bytes)`);
+    } else {
+      // Fallback: look for common headers directly
+      const fromIdx = data.indexOf('From:');
       if (fromIdx >= 0) {
-        const endIdx = data.indexOf('\n\n', fromIdx);
+        const endIdx = data.indexOf('\r\n\r\n', fromIdx);
         if (endIdx > fromIdx) {
           headers = data.substring(fromIdx, endIdx);
         }
       }
     }
 
-    // Parse From header with improved regex
-    const fromPatterns = [
-      /^From:\s*(.+?)(?=\r?\n[A-Z][a-zA-Z-]*:|$)/mi,
-      /^From:\s*(.+)/mi
-    ];
-    for (const pattern of fromPatterns) {
-      const fromMatch = headers.match(pattern);
+    // Parse headers
+    if (headers) {
+      // From
+      const fromMatch = headers.match(/^From:\s*(.+?)(?:\r?\n(?![^\s])|\r?\n\r?\n|$)/mi);
       if (fromMatch) {
         const fromValue = decodeHeaderValue(fromMatch[1].replace(/\r?\n\s+/g, ' ').trim());
         const parsed = parseEmailAddress(fromValue);
         if (parsed.email) {
           email.from_email = parsed.email;
           email.from_name = parsed.name;
-          break;
         }
       }
-    }
 
-    // Parse To header
-    const toPatterns = [
-      /^To:\s*(.+?)(?=\r?\n[A-Z][a-zA-Z-]*:|$)/mi,
-      /^To:\s*(.+)/mi
-    ];
-    for (const pattern of toPatterns) {
-      const toMatch = headers.match(pattern);
+      // To
+      const toMatch = headers.match(/^To:\s*(.+?)(?:\r?\n(?![^\s])|\r?\n\r?\n|$)/mi);
       if (toMatch) {
         const toValue = decodeHeaderValue(toMatch[1].replace(/\r?\n\s+/g, ' ').trim());
         const parsed = parseEmailAddress(toValue);
         if (parsed.email) {
           email.to_email = parsed.email;
-          break;
         }
       }
-    }
 
-    // Parse Subject header with improved regex
-    const subjectPatterns = [
-      /^Subject:\s*(.+?)(?=\r?\n[A-Z][a-zA-Z-]*:|$)/mi,
-      /^Subject:\s*(.+)/mi
-    ];
-    for (const pattern of subjectPatterns) {
-      const subjectMatch = headers.match(pattern);
+      // Subject
+      const subjectMatch = headers.match(/^Subject:\s*(.+?)(?:\r?\n(?![^\s])|\r?\n\r?\n|$)/mi);
       if (subjectMatch) {
-        const subject = decodeHeaderValue(subjectMatch[1].replace(/\r?\n\s+/g, ' ').trim());
-        if (subject) {
-          email.subject = subject;
-          break;
+        email.subject = decodeHeaderValue(subjectMatch[1].replace(/\r?\n\s+/g, ' ').trim());
+      }
+
+      // Date
+      const dateMatch = headers.match(/^Date:\s*(.+?)(?:\r?\n|$)/mi);
+      if (dateMatch) {
+        try {
+          const dateStr = dateMatch[1].trim();
+          const parsedDate = new Date(dateStr);
+          if (!isNaN(parsedDate.getTime())) {
+            email.received_at = parsedDate.toISOString();
+          }
+        } catch (e) {
+          // Keep default
         }
+      }
+
+      // Message-ID for unique identification
+      const msgIdMatch = headers.match(/^Message-ID:\s*<([^>]+)>/mi);
+      if (msgIdMatch) {
+        email.message_id = msgIdMatch[1].substring(0, 100);
       }
     }
 
-    // Parse Date header
-    const dateMatch = headers.match(/^Date:\s*(.+?)(?=\r?\n|$)/mi);
-    if (dateMatch) {
-      try {
-        const dateStr = dateMatch[1].trim();
-        const parsedDate = new Date(dateStr);
-        if (!isNaN(parsedDate.getTime())) {
-          email.received_at = parsedDate.toISOString();
-        }
-      } catch (e) {
-        // Keep default date
-      }
-    }
-
-    // Find TEXT section
-    const textMatch = data.match(/BODY\[TEXT\]\s*(?:\{\d+\})?\s*\r?\n([\s\S]*?)(?=\)\s*$|\nA\d+)/i);
-    let bodyContent = '';
+    // Extract BODY[TEXT] section
+    const textMatch = data.match(/BODY\[TEXT\]\s*\{(\d+)\}/i);
     if (textMatch) {
-      bodyContent = textMatch[1];
-    }
-
-    // Parse Content-Type from headers
-    const contentTypeMatch = headers.match(/^Content-Type:\s*([^;\r\n]+)/mi);
-    const contentType = contentTypeMatch ? contentTypeMatch[1].toLowerCase().trim() : 'text/plain';
-    
-    // Check for multipart
-    const boundaryMatch = headers.match(/boundary="?([^"\s\r\n;]+)"?/i) ||
-                          bodyContent.match(/boundary="?([^"\s\r\n;]+)"?/i);
-
-    if (boundaryMatch && bodyContent) {
-      // Multipart message
-      const boundary = boundaryMatch[1];
-      const { text, html } = parseMultipart(bodyContent, boundary);
-      email.body_text = text;
-      email.body_html = html;
-    } else if (bodyContent) {
-      // Single part
-      const encodingMatch = headers.match(/^Content-Transfer-Encoding:\s*(\S+)/mi);
-      const encoding = encodingMatch ? encodingMatch[1].toLowerCase().trim() : '';
+      const size = parseInt(textMatch[1]);
+      const startIdx = data.indexOf(textMatch[0]) + textMatch[0].length;
+      const textStart = data.indexOf('\n', startIdx) + 1;
+      const bodyContent = data.substring(textStart, textStart + Math.min(size, 50000));
       
-      let decoded = bodyContent;
-      if (encoding === 'quoted-printable') {
-        decoded = decodeQuotedPrintable(bodyContent);
-      } else if (encoding === 'base64') {
-        decoded = decodeBase64UTF8(bodyContent);
-      }
-      
-      if (contentType.includes('text/html')) {
-        email.body_html = decoded;
-        email.body_text = stripHtml(decoded);
+      // Check for Content-Type in the full data or body
+      if (bodyContent.includes('<html') || bodyContent.includes('<HTML') || 
+          bodyContent.includes('<body') || bodyContent.includes('<BODY') ||
+          bodyContent.includes('<!DOCTYPE html')) {
+        email.body_html = bodyContent;
+        email.body_text = stripHtml(bodyContent);
+      } else if (bodyContent.includes('Content-Type:')) {
+        // Multipart - try to parse
+        const boundaryMatch = bodyContent.match(/boundary="?([^"\s\r\n;]+)"?/i);
+        if (boundaryMatch) {
+          const { text, html } = parseMultipart(bodyContent, boundaryMatch[1]);
+          email.body_text = text;
+          email.body_html = html;
+        } else {
+          // Try to extract text from first text part
+          const textPartMatch = bodyContent.match(/Content-Type:\s*text\/plain[^]*?\r?\n\r?\n([^]*?)(?=--[A-Za-z0-9_=-]+|$)/i);
+          if (textPartMatch) {
+            email.body_text = cleanText(textPartMatch[1]);
+          } else {
+            email.body_text = cleanText(bodyContent);
+          }
+        }
       } else {
-        email.body_text = decoded;
+        // Plain text or encoded
+        const encodingMatch = bodyContent.match(/Content-Transfer-Encoding:\s*(\S+)/i);
+        const encoding = encodingMatch ? encodingMatch[1].toLowerCase() : '';
+        
+        let decoded = bodyContent;
+        if (encoding === 'quoted-printable') {
+          decoded = decodeQuotedPrintable(bodyContent);
+        } else if (encoding === 'base64') {
+          decoded = decodeBase64UTF8(bodyContent);
+        }
+        
+        email.body_text = cleanText(decoded);
       }
     }
 
     // Clean up text
-    email.body_text = cleanText(email.body_text);
-
+    email.body_text = email.body_text.substring(0, 10000);
+    
     return email;
   }
 
@@ -339,7 +350,7 @@ class SimpleImapClient {
   }
 }
 
-// Decode MIME header value
+// Decode MIME header value (=?charset?encoding?text?=)
 function decodeHeaderValue(value: string): string {
   if (!value) return value;
   
@@ -387,18 +398,18 @@ function parseEmailAddress(addr: string): { email: string | null; name: string |
   // Format: "Name" <email> or Name <email>
   const match1 = addr.match(/^"?([^"<]+)"?\s*<([^>]+)>/);
   if (match1) {
-    return { name: match1[1].trim(), email: match1[2].trim() };
+    return { name: match1[1].trim(), email: match1[2].trim().toLowerCase() };
   }
   
   // Format: <email>
   const match2 = addr.match(/<([^>]+)>/);
   if (match2) {
-    return { name: null, email: match2[1].trim() };
+    return { name: null, email: match2[1].trim().toLowerCase() };
   }
   
   // Just email
   if (addr.includes('@')) {
-    return { name: null, email: addr };
+    return { name: null, email: addr.toLowerCase() };
   }
   
   return { name: null, email: null };
@@ -425,7 +436,7 @@ function parseMultipart(body: string, boundary: string): { text: string; html: s
     if (contentStart === -1) contentStart = part.indexOf('\n\n');
     if (contentStart === -1) continue;
     
-    let content = part.substring(contentStart + (part[contentStart + 1] === '\n' ? 2 : 4));
+    let content = part.substring(contentStart + (part.charAt(contentStart + 1) === '\n' ? 2 : 4));
     
     // Decode content
     if (partEncoding === 'quoted-printable') {
@@ -573,8 +584,8 @@ serve(async (req) => {
         const messageCount = await client.selectInbox();
         
         // Support for full_sync and custom count
-        const { full_sync = false, count = 100 } = body || {};
-        const emailsToFetch = full_sync ? Math.min(messageCount, 500) : Math.min(count, messageCount);
+        const { full_sync = false, count = 50 } = body || {};
+        const emailsToFetch = full_sync ? Math.min(messageCount, 200) : Math.min(count, messageCount, 100);
         const startMsg = Math.max(1, messageCount - emailsToFetch + 1);
         
         console.log(`[IMAP] Fetching ${emailsToFetch} emails (full_sync: ${full_sync}, total: ${messageCount})`);
@@ -582,32 +593,34 @@ serve(async (req) => {
         
         await client.logout();
         
-        // Store emails
-        const emailsToInsert = fetchedEmails.map(email => ({
-          user_id: user.id,
-          message_id: `${imapConfig.imap_user}_${email.message_id}`,
-          from_email: email.from_email || 'unknown@email.com',
-          from_name: email.from_name,
-          to_email: email.to_email || imapConfig.imap_user,
-          subject: email.subject,
-          body_text: email.body_text?.substring(0, 50000) || null,
-          body_html: email.body_html?.substring(0, 100000) || null,
-          received_at: email.received_at || new Date().toISOString(),
-          is_read: email.is_read,
-          is_starred: false,
-          folder: 'INBOX',
-          attachments: [],
-        }));
+        // Store emails with unique message_id
+        const emailsToInsert = fetchedEmails
+          .filter(email => email.from_email && email.from_email !== 'unknown@email.com')
+          .map(email => ({
+            user_id: user.id,
+            message_id: `${imapConfig.imap_user}_${email.message_id}`,
+            from_email: email.from_email,
+            from_name: email.from_name,
+            to_email: email.to_email || imapConfig.imap_user,
+            subject: email.subject,
+            body_text: email.body_text?.substring(0, 50000) || null,
+            body_html: email.body_html?.substring(0, 100000) || null,
+            received_at: email.received_at || new Date().toISOString(),
+            is_read: email.is_read,
+            is_starred: false,
+            folder: 'INBOX',
+            attachments: [],
+          }));
 
         console.log(`[IMAP] Inserting ${emailsToInsert.length} emails`);
         
         if (emailsToInsert.length > 0) {
           // Log first email for debugging
-          if (emailsToInsert[0]) {
-            console.log(`[IMAP] First email subject: ${emailsToInsert[0].subject}`);
-            console.log(`[IMAP] First email from: ${emailsToInsert[0].from_email}`);
-            console.log(`[IMAP] First email body_text length: ${emailsToInsert[0].body_text?.length || 0}`);
-          }
+          console.log(`[IMAP] Sample email:`);
+          console.log(`  - Subject: ${emailsToInsert[0].subject}`);
+          console.log(`  - From: ${emailsToInsert[0].from_name} <${emailsToInsert[0].from_email}>`);
+          console.log(`  - Date: ${emailsToInsert[0].received_at}`);
+          console.log(`  - Body length: ${emailsToInsert[0].body_text?.length || 0}`);
           
           const { error: insertError } = await supabaseClient
             .from('received_emails')
@@ -640,8 +653,9 @@ serve(async (req) => {
             success: true, 
             emails: emails || [],
             fetched_count: fetchedEmails.length,
+            inserted_count: emailsToInsert.length,
             total_on_server: messageCount,
-            message: `${fetchedEmails.length} emails synchronisés`
+            message: `${emailsToInsert.length} emails synchronisés`
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
