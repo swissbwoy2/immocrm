@@ -6,11 +6,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Send, Reply, Forward, Settings, Paperclip, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Send, Reply, Forward, Settings, Paperclip, X, ChevronDown, ChevronUp, Users, FolderOpen, FileText, ReplyAll } from "lucide-react";
 import { EmailConfigurationDialog } from "./EmailConfigurationDialog";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface ReceivedEmail {
   id: string;
@@ -21,6 +24,7 @@ interface ReceivedEmail {
   body_text: string | null;
   body_html: string | null;
   received_at: string | null;
+  cc?: string | null;
 }
 
 interface Attachment {
@@ -30,11 +34,28 @@ interface Attachment {
   size: number;
 }
 
+interface ClientDocument {
+  id: string;
+  nom: string;
+  type: string;
+  url: string | null;
+  taille: number | null;
+}
+
+interface Client {
+  id: string;
+  profile: {
+    prenom: string;
+    nom: string;
+    email: string;
+  };
+}
+
 interface ReplyEmailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   email: ReceivedEmail | null;
-  mode: 'reply' | 'forward';
+  mode: 'reply' | 'replyall' | 'forward';
   onSent?: () => void;
 }
 
@@ -51,7 +72,13 @@ export function ReplyEmailDialog({
   const [showConfigDialog, setShowConfigDialog] = useState(false);
   const [signature, setSignature] = useState("");
   const [showCcBcc, setShowCcBcc] = useState(false);
+  const [showClientDocs, setShowClientDocs] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [clientDocuments, setClientDocuments] = useState<ClientDocument[]>([]);
+  const [selectedDocIds, setSelectedDocIds] = useState<Set<string>>(new Set());
+  const [loadingDocs, setLoadingDocs] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
@@ -67,31 +94,113 @@ export function ReplyEmailDialog({
     if (open && email) {
       checkEmailConfiguration();
       initializeForm();
+      loadClients();
       setAttachments([]);
-      setShowCcBcc(false);
+      setShowCcBcc(mode === 'replyall');
+      setShowClientDocs(false);
+      setSelectedClientId("");
+      setClientDocuments([]);
+      setSelectedDocIds(new Set());
     }
   }, [open, email, mode]);
+
+  useEffect(() => {
+    if (selectedClientId) {
+      loadClientDocuments(selectedClientId);
+    } else {
+      setClientDocuments([]);
+      setSelectedDocIds(new Set());
+    }
+  }, [selectedClientId]);
+
+  const loadClients = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get agent ID
+      const { data: agent } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!agent) return;
+
+      // Get clients with profiles
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select(`
+          id,
+          profile:profiles!clients_user_id_fkey(prenom, nom, email)
+        `)
+        .eq('agent_id', agent.id);
+
+      if (clientsData) {
+        const formattedClients = clientsData
+          .filter(c => c.profile)
+          .map(c => ({
+            id: c.id,
+            profile: c.profile as { prenom: string; nom: string; email: string }
+          }));
+        setClients(formattedClients);
+      }
+    } catch (error) {
+      console.error('Error loading clients:', error);
+    }
+  };
+
+  const loadClientDocuments = async (clientId: string) => {
+    setLoadingDocs(true);
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('id, nom, type, url, taille')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setClientDocuments(data || []);
+    } catch (error) {
+      console.error('Error loading client documents:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les documents du client",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingDocs(false);
+    }
+  };
 
   const initializeForm = () => {
     if (!email) return;
 
-    const prefix = mode === 'reply' ? 'Re: ' : 'Fwd: ';
+    const prefix = mode === 'forward' ? 'Fwd: ' : 'Re: ';
     const subject = email.subject || '(Sans objet)';
-    const newSubject = subject.startsWith(prefix) ? subject : prefix + subject;
+    const newSubject = subject.startsWith(prefix) || subject.startsWith('Re: ') || subject.startsWith('Fwd: ') 
+      ? subject 
+      : prefix + subject;
 
     // Format quoted message
     const quotedHeader = `\n\n---------- Message original ----------\nDe: ${email.from_name ? `${email.from_name} <${email.from_email}>` : email.from_email}\nDate: ${email.received_at ? format(new Date(email.received_at), "d MMMM yyyy 'à' HH:mm", { locale: fr }) : 'Non disponible'}\nObjet: ${email.subject || '(Sans objet)'}\nÀ: ${email.to_email}\n\n`;
     
     const quotedBody = email.body_text || '(Pas de contenu)';
 
+    // For reply all, include original CC recipients
+    let ccValue = "";
+    if (mode === 'replyall' && email.cc) {
+      ccValue = email.cc;
+    }
+
     setFormData({
-      recipient_email: mode === 'reply' ? email.from_email : "",
-      recipient_name: mode === 'reply' ? (email.from_name || "") : "",
+      recipient_email: mode === 'forward' ? "" : email.from_email,
+      recipient_name: mode === 'forward' ? "" : (email.from_name || ""),
       subject: newSubject,
-      body_html: mode === 'reply' 
+      body_html: mode !== 'forward' 
         ? `\n\n${quotedHeader}${quotedBody}`
         : `${quotedHeader}${quotedBody}`,
-      cc: "",
+      cc: ccValue,
       bcc: "",
     });
   };
@@ -165,6 +274,83 @@ export function ReplyEmailDialog({
     }
   };
 
+  const toggleDocSelection = (docId: string) => {
+    setSelectedDocIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(docId)) {
+        newSet.delete(docId);
+      } else {
+        newSet.add(docId);
+      }
+      return newSet;
+    });
+  };
+
+  const addSelectedDocs = async () => {
+    const docsToAdd = clientDocuments.filter(d => selectedDocIds.has(d.id));
+    
+    for (const doc of docsToAdd) {
+      // Check if it's a base64 data URL or a storage path
+      if (doc.url?.startsWith('data:')) {
+        // Already base64
+        const base64Part = doc.url.split(',')[1];
+        const mimeMatch = doc.url.match(/data:([^;]+);/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+        
+        setAttachments(prev => {
+          // Avoid duplicates
+          if (prev.some(a => a.filename === doc.nom)) return prev;
+          return [...prev, {
+            filename: doc.nom,
+            content: base64Part,
+            content_type: mimeType,
+            size: doc.taille || base64Part.length,
+          }];
+        });
+      } else if (doc.url) {
+        // It's a storage path - we'll pass the URL and let the edge function handle it
+        try {
+          // For storage files, download and convert to base64
+          const { data: signedUrlData } = await supabase.storage
+            .from('client-documents')
+            .createSignedUrl(doc.url, 300);
+          
+          if (signedUrlData?.signedUrl) {
+            const response = await fetch(signedUrlData.signedUrl);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            reader.onload = () => {
+              const base64 = (reader.result as string).split(',')[1];
+              setAttachments(prev => {
+                if (prev.some(a => a.filename === doc.nom)) return prev;
+                return [...prev, {
+                  filename: doc.nom,
+                  content: base64,
+                  content_type: doc.type || 'application/octet-stream',
+                  size: doc.taille || blob.size,
+                }];
+              });
+            };
+            reader.readAsDataURL(blob);
+          }
+        } catch (error) {
+          console.error('Error downloading document:', error);
+          toast({
+            title: "Erreur",
+            description: `Impossible de charger ${doc.nom}`,
+            variant: "destructive",
+          });
+        }
+      }
+    }
+
+    setSelectedDocIds(new Set());
+    toast({
+      title: "Documents ajoutés",
+      description: `${docsToAdd.length} document(s) ajouté(s) aux pièces jointes`,
+    });
+  };
+
   const removeAttachment = (index: number) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
@@ -229,7 +415,7 @@ export function ReplyEmailDialog({
 
       toast({
         title: "Email envoyé",
-        description: `Email ${mode === 'reply' ? 'répondu' : 'transféré'} avec succès`,
+        description: `Email ${mode === 'reply' ? 'répondu' : mode === 'replyall' ? 'répondu à tous' : 'transféré'} avec succès`,
       });
       onOpenChange(false);
       onSent?.();
@@ -245,8 +431,24 @@ export function ReplyEmailDialog({
     }
   };
 
-  const Icon = mode === 'reply' ? Reply : Forward;
-  const title = mode === 'reply' ? 'Répondre' : 'Transférer';
+  const getIcon = () => {
+    switch (mode) {
+      case 'replyall': return ReplyAll;
+      case 'forward': return Forward;
+      default: return Reply;
+    }
+  };
+
+  const getTitle = () => {
+    switch (mode) {
+      case 'replyall': return 'Répondre à tous';
+      case 'forward': return 'Transférer';
+      default: return 'Répondre';
+    }
+  };
+
+  const Icon = getIcon();
+  const title = getTitle();
   const totalAttachmentSize = attachments.reduce((sum, att) => sum + att.size, 0);
 
   return (
@@ -259,9 +461,11 @@ export function ReplyEmailDialog({
               {title}
             </DialogTitle>
             <DialogDescription>
-              {mode === 'reply' 
-                ? `Répondre à ${email?.from_name || email?.from_email}` 
-                : 'Transférer cet email'}
+              {mode === 'forward' 
+                ? 'Transférer cet email'
+                : mode === 'replyall'
+                ? `Répondre à tous les destinataires`
+                : `Répondre à ${email?.from_name || email?.from_email}`}
             </DialogDescription>
           </DialogHeader>
 
@@ -374,24 +578,112 @@ export function ReplyEmailDialog({
                     Joindre un fichier
                   </Button>
                   
-                  {attachments.map((att, index) => (
-                    <Badge 
-                      key={index} 
-                      variant="secondary" 
-                      className="flex items-center gap-1 py-1 px-2"
+                  {clients.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowClientDocs(!showClientDocs)}
                     >
-                      <Paperclip className="h-3 w-3" />
-                      <span className="max-w-[150px] truncate">{att.filename}</span>
-                      <span className="text-xs text-muted-foreground">({formatFileSize(att.size)})</span>
-                      <button
-                        onClick={() => removeAttachment(index)}
-                        className="ml-1 hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
+                      <FolderOpen className="h-4 w-4 mr-2" />
+                      Documents client
+                    </Button>
+                  )}
                 </div>
+
+                {/* Client documents selector */}
+                {showClientDocs && clients.length > 0 && (
+                  <div className="border rounded-lg p-3 space-y-3 animate-in slide-in-from-top-2 bg-muted/30">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <Select value={selectedClientId} onValueChange={setSelectedClientId}>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Sélectionner un client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {clients.map(client => (
+                            <SelectItem key={client.id} value={client.id}>
+                              {client.profile.prenom} {client.profile.nom}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {selectedClientId && (
+                      <>
+                        {loadingDocs ? (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : clientDocuments.length === 0 ? (
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            Aucun document pour ce client
+                          </p>
+                        ) : (
+                          <>
+                            <ScrollArea className="max-h-40">
+                              <div className="space-y-1">
+                                {clientDocuments.map(doc => (
+                                  <div
+                                    key={doc.id}
+                                    className="flex items-center gap-2 p-2 rounded hover:bg-accent/50 cursor-pointer"
+                                    onClick={() => toggleDocSelection(doc.id)}
+                                  >
+                                    <Checkbox 
+                                      checked={selectedDocIds.has(doc.id)}
+                                      onCheckedChange={() => toggleDocSelection(doc.id)}
+                                    />
+                                    <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                                    <span className="text-sm truncate flex-1">{doc.nom}</span>
+                                    {doc.taille && (
+                                      <span className="text-xs text-muted-foreground">
+                                        {formatFileSize(doc.taille)}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </ScrollArea>
+                            {selectedDocIds.size > 0 && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={addSelectedDocs}
+                                className="w-full"
+                              >
+                                Ajouter {selectedDocIds.size} document(s)
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Attached files display */}
+                {attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {attachments.map((att, index) => (
+                      <Badge 
+                        key={index} 
+                        variant="secondary" 
+                        className="flex items-center gap-1 py-1 px-2"
+                      >
+                        <Paperclip className="h-3 w-3" />
+                        <span className="max-w-[150px] truncate">{att.filename}</span>
+                        <span className="text-xs text-muted-foreground">({formatFileSize(att.size)})</span>
+                        <button
+                          onClick={() => removeAttachment(index)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Body */}
