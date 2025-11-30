@@ -370,41 +370,41 @@ const MesCandidatures = () => {
                   <Card className={`${statut === 'acceptee' ? 'border-green-500 border-2' : ''} transition-all duration-200 hover:shadow-md`}>
                     <CollapsibleTrigger asChild>
                       <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors rounded-t-lg">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2 flex-wrap">
-                              <CardTitle className="text-xl">{offre.adresse}</CardTitle>
-                              <Badge variant={getStatutBadgeVariant(statut)}>
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                              <CardTitle className="text-lg sm:text-xl break-words">{offre.adresse}</CardTitle>
+                              <Badge variant={getStatutBadgeVariant(statut)} className="w-fit">
                                 {getStatutLabel(statut)}
                               </Badge>
                             </div>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
                               <div className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4" />
-                                Envoyée le {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
+                                <Calendar className="h-4 w-4 shrink-0" />
+                                <span className="truncate">{new Date(offre.date_envoi).toLocaleDateString('fr-CH')}</span>
                               </div>
                               <div className="flex items-center gap-1">
-                                <Home className="h-4 w-4" />
-                                {offre.pieces} pièces
+                                <Home className="h-4 w-4 shrink-0" />
+                                <span>{offre.pieces} pcs</span>
                               </div>
                               <div className="flex items-center gap-1">
-                                <Square className="h-4 w-4" />
-                                {offre.surface} m²
+                                <Square className="h-4 w-4 shrink-0" />
+                                <span>{offre.surface} m²</span>
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-start gap-4">
-                            <div className="text-right">
-                              <p className="text-2xl font-bold text-primary">CHF {offre.prix?.toLocaleString()}</p>
-                              <p className="text-sm text-muted-foreground">par mois</p>
+                          <div className="flex items-center justify-between sm:items-start gap-2">
+                            <div className="text-left sm:text-right">
+                              <p className="text-xl sm:text-2xl font-bold text-primary">CHF {offre.prix?.toLocaleString()}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">par mois</p>
                             </div>
-                            <div className="p-2 text-muted-foreground">
+                            <div className="p-1 sm:p-2 text-muted-foreground shrink-0">
                               {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
                             </div>
                           </div>
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">
-                          {isExpanded ? 'Cliquez pour réduire' : 'Cliquez pour voir les détails et options'}
+                          {isExpanded ? 'Cliquez pour réduire' : 'Cliquez pour voir les détails'}
                         </p>
                       </CardHeader>
                     </CollapsibleTrigger>
