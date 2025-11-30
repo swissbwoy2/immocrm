@@ -12,11 +12,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, 
   FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download, Eye, Upload, MailPlus,
-  FileCheck, CheckCircle, XCircle, Clock, Pencil, Trash2, FilePlus
+  FileCheck, CheckCircle, XCircle, Clock, Pencil, Trash2, FilePlus, Users
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SendDossierDialog } from '@/components/SendDossierDialog';
 import { MergeDocumentsDialog } from '@/components/MergeDocumentsDialog';
+import { ClientCandidatesManager } from '@/components/ClientCandidatesManager';
+import { SolvabilityAlert } from '@/components/SolvabilityAlert';
+import { useClientCandidates } from '@/hooks/useClientCandidates';
+import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -97,6 +101,10 @@ export default function ClientDetail() {
   const [documents, setDocuments] = useState<any[]>([]);
   const [candidatures, setCandidatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Hook pour les candidats supplémentaires
+  const { candidates } = useClientCandidates(id);
+  const solvabilityResult = useSolvabilityCheck(client, candidates);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<any>({});
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
