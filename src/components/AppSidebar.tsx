@@ -78,6 +78,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
         { name: 'Mes documents', icon: FileText, path: '/client/documents', notifKey: null },
         { name: 'Notifications', icon: Bell, path: '/client/notifications', notifKey: 'total' },
+        { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
       ];
     default:
       return [];
