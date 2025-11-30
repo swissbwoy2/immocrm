@@ -30,6 +30,7 @@ interface CandidateDocumentsSectionProps {
   candidates: ClientCandidate[];
   onDocumentsChange?: () => void;
   refreshKey?: number;
+  agentUserId?: string;
 }
 
 const REQUIRED_DOCUMENTS = [
@@ -48,6 +49,7 @@ export function CandidateDocumentsSection({
   candidates,
   onDocumentsChange,
   refreshKey,
+  agentUserId,
 }: CandidateDocumentsSectionProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,7 +128,42 @@ export function CandidateDocumentsSection({
       setSelectedFile(null);
       setDocumentType('autre');
       setSelectedCandidate(null);
-      loadDocuments();
+      
+      // Reload documents and check completion
+      const { data: updatedDocs } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('client_id', clientId);
+      
+      setDocuments(updatedDocs || []);
+      
+      // Check if dossier is now 100% complete and notify agent
+      if (agentUserId && updatedDocs) {
+        const clientDocs = updatedDocs.filter(d => !d.candidate_id);
+        const docTypes = clientDocs.map(d => d.type_document).filter(Boolean);
+        const requiredTypes = REQUIRED_DOCUMENTS.map(r => r.type);
+        const missingCount = requiredTypes.filter(t => !docTypes.includes(t)).length;
+        
+        if (missingCount === 0) {
+          // Dossier is 100% complete - notify agent
+          try {
+            await supabase.rpc('create_notification', {
+              p_user_id: agentUserId,
+              p_type: 'dossier_complete',
+              p_title: '✅ Dossier complet',
+              p_message: `Le dossier de ${clientName || 'votre client'} est maintenant complet à 100%`,
+              p_link: `/agent/clients/${clientId}`,
+              p_metadata: { client_id: clientId }
+            });
+            toast.success('🎉 Dossier maintenant complet !', {
+              description: 'Votre agent a été notifié.'
+            });
+          } catch (notifError) {
+            console.error('Error sending notification:', notifError);
+          }
+        }
+      }
+      
       onDocumentsChange?.();
     } catch (error) {
       console.error('Error uploading:', error);
