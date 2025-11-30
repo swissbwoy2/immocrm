@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, 
   FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download, Eye, Upload, MailPlus,
-  FileCheck, CheckCircle, XCircle, Clock
+  FileCheck, CheckCircle, XCircle, Clock, Pencil
 } from 'lucide-react';
 import { SendDossierDialog } from '@/components/SendDossierDialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -105,6 +105,9 @@ export default function ClientDetail() {
   const [documentType, setDocumentType] = useState<string>('autre');
   const [isUploading, setIsUploading] = useState(false);
   const [sendDossierDialogOpen, setSendDossierDialogOpen] = useState(false);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [documentToRename, setDocumentToRename] = useState<any>(null);
+  const [newDocumentName, setNewDocumentName] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -292,6 +295,46 @@ export default function ClientDetail() {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handleRenameDocument = async () => {
+    if (!documentToRename || !newDocumentName.trim()) return;
+    
+    try {
+      const { error } = await supabase
+        .from('documents')
+        .update({ nom: newDocumentName.trim() })
+        .eq('id', documentToRename.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setDocuments(documents.map(d => 
+        d.id === documentToRename.id ? { ...d, nom: newDocumentName.trim() } : d
+      ));
+
+      toast({
+        title: 'Document renommé',
+        description: 'Le nom du document a été mis à jour',
+      });
+
+      setRenameDialogOpen(false);
+      setDocumentToRename(null);
+      setNewDocumentName('');
+    } catch (error) {
+      console.error('Error renaming document:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de renommer le document',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const openRenameDialog = (doc: any) => {
+    setDocumentToRename(doc);
+    setNewDocumentName(doc.nom);
+    setRenameDialogOpen(true);
   };
 
   const handlePreview = async (document: any) => {
@@ -1283,12 +1326,21 @@ export default function ClientDetail() {
                 <Card key={doc.id} className="border">
                   <CardContent className="pt-4">
                     <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-primary" />
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <FileText className="w-4 h-4 text-primary flex-shrink-0" />
                         <span className="text-sm font-medium truncate">
                           {doc.nom}
                         </span>
                       </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 flex-shrink-0"
+                        onClick={() => openRenameDialog(doc)}
+                        title="Renommer"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
                     </div>
                     <div className="space-y-2">
                       <Badge variant="outline" className="text-xs">
@@ -1368,6 +1420,44 @@ export default function ClientDetail() {
               <p>Aucun document uploadé</p>
             </div>
           )}
+
+          {/* Rename Document Dialog */}
+          <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Renommer le document</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-name">Nouveau nom</Label>
+                  <Input
+                    id="new-name"
+                    value={newDocumentName}
+                    onChange={(e) => setNewDocumentName(e.target.value)}
+                    placeholder="Nom du document"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setRenameDialogOpen(false);
+                      setDocumentToRename(null);
+                      setNewDocumentName('');
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    onClick={handleRenameDocument}
+                    disabled={!newDocumentName.trim()}
+                  >
+                    Renommer
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
     </div>
