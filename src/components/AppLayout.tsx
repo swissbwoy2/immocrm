@@ -37,14 +37,17 @@ function AppLayoutContent({ children }: AppLayoutProps) {
           <SidebarTrigger className="-ml-1 transition-transform duration-200 active:scale-95">
             <Menu className="h-5 w-5" />
           </SidebarTrigger>
-          <div className="flex items-center gap-2 ml-3">
+          <button 
+            onClick={() => setOpenMobile(true)}
+            className="flex items-center gap-2 ml-3 hover:opacity-80 transition-opacity"
+          >
             <img 
               src={logoImmoRama} 
               alt="Immo-Rama Logo" 
               className="h-8 w-auto object-contain"
             />
             <span className="font-semibold text-lg">ImmoCRM</span>
-          </div>
+          </button>
         </header>
         
         {/* Main Content */}
