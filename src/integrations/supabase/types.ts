@@ -808,6 +808,7 @@ export type Database = {
           email: string
           id: string
           nom: string
+          notifications_email: boolean | null
           prenom: string
           telephone: string | null
           updated_at: string | null
@@ -819,6 +820,7 @@ export type Database = {
           email: string
           id: string
           nom: string
+          notifications_email?: boolean | null
           prenom: string
           telephone?: string | null
           updated_at?: string | null
@@ -830,6 +832,7 @@ export type Database = {
           email?: string
           id?: string
           nom?: string
+          notifications_email?: boolean | null
           prenom?: string
           telephone?: string | null
           updated_at?: string | null

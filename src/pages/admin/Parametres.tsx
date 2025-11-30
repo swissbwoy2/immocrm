@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, Save, Mail, Phone, User, Settings, Shield } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Camera, Save, Mail, Phone, User, Settings, Shield, Bell } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -20,6 +21,7 @@ export default function AdminParametres() {
   const [telephone, setTelephone] = useState('');
   const [prenom, setPrenom] = useState('');
   const [nom, setNom] = useState('');
+  const [notificationsEmail, setNotificationsEmail] = useState(true);
   const [emailConfigOpen, setEmailConfigOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -45,6 +47,7 @@ export default function AdminParametres() {
       setTelephone(data.telephone || '');
       setPrenom(data.prenom || '');
       setNom(data.nom || '');
+      setNotificationsEmail(data.notifications_email !== false);
     } catch (error) {
       console.error('Error loading profile:', error);
       toast.error('Erreur lors du chargement du profil');
@@ -262,6 +265,49 @@ export default function AdminParametres() {
               <Button variant="outline" onClick={() => setEmailConfigOpen(true)}>
                 Configurer l'email
               </Button>
+            </CardContent>
+          </Card>
+
+          {/* Préférences de notification */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="w-5 h-5" />
+                Notifications
+              </CardTitle>
+              <CardDescription>
+                Gérez vos préférences de notification
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="notifications-email">Notifications par email</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Recevoir une copie des notifications par email
+                  </p>
+                </div>
+                <Switch
+                  id="notifications-email"
+                  checked={notificationsEmail}
+                  onCheckedChange={async (checked) => {
+                    setNotificationsEmail(checked);
+                    try {
+                      const { error } = await supabase
+                        .from('profiles')
+                        .update({ notifications_email: checked })
+                        .eq('id', user?.id);
+                      
+                      if (error) throw error;
+                      toast.success(checked ? 'Notifications email activées' : 'Notifications email désactivées');
+                    } catch (error) {
+                      console.error('Error updating notification preference:', error);
+                      setNotificationsEmail(!checked);
+                      toast.error('Erreur lors de la mise à jour');
+                    }
+                  }}
+                />
+              </div>
             </CardContent>
           </Card>
 
