@@ -54,7 +54,7 @@ const generateEmailHtml = (
 ): string => {
   const icon = getNotificationIcon(type);
   const color = getNotificationColor(type);
-  const baseUrl = 'https://ydljsdscdnqrqnjvqela.lovableproject.com';
+  const baseUrl = 'https://logisorama.ch';
   const fullLink = link ? `${baseUrl}${link}` : null;
 
   return `
