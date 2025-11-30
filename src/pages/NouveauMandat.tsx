@@ -241,7 +241,7 @@ export default function NouveauMandat() {
           <h1 className="text-2xl font-bold">Mandat de recherche</h1>
           <p className="text-muted-foreground">
             {currentStep < 3 
-              ? 'Complétez votre dossier de candidature'
+              ? 'Étape par étape vers votre nouveau logement'
               : formData.type_recherche === 'Acheter' 
                 ? 'Pour un bien immobilier à acheter' 
                 : 'Pour un logement à louer'}
