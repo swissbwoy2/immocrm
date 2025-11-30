@@ -172,13 +172,52 @@ export default function DemandesActivation() {
     try {
       setActivating(demande.id);
 
-      // Créer le client via la fonction existante
+      // Préparer les données complètes du mandat pour le transfert
+      const demandeMandat = {
+        adresse: demande.adresse,
+        date_naissance: demande.date_naissance,
+        nationalite: demande.nationalite,
+        type_permis: demande.type_permis,
+        etat_civil: demande.etat_civil,
+        gerance_actuelle: demande.gerance_actuelle,
+        contact_gerance: demande.contact_gerance,
+        loyer_actuel: demande.loyer_actuel,
+        depuis_le: demande.depuis_le,
+        pieces_actuel: demande.pieces_actuel,
+        charges_extraordinaires: demande.charges_extraordinaires,
+        montant_charges_extra: demande.montant_charges_extra,
+        poursuites: demande.poursuites,
+        curatelle: demande.curatelle,
+        motif_changement: demande.motif_changement,
+        profession: demande.profession,
+        employeur: demande.employeur,
+        revenus_mensuels: demande.revenus_mensuels,
+        date_engagement: demande.date_engagement,
+        utilisation_logement: demande.utilisation_logement,
+        animaux: demande.animaux,
+        instrument_musique: demande.instrument_musique,
+        vehicules: demande.vehicules,
+        numero_plaques: demande.numero_plaques,
+        decouverte_agence: demande.decouverte_agence,
+        type_recherche: demande.type_recherche,
+        nombre_occupants: demande.nombre_occupants,
+        type_bien: demande.type_bien,
+        pieces_recherche: demande.pieces_recherche,
+        region_recherche: demande.region_recherche,
+        budget_max: demande.budget_max,
+        souhaits_particuliers: demande.souhaits_particuliers,
+        candidats: demande.candidats || [],
+        documents_uploades: demande.documents_uploades || []
+      };
+
+      // Créer le client avec TOUTES les données du mandat
       const { error: inviteError } = await supabase.functions.invoke('invite-client', {
         body: {
           email: demande.email,
           prenom: demande.prenom,
           nom: demande.nom,
           telephone: demande.telephone,
+          demandeMandat: demandeMandat
         }
       });
 
@@ -190,7 +229,7 @@ export default function DemandesActivation() {
         .update({ statut: 'active' })
         .eq('id', demande.id);
 
-      toast.success('Compte activé ! Invitation envoyée.');
+      toast.success('Compte activé avec toutes les données ! Invitation envoyée.');
       await loadData();
     } catch (error: any) {
       console.error('Error:', error);
