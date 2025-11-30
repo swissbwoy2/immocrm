@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -54,6 +54,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Calendrier', icon: Calendar, path: '/agent/calendrier', notifKey: 'visit_combined' },
         { name: 'Mes clients', icon: Users, path: '/agent/mes-clients', notifKey: 'client_assigned' },
         { name: 'Visites', icon: CalendarCheck, path: '/agent/visites', notifKey: 'new_visit' },
+        { name: 'Candidatures', icon: FileCheck, path: '/agent/candidatures', notifKey: null },
         { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre', notifKey: null },
         { name: 'Offres envoyées', icon: Mail, path: '/agent/offres-envoyees', notifKey: null },
         { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie', notifKey: 'new_message' },

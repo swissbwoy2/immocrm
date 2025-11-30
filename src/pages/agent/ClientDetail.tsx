@@ -11,9 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, 
-  FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download, Eye, Upload, MailPlus
+  FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download, Eye, Upload, MailPlus,
+  FileCheck, CheckCircle, XCircle, Clock
 } from 'lucide-react';
-import { SendEmailDialog } from '@/components/SendEmailDialog';
+import { SendDossierDialog } from '@/components/SendDossierDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -92,6 +93,7 @@ export default function ClientDetail() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [offres, setOffres] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
+  const [candidatures, setCandidatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<any>({});
@@ -102,7 +104,7 @@ export default function ClientDetail() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [documentType, setDocumentType] = useState<string>('autre');
   const [isUploading, setIsUploading] = useState(false);
-  const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
+  const [sendDossierDialogOpen, setSendDossierDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -151,6 +153,16 @@ export default function ClientDetail() {
 
       if (docsError) throw docsError;
       setDocuments(docsData || []);
+
+      // Load candidatures
+      const { data: candidaturesData, error: candidaturesError } = await supabase
+        .from('candidatures')
+        .select('*, offres(adresse, prix, pieces)')
+        .eq('client_id', id)
+        .order('created_at', { ascending: false });
+
+      if (candidaturesError) throw candidaturesError;
+      setCandidatures(candidaturesData || []);
     } catch (error) {
       console.error('Error loading client data:', error);
       toast({
@@ -447,7 +459,7 @@ export default function ClientDetail() {
 
           {/* Boutons d'action - Responsive grid sur mobile */}
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:flex-nowrap w-full sm:w-auto">
-            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSendEmailDialogOpen(true)}>
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSendDossierDialogOpen(true)}>
               <MailPlus className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Envoyer dossier</span>
               <span className="sm:hidden">Dossier</span>
@@ -1418,6 +1430,132 @@ export default function ClientDetail() {
             </Card>
           )}
         </div>
+
+        {/* Candidatures déposées */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold flex items-center gap-2">
+              <FileCheck className="w-5 h-5" />
+              Candidatures déposées ({candidatures.length})
+            </h2>
+          </div>
+
+          {candidatures.length > 0 ? (
+            <div className="space-y-3">
+              {candidatures.map((candidature) => {
+                const getCandidatureStatutLabel = (statut: string) => {
+                  const labels: Record<string, string> = {
+                    'en_attente': 'En attente',
+                    'acceptee': 'Acceptée',
+                    'refusee': 'Refusée',
+                  };
+                  return labels[statut] || statut;
+                };
+
+                const getCandidatureStatutVariant = (statut: string): "default" | "secondary" | "destructive" | "outline" => {
+                  if (statut === 'acceptee') return 'default';
+                  if (statut === 'refusee') return 'destructive';
+                  return 'secondary';
+                };
+
+                const getCandidatureStatutIcon = (statut: string) => {
+                  if (statut === 'acceptee') return <CheckCircle className="h-4 w-4" />;
+                  if (statut === 'refusee') return <XCircle className="h-4 w-4" />;
+                  return <Clock className="h-4 w-4" />;
+                };
+
+                const handleCandidatureStatutChange = async (candidatureId: string, newStatut: string) => {
+                  try {
+                    const { error } = await supabase
+                      .from('candidatures')
+                      .update({ statut: newStatut })
+                      .eq('id', candidatureId);
+
+                    if (error) throw error;
+
+                    setCandidatures(prev => 
+                      prev.map(c => c.id === candidatureId ? { ...c, statut: newStatut } : c)
+                    );
+
+                    toast({
+                      title: 'Statut mis à jour',
+                      description: `Candidature marquée comme ${getCandidatureStatutLabel(newStatut).toLowerCase()}`,
+                    });
+                  } catch (error) {
+                    console.error('Error updating status:', error);
+                    toast({
+                      title: 'Erreur',
+                      description: 'Impossible de mettre à jour le statut',
+                      variant: 'destructive',
+                    });
+                  }
+                };
+
+                return (
+                  <Card key={candidature.id}>
+                    <CardContent className="p-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="font-medium truncate">
+                              {candidature.offres?.adresse || 'Offre inconnue'}
+                            </span>
+                            <Badge variant={getCandidatureStatutVariant(candidature.statut)} className="flex items-center gap-1">
+                              {getCandidatureStatutIcon(candidature.statut)}
+                              {getCandidatureStatutLabel(candidature.statut)}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            {candidature.offres && (
+                              <span>{candidature.offres.prix?.toLocaleString()} CHF • {candidature.offres.pieces || 'N/A'} pièces</span>
+                            )}
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(candidature.date_depot || candidature.created_at).toLocaleDateString('fr-CH')}
+                            </span>
+                            <Badge variant={candidature.dossier_complet ? "outline" : "secondary"} className="text-xs">
+                              {candidature.dossier_complet ? "Dossier complet" : "Dossier incomplet"}
+                            </Badge>
+                          </div>
+                        </div>
+                        {candidature.statut === 'en_attente' && (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-green-600 border-green-600 hover:bg-green-50"
+                              onClick={() => handleCandidatureStatutChange(candidature.id, 'acceptee')}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Accepter
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-600 hover:bg-red-50"
+                              onClick={() => handleCandidatureStatutChange(candidature.id, 'refusee')}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Refuser
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                <FileCheck className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Aucune candidature déposée pour ce client</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
 
       {/* Dialog d'aperçu */}
@@ -1464,13 +1602,14 @@ export default function ClientDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Send Email Dialog */}
-      <SendEmailDialog
-        open={sendEmailDialogOpen}
-        onOpenChange={setSendEmailDialogOpen}
+      {/* Send Dossier Dialog */}
+      <SendDossierDialog
+        open={sendDossierDialogOpen}
+        onOpenChange={setSendDossierDialogOpen}
         clientId={client.id}
         clientName={`${profile.prenom} ${profile.nom}`}
-        clientEmail={profile.email}
+        offres={offres}
+        onCandidatureCreated={loadClientData}
       />
     </main>
   );
