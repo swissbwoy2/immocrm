@@ -8,11 +8,35 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Link, Paperclip } from "lucide-react";
+import { Link, Paperclip, RotateCcw } from "lucide-react";
 import logoImmoRama from "@/assets/logo-immo-rama.png";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { OfferAttachmentUploader, AttachmentData } from "@/components/OfferAttachmentUploader";
+import { usePersistedFormState } from "@/hooks/usePersistedFormState";
+
+const STORAGE_KEY_FORM = 'envoyer-offre-form';
+const STORAGE_KEY_ATTACHMENTS = 'envoyer-offre-attachments';
+
+const initialFormData = {
+  clientId: "",
+  localisation: "",
+  prix: "",
+  surface: "",
+  nombrePieces: "",
+  description: "",
+  etage: "",
+  disponibilite: "",
+  etageVisite: "",
+  codeImmeuble: "",
+  locataireNom: "",
+  locataireTel: "",
+  conciergeNom: "",
+  conciergeTel: "",
+  commentaires: "",
+  lienAnnonce: "",
+  datesVisite: ["", "", ""],
+};
 
 const EnvoyerOffre = () => {
   const location = useLocation();
@@ -21,31 +45,23 @@ const EnvoyerOffre = () => {
   const { user } = useAuth();
   const [agent, setAgent] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
-  const [attachments, setAttachments] = useState<AttachmentData[]>([]);
   
   // Lire le clientId depuis les query params de l'URL
   const searchParams = new URLSearchParams(location.search);
   const clientIdFromUrl = searchParams.get('clientId');
+  const clientIdFromState = location.state?.clientId;
   
-  const [formData, setFormData] = useState({
-    clientId: location.state?.clientId || clientIdFromUrl || "",
-    localisation: "",
-    prix: "",
-    surface: "",
-    nombrePieces: "",
-    description: "",
-    etage: "",
-    disponibilite: "",
-    etageVisite: "",
-    codeImmeuble: "",
-    locataireNom: "",
-    locataireTel: "",
-    conciergeNom: "",
-    conciergeTel: "",
-    commentaires: "",
-    lienAnnonce: "",
-    datesVisite: ["", "", ""],
-  });
+  // Utiliser le hook de persistance pour le formulaire
+  const [formData, setFormData, clearFormData] = usePersistedFormState(STORAGE_KEY_FORM, initialFormData);
+  const [attachments, setAttachments, clearAttachments] = usePersistedFormState<AttachmentData[]>(STORAGE_KEY_ATTACHMENTS, []);
+
+  // Mettre à jour le clientId si passé via URL ou state (prioritaire sur localStorage)
+  useEffect(() => {
+    const newClientId = clientIdFromState || clientIdFromUrl;
+    if (newClientId && newClientId !== formData.clientId) {
+      setFormData(prev => ({ ...prev, clientId: newClientId }));
+    }
+  }, [clientIdFromState, clientIdFromUrl]);
 
   useEffect(() => {
     loadData();
@@ -236,6 +252,10 @@ const EnvoyerOffre = () => {
         }
       }
 
+      // Nettoyer le localStorage après envoi réussi
+      clearFormData();
+      clearAttachments();
+      
       toast({ title: "Succès", description: "Offre envoyée avec succès" });
       navigate('/agent');
     } catch (error) {
@@ -409,9 +429,25 @@ const EnvoyerOffre = () => {
               />
             </Card>
 
-            <Button onClick={handleSubmit} className="w-full" size="lg">
-              Envoyer
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  clearFormData();
+                  clearAttachments();
+                  setFormData(initialFormData);
+                  setAttachments([]);
+                  toast({ title: "Formulaire réinitialisé", description: "Toutes les données ont été effacées" });
+                }}
+                className="flex items-center gap-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Réinitialiser
+              </Button>
+              <Button onClick={handleSubmit} className="flex-1" size="lg">
+                Envoyer
+              </Button>
+            </div>
           </div>
 
           {/* Aperçu de l'email à droite */}
