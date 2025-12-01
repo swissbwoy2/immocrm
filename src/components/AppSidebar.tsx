@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ import { useState, useEffect } from 'react';
 import { NotificationBadge } from './NotificationBadge';
 import { NotificationBell } from './NotificationBell';
 import { useNotifications } from '@/hooks/useNotifications';
+import { checkDraftsExist } from '@/hooks/useDraftManager';
 
 const getMenuForRole = (role: string) => {
   switch (role) {
@@ -96,12 +97,29 @@ export function AppSidebar() {
   const { user, userRole } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const { counts } = useNotifications();
+  const [hasDrafts, setHasDrafts] = useState(false);
 
   const handleNavClick = () => {
     if (isMobile) {
       setOpenMobile(false);
     }
   };
+
+  // Check for drafts on mount and when storage changes
+  useEffect(() => {
+    const checkDrafts = () => {
+      setHasDrafts(checkDraftsExist());
+    };
+
+    checkDrafts();
+    window.addEventListener('focus', checkDrafts);
+    window.addEventListener('storage', checkDrafts);
+    
+    return () => {
+      window.removeEventListener('focus', checkDrafts);
+      window.removeEventListener('storage', checkDrafts);
+    };
+  }, []);
   
   useEffect(() => {
     if (user) {
@@ -203,10 +221,13 @@ export function AppSidebar() {
                                 className="absolute -top-1 -right-1"
                               />
                             )}
+                            {hasDrafts && item.path === '/agent/envoyer-offre' && (
+                              <FileEdit className="w-3 h-3 absolute -top-1 -right-1 text-orange-500" />
+                            )}
                           </NavLink>
                         </TooltipTrigger>
                         <TooltipContent side="right">
-                          <p>{item.name} {notifCount > 0 && `(${notifCount})`}</p>
+                          <p>{item.name} {notifCount > 0 && `(${notifCount})`} {hasDrafts && item.path === '/agent/envoyer-offre' && '📝'}</p>
                         </TooltipContent>
                       </Tooltip>
                     ) : (
@@ -219,6 +240,9 @@ export function AppSidebar() {
                       >
                         <item.icon className="w-5 h-5 flex-shrink-0" />
                         <span className="truncate flex-1">{item.name}</span>
+                        {hasDrafts && item.path === '/agent/envoyer-offre' && (
+                          <span className="text-orange-500 text-sm" title="Brouillons sauvegardés">📝</span>
+                        )}
                         {notifCount > 0 && (
                           <NotificationBadge count={notifCount} />
                         )}
