@@ -195,6 +195,15 @@ export default function Assignations() {
         await supabase.rpc('increment_agent_clients', { agent_uuid: primaryAgent.agent_id });
       }
 
+      // Unarchive conversations for re-assigned agents
+      for (const assignment of agentAssignments) {
+        await supabase
+          .from('conversations')
+          .update({ is_archived: false })
+          .eq('agent_id', assignment.agent_id)
+          .eq('client_id', clientId);
+      }
+
       // Get client and agent details for notifications
       const { data: clientData } = await supabase
         .from('clients')
@@ -241,8 +250,48 @@ export default function Assignations() {
 
   const handleReassign = async (clientId: string) => {
     try {
-      // Get current assignments
+      // Get current assignments and client info
       const currentAssignments = clientAgents.filter(ca => ca.client_id === clientId);
+      
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('user_id')
+        .eq('id', clientId)
+        .single();
+
+      const { data: clientProfile } = clientData ? await supabase
+        .from('profiles')
+        .select('prenom, nom')
+        .eq('id', clientData.user_id)
+        .single() : { data: null };
+
+      const clientName = clientProfile ? `${clientProfile.prenom} ${clientProfile.nom}` : 'ce client';
+
+      // Archive conversations for each removed agent
+      for (const assignment of currentAssignments) {
+        await supabase
+          .from('conversations')
+          .update({ is_archived: true })
+          .eq('agent_id', assignment.agent_id)
+          .eq('client_id', clientId);
+
+        // Send notification to removed agent
+        const { data: agentData } = await supabase
+          .from('agents')
+          .select('user_id')
+          .eq('id', assignment.agent_id)
+          .single();
+
+        if (agentData) {
+          await supabase.from('notifications').insert({
+            user_id: agentData.user_id,
+            type: 'client_removed',
+            title: 'Client retiré',
+            message: `${clientName} a été retiré de votre portefeuille`,
+            link: '/agent/mes-clients',
+          });
+        }
+      }
 
       // Delete all assignments for this client
       const { error } = await supabase
@@ -287,8 +336,22 @@ export default function Assignations() {
     }
 
     try {
-      // Get current assignments
+      // Get current assignments and client info
       const currentAssignments = clientAgents.filter(ca => ca.client_id === editingClientId);
+      
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('user_id')
+        .eq('id', editingClientId)
+        .single();
+
+      const { data: clientProfile } = clientData ? await supabase
+        .from('profiles')
+        .select('prenom, nom')
+        .eq('id', clientData.user_id)
+        .single() : { data: null };
+
+      const clientName = clientProfile ? `${clientProfile.prenom} ${clientProfile.nom}` : 'ce client';
 
       // Delete all current assignments
       const { error: deleteError } = await supabase
@@ -319,17 +382,48 @@ export default function Assignations() {
       const oldAgentIds = currentAssignments.map(ca => ca.agent_id);
       const newAgentIds = editAgentAssignments.map(ea => ea.agent_id);
 
-      // Decrement removed agents
+      // For removed agents: decrement count, archive conversation, notify
       for (const agentId of oldAgentIds) {
         if (!newAgentIds.includes(agentId)) {
           await (supabase.rpc as any)('decrement_agent_clients', { agent_uuid: agentId });
+          
+          // Archive conversation
+          await supabase
+            .from('conversations')
+            .update({ is_archived: true })
+            .eq('agent_id', agentId)
+            .eq('client_id', editingClientId);
+
+          // Send notification to removed agent
+          const { data: agentData } = await supabase
+            .from('agents')
+            .select('user_id')
+            .eq('id', agentId)
+            .single();
+
+          if (agentData) {
+            await supabase.from('notifications').insert({
+              user_id: agentData.user_id,
+              type: 'client_removed',
+              title: 'Client retiré',
+              message: `${clientName} a été retiré de votre portefeuille`,
+              link: '/agent/mes-clients',
+            });
+          }
         }
       }
 
-      // Increment added agents
+      // For added agents: increment count, unarchive conversation
       for (const agentId of newAgentIds) {
         if (!oldAgentIds.includes(agentId)) {
           await (supabase.rpc as any)('increment_agent_clients', { agent_uuid: agentId });
+          
+          // Unarchive conversation if it exists
+          await supabase
+            .from('conversations')
+            .update({ is_archived: false })
+            .eq('agent_id', agentId)
+            .eq('client_id', editingClientId);
         }
       }
 

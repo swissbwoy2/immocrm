@@ -803,9 +803,11 @@ export type Database = {
           admin_user_id: string | null
           agent_id: string
           client_id: string | null
+          client_name: string | null
           conversation_type: string | null
           created_at: string | null
           id: string
+          is_archived: boolean | null
           last_message_at: string | null
           status: string | null
           subject: string | null
@@ -814,9 +816,11 @@ export type Database = {
           admin_user_id?: string | null
           agent_id: string
           client_id?: string | null
+          client_name?: string | null
           conversation_type?: string | null
           created_at?: string | null
           id?: string
+          is_archived?: boolean | null
           last_message_at?: string | null
           status?: string | null
           subject?: string | null
@@ -825,9 +829,11 @@ export type Database = {
           admin_user_id?: string | null
           agent_id?: string
           client_id?: string | null
+          client_name?: string | null
           conversation_type?: string | null
           created_at?: string | null
           id?: string
+          is_archived?: boolean | null
           last_message_at?: string | null
           status?: string | null
           subject?: string | null

@@ -158,12 +158,14 @@ export function AdminNewConversationDialog({ onConversationCreated }: AdminNewCo
         return;
       }
 
+      const clientName = `${client.prenom} ${client.nom}`.trim();
       const { data, error } = await supabase
         .from('conversations')
         .insert({
           agent_id: agentId,
           client_id: client.id,
-          subject: `Conversation avec ${client.prenom} ${client.nom}`,
+          client_name: clientName,
+          subject: `Conversation avec ${clientName}`,
           last_message_at: new Date().toISOString(),
           conversation_type: 'client-agent',
         })

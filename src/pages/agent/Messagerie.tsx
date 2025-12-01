@@ -166,7 +166,13 @@ const Messagerie = () => {
         clientsData?.forEach(client => {
           const profile = profilesMap.get(client.user_id);
           const fullName = `${profile?.prenom || ''} ${profile?.nom || ''}`.trim();
-          contactsMapping[client.id] = { name: fullName || 'Inconnu', type: 'client', clientId: client.id };
+          // Find conversation to get stored client_name as fallback
+          const conv = convData?.find(c => c.client_id === client.id);
+          contactsMapping[client.id] = { 
+            name: fullName || conv?.client_name || 'Destinataire inconnu', 
+            type: 'client', 
+            clientId: client.id 
+          };
         });
       }
 
@@ -975,6 +981,18 @@ const Messagerie = () => {
 
   const chatView = selectedConv ? (
     <div className="flex-1 flex flex-col min-h-0">
+      {currentConversation?.is_archived && (
+        <div className="p-4 bg-amber-50 border-l-4 border-amber-400 dark:bg-amber-950/50">
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="border-amber-600 text-amber-600">
+              Conversation archivée
+            </Badge>
+            <p className="text-sm text-amber-700 dark:text-amber-400">
+              Vous n'êtes plus assigné à ce client. Vous ne pouvez plus envoyer de messages.
+            </p>
+          </div>
+        </div>
+      )}
       <div className="flex-1 overflow-y-auto p-4">
         <div className="space-y-4">
           {selectedMessages.map((msg) => (
@@ -1040,23 +1058,25 @@ const Messagerie = () => {
         </div>
       </div>
       <div className="p-4 border-t bg-card">
-        <div className="flex gap-2 items-end">
-          <div className="flex-1">
-            <MessageAttachmentUploader
-              conversationId={selectedConv}
-              onAttachmentReady={setPendingAttachment}
-            />
-            <Input
-              placeholder="Écrire un message..."
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            />
+        {!currentConversation?.is_archived && (
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <MessageAttachmentUploader
+                conversationId={selectedConv}
+                onAttachmentReady={setPendingAttachment}
+              />
+              <Input
+                placeholder="Écrire un message..."
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              />
+            </div>
+            <Button onClick={handleSendMessage} disabled={!messageText.trim() && !pendingAttachment}>
+              <Send className="h-4 w-4" />
+            </Button>
           </div>
-          <Button onClick={handleSendMessage} disabled={!messageText.trim() && !pendingAttachment}>
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
+        )}
       </div>
 
       {/* Dialog proposer dates signature */}
