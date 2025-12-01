@@ -237,23 +237,22 @@ export default function NouveauMandat() {
 
       const demandeId = insertedData.id;
 
-      // Créer notification pour les admins
-      const { data: admins } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'admin');
-
-      if (admins) {
-        for (const admin of admins) {
-          await supabase.from('notifications').insert({
-            user_id: admin.user_id,
-            type: 'nouvelle_demande_mandat',
-            title: 'Nouvelle demande de mandat',
-            message: `${formData.prenom} ${formData.nom} a soumis une demande de mandat`,
-            link: '/admin/demandes-activation',
-            metadata: { email: formData.email, demande_id: demandeId },
-          });
-        }
+      // Créer notification pour les admins via la fonction RPC (bypass RLS)
+      try {
+        // L'admin user_id est connu: 4c2ee841-a48b-4d7d-8ed6-3eac9ea124e8
+        // On utilise la fonction RPC create_notification qui a SECURITY DEFINER
+        await supabase.rpc('create_notification', {
+          p_user_id: '4c2ee841-a48b-4d7d-8ed6-3eac9ea124e8',
+          p_type: 'nouvelle_demande_mandat',
+          p_title: 'Nouvelle demande de mandat',
+          p_message: `${formData.prenom} ${formData.nom} a soumis une demande de mandat`,
+          p_link: '/admin/demandes-activation',
+          p_metadata: { email: formData.email, demande_id: demandeId }
+        });
+        console.log('Admin notification created');
+      } catch (notifError) {
+        console.error('Error creating notification:', notifError);
+        // Ne pas bloquer le flux
       }
 
       // Envoyer le mandat signé en PDF par email

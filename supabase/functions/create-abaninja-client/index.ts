@@ -53,26 +53,30 @@ serve(async (req) => {
 
     console.log('Generated client number:', clientNumber);
 
-    // Create person in AbaNinja with client number
+    // Create person in AbaNinja with the correct API v2 format
+    // Documentation: https://abaninja.ch/apidocs/#tag/Addresses/paths/~1accounts~1{accountUuid}~1addresses~1v2~1addresses/post
     const personPayload = {
       type: "person",
-      number: clientNumber, // e.g., "IR0149"
+      customer_number: clientNumber, // e.g., "IR0149"
       first_name: prenom,
       last_name: nom,
+      currency_code: "CHF",
+      language: "fr",
       contacts: [
         {
           type: "email",
-          value: email
+          value: email,
+          primary: true
         },
         {
           type: "phone",
-          value: telephone
+          value: telephone,
+          primary: false
         }
       ],
       addresses: adresse ? [
         {
-          type: "main",
-          street: adresse,
+          address: adresse,
           country_code: "CH"
         }
       ] : []
@@ -80,10 +84,9 @@ serve(async (req) => {
 
     console.log('AbaNinja person payload:', JSON.stringify(personPayload));
 
-    // Use the correct endpoint for creating addresses (persons)
-    // The v2/persons endpoint is for GET, POST goes to /addresses
+    // Use the correct v2 endpoint for creating addresses
     const response = await fetch(
-      `https://api.abaninja.ch/accounts/${accountUuid}/addresses`,
+      `https://api.abaninja.ch/accounts/${accountUuid}/addresses/v2/addresses?force=true`,
       {
         method: 'POST',
         headers: {
@@ -105,10 +108,13 @@ serve(async (req) => {
 
     const data = JSON.parse(responseText);
 
+    // The response contains the created address in data.data.uuid
+    const clientUuid = data.data?.uuid || data.uuid;
+
     return new Response(
       JSON.stringify({
         success: true,
-        client_uuid: data.uuid,
+        client_uuid: clientUuid,
         client_number: clientNumber,
         data
       }),
