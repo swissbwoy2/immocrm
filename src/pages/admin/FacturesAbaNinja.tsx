@@ -16,8 +16,9 @@ import { toast } from 'sonner';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { differenceInDays } from 'date-fns';
 
 interface DemandeMandat {
   id: string;
@@ -50,6 +51,7 @@ export default function FacturesAbaNinja() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [resendingInvoice, setResendingInvoice] = useState<string | null>(null);
+  const [sendingReminders, setSendingReminders] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -188,6 +190,42 @@ export default function FacturesAbaNinja() {
 
   const pendingInvoices = demandes.filter(d => d.statut === 'facture_envoyee');
   const paidInvoices = demandes.filter(d => d.statut === 'paye' || d.statut === 'active');
+  
+  // Invoices pending more than 7 days
+  const overdueInvoices = pendingInvoices.filter(d => {
+    const daysPending = differenceInDays(new Date(), new Date(d.created_at));
+    return daysPending > 7;
+  });
+
+  // Pie chart data - Location vs Achat
+  const typeRepartition = useMemo(() => {
+    const location = demandes.filter(d => d.type_recherche !== 'Acheter').length;
+    const achat = demandes.filter(d => d.type_recherche === 'Acheter').length;
+    const locationMontant = demandes.filter(d => d.type_recherche !== 'Acheter').reduce((sum, d) => sum + getMontant(d), 0);
+    const achatMontant = demandes.filter(d => d.type_recherche === 'Acheter').reduce((sum, d) => sum + getMontant(d), 0);
+    
+    return [
+      { name: 'Location', value: location, montant: locationMontant, color: 'hsl(215, 76%, 56%)' },
+      { name: 'Achat', value: achat, montant: achatMontant, color: 'hsl(142, 76%, 36%)' },
+    ];
+  }, [demandes]);
+
+  const handleSendReminders = async () => {
+    try {
+      setSendingReminders(true);
+      const { data, error } = await supabase.functions.invoke('send-invoice-reminders');
+      
+      if (error) throw error;
+      
+      toast.success(`${data.processed} rappels envoyés avec succès`);
+      await loadData();
+    } catch (error: any) {
+      console.error('Error sending reminders:', error);
+      toast.error(error.message || 'Erreur lors de l\'envoi des rappels');
+    } finally {
+      setSendingReminders(false);
+    }
+  };
 
   const filteredDemandes = demandes.filter(demande => 
     `${demande.prenom} ${demande.nom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -239,7 +277,7 @@ export default function FacturesAbaNinja() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Card className="p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-950">
@@ -284,7 +322,57 @@ export default function FacturesAbaNinja() {
               </div>
             </div>
           </Card>
+          {/* Overdue invoices alert */}
+          <Card className={`p-4 ${overdueInvoices.length > 0 ? 'bg-red-50 dark:bg-red-950/30 border-red-200' : ''}`}>
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-full ${overdueInvoices.length > 0 ? 'bg-red-100 dark:bg-red-950' : 'bg-gray-100 dark:bg-gray-950'}`}>
+                <Clock className={`h-5 w-5 ${overdueInvoices.length > 0 ? 'text-red-600' : 'text-gray-600'}`} />
+              </div>
+              <div>
+                <p className={`text-2xl font-bold ${overdueInvoices.length > 0 ? 'text-red-600' : ''}`}>{overdueInvoices.length}</p>
+                <p className="text-xs text-muted-foreground">&gt; 7 jours</p>
+              </div>
+            </div>
+          </Card>
         </div>
+
+        {/* Overdue invoices alert banner */}
+        {overdueInvoices.length > 0 && (
+          <Card className="p-4 bg-red-50 dark:bg-red-950/30 border-red-200">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-full bg-red-100 dark:bg-red-900">
+                  <Clock className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-red-700 dark:text-red-400">
+                    ⚠️ {overdueInvoices.length} facture(s) en attente depuis plus de 7 jours
+                  </p>
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    Montant total en attente : {overdueInvoices.reduce((sum, d) => sum + getMontant(d), 0).toLocaleString()} CHF
+                  </p>
+                </div>
+              </div>
+              <Button 
+                variant="destructive" 
+                onClick={handleSendReminders}
+                disabled={sendingReminders}
+              >
+                {sendingReminders ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Envoi...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Envoyer les rappels
+                  </>
+                )}
+              </Button>
+            </div>
+          </Card>
+        )}
 
         {/* Search */}
         <div className="relative max-w-md">
@@ -351,10 +439,10 @@ export default function FacturesAbaNinja() {
           </TabsContent>
 
           <TabsContent value="stats" className="space-y-6">
-            {/* Charts */}
-            <div className="grid md:grid-cols-2 gap-6">
+            {/* Charts Row 1 */}
+            <div className="grid md:grid-cols-3 gap-6">
               {/* Bar Chart - Montants encaissés */}
-              <Card className="p-6">
+              <Card className="p-6 md:col-span-2">
                 <div className="flex items-center gap-2 mb-4">
                   <CreditCard className="h-5 w-5 text-green-600" />
                   <h3 className="font-semibold">Montants encaissés par mois</h3>
@@ -389,50 +477,95 @@ export default function FacturesAbaNinja() {
                 </ChartContainer>
               </Card>
 
-              {/* Line Chart - Évolution des factures */}
+              {/* Pie Chart - Location vs Achat */}
               <Card className="p-6">
                 <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp className="h-5 w-5 text-blue-600" />
-                  <h3 className="font-semibold">Évolution des factures</h3>
+                  <Building2 className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold">Répartition Location / Achat</h3>
                 </div>
-                <ChartContainer config={chartConfig} className="h-[300px]">
+                <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={monthlyStats}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis 
-                        dataKey="mois" 
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
+                    <PieChart>
+                      <Pie
+                        data={typeRepartition}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {typeRepartition.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: number, name: string) => [
+                          `${value} factures`, 
+                          name
+                        ]}
                       />
-                      <YAxis 
-                        tick={{ fontSize: 12 }}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <ChartTooltip content={<ChartTooltipContent />} />
                       <Legend />
-                      <Line 
-                        type="monotone"
-                        dataKey="creees" 
-                        stroke="hsl(var(--primary))" 
-                        strokeWidth={2}
-                        dot={{ fill: "hsl(var(--primary))", strokeWidth: 2 }}
-                        name="Créées"
-                      />
-                      <Line 
-                        type="monotone"
-                        dataKey="payees" 
-                        stroke="hsl(142, 76%, 36%)" 
-                        strokeWidth={2}
-                        dot={{ fill: "hsl(142, 76%, 36%)", strokeWidth: 2 }}
-                        name="Payées"
-                      />
-                    </LineChart>
+                    </PieChart>
                   </ResponsiveContainer>
-                </ChartContainer>
+                </div>
+                <div className="mt-4 space-y-2 text-sm">
+                  {typeRepartition.map((item) => (
+                    <div key={item.name} className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span>{item.name}</span>
+                      </div>
+                      <span className="font-semibold">{item.montant.toLocaleString()} CHF</span>
+                    </div>
+                  ))}
+                </div>
               </Card>
             </div>
+
+            {/* Line Chart - Évolution des factures */}
+            <Card className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+                <h3 className="font-semibold">Évolution des factures</h3>
+              </div>
+              <ChartContainer config={chartConfig} className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthlyStats}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis 
+                      dataKey="mois" 
+                      tick={{ fontSize: 12 }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 12 }}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Legend />
+                    <Line 
+                      type="monotone"
+                      dataKey="creees" 
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={2}
+                      dot={{ fill: "hsl(var(--primary))", strokeWidth: 2 }}
+                      name="Créées"
+                    />
+                    <Line 
+                      type="monotone"
+                      dataKey="payees" 
+                      stroke="hsl(142, 76%, 36%)" 
+                      strokeWidth={2}
+                      dot={{ fill: "hsl(142, 76%, 36%)", strokeWidth: 2 }}
+                      name="Payées"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </Card>
 
             {/* Summary Table */}
             <Card className="p-6">
@@ -589,6 +722,11 @@ function InvoiceList({
                       <span className="text-green-600">
                         {' '}• Payée le {format(new Date(demande.date_paiement), 'dd MMM yyyy', { locale: fr })}
                       </span>
+                    )}
+                    {!demande.date_paiement && differenceInDays(new Date(), new Date(demande.created_at)) > 7 && (
+                      <Badge variant="destructive" className="ml-2">
+                        ⚠️ &gt; 7 jours
+                      </Badge>
                     )}
                   </p>
                 </div>

@@ -123,7 +123,59 @@ export default function NouveauMandat() {
 
       const montantAcompte = formData.type_recherche === 'Acheter' ? 2500 : 300;
 
-      // Insérer la demande et récupérer l'ID
+      // ÉTAPE 1: Créer le client AbaNinja AVANT l'insert
+      let abaninjaClientUuid: string | null = null;
+      try {
+        const { data: clientResponse, error: clientError } = await supabase.functions.invoke('create-abaninja-client', {
+          body: {
+            prenom: formData.prenom,
+            nom: formData.nom,
+            email: formData.email,
+            telephone: formData.telephone,
+            adresse: formData.adresse
+          }
+        });
+
+        if (clientError) {
+          console.error('Error creating AbaNinja client:', clientError);
+        } else if (clientResponse?.client_uuid) {
+          abaninjaClientUuid = clientResponse.client_uuid;
+          console.log('AbaNinja client created:', abaninjaClientUuid);
+        }
+      } catch (abaNinjaClientError) {
+        console.error('AbaNinja client creation failed:', abaNinjaClientError);
+      }
+
+      // ÉTAPE 2: Créer la facture AbaNinja (si client créé)
+      let abaninjaInvoiceId: string | null = null;
+      let abaninjaInvoiceRef: string | null = null;
+      
+      if (abaninjaClientUuid) {
+        try {
+          const { data: invoiceResponse, error: invoiceError } = await supabase.functions.invoke('create-abaninja-invoice', {
+            body: {
+              client_uuid: abaninjaClientUuid,
+              type_recherche: formData.type_recherche,
+              prenom: formData.prenom,
+              nom: formData.nom,
+              email: formData.email,
+              demande_id: null // Pas encore d'ID de demande
+            }
+          });
+
+          if (invoiceError) {
+            console.error('Error creating AbaNinja invoice:', invoiceError);
+          } else if (invoiceResponse) {
+            abaninjaInvoiceId = invoiceResponse.invoice_id;
+            abaninjaInvoiceRef = invoiceResponse.invoice_number;
+            console.log('AbaNinja invoice created:', abaninjaInvoiceRef);
+          }
+        } catch (abaNinjaInvoiceError) {
+          console.error('AbaNinja invoice creation failed:', abaNinjaInvoiceError);
+        }
+      }
+
+      // ÉTAPE 3: INSERT UNIQUE avec toutes les données (y compris AbaNinja)
       const insertData = {
         email: formData.email,
         prenom: formData.prenom,
@@ -169,6 +221,10 @@ export default function NouveauMandat() {
         cgv_acceptees_at: new Date().toISOString(),
         code_promo: formData.code_promo,
         montant_acompte: montantAcompte,
+        // Inclure les données AbaNinja directement
+        abaninja_client_uuid: abaninjaClientUuid,
+        abaninja_invoice_id: abaninjaInvoiceId,
+        abaninja_invoice_ref: abaninjaInvoiceRef,
       };
 
       const { data: insertedData, error: insertError } = await supabase
@@ -180,70 +236,6 @@ export default function NouveauMandat() {
       if (insertError) throw insertError;
 
       const demandeId = insertedData.id;
-
-      // Créer le client AbaNinja
-      let abaninjaClientUuid: string | null = null;
-      try {
-        const { data: clientResponse, error: clientError } = await supabase.functions.invoke('create-abaninja-client', {
-          body: {
-            prenom: formData.prenom,
-            nom: formData.nom,
-            email: formData.email,
-            telephone: formData.telephone,
-            adresse: formData.adresse
-          }
-        });
-
-        if (clientError) {
-          console.error('Error creating AbaNinja client:', clientError);
-        } else if (clientResponse?.client_uuid) {
-          abaninjaClientUuid = clientResponse.client_uuid;
-          console.log('AbaNinja client created:', abaninjaClientUuid);
-        }
-      } catch (abaNinjaClientError) {
-        console.error('AbaNinja client creation failed:', abaNinjaClientError);
-      }
-
-      // Créer et envoyer la facture AbaNinja
-      let abaninjaInvoiceId: string | null = null;
-      let abaninjaInvoiceRef: string | null = null;
-      
-      if (abaninjaClientUuid) {
-        try {
-          const { data: invoiceResponse, error: invoiceError } = await supabase.functions.invoke('create-abaninja-invoice', {
-            body: {
-              client_uuid: abaninjaClientUuid,
-              type_recherche: formData.type_recherche,
-              prenom: formData.prenom,
-              nom: formData.nom,
-              email: formData.email,
-              demande_id: demandeId
-            }
-          });
-
-          if (invoiceError) {
-            console.error('Error creating AbaNinja invoice:', invoiceError);
-          } else if (invoiceResponse) {
-            abaninjaInvoiceId = invoiceResponse.invoice_id;
-            abaninjaInvoiceRef = invoiceResponse.invoice_number;
-            console.log('AbaNinja invoice created:', abaninjaInvoiceRef);
-          }
-        } catch (abaNinjaInvoiceError) {
-          console.error('AbaNinja invoice creation failed:', abaNinjaInvoiceError);
-        }
-      }
-
-      // Mettre à jour la demande avec les infos AbaNinja
-      if (abaninjaClientUuid || abaninjaInvoiceId) {
-        await supabase
-          .from('demandes_mandat')
-          .update({
-            abaninja_client_uuid: abaninjaClientUuid,
-            abaninja_invoice_id: abaninjaInvoiceId,
-            abaninja_invoice_ref: abaninjaInvoiceRef
-          } as any)
-          .eq('id', demandeId);
-      }
 
       // Créer notification pour les admins
       const { data: admins } = await supabase
