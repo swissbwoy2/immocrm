@@ -253,8 +253,8 @@ export default function AgentDashboard() {
             )}
           </div>
 
-          {/* KPIs - Plus lisible sur tablette */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-9 gap-3 md:gap-4">
+          {/* KPIs - Responsive grid */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-5 xl:gap-4">
             <KPICard 
               title="Clients actifs" 
               value={clientsActifs} 
