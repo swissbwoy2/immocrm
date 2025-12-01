@@ -33,10 +33,10 @@ serve(async (req) => {
 
     console.log('Creating AbaNinja invoice for:', { client_uuid, type_recherche, email });
 
-    // Fetch bank accounts from AbaNinja to get the bankAccountUuid
+    // Fetch bank accounts from AbaNinja - CORRECTED endpoint with /finances/v2/
     console.log('Fetching bank accounts from AbaNinja...');
     const bankAccountsResponse = await fetch(
-      `https://api.abaninja.ch/accounts/${accountUuid}/finance/v1/bank-accounts`,
+      `https://api.abaninja.ch/accounts/${accountUuid}/finances/v2/bank-accounts`,
       {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -54,13 +54,19 @@ serve(async (req) => {
     }
 
     const bankAccounts = JSON.parse(bankAccountsText);
-    const bankAccountUuid = bankAccounts.data?.[0]?.uuid;
-
-    if (!bankAccountUuid) {
+    const bankAccount = bankAccounts.data?.[0];
+    
+    if (!bankAccount) {
       throw new Error('No bank account found in AbaNinja. Please configure a bank account first.');
     }
 
-    console.log('Using bank account UUID:', bankAccountUuid);
+    // Extract IBAN or QR-IBAN from the bank account
+    const iban = bankAccount.qr_iban || bankAccount.iban;
+    console.log('Using IBAN:', iban ? `${iban.substring(0, 8)}...` : 'none');
+
+    if (!iban) {
+      throw new Error('No IBAN found in bank account. Please configure an IBAN in AbaNinja.');
+    }
 
     // Calculate amount based on search type
     const montant = type_recherche === 'Acheter' ? 2500 : 300;
@@ -75,26 +81,36 @@ serve(async (req) => {
 
     const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
-    // Create invoice in AbaNinja - v2 API requires camelCase field names
+    // Create invoice in AbaNinja - v2 API with correct schema
     const invoiceData = {
-      addressUuid: client_uuid,
+      receiver: {
+        addressUuid: client_uuid
+      },
       invoiceDate: formatDate(today),
       dueDate: formatDate(dueDate),
       currencyCode: "CHF",
       title: `Mandat de recherche - ${prenom} ${nom}`,
       reference: `MANDAT-${demande_id.slice(0, 8).toUpperCase()}`,
-      paymentInstructions: {
-        type: "qrIban",
-        bankAccountUuid: bankAccountUuid
+      paymentInstructions: bankAccount.qr_iban ? {
+        qrIban: bankAccount.qr_iban
+      } : {
+        iban: bankAccount.iban
       },
+      documentTotal: montant,
+      pricesIncludeVat: true,
       positions: [
         {
-          type: "product",
-          name: description,
-          description: `Activation des recherches de logement à ${type_recherche.toLowerCase()} pour ${prenom} ${nom}`,
+          kind: "product",
+          positionNumber: 1,
+          productDescription: description,
+          additionalDescription: `Activation des recherches de logement à ${type_recherche.toLowerCase()} pour ${prenom} ${nom}`,
           quantity: 1,
-          unitPrice: montant,
-          vatRate: 0 // Services exemptés de TVA
+          singlePrice: montant,
+          positionTotal: montant,
+          vat: {
+            percentage: 0,
+            amount: 0
+          }
         }
       ]
     };
@@ -104,7 +120,7 @@ serve(async (req) => {
       documents: [invoiceData]
     };
 
-    console.log('AbaNinja invoice payload:', JSON.stringify(payload));
+    console.log('AbaNinja invoice payload:', JSON.stringify(payload, null, 2));
 
     const response = await fetch(
       `https://api.abaninja.ch/accounts/${accountUuid}/documents/v2/invoices`,
