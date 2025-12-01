@@ -355,7 +355,7 @@ export default function AgentVisites() {
     return (
       <Card 
         key={visite.id} 
-        className={`cursor-pointer hover:shadow-md transition-shadow ${
+        className={`cursor-pointer hover:shadow-md transition-shadow overflow-hidden ${
           isUrgent ? 'border-destructive/50 bg-destructive/5' : 
           visite.est_deleguee ? 'border-primary/50' : ''
         }`}
@@ -406,12 +406,12 @@ export default function AgentVisites() {
             </div>
           )}
           {visite.offres && (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-xs sm:text-sm text-muted-foreground break-words">
               {visite.offres.pieces} pièces • {visite.offres.surface}m² • {visite.offres.prix} CHF/mois
             </div>
           )}
           {visite.notes && (
-            <p className="text-sm bg-yellow-50 dark:bg-yellow-950 p-2 rounded-lg">
+            <p className="text-xs sm:text-sm bg-yellow-50 dark:bg-yellow-950 p-2 rounded-lg break-words">
               💡 {visite.notes}
             </p>
           )}
@@ -439,8 +439,8 @@ export default function AgentVisites() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto smooth-scroll pb-safe">
-      <div className="p-4 md:p-8 space-y-6">
+    <div className="flex-1 overflow-y-auto overflow-x-hidden smooth-scroll pb-safe">
+      <div className="p-3 sm:p-4 md:p-8 space-y-4 sm:space-y-6 max-w-full">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Visites clients</h1>
           <p className="text-muted-foreground text-sm sm:text-base">
@@ -491,7 +491,7 @@ export default function AgentVisites() {
                   {visitesDelegueesPending.map(visite => (
                     <Card 
                       key={visite.id} 
-                      className="border-amber-300 dark:border-amber-700 cursor-pointer hover:shadow-md transition-shadow"
+                      className="border-amber-300 dark:border-amber-700 cursor-pointer hover:shadow-md transition-shadow overflow-hidden"
                       onClick={() => handleOpenDetail(visite)}
                     >
                       <CardHeader className="pb-2">
@@ -530,12 +530,12 @@ export default function AgentVisites() {
                           </div>
                         )}
                         {visite.offres && (
-                          <div className="text-sm text-muted-foreground">
+                          <div className="text-xs sm:text-sm text-muted-foreground break-words">
                             {visite.offres.pieces} pièces • {visite.offres.surface}m² • {visite.offres.prix} CHF/mois
                           </div>
                         )}
                         {visite.notes && (
-                          <p className="text-sm bg-yellow-50 dark:bg-yellow-950 p-2 rounded-lg">
+                          <p className="text-xs sm:text-sm bg-yellow-50 dark:bg-yellow-950 p-2 rounded-lg break-words">
                             💡 {visite.notes}
                           </p>
                         )}
@@ -613,7 +613,7 @@ export default function AgentVisites() {
                 {visitesPassees.map(visite => (
                   <Card 
                     key={visite.id} 
-                    className="opacity-75 cursor-pointer hover:shadow-md transition-shadow" 
+                    className="opacity-75 cursor-pointer hover:shadow-md transition-shadow overflow-hidden" 
                     onClick={() => handleOpenDetail(visite)}
                   >
                     <CardHeader className="pb-2">
@@ -685,10 +685,10 @@ export default function AgentVisites() {
 
           {selectedVisite && (
             <div className="space-y-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <h4 className="font-semibold">{selectedVisite.adresse}</h4>
+              <div className="p-3 sm:p-4 bg-muted rounded-lg break-words">
+                <h4 className="font-semibold break-words">{selectedVisite.adresse}</h4>
                 {selectedVisite.offres && (
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 break-words">
                     {selectedVisite.offres.pieces} pièces • {selectedVisite.offres.surface}m² • {selectedVisite.offres.prix} CHF/mois
                   </p>
                 )}
@@ -776,8 +776,8 @@ export default function AgentVisites() {
           {selectedVisite && (
             <div className="space-y-4">
               {/* Adresse */}
-              <div className="p-4 bg-muted rounded-lg">
-                <h4 className="font-semibold text-lg">{selectedVisite.adresse}</h4>
+              <div className="p-3 sm:p-4 bg-muted rounded-lg break-words">
+                <h4 className="font-semibold text-base sm:text-lg break-words">{selectedVisite.adresse}</h4>
                 <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Calendar className="h-4 w-4" />
@@ -946,16 +946,16 @@ export default function AgentVisites() {
           </DialogHeader>
 
           {selectedVisite && (
-            <div className="space-y-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <h4 className="font-semibold">{selectedVisite.adresse}</h4>
+              <div className="space-y-4 max-w-full overflow-hidden">
+              <div className="p-3 sm:p-4 bg-muted rounded-lg break-words">
+                <h4 className="font-semibold break-words">{selectedVisite.adresse}</h4>
                 {selectedVisite.client_profile && (
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 break-words">
                     Pour {selectedVisite.client_profile.prenom} {selectedVisite.client_profile.nom}
                   </p>
                 )}
                 {selectedVisite.offres && (
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1 break-words">
                     {selectedVisite.offres.pieces} pièces • {selectedVisite.offres.surface}m² • {selectedVisite.offres.prix} CHF/mois
                   </p>
                 )}
