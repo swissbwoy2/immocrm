@@ -9,8 +9,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { 
   UserPlus, Clock, Mail, Phone, CheckCircle, XCircle, Search,
   RefreshCw, AlertTriangle, Eye, FileText, CreditCard, Calendar,
-  User, Briefcase, Home, Building2, Receipt, Loader2, Send
+  User, Briefcase, Home, Building2, Receipt, Loader2, Send, Trash2
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -55,6 +65,9 @@ export default function DemandesActivation() {
   const [creatingInvoice, setCreatingInvoice] = useState<string | null>(null);
   const [resendingInvoice, setResendingInvoice] = useState<string | null>(null);
   const [selectedDemande, setSelectedDemande] = useState<DemandeMandat | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [demandeToDelete, setDemandeToDelete] = useState<DemandeMandat | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -286,6 +299,30 @@ export default function DemandesActivation() {
       toast.error('Erreur');
     } finally {
       setActivating(null);
+    }
+  };
+
+  const handleDeleteDemande = async () => {
+    if (!demandeToDelete) return;
+    
+    try {
+      setDeleting(true);
+      const { error } = await supabase
+        .from('demandes_mandat')
+        .delete()
+        .eq('id', demandeToDelete.id);
+
+      if (error) throw error;
+      
+      toast.success('Demande supprimée');
+      setDeleteDialogOpen(false);
+      setDemandeToDelete(null);
+      await loadData();
+    } catch (error: any) {
+      console.error('Error deleting demande:', error);
+      toast.error(error.message || 'Erreur lors de la suppression');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -563,6 +600,15 @@ export default function DemandesActivation() {
                                 )}
                               </Button>
                             )}
+                            
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => { setDemandeToDelete(demande); setDeleteDialogOpen(true); }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" />Supprimer
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -622,6 +668,30 @@ export default function DemandesActivation() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette demande ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer la demande de {demandeToDelete?.prenom} {demandeToDelete?.nom} ?
+              Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteDemande}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
