@@ -74,7 +74,7 @@ const Messagerie = () => {
 
   const scrollToBottom = () => {
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
     }, 100);
   };
 
@@ -989,15 +989,6 @@ const Messagerie = () => {
     </>
   );
 
-  const chatHeader = currentConversation && (
-    <ChatHeader
-      name={getContactInfo(currentConversation).name}
-      avatarUrl={null}
-      status={getContactInfo(currentConversation).type === 'admin' ? 'Admin' : undefined}
-      isArchived={currentConversation.is_archived}
-    />
-  );
-
   const chatView = selectedConv ? (
     <div className="flex-1 flex flex-col min-h-0 chat-background">
       {currentConversation?.is_archived && (
@@ -1012,6 +1003,18 @@ const Messagerie = () => {
       )}
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-2 max-w-4xl mx-auto">
+          {/* Header qui défile avec les messages */}
+          {currentConversation && (
+            <div className="mb-6 pb-4 border-b border-border/30">
+              <ChatHeader
+                name={getContactInfo(currentConversation).name}
+                avatarUrl={null}
+                status={getContactInfo(currentConversation).type === 'admin' ? 'Admin' : undefined}
+                isArchived={currentConversation.is_archived}
+              />
+            </div>
+          )}
+          
           {selectedMessages.map((msg) => {
             const isSent = msg.sender_type === 'agent';
             const senderName = isSent ? undefined : getContactInfo(currentConversation).name;
@@ -1173,7 +1176,6 @@ const Messagerie = () => {
       chatView={chatView}
       selectedConversation={selectedConv}
       onSelectConversation={setSelectedConv}
-      chatHeader={chatHeader}
     />
   );
 };
