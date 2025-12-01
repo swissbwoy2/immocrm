@@ -37,7 +37,9 @@ import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 import { MissingDocumentsAlert } from '@/components/MissingDocumentsAlert';
 import { useClientCandidates, ClientCandidate } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
+import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck';
 import { SolvabilityAlert } from '@/components/SolvabilityAlert';
+import { PurchaseSolvabilityAlert } from '@/components/PurchaseSolvabilityAlert';
 import { ClientCandidatesManager } from '@/components/ClientCandidatesManager';
 import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSection';
 
@@ -59,7 +61,9 @@ export default function Dossier() {
   
   // Hooks pour la gestion des candidats et solvabilité
   const { candidates, refresh: refreshCandidates } = useClientCandidates(client?.id);
+  const isAcheteur = client?.type_recherche === 'Acheter';
   const solvabilityResult = useSolvabilityCheck(client, candidates);
+  const purchaseSolvabilityResult = usePurchaseSolvabilityCheck(client, candidates);
 
   useEffect(() => {
     loadData();
@@ -456,7 +460,9 @@ export default function Dossier() {
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-2">
                     <DollarSign className="w-5 h-5 text-primary" />
-                    <CardTitle className="text-sm">Budget maximum</CardTitle>
+                    <CardTitle className="text-sm">
+                      {isAcheteur ? 'Prix d\'achat recherché' : 'Budget maximum'}
+                    </CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -464,21 +470,79 @@ export default function Dossier() {
                 </CardContent>
               </Card>
 
-              <Card className="border-green-200 bg-green-50 dark:bg-green-950">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-green-600" />
-                    <CardTitle className="text-sm">Budget recommandé</CardTitle>
-                  </div>
+              {isAcheteur ? (
+                <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-5 h-5 text-blue-600" />
+                      <CardTitle className="text-sm">Prix max finançable</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                      {purchaseSolvabilityResult.prixAchatMax.toLocaleString('fr-CH')} CHF
+                    </p>
+                    <Badge variant="secondary" className="mt-1">Règle 33% charges</Badge>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="border-green-200 bg-green-50 dark:bg-green-950">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="w-5 h-5 text-green-600" />
+                      <CardTitle className="text-sm">Budget recommandé</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                      {budgetRecommande.toLocaleString('fr-CH')} CHF
+                    </p>
+                    <Badge variant="secondary" className="mt-1">Règle du tiers</Badge>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Section Capacité d'achat pour les acheteurs */}
+            {isAcheteur && (
+              <Card className="mt-4 border-blue-200">
+                <CardHeader>
+                  <CardTitle className="text-base">🏠 Capacité d'achat</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold text-green-700 dark:text-green-300">
-                    {budgetRecommande.toLocaleString('fr-CH')} CHF
-                  </p>
-                  <Badge variant="secondary" className="mt-1">Règle du tiers</Badge>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Prix max finançable</p>
+                      <p className="font-bold text-lg">{purchaseSolvabilityResult.prixAchatMax.toLocaleString('fr-CH')} CHF</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Apport disponible</p>
+                      <p className="font-bold text-lg">{(client.apport_personnel || 0).toLocaleString('fr-CH')} CHF</p>
+                      <p className="text-xs text-muted-foreground">
+                        Requis (26%): {purchaseSolvabilityResult.apportRequis.toLocaleString('fr-CH')} CHF
+                      </p>
+                      {purchaseSolvabilityResult.apportManquant > 0 && (
+                        <p className="text-xs text-red-500">
+                          Manque: {purchaseSolvabilityResult.apportManquant.toLocaleString('fr-CH')} CHF
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Charges mensuelles estimées</p>
+                      <p className="font-bold text-lg">{purchaseSolvabilityResult.chargesMensuelles.toLocaleString('fr-CH')} CHF</p>
+                      <p className="text-xs text-muted-foreground">Intérêts + amortissement + entretien</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Taux d'effort</p>
+                      <p className={`font-bold text-lg ${purchaseSolvabilityResult.tauxEffort > 33 ? 'text-red-500' : 'text-green-600'}`}>
+                        {purchaseSolvabilityResult.tauxEffort}%
+                      </p>
+                      <p className="text-xs text-muted-foreground">Maximum recommandé: 33%</p>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-            </div>
+            )}
 
             {/* Détails des charges */}
             <Card className="mt-4">
@@ -526,7 +590,11 @@ export default function Dossier() {
             </Card>
 
             {/* Solvabilité - Alerte détaillée */}
-            <SolvabilityAlert result={solvabilityResult} />
+            {isAcheteur ? (
+              <PurchaseSolvabilityAlert result={purchaseSolvabilityResult} />
+            ) : (
+              <SolvabilityAlert result={solvabilityResult} />
+            )}
 
             {/* Gestion des candidats */}
             <ClientCandidatesManager 
@@ -680,7 +748,9 @@ export default function Dossier() {
                   </div>
 
                   <div>
-                    <p className="text-sm text-muted-foreground">Budget maximum</p>
+                    <p className="text-sm text-muted-foreground">
+                      {isAcheteur ? 'Prix d\'achat recherché' : 'Budget maximum'}
+                    </p>
                     <p className="font-medium">{(client.budget_max || 0).toLocaleString('fr-CH')} CHF</p>
                   </div>
 
