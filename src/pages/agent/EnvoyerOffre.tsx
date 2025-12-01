@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { OfferAttachmentUploader } from "@/components/OfferAttachmentUploader";
 import { useDraftManager, initialFormData } from "@/hooks/useDraftManager";
 import { DraftManagerDialog } from "@/components/DraftManagerDialog";
+import { ClientMultiSelect } from "@/components/ClientMultiSelect";
 
 const EnvoyerOffre = () => {
   const location = useLocation();
@@ -23,6 +24,7 @@ const EnvoyerOffre = () => {
   const { user } = useAuth();
   const [agent, setAgent] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [draftDialogOpen, setDraftDialogOpen] = useState(false);
   
   // Lire le clientId depuis les query params de l'URL
@@ -48,7 +50,8 @@ const EnvoyerOffre = () => {
   // Mettre à jour le clientId si passé via URL ou state (prioritaire sur localStorage)
   useEffect(() => {
     const newClientId = clientIdFromState || clientIdFromUrl;
-    if (newClientId && newClientId !== formData.clientId) {
+    if (newClientId) {
+      setSelectedClientIds([newClientId]);
       setFormData(prev => ({ ...prev, clientId: newClientId }));
     }
   }, [clientIdFromState, clientIdFromUrl]);
@@ -107,7 +110,7 @@ const EnvoyerOffre = () => {
     }
   };
 
-  const selectedClient = clients.find(c => c.id === formData.clientId);
+  const selectedClients = clients.filter(c => selectedClientIds.includes(c.id));
 
   const handleDateVisiteChange = (index: number, value: string) => {
     const newDates = [...formData.datesVisite];
@@ -116,129 +119,134 @@ const EnvoyerOffre = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.clientId || !formData.localisation || !formData.prix || !formData.surface || !formData.nombrePieces) {
-      toast({ title: "Erreur", description: "Veuillez remplir tous les champs obligatoires", variant: "destructive" });
+    if (selectedClientIds.length === 0 || !formData.localisation || !formData.prix || !formData.surface || !formData.nombrePieces) {
+      toast({ title: "Erreur", description: "Veuillez sélectionner au moins un client et remplir tous les champs obligatoires", variant: "destructive" });
       return;
     }
 
     if (!agent) return;
 
     try {
-      // Create offer
-      const { data: offre, error: offreError } = await supabase
-        .from('offres')
-        .insert({
-          client_id: formData.clientId,
-          agent_id: agent.id,
-          adresse: formData.localisation,
-          prix: parseFloat(formData.prix),
-          surface: parseFloat(formData.surface),
-          pieces: parseFloat(formData.nombrePieces),
-          description: formData.description,
-          etage: formData.etage,
-          disponibilite: formData.disponibilite,
-          statut: 'envoyee',
-          lien_annonce: formData.lienAnnonce,
-          code_immeuble: formData.codeImmeuble,
-          locataire_nom: formData.locataireNom,
-          locataire_tel: formData.locataireTel,
-          concierge_nom: formData.conciergeNom,
-          concierge_tel: formData.conciergeTel,
-          commentaires: formData.commentaires,
-        })
-        .select()
-        .single();
-
-      if (offreError) throw offreError;
-
-      // Create conversation if it doesn't exist
-      const { data: existingConv } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq('client_id', formData.clientId)
-        .eq('agent_id', agent.id)
-        .single();
-
-      let conversationId = existingConv?.id;
-
-      if (!existingConv) {
-        const { data: newConv, error: convError } = await supabase
-          .from('conversations')
+      // Boucle sur chaque client sélectionné
+      for (const clientId of selectedClientIds) {
+        const client = clients.find(c => c.id === clientId);
+        
+        // Create offer for this client
+        const { data: offre, error: offreError } = await supabase
+          .from('offres')
           .insert({
-            client_id: formData.clientId,
+            client_id: clientId,
             agent_id: agent.id,
-            subject: "Nouvelles offres",
+            adresse: formData.localisation,
+            prix: parseFloat(formData.prix),
+            surface: parseFloat(formData.surface),
+            pieces: parseFloat(formData.nombrePieces),
+            description: formData.description,
+            etage: formData.etage,
+            disponibilite: formData.disponibilite,
+            statut: 'envoyee',
+            lien_annonce: formData.lienAnnonce,
+            code_immeuble: formData.codeImmeuble,
+            locataire_nom: formData.locataireNom,
+            locataire_tel: formData.locataireTel,
+            concierge_nom: formData.conciergeNom,
+            concierge_tel: formData.conciergeTel,
+            commentaires: formData.commentaires,
           })
           .select()
           .single();
 
-        if (convError) throw convError;
-        conversationId = newConv.id;
-      }
+        if (offreError) throw offreError;
 
-      // Send message with offer
-      const messageContent = `Nouvelle Offre pour Votre Recherche d'Appartement\n\nBonjour ${selectedClient?.profiles?.prenom} ${selectedClient?.profiles?.nom} 👋,\n\nNous avons trouvé une offre qui pourrait correspondre à vos critères de recherche ! Voici les détails de ce bien immobilier :\n\n📍 Localisation : ${formData.localisation}\n💰 Prix : ${formData.prix} CHF\n📐 Surface : ${formData.surface} m²\n🏠 Nombre de pièces : ${formData.nombrePieces}\n🏢 Étage : ${formData.etage}\n📅 Disponibilité : ${formData.disponibilite}\n\nDescription :\n${formData.description}${formData.datesVisite.filter(d => d).length > 0 ? `\n\nDates de visite proposées :\n${formData.datesVisite.filter(d => d).map((d, i) => `• ${d}`).join('\n')}` : ''}${formData.lienAnnonce ? `\n\n🔗 Voir l'annonce complète : ${formData.lienAnnonce}` : ''}${attachments.length > 0 ? `\n\n📎 ${attachments.length} pièce(s) jointe(s)` : ''}\n\nPour toute question, n'hésitez pas à nous appeler au +41 21 634 28 39 ou à répondre directement à cet email.\n\nCordialement,\nL'équipe Immo-rama.ch`;
+        // Create conversation if it doesn't exist
+        const { data: existingConv } = await supabase
+          .from('conversations')
+          .select('*')
+          .eq('client_id', clientId)
+          .eq('agent_id', agent.id)
+          .single();
 
-      // If we have attachments, send each as a separate message
-      if (attachments.length > 0) {
-        // First send the main message
-        const { error: messageError } = await supabase
-          .from('messages')
-          .insert({
-            conversation_id: conversationId,
-            sender_id: agent.id,
-            sender_type: 'agent',
-            content: messageContent,
-            offre_id: offre.id,
-          });
+        let conversationId = existingConv?.id;
 
-        if (messageError) throw messageError;
+        if (!existingConv) {
+          const { data: newConv, error: convError } = await supabase
+            .from('conversations')
+            .insert({
+              client_id: clientId,
+              agent_id: agent.id,
+              subject: "Nouvelles offres",
+            })
+            .select()
+            .single();
 
-        // Then send each attachment as a separate message
-        for (const attachment of attachments) {
-          await supabase
+          if (convError) throw convError;
+          conversationId = newConv.id;
+        }
+
+        // Send message with offer
+        const messageContent = `Nouvelle Offre pour Votre Recherche d'Appartement\n\nBonjour ${client?.profiles?.prenom} ${client?.profiles?.nom} 👋,\n\nNous avons trouvé une offre qui pourrait correspondre à vos critères de recherche ! Voici les détails de ce bien immobilier :\n\n📍 Localisation : ${formData.localisation}\n💰 Prix : ${formData.prix} CHF\n📐 Surface : ${formData.surface} m²\n🏠 Nombre de pièces : ${formData.nombrePieces}\n🏢 Étage : ${formData.etage}\n📅 Disponibilité : ${formData.disponibilite}\n\nDescription :\n${formData.description}${formData.datesVisite.filter(d => d).length > 0 ? `\n\nDates de visite proposées :\n${formData.datesVisite.filter(d => d).map((d, i) => `• ${d}`).join('\n')}` : ''}${formData.lienAnnonce ? `\n\n🔗 Voir l'annonce complète : ${formData.lienAnnonce}` : ''}${attachments.length > 0 ? `\n\n📎 ${attachments.length} pièce(s) jointe(s)` : ''}\n\nPour toute question, n'hésitez pas à nous appeler au +41 21 634 28 39 ou à répondre directement à cet email.\n\nCordialement,\nL'équipe Immo-rama.ch`;
+
+        // If we have attachments, send each as a separate message
+        if (attachments.length > 0) {
+          // First send the main message
+          const { error: messageError } = await supabase
             .from('messages')
             .insert({
               conversation_id: conversationId,
               sender_id: agent.id,
               sender_type: 'agent',
-              content: `📎 Pièce jointe: ${attachment.name}`,
+              content: messageContent,
               offre_id: offre.id,
-              attachment_url: attachment.url,
-              attachment_type: attachment.type,
-              attachment_name: attachment.name,
-              attachment_size: attachment.size,
             });
-        }
-      } else {
-        const { error: messageError } = await supabase
-          .from('messages')
-          .insert({
-            conversation_id: conversationId,
-            sender_id: agent.id,
-            sender_type: 'agent',
-            content: messageContent,
-            offre_id: offre.id,
-          });
 
-        if (messageError) throw messageError;
-      }
+          if (messageError) throw messageError;
 
-      // Create visits if dates are provided
-      const validDates = formData.datesVisite.filter(d => d);
-      if (validDates.length > 0 && offre) {
-        for (const dateStr of validDates) {
-          await supabase
-            .from('visites')
+          // Then send each attachment as a separate message
+          for (const attachment of attachments) {
+            await supabase
+              .from('messages')
+              .insert({
+                conversation_id: conversationId,
+                sender_id: agent.id,
+                sender_type: 'agent',
+                content: `📎 Pièce jointe: ${attachment.name}`,
+                offre_id: offre.id,
+                attachment_url: attachment.url,
+                attachment_type: attachment.type,
+                attachment_name: attachment.name,
+                attachment_size: attachment.size,
+              });
+          }
+        } else {
+          const { error: messageError } = await supabase
+            .from('messages')
             .insert({
+              conversation_id: conversationId,
+              sender_id: agent.id,
+              sender_type: 'agent',
+              content: messageContent,
               offre_id: offre.id,
-              client_id: formData.clientId,
-              agent_id: agent.id,
-              date_visite: dateStr,
-              adresse: formData.localisation,
-              statut: 'planifiee',
-              notes: formData.commentaires,
             });
+
+          if (messageError) throw messageError;
+        }
+
+        // Create visits if dates are provided
+        const validDates = formData.datesVisite.filter(d => d);
+        if (validDates.length > 0 && offre) {
+          for (const dateStr of validDates) {
+            await supabase
+              .from('visites')
+              .insert({
+                offre_id: offre.id,
+                client_id: clientId,
+                agent_id: agent.id,
+                date_visite: dateStr,
+                adresse: formData.localisation,
+                statut: 'planifiee',
+                notes: formData.commentaires,
+              });
+          }
         }
       }
 
@@ -248,7 +256,7 @@ const EnvoyerOffre = () => {
       }
       clearCurrentDraft();
       
-      toast({ title: "Succès", description: "Offre envoyée avec succès" });
+      toast({ title: "Succès", description: `Offre envoyée à ${selectedClientIds.length} client(s) avec succès` });
       navigate('/agent');
     } catch (error) {
       console.error('Error sending offer:', error);
@@ -279,19 +287,17 @@ const EnvoyerOffre = () => {
           {/* Formulaire à gauche */}
           <div className="space-y-6">
             <Card className="p-6">
-              <h3 className="font-semibold mb-4">Sélectionner un client</h3>
-              <Select value={formData.clientId} onValueChange={(value) => setFormData({ ...formData, clientId: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map(client => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.profiles?.prenom} {client.profiles?.nom} - {client.profiles?.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <h3 className="font-semibold mb-4">Sélectionner des clients</h3>
+              <ClientMultiSelect
+                clients={clients}
+                selectedClientIds={selectedClientIds}
+                onSelectionChange={setSelectedClientIds}
+              />
+              {selectedClientIds.length > 1 && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  Cette offre sera envoyée à {selectedClientIds.length} clients
+                </p>
+              )}
             </Card>
 
             <Card className="p-6 space-y-4">
@@ -485,8 +491,11 @@ const EnvoyerOffre = () => {
                   🏠 Nouvelle Offre pour Votre Recherche d'Appartement
                 </h2>
 
-                {selectedClient && (
-                  <p className="text-sm">Bonjour {selectedClient.profiles?.prenom} {selectedClient.profiles?.nom} 👋,</p>
+                {selectedClientIds.length === 1 && selectedClients[0] && (
+                  <p className="text-sm">Bonjour {selectedClients[0].profiles?.prenom} {selectedClients[0].profiles?.nom} 👋,</p>
+                )}
+                {selectedClientIds.length > 1 && (
+                  <p className="text-sm">Bonjour 👋,</p>
                 )}
 
                 <p className="text-sm">
