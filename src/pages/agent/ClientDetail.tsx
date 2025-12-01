@@ -19,14 +19,17 @@ import { SendDossierDialog } from '@/components/SendDossierDialog';
 import { MergeDocumentsDialog } from '@/components/MergeDocumentsDialog';
 import { ClientCandidatesManager } from '@/components/ClientCandidatesManager';
 import { SolvabilityAlert } from '@/components/SolvabilityAlert';
+import { PurchaseSolvabilityAlert } from '@/components/PurchaseSolvabilityAlert';
 import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSection';
 import { useClientCandidates } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
+import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { calculateDaysElapsed } from '@/utils/calculations';
 import { Progress } from '@/components/ui/progress';
+import { ClientTypeBadge } from '@/components/ClientTypeBadge';
 
 interface Client {
   id: string;
@@ -54,6 +57,7 @@ interface Client {
   situation_financiere?: string;
   profession?: string;
   type_bien?: string;
+  type_recherche?: string;
   source_revenus?: string;
   anciennete_mois?: number;
   created_at?: string;
@@ -107,6 +111,8 @@ export default function ClientDetail() {
   // Hook pour les candidats supplémentaires
   const { candidates, refresh: refreshCandidates } = useClientCandidates(id);
   const solvabilityResult = useSolvabilityCheck(client, candidates);
+  const purchaseSolvabilityResult = usePurchaseSolvabilityCheck(client, candidates);
+  const isAcheteur = client?.type_recherche === 'Acheter';
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<any>({});
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
@@ -531,6 +537,7 @@ export default function ClientDetail() {
               <h1 className="text-2xl sm:text-3xl font-bold">
                 {profile.prenom} {profile.nom}
               </h1>
+              <ClientTypeBadge typeRecherche={client.type_recherche} />
               <Badge variant="outline">{client.nationalite || 'N/A'}</Badge>
               <Badge variant="secondary">Permis {client.type_permis || 'N/A'}</Badge>
             </div>
@@ -1193,23 +1200,40 @@ export default function ClientDetail() {
                 </Card>
                 <Card className="bg-muted/50">
                   <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground mb-1">Budget demandé</p>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      {isAcheteur ? 'Prix recherché' : 'Budget demandé'}
+                    </p>
                     <p className="text-2xl font-bold text-primary">
                       CHF {client.budget_max?.toLocaleString() || '0'}
+                      {!isAcheteur && <span className="text-base font-normal">/mois</span>}
                     </p>
                   </CardContent>
                 </Card>
-                <Card className={`${solvabilityResult.budgetPossible >= (client.budget_max || 0) ? 'bg-green-50 dark:bg-green-950/20' : 'bg-orange-50 dark:bg-orange-950/20'}`}>
-                  <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground mb-1">Budget possible</p>
-                    <p className={`text-2xl font-bold ${solvabilityResult.budgetPossible >= (client.budget_max || 0) ? 'text-green-600' : 'text-orange-600'}`}>
-                      CHF {solvabilityResult.budgetPossible.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      (Revenus ÷ 3)
-                    </p>
-                  </CardContent>
-                </Card>
+                {isAcheteur ? (
+                  <Card className={`${(client.apport_personnel || 0) >= (client.budget_max || 0) * 0.26 ? 'bg-green-50 dark:bg-green-950/20' : 'bg-orange-50 dark:bg-orange-950/20'}`}>
+                    <CardContent className="pt-6">
+                      <p className="text-sm text-muted-foreground mb-1">Apport disponible</p>
+                      <p className={`text-2xl font-bold ${(client.apport_personnel || 0) >= (client.budget_max || 0) * 0.26 ? 'text-green-600' : 'text-orange-600'}`}>
+                        CHF {client.apport_personnel?.toLocaleString() || '0'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        (Requis: {Math.round((client.budget_max || 0) * 0.26).toLocaleString()} CHF - 26%)
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className={`${solvabilityResult.budgetPossible >= (client.budget_max || 0) ? 'bg-green-50 dark:bg-green-950/20' : 'bg-orange-50 dark:bg-orange-950/20'}`}>
+                    <CardContent className="pt-6">
+                      <p className="text-sm text-muted-foreground mb-1">Budget possible</p>
+                      <p className={`text-2xl font-bold ${solvabilityResult.budgetPossible >= (client.budget_max || 0) ? 'text-green-600' : 'text-orange-600'}`}>
+                        CHF {solvabilityResult.budgetPossible.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        (Revenus ÷ 3)
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
               <Separator />
               <div className="space-y-2">
@@ -1322,7 +1346,11 @@ export default function ClientDetail() {
           </Card>
 
           {/* Alerte de solvabilité */}
-          <SolvabilityAlert result={solvabilityResult} className="col-span-full" />
+          {isAcheteur ? (
+            <PurchaseSolvabilityAlert result={purchaseSolvabilityResult} className="col-span-full" />
+          ) : (
+            <SolvabilityAlert result={solvabilityResult} className="col-span-full" />
+          )}
 
           {/* Candidats supplémentaires */}
           <div className="col-span-full">

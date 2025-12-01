@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download, Calendar, FileCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download, Calendar, FileCheck, Home, Key } from 'lucide-react';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -188,6 +188,10 @@ export default function AgentDashboard() {
     return calculateDaysElapsed(dateAjout) <= 90;
   }).length;
   
+  // Clients par type
+  const clientsLocation = clients.filter(c => c.type_recherche !== 'Acheter').length;
+  const clientsAchat = clients.filter(c => c.type_recherche === 'Acheter').length;
+  
   const deadlinesCritiques = clients.filter(c => {
     const dateAjout = c.date_ajout || c.created_at;
     return calculateDaysElapsed(dateAjout) >= 90;
@@ -250,12 +254,27 @@ export default function AgentDashboard() {
           </div>
 
           {/* KPIs - Plus lisible sur tablette */}
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3 md:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-9 gap-3 md:gap-4">
             <KPICard 
               title="Clients actifs" 
               value={clientsActifs} 
               icon={Users}
               onClick={() => navigate('/agent/mes-clients')}
+            />
+            <KPICard 
+              title="Location" 
+              value={clientsLocation} 
+              icon={Key}
+              onClick={() => navigate('/agent/mes-clients')}
+              subtitle="clients"
+            />
+            <KPICard 
+              title="Achat" 
+              value={clientsAchat} 
+              icon={Home}
+              onClick={() => navigate('/agent/mes-clients')}
+              variant={clientsAchat > 0 ? 'success' : 'default'}
+              subtitle="clients"
             />
             <KPICard 
               title="Offres envoyées" 
@@ -277,13 +296,6 @@ export default function AgentDashboard() {
               icon={MessageSquare}
               onClick={() => navigate('/agent/messagerie')}
               variant={counts.new_message > 0 ? 'danger' : 'default'}
-            />
-            <KPICard 
-              title="Deadlines" 
-              value={deadlinesCritiques} 
-              icon={LayoutDashboard} 
-              variant={deadlinesCritiques > 0 ? 'danger' : 'default'}
-              onClick={() => navigate('/agent/mes-clients')}
             />
             <KPICard 
               title="Affaires conclues" 
