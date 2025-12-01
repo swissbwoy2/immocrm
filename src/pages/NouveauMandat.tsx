@@ -121,7 +121,9 @@ export default function NouveauMandat() {
         return;
       }
 
-      // Insérer la demande
+      const montantAcompte = formData.type_recherche === 'Acheter' ? 2500 : 300;
+
+      // Insérer la demande et récupérer l'ID
       const insertData = {
         email: formData.email,
         prenom: formData.prenom,
@@ -166,14 +168,82 @@ export default function NouveauMandat() {
         cgv_acceptees: formData.cgv_acceptees,
         cgv_acceptees_at: new Date().toISOString(),
         code_promo: formData.code_promo,
-        montant_acompte: formData.type_recherche === 'Acheter' ? 2500 : 300,
+        montant_acompte: montantAcompte,
       };
 
-      const { error } = await supabase
+      const { data: insertedData, error: insertError } = await supabase
         .from('demandes_mandat')
-        .insert(insertData as any);
+        .insert(insertData as any)
+        .select('id')
+        .single();
 
-      if (error) throw error;
+      if (insertError) throw insertError;
+
+      const demandeId = insertedData.id;
+
+      // Créer le client AbaNinja
+      let abaninjaClientUuid: string | null = null;
+      try {
+        const { data: clientResponse, error: clientError } = await supabase.functions.invoke('create-abaninja-client', {
+          body: {
+            prenom: formData.prenom,
+            nom: formData.nom,
+            email: formData.email,
+            telephone: formData.telephone,
+            adresse: formData.adresse
+          }
+        });
+
+        if (clientError) {
+          console.error('Error creating AbaNinja client:', clientError);
+        } else if (clientResponse?.client_uuid) {
+          abaninjaClientUuid = clientResponse.client_uuid;
+          console.log('AbaNinja client created:', abaninjaClientUuid);
+        }
+      } catch (abaNinjaClientError) {
+        console.error('AbaNinja client creation failed:', abaNinjaClientError);
+      }
+
+      // Créer et envoyer la facture AbaNinja
+      let abaninjaInvoiceId: string | null = null;
+      let abaninjaInvoiceRef: string | null = null;
+      
+      if (abaninjaClientUuid) {
+        try {
+          const { data: invoiceResponse, error: invoiceError } = await supabase.functions.invoke('create-abaninja-invoice', {
+            body: {
+              client_uuid: abaninjaClientUuid,
+              type_recherche: formData.type_recherche,
+              prenom: formData.prenom,
+              nom: formData.nom,
+              email: formData.email,
+              demande_id: demandeId
+            }
+          });
+
+          if (invoiceError) {
+            console.error('Error creating AbaNinja invoice:', invoiceError);
+          } else if (invoiceResponse) {
+            abaninjaInvoiceId = invoiceResponse.invoice_id;
+            abaninjaInvoiceRef = invoiceResponse.invoice_number;
+            console.log('AbaNinja invoice created:', abaninjaInvoiceRef);
+          }
+        } catch (abaNinjaInvoiceError) {
+          console.error('AbaNinja invoice creation failed:', abaNinjaInvoiceError);
+        }
+      }
+
+      // Mettre à jour la demande avec les infos AbaNinja
+      if (abaninjaClientUuid || abaninjaInvoiceId) {
+        await supabase
+          .from('demandes_mandat')
+          .update({
+            abaninja_client_uuid: abaninjaClientUuid,
+            abaninja_invoice_id: abaninjaInvoiceId,
+            abaninja_invoice_ref: abaninjaInvoiceRef
+          } as any)
+          .eq('id', demandeId);
+      }
 
       // Créer notification pour les admins
       const { data: admins } = await supabase
@@ -189,7 +259,7 @@ export default function NouveauMandat() {
             title: 'Nouvelle demande de mandat',
             message: `${formData.prenom} ${formData.nom} a soumis une demande de mandat`,
             link: '/admin/demandes-activation',
-            metadata: { email: formData.email },
+            metadata: { email: formData.email, demande_id: demandeId },
           });
         }
       }
@@ -249,7 +319,16 @@ export default function NouveauMandat() {
       // Nettoyer le localStorage
       localStorage.removeItem(STORAGE_KEY);
 
-      toast.success('Demande envoyée avec succès ! Un email de confirmation vous a été envoyé.');
+      // Message de confirmation avec détails
+      const invoiceMessage = abaninjaInvoiceRef 
+        ? ` La facture n°${abaninjaInvoiceRef} vous a été envoyée.`
+        : '';
+      
+      toast.success(
+        `Demande envoyée avec succès ! Vous allez recevoir par email votre mandat signé en PDF.${invoiceMessage}`,
+        { duration: 6000 }
+      );
+      
       navigate('/login', { state: { mandatSubmitted: true } });
 
     } catch (error: any) {
