@@ -46,12 +46,12 @@ serve(async (req) => {
 
     const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
-    // Create invoice in AbaNinja - v2 API requires documents array wrapper
+    // Create invoice in AbaNinja - v2 API requires camelCase field names
     const invoiceData = {
-      address_uuid: client_uuid,
-      date: formatDate(today),
-      due_date: formatDate(dueDate),
-      currency_code: "CHF",
+      addressUuid: client_uuid,
+      invoiceDate: formatDate(today),
+      dueDate: formatDate(dueDate),
+      currencyCode: "CHF",
       title: `Mandat de recherche - ${prenom} ${nom}`,
       reference: `MANDAT-${demande_id.slice(0, 8).toUpperCase()}`,
       positions: [
@@ -60,8 +60,8 @@ serve(async (req) => {
           name: description,
           description: `Activation des recherches de logement à ${type_recherche.toLowerCase()} pour ${prenom} ${nom}`,
           quantity: 1,
-          unit_price: montant,
-          vat_rate: 0 // Services exemptés de TVA
+          unitPrice: montant,
+          vatRate: 0 // Services exemptés de TVA
         }
       ]
     };
