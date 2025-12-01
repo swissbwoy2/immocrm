@@ -8,35 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Link, Paperclip, RotateCcw } from "lucide-react";
+import { Link, Paperclip, RotateCcw, FolderOpen, Save } from "lucide-react";
 import logoImmoRama from "@/assets/logo-immo-rama.png";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { OfferAttachmentUploader, AttachmentData } from "@/components/OfferAttachmentUploader";
-import { usePersistedFormState } from "@/hooks/usePersistedFormState";
-
-const STORAGE_KEY_FORM = 'envoyer-offre-form';
-const STORAGE_KEY_ATTACHMENTS = 'envoyer-offre-attachments';
-
-const initialFormData = {
-  clientId: "",
-  localisation: "",
-  prix: "",
-  surface: "",
-  nombrePieces: "",
-  description: "",
-  etage: "",
-  disponibilite: "",
-  etageVisite: "",
-  codeImmeuble: "",
-  locataireNom: "",
-  locataireTel: "",
-  conciergeNom: "",
-  conciergeTel: "",
-  commentaires: "",
-  lienAnnonce: "",
-  datesVisite: ["", "", ""],
-};
+import { OfferAttachmentUploader } from "@/components/OfferAttachmentUploader";
+import { useDraftManager, initialFormData } from "@/hooks/useDraftManager";
+import { DraftManagerDialog } from "@/components/DraftManagerDialog";
 
 const EnvoyerOffre = () => {
   const location = useLocation();
@@ -45,15 +23,27 @@ const EnvoyerOffre = () => {
   const { user } = useAuth();
   const [agent, setAgent] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
+  const [draftDialogOpen, setDraftDialogOpen] = useState(false);
   
   // Lire le clientId depuis les query params de l'URL
   const searchParams = new URLSearchParams(location.search);
   const clientIdFromUrl = searchParams.get('clientId');
   const clientIdFromState = location.state?.clientId;
   
-  // Utiliser le hook de persistance pour le formulaire
-  const [formData, setFormData, clearFormData] = usePersistedFormState(STORAGE_KEY_FORM, initialFormData);
-  const [attachments, setAttachments, clearAttachments] = usePersistedFormState<AttachmentData[]>(STORAGE_KEY_ATTACHMENTS, []);
+  // Utiliser le hook de gestion des brouillons
+  const {
+    drafts,
+    currentDraftId,
+    formData,
+    setFormData,
+    attachments,
+    setAttachments,
+    saveDraft,
+    loadDraft,
+    deleteDraft,
+    renameDraft,
+    clearCurrentDraft,
+  } = useDraftManager();
 
   // Mettre à jour le clientId si passé via URL ou state (prioritaire sur localStorage)
   useEffect(() => {
@@ -252,9 +242,11 @@ const EnvoyerOffre = () => {
         }
       }
 
-      // Nettoyer le localStorage après envoi réussi
-      clearFormData();
-      clearAttachments();
+      // Nettoyer le brouillon après envoi réussi
+      if (currentDraftId) {
+        deleteDraft(currentDraftId);
+      }
+      clearCurrentDraft();
       
       toast({ title: "Succès", description: "Offre envoyée avec succès" });
       navigate('/agent');
@@ -429,14 +421,34 @@ const EnvoyerOffre = () => {
               />
             </Card>
 
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setDraftDialogOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <FolderOpen className="h-4 w-4" />
+                Mes brouillons ({drafts.length})
+              </Button>
               <Button 
                 variant="outline" 
                 onClick={() => {
-                  clearFormData();
-                  clearAttachments();
-                  setFormData(initialFormData);
-                  setAttachments([]);
+                  const defaultName = `Brouillon - ${formData.localisation || 'Sans titre'}`;
+                  const name = window.prompt("Nom du brouillon:", defaultName);
+                  if (name) {
+                    saveDraft(name);
+                    toast({ title: "Brouillon sauvegardé", description: `"${name}" a été sauvegardé` });
+                  }
+                }}
+                className="flex items-center gap-2"
+              >
+                <Save className="h-4 w-4" />
+                Sauvegarder
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  clearCurrentDraft();
                   toast({ title: "Formulaire réinitialisé", description: "Toutes les données ont été effacées" });
                 }}
                 className="flex items-center gap-2"
@@ -448,6 +460,16 @@ const EnvoyerOffre = () => {
                 Envoyer
               </Button>
             </div>
+
+            <DraftManagerDialog
+              open={draftDialogOpen}
+              onOpenChange={setDraftDialogOpen}
+              drafts={drafts}
+              onLoadDraft={loadDraft}
+              onDeleteDraft={deleteDraft}
+              onRenameDraft={renameDraft}
+              currentDraftId={currentDraftId}
+            />
           </div>
 
           {/* Aperçu de l'email à droite */}
