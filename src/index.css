@@ -177,4 +177,25 @@ All colors MUST be HSL.
   .conversation-item-hover {
     transition: background-color 0.15s ease;
   }
+
+  /* Safe area support for mobile devices */
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .pt-safe {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+
+  /* Touch-optimized button sizes */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Smooth scroll with momentum */
+  .smooth-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
 }
