@@ -31,6 +31,7 @@ import AdminCalendrier from "./pages/admin/Calendrier";
 import AdminRappels from "./pages/admin/Rappels";
 import AdminCandidatures from "./pages/admin/Candidatures";
 import AdminDemandesActivation from "./pages/admin/DemandesActivation";
+import AdminFacturesAbaNinja from "./pages/admin/FacturesAbaNinja";
 import AgentDashboard from "./pages/agent/Dashboard";
 import AgentMesClients from "./pages/agent/MesClients";
 import AgentClientDetail from "./pages/agent/ClientDetail";
@@ -102,6 +103,7 @@ const App = () => (
             <Route path="/admin/rappels" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRappels /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/candidatures" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminCandidatures /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/demandes-activation" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminDemandesActivation /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/factures-abaninja" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminFacturesAbaNinja /></AppLayout></ProtectedRoute>} />
 
             {/* Agent Routes */}
             <Route path="/agent" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDashboard /></AppLayout></ProtectedRoute>} />

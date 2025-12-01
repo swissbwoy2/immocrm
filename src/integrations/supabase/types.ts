@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      abaninja_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          key: string
+          updated_at: string | null
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          key: string
+          updated_at?: string | null
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          key?: string
+          updated_at?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       agent_badges: {
         Row: {
           agent_id: string
@@ -1777,6 +1801,7 @@ export type Database = {
         Returns: string
       }
       get_current_user_id: { Args: never; Returns: string }
+      get_next_abaninja_client_number: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

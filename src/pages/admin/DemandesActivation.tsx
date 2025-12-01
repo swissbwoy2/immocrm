@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { 
   UserPlus, Clock, Mail, Phone, CheckCircle, XCircle, Search,
   RefreshCw, AlertTriangle, Eye, FileText, CreditCard, Calendar,
-  User, Briefcase, Home, Building2, Receipt, Loader2
+  User, Briefcase, Home, Building2, Receipt, Loader2, Send
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -53,6 +53,7 @@ export default function DemandesActivation() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activating, setActivating] = useState<string | null>(null);
   const [creatingInvoice, setCreatingInvoice] = useState<string | null>(null);
+  const [resendingInvoice, setResendingInvoice] = useState<string | null>(null);
   const [selectedDemande, setSelectedDemande] = useState<DemandeMandat | null>(null);
 
   useEffect(() => {
@@ -165,6 +166,34 @@ export default function DemandesActivation() {
     } catch (error) {
       console.error('Error:', error);
       toast.error('Erreur');
+    }
+  };
+
+  const handleResendInvoice = async (demande: DemandeMandat) => {
+    if (!demande.abaninja_invoice_id) {
+      toast.error('Pas de facture à renvoyer');
+      return;
+    }
+
+    try {
+      setResendingInvoice(demande.id);
+
+      const { data, error } = await supabase.functions.invoke('resend-abaninja-invoice', {
+        body: {
+          invoice_uuid: demande.abaninja_invoice_id,
+          email: demande.email
+        }
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      toast.success('Facture renvoyée par email !');
+    } catch (error: any) {
+      console.error('Error resending invoice:', error);
+      toast.error(error.message || 'Erreur lors du renvoi');
+    } finally {
+      setResendingInvoice(null);
     }
   };
 
@@ -498,6 +527,20 @@ export default function DemandesActivation() {
                                   <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
                                   <><Receipt className="h-4 w-4 mr-1" />Facturer</>
+                                )}
+                              </Button>
+                            )}
+                            {demande.statut === 'facture_envoyee' && demande.abaninja_invoice_id && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                onClick={() => handleResendInvoice(demande)}
+                                disabled={resendingInvoice === demande.id}
+                              >
+                                {resendingInvoice === demande.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <><Send className="h-4 w-4 mr-1" />Renvoyer</>
                                 )}
                               </Button>
                             )}
