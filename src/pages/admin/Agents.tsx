@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Mail, Phone, Users, Trash2 } from "lucide-react";
+import { Plus, Mail, Phone, Users, Trash2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -171,6 +171,27 @@ const Agents = () => {
     }
   };
 
+  const resendInvitation = async (userId: string, email: string) => {
+    try {
+      const { error } = await supabase.functions.invoke('resend-agent-invitation', {
+        body: { userId, email }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Succès",
+        description: `Invitation renvoyée à ${email}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Erreur lors du renvoi de l'invitation",
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredAgents = agents.filter(agent =>
     `${agent.profiles.prenom} ${agent.profiles.nom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     agent.profiles.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -261,6 +282,11 @@ const Agents = () => {
                           <Badge variant={agent.profiles.actif ? "default" : "secondary"} className="text-xs">
                             {agent.profiles.actif ? "Actif" : "Inactif"}
                           </Badge>
+                          {agent.statut === 'en_attente' && (
+                            <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800">
+                              En attente d'activation
+                            </Badge>
+                          )}
                         </div>
                         <div className="space-y-1 md:space-y-2 text-xs md:text-sm text-muted-foreground">
                           <div className="flex items-center gap-2">
@@ -281,6 +307,20 @@ const Agents = () => {
                     
                     {/* Boutons d'action - empilés verticalement sur mobile */}
                     <div className="flex sm:flex-col gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l sm:pl-4">
+                      {agent.statut === 'en_attente' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 sm:flex-none text-xs md:text-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            resendInvitation(agent.user_id, agent.profiles.email);
+                          }}
+                        >
+                          <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
+                          Renvoyer invitation
+                        </Button>
+                      )}
                       <Button
                         variant={agent.profiles.actif ? "outline" : "default"}
                         size="sm"
