@@ -180,13 +180,18 @@ serve(async (req) => {
 
     const data = JSON.parse(responseText);
 
-    // The response contains the created address in data.data.uuid
+    // The response contains the created person in data.data.uuid
+    // and the address in data.data.addresses[0].uuid
     const clientUuid = data.data?.uuid || data.uuid;
+    const addressUuid = data.data?.addresses?.[0]?.uuid || null;
+
+    console.log('Created client UUID:', clientUuid, 'Address UUID:', addressUuid);
 
     return new Response(
       JSON.stringify({
         success: true,
         client_uuid: clientUuid,
+        address_uuid: addressUuid,
         client_number: clientNumber,
         data
       }),

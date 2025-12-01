@@ -7,6 +7,7 @@ const corsHeaders = {
 
 interface CreateInvoiceRequest {
   client_uuid: string;
+  address_uuid: string;
   type_recherche: string;
   prenom: string;
   nom: string;
@@ -29,9 +30,9 @@ serve(async (req) => {
       throw new Error('AbaNinja credentials not configured');
     }
 
-    const { client_uuid, type_recherche, prenom, nom, email, demande_id } = await req.json() as CreateInvoiceRequest;
+    const { client_uuid, address_uuid, type_recherche, prenom, nom, email, demande_id } = await req.json() as CreateInvoiceRequest;
 
-    console.log('Creating AbaNinja invoice for:', { client_uuid, type_recherche, email });
+    console.log('Creating AbaNinja invoice for:', { client_uuid, address_uuid, type_recherche, email });
 
     // Fetch bank accounts from AbaNinja - CORRECTED endpoint with /finances/v2/
     console.log('Fetching bank accounts from AbaNinja...');
@@ -84,7 +85,7 @@ serve(async (req) => {
     // Create invoice in AbaNinja - v2 API with correct schema
     const invoiceData = {
       receiver: {
-        personUuid: client_uuid
+        addressUuid: address_uuid
       },
       invoiceDate: formatDate(today),
       dueDate: formatDate(dueDate),
