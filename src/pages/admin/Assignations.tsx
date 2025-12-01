@@ -3,13 +3,13 @@ import { Users, UserPlus, Upload, Trash2, Pencil, Users2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CSVImportDialog } from '@/components/CSVImportDialog';
+import { AgentMultiSelect } from '@/components/AgentMultiSelect';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -32,18 +32,32 @@ interface Agent {
   id: string;
   user_id: string;
   profile: Profile;
+  profiles?: Profile;
+}
+
+interface AgentAssignment {
+  agent_id: string;
+  is_primary: boolean;
+  commission_split: number;
+}
+
+interface ClientAgentAssignment {
+  id: string;
+  client_id: string;
+  agent_id: string;
+  is_primary: boolean;
+  commission_split: number;
 }
 
 export default function Assignations() {
   const [clients, setClients] = useState<Client[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [clientProfiles, setClientProfiles] = useState<Map<string, Profile>>(new Map());
+  const [clientAgents, setClientAgents] = useState<ClientAgentAssignment[]>([]);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
-  const [selectedAgent, setSelectedAgent] = useState<string>('');
-  const [selectedSplit, setSelectedSplit] = useState<'45-55' | '60-40'>('45-55');
-  const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const [editAgent, setEditAgent] = useState<string>('');
-  const [editSplit, setEditSplit] = useState<'45-55' | '60-40'>('45-55');
+  const [selectedAgentAssignments, setSelectedAgentAssignments] = useState<AgentAssignment[]>([]);
+  const [editingClientId, setEditingClientId] = useState<string | null>(null);
+  const [editAgentAssignments, setEditAgentAssignments] = useState<AgentAssignment[]>([]);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
@@ -80,6 +94,14 @@ export default function Assignations() {
       const clientProfilesMap = new Map(clientProfilesData?.map(p => [p.id, p]) || []);
       setClientProfiles(clientProfilesMap);
 
+      // Load client_agents
+      const { data: clientAgentsData, error: clientAgentsError } = await supabase
+        .from('client_agents')
+        .select('*');
+
+      if (clientAgentsError) throw clientAgentsError;
+      setClientAgents(clientAgentsData || []);
+
       // Load agents with active profiles
       const { data: agentsData, error: agentsError } = await supabase
         .from('agents')
@@ -106,6 +128,7 @@ export default function Assignations() {
           id: agent.id,
           user_id: agent.user_id,
           profile: agentProfilesMap.get(agent.user_id) as Profile,
+          profiles: agentProfilesMap.get(agent.user_id) as Profile,
         })) || [];
 
       setAgents(transformedAgents);
@@ -121,48 +144,64 @@ export default function Assignations() {
     }
   };
 
-  const unassignedClients = clients.filter(c => !c.agent_id);
-  const assignedClients = clients.filter(c => c.agent_id);
+  const unassignedClients = clients.filter(c => 
+    !clientAgents.some(ca => ca.client_id === c.id)
+  );
+  const assignedClients = clients.filter(c => 
+    clientAgents.some(ca => ca.client_id === c.id)
+  );
 
   const handleAssign = async () => {
-    if (!selectedClient || !selectedAgent) {
+    if (!selectedClient || selectedAgentAssignments.length === 0) {
       toast({
         title: 'Erreur',
-        description: 'Veuillez sélectionner un client et un agent',
+        description: 'Veuillez sélectionner un client et au moins un agent',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (selectedAgentAssignments.length > 4) {
+      toast({
+        title: 'Erreur',
+        description: 'Maximum 4 agents peuvent être assignés à un client',
         variant: 'destructive',
       });
       return;
     }
 
     try {
-      const commissionValue = selectedSplit === '45-55' ? 45 : 60;
-
-      const { error } = await supabase
-        .from('clients')
-        .update({
-          agent_id: selectedAgent,
-          commission_split: commissionValue,
+      // Insert into client_agents for each assignment
+      const insertPromises = selectedAgentAssignments.map(assignment =>
+        supabase.from('client_agents').insert({
+          client_id: selectedClient,
+          agent_id: assignment.agent_id,
+          is_primary: assignment.is_primary,
+          commission_split: assignment.commission_split,
         })
-        .eq('id', selectedClient);
+      );
 
-      if (error) throw error;
+      const results = await Promise.all(insertPromises);
+      const errors = results.filter(r => r.error);
 
-      // Update agent's nombre_clients_assignes
-      await (supabase.rpc as any)('increment_agent_clients', { agent_uuid: selectedAgent });
+      if (errors.length > 0) {
+        throw new Error('Erreur lors de l\'assignation');
+      }
 
-      // Update local state
-      setClients(clients.map(c => 
-        c.id === selectedClient
-          ? { ...c, agent_id: selectedAgent, commission_split: commissionValue }
-          : c
-      ));
+      // Increment each agent's client count
+      for (const assignment of selectedAgentAssignments) {
+        await (supabase.rpc as any)('increment_agent_clients', { agent_uuid: assignment.agent_id });
+      }
+
+      // Reload data to reflect changes
+      await loadData();
 
       setSelectedClient(null);
-      setSelectedAgent('');
+      setSelectedAgentAssignments([]);
 
       toast({
         title: 'Assignation réussie',
-        description: 'Le client a été assigné à l\'agent',
+        description: `${selectedAgentAssignments.length} agent(s) assigné(s) au client`,
       });
     } catch (error) {
       console.error('Error assigning client:', error);
@@ -176,32 +215,28 @@ export default function Assignations() {
 
   const handleReassign = async (clientId: string) => {
     try {
-      // Get current agent before unassigning
-      const client = clients.find(c => c.id === clientId);
-      const previousAgentId = client?.agent_id;
+      // Get current assignments
+      const currentAssignments = clientAgents.filter(ca => ca.client_id === clientId);
 
+      // Delete all assignments for this client
       const { error } = await supabase
-        .from('clients')
-        .update({
-          agent_id: null,
-        })
-        .eq('id', clientId);
+        .from('client_agents')
+        .delete()
+        .eq('client_id', clientId);
 
       if (error) throw error;
 
-      // Decrement previous agent's count
-      if (previousAgentId) {
-        await (supabase.rpc as any)('decrement_agent_clients', { agent_uuid: previousAgentId });
+      // Decrement each agent's count
+      for (const assignment of currentAssignments) {
+        await (supabase.rpc as any)('decrement_agent_clients', { agent_uuid: assignment.agent_id });
       }
 
-      // Update local state
-      setClients(clients.map(c => 
-        c.id === clientId ? { ...c, agent_id: undefined } : c
-      ));
+      // Reload data
+      await loadData();
 
       toast({
         title: 'Désassignation réussie',
-        description: 'Le client a été retiré de l\'agent',
+        description: 'Le client a été retiré de tous les agents',
       });
     } catch (error) {
       console.error('Error reassigning client:', error);
@@ -214,36 +249,70 @@ export default function Assignations() {
   };
 
   const handleUpdateAssignment = async () => {
-    if (!editingClient || !editAgent) return;
+    if (!editingClientId || editAgentAssignments.length === 0) return;
+
+    if (editAgentAssignments.length > 4) {
+      toast({
+        title: 'Erreur',
+        description: 'Maximum 4 agents peuvent être assignés à un client',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     try {
-      const commissionValue = editSplit === '45-55' ? 45 : 60;
-      const previousAgentId = editingClient.agent_id;
+      // Get current assignments
+      const currentAssignments = clientAgents.filter(ca => ca.client_id === editingClientId);
 
-      const { error } = await supabase
-        .from('clients')
-        .update({
-          agent_id: editAgent,
-          commission_split: commissionValue,
+      // Delete all current assignments
+      const { error: deleteError } = await supabase
+        .from('client_agents')
+        .delete()
+        .eq('client_id', editingClientId);
+
+      if (deleteError) throw deleteError;
+
+      // Insert new assignments
+      const insertPromises = editAgentAssignments.map(assignment =>
+        supabase.from('client_agents').insert({
+          client_id: editingClientId,
+          agent_id: assignment.agent_id,
+          is_primary: assignment.is_primary,
+          commission_split: assignment.commission_split,
         })
-        .eq('id', editingClient.id);
+      );
 
-      if (error) throw error;
+      const results = await Promise.all(insertPromises);
+      const errors = results.filter(r => r.error);
 
-      // Update agent counts if agent changed
-      if (previousAgentId && previousAgentId !== editAgent) {
-        await (supabase.rpc as any)('decrement_agent_clients', { agent_uuid: previousAgentId });
-        await (supabase.rpc as any)('increment_agent_clients', { agent_uuid: editAgent });
+      if (errors.length > 0) {
+        throw new Error('Erreur lors de la mise à jour');
       }
 
-      // Update local state
-      setClients(clients.map(c => 
-        c.id === editingClient.id
-          ? { ...c, agent_id: editAgent, commission_split: commissionValue }
-          : c
-      ));
+      // Update agent counts
+      const oldAgentIds = currentAssignments.map(ca => ca.agent_id);
+      const newAgentIds = editAgentAssignments.map(ea => ea.agent_id);
 
-      setEditingClient(null);
+      // Decrement removed agents
+      for (const agentId of oldAgentIds) {
+        if (!newAgentIds.includes(agentId)) {
+          await (supabase.rpc as any)('decrement_agent_clients', { agent_uuid: agentId });
+        }
+      }
+
+      // Increment added agents
+      for (const agentId of newAgentIds) {
+        if (!oldAgentIds.includes(agentId)) {
+          await (supabase.rpc as any)('increment_agent_clients', { agent_uuid: agentId });
+        }
+      }
+
+      // Reload data
+      await loadData();
+
+      setEditingClientId(null);
+      setEditAgentAssignments([]);
+      
       toast({
         title: 'Modification réussie',
         description: 'L\'assignation a été mise à jour',
@@ -288,7 +357,7 @@ export default function Assignations() {
   };
 
   const handleBulkAssign = async () => {
-    if (bulkSelectedClients.length === 0 || !selectedAgent) {
+    if (bulkSelectedClients.length === 0 || selectedAgentAssignments.length === 0) {
       toast({
         title: 'Erreur',
         description: 'Veuillez sélectionner au moins un client et un agent',
@@ -297,39 +366,51 @@ export default function Assignations() {
       return;
     }
 
+    if (selectedAgentAssignments.length > 4) {
+      toast({
+        title: 'Erreur',
+        description: 'Maximum 4 agents peuvent être assignés à un client',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
-      const commissionValue = selectedSplit === '45-55' ? 45 : 60;
       let successCount = 0;
 
       for (const clientId of bulkSelectedClients) {
-        const { error } = await supabase
-          .from('clients')
-          .update({
-            agent_id: selectedAgent,
-            commission_split: commissionValue,
+        // Insert assignments for this client
+        const insertPromises = selectedAgentAssignments.map(assignment =>
+          supabase.from('client_agents').insert({
+            client_id: clientId,
+            agent_id: assignment.agent_id,
+            is_primary: assignment.is_primary,
+            commission_split: assignment.commission_split,
           })
-          .eq('id', clientId);
+        );
 
-        if (!error) {
+        const results = await Promise.all(insertPromises);
+        const errors = results.filter(r => r.error);
+
+        if (errors.length === 0) {
           successCount++;
-          await (supabase.rpc as any)('increment_agent_clients', { agent_uuid: selectedAgent });
+          // Increment each agent's client count
+          for (const assignment of selectedAgentAssignments) {
+            await (supabase.rpc as any)('increment_agent_clients', { agent_uuid: assignment.agent_id });
+          }
         }
       }
 
-      // Update local state
-      setClients(clients.map(c =>
-        bulkSelectedClients.includes(c.id)
-          ? { ...c, agent_id: selectedAgent, commission_split: commissionValue }
-          : c
-      ));
+      // Reload data
+      await loadData();
 
       setBulkSelectedClients([]);
       setBulkMode(false);
-      setSelectedAgent('');
+      setSelectedAgentAssignments([]);
 
       toast({
         title: 'Assignation en masse réussie',
-        description: `${successCount} client(s) ont été assignés à ${getAgentName(selectedAgent)}`,
+        description: `${successCount} client(s) ont été assignés avec ${selectedAgentAssignments.length} agent(s)`,
       });
     } catch (error) {
       console.error('Error bulk assigning clients:', error);
@@ -363,7 +444,14 @@ export default function Assignations() {
   };
 
   const getClientsByAgent = (agentId: string) => {
-    return assignedClients.filter(c => c.agent_id === agentId);
+    const clientIds = clientAgents
+      .filter(ca => ca.agent_id === agentId)
+      .map(ca => ca.client_id);
+    return clients.filter(c => clientIds.includes(c.id));
+  };
+
+  const getClientAssignments = (clientId: string) => {
+    return clientAgents.filter(ca => ca.client_id === clientId);
   };
 
   if (loading) {
@@ -506,47 +594,30 @@ export default function Assignations() {
                       })}
                     </div>
                     
-                    {/* Sélection agent et commission */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Agent</Label>
-                        <Select value={selectedAgent} onValueChange={setSelectedAgent}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choisir un agent" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {agents.map(agent => (
-                              <SelectItem key={agent.id} value={agent.id}>
-                                {agent.profile.prenom} {agent.profile.nom} ({getClientsByAgent(agent.id).length} clients)
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Commission Split</Label>
-                        <RadioGroup value={selectedSplit} onValueChange={(v) => setSelectedSplit(v as '45-55' | '60-40')}>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="45-55" id="bulk-split-45" />
-                            <Label htmlFor="bulk-split-45" className="font-normal cursor-pointer">
-                              45% Agent / 55% Agence
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="60-40" id="bulk-split-60" />
-                            <Label htmlFor="bulk-split-60" className="font-normal cursor-pointer">
-                              60% Agent / 40% Agence
-                            </Label>
-                          </div>
-                        </RadioGroup>
-                      </div>
+                    {/* Sélection agents */}
+                    <div className="space-y-2">
+                      <Label>Agents (max 4)</Label>
+                      <AgentMultiSelect
+                        agents={agents}
+                        selectedAssignments={selectedAgentAssignments}
+                        onSelectionChange={(assignments) => {
+                          if (assignments.length <= 4) {
+                            setSelectedAgentAssignments(assignments);
+                          } else {
+                            toast({
+                              title: 'Limite atteinte',
+                              description: 'Maximum 4 agents peuvent être assignés',
+                              variant: 'destructive',
+                            });
+                          }
+                        }}
+                      />
                     </div>
                     
                     {/* Bouton d'assignation en masse */}
                     <Button
                       onClick={handleBulkAssign}
-                      disabled={bulkSelectedClients.length === 0 || !selectedAgent}
+                      disabled={bulkSelectedClients.length === 0 || selectedAgentAssignments.length === 0}
                       className="w-full"
                     >
                       <UserPlus className="w-4 h-4 mr-2" />
@@ -555,7 +626,7 @@ export default function Assignations() {
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-4">
                       <div className="space-y-2">
                         <Label>Client</Label>
                         <Select value={selectedClient || ''} onValueChange={setSelectedClient}>
@@ -579,43 +650,28 @@ export default function Assignations() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Agent</Label>
-                        <Select value={selectedAgent} onValueChange={setSelectedAgent}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Choisir un agent" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {agents.map(agent => (
-                              <SelectItem key={agent.id} value={agent.id}>
-                                {agent.profile.prenom} {agent.profile.nom} ({getClientsByAgent(agent.id).length} clients)
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Commission Split</Label>
-                        <RadioGroup value={selectedSplit} onValueChange={(v) => setSelectedSplit(v as '45-55' | '60-40')}>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="45-55" id="split-45" />
-                            <Label htmlFor="split-45" className="font-normal cursor-pointer">
-                              45% Agent / 55% Agence
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <RadioGroupItem value="60-40" id="split-60" />
-                            <Label htmlFor="split-60" className="font-normal cursor-pointer">
-                              60% Agent / 40% Agence
-                            </Label>
-                          </div>
-                        </RadioGroup>
+                        <Label>Agents (max 4)</Label>
+                        <AgentMultiSelect
+                          agents={agents}
+                          selectedAssignments={selectedAgentAssignments}
+                          onSelectionChange={(assignments) => {
+                            if (assignments.length <= 4) {
+                              setSelectedAgentAssignments(assignments);
+                            } else {
+                              toast({
+                                title: 'Limite atteinte',
+                                description: 'Maximum 4 agents peuvent être assignés',
+                                variant: 'destructive',
+                              });
+                            }
+                          }}
+                        />
                       </div>
                     </div>
 
                     <Button 
                       onClick={handleAssign} 
-                      disabled={!selectedClient || !selectedAgent}
+                      disabled={!selectedClient || selectedAgentAssignments.length === 0}
                       className="w-full md:w-auto"
                     >
                       <UserPlus className="w-4 h-4 mr-2" />
@@ -653,12 +709,12 @@ export default function Assignations() {
                   <CardContent>
                     <div className="space-y-2">
                       {agentClients.map(client => {
-                        const commissionSplit = client.commission_split || 50;
-                        const agencySplit = 100 - commissionSplit;
                         const profile = clientProfiles.get(client.user_id);
                         const displayName = profile 
                           ? `${profile.prenom} ${profile.nom}` 
                           : `Client ID: ${client.id.substring(0, 8)}...`;
+                        const assignments = getClientAssignments(client.id);
+                        const primaryAssignment = assignments.find(a => a.is_primary);
                         
                         return (
                           <div
@@ -672,18 +728,28 @@ export default function Assignations() {
                               <p className="text-sm text-muted-foreground">
                                 {profile?.email} • Ajouté le {new Date(client.created_at || '').toLocaleDateString('fr-CH')}
                               </p>
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {assignments.map(assignment => {
+                                  const assignedAgent = agents.find(a => a.id === assignment.agent_id);
+                                  return (
+                                    <Badge key={assignment.id} variant={assignment.is_primary ? 'default' : 'secondary'} className="text-xs">
+                                      {assignedAgent ? `${assignedAgent.profile.prenom} ${assignedAgent.profile.nom}` : 'Agent inconnu'} ({assignment.commission_split}%)
+                                    </Badge>
+                                  );
+                                })}
+                              </div>
                             </div>
                             <div className="flex items-center gap-3">
-                              <Badge variant="outline">
-                                Split {commissionSplit}/{agencySplit}
-                              </Badge>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => {
-                                  setEditingClient(client);
-                                  setEditAgent(client.agent_id || '');
-                                  setEditSplit(client.commission_split === 60 ? '60-40' : '45-55');
+                                  setEditingClientId(client.id);
+                                  setEditAgentAssignments(assignments.map(a => ({
+                                    agent_id: a.agent_id,
+                                    is_primary: a.is_primary,
+                                    commission_split: a.commission_split,
+                                  })));
                                 }}
                               >
                                 <Pencil className="w-4 h-4 mr-1" />
@@ -717,51 +783,42 @@ export default function Assignations() {
         </div>
       </main>
 
-      <Dialog open={!!editingClient} onOpenChange={(open) => !open && setEditingClient(null)}>
-        <DialogContent>
+      <Dialog open={!!editingClientId} onOpenChange={(open) => !open && setEditingClientId(null)}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Modifier l'assignation</DialogTitle>
             <DialogDescription>
-              Modifier l'agent ou le split de commission pour {editingClient && clientProfiles.get(editingClient.user_id)?.prenom}
+              Modifier les agents assignés (max 4) pour {editingClientId && (() => {
+                const client = clients.find(c => c.id === editingClientId);
+                return client ? clientProfiles.get(client.user_id)?.prenom : '';
+              })()}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Nouvel agent</Label>
-              <Select value={editAgent} onValueChange={setEditAgent}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choisir un agent" />
-                </SelectTrigger>
-                <SelectContent>
-                  {agents.map(agent => (
-                    <SelectItem key={agent.id} value={agent.id}>
-                      {agent.profile.prenom} {agent.profile.nom}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>Commission Split</Label>
-              <RadioGroup value={editSplit} onValueChange={(v) => setEditSplit(v as '45-55' | '60-40')}>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="45-55" id="edit-split-45" />
-                  <Label htmlFor="edit-split-45" className="font-normal cursor-pointer">
-                    45% Agent / 55% Agence
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="60-40" id="edit-split-60" />
-                  <Label htmlFor="edit-split-60" className="font-normal cursor-pointer">
-                    60% Agent / 40% Agence
-                  </Label>
-                </div>
-              </RadioGroup>
+              <Label>Agents (max 4)</Label>
+              <AgentMultiSelect
+                agents={agents}
+                selectedAssignments={editAgentAssignments}
+                onSelectionChange={(assignments) => {
+                  if (assignments.length <= 4) {
+                    setEditAgentAssignments(assignments);
+                  } else {
+                    toast({
+                      title: 'Limite atteinte',
+                      description: 'Maximum 4 agents peuvent être assignés',
+                      variant: 'destructive',
+                    });
+                  }
+                }}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingClient(null)}>
+            <Button variant="outline" onClick={() => {
+              setEditingClientId(null);
+              setEditAgentAssignments([]);
+            }}>
               Annuler
             </Button>
             <Button onClick={handleUpdateAssignment}>
