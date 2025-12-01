@@ -479,6 +479,34 @@ const Messagerie = () => {
           }
           break;
 
+        case 'confirmer_visite':
+          const { data: visiteNormale } = await supabase
+            .from('visites')
+            .select('*')
+            .eq('offre_id', offreId)
+            .eq('est_deleguee', false)
+            .eq('statut', 'planifiee')
+            .maybeSingle();
+
+          if (visiteNormale) {
+            await supabase
+              .from('visites')
+              .update({ statut: 'confirmee' })
+              .eq('id', visiteNormale.id);
+
+            await supabase.from('messages').insert({
+              conversation_id: selectedConv,
+              sender_id: user.id,
+              sender_type: 'agent',
+              content: `✅ **Visite confirmée**\n\n📍 ${offre.adresse}\n📅 ${new Date(visiteNormale.date_visite).toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}\n🕐 ${new Date(visiteNormale.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}\n\nJe confirme votre présence pour cette visite. À bientôt !`
+            });
+
+            await supabase.from('offres').update({ statut: 'visite_confirmee' }).eq('id', offreId);
+            
+            toast({ title: "Visite confirmée" });
+          }
+          break;
+
         case 'confirmer_visite_deleguee':
           const { data: visite } = await supabase
             .from('visites')
@@ -693,6 +721,22 @@ const Messagerie = () => {
 
     // Check for pending delegated visit
     const hasPendingDelegatedVisit = offre.statut === 'interesse';
+    
+    // Visite planifiée (normale) - afficher bouton de confirmation
+    if (offre.statut === 'visite_planifiee') {
+      return (
+        <div className="mt-3 space-y-2">
+          <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-lg">
+            <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-1">
+              <Calendar className="h-3 w-3" /> Visite planifiée
+            </p>
+          </div>
+          <Button size="sm" onClick={() => onAction('confirmer_visite')} className="w-full">
+            <Check className="h-4 w-4 mr-1" /> Confirmer présence client
+          </Button>
+        </div>
+      );
+    }
 
     // Visite déléguée en attente
     if (hasPendingDelegatedVisit) {

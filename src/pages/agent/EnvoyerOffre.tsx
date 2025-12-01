@@ -231,23 +231,27 @@ const EnvoyerOffre = () => {
           if (messageError) throw messageError;
         }
 
-        // Create visits if dates are provided
-        const validDates = formData.datesVisite.filter(d => d);
-        if (validDates.length > 0 && offre) {
-          for (const dateStr of validDates) {
-            await supabase
-              .from('visites')
-              .insert({
-                offre_id: offre.id,
-                client_id: clientId,
-                agent_id: agent.id,
-                date_visite: dateStr,
-                adresse: formData.localisation,
-                statut: 'planifiee',
-                notes: formData.commentaires,
-              });
-          }
+      // Create visits if dates are provided
+      const validDates = formData.datesVisite.filter(d => d);
+      if (validDates.length > 0 && offre) {
+        for (const dateStr of validDates) {
+          // Convert local datetime to ISO string with timezone
+          const localDate = new Date(dateStr);
+          const isoWithTimezone = localDate.toISOString();
+          
+          await supabase
+            .from('visites')
+            .insert({
+              offre_id: offre.id,
+              client_id: clientId,
+              agent_id: agent.id,
+              date_visite: isoWithTimezone,
+              adresse: formData.localisation,
+              statut: 'planifiee',
+              notes: formData.commentaires,
+            });
         }
+      }
       }
 
       // Nettoyer le brouillon après envoi réussi

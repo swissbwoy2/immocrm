@@ -276,13 +276,17 @@ const AdminEnvoyerOffre = () => {
       const validDates = formData.datesVisite.filter(d => d);
       if (validDates.length > 0 && offre) {
         for (const dateStr of validDates) {
+          // Convert local datetime to ISO string with timezone
+          const localDate = new Date(dateStr);
+          const isoWithTimezone = localDate.toISOString();
+          
           await supabase
             .from('visites')
             .insert({
               offre_id: offre.id,
               client_id: formData.clientId,
               agent_id: clientAgent,
-              date_visite: dateStr,
+              date_visite: isoWithTimezone,
               adresse: formData.localisation,
               statut: 'planifiee',
               notes: formData.commentaires,
