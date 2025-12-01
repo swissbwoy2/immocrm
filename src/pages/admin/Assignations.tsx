@@ -77,36 +77,33 @@ export default function Assignations() {
       const clientProfilesMap = new Map(clientProfilesData?.map(p => [p.id, p]) || []);
       setClientProfiles(clientProfilesMap);
 
-      // Load agents (actif ou en_attente)
+      // Load agents with active profiles
       const { data: agentsData, error: agentsError } = await supabase
         .from('agents')
-        .select('id, user_id, statut')
-        .in('statut', ['actif', 'en_attente']);
+        .select('id, user_id');
 
       if (agentsError) throw agentsError;
 
-      // Load agent profiles separately
+      // Load agent profiles separately, filtering by actif = true
       const agentUserIds = agentsData?.map(a => a.user_id) || [];
       const { data: agentProfilesData, error: agentProfilesError } = await supabase
         .from('profiles')
         .select('*')
-        .in('id', agentUserIds);
+        .in('id', agentUserIds)
+        .eq('actif', true);
 
       if (agentProfilesError) throw agentProfilesError;
 
       const agentProfilesMap = new Map(agentProfilesData?.map(p => [p.id, p]));
 
-      // Transform the data to match our interface
-      const transformedAgents = agentsData?.map(agent => ({
-        id: agent.id,
-        user_id: agent.user_id,
-        profile: agentProfilesMap.get(agent.user_id) as Profile || {
-          nom: '',
-          prenom: '',
-          email: '',
-          telephone: '',
-        },
-      })) || [];
+      // Only keep agents with active profiles
+      const transformedAgents = agentsData
+        ?.filter(agent => agentProfilesMap.has(agent.user_id))
+        .map(agent => ({
+          id: agent.id,
+          user_id: agent.user_id,
+          profile: agentProfilesMap.get(agent.user_id) as Profile,
+        })) || [];
 
       setAgents(transformedAgents);
     } catch (error) {
