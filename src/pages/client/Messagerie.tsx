@@ -327,6 +327,23 @@ const Messagerie = () => {
 
       if (!clientData) return;
 
+      // Get agent user_id for notifications
+      const { data: agentData } = await supabase
+        .from('agents')
+        .select('user_id')
+        .eq('id', clientData.agent_id)
+        .single();
+
+      const { data: clientProfile } = await supabase
+        .from('profiles')
+        .select('prenom, nom')
+        .eq('id', user.id)
+        .single();
+
+      const clientName = clientProfile 
+        ? `${clientProfile.prenom} ${clientProfile.nom}`.trim() 
+        : 'Un client';
+
       switch (action) {
         case 'interesse':
           await supabase
@@ -340,6 +357,18 @@ const Messagerie = () => {
             sender_type: 'client',
             content: `✅ Je suis intéressé(e) par cette offre !`
           });
+
+          // Notify agent
+          if (agentData?.user_id) {
+            await supabase.rpc('create_notification', {
+              p_user_id: agentData.user_id,
+              p_type: 'client_interesse',
+              p_title: '💚 Client intéressé',
+              p_message: `${clientName} est intéressé(e) par ${offre.adresse}`,
+              p_link: '/agent/offres-envoyees',
+              p_metadata: { offre_id: offreId }
+            });
+          }
 
           toast({ title: "Succès", description: "Agent notifié de votre intérêt" });
           break;
@@ -396,12 +425,31 @@ const Messagerie = () => {
             .update({ statut: 'visite_effectuee' })
             .eq('id', offreId);
 
+          // Update visite status
+          await supabase
+            .from('visites')
+            .update({ statut: 'effectuee' })
+            .eq('offre_id', offreId)
+            .eq('client_id', clientData.id);
+
           await supabase.from('messages').insert({
             conversation_id: selectedConv,
             sender_id: user.id,
             sender_type: 'client',
             content: `✅ J'ai effectué la visite du bien ${offre.adresse}`
           });
+
+          // Notify agent
+          if (agentData?.user_id) {
+            await supabase.rpc('create_notification', {
+              p_user_id: agentData.user_id,
+              p_type: 'visite_effectuee',
+              p_title: '✅ Visite effectuée',
+              p_message: `${clientName} a effectué la visite de ${offre.adresse}`,
+              p_link: '/agent/visites',
+              p_metadata: { offre_id: offreId }
+            });
+          }
 
           toast({ title: "Visite confirmée" });
           break;
@@ -442,12 +490,36 @@ const Messagerie = () => {
                 })
                 .eq('id', candidature.id);
 
+              // Create calendar event for signature
+              await supabase.from('calendar_events').insert({
+                title: `Signature bail - ${offre.adresse}`,
+                event_type: 'signature',
+                event_date: selectedDateObj.date,
+                description: `Signature du bail pour ${offre.adresse}\nLieu: ${selectedDateObj.lieu}`,
+                client_id: clientData.id,
+                agent_id: clientData.agent_id,
+                created_by: user.id,
+                priority: 'haute'
+              });
+
               await supabase.from('messages').insert({
                 conversation_id: selectedConv,
                 sender_id: user.id,
                 sender_type: 'client',
                 content: `📅 J'ai choisi la date de signature : ${format(new Date(selectedDateObj.date), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })} à ${selectedDateObj.lieu}`
               });
+
+              // Notify agent
+              if (agentData?.user_id) {
+                await supabase.rpc('create_notification', {
+                  p_user_id: agentData.user_id,
+                  p_type: 'date_signature_choisie',
+                  p_title: '📅 Date de signature choisie',
+                  p_message: `${clientName} a choisi une date de signature pour ${offre.adresse}`,
+                  p_link: '/agent/candidatures',
+                  p_metadata: { candidature_id: candidature.id, offre_id: offreId }
+                });
+              }
 
               toast({ title: "Date confirmée" });
             }
@@ -519,7 +591,8 @@ const Messagerie = () => {
         return;
       }
 
-      await supabase.from('visites').insert({
+      // Create visit
+      const { data: visite } = await supabase.from('visites').insert({
         offre_id: selectedOffre.id,
         client_id: clientData.id,
         agent_id: clientData.agent_id,
@@ -527,7 +600,7 @@ const Messagerie = () => {
         date_visite: visitDate,
         statut: 'planifiee',
         est_deleguee: false
-      });
+      }).select().single();
 
       await supabase
         .from('offres')
@@ -536,12 +609,52 @@ const Messagerie = () => {
 
       const formattedDate = format(new Date(visitDate), 'EEEE d MMMM yyyy à HH:mm', { locale: fr });
       
+      // Create calendar event
+      await supabase.from('calendar_events').insert({
+        title: `Visite - ${selectedOffre.adresse}`,
+        event_type: 'visite',
+        event_date: visitDate,
+        description: `Visite planifiée par le client pour ${selectedOffre.adresse}`,
+        client_id: clientData.id,
+        agent_id: clientData.agent_id,
+        created_by: user.id,
+        priority: 'normale'
+      });
+
       await supabase.from('messages').insert({
         conversation_id: selectedConv,
         sender_id: user.id,
         sender_type: 'client',
         content: `📅 J'ai planifié une visite pour le ${formattedDate} au ${selectedOffre.adresse}`
       });
+
+      // Notify agent
+      const { data: agentData } = await supabase
+        .from('agents')
+        .select('user_id')
+        .eq('id', clientData.agent_id)
+        .single();
+
+      if (agentData?.user_id) {
+        const { data: clientProfile } = await supabase
+          .from('profiles')
+          .select('prenom, nom')
+          .eq('id', user.id)
+          .single();
+
+        const clientName = clientProfile 
+          ? `${clientProfile.prenom} ${clientProfile.nom}`.trim() 
+          : 'Un client';
+
+        await supabase.rpc('create_notification', {
+          p_user_id: agentData.user_id,
+          p_type: 'new_visit',
+          p_title: '📅 Nouvelle visite planifiée',
+          p_message: `${clientName} a planifié une visite le ${formattedDate} au ${selectedOffre.adresse}`,
+          p_link: '/agent/visites',
+          p_metadata: { visite_id: visite?.id, offre_id: selectedOffre.id }
+        });
+      }
 
       setVisitDialogOpen(false);
       toast({ title: "Visite planifiée", description: "Votre agent a été notifié" });
@@ -568,7 +681,8 @@ const Messagerie = () => {
         return;
       }
 
-      await supabase.from('visites').insert({
+      // Create delegated visit
+      const { data: visite } = await supabase.from('visites').insert({
         offre_id: selectedOffre.id,
         client_id: clientData.id,
         agent_id: clientData.agent_id,
@@ -577,7 +691,7 @@ const Messagerie = () => {
         statut: 'planifiee',
         est_deleguee: true,
         notes: delegateNotes || 'Visite déléguée à l\'agent par le client'
-      });
+      }).select().single();
 
       await supabase
         .from('offres')
@@ -586,12 +700,52 @@ const Messagerie = () => {
 
       const formattedDate = format(new Date(delegateDate), 'EEEE d MMMM yyyy à HH:mm', { locale: fr });
       
+      // Create calendar event for delegated visit
+      await supabase.from('calendar_events').insert({
+        title: `Visite déléguée - ${selectedOffre.adresse}`,
+        event_type: 'visite',
+        event_date: delegateDate,
+        description: `Visite déléguée par le client pour ${selectedOffre.adresse}\n${delegateNotes ? `Notes: ${delegateNotes}` : ''}`,
+        client_id: clientData.id,
+        agent_id: clientData.agent_id,
+        created_by: user.id,
+        priority: 'haute'
+      });
+
       await supabase.from('messages').insert({
         conversation_id: selectedConv,
         sender_id: user.id,
         sender_type: 'client',
         content: `🏠 **Demande de visite déléguée**\n\n📍 ${selectedOffre.adresse}\n📅 Date souhaitée : ${formattedDate}\n${delegateNotes ? `📝 Notes : ${delegateNotes}` : ''}\n\nPouvez-vous effectuer cette visite pour moi ?`
       });
+
+      // Notify agent
+      const { data: agentData } = await supabase
+        .from('agents')
+        .select('user_id')
+        .eq('id', clientData.agent_id)
+        .single();
+
+      if (agentData?.user_id) {
+        const { data: clientProfile } = await supabase
+          .from('profiles')
+          .select('prenom, nom')
+          .eq('id', user.id)
+          .single();
+
+        const clientName = clientProfile 
+          ? `${clientProfile.prenom} ${clientProfile.nom}`.trim() 
+          : 'Un client';
+
+        await supabase.rpc('create_notification', {
+          p_user_id: agentData.user_id,
+          p_type: 'visit_delegated',
+          p_title: '🏠 Visite déléguée',
+          p_message: `${clientName} vous demande d'effectuer une visite le ${formattedDate} au ${selectedOffre.adresse}`,
+          p_link: '/agent/visites',
+          p_metadata: { visite_id: visite?.id, offre_id: selectedOffre.id }
+        });
+      }
 
       setDelegateDialogOpen(false);
       toast({ title: "Visite déléguée", description: "Votre agent a été notifié" });
@@ -615,13 +769,13 @@ const Messagerie = () => {
 
       if (!clientData) return;
 
-      await supabase.from('candidatures').insert({
+      const { data: candidature } = await supabase.from('candidatures').insert({
         offre_id: selectedOffre.id,
         client_id: clientData.id,
         message_client: messageClient || null,
         statut: 'en_attente',
         dossier_complet: true
-      });
+      }).select().single();
 
       await supabase
         .from('offres')
@@ -634,6 +788,36 @@ const Messagerie = () => {
         sender_type: 'client',
         content: `📝 **Candidature déposée**\n\n📍 ${selectedOffre.adresse}\n💰 ${selectedOffre.prix?.toLocaleString()} CHF/mois\n${messageClient ? `\n💬 Message : ${messageClient}` : ''}`
       });
+
+      // Notify agent
+      if (clientData.agent_id) {
+        const { data: agentData } = await supabase
+          .from('agents')
+          .select('user_id')
+          .eq('id', clientData.agent_id)
+          .single();
+
+        if (agentData?.user_id) {
+          const { data: clientProfile } = await supabase
+            .from('profiles')
+            .select('prenom, nom')
+            .eq('id', user.id)
+            .single();
+
+          const clientName = clientProfile 
+            ? `${clientProfile.prenom} ${clientProfile.nom}`.trim() 
+            : 'Un client';
+
+          await supabase.rpc('create_notification', {
+            p_user_id: agentData.user_id,
+            p_type: 'new_candidature',
+            p_title: '📝 Nouvelle candidature',
+            p_message: `${clientName} a déposé une candidature pour ${selectedOffre.adresse}`,
+            p_link: '/agent/candidatures',
+            p_metadata: { candidature_id: candidature?.id, offre_id: selectedOffre.id }
+          });
+        }
+      }
 
       setCandidatureDialogOpen(false);
       toast({ title: "Candidature envoyée", description: "Votre dossier est en cours d'examen" });
