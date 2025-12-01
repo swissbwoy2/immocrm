@@ -7,11 +7,66 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Send, Paperclip, FileText, Image, File, Settings, MapPin, Upload, X, Eye, AlertCircle } from "lucide-react";
+import { Loader2, Send, Paperclip, FileText, Image, File, Settings, MapPin, Upload, X, Eye, AlertCircle, FileEdit } from "lucide-react";
 import { EmailConfigurationDialog } from "./EmailConfigurationDialog";
 import { AttachmentPreviewDialog } from "./AttachmentPreviewDialog";
+
+// Email templates
+type EmailTemplateId = 'visite' | 'spontanee' | 'complet' | 'personnalise';
+
+interface EmailTemplate {
+  id: EmailTemplateId;
+  label: string;
+  body: string;
+}
+
+const EMAIL_TEMPLATES: EmailTemplate[] = [
+  {
+    id: 'visite',
+    label: 'Suite à une visite',
+    body: `Bonjour,
+
+Suite à la visite effectuée avec {client_gender}, j'ai le plaisir de vous transmettre le dossier complet pour l'appartement de {pieces} pcs à l'adresse mentionnée en objet.
+
+Bien évidemment, je reste volontiers à disposition pour tout complément d'information nécessaire.
+
+Cordialement,`
+  },
+  {
+    id: 'spontanee',
+    label: 'Candidature spontanée',
+    body: `Madame, Monsieur,
+
+Je me permets de vous adresser le dossier de candidature de {client_gender} pour le bien situé {address}.
+
+Vous trouverez en pièces jointes l'ensemble des documents nécessaires à l'étude de cette candidature.
+
+Je reste à votre entière disposition pour tout renseignement complémentaire.
+
+Dans l'attente de votre retour, je vous prie d'agréer, Madame, Monsieur, mes salutations distinguées.`
+  },
+  {
+    id: 'complet',
+    label: 'Dossier complet simple',
+    body: `Bonjour,
+
+Veuillez trouver ci-joint le dossier complet de {client_gender} pour le logement de {pieces} pièces situé au {address}.
+
+Je reste à disposition pour toute information complémentaire.
+
+Cordialement,`
+  },
+  {
+    id: 'personnalise',
+    label: 'Email personnalisé',
+    body: ''
+  }
+];
+
+type ClientGender = 'masculin' | 'feminin';
 
 interface Document {
   id: string;
@@ -65,6 +120,10 @@ export function SendDossierDialog({
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [selectedOffreId, setSelectedOffreId] = useState<string>("");
   
+  // Email template state
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplateId>('visite');
+  const [clientGender, setClientGender] = useState<ClientGender>('masculin');
+  
   // Local files state
   const [localFiles, setLocalFiles] = useState<LocalFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -88,6 +147,8 @@ export function SendDossierDialog({
       loadClientDocuments();
       // Reset form with client email in BCC by default
       setSelectedOffreId("");
+      setSelectedTemplate('visite');
+      setClientGender('masculin');
       setEmail({
         recipient_email: "",
         recipient_name: "",
@@ -110,6 +171,40 @@ export function SendDossierDialog({
     };
   }, [localFiles]);
 
+  // Helper function to get gender text
+  const getGenderText = (gender: ClientGender): string => {
+    return gender === 'masculin' ? 'mon client' : 'ma cliente';
+  };
+
+  // Apply template with variable replacement
+  const applyTemplate = (templateId: EmailTemplateId, gender: ClientGender) => {
+    const template = EMAIL_TEMPLATES.find(t => t.id === templateId);
+    if (!template) return;
+
+    const selectedOffre = offres.find(o => o.id === selectedOffreId);
+    
+    let body = template.body;
+    
+    // Replace variables
+    body = body.replace(/{client_gender}/g, getGenderText(gender));
+    body = body.replace(/{client_name}/g, clientName);
+    
+    if (selectedOffre) {
+      body = body.replace(/{address}/g, selectedOffre.adresse);
+      body = body.replace(/{pieces}/g, selectedOffre.pieces?.toString() || 'N/A');
+      body = body.replace(/{price}/g, selectedOffre.prix?.toLocaleString() || 'N/A');
+    } else {
+      body = body.replace(/{address}/g, '[adresse]');
+      body = body.replace(/{pieces}/g, '[pièces]');
+      body = body.replace(/{price}/g, '[prix]');
+    }
+    
+    setEmail(prev => ({
+      ...prev,
+      body_html: body,
+    }));
+  };
+
   // Auto-fill when offre is selected
   useEffect(() => {
     if (selectedOffreId) {
@@ -119,9 +214,20 @@ export function SendDossierDialog({
           ...prev,
           subject: `Candidature - ${selectedOffre.adresse} - ${clientName}`,
         }));
+        // Re-apply template with new offer data
+        if (selectedTemplate !== 'personnalise') {
+          applyTemplate(selectedTemplate, clientGender);
+        }
       }
     }
   }, [selectedOffreId, offres, clientName]);
+
+  // Apply template when template or gender changes
+  useEffect(() => {
+    if (selectedTemplate !== 'personnalise') {
+      applyTemplate(selectedTemplate, clientGender);
+    }
+  }, [selectedTemplate, clientGender]);
 
   const checkEmailConfiguration = async () => {
     try {
@@ -487,7 +593,53 @@ export function SendDossierDialog({
                       </SelectItem>
                     )}
                   </SelectContent>
-                </Select>
+              </Select>
+              </div>
+
+              {/* Email Template Selection */}
+              <div className="space-y-3 p-4 border rounded-lg bg-muted/20">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <FileEdit className="h-4 w-4" />
+                      Modèle d'email
+                    </Label>
+                    <Select value={selectedTemplate} onValueChange={(value: EmailTemplateId) => setSelectedTemplate(value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choisir un modèle..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EMAIL_TEMPLATES.map(template => (
+                          <SelectItem key={template.id} value={template.id}>
+                            {template.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Genre du client</Label>
+                    <RadioGroup 
+                      value={clientGender} 
+                      onValueChange={(value: ClientGender) => setClientGender(value)}
+                      className="flex gap-4"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="masculin" id="masculin" />
+                        <Label htmlFor="masculin" className="cursor-pointer font-normal">
+                          Masculin (mon client)
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="feminin" id="feminin" />
+                        <Label htmlFor="feminin" className="cursor-pointer font-normal">
+                          Féminin (ma cliente)
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                </div>
               </div>
 
               {/* Recipient */}
