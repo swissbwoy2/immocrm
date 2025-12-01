@@ -28,6 +28,8 @@ interface ImportClient {
     region_recherche?: string;
     type_bien?: string;
     type_contrat?: string;
+    type_recherche?: string;
+    apport_personnel?: number;
     date_ajout?: string;
     date_naissance?: string;
     adresse?: string;

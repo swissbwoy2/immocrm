@@ -234,8 +234,8 @@ serve(async (req) => {
           vehicules: demandeMandat.vehicules,
           numero_plaques: demandeMandat.numero_plaques,
           decouverte_agence: demandeMandat.decouverte_agence,
-          // Map type_recherche to residence field or keep separate
-          // For purchase clients, set specific fields
+          // Type de recherche: Louer ou Acheter
+          type_recherche: demandeMandat.type_recherche || 'Louer',
           type_bien: demandeMandat.type_bien,
           pieces: demandeMandat.pieces_recherche ? parseFloat(demandeMandat.pieces_recherche.replace('+', '')) : null,
           region_recherche: demandeMandat.region_recherche,
@@ -298,6 +298,8 @@ serve(async (req) => {
           vehicules: demandeMandat.vehicules,
           numero_plaques: demandeMandat.numero_plaques,
           decouverte_agence: demandeMandat.decouverte_agence,
+          // Type de recherche: Louer ou Acheter
+          type_recherche: demandeMandat.type_recherche || 'Louer',
           type_bien: demandeMandat.type_bien,
           pieces: demandeMandat.pieces_recherche ? parseFloat(demandeMandat.pieces_recherche.replace('+', '')) : null,
           region_recherche: demandeMandat.region_recherche,
