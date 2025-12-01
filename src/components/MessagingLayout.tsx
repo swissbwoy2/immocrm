@@ -68,14 +68,14 @@ export function MessagingLayout({
         onClick={() => setShowConversations(false)}
       />
 
-      {/* Panneau des conversations */}
+      {/* Panneau des conversations - Style WhatsApp */}
       <div
         className={cn(
-          "bg-card border-r border-border flex flex-col h-full",
+          "bg-card border-r border-border/50 flex flex-col h-full",
           // Desktop: toujours visible
-          "lg:relative lg:w-80 lg:translate-x-0",
+          "lg:relative lg:w-[360px] lg:translate-x-0",
           // Mobile: panneau coulissant avec transition
-          "fixed lg:static inset-y-0 left-0 z-50 w-[85%] max-w-[320px]",
+          "fixed lg:static inset-y-0 left-0 z-50 w-[85%] max-w-[360px]",
           "transition-transform duration-300 ease-out",
           // Cacher sur mobile quand showConversations est false
           !showConversations ? "-translate-x-full lg:translate-x-0" : "translate-x-0"

@@ -146,4 +146,35 @@ All colors MUST be HSL.
       display: none;
     }
   }
+
+  /* WhatsApp-style message bubbles */
+  .message-bubble-sent,
+  .message-bubble-received {
+    animation: message-appear 0.15s ease-out;
+  }
+
+  @keyframes message-appear {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  /* WhatsApp-style chat background pattern (optional) */
+  .chat-background {
+    background-color: hsl(var(--background));
+    background-image: 
+      linear-gradient(to right, hsl(var(--muted) / 0.02) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--muted) / 0.02) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* Smooth conversation item hover */
+  .conversation-item-hover {
+    transition: background-color 0.15s ease;
+  }
 }

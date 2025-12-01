@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,7 +14,7 @@ import {
   DialogFooter 
 } from "@/components/ui/dialog";
 import { 
-  Send, Search, Users, Shield, Home, ExternalLink, 
+  Search, Home, ExternalLink, Send,
   Check, X, Clock, FileSignature, Key, Calendar, Plus, Trash2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +27,11 @@ import { AgentNewAdminConversationDialog } from "@/components/AgentNewAdminConve
 import { parseMessageWithLinks } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
 import { MessagingLayout } from "@/components/MessagingLayout";
+import { ChatAvatar } from "@/components/messaging/ChatAvatar";
+import { MessageBubble } from "@/components/messaging/MessageBubble";
+import { ConversationItem } from "@/components/messaging/ConversationItem";
+import { ChatInput } from "@/components/messaging/ChatInput";
+import { ChatHeader } from "@/components/messaging/ChatHeader";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -894,9 +898,9 @@ const Messagerie = () => {
 
   const conversationsList = (
     <>
-      <div className="p-4 border-b space-y-2">
-        <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-          <h2 className="font-semibold">Mes Conversations</h2>
+      <div className="p-4 border-b border-border/50 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-lg">Conversations</h2>
           <div className="flex gap-2">
             {agentId && (
               <>
@@ -913,12 +917,12 @@ const Messagerie = () => {
           </div>
         </div>
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Rechercher..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8"
+            className="pl-9 bg-muted/50 border-0"
           />
         </div>
       </div>
@@ -930,36 +934,17 @@ const Messagerie = () => {
           const unreadCount = convMessages.filter(m => !m.read && m.sender_type !== 'agent').length;
           
           return (
-            <div
+            <ConversationItem
               key={conv.id}
+              name={contactInfo.name}
+              avatarUrl={null}
+              lastMessage={lastMessage?.content || conv.subject || null}
+              lastMessageTime={conv.last_message_at || conv.created_at}
+              unreadCount={unreadCount}
+              isSelected={selectedConv === conv.id}
+              isArchived={conv.is_archived}
               onClick={() => setSelectedConv(conv.id)}
-              className={`p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors ${selectedConv === conv.id ? 'bg-muted' : ''}`}
-            >
-              <div className="flex items-start justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  {contactInfo.type === 'admin' ? (
-                    <Shield className="h-4 w-4 text-primary" />
-                  ) : (
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                  )}
-                  <p className="font-medium text-sm">{contactInfo.name}</p>
-                </div>
-                {unreadCount > 0 && (
-                  <Badge variant="default" className="ml-2">{unreadCount}</Badge>
-                )}
-              </div>
-              {contactInfo.type === 'admin' && (
-                <Badge variant="outline" className="text-xs border-primary text-primary mb-1">
-                  Admin
-                </Badge>
-              )}
-              <p className="text-xs text-muted-foreground line-clamp-2">
-                {lastMessage?.content?.substring(0, 50) || conv.subject}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {new Date(conv.last_message_at || conv.created_at).toLocaleDateString('fr-FR')}
-              </p>
-            </div>
+            />
           );
         })}
       </ScrollArea>
@@ -967,117 +952,74 @@ const Messagerie = () => {
   );
 
   const chatHeader = currentConversation && (
-    <div className="flex items-center gap-2">
-      {getContactInfo(currentConversation).type === 'admin' ? (
-        <Shield className="h-4 w-4 text-primary" />
-      ) : (
-        <Users className="h-4 w-4 text-muted-foreground" />
-      )}
-      <h2 className="font-semibold truncate">
-        {getContactInfo(currentConversation).name}
-      </h2>
-    </div>
+    <ChatHeader
+      name={getContactInfo(currentConversation).name}
+      avatarUrl={null}
+      status={getContactInfo(currentConversation).type === 'admin' ? 'Admin' : undefined}
+      isArchived={currentConversation.is_archived}
+    />
   );
 
   const chatView = selectedConv ? (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex-1 flex flex-col min-h-0 chat-background">
       {currentConversation?.is_archived && (
-        <div className="p-4 bg-amber-50 border-l-4 border-amber-400 dark:bg-amber-950/50">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="border-amber-600 text-amber-600">
-              Conversation archivée
+        <div className="p-3 bg-warning/10 border-b border-warning/20">
+          <p className="text-xs text-warning text-center flex items-center justify-center gap-2">
+            <Badge variant="outline" className="border-warning text-warning text-xs">
+              Archivée
             </Badge>
-            <p className="text-sm text-amber-700 dark:text-amber-400">
-              Vous n'êtes plus assigné à ce client. Vous ne pouvez plus envoyer de messages.
-            </p>
-          </div>
+            Conversation archivée - Vous ne pouvez plus envoyer de messages
+          </p>
         </div>
       )}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="space-y-4">
-          {selectedMessages.map((msg) => (
-            <Card key={msg.id} className={`p-4 ${msg.sender_type === 'agent' ? 'ml-auto max-w-[85%] bg-primary/10' : 'mr-auto max-w-[85%]'}`}>
-              <div className="flex items-start justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm">
-                    {msg.sender_type === 'agent' ? 'Vous' : 
-                     msg.sender_type === 'admin' ? getContactInfo(currentConversation).name :
-                     getContactInfo(currentConversation).name}
-                  </p>
-                  {msg.sender_type === 'admin' && (
-                    <Badge variant="outline" className="text-xs border-primary text-primary">
-                      Admin
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {new Date(msg.created_at).toLocaleString('fr-FR')}
-                </p>
+      <ScrollArea className="flex-1 p-4">
+        <div className="space-y-2 max-w-4xl mx-auto">
+          {selectedMessages.map((msg) => {
+            const isSent = msg.sender_type === 'agent';
+            const senderName = isSent ? undefined : getContactInfo(currentConversation).name;
+            
+            return (
+              <div key={msg.id}>
+                <MessageBubble
+                  content={msg.content || ''}
+                  isSent={isSent}
+                  timestamp={msg.created_at}
+                  read={msg.read}
+                  senderName={senderName}
+                  attachmentUrl={msg.attachment_url}
+                  attachmentName={msg.attachment_name}
+                />
+                {msg.offre_id && offresMap[msg.offre_id] && (
+                  <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[75%] md:max-w-[60%]`}>
+                    <OffreCard offre={offresMap[msg.offre_id]} />
+                    <OffreActions 
+                      offre={offresMap[msg.offre_id]} 
+                      onAction={(action) => handleOffreAction(msg.offre_id, action)}
+                    />
+                  </div>
+                )}
               </div>
-              {msg.content && (
-                <div className="text-sm whitespace-pre-wrap">
-                  {parseMessageWithLinks(msg.content).map((part, index) => 
-                    part.type === 'link' ? (
-                      <a
-                        key={index}
-                        href={part.content}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        {part.content}
-                      </a>
-                    ) : (
-                      <span key={index}>{part.content}</span>
-                    )
-                  )}
-                </div>
-              )}
-              {msg.attachment_url && (
-                <div className="mt-2">
-                  <MessageAttachment
-                    url={msg.attachment_url}
-                    type={msg.attachment_type || ''}
-                    name={msg.attachment_name || 'Fichier'}
-                    size={msg.attachment_size || 0}
-                  />
-                </div>
-              )}
-              {msg.offre_id && offresMap[msg.offre_id] && (
-                <>
-                  <OffreCard offre={offresMap[msg.offre_id]} />
-                  <OffreActions 
-                    offre={offresMap[msg.offre_id]} 
-                    onAction={(action) => handleOffreAction(msg.offre_id, action)}
-                  />
-                </>
-              )}
-            </Card>
-          ))}
+            );
+          })}
           <div ref={messagesEndRef} />
         </div>
-      </div>
-      <div className="p-4 border-t bg-card">
-        {!currentConversation?.is_archived && (
-          <div className="flex gap-2 items-end">
-            <div className="flex-1">
-              <MessageAttachmentUploader
-                conversationId={selectedConv}
-                onAttachmentReady={setPendingAttachment}
-              />
-              <Input
-                placeholder="Écrire un message..."
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              />
-            </div>
-            <Button onClick={handleSendMessage} disabled={!messageText.trim() && !pendingAttachment}>
-              <Send className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-      </div>
+      </ScrollArea>
+      {!currentConversation?.is_archived && (
+        <div>
+          <MessageAttachmentUploader
+            conversationId={selectedConv}
+            onAttachmentReady={setPendingAttachment}
+          />
+          <ChatInput
+            onSendMessage={(text) => {
+              setMessageText(text);
+              setTimeout(() => handleSendMessage(), 0);
+            }}
+            disabled={false}
+            placeholder="Écrivez un message..."
+          />
+        </div>
+      )}
 
       {/* Dialog proposer dates signature */}
       <Dialog open={signatureDatesDialogOpen} onOpenChange={setSignatureDatesDialogOpen}>
