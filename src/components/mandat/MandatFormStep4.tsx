@@ -29,6 +29,18 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
 
   // Calculate rental budget recommendation (1/3 of total income)
   const budgetConseilleLocation = totalRevenusMensuels ? Math.floor(totalRevenusMensuels / 3) : 0;
+  
+  // Rental effort rate calculation (loyer / revenus * 100)
+  const tauxEffortLocation = totalRevenusMensuels > 0 && data.budget_max > 0
+    ? Math.round((data.budget_max / totalRevenusMensuels) * 100)
+    : 0;
+  
+  // Rental income requirements
+  const revenuMinRequiLocation = data.budget_max > 0 ? data.budget_max * 3 : 0;
+  const revenuManquantLocation = Math.max(0, revenuMinRequiLocation - totalRevenusMensuels);
+  
+  // Rental viability
+  const isRentalViable = tauxEffortLocation <= 33;
 
   // Calculate purchase viability with total income
   const revenuAnnuelBrut = totalRevenusMensuels * 12;
@@ -262,6 +274,165 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
                 (1/3 de vos revenus{hasCandidates ? ' + candidats' : ''})
               </p>
             </div>
+          )}
+
+          {/* RENTAL: Viability analysis */}
+          {isRental && data.budget_max > 0 && (
+            <Card className={`md:col-span-2 p-4 ${isRentalViable ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'}`}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-primary" />
+                  <span className="font-semibold">Analyse de votre budget location</span>
+                </div>
+                {isRentalViable ? (
+                  <Badge variant="default" className="bg-green-600">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Budget adapté
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    Budget élevé
+                  </Badge>
+                )}
+              </div>
+              
+              {/* Visual Gauge for rental */}
+              <div className="flex justify-center mb-6 py-4 bg-background rounded-lg">
+                <CapacityGauge 
+                  currentValue={tauxEffortLocation}
+                  maxValue={50}
+                  label="Taux d'effort"
+                />
+              </div>
+
+              {/* Recommendation for rental */}
+              {!isRentalViable && (
+                <Card className="p-4 mb-4 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900">
+                      <Home className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-blue-800 dark:text-blue-300 mb-1">
+                        💡 Recommandation basée sur vos revenus
+                      </p>
+                      <p className="text-sm text-blue-700 dark:text-blue-400 mb-3">
+                        Avec vos revenus actuels de <strong>{totalRevenusMensuels.toLocaleString('fr-CH')} CHF/mois</strong>, 
+                        nous vous recommandons de viser un loyer de :
+                      </p>
+                      <div className="bg-white dark:bg-blue-950/50 rounded-lg p-3 text-center">
+                        <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                          {budgetConseilleLocation.toLocaleString('fr-CH')} CHF/mois
+                        </p>
+                        <p className="text-xs text-blue-600/70 dark:text-blue-500 mt-1">
+                          Loyer max pour un taux d'effort de 33%
+                        </p>
+                      </div>
+                      <div className="mt-3 text-xs text-blue-600 dark:text-blue-500 space-y-1">
+                        <p>📊 Votre budget actuel: {data.budget_max.toLocaleString('fr-CH')} CHF/mois
+                          <span className="text-destructive font-medium"> (+{(data.budget_max - budgetConseilleLocation).toLocaleString('fr-CH')} CHF de trop)</span>
+                        </p>
+                        <p>💰 Revenu min requis pour {data.budget_max.toLocaleString('fr-CH')} CHF: {revenuMinRequiLocation.toLocaleString('fr-CH')} CHF/mois</p>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )}
+              
+              {/* Rental metrics */}
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <Card className="p-3 bg-background">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Taux d'effort</span>
+                  </div>
+                  <div className="text-2xl font-bold mb-1">
+                    <span className={tauxEffortLocation > 33 ? 'text-destructive' : 'text-green-600'}>
+                      {tauxEffortLocation}%
+                    </span>
+                    <span className="text-muted-foreground text-sm font-normal"> / 33% max</span>
+                  </div>
+                  <div className="text-xs space-y-1 text-muted-foreground">
+                    <p>Loyer: {data.budget_max.toLocaleString('fr-CH')} CHF/mois</p>
+                    <p>Revenus: {totalRevenusMensuels.toLocaleString('fr-CH')} CHF/mois</p>
+                  </div>
+                </Card>
+
+                <Card className="p-3 bg-background">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Revenus cumulés</span>
+                  </div>
+                  <div className="text-2xl font-bold mb-1">
+                    <span className={revenuManquantLocation > 0 ? 'text-destructive' : 'text-green-600'}>
+                      {totalRevenusMensuels.toLocaleString('fr-CH')}
+                    </span>
+                    <span className="text-muted-foreground text-sm font-normal"> / {revenuMinRequiLocation.toLocaleString('fr-CH')} CHF</span>
+                  </div>
+                  {revenuManquantLocation > 0 && (
+                    <p className="text-xs text-destructive font-medium">
+                      ⚠️ Il manque {revenuManquantLocation.toLocaleString('fr-CH')} CHF/mois
+                    </p>
+                  )}
+                </Card>
+              </div>
+
+              {/* Requirements summary for rental */}
+              <div className="bg-background rounded-lg p-3 space-y-2">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Info className="h-4 w-4" />
+                  Exigences pour ce loyer
+                </p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Revenu mensuel min:</span>
+                    <span className={`font-medium ${revenuManquantLocation > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                      {revenuMinRequiLocation.toLocaleString('fr-CH')} CHF
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Votre revenu total:</span>
+                    <span className="font-medium">{totalRevenusMensuels.toLocaleString('fr-CH')} CHF</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Loyer max conseillé:</span>
+                    <span className="font-medium text-green-600">{budgetConseilleLocation.toLocaleString('fr-CH')} CHF</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Votre budget:</span>
+                    <span className={`font-medium ${!isRentalViable ? 'text-destructive' : ''}`}>{data.budget_max.toLocaleString('fr-CH')} CHF</span>
+                  </div>
+                </div>
+                
+                {revenuManquantLocation > 0 && (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription className="flex flex-col gap-2">
+                      <span>
+                        Il vous manque <strong>{revenuManquantLocation.toLocaleString('fr-CH')} CHF/mois</strong> de revenus pour ce loyer.
+                      </span>
+                      {!hasCandidates && onAddCoBuyer && (
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-fit gap-2 border-red-300 bg-white/50 dark:bg-black/20 text-destructive hover:bg-red-100 dark:hover:bg-red-950"
+                          onClick={onAddCoBuyer}
+                        >
+                          <UserPlus className="h-4 w-4" />
+                          Ajouter un colocataire maintenant
+                        </Button>
+                      )}
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
+
+              <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+                💡 En Suisse, les régies exigent généralement que le loyer ne dépasse pas 33% des revenus bruts mensuels.
+              </p>
+            </Card>
           )}
 
           {/* PURCHASE: Price and down payment fields */}
