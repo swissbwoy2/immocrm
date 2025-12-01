@@ -115,6 +115,7 @@ export default function DemandesActivation() {
       const { data: invoiceResult, error: invoiceError } = await supabase.functions.invoke('create-abaninja-invoice', {
         body: {
           client_uuid: clientResult.client_uuid,
+          address_uuid: clientResult.address_uuid,
           type_recherche: demande.type_recherche,
           prenom: demande.prenom,
           nom: demande.nom,
