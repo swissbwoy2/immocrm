@@ -1054,6 +1054,45 @@ export type Database = {
         }
         Relationships: []
       }
+      email_templates: {
+        Row: {
+          body_template: string
+          category: string
+          created_at: string
+          id: string
+          is_system: boolean
+          name: string
+          subject_template: string | null
+          updated_at: string
+          user_id: string
+          variables: Json | null
+        }
+        Insert: {
+          body_template: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_system?: boolean
+          name: string
+          subject_template?: string | null
+          updated_at?: string
+          user_id: string
+          variables?: Json | null
+        }
+        Update: {
+          body_template?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_system?: boolean
+          name?: string
+          subject_template?: string | null
+          updated_at?: string
+          user_id?: string
+          variables?: Json | null
+        }
+        Relationships: []
+      }
       imap_configurations: {
         Row: {
           created_at: string | null
