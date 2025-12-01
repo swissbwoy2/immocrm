@@ -93,6 +93,12 @@ serve(async (req) => {
       currencyCode: "CHF",
       title: `Mandat de recherche - ${prenom} ${nom}`,
       reference: `MANDAT-${demande_id.slice(0, 8).toUpperCase()}`,
+      // Notes publiques
+      publicNote: "Merci pour votre confiance et votre collaboration",
+      // Conditions
+      conditions: "Acompte dû pour l'activation de vos recherches.",
+      // Pied de page
+      footer: "www.immo-rama.ch",
       paymentInstructions: bankAccount.qr_iban ? {
         qrIban: bankAccount.qr_iban
       } : {
@@ -150,12 +156,50 @@ serve(async (req) => {
     // v2 API returns documents in data array
     const invoice = data.data?.[0] || data.documents?.[0] || data;
 
+    // Send invoice by email automatically
+    let emailSent = false;
+    console.log('Sending invoice by email to:', email);
+    
+    try {
+      const sendResponse = await fetch(
+        `https://api.abaninja.ch/accounts/${accountUuid}/documents/v2/invoices/${invoice.uuid}/actions/send`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            channel: 'email',
+            recipient: {
+              email: email
+            }
+          })
+        }
+      );
+
+      const sendResponseText = await sendResponse.text();
+      console.log('Send invoice response status:', sendResponse.status);
+      console.log('Send invoice response:', sendResponseText);
+
+      if (sendResponse.ok) {
+        console.log('Invoice sent successfully by email to:', email);
+        emailSent = true;
+      } else {
+        console.warn('Failed to send invoice by email:', sendResponse.status, sendResponseText);
+      }
+    } catch (sendErr) {
+      console.warn('Error sending invoice by email:', sendErr);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         invoice_id: invoice.uuid,
         invoice_number: invoice.number || invoice.reference,
         amount: montant,
+        email_sent: emailSent,
         data: invoice
       }),
       {
