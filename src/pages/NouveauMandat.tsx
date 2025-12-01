@@ -308,6 +308,65 @@ export default function NouveauMandat() {
         // Don't block the flow if email fails
       }
 
+      // ÉTAPE 4: Créer automatiquement le compte client
+      try {
+        console.log('Creating client account...');
+        const { data: inviteData, error: inviteError } = await supabase.functions.invoke('invite-client', {
+          body: {
+            email: formData.email,
+            prenom: formData.prenom,
+            nom: formData.nom,
+            telephone: formData.telephone,
+            demandeMandat: {
+              adresse: formData.adresse,
+              date_naissance: formData.date_naissance,
+              nationalite: formData.nationalite,
+              type_permis: formData.type_permis,
+              etat_civil: formData.etat_civil,
+              gerance_actuelle: formData.gerance_actuelle,
+              contact_gerance: formData.contact_gerance,
+              loyer_actuel: formData.loyer_actuel,
+              depuis_le: formData.depuis_le,
+              pieces_actuel: formData.pieces_actuel,
+              charges_extraordinaires: formData.charges_extraordinaires,
+              montant_charges_extra: formData.montant_charges_extra,
+              poursuites: formData.poursuites,
+              curatelle: formData.curatelle,
+              motif_changement: formData.motif_changement,
+              profession: formData.profession,
+              employeur: formData.employeur,
+              revenus_mensuels: formData.revenus_mensuels,
+              date_engagement: formData.date_engagement,
+              utilisation_logement: formData.utilisation_logement,
+              animaux: formData.animaux,
+              instrument_musique: formData.instrument_musique,
+              vehicules: formData.vehicules,
+              numero_plaques: formData.numero_plaques,
+              decouverte_agence: formData.decouverte_agence,
+              type_recherche: formData.type_recherche,
+              nombre_occupants: formData.nombre_occupants,
+              type_bien: formData.type_bien,
+              pieces_recherche: formData.pieces_recherche,
+              region_recherche: formData.region_recherche,
+              budget_max: formData.budget_max,
+              apport_personnel: formData.apport_personnel,
+              souhaits_particuliers: formData.souhaits_particuliers,
+              documents_uploades: formData.documents_uploades,
+              candidats: formData.candidats,
+            }
+          }
+        });
+
+        if (inviteError) {
+          console.error('Error creating client account:', inviteError);
+        } else {
+          console.log('Client account created:', inviteData);
+        }
+      } catch (accountError) {
+        console.error('Error creating client account:', accountError);
+        // Ne pas bloquer le flux si la création de compte échoue
+      }
+
       // Nettoyer le localStorage
       localStorage.removeItem(STORAGE_KEY);
 
@@ -317,8 +376,8 @@ export default function NouveauMandat() {
         : '';
       
       toast.success(
-        `Demande envoyée avec succès ! Vous allez recevoir par email votre mandat signé en PDF.${invoiceMessage}`,
-        { duration: 6000 }
+        `Demande envoyée avec succès ! Vous allez recevoir par email votre mandat signé en PDF ainsi qu'un lien pour créer votre mot de passe et accéder à votre espace client.${invoiceMessage}`,
+        { duration: 8000 }
       );
       
       navigate('/login', { state: { mandatSubmitted: true } });
