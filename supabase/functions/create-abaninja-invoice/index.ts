@@ -46,8 +46,8 @@ serve(async (req) => {
 
     const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
-    // Create invoice in AbaNinja
-    const invoicePayload = {
+    // Create invoice in AbaNinja - v2 API requires documents array wrapper
+    const invoiceData = {
       address_uuid: client_uuid,
       date: formatDate(today),
       due_date: formatDate(dueDate),
@@ -63,12 +63,15 @@ serve(async (req) => {
           unit_price: montant,
           vat_rate: 0 // Services exemptés de TVA
         }
-      ],
-      send_email: true, // Send invoice by email automatically
-      email_to: email
+      ]
     };
 
-    console.log('AbaNinja invoice payload:', JSON.stringify(invoicePayload));
+    // v2 API requires wrapping in documents array
+    const payload = {
+      documents: [invoiceData]
+    };
+
+    console.log('AbaNinja invoice payload:', JSON.stringify(payload));
 
     const response = await fetch(
       `https://api.abaninja.ch/accounts/${accountUuid}/documents/v2/invoices`,
@@ -79,7 +82,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify(invoicePayload)
+        body: JSON.stringify(payload)
       }
     );
 
@@ -93,13 +96,16 @@ serve(async (req) => {
 
     const data = JSON.parse(responseText);
 
+    // v2 API returns documents in data array
+    const invoice = data.data?.[0] || data.documents?.[0] || data;
+
     return new Response(
       JSON.stringify({
         success: true,
-        invoice_id: data.uuid,
-        invoice_number: data.number || data.reference,
+        invoice_id: invoice.uuid,
+        invoice_number: invoice.number || invoice.reference,
         amount: montant,
-        data
+        data: invoice
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
