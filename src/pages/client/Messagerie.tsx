@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -30,6 +29,11 @@ import { MessageAttachment } from "@/components/MessageAttachment";
 import { parseMessageWithLinks } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
 import { MessagingLayout } from "@/components/MessagingLayout";
+import { ChatAvatar } from "@/components/messaging/ChatAvatar";
+import { MessageBubble } from "@/components/messaging/MessageBubble";
+import { ConversationItem } from "@/components/messaging/ConversationItem";
+import { ChatInput } from "@/components/messaging/ChatInput";
+import { ChatHeader } from "@/components/messaging/ChatHeader";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
