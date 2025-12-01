@@ -476,6 +476,57 @@ export type Database = {
           },
         ]
       }
+      client_notes: {
+        Row: {
+          agent_id: string
+          client_id: string
+          content: string
+          created_at: string | null
+          id: string
+          is_completed: boolean | null
+          note_type: string | null
+          reminder_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          client_id: string
+          content: string
+          created_at?: string | null
+          id?: string
+          is_completed?: boolean | null
+          note_type?: string | null
+          reminder_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          client_id?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_completed?: boolean | null
+          note_type?: string | null
+          reminder_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_notes_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           adresse: string | null
