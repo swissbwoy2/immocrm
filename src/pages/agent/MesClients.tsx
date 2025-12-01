@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Trash2, Upload, Trash, Shield, CheckCircle, FileWarning } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Trash2, Upload, Trash, Shield, CheckCircle, FileWarning, Home, Key } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNotifications } from "@/hooks/useNotifications";
 import { hasStableStatus } from "@/hooks/useSolvabilityCheck";
 import { CUMULATIVE_TYPES } from "@/hooks/useClientCandidates";
+import { ClientTypeBadge } from "@/components/ClientTypeBadge";
 
 const MesClients = () => {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ const MesClients = () => {
   const [allClients, setAllClients] = useState<any[]>([]);
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedPieces, setSelectedPieces] = useState<string[]>([]);
+  const [selectedTypeRecherche, setSelectedTypeRecherche] = useState<'all' | 'Louer' | 'Acheter'>('all');
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState<'recent' | 'ancien'>('recent');
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
@@ -213,6 +215,8 @@ const MesClients = () => {
           dateInscription: client.date_ajout || client.created_at,
           agentId: client.agent_id,
           typeBien: client.type_bien,
+          typeRecherche: client.type_recherche || 'Louer',
+          apportPersonnel: client.apport_personnel,
           garant: garant ? { 
             nom: garant.nom, 
             prenom: garant.prenom, 
@@ -338,8 +342,15 @@ const MesClients = () => {
         return Math.floor(clientNum) === Math.floor(pieceNum);
       });
     
-    return matchSearch && matchRegion && matchPieces;
+    const matchTypeRecherche = selectedTypeRecherche === 'all' || 
+      client.typeRecherche === selectedTypeRecherche;
+    
+    return matchSearch && matchRegion && matchPieces && matchTypeRecherche;
   });
+
+  // Compteurs par type
+  const clientsLocation = allClients.filter(c => c.typeRecherche !== 'Acheter').length;
+  const clientsAchat = allClients.filter(c => c.typeRecherche === 'Acheter').length;
 
   const sortedClients = [...filteredClients].sort((a, b) => {
     const dateA = new Date(a.dateInscription || 0).getTime();
@@ -433,6 +444,39 @@ const MesClients = () => {
             </div>
           </div>
 
+          {/* Filtre par type de recherche */}
+          <div className="mb-4">
+            <p className="text-sm font-medium mb-2">Type de recherche</p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant={selectedTypeRecherche === 'all' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedTypeRecherche('all')}
+                className="text-xs"
+              >
+                Tous ({allClients.length})
+              </Button>
+              <Button
+                variant={selectedTypeRecherche === 'Louer' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedTypeRecherche('Louer')}
+                className="text-xs bg-blue-600 hover:bg-blue-700"
+              >
+                <Key className="w-3 h-3 mr-1" />
+                Location ({clientsLocation})
+              </Button>
+              <Button
+                variant={selectedTypeRecherche === 'Acheter' ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedTypeRecherche('Acheter')}
+                className="text-xs bg-emerald-600 hover:bg-emerald-700"
+              >
+                <Home className="w-3 h-3 mr-1" />
+                Achat ({clientsAchat})
+              </Button>
+            </div>
+          </div>
+
           {/* Tri par date de création */}
           <div className="mb-6 flex items-center gap-2">
             <p className="text-sm font-medium">Trier par :</p>
@@ -457,6 +501,7 @@ const MesClients = () => {
           {/* Grid de clients */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {sortedClients.map((client) => {
+              const isAcheteur = client.typeRecherche === 'Acheter';
               const daysElapsed = calculateDaysElapsed(client.dateInscription);
               const daysRemaining = 90 - daysElapsed;
               const progressPercent = (daysElapsed / 90) * 100;
@@ -512,9 +557,12 @@ const MesClients = () => {
 
                   {/* Nom et nationalité */}
                   <div className="mb-3 mt-6">
-                    <h3 className="text-lg font-semibold text-primary mb-1">
-                      {client.prenom} {client.nom}
-                    </h3>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-lg font-semibold text-primary">
+                        {client.prenom} {client.nom}
+                      </h3>
+                      <ClientTypeBadge typeRecherche={client.typeRecherche} size="sm" />
+                    </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MapPin className="h-4 w-4" />
                       <span>{client.nationalite || 'Non renseigné'}</span>
@@ -605,12 +653,36 @@ const MesClients = () => {
                     <div className="flex items-start gap-2 bg-primary/10 p-2 rounded">
                       <DollarSign className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Budget possible</p>
+                        <p className="text-xs text-muted-foreground">
+                          {isAcheteur ? 'Prix recherché' : 'Budget demandé'}
+                        </p>
                         <p className={`text-sm font-semibold ${client.budgetPossible >= (client.budgetMax || 0) ? 'text-green-600' : 'text-primary'}`}>
-                          CHF {client.budgetPossible?.toLocaleString() || 0}
+                          CHF {client.budgetMax?.toLocaleString() || 0}{!isAcheteur && '/mois'}
                         </p>
                       </div>
                     </div>
+                    {isAcheteur && client.apportPersonnel > 0 && (
+                      <div className="flex items-start gap-2 bg-emerald-500/10 p-2 rounded">
+                        <DollarSign className="h-4 w-4 mt-0.5 text-emerald-600 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground">Apport disponible</p>
+                          <p className="text-sm font-semibold text-emerald-600">
+                            CHF {client.apportPersonnel?.toLocaleString() || 0}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {!isAcheteur && (
+                      <div className="flex items-start gap-2 bg-blue-500/10 p-2 rounded">
+                        <DollarSign className="h-4 w-4 mt-0.5 text-blue-600 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-muted-foreground">Budget possible (33%)</p>
+                          <p className={`text-sm font-semibold ${client.budgetPossible >= (client.budgetMax || 0) ? 'text-green-600' : 'text-blue-600'}`}>
+                            CHF {client.budgetPossible?.toLocaleString() || 0}/mois
+                          </p>
+                        </div>
+                      </div>
+                    )}
                     {client.garant && (
                       <div className="flex items-start gap-2 bg-green-500/10 p-2 rounded">
                         <Shield className="h-4 w-4 mt-0.5 text-green-600 flex-shrink-0" />
