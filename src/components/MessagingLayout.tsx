@@ -89,10 +89,19 @@ export function MessagingLayout({
 
       {/* Zone de chat */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
-        {/* SidebarTrigger flottant sur mobile */}
-        <div className="absolute top-2 left-2 z-10 lg:hidden">
-          <SidebarTrigger className="bg-background/80 backdrop-blur-sm rounded-full shadow-sm" />
-        </div>
+        {/* Bouton flottant pour ouvrir les conversations sur mobile */}
+        {selectedConversation && (
+          <div className="absolute top-2 left-2 z-10 lg:hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleOpenConversations}
+              className="bg-background/80 backdrop-blur-sm rounded-full shadow-sm"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
 
         {/* Bouton menu mobile quand aucune conversation n'est sélectionnée */}
         {!selectedConversation && (

@@ -32,8 +32,8 @@ function AppLayoutContent({ children }: AppLayoutProps) {
     <div className="min-h-screen flex w-full bg-background">
       <AppSidebar />
       <div className="flex-1 flex flex-col w-full">
-        {/* Mobile Header */}
-        <header className="sticky top-0 z-10 flex items-center h-14 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:hidden">
+        {/* Mobile Header - toujours visible */}
+        <header className="sticky top-0 z-20 flex items-center h-14 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:hidden shrink-0">
           <SidebarTrigger className="-ml-1 transition-transform duration-200 active:scale-95">
             <Menu className="h-5 w-5" />
           </SidebarTrigger>
@@ -50,8 +50,8 @@ function AppLayoutContent({ children }: AppLayoutProps) {
           </button>
         </header>
         
-        {/* Main Content */}
-        <main className="flex-1 overflow-auto">
+        {/* Main Content - zone de scroll séparée */}
+        <main className="flex-1 flex flex-col min-h-0">
           {children}
         </main>
       </div>
