@@ -85,6 +85,7 @@ serve(async (req) => {
     // Create invoice in AbaNinja - v2 API with correct schema
     const invoiceData = {
       receiver: {
+        personUuid: client_uuid,
         addressUuid: address_uuid
       },
       invoiceDate: formatDate(today),
