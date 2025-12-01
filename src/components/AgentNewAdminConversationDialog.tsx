@@ -139,12 +139,13 @@ export function AgentNewAdminConversationDialog({ agentId, onConversationCreated
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Shield className="h-4 w-4 mr-2" />
-          Contacter Admin
+        <Button variant="outline" size="sm" className="w-full">
+          <Shield className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Contacter Admin</span>
+          <span className="sm:hidden">Admin</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-[95vw] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Contacter un administrateur</DialogTitle>
         </DialogHeader>

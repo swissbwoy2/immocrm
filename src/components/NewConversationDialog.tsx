@@ -197,12 +197,13 @@ export function NewConversationDialog({ agentId, onConversationCreated }: NewCon
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <MessageSquarePlus className="h-4 w-4 mr-2" />
-          Nouvelle conversation
+        <Button variant="outline" size="sm" className="w-full">
+          <MessageSquarePlus className="h-4 w-4 sm:mr-2" />
+          <span className="hidden sm:inline">Nouvelle conversation</span>
+          <span className="sm:hidden">Nouveau</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-[95vw] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Nouvelle conversation</DialogTitle>
         </DialogHeader>

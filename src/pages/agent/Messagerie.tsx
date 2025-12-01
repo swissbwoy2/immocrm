@@ -939,22 +939,20 @@ const Messagerie = () => {
   const conversationsList = (
     <>
       <div className="p-4 border-b border-border/50 space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="space-y-3">
           <h2 className="font-semibold text-lg">Conversations</h2>
-          <div className="flex gap-2">
-            {agentId && (
-              <>
-                <NewConversationDialog 
-                  agentId={agentId} 
-                  onConversationCreated={handleConversationCreated}
-                />
-                <AgentNewAdminConversationDialog
-                  agentId={agentId}
-                  onConversationCreated={handleConversationCreated}
-                />
-              </>
-            )}
-          </div>
+          {agentId && (
+            <div className="grid grid-cols-2 gap-2">
+              <NewConversationDialog 
+                agentId={agentId} 
+                onConversationCreated={handleConversationCreated}
+              />
+              <AgentNewAdminConversationDialog
+                agentId={agentId}
+                onConversationCreated={handleConversationCreated}
+              />
+            </div>
+          )}
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
