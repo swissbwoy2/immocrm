@@ -133,6 +133,7 @@ export default function ClientDetail() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [agentId, setAgentId] = useState<string | null>(null);
+  const [assignedAgents, setAssignedAgents] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) {
@@ -155,9 +156,41 @@ export default function ClientDetail() {
       if (clientError) throw clientError;
       setClient(clientData);
       
-      // Get agent ID
-      if (clientData.agent_id) {
-        setAgentId(clientData.agent_id);
+      // Get all assigned agents via client_agents
+      const { data: clientAgentsData, error: clientAgentsError } = await supabase
+        .from('client_agents')
+        .select(`
+          agent_id,
+          is_primary,
+          commission_split,
+          agents!inner (
+            user_id,
+            profiles:user_id (
+              prenom,
+              nom,
+              email,
+              telephone
+            )
+          )
+        `)
+        .eq('client_id', id)
+        .order('is_primary', { ascending: false });
+
+      if (clientAgentsError) throw clientAgentsError;
+      
+      const agentsWithProfiles = clientAgentsData?.map(ca => ({
+        agent_id: ca.agent_id,
+        is_primary: ca.is_primary,
+        commission_split: ca.commission_split,
+        profile: ca.agents?.profiles
+      })) || [];
+      
+      setAssignedAgents(agentsWithProfiles);
+      
+      // Set primary agent ID
+      const primaryAgent = agentsWithProfiles.find(a => a.is_primary);
+      if (primaryAgent) {
+        setAgentId(primaryAgent.agent_id);
       }
 
       const { data: profileData, error: profileError } = await supabase
