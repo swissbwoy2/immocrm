@@ -14,6 +14,67 @@ interface CreateClientRequest {
   adresse?: string;
 }
 
+// Parse Swiss address format: "Street Number ZipCode City" or "Street Number, ZipCode City"
+function parseSwissAddress(adresse: string): { street: string; zip_code: string; city: string; state: string } | null {
+  if (!adresse || adresse.trim() === '') return null;
+  
+  // Try to find a 4-digit Swiss postal code
+  const zipMatch = adresse.match(/\b(\d{4})\b/);
+  if (!zipMatch) {
+    console.log('Could not find zip code in address:', adresse);
+    return null;
+  }
+  
+  const zipCode = zipMatch[1];
+  const zipIndex = adresse.indexOf(zipCode);
+  
+  // Street is everything before the zip code
+  let street = adresse.substring(0, zipIndex).trim();
+  // Remove trailing comma if present
+  street = street.replace(/,\s*$/, '').trim();
+  
+  // City is everything after the zip code
+  let city = adresse.substring(zipIndex + 4).trim();
+  
+  // Determine canton/state based on postal code ranges (simplified)
+  const state = getSwissState(zipCode);
+  
+  if (!street || !city) {
+    console.log('Could not parse street or city from address:', adresse);
+    return null;
+  }
+  
+  return { street, zip_code: zipCode, city, state };
+}
+
+// Get Swiss canton based on postal code (simplified mapping)
+function getSwissState(zipCode: string): string {
+  const zip = parseInt(zipCode, 10);
+  
+  // Simplified canton mapping based on postal code ranges
+  if (zip >= 1000 && zip <= 1299) return 'VD'; // Vaud
+  if (zip >= 1300 && zip <= 1399) return 'VD'; // Vaud (Lausanne area)
+  if (zip >= 1400 && zip <= 1499) return 'VD'; // Vaud
+  if (zip >= 1500 && zip <= 1599) return 'VD'; // Vaud
+  if (zip >= 1600 && zip <= 1699) return 'VD'; // Vaud
+  if (zip >= 1700 && zip <= 1799) return 'FR'; // Fribourg
+  if (zip >= 1800 && zip <= 1899) return 'VD'; // Vaud (Montreux area)
+  if (zip >= 1200 && zip <= 1299) return 'GE'; // Genève
+  if (zip >= 2000 && zip <= 2099) return 'NE'; // Neuchâtel
+  if (zip >= 2300 && zip <= 2399) return 'NE'; // Neuchâtel
+  if (zip >= 2500 && zip <= 2599) return 'BE'; // Bern
+  if (zip >= 2800 && zip <= 2899) return 'JU'; // Jura
+  if (zip >= 3000 && zip <= 3999) return 'BE'; // Bern
+  if (zip >= 4000 && zip <= 4999) return 'BS'; // Basel area
+  if (zip >= 5000 && zip <= 5999) return 'AG'; // Aargau
+  if (zip >= 6000 && zip <= 6999) return 'LU'; // Luzern area
+  if (zip >= 7000 && zip <= 7999) return 'GR'; // Graubünden
+  if (zip >= 8000 && zip <= 8999) return 'ZH'; // Zürich
+  if (zip >= 9000 && zip <= 9999) return 'SG'; // St. Gallen
+  
+  return 'VD'; // Default to Vaud
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -53,9 +114,13 @@ serve(async (req) => {
 
     console.log('Generated client number:', clientNumber);
 
+    // Parse the address if provided
+    const parsedAddress = adresse ? parseSwissAddress(adresse) : null;
+    console.log('Parsed address:', parsedAddress);
+
     // Create person in AbaNinja with the correct API v2 format
     // Documentation: https://abaninja.ch/apidocs/#tag/Addresses/paths/~1accounts~1{accountUuid}~1addresses~1v2~1addresses/post
-    const personPayload = {
+    const personPayload: Record<string, unknown> = {
       type: "person",
       customer_number: clientNumber, // e.g., "IR0149"
       first_name: prenom,
@@ -73,14 +138,21 @@ serve(async (req) => {
           value: telephone,
           primary: false
         }
-      ],
-      addresses: adresse ? [
+      ]
+    };
+
+    // Only add addresses if we could parse them properly
+    if (parsedAddress) {
+      personPayload.addresses = [
         {
-          address: adresse,
+          address: parsedAddress.street,
+          city: parsedAddress.city,
+          zip_code: parsedAddress.zip_code,
+          state: parsedAddress.state,
           country_code: "CH"
         }
-      ] : []
-    };
+      ];
+    }
 
     console.log('AbaNinja person payload:', JSON.stringify(personPayload));
 
