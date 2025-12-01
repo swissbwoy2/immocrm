@@ -2,6 +2,7 @@ import { ReactNode, useState, useEffect } from 'react';
 import { ChevronLeft, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 
 interface MessagingLayoutProps {
@@ -89,6 +90,7 @@ export function MessagingLayout({
         {/* Header mobile avec bouton retour - toujours visible sur mobile quand une conversation est sélectionnée */}
         {selectedConversation && (
           <div className="flex items-center gap-2 p-3 border-b bg-card lg:hidden">
+            <SidebarTrigger className="shrink-0" />
             <Button
               variant="ghost"
               size="icon"
@@ -106,6 +108,7 @@ export function MessagingLayout({
         {/* Bouton menu mobile quand aucune conversation n'est sélectionnée */}
         {!selectedConversation && (
           <div className="flex items-center gap-2 p-3 border-b bg-card lg:hidden">
+            <SidebarTrigger className="shrink-0" />
             <Button
               variant="ghost"
               size="icon"
