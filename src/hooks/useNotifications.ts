@@ -19,6 +19,8 @@ export interface NotificationCounts {
   total: number;
   new_client_activated: number;
   client_assigned: number;
+  client_removed: number;
+  client_updated: number;
   new_message: number;
   new_offer: number;
   new_visit: number;
@@ -49,6 +51,8 @@ export const useNotifications = () => {
     total: 0,
     new_client_activated: 0,
     client_assigned: 0,
+    client_removed: 0,
+    client_updated: 0,
     new_message: 0,
     new_offer: 0,
     new_visit: 0,
@@ -103,6 +107,8 @@ export const useNotifications = () => {
       total: unread.length,
       new_client_activated: unread.filter(n => n.type === 'new_client_activated').length,
       client_assigned: unread.filter(n => n.type === 'client_assigned').length,
+      client_removed: unread.filter(n => n.type === 'client_removed').length,
+      client_updated: unread.filter(n => n.type === 'client_updated').length,
       new_message: unread.filter(n => n.type === 'new_message').length,
       new_offer: unread.filter(n => n.type === 'new_offer').length,
       new_visit: unread.filter(n => n.type === 'new_visit').length,

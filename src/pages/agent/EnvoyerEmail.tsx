@@ -169,10 +169,20 @@ export default function EnvoyerEmail() {
 
       if (!agentData) return;
 
-      const { data: clientsData, error } = await supabase
-        .from('clients')
-        .select('id, user_id')
+      // Get clients via client_agents
+      const { data: clientAgentsData } = await supabase
+        .from('client_agents')
+        .select('client_id')
         .eq('agent_id', agentData.id);
+
+      const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
+
+      const { data: clientsData, error } = clientIds.length > 0
+        ? await supabase
+            .from('clients')
+            .select('id, user_id')
+            .in('id', clientIds)
+        : { data: [], error: null };
 
       if (error) throw error;
 

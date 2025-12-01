@@ -137,17 +137,27 @@ export default function Candidatures() {
         return;
       }
 
-      const { data: clientsData } = await supabase
-        .from('clients')
-        .select('id, user_id')
+      // Get clients via client_agents
+      const { data: clientAgentsData } = await supabase
+        .from('client_agents')
+        .select('client_id')
         .eq('agent_id', agentData.id);
+
+      const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
+
+      const { data: clientsData } = clientIds.length > 0
+        ? await supabase
+            .from('clients')
+            .select('id, user_id')
+            .in('id', clientIds)
+        : { data: [] };
       
       if (!clientsData || clientsData.length === 0) {
         setLoading(false);
         return;
       }
 
-      const clientIds = clientsData.map(c => c.id);
+      const candidatureClientIds = clientsData.map(c => c.id);
       const clientUserIds = clientsData.map(c => c.user_id);
 
       const { data: candidaturesData, error } = await supabase
@@ -157,7 +167,7 @@ export default function Candidatures() {
           offres (adresse, prix, pieces, surface),
           clients (user_id)
         `)
-        .in('client_id', clientIds)
+        .in('client_id', candidatureClientIds)
         .order('created_at', { ascending: false });
 
       if (error) throw error;

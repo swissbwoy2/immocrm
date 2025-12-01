@@ -151,64 +151,90 @@ export default function Assignations() {
     clientAgents.some(ca => ca.client_id === c.id)
   );
 
-  const handleAssign = async () => {
-    if (!selectedClient || selectedAgentAssignments.length === 0) {
-      toast({
-        title: 'Erreur',
-        description: 'Veuillez sélectionner un client et au moins un agent',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (selectedAgentAssignments.length > 4) {
-      toast({
-        title: 'Erreur',
-        description: 'Maximum 4 agents peuvent être assignés à un client',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+  const handleAssign = async (clientId: string, agentAssignments: Array<{ agent_id: string; is_primary: boolean; commission_split: number }>) => {
     try {
-      // Insert into client_agents for each assignment
-      const insertPromises = selectedAgentAssignments.map(assignment =>
-        supabase.from('client_agents').insert({
-          client_id: selectedClient,
-          agent_id: assignment.agent_id,
-          is_primary: assignment.is_primary,
-          commission_split: assignment.commission_split,
-        })
-      );
+      // Delete existing assignments
+      await supabase
+        .from('client_agents')
+        .delete()
+        .eq('client_id', clientId);
 
-      const results = await Promise.all(insertPromises);
-      const errors = results.filter(r => r.error);
+      // Get old agent_id for decrementing
+      const { data: oldClient } = await supabase
+        .from('clients')
+        .select('agent_id')
+        .eq('id', clientId)
+        .single();
 
-      if (errors.length > 0) {
-        throw new Error('Erreur lors de l\'assignation');
+      if (oldClient?.agent_id) {
+        await supabase.rpc('decrement_agent_clients', { agent_uuid: oldClient.agent_id });
       }
 
-      // Increment each agent's client count
-      for (const assignment of selectedAgentAssignments) {
-        await (supabase.rpc as any)('increment_agent_clients', { agent_uuid: assignment.agent_id });
+      // Insert new assignments
+      const assignmentsToInsert = agentAssignments.map(a => ({
+        client_id: clientId,
+        agent_id: a.agent_id,
+        is_primary: a.is_primary,
+        commission_split: a.commission_split,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('client_agents')
+        .insert(assignmentsToInsert);
+
+      if (insertError) throw insertError;
+
+      // Update clients.agent_id with primary agent for backward compatibility
+      const primaryAgent = agentAssignments.find(a => a.is_primary);
+      if (primaryAgent) {
+        await supabase
+          .from('clients')
+          .update({ agent_id: primaryAgent.agent_id })
+          .eq('id', clientId);
+
+        await supabase.rpc('increment_agent_clients', { agent_uuid: primaryAgent.agent_id });
       }
 
-      // Reload data to reflect changes
-      await loadData();
+      // Get client and agent details for notifications
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('user_id, profiles!clients_user_id_fkey(prenom, nom)')
+        .eq('id', clientId)
+        .single();
 
-      setSelectedClient(null);
-      setSelectedAgentAssignments([]);
+      const clientName = clientData ? `${clientData.profiles.prenom} ${clientData.profiles.nom}` : 'un client';
+
+      // Create notifications for each assigned agent
+      for (const assignment of agentAssignments) {
+        const { data: agentData } = await supabase
+          .from('agents')
+          .select('user_id')
+          .eq('id', assignment.agent_id)
+          .single();
+
+        if (agentData) {
+          await supabase.from('notifications').insert({
+            user_id: agentData.user_id,
+            type: 'client_assigned',
+            title: assignment.is_primary ? 'Nouveau client assigné (Principal)' : 'Nouveau client assigné (Co-agent)',
+            message: `${clientName} vous a été assigné${assignment.is_primary ? ' en tant qu\'agent principal' : ' en tant que co-agent'} (${assignment.commission_split}% de commission)`,
+            link: '/agent/mes-clients',
+          });
+        }
+      }
 
       toast({
-        title: 'Assignation réussie',
-        description: `${selectedAgentAssignments.length} agent(s) assigné(s) au client`,
+        title: "Succès",
+        description: `Client assigné à ${agentAssignments.length} agent(s)`,
       });
-    } catch (error) {
+      
+      loadData();
+    } catch (error: any) {
       console.error('Error assigning client:', error);
       toast({
-        title: 'Erreur',
-        description: 'Impossible d\'assigner le client',
-        variant: 'destructive',
+        variant: "destructive",
+        title: "Erreur",
+        description: error.message || "Impossible d'assigner le client",
       });
     }
   };
@@ -670,7 +696,25 @@ export default function Assignations() {
                     </div>
 
                     <Button 
-                      onClick={handleAssign} 
+                      onClick={() => {
+                        if (!selectedClient || selectedAgentAssignments.length === 0) {
+                          toast({
+                            title: 'Erreur',
+                            description: 'Veuillez sélectionner un client et au moins un agent',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+                        if (selectedAgentAssignments.length > 4) {
+                          toast({
+                            title: 'Erreur',
+                            description: 'Maximum 4 agents peuvent être assignés à un client',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+                        handleAssign(selectedClient, selectedAgentAssignments);
+                      }}
                       disabled={!selectedClient || selectedAgentAssignments.length === 0}
                       className="w-full md:w-auto"
                     >

@@ -74,6 +74,14 @@ export default function AgentCalendrier() {
       setAgentId(agentData.id);
 
       // Load data in parallel
+      // Get client IDs via client_agents
+      const { data: clientAgentsData } = await supabase
+        .from('client_agents')
+        .select('client_id')
+        .eq('agent_id', agentData.id);
+
+      const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
+
       const [eventsRes, visitesRes, clientsRes] = await Promise.all([
         supabase
           .from('calendar_events')
@@ -85,10 +93,12 @@ export default function AgentCalendrier() {
           .select('*, offres(*), clients!visites_client_id_fkey(id, user_id)')
           .eq('agent_id', agentData.id)
           .order('date_visite', { ascending: true }),
-        supabase
-          .from('clients')
-          .select('id, user_id, profiles(prenom, nom)')
-          .eq('agent_id', agentData.id),
+        clientIds.length > 0 
+          ? supabase
+              .from('clients')
+              .select('id, user_id, profiles(prenom, nom)')
+              .in('id', clientIds)
+          : Promise.resolve({ data: [] }),
       ]);
 
       // Get client profiles
