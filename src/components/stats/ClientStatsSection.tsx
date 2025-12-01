@@ -105,7 +105,11 @@ export function ClientStatsSection({
             <TrendingUp className="h-5 w-5 text-primary" />
             Ma recherche en chiffres
           </h2>
-          <p className="text-sm text-muted-foreground">Suivez l'avancement de votre recherche d'appartement</p>
+          <p className="text-sm text-muted-foreground">
+            {client?.type_recherche === 'Acheter' 
+              ? 'Suivez l\'avancement de votre projet d\'achat immobilier'
+              : 'Suivez l\'avancement de votre recherche d\'appartement'}
+          </p>
         </div>
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
       </div>

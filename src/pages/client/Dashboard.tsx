@@ -18,9 +18,11 @@ import { ClientStatsSection } from '@/components/stats/ClientStatsSection';
 import { MissingDocumentsAlert } from '@/components/MissingDocumentsAlert';
 import { ClientCandidatesManager } from '@/components/ClientCandidatesManager';
 import { SolvabilityAlert } from '@/components/SolvabilityAlert';
+import { PurchaseSolvabilityAlert } from '@/components/PurchaseSolvabilityAlert';
 import { DossierChecklistCard } from '@/components/DossierChecklistCard';
 import { useClientCandidates } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
+import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck';
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
@@ -40,6 +42,10 @@ export default function ClientDashboard() {
   // Hooks pour les candidats et solvabilité - DOIVENT être au niveau supérieur
   const { candidates, refresh: refreshCandidates } = useClientCandidates(client?.id);
   const solvabilityResult = useSolvabilityCheck(client, candidates);
+  const purchaseSolvabilityResult = usePurchaseSolvabilityCheck(client, candidates);
+  
+  // Détecter si le client est un acheteur
+  const isAcheteur = client?.type_recherche === 'Acheter';
 
   useEffect(() => {
     loadData();
@@ -428,7 +434,17 @@ export default function ClientDashboard() {
           <div className="mb-8 flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground">Mon tableau de bord</h1>
-              <p className="text-muted-foreground">Suivez l'avancement de votre recherche</p>
+              <p className="text-muted-foreground">
+                {isAcheteur 
+                  ? 'Suivez l\'avancement de votre projet d\'achat immobilier' 
+                  : 'Suivez l\'avancement de votre recherche de logement'}
+              </p>
+              {isAcheteur && (
+                <Badge variant="outline" className="mt-2 text-blue-600 border-blue-300">
+                  <Home className="w-3 h-3 mr-1" />
+                  Achat immobilier
+                </Badge>
+              )}
             </div>
             <div className="flex gap-2">
               {counts.new_message > 0 && (
@@ -575,8 +591,12 @@ export default function ClientDashboard() {
           {/* Solvabilité et Candidats */}
           {profileActif !== false && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              {/* Alerte de solvabilité */}
-              <SolvabilityAlert result={solvabilityResult} />
+              {/* Alerte de solvabilité - différente selon Louer ou Acheter */}
+              {isAcheteur ? (
+                <PurchaseSolvabilityAlert result={purchaseSolvabilityResult} />
+              ) : (
+                <SolvabilityAlert result={solvabilityResult} />
+              )}
               
               {/* Checklist du dossier */}
               <DossierChecklistCard
@@ -690,7 +710,9 @@ export default function ClientDashboard() {
             {/* Mon mandat */}
             <Card>
               <CardHeader>
-                <CardTitle>📋 Mon mandat</CardTitle>
+                <CardTitle>
+                  {isAcheteur ? '🏠 Mon projet d\'achat' : '📋 Mon mandat'}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {profileActif === false ? (
@@ -752,8 +774,13 @@ export default function ClientDashboard() {
                         </span>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Budget recherché</p>
-                        <p className="font-medium">{client.budget_max} CHF</p>
+                        <p className="text-sm text-muted-foreground">
+                          {isAcheteur ? 'Prix d\'achat recherché' : 'Budget recherché'}
+                        </p>
+                        <p className="font-medium">
+                          {client.budget_max?.toLocaleString('fr-CH')} CHF
+                          {!isAcheteur && '/mois'}
+                        </p>
                       </div>
                     </div>
                     <div>
@@ -820,6 +847,56 @@ export default function ClientDashboard() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Section financière spécifique aux acheteurs */}
+          {isAcheteur && profileActif !== false && (
+            <Card className="mb-8 border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/10">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Home className="w-5 h-5 text-blue-600" />
+                  Capacité d'achat
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-3 bg-background/80 rounded-lg">
+                    <p className="text-xs text-muted-foreground">Prix max finançable</p>
+                    <p className="text-lg font-bold text-blue-600">
+                      {purchaseSolvabilityResult.prixAchatMax.toLocaleString('fr-CH')} CHF
+                    </p>
+                  </div>
+                  <div className="p-3 bg-background/80 rounded-lg">
+                    <p className="text-xs text-muted-foreground">Apport disponible</p>
+                    <p className={`text-lg font-bold ${
+                      purchaseSolvabilityResult.apportManquant === 0 ? 'text-green-600' : 'text-orange-600'
+                    }`}>
+                      {(client.apport_personnel || 0).toLocaleString('fr-CH')} CHF
+                    </p>
+                  </div>
+                  <div className="p-3 bg-background/80 rounded-lg">
+                    <p className="text-xs text-muted-foreground">Charges mensuelles</p>
+                    <p className="text-lg font-bold">
+                      {purchaseSolvabilityResult.chargesMensuelles.toLocaleString('fr-CH')} CHF
+                    </p>
+                  </div>
+                  <div className="p-3 bg-background/80 rounded-lg">
+                    <p className="text-xs text-muted-foreground">Taux d'effort</p>
+                    <p className={`text-lg font-bold ${
+                      purchaseSolvabilityResult.tauxEffort <= 33 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {purchaseSolvabilityResult.tauxEffort}%
+                    </p>
+                  </div>
+                </div>
+                <div className="p-3 bg-blue-100/50 dark:bg-blue-900/20 rounded-lg">
+                  <p className="text-xs text-blue-700 dark:text-blue-400">
+                    📊 <strong>Calcul suisse:</strong> Apport min. 26% (20% achat + 5% notaire + 1% entretien). 
+                    Charges théoriques = 7%/an. Max 33% du revenu brut annuel.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Prochaines visites */}
           <Card className="mb-8">

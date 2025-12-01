@@ -527,6 +527,7 @@ export type Database = {
           type_bien: string | null
           type_contrat: string | null
           type_permis: string | null
+          type_recherche: string | null
           updated_at: string | null
           user_id: string
           utilisation_logement: string | null
@@ -582,6 +583,7 @@ export type Database = {
           type_bien?: string | null
           type_contrat?: string | null
           type_permis?: string | null
+          type_recherche?: string | null
           updated_at?: string | null
           user_id: string
           utilisation_logement?: string | null
@@ -637,6 +639,7 @@ export type Database = {
           type_bien?: string | null
           type_contrat?: string | null
           type_permis?: string | null
+          type_recherche?: string | null
           updated_at?: string | null
           user_id?: string
           utilisation_logement?: string | null
