@@ -9,8 +9,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { 
   Receipt, Clock, Mail, Phone, CheckCircle, Search,
   RefreshCw, Eye, CreditCard, Building2, Home, Loader2,
-  Send, BarChart3, TrendingUp
+  Send, BarChart3, TrendingUp, Trash2
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
@@ -52,6 +62,9 @@ export default function FacturesAbaNinja() {
   const [searchTerm, setSearchTerm] = useState('');
   const [resendingInvoice, setResendingInvoice] = useState<string | null>(null);
   const [sendingReminders, setSendingReminders] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [demandeToDelete, setDemandeToDelete] = useState<DemandeMandat | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -224,6 +237,30 @@ export default function FacturesAbaNinja() {
       toast.error(error.message || 'Erreur lors de l\'envoi des rappels');
     } finally {
       setSendingReminders(false);
+    }
+  };
+
+  const handleDeleteDemande = async () => {
+    if (!demandeToDelete) return;
+    
+    try {
+      setDeleting(true);
+      const { error } = await supabase
+        .from('demandes_mandat')
+        .delete()
+        .eq('id', demandeToDelete.id);
+
+      if (error) throw error;
+      
+      toast.success('Demande supprimée');
+      setDeleteDialogOpen(false);
+      setDemandeToDelete(null);
+      await loadData();
+    } catch (error: any) {
+      console.error('Error deleting demande:', error);
+      toast.error(error.message || 'Erreur lors de la suppression');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -408,6 +445,7 @@ export default function FacturesAbaNinja() {
               resendingInvoice={resendingInvoice}
               onResend={handleResendInvoice}
               onMarkAsPaid={handleMarkAsPaid}
+              onDelete={(d) => { setDemandeToDelete(d); setDeleteDialogOpen(true); }}
               getStatusBadge={getStatusBadge}
               getMontant={getMontant}
               navigate={navigate}
@@ -420,6 +458,7 @@ export default function FacturesAbaNinja() {
               resendingInvoice={resendingInvoice}
               onResend={handleResendInvoice}
               onMarkAsPaid={handleMarkAsPaid}
+              onDelete={(d) => { setDemandeToDelete(d); setDeleteDialogOpen(true); }}
               getStatusBadge={getStatusBadge}
               getMontant={getMontant}
               navigate={navigate}
@@ -432,6 +471,7 @@ export default function FacturesAbaNinja() {
               resendingInvoice={resendingInvoice}
               onResend={handleResendInvoice}
               onMarkAsPaid={handleMarkAsPaid}
+              onDelete={(d) => { setDemandeToDelete(d); setDeleteDialogOpen(true); }}
               getStatusBadge={getStatusBadge}
               getMontant={getMontant}
               navigate={navigate}
@@ -634,6 +674,30 @@ export default function FacturesAbaNinja() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette demande ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir supprimer la demande de {demandeToDelete?.prenom} {demandeToDelete?.nom} ?
+              Cette action est irréversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteDemande}
+              disabled={deleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -643,6 +707,7 @@ interface InvoiceListProps {
   resendingInvoice: string | null;
   onResend: (demande: DemandeMandat) => void;
   onMarkAsPaid: (demande: DemandeMandat) => void;
+  onDelete: (demande: DemandeMandat) => void;
   getStatusBadge: (statut: string) => JSX.Element;
   getMontant: (demande: DemandeMandat) => number;
   navigate: (path: string) => void;
@@ -652,7 +717,8 @@ function InvoiceList({
   demandes, 
   resendingInvoice, 
   onResend, 
-  onMarkAsPaid, 
+  onMarkAsPaid,
+  onDelete,
   getStatusBadge,
   getMontant,
   navigate 
@@ -758,6 +824,15 @@ function InvoiceList({
                       </Button>
                     </>
                   )}
+                  
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => onDelete(demande)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />Supprimer
+                  </Button>
                 </div>
               </div>
             </div>
