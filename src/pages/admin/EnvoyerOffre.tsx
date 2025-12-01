@@ -172,6 +172,29 @@ const AdminEnvoyerOffre = () => {
     }
 
     try {
+      // Check for duplicate offers (100% similar: same address, price, floor, surface)
+      const { data: existingOffers } = await supabase
+        .from('offres')
+        .select('agent_id')
+        .eq('client_id', formData.clientId)
+        .eq('adresse', formData.localisation)
+        .eq('prix', parseFloat(formData.prix))
+        .eq('etage', formData.etage || '')
+        .eq('surface', parseFloat(formData.surface));
+
+      if (existingOffers && existingOffers.length > 0) {
+        // Check if any existing offer was sent by a different agent
+        const offerByOtherAgent = existingOffers.find(o => o.agent_id !== clientAgent);
+        if (offerByOtherAgent) {
+          toast({ 
+            title: "Offre déjà envoyée", 
+            description: "Cette annonce a déjà été envoyée par un autre agent à ce client, impossible de la renvoyer", 
+            variant: "destructive" 
+          });
+          return;
+        }
+      }
+      
       // Create offer
       const { data: offre, error: offreError } = await supabase
         .from('offres')
