@@ -33,6 +33,35 @@ serve(async (req) => {
 
     console.log('Creating AbaNinja invoice for:', { client_uuid, type_recherche, email });
 
+    // Fetch bank accounts from AbaNinja to get the bankAccountUuid
+    console.log('Fetching bank accounts from AbaNinja...');
+    const bankAccountsResponse = await fetch(
+      `https://api.abaninja.ch/accounts/${accountUuid}/finance/v1/bank-accounts`,
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Accept': 'application/json'
+        }
+      }
+    );
+
+    const bankAccountsText = await bankAccountsResponse.text();
+    console.log('Bank accounts response status:', bankAccountsResponse.status);
+    console.log('Bank accounts response:', bankAccountsText);
+
+    if (!bankAccountsResponse.ok) {
+      throw new Error(`Failed to fetch bank accounts: ${bankAccountsResponse.status} - ${bankAccountsText}`);
+    }
+
+    const bankAccounts = JSON.parse(bankAccountsText);
+    const bankAccountUuid = bankAccounts.data?.[0]?.uuid;
+
+    if (!bankAccountUuid) {
+      throw new Error('No bank account found in AbaNinja. Please configure a bank account first.');
+    }
+
+    console.log('Using bank account UUID:', bankAccountUuid);
+
     // Calculate amount based on search type
     const montant = type_recherche === 'Acheter' ? 2500 : 300;
     const description = type_recherche === 'Acheter' 
@@ -54,6 +83,10 @@ serve(async (req) => {
       currencyCode: "CHF",
       title: `Mandat de recherche - ${prenom} ${nom}`,
       reference: `MANDAT-${demande_id.slice(0, 8).toUpperCase()}`,
+      paymentInstructions: {
+        type: "qrIban",
+        bankAccountUuid: bankAccountUuid
+      },
       positions: [
         {
           type: "product",
