@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Send, Search } from "lucide-react";
+import { Send, Search, Users, UserCog } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploader";
@@ -104,57 +104,63 @@ const Messagerie = () => {
 
     if (data) {
       // Charger les clients et les agents
-      const clientIds = [...new Set(data.map(c => c.client_id).filter(Boolean))];
-      const agentIds = [...new Set(data.map(c => c.agent_id).filter(Boolean))];
+      const clientIds = [...new Set(data.map(c => c.client_id).filter(Boolean))] as string[];
+      const agentIds = [...new Set(data.map(c => c.agent_id).filter(Boolean))] as string[];
+      const adminUserIds = [...new Set(data.map(c => c.admin_user_id).filter(Boolean))] as string[];
       
       // Charger les clients
-      const { data: clientsData } = await supabase
-        .from('clients')
-        .select('id, user_id')
-        .in('id', clientIds);
+      const { data: clientsData } = clientIds.length > 0 
+        ? await supabase.from('clients').select('id, user_id').in('id', clientIds)
+        : { data: [] as { id: string; user_id: string }[] };
       
       // Charger les agents
-      const { data: agentsData } = await supabase
-        .from('agents')
-        .select('id, user_id')
-        .in('id', agentIds);
+      const { data: agentsData } = agentIds.length > 0
+        ? await supabase.from('agents').select('id, user_id').in('id', agentIds)
+        : { data: [] as { id: string; user_id: string }[] };
       
       // Récupérer tous les user_ids pour charger les profils
       const allUserIds = [
         ...(clientsData?.map(c => c.user_id) || []),
-        ...(agentsData?.map(a => a.user_id) || [])
+        ...(agentsData?.map(a => a.user_id) || []),
+        ...adminUserIds
       ];
       
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('id, prenom, nom, email')
-        .in('id', allUserIds);
+      const { data: profilesData } = allUserIds.length > 0
+        ? await supabase.from('profiles').select('id, prenom, nom, email').in('id', allUserIds)
+        : { data: [] as { id: string; prenom: string; nom: string; email: string }[] };
       
-      const clientsMap = new Map(clientsData?.map(c => [c.id, c.user_id]));
-      const agentsMap = new Map(agentsData?.map(a => [a.id, a.user_id]));
-      const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
+      const clientsMap = new Map<string, string>(clientsData?.map(c => [c.id, c.user_id] as [string, string]) || []);
+      const agentsMap = new Map<string, string>(agentsData?.map(a => [a.id, a.user_id] as [string, string]) || []);
+      const profilesMap = new Map<string, { id: string; prenom: string; nom: string; email: string }>(
+        profilesData?.map(p => [p.id, p] as [string, typeof p]) || []
+      );
       
       // Enrichir les conversations
       const enrichedConvs = data.map(conv => {
-        const clientUserId = clientsMap.get(conv.client_id);
+        const clientUserId = clientsMap.get(conv.client_id || '');
         const clientProfile = clientUserId ? profilesMap.get(clientUserId) : null;
         
         const agentUserId = agentsMap.get(conv.agent_id);
         const agentProfile = agentUserId ? profilesMap.get(agentUserId) : null;
+
+        const adminProfile = conv.admin_user_id ? profilesMap.get(conv.admin_user_id) : null;
         
         return {
           ...conv,
           clientName: clientProfile 
             ? `${clientProfile.prenom} ${clientProfile.nom}` 
-            : 'Client inconnu',
+            : null,
           agentName: agentProfile 
             ? `${agentProfile.prenom} ${agentProfile.nom}` 
             : 'Agent inconnu',
+          adminName: adminProfile
+            ? `${adminProfile.prenom} ${adminProfile.nom}`
+            : null,
         };
       });
       
       setConversations(enrichedConvs);
-      setProfiles(profilesMap);
+      setProfiles(profilesMap as Map<string, any>);
     }
   };
 
@@ -184,7 +190,7 @@ const Messagerie = () => {
         ...msg,
         senderName: sendersMap.get(msg.sender_id) 
           ? `${sendersMap.get(msg.sender_id).prenom} ${sendersMap.get(msg.sender_id).nom}`
-          : msg.sender_type === 'client' ? 'Client' : 'Agent'
+          : msg.sender_type === 'client' ? 'Client' : msg.sender_type === 'admin' ? 'Admin' : 'Agent'
       }));
       
       setMessages(enrichedMessages);
@@ -228,7 +234,7 @@ const Messagerie = () => {
       .update({ last_message_at: new Date().toISOString() })
       .eq('id', selectedConv);
 
-    // Send notifications to client and agent
+    // Send notifications
     const conversation = conversations.find(c => c.id === selectedConv);
     if (conversation) {
       // Get admin name
@@ -242,60 +248,92 @@ const Messagerie = () => {
         ? `${adminProfile.prenom} ${adminProfile.nom}`.trim() 
         : 'L\'administrateur';
 
-      // Notify client
-      const { data: clientData } = await supabase
-        .from('clients')
-        .select('user_id')
-        .eq('id', conversation.client_id)
-        .single();
+      // If it's an admin-agent conversation, notify the agent
+      if (conversation.conversation_type === 'admin-agent') {
+        const { data: agentData } = await supabase
+          .from('agents')
+          .select('user_id')
+          .eq('id', conversation.agent_id)
+          .single();
 
-      if (clientData) {
-        await supabase.rpc('create_notification', {
-          p_user_id: clientData.user_id,
-          p_type: 'new_message',
-          p_title: 'Nouveau message',
-          p_message: `${adminName} vous a envoyé un message`,
-          p_link: '/client/messagerie',
-          p_metadata: { conversation_id: selectedConv }
-        });
+        if (agentData) {
+          await supabase.rpc('create_notification', {
+            p_user_id: agentData.user_id,
+            p_type: 'new_message',
+            p_title: 'Nouveau message admin',
+            p_message: `${adminName} vous a envoyé un message`,
+            p_link: '/agent/messagerie',
+            p_metadata: { conversation_id: selectedConv }
+          });
 
-        await supabase.functions.invoke('send-notification-email', {
-          body: {
-            user_id: clientData.user_id,
-            notification_type: 'new_message',
-            title: 'Nouveau message',
-            message: `${adminName} vous a envoyé un message`,
-            link: '/client/messagerie'
+          await supabase.functions.invoke('send-notification-email', {
+            body: {
+              user_id: agentData.user_id,
+              notification_type: 'new_message',
+              title: 'Nouveau message admin',
+              message: `${adminName} vous a envoyé un message`,
+              link: '/agent/messagerie'
+            }
+          });
+        }
+      } else {
+        // Client-agent conversation - notify both
+        if (conversation.client_id) {
+          const { data: clientData } = await supabase
+            .from('clients')
+            .select('user_id')
+            .eq('id', conversation.client_id)
+            .single();
+
+          if (clientData) {
+            await supabase.rpc('create_notification', {
+              p_user_id: clientData.user_id,
+              p_type: 'new_message',
+              p_title: 'Nouveau message',
+              p_message: `${adminName} vous a envoyé un message`,
+              p_link: '/client/messagerie',
+              p_metadata: { conversation_id: selectedConv }
+            });
+
+            await supabase.functions.invoke('send-notification-email', {
+              body: {
+                user_id: clientData.user_id,
+                notification_type: 'new_message',
+                title: 'Nouveau message',
+                message: `${adminName} vous a envoyé un message`,
+                link: '/client/messagerie'
+              }
+            });
           }
-        });
-      }
+        }
 
-      // Notify agent
-      const { data: agentData } = await supabase
-        .from('agents')
-        .select('user_id')
-        .eq('id', conversation.agent_id)
-        .single();
+        // Notify agent
+        const { data: agentData } = await supabase
+          .from('agents')
+          .select('user_id')
+          .eq('id', conversation.agent_id)
+          .single();
 
-      if (agentData) {
-        await supabase.rpc('create_notification', {
-          p_user_id: agentData.user_id,
-          p_type: 'new_message',
-          p_title: 'Nouveau message',
-          p_message: `${adminName} a envoyé un message dans une conversation`,
-          p_link: '/agent/messagerie',
-          p_metadata: { conversation_id: selectedConv }
-        });
+        if (agentData) {
+          await supabase.rpc('create_notification', {
+            p_user_id: agentData.user_id,
+            p_type: 'new_message',
+            p_title: 'Nouveau message',
+            p_message: `${adminName} a envoyé un message dans une conversation`,
+            p_link: '/agent/messagerie',
+            p_metadata: { conversation_id: selectedConv }
+          });
 
-        await supabase.functions.invoke('send-notification-email', {
-          body: {
-            user_id: agentData.user_id,
-            notification_type: 'new_message',
-            title: 'Nouveau message',
-            message: `${adminName} a envoyé un message dans une conversation`,
-            link: '/agent/messagerie'
-          }
-        });
+          await supabase.functions.invoke('send-notification-email', {
+            body: {
+              user_id: agentData.user_id,
+              notification_type: 'new_message',
+              title: 'Nouveau message',
+              message: `${adminName} a envoyé un message dans une conversation`,
+              link: '/agent/messagerie'
+            }
+          });
+        }
       }
     }
   };
@@ -309,6 +347,23 @@ const Messagerie = () => {
 
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
   const currentConversation = conversations.find(c => c.id === selectedConv);
+
+  const getConversationDisplayName = (conv: any) => {
+    if (conv.conversation_type === 'admin-agent') {
+      return (
+        <div className="flex items-center gap-2">
+          <UserCog className="h-4 w-4 text-primary" />
+          <span>{conv.agentName}</span>
+        </div>
+      );
+    }
+    return (
+      <div className="flex items-center gap-2">
+        <Users className="h-4 w-4 text-muted-foreground" />
+        <span>{conv.clientName || 'Client'}</span>
+      </div>
+    );
+  };
 
   const conversationsList = (
     <>
@@ -340,14 +395,21 @@ const Messagerie = () => {
               className={`p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors ${selectedConv === conv.id ? 'bg-muted' : ''}`}
             >
               <div className="flex flex-col gap-1">
-                <p className="font-medium text-sm">
-                  {conv.clientName}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Agent: {conv.agentName}
-                </p>
+                <div className="font-medium text-sm">
+                  {getConversationDisplayName(conv)}
+                </div>
+                {conv.conversation_type === 'client-agent' && (
+                  <p className="text-xs text-muted-foreground">
+                    Agent: {conv.agentName}
+                  </p>
+                )}
+                {conv.conversation_type === 'admin-agent' && (
+                  <Badge variant="outline" className="w-fit text-xs border-primary text-primary">
+                    Discussion directe
+                  </Badge>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-1">
                 {new Date(conv.last_message_at).toLocaleDateString('fr-FR')}
               </p>
             </div>
@@ -359,8 +421,17 @@ const Messagerie = () => {
 
   const chatHeader = currentConversation && (
     <div>
-      <h2 className="font-semibold truncate">
-        {currentConversation.clientName} ↔ {currentConversation.agentName}
+      <h2 className="font-semibold truncate flex items-center gap-2">
+        {currentConversation.conversation_type === 'admin-agent' ? (
+          <>
+            <UserCog className="h-4 w-4 text-primary" />
+            {currentConversation.agentName}
+          </>
+        ) : (
+          <>
+            {currentConversation.clientName} ↔ {currentConversation.agentName}
+          </>
+        )}
       </h2>
       <p className="text-xs text-muted-foreground truncate">
         {currentConversation.subject}
