@@ -362,30 +362,30 @@ export default function AgentVisites() {
         onClick={() => handleOpenDetail(visite)}
       >
         <CardHeader className="pb-2">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <CardTitle className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="flex-1 min-w-0 order-2 sm:order-1">
+              <CardTitle className="flex items-center gap-2 flex-wrap text-base sm:text-lg">
                 <span className="truncate">{visite.adresse}</span>
                 {visite.est_deleguee && (
-                  <Badge variant="outline" className="shrink-0">Déléguée</Badge>
+                  <Badge variant="outline" className="shrink-0 text-xs">Déléguée</Badge>
                 )}
               </CardTitle>
-              <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
+              <div className="flex items-center gap-3 sm:gap-4 mt-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
                 <div className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  {new Date(visite.date_visite).toLocaleDateString('fr-CH', {
+                  <Calendar className="h-4 w-4 shrink-0" />
+                  <span className="whitespace-nowrap">{new Date(visite.date_visite).toLocaleDateString('fr-CH', {
                     weekday: 'short',
                     day: 'numeric',
                     month: 'short'
-                  })}
+                  })}</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+                  <Clock className="h-4 w-4 shrink-0" />
+                  <span className="whitespace-nowrap">{new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 order-1 sm:order-2">
               {showUrgency && (
                 <Badge variant={urgency.color} className={isUrgent ? 'animate-pulse' : ''}>
                   {isUrgent && <AlertTriangle className="h-3 w-3 mr-1" />}
@@ -420,7 +420,8 @@ export default function AgentVisites() {
               e.stopPropagation();
               handleMarquerEffectuee(visite);
             }}
-            className="w-full"
+            className="w-full touch-target"
+            size="lg"
             variant={isUrgent ? "destructive" : "default"}
           >
             {visite.est_deleguee ? (
@@ -438,7 +439,7 @@ export default function AgentVisites() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto smooth-scroll pb-safe">
       <div className="p-4 md:p-8 space-y-6">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Visites clients</h1>
@@ -450,10 +451,10 @@ export default function AgentVisites() {
 
         {/* Alerte visites urgentes */}
         {visitesUrgentes.length > 0 && (
-          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
+          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 sm:p-4">
             <div className="flex items-center gap-2 mb-3">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              <h2 className="font-semibold text-destructive">
+              <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
+              <h2 className="font-semibold text-destructive text-sm sm:text-base">
                 {visitesUrgentes.length} visite{visitesUrgentes.length > 1 ? 's' : ''} urgente{visitesUrgentes.length > 1 ? 's' : ''}
               </h2>
             </div>
@@ -465,25 +466,25 @@ export default function AgentVisites() {
 
         <Tabs defaultValue="a-venir" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="a-venir" className="flex items-center gap-2">
-              <Bell className="h-4 w-4" />
-              À venir ({visitesNormales.length})
+            <TabsTrigger value="a-venir" className="flex items-center gap-2 text-xs sm:text-sm">
+              <Bell className="h-4 w-4 hidden xs:inline shrink-0" />
+              <span>À venir ({visitesNormales.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="passees" className="flex items-center gap-2">
-              <History className="h-4 w-4" />
-              Passées ({visitesPassees.length})
+            <TabsTrigger value="passees" className="flex items-center gap-2 text-xs sm:text-sm">
+              <History className="h-4 w-4 hidden xs:inline shrink-0" />
+              <span>Passées ({visitesPassees.length})</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="a-venir" className="space-y-6 mt-4">
             {/* Visites déléguées en attente de confirmation */}
             {visitesDelegueesPending.length > 0 && (
-              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                <h3 className="text-lg font-semibold mb-3 flex items-center gap-2 text-amber-800 dark:text-amber-200">
-                  ⏳ Demandes de visites déléguées
+              <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 sm:p-4">
+                <h3 className="text-base sm:text-lg font-semibold mb-3 flex items-center gap-2 flex-wrap text-amber-800 dark:text-amber-200">
+                  <span>⏳ Demandes de visites déléguées</span>
                   <Badge variant="secondary">{visitesDelegueesPending.length}</Badge>
                 </h3>
-                <p className="text-sm text-amber-700 dark:text-amber-300 mb-4">
+                <p className="text-xs sm:text-sm text-amber-700 dark:text-amber-300 mb-4">
                   Vos clients vous demandent d'effectuer ces visites pour eux
                 </p>
                 <div className="grid gap-3">
@@ -494,26 +495,26 @@ export default function AgentVisites() {
                       onClick={() => handleOpenDetail(visite)}
                     >
                       <CardHeader className="pb-2">
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <CardTitle className="flex items-center gap-2 flex-wrap">
+                            <CardTitle className="flex items-center gap-2 flex-wrap text-base sm:text-lg">
                               <span className="truncate">{visite.adresse}</span>
-                              <Badge variant="outline" className="shrink-0 bg-amber-100 text-amber-800 border-amber-300">
+                              <Badge variant="outline" className="shrink-0 bg-amber-100 text-amber-800 border-amber-300 text-xs">
                                 En attente
                               </Badge>
                             </CardTitle>
-                            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
+                            <div className="flex items-center gap-3 sm:gap-4 mt-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
                               <div className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4" />
-                                {new Date(visite.date_visite).toLocaleDateString('fr-CH', {
+                                <Calendar className="h-4 w-4 shrink-0" />
+                                <span className="whitespace-nowrap">{new Date(visite.date_visite).toLocaleDateString('fr-CH', {
                                   weekday: 'short',
                                   day: 'numeric',
                                   month: 'short'
-                                })}
+                                })}</span>
                               </div>
                               <div className="flex items-center gap-1">
-                                <Clock className="h-4 w-4" />
-                                {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+                                <Clock className="h-4 w-4 shrink-0" />
+                                <span className="whitespace-nowrap">{new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}</span>
                               </div>
                             </div>
                           </div>
@@ -538,13 +539,14 @@ export default function AgentVisites() {
                             💡 {visite.notes}
                           </p>
                         )}
-                        <div className="flex gap-2">
+                        <div className="flex flex-col xs:flex-row gap-3">
                           <Button 
                             onClick={(e) => {
                               e.stopPropagation();
                               handleOpenConfirmDialog(visite);
                             }}
-                            className="flex-1"
+                            className="flex-1 touch-target"
+                            size="lg"
                             variant="default"
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
@@ -556,7 +558,8 @@ export default function AgentVisites() {
                               handleRefuseDelegatedVisit(visite);
                             }}
                             variant="outline"
-                            className="flex-1"
+                            size="lg"
+                            className="flex-1 touch-target"
                           >
                             <XCircle className="mr-2 h-4 w-4" />
                             Refuser
@@ -614,18 +617,18 @@ export default function AgentVisites() {
                     onClick={() => handleOpenDetail(visite)}
                   >
                     <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="flex items-center gap-2 flex-wrap">
+                      <div className="flex flex-col xs:flex-row xs:items-start xs:justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="flex items-center gap-2 flex-wrap text-base sm:text-lg">
                             <span className="truncate">{visite.adresse}</span>
                             {visite.est_deleguee && (
-                              <Badge variant="outline" className="text-xs">Déléguée</Badge>
+                              <Badge variant="outline" className="text-xs shrink-0">Déléguée</Badge>
                             )}
                           </CardTitle>
-                          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
+                          <div className="flex items-center gap-3 sm:gap-4 mt-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
                             <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              {new Date(visite.date_visite).toLocaleDateString('fr-CH')}
+                              <Calendar className="h-4 w-4 shrink-0" />
+                              <span className="whitespace-nowrap">{new Date(visite.date_visite).toLocaleDateString('fr-CH')}</span>
                             </div>
                             {visite.recommandation_agent && (
                               <div className="flex items-center gap-1">
@@ -634,7 +637,7 @@ export default function AgentVisites() {
                             )}
                           </div>
                         </div>
-                        <Badge variant={visite.statut === 'effectuee' ? 'secondary' : 'destructive'}>
+                        <Badge variant={visite.statut === 'effectuee' ? 'secondary' : 'destructive'} className="self-start shrink-0">
                           {visite.statut === 'effectuee' ? 'Effectuée' : 'Manquée'}
                         </Badge>
                       </div>
@@ -672,7 +675,7 @@ export default function AgentVisites() {
 
       {/* Dialog de feedback */}
       <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Feedback de la visite déléguée</DialogTitle>
             <DialogDescription>
@@ -744,11 +747,11 @@ export default function AgentVisites() {
             </div>
           )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setFeedbackDialogOpen(false)}>
+          <DialogFooter className="flex-col xs:flex-row gap-3">
+            <Button variant="outline" onClick={() => setFeedbackDialogOpen(false)} className="w-full xs:w-auto touch-target">
               Annuler
             </Button>
-            <Button onClick={handleSaveFeedback} disabled={!feedbackText.trim()}>
+            <Button onClick={handleSaveFeedback} disabled={!feedbackText.trim()} className="w-full xs:w-auto touch-target">
               Enregistrer et notifier le client
             </Button>
           </DialogFooter>
@@ -757,7 +760,7 @@ export default function AgentVisites() {
 
       {/* Dialog de détail de visite */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               Détails de la visite
@@ -813,7 +816,7 @@ export default function AgentVisites() {
                 <div className="space-y-2">
                   <h5 className="font-medium">📋 Détails du bien</h5>
                   <div className="p-3 border rounded-lg space-y-2">
-                    <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
                       <div>
                         <span className="text-muted-foreground">Pièces:</span>
                         <span className="ml-1 font-medium">{selectedVisite.offres.pieces}</span>
@@ -900,15 +903,15 @@ export default function AgentVisites() {
             </div>
           )}
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
+          <DialogFooter className="flex-col xs:flex-row gap-3">
+            <Button variant="outline" onClick={() => setDetailDialogOpen(false)} className="w-full xs:w-auto touch-target">
               Fermer
             </Button>
             {selectedVisite?.statut === 'planifiee' && !selectedVisite?.est_deleguee && (
               <Button onClick={() => {
                 setDetailDialogOpen(false);
                 handleMarquerEffectuee(selectedVisite);
-              }}>
+              }} className="w-full xs:w-auto touch-target">
                 Marquer effectuée
               </Button>
             )}
@@ -916,7 +919,7 @@ export default function AgentVisites() {
               <Button onClick={() => {
                 setDetailDialogOpen(false);
                 handleOpenConfirmDialog(selectedVisite);
-              }}>
+              }} className="w-full xs:w-auto touch-target">
                 Accepter la demande
               </Button>
             )}
@@ -924,7 +927,7 @@ export default function AgentVisites() {
               <Button onClick={() => {
                 setDetailDialogOpen(false);
                 handleMarquerEffectuee(selectedVisite);
-              }}>
+              }} className="w-full xs:w-auto touch-target">
                 Donner mon feedback
               </Button>
             )}
@@ -934,7 +937,7 @@ export default function AgentVisites() {
 
       {/* Dialog de confirmation de visite déléguée */}
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Confirmer la visite déléguée</DialogTitle>
             <DialogDescription>
@@ -976,11 +979,11 @@ export default function AgentVisites() {
             </div>
           )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+          <DialogFooter className="flex-col xs:flex-row gap-3">
+            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)} className="w-full xs:w-auto touch-target">
               Annuler
             </Button>
-            <Button onClick={handleAcceptDelegatedVisit}>
+            <Button onClick={handleAcceptDelegatedVisit} className="w-full xs:w-auto touch-target">
               <CheckCircle className="mr-2 h-4 w-4" />
               Confirmer la visite
             </Button>
