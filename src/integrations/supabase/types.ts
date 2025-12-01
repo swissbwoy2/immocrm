@@ -678,8 +678,10 @@ export type Database = {
       }
       conversations: {
         Row: {
+          admin_user_id: string | null
           agent_id: string
-          client_id: string
+          client_id: string | null
+          conversation_type: string | null
           created_at: string | null
           id: string
           last_message_at: string | null
@@ -687,8 +689,10 @@ export type Database = {
           subject: string | null
         }
         Insert: {
+          admin_user_id?: string | null
           agent_id: string
-          client_id: string
+          client_id?: string | null
+          conversation_type?: string | null
           created_at?: string | null
           id?: string
           last_message_at?: string | null
@@ -696,8 +700,10 @@ export type Database = {
           subject?: string | null
         }
         Update: {
+          admin_user_id?: string | null
           agent_id?: string
-          client_id?: string
+          client_id?: string | null
+          conversation_type?: string | null
           created_at?: string | null
           id?: string
           last_message_at?: string | null
