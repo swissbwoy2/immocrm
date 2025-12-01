@@ -21,6 +21,20 @@ interface VisiteWithDetails {
   }[] | null;
 }
 
+// Helper function to calculate calendar day difference accounting for timezone
+function getCalendarDaysDiff(date1: Date, date2: Date, timezone: string = "Europe/Zurich"): number {
+  // Convert to local dates in the specified timezone
+  const d1 = new Date(date1.toLocaleString("en-US", { timeZone: timezone }));
+  const d2 = new Date(date2.toLocaleString("en-US", { timeZone: timezone }));
+  
+  // Set hours to 0 to compare only calendar days
+  d1.setHours(0, 0, 0, 0);
+  d2.setHours(0, 0, 0, 0);
+  
+  // Calculate difference in days
+  return Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -71,7 +85,9 @@ serve(async (req) => {
       const timeDiff = visiteDate.getTime() - now.getTime();
       const minutesDiff = Math.floor(timeDiff / (1000 * 60));
       const hoursDiff = Math.floor(timeDiff / (1000 * 60 * 60));
-      const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+      
+      // Use calendar days instead of simple time division to account for timezone
+      const daysDiff = getCalendarDaysDiff(now, visiteDate);
 
       // Déterminer les types de rappels à envoyer
       const remindersNeeded: Array<{ type: string; urgency: "critical" | "high" | "normal" }> = [];
@@ -204,8 +220,10 @@ serve(async (req) => {
           message = getReminderMessage(reminderType, visite, visiteDate);
           break;
         case "high":
-          emoji = "⚠️";
-          title = `${emoji} Rappel visite aujourd'hui`;
+          emoji = reminderType === "day_before" ? "📅" : "⚠️";
+          title = reminderType === "day_before" 
+            ? `${emoji} Rappel visite demain`
+            : `${emoji} Rappel visite aujourd'hui`;
           message = getReminderMessage(reminderType, visite, visiteDate);
           break;
         default:
