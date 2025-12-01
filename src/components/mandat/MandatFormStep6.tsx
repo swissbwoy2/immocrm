@@ -105,17 +105,17 @@ export default function MandatFormStep6({ data, onChange }: Props) {
   const requiredCount = REQUIRED_DOCUMENTS.filter(d => d.required).length;
 
   return (
-    <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-semibold">Documents requis</h2>
-        <p className="text-sm text-muted-foreground">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="text-center mb-4 sm:mb-6">
+        <h2 className="text-lg sm:text-xl font-semibold">Documents requis</h2>
+        <p className="text-xs sm:text-sm text-muted-foreground">
           L'inscription doit être accompagnée des documents suivants
         </p>
       </div>
 
-      <div className="flex items-center justify-center gap-2 p-4 bg-primary/5 rounded-lg">
+      <div className="flex items-center justify-center p-3 sm:p-4 bg-primary/5 rounded-lg">
         <div className="text-center">
-          <p className="text-2xl font-bold text-primary">{uploadedCount}/{requiredCount}</p>
+          <p className="text-xl sm:text-2xl font-bold text-primary">{uploadedCount}/{requiredCount}</p>
           <p className="text-xs text-muted-foreground">Documents uploadés</p>
         </div>
       </div>
@@ -128,49 +128,53 @@ export default function MandatFormStep6({ data, onChange }: Props) {
         onChange={handleFileSelect}
       />
 
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {REQUIRED_DOCUMENTS.map((doc) => {
           const uploadedDoc = getUploadedDoc(doc.key);
           const isUploading = uploading === doc.key;
 
           return (
-            <Card key={doc.key} className={`p-4 ${uploadedDoc ? 'border-green-500/50 bg-green-50/50 dark:bg-green-950/20' : ''}`}>
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3 flex-1">
+            <Card key={doc.key} className={`p-3 sm:p-4 ${uploadedDoc ? 'border-green-500/50 bg-green-50/50 dark:bg-green-950/20' : ''}`}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                {/* Icon and label */}
+                <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
                   {uploadedDoc ? (
-                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5 sm:mt-0" />
                   ) : (
-                    <AlertCircle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    <AlertCircle className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5 sm:mt-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <Label className="text-sm font-medium">
+                    <Label className="text-xs sm:text-sm font-medium leading-tight block">
                       {doc.label}
                       {doc.required && <span className="text-destructive ml-1">*</span>}
                     </Label>
                     {uploadedDoc && (
-                      <p className="text-xs text-muted-foreground truncate">{uploadedDoc.name}</p>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">{uploadedDoc.name}</p>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                {/* Buttons */}
+                <div className="flex items-center gap-2 ml-8 sm:ml-0">
                   {uploadedDoc ? (
                     <>
                       <Button
                         variant="ghost"
-                        size="icon"
+                        size="sm"
                         onClick={() => window.open(uploadedDoc.url, '_blank')}
-                        className="h-8 w-8"
+                        className="h-8 px-2 sm:px-3 gap-1.5"
                       >
                         <FileText className="h-4 w-4" />
+                        <span className="text-xs">Voir</span>
                       </Button>
                       <Button
                         variant="ghost"
-                        size="icon"
+                        size="sm"
                         onClick={() => handleRemoveDocument(doc.key)}
-                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        className="h-8 px-2 sm:px-3 gap-1.5 text-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
+                        <span className="text-xs sm:hidden">Suppr.</span>
                       </Button>
                     </>
                   ) : (
@@ -179,10 +183,10 @@ export default function MandatFormStep6({ data, onChange }: Props) {
                       size="sm"
                       onClick={() => triggerFileInput(doc.key)}
                       disabled={isUploading}
-                      className="gap-2"
+                      className="h-8 gap-1.5"
                     >
                       <Upload className="h-4 w-4" />
-                      {isUploading ? 'Upload...' : 'Charger'}
+                      <span className="text-xs">{isUploading ? 'Upload...' : 'Charger'}</span>
                     </Button>
                   )}
                 </div>
@@ -196,7 +200,7 @@ export default function MandatFormStep6({ data, onChange }: Props) {
         })}
       </div>
 
-      <p className="text-xs text-muted-foreground text-center">
+      <p className="text-xs text-muted-foreground text-center px-2">
         Formats acceptés: PDF, JPG, PNG (max 10MB par fichier)
       </p>
     </div>
