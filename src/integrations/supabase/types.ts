@@ -351,6 +351,48 @@ export type Database = {
           },
         ]
       }
+      client_agents: {
+        Row: {
+          agent_id: string
+          client_id: string
+          commission_split: number | null
+          created_at: string | null
+          id: string
+          is_primary: boolean | null
+        }
+        Insert: {
+          agent_id: string
+          client_id: string
+          commission_split?: number | null
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+        }
+        Update: {
+          agent_id?: string
+          client_id?: string
+          commission_split?: number | null
+          created_at?: string | null
+          id?: string
+          is_primary?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_agents_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_agents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_candidates: {
         Row: {
           adresse: string | null
@@ -723,6 +765,35 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_agents: {
+        Row: {
+          agent_id: string
+          conversation_id: string
+          id: string
+          joined_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          conversation_id: string
+          id?: string
+          joined_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          conversation_id?: string
+          id?: string
+          joined_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_agents_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
         ]
@@ -1917,6 +1988,10 @@ export type Database = {
       }
       is_agent_of_client: { Args: { profile_id: string }; Returns: boolean }
       is_agent_of_client_record: {
+        Args: { _client_id: string }
+        Returns: boolean
+      }
+      is_agent_of_client_via_junction: {
         Args: { _client_id: string }
         Returns: boolean
       }
