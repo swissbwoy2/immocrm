@@ -93,12 +93,12 @@ serve(async (req) => {
       currencyCode: "CHF",
       title: `Mandat de recherche - ${prenom} ${nom}`,
       reference: `MANDAT-${demande_id.slice(0, 8).toUpperCase()}`,
-      // Notes publiques
-      publicNote: "Merci pour votre confiance et votre collaboration",
-      // Conditions
-      conditions: "Acompte dû pour l'activation de vos recherches.",
-      // Pied de page
-      footer: "www.immo-rama.ch",
+      // Notes publiques (champ API: publicNotes)
+      publicNotes: "Merci pour votre confiance et votre collaboration",
+      // Conditions (champ API: terms)
+      terms: "Acompte dû pour l'activation de vos recherches.",
+      // Pied de page (champ API: footerText)
+      footerText: "www.immo-rama.ch",
       paymentInstructions: bankAccount.qr_iban ? {
         qrIban: bankAccount.qr_iban
       } : {
@@ -162,15 +162,16 @@ serve(async (req) => {
     
     try {
       const sendResponse = await fetch(
-        `https://api.abaninja.ch/accounts/${accountUuid}/documents/v2/invoices/${invoice.uuid}/actions/send`,
+        `https://api.abaninja.ch/accounts/${accountUuid}/documents/v2/invoices/${invoice.uuid}/actions`,
         {
-          method: 'POST',
+          method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
           body: JSON.stringify({
+            action: 'send',
             channel: 'email',
             recipient: {
               email: email
