@@ -326,6 +326,40 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
                       label="Taux d'effort"
                     />
                   </div>
+
+                  {/* Recommendation based on income */}
+                  {!isViable && tauxEffort > 33 && (
+                    <Card className="p-4 mb-4 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900">
+                          <Calculator className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-blue-800 dark:text-blue-300 mb-1">
+                            💡 Recommandation basée sur vos revenus
+                          </p>
+                          <p className="text-sm text-blue-700 dark:text-blue-400 mb-3">
+                            Avec vos revenus actuels de <strong>{totalRevenusMensuels.toLocaleString('fr-CH')} CHF/mois</strong>, 
+                            nous vous recommandons de viser un bien à :
+                          </p>
+                          <div className="bg-white dark:bg-blue-950/50 rounded-lg p-3 text-center">
+                            <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                              {prixAchatMax.toLocaleString('fr-CH')} CHF
+                            </p>
+                            <p className="text-xs text-blue-600/70 dark:text-blue-500 mt-1">
+                              Prix max pour un taux d'effort de 33%
+                            </p>
+                          </div>
+                          <div className="mt-3 text-xs text-blue-600 dark:text-blue-500 space-y-1">
+                            <p>📊 Votre budget actuel: {data.budget_max.toLocaleString('fr-CH')} CHF 
+                              <span className="text-destructive font-medium"> (+{((data.budget_max - prixAchatMax) / 1000).toFixed(0)}k de trop)</span>
+                            </p>
+                            <p>💰 Apport requis pour {prixAchatMax.toLocaleString('fr-CH')} CHF: {Math.round(prixAchatMax * 0.26).toLocaleString('fr-CH')} CHF</p>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
                   
                   {/* Main metrics */}
                   <div className="grid grid-cols-2 gap-4 mb-4">
