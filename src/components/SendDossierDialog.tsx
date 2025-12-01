@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Send, Paperclip, FileText, Image, File, Settings, MapPin } from "lucide-react";
+import { Loader2, Send, Paperclip, FileText, Image, File, Settings, MapPin, Upload, X, Eye, AlertCircle } from "lucide-react";
 import { EmailConfigurationDialog } from "./EmailConfigurationDialog";
+import { AttachmentPreviewDialog } from "./AttachmentPreviewDialog";
 
 interface Document {
   id: string;
@@ -19,6 +20,11 @@ interface Document {
   url: string | null;
   type_document: string | null;
   taille: number | null;
+}
+
+interface LocalFile {
+  file: File;
+  preview?: string;
 }
 
 interface Offre {
@@ -59,6 +65,14 @@ export function SendDossierDialog({
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const [selectedOffreId, setSelectedOffreId] = useState<string>("");
   
+  // Local files state
+  const [localFiles, setLocalFiles] = useState<LocalFile[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Preview state
+  const [previewFile, setPreviewFile] = useState<{ file: File; url: string } | null>(null);
+  
   const [email, setEmail] = useState({
     recipient_email: "",
     recipient_name: "",
@@ -83,8 +97,18 @@ export function SendDossierDialog({
         bcc: clientEmail || "",
       });
       setSelectedDocuments([]);
+      setLocalFiles([]);
     }
   }, [open, clientId, clientEmail]);
+
+  // Cleanup previews on unmount
+  useEffect(() => {
+    return () => {
+      localFiles.forEach(lf => {
+        if (lf.preview) URL.revokeObjectURL(lf.preview);
+      });
+    };
+  }, [localFiles]);
 
   // Auto-fill when offre is selected
   useEffect(() => {
@@ -162,12 +186,126 @@ export function SendDossierDialog({
     return <File className="h-4 w-4" />;
   };
 
-  const formatFileSize = (bytes: number | null) => {
+  const formatFileSize = (bytes: number | null | undefined) => {
     if (!bytes) return '';
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
+
+  // Local file handling
+  const addLocalFiles = (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    const maxSizePerFile = 10 * 1024 * 1024; // 10 MB per file
+    
+    const validFiles: LocalFile[] = [];
+    
+    for (const file of fileArray) {
+      if (file.size > maxSizePerFile) {
+        toast({
+          title: "Fichier trop volumineux",
+          description: `${file.name} dépasse 10 MB`,
+          variant: "destructive",
+        });
+        continue;
+      }
+      
+      // Check for duplicates
+      const isDuplicate = localFiles.some(lf => lf.file.name === file.name && lf.file.size === file.size);
+      if (isDuplicate) continue;
+      
+      // Create preview for images
+      let preview: string | undefined;
+      if (file.type.startsWith('image/')) {
+        preview = URL.createObjectURL(file);
+      }
+      
+      validFiles.push({ file, preview });
+    }
+    
+    setLocalFiles(prev => [...prev, ...validFiles]);
+  };
+
+  const handleLocalFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      addLocalFiles(e.target.files);
+      e.target.value = ''; // Reset input
+    }
+  };
+
+  const removeLocalFile = (index: number) => {
+    setLocalFiles(prev => {
+      const newFiles = [...prev];
+      const removed = newFiles.splice(index, 1)[0];
+      if (removed.preview) URL.revokeObjectURL(removed.preview);
+      return newFiles;
+    });
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      addLocalFiles(e.dataTransfer.files);
+    }
+  };
+
+  const openPreview = (file: File) => {
+    const url = URL.createObjectURL(file);
+    setPreviewFile({ file, url });
+  };
+
+  const closePreview = () => {
+    if (previewFile) {
+      URL.revokeObjectURL(previewFile.url);
+      setPreviewFile(null);
+    }
+  };
+
+  // Convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Calculate total size
+  const calculateTotalSize = () => {
+    const clientDocsSize = documents
+      .filter(d => selectedDocuments.includes(d.id))
+      .reduce((acc, d) => acc + (d.taille || 0), 0);
+    const localFilesSize = localFiles.reduce((acc, lf) => acc + lf.file.size, 0);
+    return clientDocsSize + localFilesSize;
+  };
+
+  const totalSize = calculateTotalSize();
+  const MAX_ATTACHMENT_SIZE = 25 * 1024 * 1024; // 25 MB
+  const totalAttachments = selectedDocuments.length + localFiles.length;
 
   const handleSend = async () => {
     if (!selectedOffreId) {
@@ -198,11 +336,7 @@ export function SendDossierDialog({
       return;
     }
 
-    // Check attachment size limit (25 MB)
-    const MAX_ATTACHMENT_SIZE = 25 * 1024 * 1024; // 25 MB
-    const selectedDocs = documents.filter(d => selectedDocuments.includes(d.id));
-    const totalSize = selectedDocs.reduce((acc, d) => acc + (d.taille || 0), 0);
-    
+    // Check attachment size limit
     if (totalSize > MAX_ATTACHMENT_SIZE) {
       toast({
         title: "Pièces jointes trop volumineuses",
@@ -218,14 +352,26 @@ export function SendDossierDialog({
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Non authentifié");
 
-      // Prepare attachments
-      const attachments = documents
+      // Prepare attachments from client documents
+      const clientDocAttachments = documents
         .filter(d => selectedDocuments.includes(d.id) && d.url)
         .map(d => ({
           filename: d.nom,
           url: d.url!,
           content_type: d.type,
         }));
+
+      // Prepare attachments from local files (convert to base64)
+      const localFileAttachments = await Promise.all(
+        localFiles.map(async (lf) => ({
+          filename: lf.file.name,
+          content: await fileToBase64(lf.file),
+          content_type: lf.file.type,
+        }))
+      );
+
+      // Combine all attachments
+      const attachments = [...clientDocAttachments, ...localFileAttachments];
 
       // Prepare CC/BCC arrays
       const ccList = email.cc ? email.cc.split(',').map(e => e.trim()).filter(e => e) : [];
@@ -255,7 +401,7 @@ export function SendDossierDialog({
           offre_id: selectedOffreId,
           client_id: clientId,
           statut: 'en_attente',
-          dossier_complet: selectedDocuments.length > 0,
+          dossier_complet: totalAttachments > 0,
           message_client: email.body_html,
           date_depot: new Date().toISOString(),
         });
@@ -421,55 +567,163 @@ export function SendDossierDialog({
                 </div>
               )}
 
-              {/* Documents selection */}
-              {documents.length > 0 && (
+              {/* Attachments section - ALWAYS SHOWN */}
+              <div className="space-y-4 border rounded-lg p-4 bg-muted/20">
+                <div className="flex items-center justify-between">
+                  <Label className="flex items-center gap-2 text-base font-medium">
+                    <Paperclip className="h-4 w-4" />
+                    Pièces jointes ({totalAttachments})
+                  </Label>
+                  {totalAttachments > 0 && (
+                    <span className={`text-sm ${totalSize > MAX_ATTACHMENT_SIZE ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      {formatFileSize(totalSize)} / 25 MB
+                    </span>
+                  )}
+                </div>
+
+                {/* Client documents */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2">
-                      <Paperclip className="h-4 w-4" />
-                      Documents du client ({selectedDocuments.length}/{documents.length})
+                    <Label className="text-sm text-muted-foreground">
+                      Documents du client ({documents.length > 0 ? `${selectedDocuments.length}/${documents.length} sélectionnés` : 'aucun disponible'})
                     </Label>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={selectAllDocuments}
-                    >
-                      {selectedDocuments.length === documents.length ? "Tout désélectionner" : "Tout sélectionner"}
-                    </Button>
+                    {documents.length > 0 && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={selectAllDocuments}
+                        className="h-7 text-xs"
+                      >
+                        {selectedDocuments.length === documents.length ? "Désélectionner" : "Tout sélectionner"}
+                      </Button>
+                    )}
                   </div>
                   
-                  <ScrollArea className="h-40 border rounded-md p-2">
-                    <div className="space-y-2">
-                      {documents.map(doc => (
+                  {loading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : documents.length > 0 ? (
+                    <ScrollArea className="h-32 border rounded-md p-2 bg-background">
+                      <div className="space-y-1">
+                        {documents.map(doc => (
+                          <div 
+                            key={doc.id}
+                            className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                            onClick={() => toggleDocument(doc.id)}
+                          >
+                            <Checkbox
+                              checked={selectedDocuments.includes(doc.id)}
+                              onCheckedChange={() => toggleDocument(doc.id)}
+                            />
+                            {getDocumentIcon(doc.type)}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{doc.nom}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {doc.type_document || 'Document'} 
+                                {doc.taille && ` • ${formatFileSize(doc.taille)}`}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <div className="flex items-center gap-2 p-3 rounded-md border border-dashed bg-muted/30">
+                      <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">
+                        Aucun document dans le dossier de ce client. Vous pouvez ajouter des fichiers ci-dessous.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Local files upload */}
+                <div className="space-y-2">
+                  <Label className="text-sm text-muted-foreground">
+                    Fichiers supplémentaires
+                  </Label>
+                  
+                  {/* Drop zone */}
+                  <div
+                    className={`relative border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+                      isDragging 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-muted-foreground/30 hover:border-muted-foreground/50'
+                    }`}
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                  >
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={handleLocalFileSelect}
+                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                    />
+                    <Upload className={`h-8 w-8 mx-auto mb-2 ${isDragging ? 'text-primary' : 'text-muted-foreground'}`} />
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Glissez vos fichiers ici
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      Parcourir
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      PDF, images, documents • Max 10 MB par fichier
+                    </p>
+                  </div>
+
+                  {/* List of local files */}
+                  {localFiles.length > 0 && (
+                    <div className="space-y-1 mt-2">
+                      {localFiles.map((lf, index) => (
                         <div 
-                          key={doc.id}
-                          className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer"
-                          onClick={() => toggleDocument(doc.id)}
+                          key={`${lf.file.name}-${index}`}
+                          className="flex items-center gap-3 p-2 rounded-md bg-background border"
                         >
-                          <Checkbox
-                            checked={selectedDocuments.includes(doc.id)}
-                            onCheckedChange={() => toggleDocument(doc.id)}
-                          />
-                          {getDocumentIcon(doc.type)}
+                          {getDocumentIcon(lf.file.type)}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{doc.nom}</p>
+                            <p className="text-sm font-medium truncate">{lf.file.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {doc.type_document || 'Document'} 
-                              {doc.taille && ` • ${formatFileSize(doc.taille)}`}
+                              {formatFileSize(lf.file.size)}
                             </p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {(lf.file.type.startsWith('image/') || lf.file.type === 'application/pdf') && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => openPreview(lf.file)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => removeLocalFile(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  )}
                 </div>
-              )}
-
-              {loading && (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              )}
+              </div>
 
               {/* Actions */}
               <div className="flex justify-between items-center pt-4 border-t">
@@ -508,6 +762,16 @@ export function SendDossierDialog({
           if (!open) checkEmailConfiguration();
         }} 
       />
+
+      {/* Preview dialog */}
+      {previewFile && (
+        <AttachmentPreviewDialog
+          open={!!previewFile}
+          onOpenChange={closePreview}
+          file={previewFile.file}
+          previewUrl={previewFile.url}
+        />
+      )}
     </>
   );
 }
