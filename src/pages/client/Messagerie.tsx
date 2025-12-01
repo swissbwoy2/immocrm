@@ -1196,8 +1196,8 @@ const Messagerie = () => {
 
   const conversationsList = (
     <>
-      <div className="p-4 border-b">
-        <h2 className="font-semibold">Messages</h2>
+      <div className="p-4 border-b border-border/50">
+        <h2 className="font-semibold text-lg">Messages</h2>
       </div>
       <ScrollArea className="flex-1">
         {conversations.map((conv) => {
@@ -1206,24 +1206,16 @@ const Messagerie = () => {
           const unreadCount = convMessages.filter(m => !m.read && m.sender_type === 'agent').length;
           
           return (
-            <div
+            <ConversationItem
               key={conv.id}
+              name={getAgentName(conv.agent_id)}
+              avatarUrl={null}
+              lastMessage={lastMessage?.content || conv.subject || null}
+              lastMessageTime={conv.last_message_at || conv.created_at}
+              unreadCount={unreadCount}
+              isSelected={selectedConv === conv.id}
               onClick={() => setSelectedConv(conv.id)}
-              className={`p-4 border-b cursor-pointer hover:bg-muted/50 transition-colors ${selectedConv === conv.id ? 'bg-muted' : ''}`}
-            >
-              <div className="flex items-start justify-between mb-1">
-                <p className="font-medium text-sm">{getAgentName(conv.agent_id)}</p>
-                {unreadCount > 0 && (
-                  <Badge variant="default" className="ml-2">{unreadCount}</Badge>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground line-clamp-2">
-                {lastMessage?.content?.substring(0, 50) || conv.subject}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {new Date(conv.last_message_at || conv.created_at).toLocaleDateString('fr-FR')}
-              </p>
-            </div>
+            />
           );
         })}
       </ScrollArea>
@@ -1231,86 +1223,59 @@ const Messagerie = () => {
   );
 
   const chatHeader = currentConversation && (
-    <h2 className="font-semibold truncate">
-      {getAgentName(currentConversation.agent_id)}
-    </h2>
+    <ChatHeader
+      name={getAgentName(currentConversation.agent_id)}
+      avatarUrl={null}
+    />
   );
 
   const chatView = selectedConv ? (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex-1 flex flex-col min-h-0 chat-background">
       <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
-          {selectedMessages.map((msg) => (
-            <Card key={msg.id} className={`p-4 ${msg.sender_type === 'client' ? 'ml-auto max-w-[85%] bg-primary/10' : 'mr-auto max-w-[85%]'}`}>
-              <div className="flex items-start justify-between mb-2">
-                <p className="font-medium text-sm">
-                  {msg.sender_type === 'client' ? 'Vous' : getAgentName(currentConversation?.agent_id)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {new Date(msg.created_at).toLocaleString('fr-FR')}
-                </p>
+        <div className="space-y-2 max-w-4xl mx-auto">
+          {selectedMessages.map((msg) => {
+            const isSent = msg.sender_type === 'client';
+            const senderName = isSent ? undefined : getAgentName(currentConversation?.agent_id);
+            
+            return (
+              <div key={msg.id}>
+                <MessageBubble
+                  content={msg.content || ''}
+                  isSent={isSent}
+                  timestamp={msg.created_at}
+                  read={msg.read}
+                  senderName={senderName}
+                  attachmentUrl={msg.attachment_url}
+                  attachmentName={msg.attachment_name}
+                />
+                {msg.offre_id && offresMap[msg.offre_id] && (
+                  <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[75%] md:max-w-[60%]`}>
+                    <OffreCard offre={offresMap[msg.offre_id]} />
+                    <OffreActions 
+                      offre={offresMap[msg.offre_id]} 
+                      onAction={(action, data) => handleOffreAction(msg.offre_id, action, data)}
+                    />
+                  </div>
+                )}
               </div>
-              {msg.content && (
-                <div className="text-sm whitespace-pre-wrap">
-                  {parseMessageWithLinks(msg.content).map((part, index) => 
-                    part.type === 'link' ? (
-                      <a
-                        key={index}
-                        href={part.content}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        {part.content}
-                      </a>
-                    ) : (
-                      <span key={index}>{part.content}</span>
-                    )
-                  )}
-                </div>
-              )}
-              {msg.attachment_url && (
-                <div className="mt-2">
-                  <MessageAttachment
-                    url={msg.attachment_url}
-                    type={msg.attachment_type || ''}
-                    name={msg.attachment_name || 'Fichier'}
-                    size={msg.attachment_size || 0}
-                  />
-                </div>
-              )}
-              {msg.offre_id && offresMap[msg.offre_id] && (
-                <>
-                  <OffreCard offre={offresMap[msg.offre_id]} />
-                  <OffreActions 
-                    offre={offresMap[msg.offre_id]} 
-                    onAction={(action, data) => handleOffreAction(msg.offre_id, action, data)}
-                  />
-                </>
-              )}
-            </Card>
-          ))}
+            );
+          })}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
-      <div className="p-4 border-t bg-card">
-        <div className="flex gap-2 items-end">
-          <div className="flex-1">
-            <MessageAttachmentUploader
-              conversationId={selectedConv}
-              onAttachmentReady={setPendingAttachment}
-            />
-            <Input
-              placeholder="Écrire un message..."
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-            />
-          </div>
-          <Button onClick={handleSendMessage} disabled={!messageText.trim() && !pendingAttachment}>
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
+      <div>
+        <MessageAttachmentUploader
+          conversationId={selectedConv}
+          onAttachmentReady={setPendingAttachment}
+        />
+        <ChatInput
+          onSendMessage={(text) => {
+            setMessageText(text);
+            setTimeout(() => handleSendMessage(), 0);
+          }}
+          disabled={false}
+          placeholder="Écrivez un message..."
+        />
       </div>
 
       {/* Dialog Planifier Visite */}
