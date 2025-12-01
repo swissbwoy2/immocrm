@@ -1,5 +1,8 @@
 project_id = "ydljsdscdnqrqnjvqela"
 
+[functions.resend-agent-invitation]
+verify_jwt = true
+
 [functions.reset-client-password]
 verify_jwt = false
 
