@@ -1,20 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Receipt, Clock, Mail, Phone, CheckCircle, Search,
   RefreshCw, Eye, CreditCard, Building2, Home, Loader2,
-  Send, ExternalLink
+  Send, BarChart3, TrendingUp
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
 interface DemandeMandat {
   id: string;
@@ -30,6 +33,16 @@ interface DemandeMandat {
   abaninja_invoice_id: string | null;
   abaninja_invoice_ref: string | null;
   abaninja_client_uuid: string | null;
+}
+
+interface MonthlyStats {
+  mois: string;
+  monthKey: string;
+  creees: number;
+  payees: number;
+  enAttente: number;
+  montant: number;
+  tauxConversion: number;
 }
 
 export default function FacturesAbaNinja() {
@@ -64,6 +77,52 @@ export default function FacturesAbaNinja() {
       setLoading(false);
     }
   };
+
+  const getMontant = (demande: DemandeMandat) => {
+    return demande.type_recherche === 'Acheter' ? 2500 : (demande.montant_acompte || 300);
+  };
+
+  const monthlyStats = useMemo(() => {
+    const stats: MonthlyStats[] = [];
+    const now = new Date();
+
+    // Calculate stats for the last 12 months
+    for (let i = 11; i >= 0; i--) {
+      const monthDate = subMonths(now, i);
+      const monthStart = startOfMonth(monthDate);
+      const monthEnd = endOfMonth(monthDate);
+      const monthKey = format(monthDate, 'yyyy-MM');
+      const monthLabel = format(monthDate, 'MMM yyyy', { locale: fr });
+
+      const monthDemandes = demandes.filter(d => {
+        const createdDate = new Date(d.created_at);
+        return isWithinInterval(createdDate, { start: monthStart, end: monthEnd });
+      });
+
+      const paidDemandes = demandes.filter(d => {
+        if (!d.date_paiement) return false;
+        const paidDate = new Date(d.date_paiement);
+        return isWithinInterval(paidDate, { start: monthStart, end: monthEnd });
+      });
+
+      const montantPaye = paidDemandes.reduce((sum, d) => sum + getMontant(d), 0);
+      const creees = monthDemandes.length;
+      const payees = paidDemandes.length;
+      const tauxConversion = creees > 0 ? Math.round((payees / creees) * 100) : 0;
+
+      stats.push({
+        mois: monthLabel,
+        monthKey,
+        creees,
+        payees,
+        enAttente: monthDemandes.filter(d => d.statut === 'facture_envoyee').length,
+        montant: montantPaye,
+        tauxConversion
+      });
+    }
+
+    return stats;
+  }, [demandes]);
 
   const handleResendInvoice = async (demande: DemandeMandat) => {
     if (!demande.abaninja_invoice_id) {
@@ -127,10 +186,6 @@ export default function FacturesAbaNinja() {
     }
   };
 
-  const getMontant = (demande: DemandeMandat) => {
-    return demande.type_recherche === 'Acheter' ? 2500 : (demande.montant_acompte || 300);
-  };
-
   const pendingInvoices = demandes.filter(d => d.statut === 'facture_envoyee');
   const paidInvoices = demandes.filter(d => d.statut === 'paye' || d.statut === 'active');
 
@@ -142,6 +197,21 @@ export default function FacturesAbaNinja() {
 
   const totalPending = pendingInvoices.reduce((sum, d) => sum + getMontant(d), 0);
   const totalPaid = paidInvoices.reduce((sum, d) => sum + getMontant(d), 0);
+
+  const chartConfig = {
+    creees: {
+      label: "Factures créées",
+      color: "hsl(var(--primary))",
+    },
+    payees: {
+      label: "Factures payées",
+      color: "hsl(142, 76%, 36%)",
+    },
+    montant: {
+      label: "Montant (CHF)",
+      color: "hsl(142, 76%, 36%)",
+    },
+  };
 
   if (loading) {
     return (
@@ -238,6 +308,10 @@ export default function FacturesAbaNinja() {
             <TabsTrigger value="paid">
               Payées ({paidInvoices.length})
             </TabsTrigger>
+            <TabsTrigger value="stats" className="flex items-center gap-1">
+              <BarChart3 className="h-4 w-4" />
+              Statistiques
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="all">
@@ -274,6 +348,156 @@ export default function FacturesAbaNinja() {
               getMontant={getMontant}
               navigate={navigate}
             />
+          </TabsContent>
+
+          <TabsContent value="stats" className="space-y-6">
+            {/* Charts */}
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Bar Chart - Montants encaissés */}
+              <Card className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <CreditCard className="h-5 w-5 text-green-600" />
+                  <h3 className="font-semibold">Montants encaissés par mois</h3>
+                </div>
+                <ChartContainer config={chartConfig} className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={monthlyStats}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis 
+                        dataKey="mois" 
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `${value.toLocaleString()}`}
+                      />
+                      <ChartTooltip 
+                        content={<ChartTooltipContent />}
+                        formatter={(value: number) => [`${value.toLocaleString()} CHF`, 'Montant']}
+                      />
+                      <Bar 
+                        dataKey="montant" 
+                        fill="hsl(142, 76%, 36%)" 
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </Card>
+
+              {/* Line Chart - Évolution des factures */}
+              <Card className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                  <h3 className="font-semibold">Évolution des factures</h3>
+                </div>
+                <ChartContainer config={chartConfig} className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={monthlyStats}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis 
+                        dataKey="mois" 
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 12 }}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Legend />
+                      <Line 
+                        type="monotone"
+                        dataKey="creees" 
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={2}
+                        dot={{ fill: "hsl(var(--primary))", strokeWidth: 2 }}
+                        name="Créées"
+                      />
+                      <Line 
+                        type="monotone"
+                        dataKey="payees" 
+                        stroke="hsl(142, 76%, 36%)" 
+                        strokeWidth={2}
+                        dot={{ fill: "hsl(142, 76%, 36%)", strokeWidth: 2 }}
+                        name="Payées"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </Card>
+            </div>
+
+            {/* Summary Table */}
+            <Card className="p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Receipt className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold">Récapitulatif mensuel</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Mois</TableHead>
+                      <TableHead className="text-center">Factures créées</TableHead>
+                      <TableHead className="text-center">Factures payées</TableHead>
+                      <TableHead className="text-center">Taux conversion</TableHead>
+                      <TableHead className="text-right">Montant encaissé</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {monthlyStats.slice().reverse().map((stat) => (
+                      <TableRow key={stat.monthKey}>
+                        <TableCell className="font-medium capitalize">{stat.mois}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline">{stat.creees}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="default" className="bg-green-600">{stat.payees}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className={`font-medium ${
+                            stat.tauxConversion >= 80 ? 'text-green-600' :
+                            stat.tauxConversion >= 50 ? 'text-orange-600' :
+                            'text-red-600'
+                          }`}>
+                            {stat.tauxConversion}%
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {stat.montant.toLocaleString()} CHF
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {/* Total Row */}
+                    <TableRow className="bg-muted/50 font-bold">
+                      <TableCell>TOTAL</TableCell>
+                      <TableCell className="text-center">
+                        {monthlyStats.reduce((sum, s) => sum + s.creees, 0)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {monthlyStats.reduce((sum, s) => sum + s.payees, 0)}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {Math.round(
+                          (monthlyStats.reduce((sum, s) => sum + s.payees, 0) /
+                          Math.max(monthlyStats.reduce((sum, s) => sum + s.creees, 0), 1)) * 100
+                        )}%
+                      </TableCell>
+                      <TableCell className="text-right text-green-600">
+                        {monthlyStats.reduce((sum, s) => sum + s.montant, 0).toLocaleString()} CHF
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
