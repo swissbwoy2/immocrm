@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Trash2, Upload, Trash, Shield, CheckCircle, FileWarning, Home, Key } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Trash2, Upload, Trash, Shield, CheckCircle, FileWarning, Home, Key, Bell } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +39,7 @@ const MesClients = () => {
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [agentId, setAgentId] = useState<string | null>(null);
+  const [clientReminders, setClientReminders] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     loadAgentAndClients();
@@ -99,6 +100,22 @@ const MesClients = () => {
         existing.push(candidate);
         candidatesMap.set(candidate.client_id, existing);
       });
+      
+      // Load notes and count pending reminders per client
+      const { data: notesData } = await supabase
+        .from('client_notes')
+        .select('client_id, is_completed, note_type')
+        .in('client_id', clientIds)
+        .eq('is_completed', false);
+      
+      const remindersMap = new Map<string, number>();
+      notesData?.forEach(note => {
+        if (note.note_type === 'rappel' || note.note_type === 'action') {
+          const count = remindersMap.get(note.client_id) || 0;
+          remindersMap.set(note.client_id, count + 1);
+        }
+      });
+      setClientReminders(remindersMap);
 
       // Transform data to match expected format
       const transformedClients = clientsData?.map(client => {
@@ -539,8 +556,8 @@ const MesClients = () => {
                     </Button>
                   </div>
 
-                  {/* Indicateur de solvabilité */}
-                  <div className="absolute top-3 left-3">
+                   {/* Indicateur de solvabilité */}
+                  <div className="absolute top-3 left-3 flex gap-2">
                     {client.isSolvable ? (
                       <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0">
                         <CheckCircle className="h-3 w-3 mr-1" />
@@ -551,6 +568,12 @@ const MesClients = () => {
                       <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-0">
                         <AlertTriangle className="h-3 w-3 mr-1" />
                         Non solvable
+                      </Badge>
+                    )}
+                    {clientReminders.get(client.id) && clientReminders.get(client.id)! > 0 && (
+                      <Badge variant="default" className="animate-pulse">
+                        <Bell className="h-3 w-3 mr-1" />
+                        {clientReminders.get(client.id)}
                       </Badge>
                     )}
                   </div>

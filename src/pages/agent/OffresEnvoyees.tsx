@@ -9,11 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Mail, MapPin, DollarSign, Maximize, Calendar, Eye, ExternalLink } from 'lucide-react';
+import { Mail, MapPin, DollarSign, Maximize, Calendar, Eye, ExternalLink, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { ResendOfferDialog } from '@/components/ResendOfferDialog';
 
 const getStatutBadgeVariant = (statut: string) => {
   switch (statut) {
@@ -49,7 +50,10 @@ export default function OffresEnvoyees() {
   const { user } = useAuth();
   const [agent, setAgent] = useState<any>(null);
   const [offres, setOffres] = useState<any[]>([]);
+  const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resendDialogOpen, setResendDialogOpen] = useState(false);
+  const [selectedOffer, setSelectedOffer] = useState<any>(null);
 
   useEffect(() => {
     loadData();
@@ -78,6 +82,14 @@ export default function OffresEnvoyees() {
 
       if (error) throw error;
       setOffres(offresData || []);
+      
+      // Load all clients for resending
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('*, profiles!clients_user_id_fkey(nom, prenom, email)')
+        .eq('agent_id', agentData.id);
+      
+      setClients(clientsData || []);
     } catch (error) {
       console.error('Error loading offers:', error);
     } finally {
@@ -249,10 +261,22 @@ export default function OffresEnvoyees() {
                         variant="outline"
                         size="sm"
                         className="flex-1"
+                        onClick={() => {
+                          setSelectedOffer(offre);
+                          setResendDialogOpen(true);
+                        }}
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Renvoyer
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
                         onClick={() => navigate(`/agent/clients/${offre.client_id}`)}
                       >
                         <Eye className="h-4 w-4 mr-2" />
-                        Voir le client
+                        Voir client
                       </Button>
                       <Button
                         variant="outline"
@@ -292,6 +316,17 @@ export default function OffresEnvoyees() {
           </Card>
         )}
       </div>
+      
+      {selectedOffer && (
+        <ResendOfferDialog
+          offer={selectedOffer}
+          clients={clients}
+          agentId={agent?.id || ''}
+          open={resendDialogOpen}
+          onOpenChange={setResendDialogOpen}
+          onSuccess={loadData}
+        />
+      )}
     </main>
   );
 }

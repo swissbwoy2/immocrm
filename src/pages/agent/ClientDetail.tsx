@@ -24,12 +24,14 @@ import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSectio
 import { useClientCandidates } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
 import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck';
+import { StickyNote } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { calculateDaysElapsed } from '@/utils/calculations';
 import { Progress } from '@/components/ui/progress';
 import { ClientTypeBadge } from '@/components/ClientTypeBadge';
+import { ClientNotesManager } from '@/components/ClientNotesManager';
 
 interface Client {
   id: string;
@@ -130,6 +132,7 @@ export default function ClientDetail() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [agentId, setAgentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -151,6 +154,11 @@ export default function ClientDetail() {
 
       if (clientError) throw clientError;
       setClient(clientData);
+      
+      // Get agent ID
+      if (clientData.agent_id) {
+        setAgentId(clientData.agent_id);
+      }
 
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -1350,6 +1358,23 @@ export default function ClientDetail() {
             <PurchaseSolvabilityAlert result={purchaseSolvabilityResult} className="col-span-full" />
           ) : (
             <SolvabilityAlert result={solvabilityResult} className="col-span-full" />
+          )}
+
+          {/* Notes & Rappels */}
+          {agentId && (
+            <div className="col-span-full">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <StickyNote className="w-5 h-5" />
+                    Notes & Rappels
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ClientNotesManager clientId={client.id} agentId={agentId} />
+                </CardContent>
+              </Card>
+            </div>
           )}
 
           {/* Candidats supplémentaires */}
