@@ -720,6 +720,7 @@ export type Database = {
       }
       demandes_mandat: {
         Row: {
+          abaninja_client_uuid: string | null
           abaninja_invoice_id: string | null
           abaninja_invoice_ref: string | null
           adresse: string
@@ -777,6 +778,7 @@ export type Database = {
           vehicules: boolean | null
         }
         Insert: {
+          abaninja_client_uuid?: string | null
           abaninja_invoice_id?: string | null
           abaninja_invoice_ref?: string | null
           adresse: string
@@ -834,6 +836,7 @@ export type Database = {
           vehicules?: boolean | null
         }
         Update: {
+          abaninja_client_uuid?: string | null
           abaninja_invoice_id?: string | null
           abaninja_invoice_ref?: string | null
           adresse?: string
