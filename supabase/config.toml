@@ -47,3 +47,9 @@ verify_jwt = false
 
 [functions.send-mandat-pdf]
 verify_jwt = false
+
+[functions.abaninja-webhook]
+verify_jwt = false
+
+[functions.resend-abaninja-invoice]
+verify_jwt = false

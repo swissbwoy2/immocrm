@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,19 +23,40 @@ serve(async (req) => {
   try {
     const apiKey = Deno.env.get('ABANINJA_API_KEY');
     const accountUuid = Deno.env.get('ABANINJA_ACCOUNT_UUID');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!apiKey || !accountUuid) {
       console.error('Missing AbaNinja credentials');
       throw new Error('AbaNinja credentials not configured');
     }
 
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing Supabase credentials');
+      throw new Error('Supabase credentials not configured');
+    }
+
+    // Initialize Supabase client
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     const { prenom, nom, email, telephone, adresse } = await req.json() as CreateClientRequest;
 
     console.log('Creating AbaNinja client:', { prenom, nom, email });
 
-    // Create person in AbaNinja
+    // Get next client number using the database function
+    const { data: clientNumber, error: numberError } = await supabase.rpc('get_next_abaninja_client_number');
+
+    if (numberError) {
+      console.error('Error getting next client number:', numberError);
+      throw new Error('Failed to generate client number');
+    }
+
+    console.log('Generated client number:', clientNumber);
+
+    // Create person in AbaNinja with client number
     const personPayload = {
       type: "person",
+      number: clientNumber, // e.g., "IR0149"
       first_name: prenom,
       last_name: nom,
       contacts: [
@@ -85,6 +107,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         client_uuid: data.uuid,
+        client_number: clientNumber,
         data
       }),
       {
