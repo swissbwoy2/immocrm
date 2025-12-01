@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Send, CheckCircle, Loader2, LogOut, ExternalLink } from 'lucide-react';
@@ -16,7 +16,48 @@ interface AccountActivationModalProps {
 export function AccountActivationModal({ isOpen, onClose, userId, userName }: AccountActivationModalProps) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [typeRecherche, setTypeRecherche] = useState<string>('Louer');
   const navigate = useNavigate();
+
+  // Récupérer le type de recherche du client
+  useEffect(() => {
+    const fetchTypeRecherche = async () => {
+      if (!userId) return;
+      
+      try {
+        // Récupérer l'email du profil
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', userId)
+          .single();
+        
+        if (profile?.email) {
+          // Récupérer le type_recherche depuis demandes_mandat
+          const { data: demande } = await supabase
+            .from('demandes_mandat')
+            .select('type_recherche')
+            .eq('email', profile.email)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (demande?.type_recherche) {
+            setTypeRecherche(demande.type_recherche);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching type_recherche:', error);
+      }
+    };
+    
+    if (isOpen && userId) {
+      fetchTypeRecherche();
+    }
+  }, [isOpen, userId]);
+
+  // Montant dynamique selon le type de recherche
+  const montantAcompte = typeRecherche === 'Acheter' ? "2'500.-" : "300.-";
 
   const handleContactAdmin = async () => {
     setSending(true);
@@ -90,7 +131,7 @@ export function AccountActivationModal({ isOpen, onClose, userId, userName }: Ac
               Votre compte n'est pas encore activé.
             </p>
             <p>
-              Veuillez vérifier auprès de l'administrateur que votre <strong>mandat de recherche signé</strong> a bien été reçu et que votre <strong>acompte de CHF 300.-</strong> a été comptabilisé.
+              Veuillez vérifier auprès de l'administrateur que votre <strong>mandat de recherche signé</strong> a bien été reçu et que votre <strong>acompte de CHF {montantAcompte}</strong> a été comptabilisé.
             </p>
           </DialogDescription>
         </DialogHeader>
