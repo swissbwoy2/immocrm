@@ -1,6 +1,72 @@
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-export default function CGVContent() {
+interface Props {
+  typeRecherche: string;
+}
+
+export default function CGVContent({ typeRecherche }: Props) {
+  const isAchat = typeRecherche === 'Acheter';
+
+  if (isAchat) {
+    return (
+      <ScrollArea className="h-64 rounded-md border p-4 bg-muted/30 text-sm">
+        <div className="space-y-4">
+          <h3 className="font-semibold">MANDAT DE RECHERCHE DE BIEN FONCIER</h3>
+          
+          <div>
+            <p className="font-semibold">Article 1 : MANDAT</p>
+            <p className="mt-1">
+              Le mandant charge le mandataire de lui présenter le bien ci-après désigné et d'intervenir en tant qu'intermédiaire dans le suivi, la négociation et la conclusion dudit mandat.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-semibold">Article 2. DURÉE</p>
+            <p className="mt-1">
+              Le présent contrat est conclu pour une durée de 6 mois à compter de sa date de signature. En l'absence de résiliation, par lettre recommandée, au moins 30 jours avant son échéance, le présent contrat est réputé renouvelé par reconduction tacite, à chaque fois pour 3 mois supplémentaires.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-semibold">Article 3 : HONORAIRES</p>
+            <p className="mt-1">
+              Le mandant s'engage à payer au mandataire, à la conclusion de l'acte de vente chez un notaire, le montant correspondant à 1 % du prix de vente défini entre les parties. Un acompte de CHF 2'500.- est dû pour activer vos recherches, et sera déduit de la commission en cas de réussite ou remboursé totalement en cas d'échec.
+            </p>
+            <p className="mt-2">
+              En toute confidentialité le mandataire s'engage également à communiquer au mandant toutes les informations nécessaires pour au bon déroulement de cette mission.
+            </p>
+            <p className="mt-2">
+              Si le mandant se porte acquéreur, par ses propres moyens ou par tout autre moyen, d'un bien présenté par le mandataire, la commission est intégralement due au mandataire.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-semibold">Article 4. MODIFICATION DU CONTRAT</p>
+            <p className="mt-1">
+              Le présent contrat constitue l'intégralité de l'accord passé par le Mandant et le Mandataire. Il ne pourra être modifié si ce n'est par un accord écrit subséquent entre les parties.
+            </p>
+          </div>
+
+          <div>
+            <p className="font-semibold">Article 5. ÉLECTION DE FOR ET DE DROIT</p>
+            <p className="mt-1">
+              En cas de litige relatif à l'interprétation ou à l'exécution du présent contrat, les parties acceptent la compétence exclusive des tribunaux genevois, sous réserve d'un recours au Tribunal Fédéral. Le droit suisse est applicable, sous réserve des dispositions prévues dans le présent contrat.
+            </p>
+          </div>
+
+          <div className="mt-6 p-4 bg-primary/10 rounded-lg">
+            <h4 className="font-semibold mb-2">Informations bancaires pour l'activation de vos recherches :</h4>
+            <p className="text-sm">Votre dossier sera activé dès réception du paiement ou de la preuve de paiement.</p>
+            <ul className="mt-2 text-sm space-y-1">
+              <li>• Acompte pour l'activation de vos recherches de bien à acheter: <strong>2'500 CHF</strong></li>
+            </ul>
+          </div>
+        </div>
+      </ScrollArea>
+    );
+  }
+
+  // Location (default)
   return (
     <ScrollArea className="h-64 rounded-md border p-4 bg-muted/30 text-sm">
       <div className="space-y-4">
@@ -82,7 +148,6 @@ export default function CGVContent() {
           <p className="text-sm">Votre dossier sera activé dès réception du paiement ou de la preuve de paiement.</p>
           <ul className="mt-2 text-sm space-y-1">
             <li>• Acompte pour l'activation de vos recherches de logement à louer: <strong>300 CHF</strong></li>
-            <li>• Acompte pour l'activation de vos recherches de logement à acheter: <strong>2'500 CHF</strong></li>
           </ul>
         </div>
       </div>

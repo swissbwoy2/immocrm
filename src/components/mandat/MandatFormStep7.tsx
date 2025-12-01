@@ -51,7 +51,7 @@ export default function MandatFormStep7({ data, onChange }: Props) {
       <div className="space-y-4">
         <h3 className="font-semibold">Dispositions du mandat</h3>
         <p className="text-sm text-muted-foreground">*À lire attentivement et approuver avant de signer</p>
-        <CGVContent />
+        <CGVContent typeRecherche={data.type_recherche} />
       </div>
 
       {/* Signature */}
