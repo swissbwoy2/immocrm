@@ -25,6 +25,7 @@ import AdminMigrateDocuments from "./pages/admin/MigrateDocuments";
 import AdminNotifications from "./pages/admin/Notifications";
 import AdminParametres from "./pages/admin/Parametres";
 import AdminEnvoyerEmail from "./pages/admin/EnvoyerEmail";
+import AdminEnvoyerOffre from "./pages/admin/EnvoyerOffre";
 import AdminHistoriqueEmails from "./pages/admin/HistoriqueEmails";
 import AdminBoiteReception from "./pages/admin/BoiteReception";
 import AdminCalendrier from "./pages/admin/Calendrier";
@@ -97,6 +98,7 @@ const App = () => (
             <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminNotifications /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/parametres" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminParametres /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/envoyer-email" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminEnvoyerEmail /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/envoyer-offre" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminEnvoyerOffre /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/historique-emails" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminHistoriqueEmails /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/boite-reception" element={<ProtectedRoute allowedRoles={['admin']}><AdminBoiteReception /></ProtectedRoute>} />
             <Route path="/admin/calendrier" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminCalendrier /></AppLayout></ProtectedRoute>} />
