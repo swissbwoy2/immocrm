@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Calendar, Users, DollarSign, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, DollarSign, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield, UserX } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { useNavigate } from "react-router-dom";
@@ -72,6 +72,7 @@ const Clients = () => {
   const [filterAgent, setFilterAgent] = useState<string>("all");
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedPieces, setSelectedPieces] = useState<string[]>([]);
+  const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [loading, setLoading] = useState(true);
@@ -197,6 +198,7 @@ const Clients = () => {
          profile.email.toLowerCase().includes(searchTerm.toLowerCase()))
       : true;
     const matchesAgent = filterAgent === "all" || client.agent_id === filterAgent;
+    const matchesUnassigned = !showUnassignedOnly || !client.agent_id;
     
     const matchRegion = selectedRegions.length === 0 || 
       (client.region_recherche && selectedRegions.includes(client.region_recherche));
@@ -213,7 +215,7 @@ const Clients = () => {
         return Math.floor(clientPieces) === Math.floor(pieceNum);
       });
     
-    return matchesSearch && matchesAgent && matchRegion && matchPieces;
+    return matchesSearch && matchesAgent && matchesUnassigned && matchRegion && matchPieces;
   });
 
   const getAgentName = (agentId?: string) => {
@@ -438,6 +440,14 @@ const Clients = () => {
               ))}
             </SelectContent>
           </Select>
+          <Button
+            variant={showUnassignedOnly ? "default" : "outline"}
+            onClick={() => setShowUnassignedOnly(!showUnassignedOnly)}
+            className="w-full sm:w-auto"
+          >
+            <UserX className="w-4 h-4 mr-2" />
+            Sans agent
+          </Button>
         </div>
 
         {/* Filtres dépliables sur mobile */}
