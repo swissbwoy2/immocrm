@@ -100,12 +100,21 @@ export default function ConclureAffaire() {
       
       setAgent(agentData);
 
-      // Récupérer les clients assignés à cet agent
-      const { data: clientsData } = await supabase
-        .from('clients')
-        .select('*')
-        .eq('agent_id', agentData.id)
-        .eq('statut', 'actif');
+      // Récupérer les clients assignés à cet agent via client_agents
+      const { data: clientAgentsData } = await supabase
+        .from('client_agents')
+        .select('client_id')
+        .eq('agent_id', agentData.id);
+
+      const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
+
+      const { data: clientsData } = clientIds.length > 0
+        ? await supabase
+            .from('clients')
+            .select('*')
+            .in('id', clientIds)
+            .eq('statut', 'actif')
+        : { data: [] };
       
       setClients(clientsData || []);
 

@@ -62,11 +62,20 @@ export default function AgentDocuments() {
 
       if (!agentData) return;
 
-      // Récupérer tous les clients de cet agent
-      const { data: clientsData } = await supabase
-        .from('clients')
-        .select('id, user_id')
+      // Récupérer tous les clients de cet agent via client_agents
+      const { data: clientAgentsData } = await supabase
+        .from('client_agents')
+        .select('client_id')
         .eq('agent_id', agentData.id);
+
+      const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
+
+      const { data: clientsData } = clientIds.length > 0
+        ? await supabase
+            .from('clients')
+            .select('id, user_id')
+            .in('id', clientIds)
+        : { data: [] };
 
       if (!clientsData || clientsData.length === 0) {
         setDocuments([]);

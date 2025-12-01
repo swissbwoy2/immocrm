@@ -83,11 +83,20 @@ export default function OffresEnvoyees() {
       if (error) throw error;
       setOffres(offresData || []);
       
-      // Load all clients for resending
-      const { data: clientsData } = await supabase
-        .from('clients')
-        .select('*, profiles!clients_user_id_fkey(nom, prenom, email)')
+      // Load all clients for resending via client_agents
+      const { data: clientAgentsData } = await supabase
+        .from('client_agents')
+        .select('client_id')
         .eq('agent_id', agentData.id);
+
+      const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
+
+      const { data: clientsData } = clientIds.length > 0
+        ? await supabase
+            .from('clients')
+            .select('*, profiles!clients_user_id_fkey(nom, prenom, email)')
+            .in('id', clientIds)
+        : { data: [] };
       
       setClients(clientsData || []);
     } catch (error) {
