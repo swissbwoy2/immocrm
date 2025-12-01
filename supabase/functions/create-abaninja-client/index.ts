@@ -80,8 +80,10 @@ serve(async (req) => {
 
     console.log('AbaNinja person payload:', JSON.stringify(personPayload));
 
+    // Use the correct endpoint for creating addresses (persons)
+    // The v2/persons endpoint is for GET, POST goes to /addresses
     const response = await fetch(
-      `https://api.abaninja.ch/accounts/${accountUuid}/addresses/v2/persons`,
+      `https://api.abaninja.ch/accounts/${accountUuid}/addresses`,
       {
         method: 'POST',
         headers: {
