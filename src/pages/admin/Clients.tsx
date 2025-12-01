@@ -691,6 +691,11 @@ const Clients = () => {
                     <h3 className="text-base md:text-lg font-semibold text-primary">
                       {profile.prenom} {profile.nom}
                     </h3>
+                    {!client.agent_id && (
+                      <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-[10px]">
+                        Sans agent
+                      </Badge>
+                    )}
                     {isSolvable ? (
                       <Badge className="bg-green-600 text-white text-[10px]">
                         <CheckCircle className="w-3 h-3 mr-0.5" />
