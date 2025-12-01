@@ -21,8 +21,8 @@ const STEPS = [
   { title: 'Informations personnelles', component: MandatFormStep1 },
   { title: 'Situation actuelle', component: MandatFormStep2 },
   { title: 'Situation financière', component: MandatFormStep3 },
-  { title: 'Critères de recherche', component: MandatFormStep4 },
   { title: 'Candidats', component: MandatFormStep5 },
+  { title: 'Critères de recherche', component: MandatFormStep4 },
   { title: 'Documents', component: MandatFormStep6 },
   { title: 'Signature', component: MandatFormStep7 },
 ];
@@ -68,10 +68,10 @@ export default function NouveauMandat() {
       case 2:
         return !!(formData.profession && formData.employeur && formData.revenus_mensuels > 0);
       case 3:
+        return true; // Candidats optionnels
+      case 4:
         return !!(formData.decouverte_agence && formData.type_bien && formData.pieces_recherche &&
           formData.region_recherche && formData.budget_max > 0);
-      case 4:
-        return true; // Candidats optionnels
       case 5:
         return formData.documents_uploades.length >= 5;
       case 6:
@@ -263,9 +263,9 @@ export default function NouveauMandat() {
   const StepComponent = STEPS[currentStep].component;
   const progress = ((currentStep + 1) / STEPS.length) * 100;
 
-  // Callback to jump to candidats step (step 5 = index 4)
+  // Callback to jump to candidats step (step 4 = index 3)
   const handleAddCoBuyer = () => {
-    setCurrentStep(4);
+    setCurrentStep(3);
     window.scrollTo(0, 0);
   };
 
@@ -277,7 +277,7 @@ export default function NouveauMandat() {
           <img src={logoImmorama} alt="Immo-Rama" className="h-16 mx-auto mb-4" />
           <h1 className="text-2xl font-bold">Mandat de recherche</h1>
           <p className="text-muted-foreground">
-            {currentStep < 3 
+            {currentStep < 4 
               ? 'Étape par étape vers votre nouveau logement'
               : formData.type_recherche === 'Acheter' 
                 ? 'Pour un bien immobilier à acheter' 
@@ -297,7 +297,7 @@ export default function NouveauMandat() {
         {/* Form */}
         <Card>
           <CardContent className="pt-6">
-            {currentStep === 3 ? (
+            {currentStep === 4 ? (
               <MandatFormStep4 data={formData} onChange={handleChange} onAddCoBuyer={handleAddCoBuyer} />
             ) : (
               <StepComponent data={formData} onChange={handleChange} />
