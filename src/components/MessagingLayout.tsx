@@ -88,24 +88,11 @@ export function MessagingLayout({
       </div>
 
       {/* Zone de chat */}
-      <div className="flex-1 flex flex-col min-w-0 h-full">
-        {/* Header mobile avec bouton retour - toujours visible sur mobile quand une conversation est sélectionnée */}
-        {selectedConversation && (
-          <div className="flex items-center gap-2 p-3 border-b bg-card lg:hidden">
-            <SidebarTrigger className="shrink-0" />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBackToList}
-              className="shrink-0"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex-1 min-w-0">
-              {chatHeader}
-            </div>
-          </div>
-        )}
+      <div className="flex-1 flex flex-col min-w-0 h-full relative">
+        {/* SidebarTrigger flottant sur mobile */}
+        <div className="absolute top-2 left-2 z-10 lg:hidden">
+          <SidebarTrigger className="bg-background/80 backdrop-blur-sm rounded-full shadow-sm" />
+        </div>
 
         {/* Bouton menu mobile quand aucune conversation n'est sélectionnée */}
         {!selectedConversation && (
@@ -120,13 +107,6 @@ export function MessagingLayout({
               <Menu className="h-5 w-5" />
             </Button>
             <span className="font-medium">Conversations</span>
-          </div>
-        )}
-
-        {/* Header desktop */}
-        {selectedConversation && chatHeader && (
-          <div className="hidden lg:block p-4 border-b bg-card">
-            {chatHeader}
           </div>
         )}
 
