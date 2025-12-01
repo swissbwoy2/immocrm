@@ -125,6 +125,7 @@ export default function NouveauMandat() {
 
       // ÉTAPE 1: Créer le client AbaNinja AVANT l'insert
       let abaninjaClientUuid: string | null = null;
+      let abaninjaAddressUuid: string | null = null;
       try {
         const { data: clientResponse, error: clientError } = await supabase.functions.invoke('create-abaninja-client', {
           body: {
@@ -140,21 +141,23 @@ export default function NouveauMandat() {
           console.error('Error creating AbaNinja client:', clientError);
         } else if (clientResponse?.client_uuid) {
           abaninjaClientUuid = clientResponse.client_uuid;
-          console.log('AbaNinja client created:', abaninjaClientUuid);
+          abaninjaAddressUuid = clientResponse.address_uuid;
+          console.log('AbaNinja client created:', abaninjaClientUuid, 'Address:', abaninjaAddressUuid);
         }
       } catch (abaNinjaClientError) {
         console.error('AbaNinja client creation failed:', abaNinjaClientError);
       }
 
-      // ÉTAPE 2: Créer la facture AbaNinja (si client créé)
+      // ÉTAPE 2: Créer la facture AbaNinja (si client et adresse créés)
       let abaninjaInvoiceId: string | null = null;
       let abaninjaInvoiceRef: string | null = null;
       
-      if (abaninjaClientUuid) {
+      if (abaninjaClientUuid && abaninjaAddressUuid) {
         try {
           const { data: invoiceResponse, error: invoiceError } = await supabase.functions.invoke('create-abaninja-invoice', {
             body: {
               client_uuid: abaninjaClientUuid,
+              address_uuid: abaninjaAddressUuid,
               type_recherche: formData.type_recherche,
               prenom: formData.prenom,
               nom: formData.nom,
