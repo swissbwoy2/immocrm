@@ -67,13 +67,30 @@ const MesClients = () => {
         return;
       }
 
-      setAgentId(agentData.id);
+      const currentAgentId = agentData.id;
+      setAgentId(currentAgentId);
 
-      // Load clients
+      // Load all clients via client_agents for multi-agent support
+      const { data: clientAgentsData, error: caError } = await supabase
+        .from('client_agents')
+        .select('client_id, is_primary, commission_split')
+        .eq('agent_id', currentAgentId);
+
+      if (caError) throw caError;
+      
+      if (!clientAgentsData || clientAgentsData.length === 0) {
+        setAllClients([]);
+        setLoading(false);
+        return;
+      }
+
+      const clientIds = clientAgentsData.map(ca => ca.client_id);
+
+      // Load client data
       const { data: clientsData, error } = await supabase
         .from('clients')
         .select('*')
-        .eq('agent_id', agentData.id);
+        .in('id', clientIds);
 
       if (error) throw error;
 
@@ -86,8 +103,42 @@ const MesClients = () => {
 
       const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
 
+      // Load co-agents for each client
+      const { data: allClientAgentsData, error: allCaError } = await supabase
+        .from('client_agents')
+        .select(`
+          client_id,
+          is_primary,
+          commission_split,
+          agent_id,
+          agents!inner (
+            user_id,
+            profiles:user_id (
+              prenom,
+              nom,
+              email
+            )
+          )
+        `)
+        .in('client_id', clientIds);
+
+      if (allCaError) throw allCaError;
+
+      // Map agents by client
+      const clientAgentsMap = new Map<string, any[]>();
+      allClientAgentsData?.forEach((ca: any) => {
+        if (!clientAgentsMap.has(ca.client_id)) {
+          clientAgentsMap.set(ca.client_id, []);
+        }
+        clientAgentsMap.get(ca.client_id)?.push({
+          agent_id: ca.agent_id,
+          is_primary: ca.is_primary,
+          commission_split: ca.commission_split,
+          profile: ca.agents?.profiles
+        });
+      });
+
       // Load candidates for all clients
-      const clientIds = clientsData?.map(c => c.id) || [];
       const { data: candidatesData } = await supabase
         .from('client_candidates')
         .select('*')
@@ -121,6 +172,9 @@ const MesClients = () => {
       const transformedClients = clientsData?.map(client => {
         const profile = profilesMap.get(client.user_id);
         const candidates = candidatesMap.get(client.id) || [];
+        const clientAgentsList = clientAgentsMap.get(client.id) || [];
+        const coAgents = clientAgentsList.filter(ca => ca.agent_id !== currentAgentId);
+        const isPrimaryAgent = clientAgentsList.find(ca => ca.agent_id === currentAgentId)?.is_primary || false;
         
         // Check client's stable status
         const clientHasStableStatus = hasStableStatus(client.type_permis, client.nationalite);

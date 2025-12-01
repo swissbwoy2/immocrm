@@ -40,21 +40,47 @@ export function NewConversationDialog({ agentId, onConversationCreated }: NewCon
     try {
       setLoading(true);
 
-      // Get all clients assigned to this agent
-      const { data: clientsData, error: clientsError } = await supabase
-        .from('clients')
-        .select('id, user_id')
-        .eq('agent_id', agentId);
-
-      if (clientsError) throw clientsError;
-
-      // Get existing conversations for this agent
-      const { data: conversationsData, error: convError } = await supabase
-        .from('conversations')
+      // Get all clients assigned to this agent via client_agents
+      const { data: clientAgentsData, error: caError } = await supabase
+        .from('client_agents')
         .select('client_id')
         .eq('agent_id', agentId);
 
+      if (caError) throw caError;
+      
+      if (!clientAgentsData || clientAgentsData.length === 0) {
+        setClients([]);
+        setLoading(false);
+        return;
+      }
+
+      const clientIds = clientAgentsData.map(ca => ca.client_id);
+
+      // Get client data
+      const { data: clientsData, error: clientsError } = await supabase
+        .from('clients')
+        .select('id, user_id')
+        .in('id', clientIds);
+
+      if (clientsError) throw clientsError;
+
+      // Get existing conversations via conversation_agents
+      const { data: convAgentsData, error: convError } = await supabase
+        .from('conversation_agents')
+        .select('conversation_id')
+        .eq('agent_id', agentId);
+
       if (convError) throw convError;
+      
+      const conversationIds = convAgentsData?.map(ca => ca.conversation_id) || [];
+      
+      // Get conversations client_ids
+      const { data: conversationsData, error: convDataError } = await supabase
+        .from('conversations')
+        .select('client_id')
+        .in('id', conversationIds);
+
+      if (convDataError) throw convDataError;
 
       const existingClientIds = new Set(conversationsData?.map(c => c.client_id) || []);
       
@@ -103,6 +129,17 @@ export function NewConversationDialog({ agentId, onConversationCreated }: NewCon
 
   const handleCreateConversation = async (client: Client) => {
     try {
+      // Get all agents assigned to this client
+      const { data: clientAgentsData, error: caError } = await supabase
+        .from('client_agents')
+        .select('agent_id')
+        .eq('client_id', client.id);
+
+      if (caError) throw caError;
+
+      const allAgentIds = clientAgentsData?.map(ca => ca.agent_id) || [];
+
+      // Create the conversation
       const { data, error } = await supabase
         .from('conversations')
         .insert({
@@ -115,6 +152,22 @@ export function NewConversationDialog({ agentId, onConversationCreated }: NewCon
         .single();
 
       if (error) throw error;
+
+      // Add all agents to conversation_agents
+      if (allAgentIds.length > 0) {
+        const conversationAgents = allAgentIds.map(aid => ({
+          conversation_id: data.id,
+          agent_id: aid
+        }));
+
+        const { error: caInsertError } = await supabase
+          .from('conversation_agents')
+          .insert(conversationAgents);
+
+        if (caInsertError) {
+          console.error('Error adding agents to conversation:', caInsertError);
+        }
+      }
 
       toast({
         title: "Conversation créée",
