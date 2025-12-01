@@ -440,11 +440,11 @@ const Messagerie = () => {
   );
 
   const chatView = selectedConv ? (
-    <div className="flex-1 flex flex-col min-h-0">
-      <ScrollArea className="flex-1 p-4">
+    <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4">
         <div className="space-y-4">
           {selectedMessages.map((msg) => (
-            <Card key={msg.id} className="p-4">
+            <Card key={msg.id} className="p-4 overflow-hidden min-w-0">
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <p className="font-medium text-sm">{msg.senderName}</p>
@@ -466,7 +466,7 @@ const Messagerie = () => {
                 </p>
               </div>
               {msg.content && (
-                <div className="text-sm whitespace-pre-line">
+                <div className="text-sm whitespace-pre-line break-words overflow-wrap-anywhere">
                   {parseMessageWithLinks(msg.content).map((part, index) => 
                     part.type === 'link' ? (
                       <a
@@ -474,9 +474,9 @@ const Messagerie = () => {
                         href={part.content}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-primary hover:underline"
+                        className="text-primary hover:underline break-all"
                       >
-                        {part.content}
+                        {part.content.length > 50 ? `${part.content.substring(0, 50)}...` : part.content}
                       </a>
                     ) : (
                       <span key={index}>{part.content}</span>
@@ -498,7 +498,7 @@ const Messagerie = () => {
           ))}
           <div ref={messagesEndRef} />
         </div>
-      </ScrollArea>
+      </div>
       <div className="p-4 border-t bg-card">
         <div className="flex gap-2 items-end">
           <div className="flex-1">
