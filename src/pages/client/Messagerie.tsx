@@ -5,7 +5,23 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Send, Home, Heart, Calendar, ExternalLink, X } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { 
+  Send, Home, Heart, Calendar, ExternalLink, X, FileText, 
+  Check, Clock, Key, Star, Mail, User, PartyPopper, FileSignature,
+  MapPin, AlertCircle
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -14,8 +30,9 @@ import { MessageAttachment } from "@/components/MessageAttachment";
 import { parseMessageWithLinks } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
 import { MessagingLayout } from "@/components/MessagingLayout";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
-// Fonction pour retirer les accents des chaînes pour une recherche plus flexible
 const removeAccents = (str: string) => {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 };
@@ -28,6 +45,7 @@ const Messagerie = () => {
   const [conversations, setConversations] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [offresMap, setOffresMap] = useState<Record<string, any>>({});
+  const [candidaturesMap, setCandidaturesMap] = useState<Record<string, any>>({});
   const [agentsMap, setAgentsMap] = useState<Record<string, string>>({});
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
@@ -39,6 +57,21 @@ const Messagerie = () => {
     size: number;
   } | null>(null);
 
+  // Dialog states
+  const [visitDialogOpen, setVisitDialogOpen] = useState(false);
+  const [delegateDialogOpen, setDelegateDialogOpen] = useState(false);
+  const [candidatureDialogOpen, setCandidatureDialogOpen] = useState(false);
+  const [recommendationDialogOpen, setRecommendationDialogOpen] = useState(false);
+  const [selectedOffre, setSelectedOffre] = useState<any>(null);
+  const [selectedCandidature, setSelectedCandidature] = useState<any>(null);
+  const [visitDate, setVisitDate] = useState("");
+  const [delegateDate, setDelegateDate] = useState("");
+  const [delegateNotes, setDelegateNotes] = useState("");
+  const [messageClient, setMessageClient] = useState("");
+  const [accepteConditions, setAccepteConditions] = useState(false);
+  const [recommendationEmails, setRecommendationEmails] = useState<string[]>(["", "", "", "", ""]);
+  const [selectedSignatureDate, setSelectedSignatureDate] = useState<string>("");
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -49,7 +82,6 @@ const Messagerie = () => {
 
   useEffect(() => {
     loadClientAndConversations();
-    // Mark new_message notifications as read when visiting this page
     markTypeAsRead('new_message');
   }, [user]);
 
@@ -59,12 +91,10 @@ const Messagerie = () => {
     }
   }, [selectedConv]);
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages, selectedConv]);
 
-  // Setup realtime subscription
   useEffect(() => {
     if (!selectedConv) return;
 
@@ -99,7 +129,6 @@ const Messagerie = () => {
     if (!user) return;
 
     try {
-      // Get client ID
       const { data: clientData } = await supabase
         .from('clients')
         .select('id')
@@ -114,7 +143,6 @@ const Messagerie = () => {
       const clientIdStr = clientData.id;
       setClientId(clientIdStr);
 
-      // Load conversations
       const { data: convData, error } = await supabase
         .from('conversations')
         .select('*')
@@ -125,7 +153,6 @@ const Messagerie = () => {
 
       setConversations(convData || []);
 
-      // Load agent profiles for display
       const agentIds = convData?.map(c => c.agent_id) || [];
       if (agentIds.length > 0) {
         const { data: agentsData } = await supabase
@@ -173,12 +200,29 @@ const Messagerie = () => {
 
       // Create map of offers for quick access
       const offresMapping: Record<string, any> = {};
+      const offreIds: string[] = [];
       data?.forEach(msg => {
         if (msg.offre_id && msg.offres) {
           offresMapping[msg.offre_id] = msg.offres;
+          offreIds.push(msg.offre_id);
         }
       });
       setOffresMap(offresMapping);
+
+      // Load candidatures for these offers
+      if (offreIds.length > 0 && clientId) {
+        const { data: candidaturesData } = await supabase
+          .from('candidatures')
+          .select('*')
+          .in('offre_id', offreIds)
+          .eq('client_id', clientId);
+
+        const candidaturesMapping: Record<string, any> = {};
+        candidaturesData?.forEach(c => {
+          candidaturesMapping[c.offre_id] = c;
+        });
+        setCandidaturesMap(candidaturesMapping);
+      }
 
       // Mark messages as read
       await supabase
@@ -210,13 +254,11 @@ const Messagerie = () => {
 
       if (error) throw error;
 
-      // Update conversation last_message_at
       await supabase
         .from('conversations')
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', selectedConv);
 
-      // Get agent user_id to send notification
       const conversation = conversations.find(c => c.id === selectedConv);
       if (conversation) {
         const { data: agentData } = await supabase
@@ -226,7 +268,6 @@ const Messagerie = () => {
           .single();
 
         if (agentData) {
-          // Get client name for notification
           const { data: clientProfile } = await supabase
             .from('profiles')
             .select('prenom, nom')
@@ -237,7 +278,6 @@ const Messagerie = () => {
             ? `${clientProfile.prenom} ${clientProfile.nom}`.trim() 
             : 'Un client';
 
-          // Create notification for agent
           await supabase.rpc('create_notification', {
             p_user_id: agentData.user_id,
             p_type: 'new_message',
@@ -247,7 +287,6 @@ const Messagerie = () => {
             p_metadata: { conversation_id: selectedConv }
           });
 
-          // Also directly call the edge function to ensure email is sent
           await supabase.functions.invoke('send-notification-email', {
             body: {
               user_id: agentData.user_id,
@@ -272,8 +311,12 @@ const Messagerie = () => {
     }
   };
 
-  const handleOffreAction = async (offreId: string, action: string) => {
-    if (!user) return;
+  // Unified action handler
+  const handleOffreAction = async (offreId: string, action: string, data?: any) => {
+    if (!user || !clientId) return;
+
+    const offre = offresMap[offreId];
+    const candidature = candidaturesMap[offreId];
 
     try {
       const { data: clientData } = await supabase
@@ -284,41 +327,168 @@ const Messagerie = () => {
 
       if (!clientData) return;
 
-      if (action === 'interesse') {
-        await supabase
-          .from('offres')
-          .update({ statut: 'interesse' })
-          .eq('id', offreId);
+      switch (action) {
+        case 'interesse':
+          await supabase
+            .from('offres')
+            .update({ statut: 'interesse' })
+            .eq('id', offreId);
 
-        await supabase.from('messages').insert({
-          conversation_id: selectedConv,
-          sender_id: user.id,
-          sender_type: 'client',
-          content: `✅ Je suis intéressé(e) par cette offre !`
-        });
+          await supabase.from('messages').insert({
+            conversation_id: selectedConv,
+            sender_id: user.id,
+            sender_type: 'client',
+            content: `✅ Je suis intéressé(e) par cette offre !`
+          });
 
-        toast({ title: "Succès", description: "Agent notifié de votre intérêt" });
-        
-      } else if (action === 'visite') {
-        navigate(`/client/offres-recues?offre=${offreId}&action=visite`);
-        
-      } else if (action === 'details') {
-        navigate(`/client/offres-recues?offre=${offreId}`);
-        
-      } else if (action === 'refuser') {
-        await supabase
-          .from('offres')
-          .update({ statut: 'refusee' })
-          .eq('id', offreId);
+          toast({ title: "Succès", description: "Agent notifié de votre intérêt" });
+          break;
 
-        await supabase.from('messages').insert({
-          conversation_id: selectedConv,
-          sender_id: user.id,
-          sender_type: 'client',
-          content: `❌ Cette offre ne correspond pas à mes critères.`
-        });
+        case 'planifier_visite':
+          setSelectedOffre(offre);
+          setVisitDate("");
+          setVisitDialogOpen(true);
+          return; // Don't reload messages yet
 
-        toast({ title: "Succès", description: "Offre refusée" });
+        case 'deleguer_visite':
+          setSelectedOffre(offre);
+          setDelegateDate("");
+          setDelegateNotes("");
+          setDelegateDialogOpen(true);
+          return;
+
+        case 'postuler':
+        case 'deposer_candidature':
+          setSelectedOffre(offre);
+          setMessageClient("");
+          setAccepteConditions(false);
+          setCandidatureDialogOpen(true);
+          return;
+
+        case 'demander_aide':
+          // Create candidature with dossier_complet: false
+          await supabase.from('candidatures').insert({
+            offre_id: offreId,
+            client_id: clientData.id,
+            message_client: 'Le client demande l\'aide de l\'agent pour postuler à ce bien.',
+            statut: 'en_attente',
+            dossier_complet: false
+          });
+
+          await supabase
+            .from('offres')
+            .update({ statut: 'candidature_deposee' })
+            .eq('id', offreId);
+
+          await supabase.from('messages').insert({
+            conversation_id: selectedConv,
+            sender_id: user.id,
+            sender_type: 'client',
+            content: `🆘 J'ai besoin de votre aide pour postuler au bien ${offre.adresse}. Pouvez-vous m'accompagner dans les démarches ?`
+          });
+
+          toast({ title: "Demande envoyée", description: "Votre agent va vous contacter" });
+          break;
+
+        case 'visite_effectuee':
+          await supabase
+            .from('offres')
+            .update({ statut: 'visite_effectuee' })
+            .eq('id', offreId);
+
+          await supabase.from('messages').insert({
+            conversation_id: selectedConv,
+            sender_id: user.id,
+            sender_type: 'client',
+            content: `✅ J'ai effectué la visite du bien ${offre.adresse}`
+          });
+
+          toast({ title: "Visite confirmée" });
+          break;
+
+        case 'confirmer_conclure':
+          if (candidature) {
+            await supabase
+              .from('candidatures')
+              .update({ 
+                client_accepte_conclure: true,
+                client_accepte_conclure_at: new Date().toISOString(),
+                statut: 'bail_conclu'
+              })
+              .eq('id', candidature.id);
+
+            await supabase.from('messages').insert({
+              conversation_id: selectedConv,
+              sender_id: user.id,
+              sender_type: 'client',
+              content: `🎉 Je confirme vouloir conclure le bail pour ${offre.adresse} !`
+            });
+
+            toast({ title: "Confirmation envoyée", description: "Votre agent valide avec la régie" });
+          }
+          break;
+
+        case 'choisir_date_signature':
+          if (candidature && typeof data === 'number') {
+            const datesProposees = candidature.dates_signature_proposees || [];
+            const selectedDateObj = datesProposees[data];
+            if (selectedDateObj) {
+              await supabase
+                .from('candidatures')
+                .update({ 
+                  date_signature_choisie: selectedDateObj.date,
+                  lieu_signature: selectedDateObj.lieu,
+                  statut: 'signature_planifiee'
+                })
+                .eq('id', candidature.id);
+
+              await supabase.from('messages').insert({
+                conversation_id: selectedConv,
+                sender_id: user.id,
+                sender_type: 'client',
+                content: `📅 J'ai choisi la date de signature : ${format(new Date(selectedDateObj.date), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })} à ${selectedDateObj.lieu}`
+              });
+
+              toast({ title: "Date confirmée" });
+            }
+          }
+          break;
+
+        case 'avis_google':
+          window.open('https://g.page/r/CQpCCH4CyVqsEBM/review', '_blank');
+          if (candidature) {
+            await supabase
+              .from('candidatures')
+              .update({ avis_google_envoye: true })
+              .eq('id', candidature.id);
+          }
+          return;
+
+        case 'recommander':
+          setSelectedCandidature(candidature);
+          setRecommendationEmails(["", "", "", "", ""]);
+          setRecommendationDialogOpen(true);
+          return;
+
+        case 'details':
+          navigate(`/client/offres-recues?offre=${offreId}`);
+          return;
+
+        case 'refuser':
+          await supabase
+            .from('offres')
+            .update({ statut: 'refusee' })
+            .eq('id', offreId);
+
+          await supabase.from('messages').insert({
+            conversation_id: selectedConv,
+            sender_id: user.id,
+            sender_type: 'client',
+            content: `❌ Cette offre ne correspond pas à mes critères.`
+          });
+
+          toast({ title: "Offre refusée" });
+          break;
       }
 
       loadMessages(selectedConv!);
@@ -333,6 +503,179 @@ const Messagerie = () => {
     }
   };
 
+  // Confirm visit planning
+  const confirmPlanVisit = async () => {
+    if (!selectedOffre || !visitDate || !user || !clientId) return;
+
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id, agent_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!clientData?.agent_id) {
+        toast({ title: "Erreur", description: "Aucun agent assigné", variant: "destructive" });
+        return;
+      }
+
+      await supabase.from('visites').insert({
+        offre_id: selectedOffre.id,
+        client_id: clientData.id,
+        agent_id: clientData.agent_id,
+        adresse: selectedOffre.adresse,
+        date_visite: visitDate,
+        statut: 'planifiee',
+        est_deleguee: false
+      });
+
+      await supabase
+        .from('offres')
+        .update({ statut: 'visite_planifiee' })
+        .eq('id', selectedOffre.id);
+
+      const formattedDate = format(new Date(visitDate), 'EEEE d MMMM yyyy à HH:mm', { locale: fr });
+      
+      await supabase.from('messages').insert({
+        conversation_id: selectedConv,
+        sender_id: user.id,
+        sender_type: 'client',
+        content: `📅 J'ai planifié une visite pour le ${formattedDate} au ${selectedOffre.adresse}`
+      });
+
+      setVisitDialogOpen(false);
+      toast({ title: "Visite planifiée", description: "Votre agent a été notifié" });
+      loadMessages(selectedConv!);
+    } catch (error) {
+      console.error('Error planning visit:', error);
+      toast({ title: "Erreur", description: "Impossible de planifier la visite", variant: "destructive" });
+    }
+  };
+
+  // Confirm delegate visit
+  const confirmDelegateVisit = async () => {
+    if (!selectedOffre || !delegateDate || !user || !clientId) return;
+
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id, agent_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!clientData?.agent_id) {
+        toast({ title: "Erreur", description: "Aucun agent assigné", variant: "destructive" });
+        return;
+      }
+
+      await supabase.from('visites').insert({
+        offre_id: selectedOffre.id,
+        client_id: clientData.id,
+        agent_id: clientData.agent_id,
+        adresse: selectedOffre.adresse,
+        date_visite: delegateDate,
+        statut: 'planifiee',
+        est_deleguee: true,
+        notes: delegateNotes || 'Visite déléguée à l\'agent par le client'
+      });
+
+      await supabase
+        .from('offres')
+        .update({ statut: 'interesse' })
+        .eq('id', selectedOffre.id);
+
+      const formattedDate = format(new Date(delegateDate), 'EEEE d MMMM yyyy à HH:mm', { locale: fr });
+      
+      await supabase.from('messages').insert({
+        conversation_id: selectedConv,
+        sender_id: user.id,
+        sender_type: 'client',
+        content: `🏠 **Demande de visite déléguée**\n\n📍 ${selectedOffre.adresse}\n📅 Date souhaitée : ${formattedDate}\n${delegateNotes ? `📝 Notes : ${delegateNotes}` : ''}\n\nPouvez-vous effectuer cette visite pour moi ?`
+      });
+
+      setDelegateDialogOpen(false);
+      toast({ title: "Visite déléguée", description: "Votre agent a été notifié" });
+      loadMessages(selectedConv!);
+    } catch (error) {
+      console.error('Error delegating visit:', error);
+      toast({ title: "Erreur", description: "Impossible de déléguer la visite", variant: "destructive" });
+    }
+  };
+
+  // Confirm candidature
+  const confirmCandidature = async () => {
+    if (!selectedOffre || !accepteConditions || !user || !clientId) return;
+
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id, agent_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!clientData) return;
+
+      await supabase.from('candidatures').insert({
+        offre_id: selectedOffre.id,
+        client_id: clientData.id,
+        message_client: messageClient || null,
+        statut: 'en_attente',
+        dossier_complet: true
+      });
+
+      await supabase
+        .from('offres')
+        .update({ statut: 'candidature_deposee' })
+        .eq('id', selectedOffre.id);
+
+      await supabase.from('messages').insert({
+        conversation_id: selectedConv,
+        sender_id: user.id,
+        sender_type: 'client',
+        content: `📝 **Candidature déposée**\n\n📍 ${selectedOffre.adresse}\n💰 ${selectedOffre.prix?.toLocaleString()} CHF/mois\n${messageClient ? `\n💬 Message : ${messageClient}` : ''}`
+      });
+
+      setCandidatureDialogOpen(false);
+      toast({ title: "Candidature envoyée", description: "Votre dossier est en cours d'examen" });
+      loadMessages(selectedConv!);
+    } catch (error) {
+      console.error('Error submitting candidature:', error);
+      toast({ title: "Erreur", description: "Impossible d'envoyer la candidature", variant: "destructive" });
+    }
+  };
+
+  // Send recommendations
+  const sendRecommendations = async () => {
+    const validEmails = recommendationEmails.filter(e => e.trim() && e.includes('@'));
+    if (validEmails.length === 0) {
+      toast({ title: "Erreur", description: "Veuillez entrer au moins un email valide", variant: "destructive" });
+      return;
+    }
+
+    try {
+      if (selectedCandidature) {
+        await supabase
+          .from('candidatures')
+          .update({ 
+            recommandation_envoyee: true,
+            emails_recommandation: validEmails
+          })
+          .eq('id', selectedCandidature.id);
+
+        // Call edge function to send emails
+        await supabase.functions.invoke('send-recommendation-email', {
+          body: { emails: validEmails, candidature_id: selectedCandidature.id }
+        });
+      }
+
+      setRecommendationDialogOpen(false);
+      toast({ title: "Recommandations envoyées", description: `${validEmails.length} email(s) envoyé(s)` });
+    } catch (error) {
+      console.error('Error sending recommendations:', error);
+      toast({ title: "Erreur", description: "Impossible d'envoyer les recommandations", variant: "destructive" });
+    }
+  };
+
   const getAgentName = (agentId: string) => {
     return agentsMap[agentId] || "Mon agent";
   };
@@ -340,6 +683,7 @@ const Messagerie = () => {
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
   const currentConversation = conversations.find(c => c.id === selectedConv);
 
+  // Offer card component
   const OffreCard = ({ offre }: { offre: any }) => (
     <div className="mt-2 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-lg border-2 border-blue-200 dark:border-blue-800">
       <div className="flex items-start gap-2 mb-2">
@@ -347,9 +691,9 @@ const Messagerie = () => {
         <div className="flex-1">
           <p className="font-semibold text-sm">{offre.adresse}</p>
           <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
-            <span>💰 {offre.prix.toLocaleString()} CHF</span>
-            <span>📐 {offre.surface} m²</span>
-            <span>🏠 {offre.pieces} pcs</span>
+            <span>💰 {offre.prix?.toLocaleString()} CHF</span>
+            {offre.surface && <span>📐 {offre.surface} m²</span>}
+            {offre.pieces && <span>🏠 {offre.pieces} pcs</span>}
           </div>
         </div>
       </div>
@@ -367,60 +711,299 @@ const Messagerie = () => {
     </div>
   );
 
-  const OffreActions = ({ offre, onAction }: { offre: any, onAction: (action: string) => void }) => {
+  // Contextual action buttons based on offer/candidature status
+  const OffreActions = ({ offre, onAction }: { offre: any, onAction: (action: string, data?: any) => void }) => {
     if (!offre) return null;
 
-    if (['acceptee', 'refusee', 'candidature_deposee', 'interesse'].includes(offre.statut)) {
+    const candidature = candidaturesMap[offre.id];
+    const statut = candidature?.statut || offre.statut;
+
+    // Nouvelle offre - tous les boutons disponibles
+    if (statut === 'envoyee' || statut === 'vue') {
       return (
-        <div className="mt-3 p-3 bg-muted rounded-lg">
-          <p className="text-xs text-muted-foreground">
-            {offre.statut === 'acceptee' && '✅ Vous avez accepté cette offre'}
-            {offre.statut === 'refusee' && '❌ Vous avez refusé cette offre'}
-            {offre.statut === 'candidature_deposee' && '📝 Candidature déposée'}
-            {offre.statut === 'interesse' && '✅ Vous êtes intéressé(e) par cette offre'}
+        <div className="mt-3 space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => onAction('interesse')} className="flex-1">
+              <Heart className="h-4 w-4 mr-1" /> Intéressé(e)
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => onAction('planifier_visite')} className="flex-1">
+              <Calendar className="h-4 w-4 mr-1" /> Planifier visite
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} className="flex-1">
+              <User className="h-4 w-4 mr-1" /> Déléguer visite
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => onAction('postuler')} className="flex-1">
+              <FileText className="h-4 w-4 mr-1" /> Postuler
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="ghost" onClick={() => onAction('details')}>
+              <ExternalLink className="h-4 w-4 mr-1" /> Détails
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => onAction('refuser')}>
+              <X className="h-4 w-4 mr-1" /> Refuser
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // Intéressé - proposer visite ou postuler
+    if (statut === 'interesse') {
+      return (
+        <div className="mt-3 space-y-2">
+          <div className="p-2 bg-green-50 dark:bg-green-950 rounded-lg">
+            <p className="text-xs text-green-700 dark:text-green-300 flex items-center gap-1">
+              <Check className="h-3 w-3" /> Vous êtes intéressé(e) par cette offre
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => onAction('planifier_visite')} className="flex-1">
+              <Calendar className="h-4 w-4 mr-1" /> Planifier visite
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} className="flex-1">
+              <User className="h-4 w-4 mr-1" /> Déléguer visite
+            </Button>
+          </div>
+          <Button size="sm" variant="secondary" onClick={() => onAction('postuler')} className="w-full">
+            <FileText className="h-4 w-4 mr-1" /> Postuler directement
+          </Button>
+        </div>
+      );
+    }
+
+    // Visite planifiée - confirmer la visite effectuée
+    if (statut === 'visite_planifiee') {
+      return (
+        <div className="mt-3 space-y-2">
+          <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-lg">
+            <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-1">
+              <Calendar className="h-3 w-3" /> Visite planifiée
+            </p>
+          </div>
+          <Button size="sm" onClick={() => onAction('visite_effectuee')} className="w-full">
+            <Check className="h-4 w-4 mr-1" /> Marquer visite effectuée
+          </Button>
+        </div>
+      );
+    }
+
+    // Visite effectuée - proposer de postuler
+    if (statut === 'visite_effectuee') {
+      return (
+        <div className="mt-3 space-y-2">
+          <div className="p-2 bg-green-50 dark:bg-green-950 rounded-lg">
+            <p className="text-xs text-green-700 dark:text-green-300 flex items-center gap-1">
+              <Check className="h-3 w-3" /> Visite effectuée
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => onAction('deposer_candidature')} className="flex-1">
+              <FileText className="h-4 w-4 mr-1" /> Déposer candidature
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => onAction('demander_aide')} className="flex-1">
+              <User className="h-4 w-4 mr-1" /> Demander aide agent
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // Candidature déposée / En attente
+    if (statut === 'candidature_deposee' || statut === 'en_attente') {
+      return (
+        <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-amber-600 animate-pulse" />
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              En attente de réponse de la régie...
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Candidature acceptée - confirmer pour conclure
+    if (statut === 'acceptee') {
+      return (
+        <div className="mt-3 space-y-2">
+          <div className="p-3 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900 dark:to-emerald-900 rounded-lg">
+            <div className="flex items-center gap-2">
+              <PartyPopper className="h-5 w-5 text-green-600" />
+              <p className="font-semibold text-green-700 dark:text-green-300">
+                🎉 Félicitations ! Candidature acceptée !
+              </p>
+            </div>
+          </div>
+          <Button size="sm" onClick={() => onAction('confirmer_conclure')} className="w-full">
+            <Check className="h-4 w-4 mr-1" /> Confirmer et conclure
+          </Button>
+        </div>
+      );
+    }
+
+    // Bail conclu - en attente validation régie
+    if (statut === 'bail_conclu') {
+      return (
+        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
+          <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+            <Check className="h-4 w-4" />
+            Vous avez confirmé vouloir ce bien. En attente de validation par la régie...
           </p>
         </div>
       );
     }
 
-    return (
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button 
-          size="sm" 
-          variant="default"
-          onClick={() => onAction('interesse')}
-          className="flex-1"
-        >
-          <Heart className="h-4 w-4 mr-1" />
-          Intéressé(e)
-        </Button>
-        <Button 
-          size="sm" 
-          variant="outline"
-          onClick={() => onAction('visite')}
-          className="flex-1"
-        >
-          <Calendar className="h-4 w-4 mr-1" />
-          Visite
-        </Button>
-        <Button 
-          size="sm" 
-          variant="outline"
-          onClick={() => onAction('details')}
-        >
-          <ExternalLink className="h-4 w-4 mr-1" />
-          Détails
-        </Button>
-        <Button 
-          size="sm" 
-          variant="ghost"
-          onClick={() => onAction('refuser')}
-        >
-          <X className="h-4 w-4 mr-1" />
-          Refuser
-        </Button>
-      </div>
-    );
+    // Attente bail
+    if (statut === 'attente_bail') {
+      return (
+        <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950 rounded-lg">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-amber-600 animate-pulse" />
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              L'agent attend le bail de la régie...
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Bail reçu - choisir date signature
+    if (statut === 'bail_recu' && candidature) {
+      const datesProposees = candidature.dates_signature_proposees || [];
+      return (
+        <div className="mt-3 space-y-2">
+          <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+            <p className="text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
+              <FileSignature className="h-4 w-4" />
+              📄 Le bail est prêt ! Choisissez une date de signature.
+            </p>
+          </div>
+          {datesProposees.length > 0 ? (
+            <RadioGroup 
+              value={selectedSignatureDate} 
+              onValueChange={(val) => {
+                setSelectedSignatureDate(val);
+                onAction('choisir_date_signature', parseInt(val));
+              }}
+              className="space-y-2"
+            >
+              {datesProposees.map((d: any, idx: number) => (
+                <div key={idx} className="flex items-center space-x-2 p-2 bg-muted rounded-lg">
+                  <RadioGroupItem value={String(idx)} id={`date-${idx}`} />
+                  <Label htmlFor={`date-${idx}`} className="flex-1 cursor-pointer">
+                    <span className="font-medium">
+                      {format(new Date(d.date), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })}
+                    </span>
+                    <span className="text-muted-foreground ml-2 text-xs">📍 {d.lieu}</span>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          ) : (
+            <p className="text-sm text-muted-foreground p-2">
+              <AlertCircle className="h-4 w-4 inline mr-1" />
+              Votre agent vous proposera des dates prochainement.
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    // Signature planifiée
+    if (statut === 'signature_planifiee' && candidature) {
+      return (
+        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-1">
+          <div className="flex items-center gap-2">
+            <FileSignature className="h-4 w-4 text-blue-600" />
+            <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+              📅 Signature confirmée
+            </p>
+          </div>
+          {candidature.date_signature_choisie && (
+            <p className="text-xs text-blue-600 dark:text-blue-400">
+              {format(new Date(candidature.date_signature_choisie), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })}
+            </p>
+          )}
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
+            <MapPin className="h-3 w-3" />
+            {candidature.lieu_signature || 'Lieu à confirmer'}
+          </p>
+        </div>
+      );
+    }
+
+    // Signature effectuée - attente état des lieux
+    if (statut === 'signature_effectuee') {
+      return (
+        <div className="mt-3 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+          <p className="text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
+            <Check className="h-4 w-4" />
+            ✅ Bail signé ! En attente de la date d'état des lieux...
+          </p>
+        </div>
+      );
+    }
+
+    // État des lieux fixé
+    if (statut === 'etat_lieux_fixe' && candidature) {
+      return (
+        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-1">
+          <div className="flex items-center gap-2">
+            <Key className="h-4 w-4 text-blue-600" />
+            <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+              🔑 État des lieux fixé
+            </p>
+          </div>
+          {candidature.date_etat_lieux && (
+            <p className="text-xs text-blue-600 dark:text-blue-400">
+              {format(new Date(candidature.date_etat_lieux), 'EEEE d MMMM yyyy', { locale: fr })}
+              {candidature.heure_etat_lieux && ` à ${candidature.heure_etat_lieux}`}
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    // Clés remises - Félicitations + avis + recommandation
+    if (statut === 'cles_remises') {
+      return (
+        <div className="mt-3 space-y-3">
+          <div className="p-3 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900 dark:to-emerald-900 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Key className="h-5 w-5 text-green-600" />
+              <p className="font-semibold text-green-700 dark:text-green-300">
+                🔑 🎉 Félicitations ! Les clés vous ont été remises !
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => onAction('avis_google')} className="flex-1">
+              <Star className="h-4 w-4 mr-1" /> Laisser un avis Google
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => onAction('recommander')} className="flex-1">
+              <Mail className="h-4 w-4 mr-1" /> Recommander à des amis
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // Refusée
+    if (statut === 'refusee') {
+      return (
+        <div className="mt-3 p-3 bg-red-50 dark:bg-red-950 rounded-lg">
+          <p className="text-sm text-red-700 dark:text-red-300 flex items-center gap-2">
+            <X className="h-4 w-4" />
+            ❌ Cette offre/candidature a été refusée
+          </p>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   const conversationsList = (
@@ -470,7 +1053,7 @@ const Messagerie = () => {
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
           {selectedMessages.map((msg) => (
-            <Card key={msg.id} className={`p-4 ${msg.sender_type === 'client' ? 'ml-auto max-w-[70%] bg-primary/10' : 'mr-auto max-w-[70%]'}`}>
+            <Card key={msg.id} className={`p-4 ${msg.sender_type === 'client' ? 'ml-auto max-w-[85%] bg-primary/10' : 'mr-auto max-w-[85%]'}`}>
               <div className="flex items-start justify-between mb-2">
                 <p className="font-medium text-sm">
                   {msg.sender_type === 'client' ? 'Vous' : getAgentName(currentConversation?.agent_id)}
@@ -513,7 +1096,7 @@ const Messagerie = () => {
                   <OffreCard offre={offresMap[msg.offre_id]} />
                   <OffreActions 
                     offre={offresMap[msg.offre_id]} 
-                    onAction={(action) => handleOffreAction(msg.offre_id, action)}
+                    onAction={(action, data) => handleOffreAction(msg.offre_id, action, data)}
                   />
                 </>
               )}
@@ -541,6 +1124,147 @@ const Messagerie = () => {
           </Button>
         </div>
       </div>
+
+      {/* Dialog Planifier Visite */}
+      <Dialog open={visitDialogOpen} onOpenChange={setVisitDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>📅 Planifier une visite</DialogTitle>
+            <DialogDescription>
+              Choisissez la date et l'heure de votre visite pour {selectedOffre?.adresse}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="visit-date">Date et heure</Label>
+              <Input
+                id="visit-date"
+                type="datetime-local"
+                value={visitDate}
+                onChange={(e) => setVisitDate(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVisitDialogOpen(false)}>Annuler</Button>
+            <Button onClick={confirmPlanVisit} disabled={!visitDate}>
+              <Calendar className="h-4 w-4 mr-2" /> Confirmer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Déléguer Visite */}
+      <Dialog open={delegateDialogOpen} onOpenChange={setDelegateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>🏠 Déléguer la visite à votre agent</DialogTitle>
+            <DialogDescription>
+              Votre agent effectuera la visite pour vous et vous fera un retour détaillé.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="delegate-date">Date et heure souhaitées</Label>
+              <Input
+                id="delegate-date"
+                type="datetime-local"
+                value={delegateDate}
+                onChange={(e) => setDelegateDate(e.target.value)}
+                min={new Date().toISOString().slice(0, 16)}
+              />
+            </div>
+            <div>
+              <Label htmlFor="delegate-notes">Notes pour l'agent (optionnel)</Label>
+              <Textarea
+                id="delegate-notes"
+                value={delegateNotes}
+                onChange={(e) => setDelegateNotes(e.target.value)}
+                placeholder="Points à vérifier, questions à poser..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDelegateDialogOpen(false)}>Annuler</Button>
+            <Button onClick={confirmDelegateVisit} disabled={!delegateDate}>
+              <User className="h-4 w-4 mr-2" /> Déléguer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Candidature */}
+      <Dialog open={candidatureDialogOpen} onOpenChange={setCandidatureDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>📝 Déposer ma candidature</DialogTitle>
+            <DialogDescription>
+              Soumettez votre candidature pour {selectedOffre?.adresse}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="message-client">Message pour l'agent (optionnel)</Label>
+              <Textarea
+                id="message-client"
+                value={messageClient}
+                onChange={(e) => setMessageClient(e.target.value)}
+                placeholder="Motivations, situation particulière..."
+              />
+            </div>
+            <div className="flex items-start space-x-2">
+              <Checkbox
+                id="conditions"
+                checked={accepteConditions}
+                onCheckedChange={(checked) => setAccepteConditions(checked as boolean)}
+              />
+              <Label htmlFor="conditions" className="text-sm leading-tight cursor-pointer">
+                Je confirme que mon dossier est complet et que les informations fournies sont exactes
+              </Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCandidatureDialogOpen(false)}>Annuler</Button>
+            <Button onClick={confirmCandidature} disabled={!accepteConditions}>
+              <FileText className="h-4 w-4 mr-2" /> Soumettre
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Recommandation */}
+      <Dialog open={recommendationDialogOpen} onOpenChange={setRecommendationDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>📧 Recommander Immo-Rama</DialogTitle>
+            <DialogDescription>
+              Partagez votre expérience avec vos proches ! Entrez jusqu'à 5 adresses email.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {recommendationEmails.map((email, idx) => (
+              <Input
+                key={idx}
+                type="email"
+                placeholder={`Email ${idx + 1}`}
+                value={email}
+                onChange={(e) => {
+                  const newEmails = [...recommendationEmails];
+                  newEmails[idx] = e.target.value;
+                  setRecommendationEmails(newEmails);
+                }}
+              />
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRecommendationDialogOpen(false)}>Annuler</Button>
+            <Button onClick={sendRecommendations}>
+              <Mail className="h-4 w-4 mr-2" /> Envoyer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   ) : (
     <div className="flex items-center justify-center h-full text-muted-foreground">
