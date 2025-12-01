@@ -159,19 +159,20 @@ serve(async (req) => {
     // Send invoice by email automatically
     let emailSent = false;
     console.log('Sending invoice by email to:', email);
+    console.log('Invoice UUID:', invoice.uuid);
     
     try {
+      // AbaNinja API v2 - Send invoice via POST to /send endpoint
       const sendResponse = await fetch(
-        `https://api.abaninja.ch/accounts/${accountUuid}/documents/v2/invoices/${invoice.uuid}/actions`,
+        `https://api.abaninja.ch/accounts/${accountUuid}/documents/v2/invoices/${invoice.uuid}/send`,
         {
-          method: 'PATCH',
+          method: 'POST',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
           body: JSON.stringify({
-            action: 'send',
             channel: 'email',
             recipient: {
               email: email
@@ -189,6 +190,33 @@ serve(async (req) => {
         emailSent = true;
       } else {
         console.warn('Failed to send invoice by email:', sendResponse.status, sendResponseText);
+        
+        // Fallback: Try alternative endpoint format
+        console.log('Trying alternative send endpoint...');
+        const altSendResponse = await fetch(
+          `https://api.abaninja.ch/accounts/${accountUuid}/documents/v2/invoices/${invoice.uuid}/actions/send`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+              channel: 'email',
+              recipientEmail: email
+            })
+          }
+        );
+        
+        const altResponseText = await altSendResponse.text();
+        console.log('Alternative send response status:', altSendResponse.status);
+        console.log('Alternative send response:', altResponseText);
+        
+        if (altSendResponse.ok) {
+          console.log('Invoice sent via alternative endpoint');
+          emailSent = true;
+        }
       }
     } catch (sendErr) {
       console.warn('Error sending invoice by email:', sendErr);
