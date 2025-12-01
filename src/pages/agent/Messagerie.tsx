@@ -1005,7 +1005,7 @@ const Messagerie = () => {
         <div className="space-y-2 max-w-4xl mx-auto">
           {/* Header qui défile avec les messages */}
           {currentConversation && (
-            <div className="mb-6 pb-4 border-b border-border/30">
+            <div className="mb-4 pb-3 border-b border-border/30">
               <ChatHeader
                 name={getContactInfo(currentConversation).name}
                 avatarUrl={null}

@@ -89,18 +89,9 @@ export function MessagingLayout({
 
       {/* Zone de chat */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
-        {/* Bouton flottant pour ouvrir les conversations sur mobile */}
+        {/* Indicateur swipe discret sur mobile */}
         {selectedConversation && (
-          <div className="absolute top-2 left-2 z-10 lg:hidden">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleOpenConversations}
-              className="bg-background/80 backdrop-blur-sm rounded-full shadow-sm"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-          </div>
+          <div className="lg:hidden absolute left-0 top-1/2 -translate-y-1/2 w-1 h-16 bg-muted-foreground/20 rounded-r-full pointer-events-none z-10" />
         )}
 
         {/* Bouton menu mobile quand aucune conversation n'est sélectionnée */}
