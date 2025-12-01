@@ -138,15 +138,35 @@ const Messagerie = () => {
       const agentIdStr = agentData.id;
       setAgentId(agentIdStr);
 
-      const { data: convData, error } = await supabase
+      // Récupérer les clients actuellement assignés à cet agent via client_agents
+      const { data: clientAgentsData } = await supabase
+        .from('client_agents')
+        .select('client_id')
+        .eq('agent_id', agentIdStr);
+
+      const assignedClientIds = clientAgentsData?.map(ca => ca.client_id) || [];
+
+      // Charger les conversations client-agent avec clients assignés uniquement
+      const { data: clientConvs } = await supabase
         .from('conversations')
         .select('*')
         .eq('agent_id', agentIdStr)
-        .order('last_message_at', { ascending: false });
+        .eq('conversation_type', 'client-agent')
+        .in('client_id', assignedClientIds);
 
-      if (error) throw error;
+      // Charger les conversations admin-agent (pas de filtre client)
+      const { data: adminConvs } = await supabase
+        .from('conversations')
+        .select('*')
+        .eq('agent_id', agentIdStr)
+        .eq('conversation_type', 'admin-agent');
 
-      setConversations(convData || []);
+      // Combiner les deux types de conversations et trier par date
+      const convData = [...(clientConvs || []), ...(adminConvs || [])].sort(
+        (a, b) => new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime()
+      );
+
+      setConversations(convData);
 
       const clientIds = convData?.filter(c => c.client_id).map(c => c.client_id) || [];
       const adminUserIds = convData?.filter(c => c.admin_user_id).map(c => c.admin_user_id) || [];
@@ -259,6 +279,26 @@ const Messagerie = () => {
     if ((!messageText.trim() && !pendingAttachment) || !selectedConv || !user || !agentId) return;
 
     try {
+      // Vérifier si c'est une conversation client et si l'agent est toujours assigné
+      const currentConversation = conversations.find(c => c.id === selectedConv);
+      if (currentConversation?.conversation_type === 'client-agent' && currentConversation?.client_id) {
+        const { data: assignment } = await supabase
+          .from('client_agents')
+          .select('id')
+          .eq('agent_id', agentId)
+          .eq('client_id', currentConversation.client_id)
+          .maybeSingle();
+          
+        if (!assignment) {
+          toast({
+            title: "Accès refusé",
+            description: "Vous n'êtes plus assigné à ce client",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+
       const { error } = await supabase
         .from('messages')
         .insert({
