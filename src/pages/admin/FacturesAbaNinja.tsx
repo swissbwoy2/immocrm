@@ -62,11 +62,11 @@ export default function FacturesAbaNinja() {
     try {
       setLoading(true);
 
-      // Load all demandes that have AbaNinja invoice info
+      // Load all demandes that have invoice info OR are in invoiced/paid status
       const { data, error } = await supabase
         .from('demandes_mandat')
         .select('*')
-        .not('abaninja_invoice_id', 'is', null)
+        .or('abaninja_invoice_id.not.is.null,statut.in.(facture_envoyee,paye,active)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
