@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Users, UserPlus, Upload, Trash2, Pencil } from 'lucide-react';
+import { Users, UserPlus, Upload, Trash2, Pencil, Users2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CSVImportDialog } from '@/components/CSVImportDialog';
@@ -46,6 +47,8 @@ export default function Assignations() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkSelectedClients, setBulkSelectedClients] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -284,6 +287,76 @@ export default function Assignations() {
     }
   };
 
+  const handleBulkAssign = async () => {
+    if (bulkSelectedClients.length === 0 || !selectedAgent) {
+      toast({
+        title: 'Erreur',
+        description: 'Veuillez sélectionner au moins un client et un agent',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const commissionValue = selectedSplit === '45-55' ? 45 : 60;
+      let successCount = 0;
+
+      for (const clientId of bulkSelectedClients) {
+        const { error } = await supabase
+          .from('clients')
+          .update({
+            agent_id: selectedAgent,
+            commission_split: commissionValue,
+          })
+          .eq('id', clientId);
+
+        if (!error) {
+          successCount++;
+          await (supabase.rpc as any)('increment_agent_clients', { agent_uuid: selectedAgent });
+        }
+      }
+
+      // Update local state
+      setClients(clients.map(c =>
+        bulkSelectedClients.includes(c.id)
+          ? { ...c, agent_id: selectedAgent, commission_split: commissionValue }
+          : c
+      ));
+
+      setBulkSelectedClients([]);
+      setBulkMode(false);
+      setSelectedAgent('');
+
+      toast({
+        title: 'Assignation en masse réussie',
+        description: `${successCount} client(s) ont été assignés à ${getAgentName(selectedAgent)}`,
+      });
+    } catch (error) {
+      console.error('Error bulk assigning clients:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Une erreur est survenue lors de l\'assignation en masse',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (bulkSelectedClients.length === unassignedClients.length) {
+      setBulkSelectedClients([]);
+    } else {
+      setBulkSelectedClients(unassignedClients.map(c => c.id));
+    }
+  };
+
+  const toggleClientSelection = (clientId: string) => {
+    setBulkSelectedClients(prev =>
+      prev.includes(clientId)
+        ? prev.filter(id => id !== clientId)
+        : [...prev, clientId]
+    );
+  };
+
   const getAgentName = (agentId: string) => {
     const agent = agents.find(a => a.id === agentId);
     return agent ? `${agent.profile.prenom} ${agent.profile.nom}` : 'Agent inconnu';
@@ -376,78 +449,180 @@ export default function Assignations() {
           {unassignedClients.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Assigner un client</CardTitle>
-                <CardDescription>
-                  Sélectionnez un client sans agent et assignez-le à un agent
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Assigner des clients</CardTitle>
+                    <CardDescription>
+                      Sélectionnez un ou plusieurs clients sans agent et assignez-les à un agent
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant={bulkMode ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setBulkMode(!bulkMode);
+                      setBulkSelectedClients([]);
+                    }}
+                  >
+                    <Users2 className="w-4 h-4 mr-2" />
+                    Mode masse
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Client</Label>
-                    <Select value={selectedClient || ''} onValueChange={setSelectedClient}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choisir un client" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {unassignedClients.map(client => {
-                          const profile = clientProfiles.get(client.user_id);
-                          const displayName = profile 
-                            ? `${profile.prenom} ${profile.nom}` 
-                            : `Client ID: ${client.id.substring(0, 8)}...`;
-                          return (
-                            <SelectItem key={client.id} value={client.id}>
-                              {displayName}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Agent</Label>
-                    <Select value={selectedAgent} onValueChange={setSelectedAgent}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Choisir un agent" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {agents.map(agent => (
-                          <SelectItem key={agent.id} value={agent.id}>
-                            {agent.profile.prenom} {agent.profile.nom} ({getClientsByAgent(agent.id).length} clients)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Commission Split</Label>
-                    <RadioGroup value={selectedSplit} onValueChange={(v) => setSelectedSplit(v as '45-55' | '60-40')}>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="45-55" id="split-45" />
-                        <Label htmlFor="split-45" className="font-normal cursor-pointer">
-                          45% Agent / 55% Agence
-                        </Label>
+                {bulkMode ? (
+                  <div className="space-y-4">
+                    {/* Header avec "Tout sélectionner" */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={bulkSelectedClients.length === unassignedClients.length && unassignedClients.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                        <span className="text-sm font-medium">
+                          Tout sélectionner ({bulkSelectedClients.length}/{unassignedClients.length})
+                        </span>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="60-40" id="split-60" />
-                        <Label htmlFor="split-60" className="font-normal cursor-pointer">
-                          60% Agent / 40% Agence
-                        </Label>
+                    </div>
+                    
+                    {/* Liste scrollable des clients */}
+                    <div className="max-h-64 overflow-y-auto border rounded-md p-2 space-y-2">
+                      {unassignedClients.map(client => {
+                        const profile = clientProfiles.get(client.user_id);
+                        return (
+                          <div key={client.id} className="flex items-center gap-2 p-2 hover:bg-muted/50 rounded">
+                            <Checkbox
+                              checked={bulkSelectedClients.includes(client.id)}
+                              onCheckedChange={() => toggleClientSelection(client.id)}
+                            />
+                            <span className="text-sm flex-1">
+                              {profile ? `${profile.prenom} ${profile.nom}` : 'Client inconnu'}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {profile?.email}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Sélection agent et commission */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Agent</Label>
+                        <Select value={selectedAgent} onValueChange={setSelectedAgent}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choisir un agent" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {agents.map(agent => (
+                              <SelectItem key={agent.id} value={agent.id}>
+                                {agent.profile.prenom} {agent.profile.nom} ({getClientsByAgent(agent.id).length} clients)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </RadioGroup>
-                  </div>
-                </div>
 
-                <Button 
-                  onClick={handleAssign} 
-                  disabled={!selectedClient || !selectedAgent}
-                  className="w-full md:w-auto"
-                >
-                  <UserPlus className="w-4 h-4 mr-2" />
-                  Assigner le client
-                </Button>
+                      <div className="space-y-2">
+                        <Label>Commission Split</Label>
+                        <RadioGroup value={selectedSplit} onValueChange={(v) => setSelectedSplit(v as '45-55' | '60-40')}>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="45-55" id="bulk-split-45" />
+                            <Label htmlFor="bulk-split-45" className="font-normal cursor-pointer">
+                              45% Agent / 55% Agence
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="60-40" id="bulk-split-60" />
+                            <Label htmlFor="bulk-split-60" className="font-normal cursor-pointer">
+                              60% Agent / 40% Agence
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                    </div>
+                    
+                    {/* Bouton d'assignation en masse */}
+                    <Button
+                      onClick={handleBulkAssign}
+                      disabled={bulkSelectedClients.length === 0 || !selectedAgent}
+                      className="w-full"
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Assigner {bulkSelectedClients.length} client(s)
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Client</Label>
+                        <Select value={selectedClient || ''} onValueChange={setSelectedClient}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choisir un client" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {unassignedClients.map(client => {
+                              const profile = clientProfiles.get(client.user_id);
+                              const displayName = profile 
+                                ? `${profile.prenom} ${profile.nom}` 
+                                : `Client ID: ${client.id.substring(0, 8)}...`;
+                              return (
+                                <SelectItem key={client.id} value={client.id}>
+                                  {displayName}
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Agent</Label>
+                        <Select value={selectedAgent} onValueChange={setSelectedAgent}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choisir un agent" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {agents.map(agent => (
+                              <SelectItem key={agent.id} value={agent.id}>
+                                {agent.profile.prenom} {agent.profile.nom} ({getClientsByAgent(agent.id).length} clients)
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Commission Split</Label>
+                        <RadioGroup value={selectedSplit} onValueChange={(v) => setSelectedSplit(v as '45-55' | '60-40')}>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="45-55" id="split-45" />
+                            <Label htmlFor="split-45" className="font-normal cursor-pointer">
+                              45% Agent / 55% Agence
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="60-40" id="split-60" />
+                            <Label htmlFor="split-60" className="font-normal cursor-pointer">
+                              60% Agent / 40% Agence
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                    </div>
+
+                    <Button 
+                      onClick={handleAssign} 
+                      disabled={!selectedClient || !selectedAgent}
+                      className="w-full md:w-auto"
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Assigner le client
+                    </Button>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}
