@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users } from 'lucide-react';
+import { ClientActivityStats } from '@/components/admin/ClientActivityStats';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -611,7 +612,7 @@ export default function ClientDetail() {
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
-            </AlertDialog>
+          </AlertDialog>
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="w-full sm:w-auto" onClick={handleEditClick}>
@@ -1030,6 +1031,12 @@ export default function ClientDetail() {
         <SolvabilityAlert 
           result={solvabilityResult} 
           className="mb-6"
+        />
+
+        {/* Client Activity Stats */}
+        <ClientActivityStats 
+          clientId={client.id} 
+          clientUserId={client.user_id}
         />
 
         {/* Candidates Manager */}
