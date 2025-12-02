@@ -213,6 +213,31 @@ const EnvoyerOffre = () => {
 
           if (convError) throw convError;
           conversationId = newConv.id;
+
+          // Add agent to conversation_agents for RLS permissions
+          await supabase
+            .from('conversation_agents')
+            .insert({
+              conversation_id: conversationId,
+              agent_id: agent.id,
+            });
+        } else {
+          // Ensure agent is in conversation_agents for existing conversations
+          const { data: existingAgent } = await supabase
+            .from('conversation_agents')
+            .select('id')
+            .eq('conversation_id', conversationId)
+            .eq('agent_id', agent.id)
+            .maybeSingle();
+
+          if (!existingAgent) {
+            await supabase
+              .from('conversation_agents')
+              .insert({
+                conversation_id: conversationId,
+                agent_id: agent.id,
+              });
+          }
         }
 
         // Send message with offer
