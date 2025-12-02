@@ -128,247 +128,285 @@ export function AgentDayEvents({
         </p>
       </div>
 
-      <ScrollArea className="flex-1 p-4">
-        {allItems.length === 0 ? (
-          <p className="text-muted-foreground text-center py-8">
-            Aucun événement ce jour
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {allItems.map((item, idx) => {
-              const isEvent = item.type === 'event';
-              const data = item.data;
-              const eventDate = new Date(isEvent ? data.event_date : data.date_visite);
+      <ScrollArea className="flex-1">
+        <div className="p-4">
+          {allItems.length === 0 ? (
+            <p className="text-muted-foreground text-center py-8">
+              Aucun événement ce jour
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {allItems.map((item, idx) => {
+                const isEvent = item.type === 'event';
+                const data = item.data;
+                const eventDate = new Date(isEvent ? data.event_date : data.date_visite);
 
-              if (!isEvent) {
-                // Render visite
-                const urgency = getVisiteUrgency(data.date_visite);
-                const isUrgent = urgency?.level === 'critical';
-                const isPast = data.statut === 'effectuee' || new Date(data.date_visite) < new Date();
+                if (!isEvent) {
+                  // Render visite
+                  const urgency = getVisiteUrgency(data.date_visite);
+                  const isUrgent = urgency?.level === 'critical';
+                  const isPast = data.statut === 'effectuee' || new Date(data.date_visite) < new Date();
 
+                  return (
+                    <div
+                      key={`visite-${data.id}-${idx}`}
+                      role="button"
+                      tabIndex={0}
+                      className={cn(
+                        'p-3 rounded-lg border cursor-pointer hover:shadow-md transition-all select-none',
+                        'active:scale-[0.99]',
+                        isUrgent ? 'border-destructive/50 bg-destructive/5' : 
+                        data.est_deleguee ? 'border-green-500/50 bg-green-500/5 ring-2 ring-green-400' : 
+                        'bg-blue-500/10 border-blue-500/30',
+                        isPast && 'opacity-60'
+                      )}
+                      onClick={() => {
+                        console.log('Visite clicked:', data.id);
+                        onOpenDetail(data);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onOpenDetail(data);
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="text-xs pointer-events-none">Visite</Badge>
+                            {data.est_deleguee && (
+                              <Badge className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 pointer-events-none">Déléguée</Badge>
+                            )}
+                            {urgency && !isPast && (
+                              <Badge variant={urgency.color} className={cn("text-xs pointer-events-none", isUrgent && "animate-pulse")}>
+                                {isUrgent && <AlertTriangle className="h-3 w-3 mr-1" />}
+                                {urgency.label}
+                              </Badge>
+                            )}
+                            {isPast && (
+                              <Badge variant="secondary" className="text-xs pointer-events-none">
+                                {data.statut === 'effectuee' ? 'Effectuée' : 'Passée'}
+                              </Badge>
+                            )}
+                          </div>
+                          <h4 className="font-medium mt-1 truncate">{data.adresse}</h4>
+                          <p className="text-sm flex items-center gap-1 mt-1 text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {format(eventDate, 'HH:mm')}
+                          </p>
+                          {data.client_profile && (
+                            <p className="text-xs flex items-center gap-1 mt-1 text-muted-foreground">
+                              <User className="h-3 w-3" />
+                              {data.est_deleguee && 'Pour '}
+                              {data.client_profile.prenom} {data.client_profile.nom}
+                            </p>
+                          )}
+                          {data.offres && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {data.offres.pieces} pièces • {data.offres.surface}m² • {data.offres.prix} CHF
+                            </p>
+                          )}
+                          {data.recommandation_agent && (
+                            <div className="mt-2">
+                              {data.recommandation_agent === 'recommande' && (
+                                <Badge className="text-xs bg-green-100 text-green-700 pointer-events-none">
+                                  <ThumbsUp className="h-3 w-3 mr-1" /> Recommandé
+                                </Badge>
+                              )}
+                              {data.recommandation_agent === 'neutre' && (
+                                <Badge variant="secondary" className="text-xs pointer-events-none">
+                                  <Minus className="h-3 w-3 mr-1" /> Neutre
+                                </Badge>
+                              )}
+                              {data.recommandation_agent === 'deconseille' && (
+                                <Badge variant="destructive" className="text-xs pointer-events-none">
+                                  <ThumbsDown className="h-3 w-3 mr-1" /> Déconseillé
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0 relative z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            console.log('Eye button clicked:', data.id);
+                            onOpenDetail(data);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {data.statut === 'planifiee' && !isPast && (
+                        <div className="mt-3 pt-3 border-t border-current/10">
+                          <Button
+                            size="sm"
+                            variant={isUrgent ? "destructive" : "default"}
+                            className="w-full text-xs h-8 relative z-10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              console.log('Marquer effectuee clicked:', data.id);
+                              onMarquerEffectuee(data);
+                            }}
+                          >
+                            {data.est_deleguee ? (
+                              <>
+                                <MessageSquare className="h-3 w-3 mr-1" />
+                                Donner mon feedback
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Marquer effectuée
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Render calendar event
                 return (
                   <div
-                    key={`visite-${data.id}-${idx}`}
+                    key={`event-${data.id}-${idx}`}
+                    role="button"
+                    tabIndex={0}
                     className={cn(
-                      'p-3 rounded-lg border cursor-pointer hover:shadow-md transition-shadow',
-                      isUrgent ? 'border-destructive/50 bg-destructive/5' : 
-                      data.est_deleguee ? 'border-green-500/50 bg-green-500/5 ring-1 ring-green-300' : 
-                      'bg-blue-500/10 border-blue-500/30',
-                      isPast && 'opacity-60'
+                      'p-3 rounded-lg border cursor-pointer hover:shadow-md transition-all select-none',
+                      'active:scale-[0.99]',
+                      eventTypeColors[item.eventType]
                     )}
-                    onClick={() => onOpenDetail(data)}
+                    onClick={() => {
+                      console.log('Event clicked:', data.id);
+                      onOpenEventDetail?.(data);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onOpenEventDetail?.(data);
+                      }
+                    }}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className="text-xs">Visite</Badge>
-                          {data.est_deleguee && (
-                            <Badge className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">Déléguée</Badge>
-                          )}
-                          {urgency && !isPast && (
-                            <Badge variant={urgency.color} className={cn("text-xs", isUrgent && "animate-pulse")}>
-                              {isUrgent && <AlertTriangle className="h-3 w-3 mr-1" />}
-                              {urgency.label}
+                          <Badge variant="outline" className="text-xs pointer-events-none">
+                            {eventTypeLabels[item.eventType]}
+                          </Badge>
+                          {data.priority && (
+                            <Badge className={cn('text-xs pointer-events-none', priorityColors[data.priority])}>
+                              {data.priority}
                             </Badge>
                           )}
-                          {isPast && (
-                            <Badge variant="secondary" className="text-xs">
-                              {data.statut === 'effectuee' ? 'Effectuée' : 'Passée'}
-                            </Badge>
+                          {data.status && (
+                            <span className="flex items-center gap-1 text-xs pointer-events-none">
+                              {statusIcons[data.status]}
+                              {data.status}
+                            </span>
                           )}
                         </div>
-                        <h4 className="font-medium mt-1 truncate">{data.adresse}</h4>
-                        <p className="text-sm flex items-center gap-1 mt-1 text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {format(eventDate, 'HH:mm')}
-                        </p>
-                        {data.client_profile && (
-                          <p className="text-xs flex items-center gap-1 mt-1 text-muted-foreground">
+                        <h4 className="font-medium mt-1 truncate">{data.title}</h4>
+                        {!data.all_day && (
+                          <p className="text-sm flex items-center gap-1 mt-1 text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {format(eventDate, 'HH:mm')}
+                          </p>
+                        )}
+                        {data.description && (
+                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                            {data.description}
+                          </p>
+                        )}
+                        {data.client_id && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                             <User className="h-3 w-3" />
-                            {data.est_deleguee && 'Pour '}
-                            {data.client_profile.prenom} {data.client_profile.nom}
-                          </p>
-                        )}
-                        {data.offres && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {data.offres.pieces} pièces • {data.offres.surface}m² • {data.offres.prix} CHF
-                          </p>
-                        )}
-                        {data.recommandation_agent && (
-                          <div className="mt-2">
-                            {data.recommandation_agent === 'recommande' && (
-                              <Badge className="text-xs bg-green-100 text-green-700">
-                                <ThumbsUp className="h-3 w-3 mr-1" /> Recommandé
-                              </Badge>
-                            )}
-                            {data.recommandation_agent === 'neutre' && (
-                              <Badge variant="secondary" className="text-xs">
-                                <Minus className="h-3 w-3 mr-1" /> Neutre
-                              </Badge>
-                            )}
-                            {data.recommandation_agent === 'deconseille' && (
-                              <Badge variant="destructive" className="text-xs">
-                                <ThumbsDown className="h-3 w-3 mr-1" /> Déconseillé
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenDetail(data);
-                        }}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    {data.statut === 'planifiee' && !isPast && (
-                      <div className="mt-3 pt-3 border-t border-current/10">
-                        <Button
-                          size="sm"
-                          variant={isUrgent ? "destructive" : "default"}
-                          className="w-full text-xs h-8"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onMarquerEffectuee(data);
-                          }}
-                        >
-                          {data.est_deleguee ? (
-                            <>
-                              <MessageSquare className="h-3 w-3 mr-1" />
-                              Donner mon feedback
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Marquer effectuée
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-
-              // Render calendar event
-              return (
-                <div
-                  key={`event-${data.id}-${idx}`}
-                  className={cn(
-                    'p-3 rounded-lg border cursor-pointer hover:shadow-md transition-shadow',
-                    eventTypeColors[item.eventType]
-                  )}
-                  onClick={() => onOpenEventDetail?.(data)}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="outline" className="text-xs">
-                          {eventTypeLabels[item.eventType]}
-                        </Badge>
-                        {data.priority && (
-                          <Badge className={cn('text-xs', priorityColors[data.priority])}>
-                            {data.priority}
-                          </Badge>
-                        )}
-                        {data.status && (
-                          <span className="flex items-center gap-1 text-xs">
-                            {statusIcons[data.status]}
-                            {data.status}
+                            {getClientName(data.client_id)}
                           </span>
                         )}
                       </div>
-                      <h4 className="font-medium mt-1 truncate">{data.title}</h4>
-                      {!data.all_day && (
-                        <p className="text-sm flex items-center gap-1 mt-1 text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {format(eventDate, 'HH:mm')}
-                        </p>
-                      )}
-                      {data.description && (
-                        <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                          {data.description}
-                        </p>
-                      )}
-                      {data.client_id && (
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                          <User className="h-3 w-3" />
-                          {getClientName(data.client_id)}
-                        </span>
-                      )}
+
+                      <div className="flex flex-col gap-1 relative z-10">
+                        {onEdit && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              console.log('Edit clicked:', data.id);
+                              onEdit(data);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {onDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              console.log('Delete clicked:', data.id);
+                              onDelete(data.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex flex-col gap-1">
-                      {onEdit && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-primary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit(data);
-                          }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {onDelete && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(data.id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-
-                  {onStatusChange && data.status !== 'effectue' && (
-                    <div className="flex gap-2 mt-3 pt-3 border-t border-current/10">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-xs h-7"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onStatusChange(data.id, 'effectue');
-                        }}
-                      >
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Effectué
-                      </Button>
-                      {data.status !== 'annule' && (
+                    {onStatusChange && data.status !== 'effectue' && (
+                      <div className="flex gap-2 mt-3 pt-3 border-t border-current/10 relative z-10">
                         <Button
                           size="sm"
                           variant="outline"
                           className="text-xs h-7"
                           onClick={(e) => {
                             e.stopPropagation();
-                            onStatusChange(data.id, 'annule');
+                            e.preventDefault();
+                            console.log('Status effectue clicked:', data.id);
+                            onStatusChange(data.id, 'effectue');
                           }}
                         >
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Annuler
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Effectué
                         </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+                        {data.status !== 'annule' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-xs h-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              console.log('Status annule clicked:', data.id);
+                              onStatusChange(data.id, 'annule');
+                            }}
+                          >
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Annuler
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </ScrollArea>
     </div>
   );
