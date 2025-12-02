@@ -1165,6 +1165,72 @@ const OffresRecues = () => {
                   </div>
                 )}
 
+                {/* Section Visite planifiée/effectuée */}
+                {(() => {
+                  const visiteForOffre = visites.find(v => v.offre_id === selectedOffre.id);
+                  if (!visiteForOffre) return null;
+                  
+                  return (
+                    <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <Calendar className="h-5 w-5 text-blue-600" />
+                        {visiteForOffre.statut === 'effectuee' ? '✅ Visite effectuée' : '📅 Visite planifiée'}
+                        {visiteForOffre.est_deleguee && (
+                          <Badge variant="outline" className="ml-2 text-xs">Déléguée à l'agent</Badge>
+                        )}
+                      </h4>
+                      <div className="space-y-3">
+                        {/* Date et heure complètes */}
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">
+                            {new Date(visiteForOffre.date_visite).toLocaleDateString('fr-FR', {
+                              weekday: 'long',
+                              day: 'numeric', 
+                              month: 'long',
+                              year: 'numeric'
+                            })} à {new Date(visiteForOffre.date_visite).toLocaleTimeString('fr-FR', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                        
+                        {/* Notes de l'agent sur la visite */}
+                        {visiteForOffre.notes && (
+                          <div className="mt-2 p-3 bg-white/50 dark:bg-black/20 rounded">
+                            <p className="text-sm font-medium mb-1">📝 Notes :</p>
+                            <p className="text-sm text-muted-foreground">{visiteForOffre.notes}</p>
+                          </div>
+                        )}
+                        
+                        {/* Feedback agent après visite */}
+                        {visiteForOffre.feedback_agent && (
+                          <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded border border-yellow-200 dark:border-yellow-800">
+                            <p className="text-sm font-medium mb-1">💬 Retour de l'agent après visite :</p>
+                            <p className="text-sm">{visiteForOffre.feedback_agent}</p>
+                          </div>
+                        )}
+                        
+                        {/* Recommandation de l'agent */}
+                        {visiteForOffre.recommandation_agent && (
+                          <div className="mt-2">
+                            <Badge variant={
+                              visiteForOffre.recommandation_agent === 'fortement_recommande' ? 'default' :
+                              visiteForOffre.recommandation_agent === 'recommande' ? 'secondary' : 'outline'
+                            } className="text-sm">
+                              {visiteForOffre.recommandation_agent === 'fortement_recommande' && '⭐⭐⭐ Fortement recommandé'}
+                              {visiteForOffre.recommandation_agent === 'recommande' && '⭐⭐ Recommandé'}
+                              {visiteForOffre.recommandation_agent === 'neutre' && '⭐ Neutre'}
+                              {visiteForOffre.recommandation_agent === 'non_recommande' && '❌ Non recommandé'}
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {/* Actions */}
                 <div className="flex gap-2 flex-wrap pt-4 border-t">
                   {selectedOffre.lien_annonce && (
