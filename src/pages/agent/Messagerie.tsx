@@ -14,10 +14,11 @@ import {
   DialogFooter 
 } from "@/components/ui/dialog";
 import { 
-  Search, Home, ExternalLink, Send,
+  Search, Home, Send,
   Check, X, Clock, FileSignature, Key, Calendar, Plus, Trash2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploader";
@@ -764,15 +765,9 @@ const Messagerie = () => {
         </div>
       </div>
       {offre.lien_annonce && (
-        <a 
-          href={offre.lien_annonce} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-2"
-        >
-          <ExternalLink className="h-3 w-3" />
-          Voir l'annonce complète
-        </a>
+        <div className="mt-2">
+          <LinkPreviewCard url={offre.lien_annonce} />
+        </div>
       )}
     </div>
   );

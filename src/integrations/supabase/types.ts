@@ -1263,6 +1263,42 @@ export type Database = {
         }
         Relationships: []
       }
+      link_previews: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          favicon_url: string | null
+          fetched_at: string | null
+          id: string
+          image_url: string | null
+          site_name: string | null
+          title: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          favicon_url?: string | null
+          fetched_at?: string | null
+          id?: string
+          image_url?: string | null
+          site_name?: string | null
+          title?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          favicon_url?: string | null
+          fetched_at?: string | null
+          id?: string
+          image_url?: string | null
+          site_name?: string | null
+          title?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           attachment_name: string | null

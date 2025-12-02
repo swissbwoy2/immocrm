@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { 
-  MapPin, Calendar, Square, Home, FileText, ThumbsUp, ThumbsDown, ExternalLink, 
+  MapPin, Calendar, Square, Home, FileText, ThumbsUp, ThumbsDown, 
   PartyPopper, AlertTriangle, Clock, Check, Key, Star, Mail, MapPinned, Sparkles,
   FileSignature, Building2, CalendarCheck, AlertCircle, ChevronDown, ChevronUp,
   MessageSquare, User, Phone
@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { CandidatureWorkflowTimeline } from "@/components/CandidatureWorkflowTimeline";
+import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { useNavigate } from "react-router-dom";
 
 const WORKFLOW_STATUTS = {
@@ -420,14 +421,7 @@ const MesCandidatures = () => {
                             Contacter mon agent
                           </Button>
                           {offre.lien_annonce && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={(e) => { e.stopPropagation(); window.open(offre.lien_annonce, '_blank'); }}
-                            >
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              Voir l'annonce
-                            </Button>
+                            <LinkPreviewCard url={offre.lien_annonce} />
                           )}
                         </div>
 
