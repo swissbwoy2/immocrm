@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar, Pencil, Trash2, ExternalLink, MapPin, Home, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,49 @@ import { EventForm, EventFormData } from '@/components/calendar/EventForm';
 import { AgentDayEvents } from '@/components/calendar/AgentDayEvents';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
+
+const candidatureStatusLabels: Record<string, string> = {
+  en_attente: 'En attente',
+  acceptee: 'Acceptée',
+  bail_conclu: 'Client confirme',
+  attente_bail: 'Validation régie',
+  bail_recu: 'Bail reçu',
+  signature_planifiee: 'Date choisie',
+  signature_effectuee: 'Bail signé',
+  etat_lieux_fixe: 'EDL fixé',
+  cles_remises: 'Clés remises',
+  refusee: 'Refusée',
+};
+
+const nextStatusOptions: Record<string, { value: string; label: string }[]> = {
+  en_attente: [
+    { value: 'acceptee', label: 'Accepter la candidature' },
+    { value: 'refusee', label: 'Refuser la candidature' },
+  ],
+  acceptee: [
+    { value: 'bail_conclu', label: 'Client confirme vouloir le bien' },
+    { value: 'refusee', label: 'Refuser la candidature' },
+  ],
+  bail_conclu: [
+    { value: 'attente_bail', label: 'En attente de validation régie' },
+  ],
+  attente_bail: [
+    { value: 'bail_recu', label: 'Bail reçu de la régie' },
+  ],
+  bail_recu: [
+    { value: 'signature_planifiee', label: 'Date de signature choisie' },
+  ],
+  signature_planifiee: [
+    { value: 'signature_effectuee', label: 'Bail signé' },
+  ],
+  signature_effectuee: [
+    { value: 'etat_lieux_fixe', label: 'État des lieux fixé' },
+  ],
+  etat_lieux_fixe: [
+    { value: 'cles_remises', label: 'Clés remises' },
+  ],
+};
 
 interface Client {
   id: string;
@@ -123,6 +166,24 @@ export default function AgentCalendrier() {
           : Promise.resolve({ data: [] }),
       ]);
 
+      // Get candidatures for visites with offre_id
+      const offreIds = visitesRes.data?.map(v => v.offre_id).filter(Boolean) || [];
+      const clientIdsFromVisites = visitesRes.data?.map(v => v.client_id).filter(Boolean) || [];
+      
+      let candidaturesMap = new Map();
+      if (offreIds.length > 0) {
+        const { data: candidatures } = await supabase
+          .from('candidatures')
+          .select('*')
+          .in('offre_id', offreIds)
+          .in('client_id', clientIdsFromVisites);
+        
+        candidatures?.forEach(c => {
+          const key = `${c.offre_id}-${c.client_id}`;
+          candidaturesMap.set(key, c);
+        });
+      }
+
       // Get client profiles
       const clientUserIds = visitesRes.data?.map(v => v.clients?.user_id).filter(Boolean) || [];
       const { data: profiles } = await supabase
@@ -134,7 +195,8 @@ export default function AgentCalendrier() {
 
       const visitesWithProfiles = visitesRes.data?.map(v => ({
         ...v,
-        client_profile: profilesMap.get(v.clients?.user_id)
+        client_profile: profilesMap.get(v.clients?.user_id),
+        candidature: candidaturesMap.get(`${v.offre_id}-${v.client_id}`) || null
       })) || [];
 
       setEvents(eventsRes.data || []);
@@ -145,6 +207,24 @@ export default function AgentCalendrier() {
       toast.error('Erreur lors du chargement');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Update candidature status
+  const handleUpdateCandidatureStatus = async (candidatureId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('candidatures')
+        .update({ statut: newStatus })
+        .eq('id', candidatureId);
+      
+      if (error) throw error;
+      
+      toast.success('Statut mis à jour');
+      loadData();
+    } catch (error: any) {
+      console.error('Error updating candidature:', error);
+      toast.error('Erreur lors de la mise à jour');
     }
   };
 
@@ -731,33 +811,40 @@ export default function AgentCalendrier() {
         </DialogContent>
       </Dialog>
 
-      {/* Detail dialog */}
+      {/* Detail dialog enrichi */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
               Détails de la visite
-              {selectedVisite?.est_deleguee && <Badge variant="outline">Déléguée</Badge>}
+              {selectedVisite?.est_deleguee && <Badge className="bg-green-600 text-white">Visite déléguée</Badge>}
               {selectedVisite?.statut === 'effectuee' && <Badge variant="secondary">Effectuée</Badge>}
             </DialogTitle>
           </DialogHeader>
 
           {selectedVisite && (
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* En-tête avec adresse et date/heure */}
               <div className="p-4 bg-muted rounded-lg">
-                <h4 className="font-semibold text-lg">{selectedVisite.adresse}</h4>
-                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    {new Date(selectedVisite.date_visite).toLocaleDateString('fr-CH')}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    {new Date(selectedVisite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <h4 className="font-semibold text-lg">{selectedVisite.adresse}</h4>
+                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-4 w-4" />
+                        {format(new Date(selectedVisite.date_visite), 'EEEE d MMMM yyyy', { locale: fr })}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        {format(new Date(selectedVisite.date_visite), 'HH:mm')}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
+              {/* Client */}
               {selectedVisite.client_profile && (
                 <div className="space-y-2">
                   <h5 className="font-medium flex items-center gap-2">
@@ -775,28 +862,168 @@ export default function AgentCalendrier() {
                 </div>
               )}
 
+              {/* SECTION OFFRE COMPLÈTE */}
               {selectedVisite.offres && (
-                <div className="space-y-2">
-                  <h5 className="font-medium">📋 Détails du bien</h5>
-                  <div className="p-3 border rounded-lg space-y-2">
-                    <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="space-y-3">
+                  <h5 className="font-medium flex items-center gap-2">
+                    <Home className="h-4 w-4" />
+                    Détails de l'offre envoyée
+                  </h5>
+                  <div className="p-4 border rounded-lg space-y-4">
+                    {/* Lien de l'annonce */}
+                    {selectedVisite.offres.lien_annonce && (
                       <div>
-                        <span className="text-muted-foreground">Pièces:</span>
-                        <span className="ml-1 font-medium">{selectedVisite.offres.pieces}</span>
+                        <Label className="text-muted-foreground text-xs">Lien de l'annonce</Label>
+                        <a 
+                          href={selectedVisite.offres.lien_annonce} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline flex items-center gap-1 text-sm"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          Voir l'annonce originale
+                        </a>
                       </div>
+                    )}
+
+                    {/* Date d'envoi */}
+                    {selectedVisite.offres.date_envoi && (
                       <div>
-                        <span className="text-muted-foreground">Surface:</span>
-                        <span className="ml-1 font-medium">{selectedVisite.offres.surface}m²</span>
+                        <Label className="text-muted-foreground text-xs">Date d'envoi de l'offre</Label>
+                        <p className="text-sm">
+                          {format(new Date(selectedVisite.offres.date_envoi), 'dd MMMM yyyy à HH:mm', { locale: fr })}
+                        </p>
                       </div>
-                      <div>
-                        <span className="text-muted-foreground">Prix:</span>
-                        <span className="ml-1 font-medium">{selectedVisite.offres.prix} CHF/mois</span>
+                    )}
+
+                    {/* Grille des caractéristiques */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {selectedVisite.offres.pieces && (
+                        <div className="p-2 bg-muted rounded">
+                          <p className="text-xs text-muted-foreground">Pièces</p>
+                          <p className="font-medium">{selectedVisite.offres.pieces}</p>
+                        </div>
+                      )}
+                      {selectedVisite.offres.surface && (
+                        <div className="p-2 bg-muted rounded">
+                          <p className="text-xs text-muted-foreground">Surface</p>
+                          <p className="font-medium">{selectedVisite.offres.surface} m²</p>
+                        </div>
+                      )}
+                      <div className="p-2 bg-muted rounded">
+                        <p className="text-xs text-muted-foreground">Prix</p>
+                        <p className="font-medium">{selectedVisite.offres.prix} CHF/mois</p>
                       </div>
+                      {selectedVisite.offres.etage && (
+                        <div className="p-2 bg-muted rounded">
+                          <p className="text-xs text-muted-foreground">Étage</p>
+                          <p className="font-medium">{selectedVisite.offres.etage}</p>
+                        </div>
+                      )}
                     </div>
+
+                    {/* Disponibilité */}
+                    {selectedVisite.offres.disponibilite && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Disponibilité</Label>
+                        <p className="text-sm">{selectedVisite.offres.disponibilite}</p>
+                      </div>
+                    )}
+
+                    {/* Description complète */}
+                    {selectedVisite.offres.description && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Description</Label>
+                        <p className="text-sm whitespace-pre-wrap mt-1 p-3 bg-muted/50 rounded max-h-32 overflow-y-auto">
+                          {selectedVisite.offres.description}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Commentaires agent */}
+                    {selectedVisite.offres.commentaires && (
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Commentaires</Label>
+                        <p className="text-sm whitespace-pre-wrap mt-1 p-3 bg-primary/5 rounded">
+                          {selectedVisite.offres.commentaires}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Infos contact */}
+                    {(selectedVisite.offres.concierge_nom || selectedVisite.offres.locataire_nom || selectedVisite.offres.code_immeuble) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t">
+                        {selectedVisite.offres.code_immeuble && (
+                          <div className="p-2 border rounded">
+                            <p className="text-xs text-muted-foreground">Code immeuble</p>
+                            <p className="font-mono font-medium">{selectedVisite.offres.code_immeuble}</p>
+                          </div>
+                        )}
+                        {selectedVisite.offres.concierge_nom && (
+                          <div className="p-2 border rounded">
+                            <p className="text-xs text-muted-foreground">Concierge</p>
+                            <p className="font-medium">{selectedVisite.offres.concierge_nom}</p>
+                            {selectedVisite.offres.concierge_tel && (
+                              <a href={`tel:${selectedVisite.offres.concierge_tel}`} className="text-sm text-primary flex items-center gap-1 mt-1">
+                                <Phone className="h-3 w-3" />
+                                {selectedVisite.offres.concierge_tel}
+                              </a>
+                            )}
+                          </div>
+                        )}
+                        {selectedVisite.offres.locataire_nom && (
+                          <div className="p-2 border rounded">
+                            <p className="text-xs text-muted-foreground">Locataire actuel</p>
+                            <p className="font-medium">{selectedVisite.offres.locataire_nom}</p>
+                            {selectedVisite.offres.locataire_tel && (
+                              <a href={`tel:${selectedVisite.offres.locataire_tel}`} className="text-sm text-primary flex items-center gap-1 mt-1">
+                                <Phone className="h-3 w-3" />
+                                {selectedVisite.offres.locataire_tel}
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
+              {/* SECTION WORKFLOW CANDIDATURE */}
+              {selectedVisite.candidature && (
+                <div className="space-y-3">
+                  <h5 className="font-medium flex items-center gap-2">
+                    📋 Étape du dossier
+                    <Badge variant={
+                      selectedVisite.candidature.statut === 'cles_remises' ? 'default' :
+                      selectedVisite.candidature.statut === 'refusee' ? 'destructive' : 'secondary'
+                    }>
+                      {candidatureStatusLabels[selectedVisite.candidature.statut] || selectedVisite.candidature.statut}
+                    </Badge>
+                  </h5>
+                  <div className="p-4 border rounded-lg bg-muted/30">
+                    <CandidatureWorkflowTimeline currentStatut={selectedVisite.candidature.statut} />
+                  </div>
+                  
+                  {/* Bouton pour mettre à jour le statut si pas terminé/refusé */}
+                  {nextStatusOptions[selectedVisite.candidature.statut] && (
+                    <div className="flex flex-wrap gap-2">
+                      {nextStatusOptions[selectedVisite.candidature.statut].map((option) => (
+                        <Button 
+                          key={option.value}
+                          variant={option.value === 'refusee' ? 'destructive' : 'outline'}
+                          size="sm"
+                          onClick={() => handleUpdateCandidatureStatus(selectedVisite.candidature.id, option.value)}
+                        >
+                          {option.label}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Notes de la visite */}
               {selectedVisite.notes && (
                 <div className="space-y-2">
                   <h5 className="font-medium">💬 Notes</h5>
@@ -806,6 +1033,7 @@ export default function AgentCalendrier() {
                 </div>
               )}
 
+              {/* Feedback si effectuée */}
               {selectedVisite.statut === 'effectuee' && selectedVisite.feedback_agent && (
                 <div className="space-y-2">
                   <h5 className="font-medium flex items-center gap-2">
@@ -820,7 +1048,7 @@ export default function AgentCalendrier() {
             </div>
           )}
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 pt-4 border-t">
             <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
               Fermer
             </Button>
