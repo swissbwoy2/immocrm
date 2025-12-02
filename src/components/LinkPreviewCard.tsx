@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,15 +21,53 @@ interface LinkPreviewCardProps {
   className?: string;
 }
 
+// Normalize and validate URL - add protocol if missing
+const normalizeUrl = (inputUrl: string): string | null => {
+  if (!inputUrl || typeof inputUrl !== 'string') return null;
+  
+  const trimmedUrl = inputUrl.trim();
+  if (!trimmedUrl) return null;
+
+  // Try to parse directly
+  try {
+    new URL(trimmedUrl);
+    return trimmedUrl;
+  } catch {
+    // URL is invalid, try adding https://
+  }
+
+  // Try adding https:// protocol
+  try {
+    const withProtocol = `https://${trimmedUrl}`;
+    new URL(withProtocol);
+    return withProtocol;
+  } catch {
+    return null;
+  }
+};
+
+// Safe hostname extraction
+const getHostname = (url: string | null): string => {
+  if (!url) return '';
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
+};
+
 export function LinkPreviewCard({ url, showInline = false, className }: LinkPreviewCardProps) {
   const [preview, setPreview] = useState<LinkPreviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [imageError, setImageError] = useState(false);
 
+  const normalizedUrl = useMemo(() => normalizeUrl(url), [url]);
+  const hostname = useMemo(() => getHostname(normalizedUrl), [normalizedUrl]);
+
   useEffect(() => {
     const fetchPreview = async () => {
-      if (!url) {
+      if (!normalizedUrl) {
         setLoading(false);
         setError(true);
         return;
@@ -40,7 +78,7 @@ export function LinkPreviewCard({ url, showInline = false, className }: LinkPrev
         setError(false);
         
         const { data, error: fnError } = await supabase.functions.invoke('get-link-preview', {
-          body: { url }
+          body: { url: normalizedUrl }
         });
         
         if (fnError) throw fnError;
@@ -54,9 +92,7 @@ export function LinkPreviewCard({ url, showInline = false, className }: LinkPrev
     };
 
     fetchPreview();
-  }, [url]);
-
-  const hostname = url ? new URL(url).hostname : '';
+  }, [normalizedUrl]);
 
   const PreviewContent = () => {
     if (loading) {
