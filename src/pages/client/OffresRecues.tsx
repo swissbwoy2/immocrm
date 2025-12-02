@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock } from "lucide-react";
+import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateChances } from "@/utils/chanceCalculator";
@@ -48,15 +48,48 @@ const OffresRecues = () => {
   const [visites, setVisites] = useState<any[]>([]);
   const [documentsStats, setDocumentsStats] = useState<any>({});
   const [proposedSlots, setProposedSlots] = useState<any[]>([]);
+  
+  // Documents existants du dossier client
+  const [existingDocuments, setExistingDocuments] = useState<any[]>([]);
+  const [selectedExistingSalaire, setSelectedExistingSalaire] = useState<string[]>([]);
+  const [selectedExistingPoursuites, setSelectedExistingPoursuites] = useState<string | null>(null);
+  const [selectedExistingIdentite, setSelectedExistingIdentite] = useState<string | null>(null);
 
   useEffect(() => {
     loadOffres();
     loadClientData();
     loadVisites();
     loadDocumentsStats();
+    loadExistingDocuments();
     // Mark new_offer notifications as read when visiting this page
     markTypeAsRead('new_offer');
   }, [user]);
+
+  const loadExistingDocuments = async () => {
+    if (!user) return;
+
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!clientData) return;
+
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('client_id', clientData.id)
+        .is('offre_id', null) // Documents du dossier global, pas liés à une offre
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setExistingDocuments(data || []);
+    } catch (error) {
+      console.error('Error loading existing documents:', error);
+    }
+  };
 
   const loadOffres = async () => {
     if (!user) return;
@@ -346,6 +379,10 @@ const OffresRecues = () => {
     setDocumentPieceIdentite(null);
     setMessageClient('');
     setAccepteConditions(false);
+    // Reset existing document selections
+    setSelectedExistingSalaire([]);
+    setSelectedExistingPoursuites(null);
+    setSelectedExistingIdentite(null);
     setCandidatureDialogOpen(true);
   };
 
@@ -568,7 +605,9 @@ const OffresRecues = () => {
       return;
     }
 
-    if (documentsFicheSalaire.length !== 3) {
+    // Vérifier les fiches de salaire (upload OU sélection existante)
+    const totalSalaireCount = documentsFicheSalaire.filter(f => f).length + selectedExistingSalaire.length;
+    if (totalSalaireCount < 3) {
       toast({
         title: 'Documents manquants',
         description: 'Vous devez fournir vos 3 dernières fiches de salaire',
@@ -577,7 +616,8 @@ const OffresRecues = () => {
       return;
     }
 
-    if (!documentExtraitPoursuites) {
+    // Vérifier extrait poursuites (upload OU sélection existante)
+    if (!documentExtraitPoursuites && !selectedExistingPoursuites) {
       toast({
         title: 'Document manquant',
         description: 'Vous devez fournir un extrait de l\'office des poursuites',
@@ -586,7 +626,8 @@ const OffresRecues = () => {
       return;
     }
 
-    if (!documentPieceIdentite) {
+    // Vérifier pièce d'identité (upload OU sélection existante)
+    if (!documentPieceIdentite && !selectedExistingIdentite) {
       toast({
         title: 'Document manquant',
         description: 'Vous devez fournir une pièce d\'identité valable',
@@ -598,26 +639,51 @@ const OffresRecues = () => {
     setUploadingDocs(true);
 
     try {
-      const salaireUploads = await Promise.all(
-        documentsFicheSalaire.map(file =>
-          uploadDocument(file, 'fiche_salaire', selectedOffre.id)
-        )
-      );
+      // Upload new files si fournis
+      const salaireUploads = documentsFicheSalaire.length > 0 
+        ? await Promise.all(
+            documentsFicheSalaire.filter(f => f).map(file =>
+              uploadDocument(file, 'fiche_salaire', selectedOffre.id)
+            )
+          )
+        : [];
 
-      const extraitPath = await uploadDocument(
-        documentExtraitPoursuites,
-        'extrait_poursuites',
-        selectedOffre.id
-      );
+      if (documentExtraitPoursuites) {
+        await uploadDocument(
+          documentExtraitPoursuites,
+          'extrait_poursuites',
+          selectedOffre.id
+        );
+      }
 
-      const identitePath = await uploadDocument(
-        documentPieceIdentite,
-        'piece_identite',
-        selectedOffre.id
-      );
+      if (documentPieceIdentite) {
+        await uploadDocument(
+          documentPieceIdentite,
+          'piece_identite',
+          selectedOffre.id
+        );
+      }
 
-      if (!salaireUploads.every(p => p) || !extraitPath || !identitePath) {
-        throw new Error('Échec de l\'upload de certains documents');
+      // Lier les documents existants sélectionnés à cette offre
+      if (selectedExistingSalaire.length > 0) {
+        await supabase
+          .from('documents')
+          .update({ offre_id: selectedOffre.id })
+          .in('id', selectedExistingSalaire);
+      }
+
+      if (selectedExistingPoursuites) {
+        await supabase
+          .from('documents')
+          .update({ offre_id: selectedOffre.id })
+          .eq('id', selectedExistingPoursuites);
+      }
+
+      if (selectedExistingIdentite) {
+        await supabase
+          .from('documents')
+          .update({ offre_id: selectedOffre.id })
+          .eq('id', selectedExistingIdentite);
       }
 
       const { data: clientData } = await supabase
@@ -1437,12 +1503,52 @@ const OffresRecues = () => {
                 <div className="space-y-4">
                   <h4 className="font-semibold">Documents à fournir (obligatoires)</h4>
 
+                  {/* Fiches de salaire */}
                   <div className="border rounded-lg p-4">
                     <Label className="text-base font-medium">
                       📄 3 dernières fiches de salaire *
                     </Label>
                     <p className="text-sm text-muted-foreground mb-3">
-                      Vos 3 derniers bulletins de salaire
+                      Vos 3 derniers bulletins de salaire ({documentsFicheSalaire.filter(f => f).length + selectedExistingSalaire.length}/3 fournis)
+                    </p>
+                    
+                    {/* Documents existants du dossier */}
+                    {existingDocuments.filter(d => d.type_document === 'fiche_salaire').length > 0 && (
+                      <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2 mb-2">
+                          <FolderOpen className="h-4 w-4" />
+                          Sélectionner depuis mon dossier :
+                        </p>
+                        <div className="space-y-2">
+                          {existingDocuments.filter(d => d.type_document === 'fiche_salaire').map((doc) => (
+                            <div key={doc.id} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`salaire-${doc.id}`}
+                                checked={selectedExistingSalaire.includes(doc.id)}
+                                disabled={selectedExistingSalaire.length >= 3 && !selectedExistingSalaire.includes(doc.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedExistingSalaire([...selectedExistingSalaire, doc.id]);
+                                  } else {
+                                    setSelectedExistingSalaire(selectedExistingSalaire.filter(id => id !== doc.id));
+                                  }
+                                }}
+                              />
+                              <Label htmlFor={`salaire-${doc.id}`} className="text-sm cursor-pointer flex-1">
+                                {doc.nom}
+                              </Label>
+                              {selectedExistingSalaire.includes(doc.id) && (
+                                <Check className="w-4 h-4 text-green-500" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Upload nouveaux fichiers */}
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {existingDocuments.filter(d => d.type_document === 'fiche_salaire').length > 0 ? 'Ou uploader de nouveaux fichiers :' : 'Uploader vos fichiers :'}
                     </p>
                     <div className="space-y-2">
                       {[0, 1, 2].map(index => (
@@ -1467,6 +1573,7 @@ const OffresRecues = () => {
                     </div>
                   </div>
 
+                  {/* Extrait poursuites */}
                   <div className="border rounded-lg p-4">
                     <Label className="text-base font-medium">
                       📋 Extrait de l'office des poursuites *
@@ -1474,13 +1581,50 @@ const OffresRecues = () => {
                     <p className="text-sm text-muted-foreground mb-3">
                       Datant de moins de 3 mois
                     </p>
+                    
+                    {/* Documents existants du dossier */}
+                    {existingDocuments.filter(d => d.type_document === 'extrait_poursuites').length > 0 && (
+                      <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2 mb-2">
+                          <FolderOpen className="h-4 w-4" />
+                          Sélectionner depuis mon dossier :
+                        </p>
+                        <div className="space-y-2">
+                          {existingDocuments.filter(d => d.type_document === 'extrait_poursuites').map((doc) => (
+                            <div key={doc.id} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`poursuites-${doc.id}`}
+                                checked={selectedExistingPoursuites === doc.id}
+                                onCheckedChange={(checked) => {
+                                  setSelectedExistingPoursuites(checked ? doc.id : null);
+                                  if (checked) setDocumentExtraitPoursuites(null);
+                                }}
+                              />
+                              <Label htmlFor={`poursuites-${doc.id}`} className="text-sm cursor-pointer flex-1">
+                                {doc.nom}
+                              </Label>
+                              {selectedExistingPoursuites === doc.id && (
+                                <Check className="w-4 h-4 text-green-500" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {existingDocuments.filter(d => d.type_document === 'extrait_poursuites').length > 0 ? 'Ou uploader un nouveau fichier :' : 'Uploader votre fichier :'}
+                    </p>
                     <div className="flex items-center gap-2">
                       <Input
                         type="file"
                         accept=".pdf,image/*"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
-                          if (file) setDocumentExtraitPoursuites(file);
+                          if (file) {
+                            setDocumentExtraitPoursuites(file);
+                            setSelectedExistingPoursuites(null);
+                          }
                         }}
                       />
                       {documentExtraitPoursuites && (
@@ -1489,6 +1633,7 @@ const OffresRecues = () => {
                     </div>
                   </div>
 
+                  {/* Pièce d'identité */}
                   <div className="border rounded-lg p-4">
                     <Label className="text-base font-medium">
                       🪪 Pièce d'identité / ID suisse *
@@ -1496,13 +1641,50 @@ const OffresRecues = () => {
                     <p className="text-sm text-muted-foreground mb-3">
                       Document valable (carte identité, passeport, permis de séjour)
                     </p>
+                    
+                    {/* Documents existants du dossier */}
+                    {existingDocuments.filter(d => d.type_document === 'piece_identite' || d.type_document === 'permis_sejour').length > 0 && (
+                      <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2 mb-2">
+                          <FolderOpen className="h-4 w-4" />
+                          Sélectionner depuis mon dossier :
+                        </p>
+                        <div className="space-y-2">
+                          {existingDocuments.filter(d => d.type_document === 'piece_identite' || d.type_document === 'permis_sejour').map((doc) => (
+                            <div key={doc.id} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`identite-${doc.id}`}
+                                checked={selectedExistingIdentite === doc.id}
+                                onCheckedChange={(checked) => {
+                                  setSelectedExistingIdentite(checked ? doc.id : null);
+                                  if (checked) setDocumentPieceIdentite(null);
+                                }}
+                              />
+                              <Label htmlFor={`identite-${doc.id}`} className="text-sm cursor-pointer flex-1">
+                                {doc.nom}
+                              </Label>
+                              {selectedExistingIdentite === doc.id && (
+                                <Check className="w-4 h-4 text-green-500" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {existingDocuments.filter(d => d.type_document === 'piece_identite' || d.type_document === 'permis_sejour').length > 0 ? 'Ou uploader un nouveau fichier :' : 'Uploader votre fichier :'}
+                    </p>
                     <div className="flex items-center gap-2">
                       <Input
                         type="file"
                         accept=".pdf,image/*"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
-                          if (file) setDocumentPieceIdentite(file);
+                          if (file) {
+                            setDocumentPieceIdentite(file);
+                            setSelectedExistingIdentite(null);
+                          }
                         }}
                       />
                       {documentPieceIdentite && (
