@@ -47,6 +47,7 @@ const Messagerie = () => {
   const [messages, setMessages] = useState<any[]>([]);
   const [offresMap, setOffresMap] = useState<Record<string, any>>({});
   const [candidaturesMap, setCandidaturesMap] = useState<Record<string, any>>({});
+  const [visitesMap, setVisitesMap] = useState<Record<string, any[]>>({});
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const [agentId, setAgentId] = useState<string | null>(null);
@@ -246,7 +247,7 @@ const Messagerie = () => {
       });
       setOffresMap(offresMapping);
 
-      // Load candidatures for these offers
+      // Load candidatures and visites for these offers
       if (offreIds.length > 0) {
         const conversation = conversations.find(c => c.id === convId);
         if (conversation?.client_id) {
@@ -262,6 +263,19 @@ const Messagerie = () => {
           });
           setCandidaturesMap(candidaturesMapping);
         }
+
+        // Load visites for these offers
+        const { data: visitesData } = await supabase
+          .from('visites')
+          .select('*')
+          .in('offre_id', offreIds);
+
+        const visitesMapping: Record<string, any[]> = {};
+        visitesData?.forEach(v => {
+          if (!visitesMapping[v.offre_id]) visitesMapping[v.offre_id] = [];
+          visitesMapping[v.offre_id].push(v);
+        });
+        setVisitesMap(visitesMapping);
       }
 
       // Mark messages as read
@@ -769,9 +783,16 @@ const Messagerie = () => {
 
     const candidature = candidaturesMap[offre.id];
     const statut = candidature?.statut || offre.statut;
+    const visites = visitesMap[offre.id] || [];
 
-    // Check for pending delegated visit
-    const hasPendingDelegatedVisit = offre.statut === 'interesse';
+    // Check for delegated visits status
+    const hasPendingDelegatedVisit = offre.statut === 'interesse' && 
+      visites.some(v => v.est_deleguee && v.statut === 'planifiee');
+    const hasConfirmedDelegatedVisit = offre.statut === 'interesse' && 
+      visites.some(v => v.est_deleguee && v.statut === 'confirmee');
+    const hasRefusedDelegatedVisit = offre.statut === 'interesse' && 
+      visites.some(v => v.est_deleguee && v.statut === 'refusee') &&
+      !visites.some(v => v.est_deleguee && v.statut === 'planifiee');
     
     // Visite planifiée (normale) - afficher bouton de confirmation
     if (offre.statut === 'visite_planifiee') {
@@ -785,6 +806,32 @@ const Messagerie = () => {
           <Button size="sm" onClick={() => onAction('confirmer_visite')} className="w-full">
             <Check className="h-4 w-4 mr-1" /> Confirmer présence client
           </Button>
+        </div>
+      );
+    }
+
+    // Visite déléguée confirmée - afficher badge de confirmation
+    if (hasConfirmedDelegatedVisit) {
+      return (
+        <div className="mt-3">
+          <div className="p-2 bg-green-50 dark:bg-green-950 rounded-lg">
+            <p className="text-xs text-green-700 dark:text-green-300 flex items-center gap-1">
+              <Check className="h-3 w-3" /> Visite déléguée confirmée
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Visite déléguée refusée - afficher badge d'attente nouvelle date
+    if (hasRefusedDelegatedVisit) {
+      return (
+        <div className="mt-3">
+          <div className="p-2 bg-red-50 dark:bg-red-950 rounded-lg">
+            <p className="text-xs text-red-700 dark:text-red-300 flex items-center gap-1">
+              <X className="h-3 w-3" /> Visite déléguée refusée - en attente de nouvelle date
+            </p>
+          </div>
         </div>
       );
     }
