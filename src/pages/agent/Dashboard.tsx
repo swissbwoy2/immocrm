@@ -56,12 +56,26 @@ export default function AgentDashboard() {
       
       setAgent(agentData);
 
-      // Récupérer les clients assignés à cet agent (RLS filtre automatiquement)
-      const { data: clientsData } = await supabase
-        .from('clients')
-        .select('*');
+      // Récupérer les clients via client_agents (source de vérité)
+      let clientsData: any[] = [];
+      if (agentData) {
+        const { data: clientAgentsData } = await supabase
+          .from('client_agents')
+          .select('client_id')
+          .eq('agent_id', agentData.id);
+
+        const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
+
+        if (clientIds.length > 0) {
+          const { data } = await supabase
+            .from('clients')
+            .select('*')
+            .in('id', clientIds);
+          clientsData = data || [];
+        }
+      }
       
-      setClients(clientsData || []);
+      setClients(clientsData);
 
       // Récupérer les profils des clients
       if (clientsData && clientsData.length > 0) {
