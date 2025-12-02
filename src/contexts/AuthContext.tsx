@@ -87,11 +87,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setUserRole(null);
-    navigate('/login');
+    try {
+      // Try global signout first
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      
+      if (error) {
+        console.warn('Global signout failed, trying local:', error.message);
+        // If global fails, try local signout
+        await supabase.auth.signOut({ scope: 'local' });
+      }
+    } catch (error) {
+      console.warn('SignOut error (continuing with local cleanup):', error);
+    } finally {
+      // Always clean up local state, even if API failed
+      setUser(null);
+      setSession(null);
+      setUserRole(null);
+      navigate('/login');
+    }
   };
 
   return (
