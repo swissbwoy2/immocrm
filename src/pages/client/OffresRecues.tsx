@@ -10,6 +10,7 @@ import { calculateChances } from "@/utils/chanceCalculator";
 import { ChanceIndicator } from "@/components/ChanceIndicator";
 import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { useNotifications } from "@/hooks/useNotifications";
+import { CandidatureWorkflowInteractive } from "@/components/CandidatureWorkflowInteractive";
 import {
   Dialog,
   DialogContent,
@@ -48,6 +49,7 @@ const OffresRecues = () => {
   const [visites, setVisites] = useState<any[]>([]);
   const [documentsStats, setDocumentsStats] = useState<any>({});
   const [proposedSlots, setProposedSlots] = useState<any[]>([]);
+  const [candidatures, setCandidatures] = useState<any[]>([]);
   
   // Documents existants du dossier client
   const [existingDocuments, setExistingDocuments] = useState<any[]>([]);
@@ -61,6 +63,7 @@ const OffresRecues = () => {
     loadVisites();
     loadDocumentsStats();
     loadExistingDocuments();
+    loadCandidatures();
     // Mark new_offer notifications as read when visiting this page
     markTypeAsRead('new_offer');
   }, [user]);
@@ -222,10 +225,111 @@ const OffresRecues = () => {
     }
   };
 
+  const loadCandidatures = async () => {
+    if (!user) return;
+
+    try {
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!clientData) return;
+
+      const { data, error } = await supabase
+        .from('candidatures')
+        .select('*')
+        .eq('client_id', clientData.id);
+
+      if (error) throw error;
+      setCandidatures(data || []);
+    } catch (error) {
+      console.error('Error loading candidatures:', error);
+    }
+  };
+
   // Rafraîchir les données après upload
   const refreshData = () => {
     loadDocumentsStats();
     loadVisites();
+    loadCandidatures();
+  };
+
+  // Handler pour progresser dans le workflow
+  const handleProgressWorkflow = async (nextStatut: string, candidatureId: string) => {
+    try {
+      const { error } = await supabase
+        .from('candidatures')
+        .update({ 
+          statut: nextStatut,
+          ...(nextStatut === 'bail_conclu' ? {
+            client_accepte_conclure: true,
+            client_accepte_conclure_at: new Date().toISOString()
+          } : {})
+        })
+        .eq('id', candidatureId);
+
+      if (error) throw error;
+
+      // Notify agent
+      const candidature = candidatures.find(c => c.id === candidatureId);
+      const offre = offres.find(o => o.id === candidature?.offre_id);
+      
+      const { data: client } = await supabase
+        .from('clients')
+        .select('id, agent_id')
+        .eq('user_id', user?.id)
+        .maybeSingle();
+
+      if (client?.agent_id) {
+        let { data: conv } = await supabase
+          .from('conversations')
+          .select('id')
+          .eq('client_id', client.id)
+          .eq('agent_id', client.agent_id)
+          .maybeSingle();
+
+        if (!conv) {
+          const { data: newConv } = await supabase
+            .from('conversations')
+            .insert({
+              client_id: client.id,
+              agent_id: client.agent_id,
+              subject: 'Messages',
+            })
+            .select()
+            .maybeSingle();
+          conv = newConv;
+        }
+
+        if (conv && offre) {
+          const messageContent = nextStatut === 'bail_conclu' 
+            ? `✅ **Bail confirmé**\n\nJ'accepte de conclure le bail pour :\n📍 ${offre.adresse}\n💰 ${offre.prix?.toLocaleString()} CHF/mois\n\nMerci de valider avec la régie.`
+            : `📋 Progression de la candidature pour ${offre.adresse} vers l'étape: ${nextStatut}`;
+
+          await supabase.from('messages').insert({
+            conversation_id: conv.id,
+            sender_id: user?.id,
+            sender_type: 'client',
+            content: messageContent,
+          });
+        }
+      }
+
+      await loadCandidatures();
+      await loadOffres();
+      
+      toast({ 
+        title: nextStatut === 'bail_conclu' ? "✅ Bail confirmé" : "Progression enregistrée", 
+        description: nextStatut === 'bail_conclu' 
+          ? "Votre agent va valider avec la régie." 
+          : "Votre agent a été notifié."
+      });
+    } catch (error) {
+      console.error('Error progressing workflow:', error);
+      toast({ title: "Erreur", variant: "destructive" });
+    }
   };
 
   const updateStatut = async (offreId: string, newStatut: string) => {
@@ -1077,6 +1181,27 @@ const OffresRecues = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Workflow de candidature - affiché si candidature_deposee ou après */}
+                {(() => {
+                  const candidature = candidatures.find(c => c.offre_id === selectedOffre.id);
+                  const showWorkflow = ['candidature_deposee', 'en_attente', 'acceptee', 'bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(candidature?.statut || selectedOffre.statut);
+                  
+                  if (!showWorkflow) return null;
+                  
+                  const effectiveStatut = candidature?.statut || selectedOffre.statut;
+                  
+                  return (
+                    <div className="border-b pb-4">
+                      <h4 className="font-semibold mb-3">📊 Suivi de votre candidature</h4>
+                      <CandidatureWorkflowInteractive 
+                        currentStatut={effectiveStatut}
+                        candidature={candidature}
+                        onProgressWorkflow={handleProgressWorkflow}
+                      />
+                    </div>
+                  );
+                })()}
 
                 {/* Caractéristiques principales */}
                 <div>
