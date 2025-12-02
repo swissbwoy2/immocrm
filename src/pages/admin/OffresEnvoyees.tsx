@@ -5,9 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send, MapPin, Home, Calendar, User, Filter, Eye } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Send, MapPin, Home, Calendar, User, Filter, Eye, ExternalLink, Phone, Building } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 interface Offre {
   id: string;
@@ -21,6 +25,16 @@ interface Offre {
   date_envoi: string | null;
   client_id: string | null;
   agent_id: string | null;
+  lien_annonce: string | null;
+  description: string | null;
+  disponibilite: string | null;
+  etage: string | null;
+  code_immeuble: string | null;
+  commentaires: string | null;
+  concierge_nom: string | null;
+  concierge_tel: string | null;
+  locataire_nom: string | null;
+  locataire_tel: string | null;
 }
 
 interface Profile {
@@ -50,6 +64,10 @@ export default function AdminOffresEnvoyees() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [agentFilter, setAgentFilter] = useState("all");
+  
+  // Dialog state
+  const [selectedOffre, setSelectedOffre] = useState<Offre | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!user || userRole !== 'admin') {
@@ -62,7 +80,7 @@ export default function AdminOffresEnvoyees() {
 
   const loadData = async () => {
     try {
-      // Charger toutes les offres
+      // Charger toutes les offres avec tous les champs
       const { data: offresData, error: offresError } = await supabase
         .from('offres')
         .select('*')
@@ -126,21 +144,27 @@ export default function AdminOffresEnvoyees() {
     return profile ? `${profile.prenom} ${profile.nom}` : "Client inconnu";
   };
 
-  const getStatusBadge = (statut: string | null) => {
+  const getStatusBadge = (statut: string | null, clickable: boolean = false) => {
+    const baseClass = clickable ? "cursor-pointer hover:opacity-80 transition-opacity" : "";
     switch (statut) {
       case 'envoyee':
-        return <Badge variant="secondary">Envoyée</Badge>;
+        return <Badge variant="secondary" className={baseClass}>Envoyée</Badge>;
       case 'vue':
-        return <Badge variant="outline">Vue</Badge>;
+        return <Badge variant="outline" className={baseClass}>Vue</Badge>;
       case 'acceptee':
-        return <Badge className="bg-success text-success-foreground">Acceptée</Badge>;
+        return <Badge className={`bg-success text-success-foreground ${baseClass}`}>Acceptée</Badge>;
       case 'refusee':
-        return <Badge variant="destructive">Refusée</Badge>;
+        return <Badge variant="destructive" className={baseClass}>Refusée</Badge>;
       case 'visite_programmee':
-        return <Badge className="bg-primary text-primary-foreground">Visite programmée</Badge>;
+        return <Badge className={`bg-primary text-primary-foreground ${baseClass}`}>Visite programmée</Badge>;
       default:
-        return <Badge variant="outline">{statut || "Inconnue"}</Badge>;
+        return <Badge variant="outline" className={baseClass}>{statut || "Inconnue"}</Badge>;
     }
+  };
+
+  const handleOpenOffreDetail = (offre: Offre) => {
+    setSelectedOffre(offre);
+    setDetailDialogOpen(true);
   };
 
   // Filtrage
@@ -264,14 +288,23 @@ export default function AdminOffresEnvoyees() {
             </Card>
           ) : (
             filteredOffres.map((offre) => (
-              <Card key={offre.id} className="p-6 hover:shadow-md transition-shadow">
+              <Card 
+                key={offre.id} 
+                className="p-6 hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => handleOpenOffreDetail(offre)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => e.key === 'Enter' && handleOpenOffreDetail(offre)}
+              >
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-lg font-semibold">
                         {offre.titre || offre.adresse}
                       </h3>
-                      {getStatusBadge(offre.statut)}
+                      <span className="pointer-events-none">
+                        {getStatusBadge(offre.statut)}
+                      </span>
                     </div>
                     
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
@@ -320,7 +353,11 @@ export default function AdminOffresEnvoyees() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => navigate(`/admin/clients/${offre.client_id}`)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/admin/clients/${offre.client_id}`);
+                        }}
+                        className="relative z-10"
                       >
                         <Eye className="w-4 h-4 mr-1" />
                         Voir client
@@ -333,6 +370,194 @@ export default function AdminOffresEnvoyees() {
           )}
         </div>
       </div>
+
+      {/* Dialog détail offre */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
+              Détails de l'offre
+              {selectedOffre && getStatusBadge(selectedOffre.statut)}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedOffre && (
+            <div className="space-y-6">
+              {/* En-tête avec adresse */}
+              <div className="p-4 bg-muted rounded-lg">
+                <h4 className="font-semibold text-lg">{selectedOffre.titre || selectedOffre.adresse}</h4>
+                <div className="flex items-center gap-2 mt-1 text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  {selectedOffre.adresse}
+                </div>
+                {selectedOffre.date_envoi && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Envoyée le {format(new Date(selectedOffre.date_envoi), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })}
+                  </p>
+                )}
+              </div>
+
+              {/* Lien de l'annonce */}
+              {selectedOffre.lien_annonce && (
+                <div className="p-4 border rounded-lg bg-primary/5">
+                  <Label className="text-muted-foreground mb-2 block">Lien de l'annonce</Label>
+                  <a 
+                    href={selectedOffre.lien_annonce} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline flex items-center gap-2 font-medium"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Voir l'annonce originale
+                  </a>
+                </div>
+              )}
+
+              {/* Caractéristiques */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 bg-muted rounded-lg text-center">
+                  <p className="text-xs text-muted-foreground">Prix</p>
+                  <p className="font-bold text-primary">{selectedOffre.prix.toLocaleString()} CHF</p>
+                </div>
+                {selectedOffre.pieces && (
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <p className="text-xs text-muted-foreground">Pièces</p>
+                    <p className="font-bold">{selectedOffre.pieces}</p>
+                  </div>
+                )}
+                {selectedOffre.surface && (
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <p className="text-xs text-muted-foreground">Surface</p>
+                    <p className="font-bold">{selectedOffre.surface} m²</p>
+                  </div>
+                )}
+                {selectedOffre.etage && (
+                  <div className="p-3 bg-muted rounded-lg text-center">
+                    <p className="text-xs text-muted-foreground">Étage</p>
+                    <p className="font-bold">{selectedOffre.etage}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Type et disponibilité */}
+              <div className="grid grid-cols-2 gap-4">
+                {selectedOffre.type_bien && (
+                  <div>
+                    <Label className="text-muted-foreground">Type de bien</Label>
+                    <p className="font-medium flex items-center gap-2 mt-1">
+                      <Home className="h-4 w-4" />
+                      {selectedOffre.type_bien}
+                    </p>
+                  </div>
+                )}
+                {selectedOffre.disponibilite && (
+                  <div>
+                    <Label className="text-muted-foreground">Disponibilité</Label>
+                    <p className="font-medium mt-1">{selectedOffre.disponibilite}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
+              {selectedOffre.description && (
+                <div>
+                  <Label className="text-muted-foreground mb-2 block">Description</Label>
+                  <div className="p-4 bg-muted/50 rounded-lg max-h-48 overflow-y-auto">
+                    <p className="text-sm whitespace-pre-wrap">{selectedOffre.description}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Commentaires agent */}
+              {selectedOffre.commentaires && (
+                <div>
+                  <Label className="text-muted-foreground mb-2 block">Commentaires de l'agent</Label>
+                  <div className="p-4 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                    <p className="text-sm whitespace-pre-wrap">{selectedOffre.commentaires}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Infos immeuble */}
+              {selectedOffre.code_immeuble && (
+                <div className="flex items-center gap-2">
+                  <Building className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">Code immeuble: <strong>{selectedOffre.code_immeuble}</strong></span>
+                </div>
+              )}
+
+              {/* Contacts */}
+              {(selectedOffre.concierge_nom || selectedOffre.locataire_nom) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {selectedOffre.concierge_nom && (
+                    <div className="p-3 border rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">Concierge</p>
+                      <p className="font-medium">{selectedOffre.concierge_nom}</p>
+                      {selectedOffre.concierge_tel && (
+                        <a 
+                          href={`tel:${selectedOffre.concierge_tel}`} 
+                          className="text-sm text-primary flex items-center gap-1 mt-1 hover:underline"
+                        >
+                          <Phone className="h-3 w-3" />
+                          {selectedOffre.concierge_tel}
+                        </a>
+                      )}
+                    </div>
+                  )}
+                  {selectedOffre.locataire_nom && (
+                    <div className="p-3 border rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">Locataire actuel</p>
+                      <p className="font-medium">{selectedOffre.locataire_nom}</p>
+                      {selectedOffre.locataire_tel && (
+                        <a 
+                          href={`tel:${selectedOffre.locataire_tel}`} 
+                          className="text-sm text-primary flex items-center gap-1 mt-1 hover:underline"
+                        >
+                          <Phone className="h-3 w-3" />
+                          {selectedOffre.locataire_tel}
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Agent et Client */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                <div>
+                  <Label className="text-muted-foreground">Agent</Label>
+                  <p className="font-medium mt-1">{getAgentName(selectedOffre.agent_id)}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Client</Label>
+                  <p className="font-medium mt-1">{getClientName(selectedOffre.client_id)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            {selectedOffre?.lien_annonce && (
+              <Button 
+                variant="outline" 
+                onClick={() => window.open(selectedOffre.lien_annonce!, '_blank')}
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Ouvrir l'annonce
+              </Button>
+            )}
+            {selectedOffre?.client_id && (
+              <Button onClick={() => {
+                setDetailDialogOpen(false);
+                navigate(`/admin/clients/${selectedOffre.client_id}`);
+              }}>
+                <Eye className="w-4 h-4 mr-2" />
+                Voir le client
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
