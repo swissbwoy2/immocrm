@@ -3,11 +3,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Square, Home, ExternalLink, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock } from "lucide-react";
+import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateChances } from "@/utils/chanceCalculator";
 import { ChanceIndicator } from "@/components/ChanceIndicator";
+import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
   Dialog,
@@ -925,12 +926,7 @@ const OffresRecues = () => {
                     Voir les détails
                   </Button>
                   {offre.lien_annonce && (
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={offre.lien_annonce} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Voir l'annonce
-                      </a>
-                    </Button>
+                    <LinkPreviewCard url={offre.lien_annonce} />
                   )}
                   {(offre.statut === 'envoyee' || offre.statut === 'vue' || offre.statut === 'interesse') && (
                     <>
@@ -1172,12 +1168,7 @@ const OffresRecues = () => {
                 {/* Actions */}
                 <div className="flex gap-2 flex-wrap pt-4 border-t">
                   {selectedOffre.lien_annonce && (
-                    <Button variant="outline" size="sm" asChild>
-                      <a href={selectedOffre.lien_annonce} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Voir l'annonce
-                      </a>
-                    </Button>
+                    <LinkPreviewCard url={selectedOffre.lien_annonce} />
                   )}
                   {(selectedOffre.statut === 'envoyee' || selectedOffre.statut === 'vue') && (
                     <>

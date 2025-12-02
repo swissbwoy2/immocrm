@@ -2,13 +2,14 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { 
   Calendar, Clock, MapPin, Home, Maximize, User, Phone, KeyRound, 
-  Check, X, FileCheck, ExternalLink, ThumbsUp, ThumbsDown, Minus
+  Check, X, FileCheck, ThumbsUp, ThumbsDown, Minus
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { CalendarEvent } from './CalendarView';
+import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 
 interface ClientDayEventsProps {
   date: Date | null;
@@ -291,13 +292,7 @@ export function ClientDayEvents({
                           Voir l'offre
                         </Button>
                         {data.offres?.lien_annonce && (
-                          <Button 
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open(data.offres.lien_annonce, '_blank')}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
+                          <LinkPreviewCard url={data.offres.lien_annonce} />
                         )}
                       </div>
                     </div>

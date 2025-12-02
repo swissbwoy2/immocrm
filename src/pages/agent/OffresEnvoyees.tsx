@@ -9,12 +9,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Mail, MapPin, DollarSign, Maximize, Calendar, Eye, ExternalLink, Send } from 'lucide-react';
+import { Mail, MapPin, DollarSign, Maximize, Calendar, Eye, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ResendOfferDialog } from '@/components/ResendOfferDialog';
+import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 
 const getStatutBadgeVariant = (statut: string) => {
   switch (statut) {
@@ -287,26 +288,9 @@ export default function OffresEnvoyees() {
                         <Eye className="h-4 w-4 mr-2" />
                         Voir client
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        onClick={() => {
-                          if (offre.lien_annonce && offre.lien_annonce.trim()) {
-                            window.open(offre.lien_annonce, '_blank');
-                          } else {
-                            toast({
-                              title: 'Lien manquant',
-                              description: 'Aucun lien d\'annonce n\'a été renseigné pour cette offre',
-                              variant: 'destructive',
-                            });
-                          }
-                        }}
-                        disabled={!offre.lien_annonce || !offre.lien_annonce.trim()}
-                      >
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Annonce
-                      </Button>
+                      {offre.lien_annonce && offre.lien_annonce.trim() && (
+                        <LinkPreviewCard url={offre.lien_annonce} className="flex-1" />
+                      )}
                     </div>
                   </div>
                 </CardContent>

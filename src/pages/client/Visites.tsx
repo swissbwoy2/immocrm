@@ -11,6 +11,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
+import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 
 export default function Visites() {
   const navigate = useNavigate();
@@ -532,13 +533,7 @@ export default function Visites() {
                   Voir l'offre
                 </Button>
                 {visite.offres?.lien_annonce && (
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(visite.offres.lien_annonce, '_blank')}
-                  >
-                    Annonce
-                  </Button>
+                  <LinkPreviewCard url={visite.offres.lien_annonce} />
                 )}
               </div>
             </div>

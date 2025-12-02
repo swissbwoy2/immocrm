@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Send, MapPin, Home, Calendar, User, Filter, Eye, ExternalLink, Phone, Building } from "lucide-react";
+import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -397,19 +398,11 @@ export default function AdminOffresEnvoyees() {
                 )}
               </div>
 
-              {/* Lien de l'annonce */}
+              {/* Lien de l'annonce avec prévisualisation */}
               {selectedOffre.lien_annonce && (
-                <div className="p-4 border rounded-lg bg-primary/5">
-                  <Label className="text-muted-foreground mb-2 block">Lien de l'annonce</Label>
-                  <a 
-                    href={selectedOffre.lien_annonce} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline flex items-center gap-2 font-medium"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    Voir l'annonce originale
-                  </a>
+                <div className="space-y-2">
+                  <Label className="text-muted-foreground">Lien de l'annonce</Label>
+                  <LinkPreviewCard url={selectedOffre.lien_annonce} showInline />
                 </div>
               )}
 

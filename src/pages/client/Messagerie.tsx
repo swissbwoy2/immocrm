@@ -17,7 +17,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { 
-  Send, Home, Heart, Calendar, ExternalLink, X, FileText, 
+  Send, Home, Heart, Calendar, X, FileText, ExternalLink,
   Check, Clock, Key, Star, Mail, User, PartyPopper, FileSignature,
   MapPin, AlertCircle
 } from "lucide-react";
@@ -28,6 +28,7 @@ import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploade
 import { MessageAttachment } from "@/components/MessageAttachment";
 import { parseMessageWithLinks } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
+import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { MessagingLayout } from "@/components/MessagingLayout";
 import { ChatAvatar } from "@/components/messaging/ChatAvatar";
 import { MessageBubble } from "@/components/messaging/MessageBubble";
@@ -887,15 +888,9 @@ const Messagerie = () => {
         </div>
       </div>
       {offre.lien_annonce && (
-        <a 
-          href={offre.lien_annonce} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-xs text-blue-600 hover:underline flex items-center gap-1 mt-2"
-        >
-          <ExternalLink className="h-3 w-3" />
-          Voir l'annonce complète
-        </a>
+        <div className="mt-2">
+          <LinkPreviewCard url={offre.lien_annonce} />
+        </div>
       )}
     </div>
   );

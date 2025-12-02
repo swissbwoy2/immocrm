@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar, Pencil, Trash2, ExternalLink, MapPin, Home, Phone } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar, Pencil, Trash2, MapPin, Home, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import { AgentDayEvents } from '@/components/calendar/AgentDayEvents';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
+import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 
 const candidatureStatusLabels: Record<string, string> = {
   en_attente: 'En attente',
@@ -874,15 +875,9 @@ export default function AgentCalendrier() {
                     {selectedVisite.offres.lien_annonce && (
                       <div>
                         <Label className="text-muted-foreground text-xs">Lien de l'annonce</Label>
-                        <a 
-                          href={selectedVisite.offres.lien_annonce} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline flex items-center gap-1 text-sm"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                          Voir l'annonce originale
-                        </a>
+                        <div className="mt-1">
+                          <LinkPreviewCard url={selectedVisite.offres.lien_annonce} showInline />
+                        </div>
                       </div>
                     )}
 
