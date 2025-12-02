@@ -127,6 +127,31 @@ export const ResendOfferDialog = ({
 
           if (convError) throw convError;
           conversationId = newConv.id;
+
+          // Add agent to conversation_agents for RLS permissions
+          await supabase
+            .from('conversation_agents')
+            .insert({
+              conversation_id: conversationId,
+              agent_id: agentId,
+            });
+        } else {
+          // Ensure agent is in conversation_agents for existing conversations
+          const { data: existingAgent } = await supabase
+            .from('conversation_agents')
+            .select('id')
+            .eq('conversation_id', conversationId)
+            .eq('agent_id', agentId)
+            .maybeSingle();
+
+          if (!existingAgent) {
+            await supabase
+              .from('conversation_agents')
+              .insert({
+                conversation_id: conversationId,
+                agent_id: agentId,
+              });
+          }
         }
 
         // Créer le message avec l'offre
