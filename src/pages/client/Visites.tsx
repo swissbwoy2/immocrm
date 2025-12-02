@@ -110,15 +110,29 @@ export default function Visites() {
 
   const marquerVisiteEffectuee = async (visite: any) => {
     try {
-      await supabase
+      // Update visite status
+      const { error: visiteError } = await supabase
         .from('visites')
         .update({ statut: 'effectuee' })
         .eq('id', visite.id);
 
-      await supabase
-        .from('offres')
-        .update({ statut: 'visite_effectuee' })
-        .eq('id', visite.offre_id);
+      if (visiteError) {
+        console.error('Error updating visite:', visiteError);
+        throw visiteError;
+      }
+
+      // Update offre status only if offre_id exists
+      if (visite.offre_id) {
+        const { error: offreError } = await supabase
+          .from('offres')
+          .update({ statut: 'visite_effectuee' })
+          .eq('id', visite.offre_id);
+
+        if (offreError) {
+          console.error('Error updating offre:', offreError);
+          // Don't throw, visite is already updated
+        }
+      }
 
       toast({
         title: 'Succès',
