@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { CalendarEvent } from './CalendarView';
 
 interface Agent {
   id: string;
@@ -38,6 +39,8 @@ interface EventFormProps {
   clients: Client[];
   initialDate?: Date;
   isLoading?: boolean;
+  editingEvent?: CalendarEvent | null;
+  mode?: 'create' | 'edit';
 }
 
 export interface EventFormData {
@@ -55,6 +58,16 @@ export interface EventFormData {
   reminder_date?: Date;
 }
 
+const getDefaultFormData = (initialDate?: Date): EventFormData => ({
+  event_type: 'rappel',
+  title: '',
+  description: '',
+  event_date: initialDate || new Date(),
+  event_time: '09:00',
+  priority: 'normale',
+  all_day: false,
+});
+
 export function EventForm({
   open,
   onClose,
@@ -63,16 +76,30 @@ export function EventForm({
   clients,
   initialDate,
   isLoading,
+  editingEvent,
+  mode = 'create',
 }: EventFormProps) {
-  const [formData, setFormData] = useState<EventFormData>({
-    event_type: 'rappel',
-    title: '',
-    description: '',
-    event_date: initialDate || new Date(),
-    event_time: '09:00',
-    priority: 'normale',
-    all_day: false,
-  });
+  const [formData, setFormData] = useState<EventFormData>(getDefaultFormData(initialDate));
+
+  // Populate form when editing
+  useEffect(() => {
+    if (mode === 'edit' && editingEvent) {
+      const eventDate = new Date(editingEvent.event_date);
+      setFormData({
+        event_type: editingEvent.event_type || 'rappel',
+        title: editingEvent.title || '',
+        description: editingEvent.description || '',
+        event_date: eventDate,
+        event_time: format(eventDate, 'HH:mm'),
+        priority: editingEvent.priority || 'normale',
+        all_day: editingEvent.all_day || false,
+        client_id: editingEvent.client_id || undefined,
+        agent_id: editingEvent.agent_id || undefined,
+      });
+    } else if (mode === 'create') {
+      setFormData(getDefaultFormData(initialDate));
+    }
+  }, [mode, editingEvent, initialDate, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,22 +107,21 @@ export function EventForm({
   };
 
   const resetForm = () => {
-    setFormData({
-      event_type: 'rappel',
-      title: '',
-      description: '',
-      event_date: initialDate || new Date(),
-      event_time: '09:00',
-      priority: 'normale',
-      all_day: false,
-    });
+    setFormData(getDefaultFormData(initialDate));
   };
 
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  const isEditing = mode === 'edit';
+
   return (
-    <Dialog open={open} onOpenChange={(open) => { if (!open) { resetForm(); onClose(); } }}>
+    <Dialog open={open} onOpenChange={(open) => { if (!open) handleClose(); }}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nouvel événement</DialogTitle>
+          <DialogTitle>{isEditing ? 'Modifier l\'événement' : 'Nouvel événement'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -249,11 +275,11 @@ export function EventForm({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={handleClose}>
               Annuler
             </Button>
             <Button type="submit" disabled={isLoading || !formData.title}>
-              {isLoading ? 'Création...' : 'Créer'}
+              {isLoading ? (isEditing ? 'Enregistrement...' : 'Création...') : (isEditing ? 'Enregistrer' : 'Créer')}
             </Button>
           </DialogFooter>
         </form>

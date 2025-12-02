@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { isSameDay } from 'date-fns';
-import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar } from 'lucide-react';
+import { format, isSameDay } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar, Pencil, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,21 @@ interface Client {
   };
 }
 
+const eventTypeLabels: Record<string, string> = {
+  rappel: 'Rappel',
+  rendez_vous: 'Rendez-vous',
+  tache: 'Tâche',
+  reunion: 'Réunion',
+  autre: 'Autre',
+};
+
+const priorityLabels: Record<string, string> = {
+  basse: 'Basse',
+  normale: 'Normale',
+  haute: 'Haute',
+  urgente: 'Urgente',
+};
+
 export default function AgentCalendrier() {
   const { user } = useAuth();
   const { markTypeAsRead } = useNotifications();
@@ -37,13 +53,19 @@ export default function AgentCalendrier() {
   const [showEventForm, setShowEventForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
+  // Edit mode
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+
   // Filter
   const [filterClient, setFilterClient] = useState('all');
 
   // Dialogs
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [eventDetailDialogOpen, setEventDetailDialogOpen] = useState(false);
   const [selectedVisite, setSelectedVisite] = useState<any>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [recommandation, setRecommandation] = useState<'recommande' | 'neutre' | 'deconseille'>('neutre');
 
@@ -202,6 +224,66 @@ export default function AgentCalendrier() {
     }
   };
 
+  const handleUpdateEvent = async (formData: EventFormData) => {
+    if (!editingEvent) return;
+
+    try {
+      setIsCreating(true);
+
+      const eventDate = new Date(formData.event_date);
+      if (!formData.all_day && formData.event_time) {
+        const [hours, minutes] = formData.event_time.split(':');
+        eventDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+      }
+
+      const { error } = await supabase
+        .from('calendar_events')
+        .update({
+          event_type: formData.event_type,
+          title: formData.title,
+          description: formData.description || null,
+          event_date: eventDate.toISOString(),
+          client_id: formData.client_id || null,
+          priority: formData.priority,
+          all_day: formData.all_day,
+        })
+        .eq('id', editingEvent.id);
+
+      if (error) throw error;
+
+      toast.success('Événement modifié');
+      setShowEventForm(false);
+      setEditingEvent(null);
+      setFormMode('create');
+      loadData();
+    } catch (error: any) {
+      console.error('Error updating event:', error);
+      toast.error('Erreur lors de la modification');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleEditEvent = (event: CalendarEvent) => {
+    setEditingEvent(event);
+    setFormMode('edit');
+    setShowEventForm(true);
+  };
+
+  const handleFormSubmit = (formData: EventFormData) => {
+    if (formMode === 'edit') {
+      handleUpdateEvent(formData);
+    } else {
+      handleCreateEvent(formData);
+    }
+  };
+
+  const handleFormClose = () => {
+    setShowEventForm(false);
+    setEditingEvent(null);
+    setFormMode('create');
+  };
+
   const handleStatusChange = async (eventId: string, status: string) => {
     try {
       const { error } = await supabase
@@ -229,6 +311,8 @@ export default function AgentCalendrier() {
       if (error) throw error;
 
       toast.success('Événement supprimé');
+      setEventDetailDialogOpen(false);
+      setSelectedEvent(null);
       loadData();
     } catch (error: any) {
       console.error('Error deleting event:', error);
@@ -317,6 +401,25 @@ export default function AgentCalendrier() {
     setDetailDialogOpen(true);
   };
 
+  const handleOpenEventDetail = (event: CalendarEvent) => {
+    setSelectedEvent(event);
+    setEventDetailDialogOpen(true);
+  };
+
+  const handleCalendarEventClick = (event: any, type: 'event' | 'visite') => {
+    if (type === 'visite') {
+      handleOpenDetail(event);
+    } else {
+      handleOpenEventDetail(event);
+    }
+  };
+
+  const getClientName = (clientId?: string) => {
+    if (!clientId) return null;
+    const client = clients.find((c) => c.id === clientId);
+    return client ? `${client.profiles.prenom} ${client.profiles.nom}` : null;
+  };
+
   const getRecommandationBadge = (recommandation: string | null) => {
     if (!recommandation) return null;
     
@@ -358,7 +461,11 @@ export default function AgentCalendrier() {
             {visites.filter(v => v.statut === 'planifiee').length} visites à venir • {events.length} événements
           </p>
         </div>
-        <Button onClick={() => setShowEventForm(true)}>
+        <Button onClick={() => {
+          setFormMode('create');
+          setEditingEvent(null);
+          setShowEventForm(true);
+        }}>
           <Plus className="h-4 w-4 mr-2" />
           Nouvel événement
         </Button>
@@ -423,6 +530,7 @@ export default function AgentCalendrier() {
             visites={filteredVisites}
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
+            onEventClick={handleCalendarEventClick}
           />
         </div>
 
@@ -435,8 +543,10 @@ export default function AgentCalendrier() {
             clients={clients}
             onStatusChange={handleStatusChange}
             onDelete={handleDeleteEvent}
+            onEdit={handleEditEvent}
             onMarquerEffectuee={handleMarquerEffectuee}
             onOpenDetail={handleOpenDetail}
+            onOpenEventDetail={handleOpenEventDetail}
           />
         </div>
       </div>
@@ -444,13 +554,101 @@ export default function AgentCalendrier() {
       {/* Event form */}
       <EventForm
         open={showEventForm}
-        onClose={() => setShowEventForm(false)}
-        onSubmit={handleCreateEvent}
+        onClose={handleFormClose}
+        onSubmit={handleFormSubmit}
         agents={[]}
         clients={clients}
         initialDate={selectedDate || undefined}
         isLoading={isCreating}
+        editingEvent={editingEvent}
+        mode={formMode}
       />
+
+      {/* Event detail dialog */}
+      <Dialog open={eventDetailDialogOpen} onOpenChange={setEventDetailDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              Détails de l'événement
+              {selectedEvent?.status === 'effectue' && <Badge variant="secondary">Effectué</Badge>}
+              {selectedEvent?.status === 'annule' && <Badge variant="destructive">Annulé</Badge>}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedEvent && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline">
+                  {eventTypeLabels[selectedEvent.event_type] || selectedEvent.event_type}
+                </Badge>
+                {selectedEvent.priority && (
+                  <Badge variant={selectedEvent.priority === 'urgente' ? 'destructive' : selectedEvent.priority === 'haute' ? 'default' : 'secondary'}>
+                    {priorityLabels[selectedEvent.priority] || selectedEvent.priority}
+                  </Badge>
+                )}
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold">{selectedEvent.title}</h3>
+              </div>
+
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  {format(new Date(selectedEvent.event_date), 'EEEE d MMMM yyyy', { locale: fr })}
+                </div>
+                {!selectedEvent.all_day && (
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-4 w-4" />
+                    {format(new Date(selectedEvent.event_date), 'HH:mm')}
+                  </div>
+                )}
+                {selectedEvent.all_day && (
+                  <Badge variant="outline">Journée entière</Badge>
+                )}
+              </div>
+
+              {selectedEvent.description && (
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm">{selectedEvent.description}</p>
+                </div>
+              )}
+
+              {selectedEvent.client_id && (
+                <div className="flex items-center gap-2 text-sm">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <span>Client: {getClientName(selectedEvent.client_id)}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setEventDetailDialogOpen(false)}>
+              Fermer
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEventDetailDialogOpen(false);
+                if (selectedEvent) handleEditEvent(selectedEvent);
+              }}
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Modifier
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (selectedEvent) handleDeleteEvent(selectedEvent.id);
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Feedback dialog */}
       <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>

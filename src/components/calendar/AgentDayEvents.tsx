@@ -2,7 +2,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { 
   Calendar, Clock, User, MapPin, CheckCircle, XCircle, Trash2,
-  MessageSquare, AlertTriangle, ThumbsUp, ThumbsDown, Minus, Eye
+  MessageSquare, AlertTriangle, ThumbsUp, ThumbsDown, Minus, Eye, Pencil
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,8 +17,10 @@ interface AgentDayEventsProps {
   clients: { id: string; user_id: string; profiles: { prenom: string; nom: string } }[];
   onStatusChange?: (eventId: string, status: string) => void;
   onDelete?: (eventId: string) => void;
+  onEdit?: (event: CalendarEvent) => void;
   onMarquerEffectuee: (visite: any) => void;
   onOpenDetail: (visite: any) => void;
+  onOpenEventDetail?: (event: CalendarEvent) => void;
 }
 
 const eventTypeLabels: Record<string, string> = {
@@ -54,7 +56,7 @@ const statusIcons: Record<string, React.ReactNode> = {
 
 export function AgentDayEvents({ 
   date, events, visites, clients, 
-  onStatusChange, onDelete, onMarquerEffectuee, onOpenDetail 
+  onStatusChange, onDelete, onEdit, onMarquerEffectuee, onOpenDetail, onOpenEventDetail 
 }: AgentDayEventsProps) {
   if (!date) {
     return (
@@ -150,7 +152,7 @@ export function AgentDayEvents({
                     className={cn(
                       'p-3 rounded-lg border cursor-pointer hover:shadow-md transition-shadow',
                       isUrgent ? 'border-destructive/50 bg-destructive/5' : 
-                      data.est_deleguee ? 'border-primary/50 bg-primary/5' : 
+                      data.est_deleguee ? 'border-green-500/50 bg-green-500/5 ring-1 ring-green-300' : 
                       'bg-blue-500/10 border-blue-500/30',
                       isPast && 'opacity-60'
                     )}
@@ -161,7 +163,7 @@ export function AgentDayEvents({
                         <div className="flex items-center gap-2 flex-wrap">
                           <Badge variant="outline" className="text-xs">Visite</Badge>
                           {data.est_deleguee && (
-                            <Badge variant="secondary" className="text-xs">Déléguée</Badge>
+                            <Badge className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">Déléguée</Badge>
                           )}
                           {urgency && !isPast && (
                             <Badge variant={urgency.color} className={cn("text-xs", isUrgent && "animate-pulse")}>
@@ -258,7 +260,11 @@ export function AgentDayEvents({
               return (
                 <div
                   key={`event-${data.id}-${idx}`}
-                  className={cn('p-3 rounded-lg border', eventTypeColors[item.eventType])}
+                  className={cn(
+                    'p-3 rounded-lg border cursor-pointer hover:shadow-md transition-shadow',
+                    eventTypeColors[item.eventType]
+                  )}
+                  onClick={() => onOpenEventDetail?.(data)}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
@@ -298,16 +304,34 @@ export function AgentDayEvents({
                       )}
                     </div>
 
-                    {onDelete && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => onDelete(data.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <div className="flex flex-col gap-1">
+                      {onEdit && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(data);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {onDelete && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(data.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
 
                   {onStatusChange && data.status !== 'effectue' && (
@@ -316,7 +340,10 @@ export function AgentDayEvents({
                         size="sm"
                         variant="outline"
                         className="text-xs h-7"
-                        onClick={() => onStatusChange(data.id, 'effectue')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onStatusChange(data.id, 'effectue');
+                        }}
                       >
                         <CheckCircle className="h-3 w-3 mr-1" />
                         Effectué
@@ -326,7 +353,10 @@ export function AgentDayEvents({
                           size="sm"
                           variant="outline"
                           className="text-xs h-7"
-                          onClick={() => onStatusChange(data.id, 'annule')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onStatusChange(data.id, 'annule');
+                          }}
                         >
                           <XCircle className="h-3 w-3 mr-1" />
                           Annuler
