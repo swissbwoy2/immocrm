@@ -275,8 +275,9 @@ const Messagerie = () => {
     }
   };
 
-  const handleSendMessage = async () => {
-    if ((!messageText.trim() && !pendingAttachment) || !selectedConv || !user || !agentId) return;
+  const handleSendMessage = async (textOverride?: string) => {
+    const content = textOverride ?? messageText;
+    if ((!content.trim() && !pendingAttachment) || !selectedConv || !user || !agentId) return;
 
     try {
       // Vérifier si c'est une conversation client et si l'agent est toujours assigné
@@ -305,7 +306,7 @@ const Messagerie = () => {
           conversation_id: selectedConv,
           sender_id: user.id,
           sender_type: 'agent',
-          content: messageText || null,
+          content: content || null,
           attachment_url: pendingAttachment?.url || null,
           attachment_type: pendingAttachment?.type || null,
           attachment_name: pendingAttachment?.name || null,
@@ -1052,10 +1053,7 @@ const Messagerie = () => {
             onAttachmentReady={setPendingAttachment}
           />
           <ChatInput
-            onSendMessage={(text) => {
-              setMessageText(text);
-              setTimeout(() => handleSendMessage(), 0);
-            }}
+            onSendMessage={handleSendMessage}
             disabled={false}
             placeholder="Écrivez un message..."
           />
