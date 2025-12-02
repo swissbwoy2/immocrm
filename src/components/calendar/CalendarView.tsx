@@ -24,10 +24,12 @@ interface CalendarViewProps {
   visites: any[];
   selectedDate: Date | null;
   onDateSelect: (date: Date) => void;
+  onEventClick?: (event: any, type: 'event' | 'visite') => void;
 }
 
 const eventTypeColors: Record<string, string> = {
   visite: 'bg-blue-500',
+  visite_deleguee: 'bg-green-600 ring-2 ring-green-300',
   rappel: 'bg-yellow-500',
   rendez_vous: 'bg-green-500',
   tache: 'bg-orange-500',
@@ -37,7 +39,7 @@ const eventTypeColors: Record<string, string> = {
   autre: 'bg-gray-500',
 };
 
-export function CalendarView({ events, visites, selectedDate, onDateSelect }: CalendarViewProps) {
+export function CalendarView({ events, visites, selectedDate, onDateSelect, onEventClick }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const monthStart = startOfMonth(currentMonth);
@@ -49,23 +51,58 @@ export function CalendarView({ events, visites, selectedDate, onDateSelect }: Ca
   const paddingDays = startDay === 0 ? 6 : startDay - 1;
 
   const getEventsForDay = (date: Date) => {
-    const dayEvents: { type: string; event: any }[] = [];
+    const dayEvents: { type: string; event: any; isVisite: boolean; isDelegated?: boolean }[] = [];
 
     // Add calendar events
     events.forEach((event) => {
       if (isSameDay(new Date(event.event_date), date)) {
-        dayEvents.push({ type: event.event_type, event });
+        dayEvents.push({ type: event.event_type, event, isVisite: false });
       }
     });
 
     // Add visites
     visites.forEach((visite) => {
       if (isSameDay(new Date(visite.date_visite), date)) {
-        dayEvents.push({ type: 'visite', event: visite });
+        dayEvents.push({ 
+          type: visite.est_deleguee ? 'visite_deleguee' : 'visite', 
+          event: visite, 
+          isVisite: true,
+          isDelegated: visite.est_deleguee 
+        });
       }
     });
 
     return dayEvents;
+  };
+
+  const handleEventClick = (e: React.MouseEvent, item: { event: any; isVisite: boolean }) => {
+    e.stopPropagation();
+    if (onEventClick) {
+      onEventClick(item.event, item.isVisite ? 'visite' : 'event');
+    }
+  };
+
+  const getEventTime = (item: { event: any; isVisite: boolean }) => {
+    const dateStr = item.isVisite ? item.event.date_visite : item.event.event_date;
+    if (!dateStr) return '';
+    
+    const date = new Date(dateStr);
+    // Check if it's all day event
+    if (!item.isVisite && item.event.all_day) return '';
+    
+    return format(date, 'HH:mm');
+  };
+
+  const getEventLabel = (item: { event: any; isVisite: boolean }) => {
+    const time = getEventTime(item);
+    const label = item.isVisite 
+      ? item.event.adresse?.substring(0, 12) 
+      : item.event.title?.substring(0, 12);
+    
+    if (time) {
+      return `${time} ${label || ''}`;
+    }
+    return label || '';
   };
 
   return (
@@ -142,12 +179,14 @@ export function CalendarView({ events, visites, selectedDate, onDateSelect }: Ca
                 {dayEvents.slice(0, 3).map((item, idx) => (
                   <div
                     key={idx}
+                    onClick={(e) => handleEventClick(e, item)}
                     className={cn(
-                      'text-[10px] px-1 py-0.5 rounded truncate text-white',
+                      'text-[9px] px-1 py-0.5 rounded truncate text-white cursor-pointer hover:opacity-80 transition-opacity',
                       eventTypeColors[item.type] || 'bg-gray-500'
                     )}
+                    title={item.isVisite ? item.event.adresse : item.event.title}
                   >
-                    {item.event.title || item.event.adresse?.substring(0, 15)}
+                    {getEventLabel(item)}
                   </div>
                 ))}
                 {dayEvents.length > 3 && (
@@ -166,6 +205,10 @@ export function CalendarView({ events, visites, selectedDate, onDateSelect }: Ca
         <div className="flex items-center gap-1.5">
           <div className={cn('w-3 h-3 rounded', eventTypeColors.visite)} />
           <span className="text-xs text-muted-foreground">Visite</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className={cn('w-3 h-3 rounded ring-2 ring-green-300', eventTypeColors.visite_deleguee)} />
+          <span className="text-xs text-muted-foreground">Visite déléguée</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className={cn('w-3 h-3 rounded', eventTypeColors.signature)} />
