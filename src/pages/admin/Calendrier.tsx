@@ -57,10 +57,10 @@ export default function AdminCalendrier() {
       const [eventsRes, visitesRes, agentsRes, clientsRes, candidaturesRes] = await Promise.all([
         supabase.from('calendar_events').select('*').order('event_date', { ascending: true }),
         supabase.from('visites').select('*').order('date_visite', { ascending: true }),
-        supabase.from('agents').select('id, user_id, profiles(prenom, nom)'),
-        supabase.from('clients').select('id, user_id, profiles(prenom, nom)'),
+        supabase.from('agents').select('id, user_id, profiles!agents_user_id_fkey(prenom, nom)'),
+        supabase.from('clients').select('id, user_id, profiles!clients_user_id_fkey(prenom, nom)'),
         supabase.from('candidatures')
-          .select('id, client_id, offre_id, date_etat_lieux, heure_etat_lieux, date_signature_choisie, statut, clients(id, profiles(prenom, nom)), offres(adresse, agent_id)')
+          .select('id, client_id, offre_id, date_etat_lieux, heure_etat_lieux, date_signature_choisie, statut, clients(id, profiles!clients_user_id_fkey(prenom, nom)), offres(adresse, agent_id)')
           .or('date_etat_lieux.not.is.null,date_signature_choisie.not.is.null'),
       ]);
 
