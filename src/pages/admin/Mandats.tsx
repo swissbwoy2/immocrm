@@ -114,8 +114,9 @@ const Mandats = () => {
 
   const getMandateStatus = (daysElapsed: number) => {
     if (daysElapsed <= 30) return { label: "Nouveau", variant: "default" as const, color: "text-primary", key: "nouveau" };
-    if (daysElapsed <= 60) return { label: "En cours", variant: "secondary" as const, color: "text-warning", key: "en_cours" };
-    return { label: "Critique", variant: "destructive" as const, color: "text-destructive", key: "critique" };
+    if (daysElapsed <= 60) return { label: "En cours", variant: "secondary" as const, color: "text-muted-foreground", key: "en_cours" };
+    if (daysElapsed < 90) return { label: "Critique", variant: "outline" as const, color: "text-warning", key: "critique" };
+    return { label: "Expiré", variant: "destructive" as const, color: "text-destructive", key: "expire" };
   };
 
   const getLatestRenewal = (clientId: string) => {
@@ -245,7 +246,7 @@ const Mandats = () => {
         </div>
 
         {/* Stats résumé */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
           <Card className="p-3 md:p-4">
             <p className="text-xs text-muted-foreground">Total clients</p>
             <p className="text-xl md:text-2xl font-bold">{clients.length}</p>
@@ -258,7 +259,7 @@ const Mandats = () => {
           </Card>
           <Card className="p-3 md:p-4">
             <p className="text-xs text-muted-foreground">En cours (30-60j)</p>
-            <p className="text-xl md:text-2xl font-bold text-warning">
+            <p className="text-xl md:text-2xl font-bold text-muted-foreground">
               {clients.filter(c => {
                 const days = calculateDaysElapsed(c.date_ajout || c.created_at);
                 return days > 30 && days <= 60;
@@ -266,9 +267,18 @@ const Mandats = () => {
             </p>
           </Card>
           <Card className="p-3 md:p-4">
-            <p className="text-xs text-muted-foreground">Critiques (&gt;60j)</p>
+            <p className="text-xs text-muted-foreground">Critiques (60-89j)</p>
+            <p className="text-xl md:text-2xl font-bold text-warning">
+              {clients.filter(c => {
+                const days = calculateDaysElapsed(c.date_ajout || c.created_at);
+                return days > 60 && days < 90;
+              }).length}
+            </p>
+          </Card>
+          <Card className="p-3 md:p-4">
+            <p className="text-xs text-muted-foreground">Expirés (90+j)</p>
             <p className="text-xl md:text-2xl font-bold text-destructive">
-              {clients.filter(c => calculateDaysElapsed(c.date_ajout || c.created_at) > 60).length}
+              {clients.filter(c => calculateDaysElapsed(c.date_ajout || c.created_at) >= 90).length}
             </p>
           </Card>
         </div>
@@ -306,6 +316,7 @@ const Mandats = () => {
               <SelectItem value="nouveau">Nouveaux</SelectItem>
               <SelectItem value="en_cours">En cours</SelectItem>
               <SelectItem value="critique">Critiques</SelectItem>
+              <SelectItem value="expire">Expirés</SelectItem>
             </SelectContent>
           </Select>
         </div>
