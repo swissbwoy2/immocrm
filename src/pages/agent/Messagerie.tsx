@@ -17,6 +17,7 @@ import {
   Search, Home, Send,
   Check, X, Clock, FileSignature, Key, Calendar, Plus, Trash2
 } from "lucide-react";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { useAuth } from "@/contexts/AuthContext";
@@ -983,7 +984,10 @@ const Messagerie = () => {
     <>
       <div className="p-4 border-b border-border/50 space-y-3">
         <div className="space-y-3">
-          <h2 className="font-semibold text-lg">Conversations</h2>
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="shrink-0" />
+            <h2 className="font-semibold text-lg">Conversations</h2>
+          </div>
           {agentId && (
             <div className="grid grid-cols-2 gap-2">
               <NewConversationDialog 
