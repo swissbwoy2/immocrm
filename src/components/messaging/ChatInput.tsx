@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Paperclip, Send, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -58,13 +58,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       )}
 
       <div className="flex-1 relative">
-        <Input
+        <Textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyPress}
           placeholder={placeholder}
           disabled={disabled}
-          className="rounded-full bg-muted border-0 pr-4 focus-visible:ring-1 focus-visible:ring-primary"
+          rows={1}
+          className="min-h-[40px] max-h-[120px] resize-none rounded-2xl bg-muted border-0 pr-4 py-2 focus-visible:ring-1 focus-visible:ring-primary"
         />
       </div>
 
