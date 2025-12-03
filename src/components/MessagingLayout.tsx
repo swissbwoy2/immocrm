@@ -94,6 +94,21 @@ export function MessagingLayout({
           <div className="lg:hidden absolute left-0 top-1/2 -translate-y-1/2 w-1 h-16 bg-muted-foreground/20 rounded-r-full pointer-events-none z-10" />
         )}
 
+        {/* Bouton retour vers les conversations - visible quand le panneau est masqué */}
+        {selectedConversation && !showConversations && (
+          <div className="flex items-center gap-2 p-3 border-b bg-card lg:hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleBackToList}
+              className="shrink-0"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <span className="font-medium">Retour aux conversations</span>
+          </div>
+        )}
+
         {/* Bouton menu mobile quand aucune conversation n'est sélectionnée */}
         {!selectedConversation && (
           <div className="flex items-center gap-2 p-3 border-b bg-card lg:hidden">
