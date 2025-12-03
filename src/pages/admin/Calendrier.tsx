@@ -64,11 +64,40 @@ export default function AdminCalendrier() {
           .or('date_etat_lieux.not.is.null,date_signature_choisie.not.is.null'),
       ]);
 
-      if (eventsRes.error) throw eventsRes.error;
-      if (visitesRes.error) throw visitesRes.error;
-      if (agentsRes.error) throw agentsRes.error;
-      if (clientsRes.error) throw clientsRes.error;
-      if (candidaturesRes.error) throw candidaturesRes.error;
+      // Log results for debugging
+      console.log('Calendar data loaded:', {
+        events: eventsRes.data?.length || 0,
+        eventsError: eventsRes.error,
+        visites: visitesRes.data?.length || 0,
+        visitesError: visitesRes.error,
+        agents: agentsRes.data?.length || 0,
+        agentsError: agentsRes.error,
+        clients: clientsRes.data?.length || 0,
+        clientsError: clientsRes.error,
+        candidatures: candidaturesRes.data?.length || 0,
+        candidaturesError: candidaturesRes.error,
+      });
+
+      // Handle errors but continue with available data
+      if (eventsRes.error) {
+        console.error('Events error:', eventsRes.error);
+        toast.error('Erreur chargement événements: ' + eventsRes.error.message);
+      }
+      if (visitesRes.error) {
+        console.error('Visites error:', visitesRes.error);
+        toast.error('Erreur chargement visites: ' + visitesRes.error.message);
+      }
+      if (agentsRes.error) {
+        console.error('Agents error:', agentsRes.error);
+        toast.error('Erreur chargement agents: ' + agentsRes.error.message);
+      }
+      if (clientsRes.error) {
+        console.error('Clients error:', clientsRes.error);
+        toast.error('Erreur chargement clients: ' + clientsRes.error.message);
+      }
+      if (candidaturesRes.error) {
+        console.error('Candidatures error:', candidaturesRes.error);
+      }
 
       // Transform candidatures into virtual calendar events
       const candidatureEvents: CalendarEvent[] = [];
@@ -108,13 +137,19 @@ export default function AdminCalendrier() {
         }
       });
 
+      // Set data even if some queries failed
       setEvents([...(eventsRes.data || []), ...candidatureEvents]);
       setVisites(visitesRes.data || []);
       setAgents((agentsRes.data as any) || []);
       setClients((clientsRes.data as any) || []);
+      
+      // Show success with counts
+      if (!eventsRes.error && !visitesRes.error) {
+        console.log(`Calendrier chargé: ${(eventsRes.data || []).length + candidatureEvents.length} événements, ${visitesRes.data?.length || 0} visites`);
+      }
     } catch (error: any) {
       console.error('Error loading calendar data:', error);
-      toast.error('Erreur lors du chargement des données');
+      toast.error('Erreur lors du chargement des données: ' + error.message);
     } finally {
       setLoading(false);
     }
