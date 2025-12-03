@@ -72,9 +72,9 @@ export function MessagingLayout({
       {/* Panneau des conversations - Style WhatsApp */}
       <div
         className={cn(
-          "bg-card border-r border-border/50 flex flex-col h-full",
+          "bg-card border-r border-border/50 flex flex-col overflow-hidden",
           // Desktop: toujours visible
-          "lg:relative lg:w-[360px] lg:translate-x-0",
+          "lg:relative lg:w-[360px] lg:translate-x-0 lg:h-full",
           // Tablet: largeur intermédiaire
           "md:w-[320px]",
           // Mobile: panneau coulissant avec transition
