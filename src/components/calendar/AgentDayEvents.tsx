@@ -71,7 +71,7 @@ export function AgentDayEvents({
   const getClientName = (clientId?: string) => {
     if (!clientId) return null;
     const client = clients.find((c) => c.id === clientId);
-    return client ? `${client.profiles.prenom} ${client.profiles.nom}` : null;
+    return client?.profiles ? `${client.profiles.prenom} ${client.profiles.nom}` : null;
   };
 
   const getVisiteUrgency = (dateVisite: string) => {

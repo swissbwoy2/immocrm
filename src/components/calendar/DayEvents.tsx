@@ -66,13 +66,13 @@ export function DayEvents({ date, events, visites, agents, clients, onStatusChan
   const getAgentName = (agentId?: string) => {
     if (!agentId) return null;
     const agent = agents.find((a) => a.id === agentId);
-    return agent ? `${agent.profiles.prenom} ${agent.profiles.nom}` : null;
+    return agent?.profiles ? `${agent.profiles.prenom} ${agent.profiles.nom}` : null;
   };
 
   const getClientName = (clientId?: string) => {
     if (!clientId) return null;
     const client = clients.find((c) => c.id === clientId);
-    return client ? `${client.profiles.prenom} ${client.profiles.nom}` : null;
+    return client?.profiles ? `${client.profiles.prenom} ${client.profiles.nom}` : null;
   };
 
   // Combine events and visites for the selected day

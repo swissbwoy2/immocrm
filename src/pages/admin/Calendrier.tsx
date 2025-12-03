@@ -73,8 +73,9 @@ export default function AdminCalendrier() {
       // Transform candidatures into virtual calendar events
       const candidatureEvents: CalendarEvent[] = [];
       (candidaturesRes.data || []).forEach((candidature: any) => {
+        if (!candidature) return;
         const clientName = candidature.clients?.profiles 
-          ? `${candidature.clients.profiles.prenom} ${candidature.clients.profiles.nom}` 
+          ? `${candidature.clients.profiles.prenom || ''} ${candidature.clients.profiles.nom || ''}`.trim() 
           : 'Client';
         const adresse = candidature.offres?.adresse || 'Adresse inconnue';
         
