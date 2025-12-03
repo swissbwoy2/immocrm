@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Send, Search, Users, UserCog } from "lucide-react";
+import { SidebarTrigger } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploader";
@@ -399,7 +400,10 @@ const Messagerie = () => {
     <>
       <div className="p-4 border-b border-border/50 space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-semibold text-lg">Conversations</h2>
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="shrink-0" />
+            <h2 className="font-semibold text-lg">Conversations</h2>
+          </div>
           <AdminNewConversationDialog onConversationCreated={handleConversationCreated} />
         </div>
         <div className="relative">
