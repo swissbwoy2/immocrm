@@ -66,7 +66,7 @@ const OffresRecues = () => {
     loadCandidatures();
     // Mark new_offer notifications as read when visiting this page
     markTypeAsRead('new_offer');
-  }, [user]);
+  }, [user?.id]);
 
   const loadExistingDocuments = async () => {
     if (!user) return;

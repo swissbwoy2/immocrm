@@ -70,7 +70,7 @@ export default function ClientDashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user?.id]);
 
   const loadData = async () => {
     if (!user) {

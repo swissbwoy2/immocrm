@@ -83,7 +83,7 @@ export default function EnvoyerEmail() {
       checkEmailConfiguration();
       loadClients();
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (selectedClientId) {

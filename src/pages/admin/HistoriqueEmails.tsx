@@ -48,7 +48,7 @@ export default function HistoriqueEmails() {
     if (user) {
       loadEmails();
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     filterEmails();

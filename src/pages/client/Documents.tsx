@@ -56,7 +56,7 @@ export default function Documents() {
 
   useEffect(() => {
     loadDocuments();
-  }, [user]);
+  }, [user?.id]);
 
   const loadDocuments = async () => {
     if (!user) return;

@@ -45,7 +45,7 @@ export default function AdminDocuments() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (searchTerm.trim() === '') {

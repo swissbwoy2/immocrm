@@ -47,7 +47,7 @@ export default function AgentDocuments() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user?.id]);
 
   const loadDocuments = async () => {
     if (!user) return;

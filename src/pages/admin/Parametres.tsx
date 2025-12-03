@@ -30,7 +30,7 @@ export default function AdminParametres() {
     if (user) {
       loadProfile();
     }
-  }, [user]);
+  }, [user?.id]);
 
   const loadProfile = async () => {
     if (!user) return;

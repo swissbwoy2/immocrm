@@ -128,7 +128,7 @@ export function AppSidebar() {
     if (user) {
       loadProfile();
     }
-  }, [user]);
+  }, [user?.id]);
 
   const loadProfile = async () => {
     if (!user) return;

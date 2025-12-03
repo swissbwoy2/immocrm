@@ -83,7 +83,7 @@ const Messagerie = () => {
   useEffect(() => {
     loadAgentAndConversations();
     markTypeAsRead('new_message');
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (selectedConv) {

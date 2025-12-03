@@ -45,7 +45,7 @@ export default function Visites() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user?.id]);
 
   const loadVisites = async () => {
     if (!user) return;
