@@ -1060,7 +1060,17 @@ const Messagerie = () => {
           
           {selectedMessages.map((msg) => {
             const isSent = msg.sender_type === 'agent';
-            const senderName = isSent ? undefined : getContactInfo(currentConversation).name;
+            // Déterminer le nom de l'expéditeur selon le type d'expéditeur
+            let senderName: string | undefined;
+            if (isSent) {
+              senderName = undefined; // Nos propres messages (agent)
+            } else if (msg.sender_type === 'admin') {
+              // Message envoyé par un admin - récupérer le nom de l'admin via sender_id
+              senderName = contactsMap[msg.sender_id]?.name || 'Admin';
+            } else {
+              // Message envoyé par un client
+              senderName = getContactInfo(currentConversation).name;
+            }
             
             return (
               <div key={msg.id}>
