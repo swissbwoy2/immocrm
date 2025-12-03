@@ -84,6 +84,10 @@ export function MessagingLayout({
           !showConversations ? "-translate-x-full lg:translate-x-0" : "translate-x-0"
         )}
       >
+        {/* Header avec SidebarTrigger sur desktop */}
+        <div className="hidden lg:flex items-center gap-2 p-3 border-b bg-card shrink-0">
+          <SidebarTrigger className="shrink-0" />
+        </div>
         {conversationsList}
       </div>
 
