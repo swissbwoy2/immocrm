@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Calendar, TrendingUp, AlertCircle, RefreshCw, Search, ArrowUpDown, User } from "lucide-react";
+import { Calendar, TrendingUp, AlertCircle, RefreshCw, Search, ArrowUpDown, User, Undo2, History } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from "@/utils/calculations";
 import { toast } from "sonner";
@@ -22,9 +22,12 @@ const Mandats = () => {
   const [renouvellements, setRenouvellements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [renewalDialogOpen, setRenewalDialogOpen] = useState(false);
+  const [cancelRenewalDialogOpen, setCancelRenewalDialogOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<any>(null);
+  const [selectedRenewal, setSelectedRenewal] = useState<any>(null);
   const [renewalReason, setRenewalReason] = useState("");
   const [isRenewing, setIsRenewing] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   
   // Filtres et tri
   const [searchTerm, setSearchTerm] = useState("");
@@ -115,11 +118,52 @@ const Mandats = () => {
     return { label: "Critique", variant: "destructive" as const, color: "text-destructive", key: "critique" };
   };
 
+  const getLatestRenewal = (clientId: string) => {
+    return renouvellements.find(r => r.client_id === clientId);
+  };
+
   const isRecentlyRenewed = (clientId: string) => {
-    const renewal = renouvellements.find(r => r.client_id === clientId);
+    const renewal = getLatestRenewal(clientId);
     if (!renewal) return false;
     const daysSinceRenewal = Math.floor((Date.now() - new Date(renewal.created_at).getTime()) / (1000 * 60 * 60 * 24));
     return daysSinceRenewal <= 7;
+  };
+
+  const handleCancelRenewal = async () => {
+    if (!selectedRenewal || !selectedClient) return;
+    
+    setIsCancelling(true);
+    try {
+      // Restaurer la date_ajout à la date ancienne
+      const { error: updateError } = await supabase
+        .from('clients')
+        .update({ date_ajout: selectedRenewal.date_ancien_mandat })
+        .eq('id', selectedClient.id);
+
+      if (updateError) throw updateError;
+
+      // Supprimer le renouvellement
+      const { error: deleteError } = await supabase
+        .from('renouvellements_mandat')
+        .delete()
+        .eq('id', selectedRenewal.id);
+
+      if (deleteError) throw deleteError;
+
+      await loadData();
+      setCancelRenewalDialogOpen(false);
+      setSelectedRenewal(null);
+      setSelectedClient(null);
+      
+      toast.success("Renouvellement annulé", {
+        description: `Le mandat de ${selectedClient.profiles?.prenom} ${selectedClient.profiles?.nom} a été restauré à sa date initiale.`
+      });
+    } catch (error) {
+      console.error('Error cancelling renewal:', error);
+      toast.error("Erreur lors de l'annulation du renouvellement");
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   const toggleSort = (field: SortField) => {
@@ -325,7 +369,7 @@ const Mandats = () => {
                   {/* Header */}
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                     <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
                         <h3 className="text-lg md:text-xl font-semibold">
                           {client.profiles 
                             ? `${client.profiles.prenom} ${client.profiles.nom}` 
@@ -336,6 +380,22 @@ const Mandats = () => {
                           <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-200 text-xs">
                             🔄 Renouvelé
                           </Badge>
+                        )}
+                        {getLatestRenewal(client.id) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedClient(client);
+                              setSelectedRenewal(getLatestRenewal(client.id));
+                              setCancelRenewalDialogOpen(true);
+                            }}
+                          >
+                            <Undo2 className="h-3 w-3 mr-1" />
+                            Annuler renouvellement
+                          </Button>
                         )}
                       </div>
                       <p className="text-xs md:text-sm text-muted-foreground flex items-center gap-1">
@@ -473,6 +533,76 @@ const Mandats = () => {
               disabled={isRenewing}
             >
               {isRenewing ? "Renouvellement..." : "Confirmer le renouvellement"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog annulation renouvellement */}
+      <Dialog open={cancelRenewalDialogOpen} onOpenChange={setCancelRenewalDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Undo2 className="h-5 w-5 text-destructive" />
+              Annuler le renouvellement
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Client: <span className="font-medium text-foreground">
+                  {selectedClient?.profiles?.prenom} {selectedClient?.profiles?.nom}
+                </span>
+              </p>
+              {selectedRenewal && (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Date actuelle du mandat: <span className="font-medium text-foreground">
+                      {new Date(selectedClient?.date_ajout).toLocaleDateString('fr-CH')}
+                    </span>
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Date avant renouvellement: <span className="font-medium text-foreground">
+                      {new Date(selectedRenewal.date_ancien_mandat).toLocaleDateString('fr-CH')}
+                    </span>
+                  </p>
+                  {selectedRenewal.raison && (
+                    <p className="text-sm text-muted-foreground">
+                      Raison du renouvellement: <span className="font-medium text-foreground">
+                        {selectedRenewal.raison}
+                      </span>
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-md">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                ⚠️ Cette action va restaurer la date du mandat à sa valeur avant le renouvellement ({selectedRenewal ? new Date(selectedRenewal.date_ancien_mandat).toLocaleDateString('fr-CH') : ''}).
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCancelRenewalDialogOpen(false);
+                setSelectedRenewal(null);
+                setSelectedClient(null);
+              }}
+              disabled={isCancelling}
+            >
+              Fermer
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleCancelRenewal}
+              disabled={isCancelling}
+            >
+              {isCancelling ? "Annulation..." : "Confirmer l'annulation"}
             </Button>
           </DialogFooter>
         </DialogContent>
