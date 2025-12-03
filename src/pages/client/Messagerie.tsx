@@ -1231,7 +1231,15 @@ const Messagerie = () => {
         <div className="space-y-2 max-w-4xl mx-auto">
           {selectedMessages.map((msg) => {
             const isSent = msg.sender_type === 'client';
-            const senderName = isSent ? undefined : getAgentName(currentConversation?.agent_id);
+            // Déterminer le nom de l'expéditeur selon le type
+            let senderName: string | undefined;
+            if (isSent) {
+              senderName = undefined; // Nos propres messages
+            } else if (msg.sender_type === 'admin') {
+              senderName = 'Admin';
+            } else {
+              senderName = getAgentName(currentConversation?.agent_id);
+            }
             
             return (
               <div key={msg.id}>
