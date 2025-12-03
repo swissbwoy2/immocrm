@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   FileText, Upload, Download, Trash2, File, 
-  Image as ImageIcon, FileSpreadsheet, AlertCircle, Eye, Pencil 
+  Image as ImageIcon, FileSpreadsheet, AlertCircle, Eye, Pencil, ClipboardList 
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -32,10 +32,20 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+interface DocumentRequest {
+  id: string;
+  document_type: string;
+  document_label: string;
+  note: string | null;
+  candidate_id: string | null;
+  created_at: string;
+}
+
 export default function Documents() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
+  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<any | null>(null);
@@ -83,8 +93,17 @@ export default function Documents() {
         .order('date_upload', { ascending: false });
 
       if (error) throw error;
-
       setDocuments(docsData || []);
+
+      // Charger les demandes de documents en attente
+      const { data: requestsData } = await supabase
+        .from('document_requests')
+        .select('*')
+        .eq('client_id', clientData.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      setDocumentRequests(requestsData || []);
     } catch (error) {
       console.error('Error loading documents:', error);
       toast({
@@ -174,6 +193,27 @@ export default function Documents() {
         });
 
       if (dbError) throw dbError;
+
+      // Auto-mark matching document request as fulfilled
+      if (clientId && selectedType !== 'autre') {
+        const { data: pendingRequest } = await supabase
+          .from('document_requests')
+          .select('id')
+          .eq('client_id', clientId)
+          .eq('document_type', selectedType)
+          .eq('status', 'pending')
+          .maybeSingle();
+
+        if (pendingRequest) {
+          await supabase
+            .from('document_requests')
+            .update({ 
+              status: 'fulfilled', 
+              fulfilled_at: new Date().toISOString() 
+            })
+            .eq('id', pendingRequest.id);
+        }
+      }
 
       await loadDocuments();
 
@@ -414,6 +454,53 @@ export default function Documents() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Documents demandés par l'agent */}
+          {documentRequests.length > 0 && (
+            <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-orange-800 dark:text-orange-200">
+                  <ClipboardList className="w-5 h-5" />
+                  📋 Documents demandés par votre agent
+                  <Badge variant="secondary" className="ml-2">
+                    {documentRequests.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {documentRequests.map((request) => (
+                    <div 
+                      key={request.id} 
+                      className="flex items-center justify-between p-3 rounded-lg bg-background border"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{request.document_label}</p>
+                        {request.note && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            📝 {request.note}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Demandé le {new Date(request.created_at).toLocaleDateString('fr-CH')}
+                        </p>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        onClick={() => {
+                          setSelectedType(request.document_type);
+                          setUploadDialogOpen(true);
+                        }}
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Uploader
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Liste des documents */}
           {documents.length > 0 ? (
