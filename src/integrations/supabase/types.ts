@@ -1050,6 +1050,63 @@ export type Database = {
           },
         ]
       }
+      document_requests: {
+        Row: {
+          candidate_id: string | null
+          client_id: string
+          created_at: string | null
+          document_label: string
+          document_type: string
+          fulfilled_at: string | null
+          id: string
+          note: string | null
+          requested_by: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          candidate_id?: string | null
+          client_id: string
+          created_at?: string | null
+          document_label: string
+          document_type: string
+          fulfilled_at?: string | null
+          id?: string
+          note?: string | null
+          requested_by: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          candidate_id?: string | null
+          client_id?: string
+          created_at?: string | null
+          document_label?: string
+          document_type?: string
+          fulfilled_at?: string | null
+          id?: string
+          note?: string | null
+          requested_by?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_requests_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "client_candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           candidate_id: string | null
