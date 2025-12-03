@@ -106,7 +106,7 @@ export default function Candidatures() {
       return;
     }
     loadCandidatures();
-  }, [user, userRole, navigate]);
+  }, [user?.id, userRole]);
 
   const toggleCard = (id: string) => {
     setExpandedCards(prev => {
