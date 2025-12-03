@@ -44,6 +44,7 @@ const OffresRecues = () => {
   const [delegateDialogOpen, setDelegateDialogOpen] = useState(false);
   const [delegateDate, setDelegateDate] = useState<string>("");
   const [delegateProposedSlots, setDelegateProposedSlots] = useState<any[]>([]);
+  const [visitRequiredAlertOpen, setVisitRequiredAlertOpen] = useState(false);
   
   const [clientData, setClientData] = useState<any>(null);
   const [visites, setVisites] = useState<any[]>([]);
@@ -619,6 +620,19 @@ const OffresRecues = () => {
   };
 
   const handlePostulerDirect = async (offre: any) => {
+    // Vérifier si une visite a été effectuée pour cette offre
+    const visiteEffectuee = visites.find(v => 
+      v.offre_id === offre.id && 
+      v.statut === 'effectuee'
+    );
+    
+    if (!visiteEffectuee) {
+      // Afficher l'alerte au lieu de continuer
+      setSelectedOffre(offre);
+      setVisitRequiredAlertOpen(true);
+      return;
+    }
+
     try {
       const { data: clientData } = await supabase
         .from('clients')
@@ -2012,6 +2026,51 @@ const OffresRecues = () => {
               </Button>
               <Button onClick={confirmDeleguerVisite} disabled={!delegateDate}>
                 Confirmer la délégation
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog Visite Requise */}
+        <Dialog open={visitRequiredAlertOpen} onOpenChange={setVisitRequiredAlertOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Info className="h-5 w-5 text-amber-500" />
+                Visite obligatoire
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                <strong>Aucune régie propriétaire ne considérera votre dossier avant d'avoir visité l'appartement.</strong>
+              </p>
+              <p className="text-sm">
+                Merci de visiter ce bien vous-même ou de déléguer la visite à votre agent avant de postuler.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Après la visite, vous pourrez revenir ici pour demander à votre agent de postuler pour vous.
+              </p>
+            </div>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setVisitRequiredAlertOpen(false)}>
+                Fermer
+              </Button>
+              <Button 
+                variant="secondary"
+                onClick={() => { 
+                  setVisitRequiredAlertOpen(false);
+                  if (selectedOffre) handleDeleguerVisite(selectedOffre);
+                }}
+              >
+                <User className="mr-2 h-4 w-4" />
+                Déléguer à l'agent
+              </Button>
+              <Button onClick={() => {
+                setVisitRequiredAlertOpen(false);
+                if (selectedOffre) handlePlanVisit(selectedOffre);
+              }}>
+                <Calendar className="mr-2 h-4 w-4" />
+                Planifier une visite
               </Button>
             </DialogFooter>
           </DialogContent>

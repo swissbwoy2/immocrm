@@ -227,6 +227,14 @@ export default function AgentVisites() {
         })
         .eq('id', selectedVisite.id);
 
+      // Mettre à jour le statut de l'offre
+      if (selectedVisite.offre_id) {
+        await supabase
+          .from('offres')
+          .update({ statut: 'visite_effectuee' })
+          .eq('id', selectedVisite.offre_id);
+      }
+
       // Notifier le client
       const { data: conv } = await supabase
         .from('conversations')
@@ -248,11 +256,18 @@ export default function AgentVisites() {
           deconseille: 'Je ne recommande pas ce bien'
         }[recommandation];
 
+        // Message de feedback + invitation à postuler
+        const postulationMessage = recommandation === 'recommande' 
+          ? `\n\n📝 **Prêt à postuler ?**\nSi ce bien vous intéresse, vous pouvez maintenant déposer votre candidature depuis la page "Offres Reçues". Cliquez sur "Demander l'aide de l'agent" pour que je postule pour vous.`
+          : (recommandation === 'neutre' 
+            ? `\n\n📝 **Vous souhaitez postuler ?**\nVous pouvez maintenant déposer votre candidature depuis la page "Offres Reçues" si ce bien vous intéresse malgré tout.`
+            : '');
+
         await supabase.from('messages').insert({
           conversation_id: conv.id,
           sender_id: user!.id,
           sender_type: 'agent',
-          content: `🏠 **Retour de la visite déléguée**\n\n📍 ${selectedVisite.adresse}\n\n${recommandationEmoji} **${recommandationText}**\n\n📝 Feedback:\n${feedbackText}`
+          content: `🏠 **Retour de la visite déléguée**\n\n📍 ${selectedVisite.adresse}\n${selectedVisite.offres ? `💰 ${selectedVisite.offres.prix?.toLocaleString()} CHF/mois` : ''}\n\n${recommandationEmoji} **${recommandationText}**\n\n📝 Feedback:\n${feedbackText}${postulationMessage}`
         });
       }
 
