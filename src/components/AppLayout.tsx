@@ -51,7 +51,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
         </header>
         
         {/* Main Content - zone de scroll séparée */}
-        <main className="flex-1 flex flex-col min-h-0">
+        <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {children}
         </main>
       </div>
