@@ -85,7 +85,7 @@ export default function BoiteReception() {
       checkConfig();
       loadEmails();
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     filterEmails();

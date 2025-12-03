@@ -27,7 +27,7 @@ export default function ClientParametres() {
     if (user) {
       loadProfile();
     }
-  }, [user]);
+  }, [user?.id]);
 
   const loadProfile = async () => {
     if (!user) return;

@@ -42,7 +42,7 @@ export default function AgentVisites() {
     // Mark visit notifications as read when visiting this page
     markTypeAsRead('new_visit');
     markTypeAsRead('visit_reminder');
-  }, [user]);
+  }, [user?.id]);
 
   const loadVisites = async () => {
     if (!user) return;

@@ -117,7 +117,7 @@ export default function AgentCalendrier() {
     loadData();
     markTypeAsRead('new_visit');
     markTypeAsRead('visit_reminder');
-  }, [user]);
+  }, [user?.id]);
 
   const loadData = async () => {
     if (!user) return;

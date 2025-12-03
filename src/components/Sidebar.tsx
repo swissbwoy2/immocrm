@@ -66,7 +66,7 @@ export function Sidebar() {
           if (data) setUserProfile(data);
         });
     }
-  }, [user]);
+  }, [user?.id]);
 
   if (!user || !userRole) {
     return null;

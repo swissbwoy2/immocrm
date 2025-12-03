@@ -39,7 +39,7 @@ export default function ClientCalendrier() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user?.id]);
 
   const loadData = async () => {
     if (!user) return;

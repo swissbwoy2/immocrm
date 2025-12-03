@@ -58,7 +58,7 @@ export default function OffresEnvoyees() {
 
   useEffect(() => {
     loadData();
-  }, [user]);
+  }, [user?.id]);
 
   const loadData = async () => {
     if (!user) return;

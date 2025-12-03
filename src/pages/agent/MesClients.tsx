@@ -45,7 +45,7 @@ const MesClients = () => {
     loadAgentAndClients();
     // Mark client_assigned notifications as read when visiting this page
     markTypeAsRead('client_assigned');
-  }, [user]);
+  }, [user?.id]);
 
   const loadAgentAndClients = async () => {
     if (!user) return;
