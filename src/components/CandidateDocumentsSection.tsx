@@ -7,10 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Upload, FileText, Image as ImageIcon, Eye, Download, Trash2, Loader2, User, Users, Shield, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Upload, FileText, Image as ImageIcon, Eye, Download, Trash2, Loader2, User, Users, Shield, CheckCircle, AlertTriangle, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ClientCandidate, CANDIDATE_TYPE_LABELS } from '@/hooks/useClientCandidates';
+import { RequestDocumentsDialog } from './RequestDocumentsDialog';
 
 interface Document {
   id: string;
@@ -31,6 +32,7 @@ interface CandidateDocumentsSectionProps {
   onDocumentsChange?: () => void;
   refreshKey?: number;
   agentUserId?: string;
+  agentId?: string;
 }
 
 const REQUIRED_DOCUMENTS = [
@@ -50,6 +52,7 @@ export function CandidateDocumentsSection({
   onDocumentsChange,
   refreshKey,
   agentUserId,
+  agentId,
 }: CandidateDocumentsSectionProps) {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +66,8 @@ export function CandidateDocumentsSection({
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [requestCandidate, setRequestCandidate] = useState<ClientCandidate | null>(null);
 
   const loadDocuments = async () => {
     try {
@@ -247,6 +252,11 @@ export function CandidateDocumentsSection({
     setUploadDialogOpen(true);
   };
 
+  const openRequestDialog = (candidate: ClientCandidate | null) => {
+    setRequestCandidate(candidate);
+    setRequestDialogOpen(true);
+  };
+
   // Grouper les documents par personne
   const clientDocuments = documents.filter(d => !d.candidate_id);
   const candidateDocumentsMap = new Map<string, Document[]>();
@@ -309,10 +319,18 @@ export function CandidateDocumentsSection({
                   );
                 })()}
               </CardTitle>
-              <Button size="sm" variant="outline" onClick={() => openUploadForCandidate(null)}>
-                <Upload className="w-4 h-4 mr-2" />
-                Ajouter
-              </Button>
+              <div className="flex gap-2">
+                {agentId && agentUserId && (
+                  <Button size="sm" variant="outline" onClick={() => openRequestDialog(null)}>
+                    <Mail className="w-4 h-4 mr-2" />
+                    Demander
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" onClick={() => openUploadForCandidate(null)}>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Ajouter
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -380,10 +398,18 @@ export function CandidateDocumentsSection({
                       </Badge>
                     )}
                   </CardTitle>
-                  <Button size="sm" variant="outline" onClick={() => openUploadForCandidate(candidate)}>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Ajouter
-                  </Button>
+                  <div className="flex gap-2">
+                    {agentId && agentUserId && (
+                      <Button size="sm" variant="outline" onClick={() => openRequestDialog(candidate)}>
+                        <Mail className="w-4 h-4 mr-2" />
+                        Demander
+                      </Button>
+                    )}
+                    <Button size="sm" variant="outline" onClick={() => openUploadForCandidate(candidate)}>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Ajouter
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -506,6 +532,21 @@ export function CandidateDocumentsSection({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Request Documents Dialog */}
+      {agentId && agentUserId && (
+        <RequestDocumentsDialog
+          open={requestDialogOpen}
+          onOpenChange={setRequestDialogOpen}
+          clientId={clientId}
+          clientUserId={clientUserId}
+          clientName={clientName || 'Client'}
+          candidate={requestCandidate}
+          existingDocuments={documents}
+          agentId={agentId}
+          agentUserId={agentUserId}
+        />
+      )}
     </>
   );
 }
