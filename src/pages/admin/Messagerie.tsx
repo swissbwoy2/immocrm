@@ -111,6 +111,7 @@ const Messagerie = () => {
       const clientIds = [...new Set(data.map(c => c.client_id).filter(Boolean))] as string[];
       const agentIds = [...new Set(data.map(c => c.agent_id).filter(Boolean))] as string[];
       const adminUserIds = [...new Set(data.map(c => c.admin_user_id).filter(Boolean))] as string[];
+      const conversationIds = data.map(c => c.id);
       
       // Charger les clients
       const { data: clientsData } = clientIds.length > 0 
@@ -132,6 +133,26 @@ const Messagerie = () => {
       const { data: profilesData } = allUserIds.length > 0
         ? await supabase.from('profiles').select('id, prenom, nom, email').in('id', allUserIds)
         : { data: [] as { id: string; prenom: string; nom: string; email: string }[] };
+
+      // Charger les derniers messages de chaque conversation
+      const { data: lastMessagesData } = conversationIds.length > 0
+        ? await supabase
+            .from('messages')
+            .select('conversation_id, content, attachment_name, created_at')
+            .in('conversation_id', conversationIds)
+            .order('created_at', { ascending: false })
+        : { data: [] as { conversation_id: string; content: string | null; attachment_name: string | null; created_at: string }[] };
+
+      // Créer une map du dernier message par conversation
+      const lastMessagesMap = new Map<string, { content: string | null; attachment_name: string | null }>();
+      lastMessagesData?.forEach(msg => {
+        if (!lastMessagesMap.has(msg.conversation_id)) {
+          lastMessagesMap.set(msg.conversation_id, {
+            content: msg.content,
+            attachment_name: msg.attachment_name
+          });
+        }
+      });
       
       const clientsMap = new Map<string, string>(clientsData?.map(c => [c.id, c.user_id] as [string, string]) || []);
       const agentsMap = new Map<string, string>(agentsData?.map(a => [a.id, a.user_id] as [string, string]) || []);
@@ -148,6 +169,9 @@ const Messagerie = () => {
         const agentProfile = agentUserId ? profilesMap.get(agentUserId) : null;
 
         const adminProfile = conv.admin_user_id ? profilesMap.get(conv.admin_user_id) : null;
+
+        const lastMsg = lastMessagesMap.get(conv.id);
+        const lastMessageText = lastMsg?.content || (lastMsg?.attachment_name ? `📎 ${lastMsg.attachment_name}` : null);
         
         return {
           ...conv,
@@ -160,6 +184,7 @@ const Messagerie = () => {
           adminName: adminProfile
             ? `${adminProfile.prenom} ${adminProfile.nom}`
             : null,
+          lastMessageText,
         };
       });
       
@@ -397,14 +422,13 @@ const Messagerie = () => {
             const displayName = conv.conversation_type === 'admin-agent' 
               ? conv.agentName 
               : conv.clientName || 'Client';
-            const lastMessage = null; // On pourrait charger le dernier message ici si nécessaire
             
             return (
               <ConversationItem
                 key={conv.id}
                 name={displayName}
                 avatarUrl={null}
-                lastMessage={lastMessage}
+                lastMessage={conv.lastMessageText}
                 lastMessageTime={conv.last_message_at}
                 unreadCount={0}
                 isSelected={selectedConv === conv.id}
