@@ -134,6 +134,48 @@ export default function Visites() {
         }
       }
 
+      // Envoyer un message automatique pour proposer de postuler
+      if (visite.offres) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('id, agent_id')
+          .eq('user_id', user?.id)
+          .maybeSingle();
+
+        if (clientData?.agent_id) {
+          let { data: conv } = await supabase
+            .from('conversations')
+            .select('id')
+            .eq('client_id', clientData.id)
+            .eq('agent_id', clientData.agent_id)
+            .maybeSingle();
+
+          if (!conv) {
+            const { data: newConv } = await supabase
+              .from('conversations')
+              .insert({
+                client_id: clientData.id,
+                agent_id: clientData.agent_id,
+                subject: 'Messages'
+              })
+              .select()
+              .maybeSingle();
+            conv = newConv;
+          }
+
+          if (conv) {
+            const messageContent = `✅ **Visite effectuée !**\n\n🏠 Bien visité:\n📍 ${visite.offres.adresse}\n💰 ${visite.offres.prix?.toLocaleString()} CHF/mois\n\n📝 **Prêt à postuler ?**\nSi ce bien vous intéresse, vous pouvez maintenant déposer votre candidature depuis la page "Offres Reçues".\n\n👉 Cliquez sur "Demander l'aide de l'agent" pour que votre agent postule pour vous.`;
+
+            await supabase.from('messages').insert({
+              conversation_id: conv.id,
+              sender_id: user?.id,
+              sender_type: 'client',
+              content: messageContent
+            });
+          }
+        }
+      }
+
       toast({
         title: 'Succès',
         description: 'La visite a été marquée comme effectuée'
