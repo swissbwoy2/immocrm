@@ -162,7 +162,7 @@ export default function AgentCalendrier() {
         clientIds.length > 0 
           ? supabase
               .from('clients')
-              .select('id, user_id, profiles(prenom, nom)')
+              .select('id, user_id, profiles!clients_user_id_fkey(prenom, nom)')
               .in('id', clientIds)
           : Promise.resolve({ data: [] }),
       ]);
