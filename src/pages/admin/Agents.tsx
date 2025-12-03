@@ -126,12 +126,26 @@ const Agents = () => {
 
   const toggleAgentStatus = async (agentId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ actif: !currentStatus })
-        .eq('id', agents.find(a => a.id === agentId)?.user_id);
+      const agent = agents.find(a => a.id === agentId);
+      if (!agent) return;
 
-      if (error) throw error;
+      const newStatus = !currentStatus;
+      
+      // Mettre à jour le profil
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ actif: newStatus })
+        .eq('id', agent.user_id);
+
+      if (profileError) throw profileError;
+
+      // Synchroniser le statut de l'agent
+      const { error: agentError } = await supabase
+        .from('agents')
+        .update({ statut: newStatus ? 'actif' : 'inactif' })
+        .eq('id', agentId);
+
+      if (agentError) throw agentError;
 
       toast({ title: "Succès", description: "Statut mis à jour" });
       fetchAgents();
