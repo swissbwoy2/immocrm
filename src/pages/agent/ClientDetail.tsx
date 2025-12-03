@@ -141,7 +141,8 @@ export default function ClientDetail() {
       return;
     }
     loadClientData();
-  }, [id, user, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, user?.id]);
 
   const loadClientData = async () => {
     try {
