@@ -37,7 +37,7 @@ export default function AgentDashboard() {
     }
     
     loadAgentData();
-  }, [user, userRole, navigate]);
+  }, [user?.id, userRole]);
 
   const loadAgentData = async () => {
     if (!user) return;

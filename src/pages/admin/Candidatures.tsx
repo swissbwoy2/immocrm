@@ -127,7 +127,7 @@ export default function AdminCandidatures() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, userRole, navigate]);
+  }, [user?.id, userRole]);
 
   const toggleCard = (id: string) => {
     setExpandedCards(prev => {

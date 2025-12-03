@@ -77,7 +77,7 @@ export default function AdminOffresEnvoyees() {
     }
     
     loadData();
-  }, [user, userRole, navigate]);
+  }, [user?.id, userRole]);
 
   const loadData = async () => {
     try {

@@ -20,7 +20,7 @@ const Transactions = () => {
     }
     
     loadTransactions();
-  }, [user, userRole, navigate]);
+  }, [user?.id, userRole]);
 
   const loadTransactions = async () => {
     try {

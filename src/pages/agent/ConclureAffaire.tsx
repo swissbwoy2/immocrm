@@ -75,7 +75,7 @@ export default function ConclureAffaire() {
     }
     
     loadData();
-  }, [user, userRole, navigate]);
+  }, [user?.id, userRole]);
 
   const loadData = async () => {
     if (!user) return;
