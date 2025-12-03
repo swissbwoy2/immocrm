@@ -1996,6 +1996,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_agent_create_conversation: {
+        Args: { _agent_id: string; _client_id: string }
+        Returns: boolean
+      }
       create_notification: {
         Args: {
           p_link?: string
