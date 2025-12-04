@@ -3,19 +3,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useNavigate } from "react-router-dom";
-import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Trash2, Upload, Trash, Shield, CheckCircle, FileWarning, Home, Key, Bell } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Upload, Shield, CheckCircle, FileWarning, Home, Key, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateDaysElapsed } from "@/utils/calculations";
@@ -37,12 +26,9 @@ const MesClients = () => {
   const [selectedTypeRecherche, setSelectedTypeRecherche] = useState<'all' | 'Louer' | 'Acheter'>('all');
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState<'recent' | 'ancien'>('recent');
-  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [agentId, setAgentId] = useState<string | null>(null);
   const [clientReminders, setClientReminders] = useState<Map<string, number>>(new Map());
-  const [selectedClients, setSelectedClients] = useState<Set<string>>(new Set());
-  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     loadAgentAndClients();
@@ -325,58 +311,6 @@ const MesClients = () => {
     }
   };
 
-  const handleDeleteClient = async (clientId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('clients')
-        .delete()
-        .eq('id', clientId);
-
-      if (error) throw error;
-
-      setAllClients(allClients.filter(c => c.id !== clientId));
-      toast({
-        title: "Client supprimé",
-        description: "Le client a été supprimé avec succès",
-      });
-    } catch (error) {
-      console.error('Error deleting client:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer le client",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeleteAllClients = async () => {
-    if (!agentId) return;
-
-    try {
-      const { error } = await supabase
-        .from('clients')
-        .delete()
-        .eq('agent_id', agentId);
-
-      if (error) throw error;
-
-      setAllClients([]);
-      setDeleteAllDialogOpen(false);
-      toast({
-        title: "Clients supprimés",
-        description: "Tous les clients ont été supprimés",
-      });
-    } catch (error) {
-      console.error('Error deleting all clients:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer les clients",
-        variant: "destructive",
-      });
-    }
-  };
 
   const regions = ['Chablais', 'Fribourg', 'Gros-de-Vaud', 'Lausanne et région', 'Ouest-lausannois', 'Lavaux', 'Nord-vaudois', 'Nyon et région', 'Riviera', 'Valais', 'Genève', 'Autre'];
   const nombrePieces = ['1+', '2+', '3+', '4+', '5+', 'Autre'];
@@ -432,48 +366,6 @@ const MesClients = () => {
     return sortOrder === 'recent' ? dateB - dateA : dateA - dateB;
   });
 
-  const toggleClientSelection = (clientId: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    const newSelection = new Set(selectedClients);
-    if (newSelection.has(clientId)) {
-      newSelection.delete(clientId);
-    } else {
-      newSelection.add(clientId);
-    }
-    setSelectedClients(newSelection);
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedClients.size === sortedClients.length) {
-      setSelectedClients(new Set());
-    } else {
-      setSelectedClients(new Set(sortedClients.map(c => c.id)));
-    }
-  };
-
-  const handleBulkDeleteClients = async () => {
-    try {
-      const clientIds = Array.from(selectedClients);
-      const { error } = await supabase.from('clients').delete().in('id', clientIds);
-      if (error) throw error;
-
-      setAllClients(allClients.filter(c => !selectedClients.has(c.id)));
-      setSelectedClients(new Set());
-      toast({
-        title: "Clients supprimés",
-        description: `${clientIds.length} client(s) supprimé(s) avec succès`,
-      });
-    } catch (error) {
-      console.error('Error bulk deleting:', error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer les clients",
-        variant: "destructive",
-      });
-    } finally {
-      setBulkDeleteDialogOpen(false);
-    }
-  };
 
   const getProgressColor = (days: number) => {
     if (days < 60) return 'bg-green-500';
@@ -498,44 +390,10 @@ const MesClients = () => {
   }
 
   return (
-    <>
-      <div className="flex-1 overflow-auto">
+    <div className="flex-1 overflow-auto">
         <div className="p-4 md:p-8">
-          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="mb-6">
             <h1 className="text-3xl font-bold text-foreground">Clients</h1>
-            <div className="flex flex-wrap items-center gap-3">
-              {sortedClients.length > 0 && (
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <Checkbox 
-                      checked={selectedClients.size === sortedClients.length && sortedClients.length > 0}
-                      onCheckedChange={toggleSelectAll}
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      {selectedClients.size > 0 ? `${selectedClients.size} sélectionné(s)` : 'Tout sélectionner'}
-                    </span>
-                  </div>
-                  {selectedClients.size > 0 && (
-                    <Button 
-                      variant="destructive" 
-                      size="sm"
-                      onClick={() => setBulkDeleteDialogOpen(true)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Supprimer ({selectedClients.size})
-                    </Button>
-                  )}
-                </div>
-              )}
-              <Button 
-                variant="destructive" 
-                onClick={() => setDeleteAllDialogOpen(true)}
-                disabled={allClients.length === 0}
-              >
-                <Trash className="w-4 h-4 mr-2" />
-                Supprimer tous
-              </Button>
-            </div>
           </div>
 
           {/* Barre de recherche */}
@@ -650,20 +508,11 @@ const MesClients = () => {
               return (
                 <Card 
                   key={client.id} 
-                  className={`p-4 flex flex-col relative cursor-pointer hover:shadow-lg transition-shadow ${selectedClients.has(client.id) ? 'ring-2 ring-primary' : ''}`}
+                  className="p-4 flex flex-col relative cursor-pointer hover:shadow-lg transition-shadow"
                   onClick={() => navigate(`/agent/clients/${client.id}`)}
                 >
-                  {/* Checkbox de sélection */}
-                  <div className="absolute top-3 left-3">
-                    <Checkbox 
-                      checked={selectedClients.has(client.id)}
-                      onCheckedChange={() => toggleClientSelection(client.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-
                   {/* Actions en haut à droite */}
-                  <div className="absolute top-3 right-3 flex gap-2">
+                  <div className="absolute top-3 right-3">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -675,21 +524,10 @@ const MesClients = () => {
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClient(client.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
 
                    {/* Indicateur de solvabilité */}
-                  <div className="absolute top-12 left-3 flex gap-2">
+                  <div className="absolute top-3 left-3 flex gap-2">
                     {client.isSolvable ? (
                       <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0">
                         <CheckCircle className="h-3 w-3 mr-1" />
@@ -948,47 +786,6 @@ const MesClients = () => {
           )}
         </div>
       </div>
-
-      <AlertDialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer tous les clients</AlertDialogTitle>
-            <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer tous vos clients ? Cette action est irréversible.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteAllClients} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Bulk Delete Dialog */}
-      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer {selectedClients.size} client(s) ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Cette action supprimera définitivement les clients sélectionnés et toutes leurs données associées.
-              <br /><br />
-              <span className="text-destructive font-medium">Cette action est irréversible.</span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleBulkDeleteClients}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
   );
 };
 
