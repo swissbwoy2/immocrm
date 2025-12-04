@@ -309,9 +309,9 @@ export default function AdminCalendrier() {
       </details>
 
       {/* Main content - responsive grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 min-w-0">
         {/* Filters sidebar - desktop only */}
-        <div className="hidden lg:block lg:col-span-1">
+        <div className="hidden lg:block lg:col-span-1 min-w-0">
           <EventFilters
             agents={agents}
             clients={clients}
@@ -327,7 +327,7 @@ export default function AdminCalendrier() {
         </div>
 
         {/* Calendar */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 min-w-0 overflow-hidden">
           <CalendarView
             events={filteredEvents}
             visites={filteredVisites}
@@ -337,7 +337,7 @@ export default function AdminCalendrier() {
         </div>
 
         {/* Day events */}
-        <div className="lg:col-span-1 h-[400px] md:h-[600px]">
+        <div className="lg:col-span-1 min-w-0 h-[400px] md:h-[600px]">
           <DayEvents
             date={selectedDate}
             events={selectedDayEvents}

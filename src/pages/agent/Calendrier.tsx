@@ -603,9 +603,9 @@ export default function AgentCalendrier() {
       </div>
 
       {/* Main content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0">
         {/* Calendar */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 min-w-0 overflow-hidden">
           <CalendarView
             events={filteredEvents}
             visites={filteredVisites}
@@ -616,7 +616,7 @@ export default function AgentCalendrier() {
         </div>
 
         {/* Day events */}
-        <div className="h-[600px]">
+        <div className="min-w-0 h-[600px]">
           <AgentDayEvents
             date={selectedDate}
             events={selectedDayEvents}
