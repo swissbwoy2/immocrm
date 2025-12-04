@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { calculateDaysElapsed } from '@/utils/calculations';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -16,6 +16,7 @@ import { countUniqueOffres } from '@/utils/visitesCalculator';
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, userRole } = useAuth();
   const { counts } = useNotifications();
   
@@ -38,7 +39,7 @@ export default function AgentDashboard() {
     }
     
     loadAgentData();
-  }, [user?.id, userRole]);
+  }, [user?.id, userRole, location.key]);
 
   const loadAgentData = async () => {
     if (!user) return;
