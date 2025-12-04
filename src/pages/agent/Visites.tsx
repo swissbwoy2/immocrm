@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -37,6 +38,8 @@ export default function AgentVisites() {
   const [feedbackText, setFeedbackText] = useState('');
   const [recommandation, setRecommandation] = useState<'recommande' | 'neutre' | 'deconseille'>('neutre');
   const [agentId, setAgentId] = useState<string | null>(null);
+  const [selectedVisites, setSelectedVisites] = useState<Set<string>>(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   const handleOpenDetail = (visite: any) => {
     setSelectedVisite(visite);
@@ -389,6 +392,42 @@ export default function AgentVisites() {
     );
   };
 
+  const toggleVisiteSelection = (visiteId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const newSelection = new Set(selectedVisites);
+    if (newSelection.has(visiteId)) {
+      newSelection.delete(visiteId);
+    } else {
+      newSelection.add(visiteId);
+    }
+    setSelectedVisites(newSelection);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedVisites.size === visites.length) {
+      setSelectedVisites(new Set());
+    } else {
+      setSelectedVisites(new Set(visites.map(v => v.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      const visiteIds = Array.from(selectedVisites);
+      const { error } = await supabase.from('visites').delete().in('id', visiteIds);
+      if (error) throw error;
+
+      setVisites(visites.filter(v => !selectedVisites.has(v.id)));
+      setSelectedVisites(new Set());
+      toast.success(`${visiteIds.length} visite(s) supprimée(s)`);
+    } catch (error) {
+      console.error('Error bulk deleting:', error);
+      toast.error('Erreur lors de la suppression');
+    } finally {
+      setBulkDeleteDialogOpen(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -452,7 +491,7 @@ export default function AgentVisites() {
     return urgency.level === 'normal';
   });
 
-  const renderVisiteCard = (visite: any, showUrgency = true) => {
+  const renderVisiteCard = (visite: any, showUrgency = true, showCheckbox = false) => {
     const urgency = getVisiteUrgency(visite.date_visite);
     const isUrgent = urgency.level === 'critical';
     
@@ -462,12 +501,20 @@ export default function AgentVisites() {
         className={`cursor-pointer hover:shadow-md transition-shadow overflow-hidden ${
           isUrgent ? 'border-destructive/50 bg-destructive/5' : 
           visite.est_deleguee ? 'border-primary/50' : ''
-        }`}
+        } ${selectedVisites.has(visite.id) ? 'ring-2 ring-primary' : ''}`}
         onClick={() => handleOpenDetail(visite)}
       >
         <CardHeader className="pb-2">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            <div className="flex-1 min-w-0 order-2 sm:order-1">
+            <div className="flex items-start gap-3 flex-1 min-w-0 order-2 sm:order-1">
+              {showCheckbox && (
+                <Checkbox 
+                  checked={selectedVisites.has(visite.id)}
+                  onCheckedChange={() => toggleVisiteSelection(visite.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-1"
+                />
+              )}
               <CardTitle className="flex items-center gap-2 flex-wrap text-base sm:text-lg">
                 <span className="truncate">{visite.adresse}</span>
                 {visite.est_deleguee && (
@@ -545,12 +592,37 @@ export default function AgentVisites() {
   return (
     <div className="flex-1 overflow-y-auto overflow-x-hidden smooth-scroll pb-safe">
       <div className="p-3 sm:p-4 md:p-8 space-y-4 sm:space-y-6 max-w-full">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Visites clients</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            {visitesDelegueesPending.length > 0 && `${visitesDelegueesPending.length} demande${visitesDelegueesPending.length > 1 ? 's' : ''} en attente • `}
-            {toutesVisitesAVenir.length} à venir • {visitesPassees.length} passée{visitesPassees.length > 1 ? 's' : ''}
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">Visites clients</h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              {visitesDelegueesPending.length > 0 && `${visitesDelegueesPending.length} demande${visitesDelegueesPending.length > 1 ? 's' : ''} en attente • `}
+              {toutesVisitesAVenir.length} à venir • {visitesPassees.length} passée{visitesPassees.length > 1 ? 's' : ''}
+            </p>
+          </div>
+          {visites.length > 0 && (
+            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Checkbox 
+                  checked={selectedVisites.size === visites.length && visites.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+                <span className="text-sm text-muted-foreground">
+                  {selectedVisites.size > 0 ? `${selectedVisites.size} sélectionnée(s)` : 'Tout sélectionner'}
+                </span>
+              </div>
+              {selectedVisites.size > 0 && (
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => setBulkDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Supprimer ({selectedVisites.size})
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Alerte visites urgentes */}
@@ -581,6 +653,13 @@ export default function AgentVisites() {
           </TabsList>
 
           <TabsContent value="a-venir" className="space-y-6 mt-4">
+            {/* Visites normales à venir */}
+            {visitesNormales.length > 0 && (
+              <div className="grid gap-3">
+                {visitesNormales.map(visite => renderVisiteCard(visite, true, true))}
+              </div>
+            )}
+
             {/* Visites déléguées en attente de confirmation */}
             {visitesDelegueesPending.length > 0 && (
               <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-3 sm:p-4">
@@ -684,7 +763,7 @@ export default function AgentVisites() {
                   <Badge variant="secondary">{visitesDeleguees.length}</Badge>
                 </h3>
                 <div className="grid gap-3">
-                  {visitesDeleguees.map(visite => renderVisiteCard(visite, true))}
+                  {visitesDeleguees.map(visite => renderVisiteCard(visite, true, true))}
                 </div>
               </div>
             )}
@@ -697,7 +776,7 @@ export default function AgentVisites() {
                   <Badge variant="secondary">{visitesNormales.filter(v => !v.est_deleguee).length}</Badge>
                 </h3>
                 <div className="grid gap-3">
-                  {visitesNormales.filter(v => !v.est_deleguee).map(visite => renderVisiteCard(visite, true))}
+                  {visitesNormales.filter(v => !v.est_deleguee).map(visite => renderVisiteCard(visite, true, true))}
                 </div>
               </div>
             )}
@@ -717,28 +796,36 @@ export default function AgentVisites() {
                 {visitesPassees.map(visite => (
                   <Card 
                     key={visite.id} 
-                    className="opacity-75 cursor-pointer hover:shadow-md transition-shadow overflow-hidden" 
+                    className={`opacity-75 cursor-pointer hover:shadow-md transition-shadow overflow-hidden ${selectedVisites.has(visite.id) ? 'ring-2 ring-primary opacity-100' : ''}`}
                     onClick={() => handleOpenDetail(visite)}
                   >
                     <CardHeader className="pb-2">
                       <div className="flex flex-col xs:flex-row xs:items-start xs:justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <CardTitle className="flex items-center gap-2 flex-wrap text-base sm:text-lg">
-                            <span className="truncate">{visite.adresse}</span>
-                            {visite.est_deleguee && (
-                              <Badge variant="outline" className="text-xs shrink-0">Déléguée</Badge>
-                            )}
-                          </CardTitle>
-                          <div className="flex items-center gap-3 sm:gap-4 mt-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4 shrink-0" />
-                              <span className="whitespace-nowrap">{new Date(visite.date_visite).toLocaleDateString('fr-CH')}</span>
-                            </div>
-                            {visite.recommandation_agent && (
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          <Checkbox 
+                            checked={selectedVisites.has(visite.id)}
+                            onCheckedChange={() => toggleVisiteSelection(visite.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-1"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="flex items-center gap-2 flex-wrap text-base sm:text-lg">
+                              <span className="truncate">{visite.adresse}</span>
+                              {visite.est_deleguee && (
+                                <Badge variant="outline" className="text-xs shrink-0">Déléguée</Badge>
+                              )}
+                            </CardTitle>
+                            <div className="flex items-center gap-3 sm:gap-4 mt-2 text-xs sm:text-sm text-muted-foreground flex-wrap">
                               <div className="flex items-center gap-1">
-                                {getRecommandationBadge(visite.recommandation_agent)}
+                                <Calendar className="h-4 w-4 shrink-0" />
+                                <span className="whitespace-nowrap">{new Date(visite.date_visite).toLocaleDateString('fr-CH')}</span>
                               </div>
-                            )}
+                              {visite.recommandation_agent && (
+                                <div className="flex items-center gap-1">
+                                  {getRecommandationBadge(visite.recommandation_agent)}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <Badge variant={visite.statut === 'effectuee' ? 'secondary' : 'destructive'} className="self-start shrink-0">
@@ -1148,6 +1235,29 @@ export default function AgentVisites() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Delete Dialog */}
+      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer {selectedVisites.size} visite(s) ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action supprimera définitivement les visites sélectionnées.
+              <br /><br />
+              <span className="text-destructive font-medium">Cette action est irréversible.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
