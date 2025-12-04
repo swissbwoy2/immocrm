@@ -45,19 +45,60 @@ serve(async (req) => {
     
     // Fetch the page
     console.log('Fetching page...');
-    const response = await fetch(url, {
-      headers: { 
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+    const hostname = new URL(url).hostname;
+    
+    let html = '';
+    try {
+      const response = await fetch(url, {
+        headers: { 
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        }
+      });
+      
+      if (!response.ok) {
+        console.log(`Site returned ${response.status}, using fallback preview`);
+        // Return a basic preview for sites that block scraping
+        const fallbackPreview = {
+          url,
+          title: hostname,
+          description: null,
+          image_url: null,
+          site_name: hostname,
+          favicon_url: `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`,
+          fetched_at: new Date().toISOString(),
+        };
+        
+        // Cache the fallback
+        await supabase
+          .from('link_previews')
+          .upsert(fallbackPreview, { onConflict: 'url' });
+        
+        return new Response(JSON.stringify(fallbackPreview), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch URL: ${response.status}`);
+      
+      html = await response.text();
+    } catch (fetchError) {
+      console.log('Fetch failed, using fallback preview:', fetchError);
+      const fallbackPreview = {
+        url,
+        title: hostname,
+        description: null,
+        image_url: null,
+        site_name: hostname,
+        favicon_url: `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`,
+        fetched_at: new Date().toISOString(),
+      };
+      
+      return new Response(JSON.stringify(fallbackPreview), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
-    
-    const html = await response.text();
     
     // Extract Open Graph metadata
     const getMetaContent = (property: string): string | null => {
@@ -85,7 +126,6 @@ serve(async (req) => {
     };
     
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const hostname = new URL(url).hostname;
     
     // Get image URL and make it absolute if needed
     let imageUrl = getMetaContent('og:image') || getMetaContent('twitter:image');
