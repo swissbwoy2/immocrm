@@ -50,6 +50,7 @@ const Messagerie = () => {
   const { markTypeAsRead } = useNotifications();
   const [conversations, setConversations] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
+  const [lastMessagesMap, setLastMessagesMap] = useState<Map<string, { content: string | null; attachment_name: string | null }>>(new Map());
   const [offresMap, setOffresMap] = useState<Record<string, any>>({});
   const [candidaturesMap, setCandidaturesMap] = useState<Record<string, any>>({});
   const [agentsMap, setAgentsMap] = useState<Record<string, string>>({});
@@ -117,6 +118,16 @@ const Messagerie = () => {
         (payload) => {
           if (payload.eventType === 'INSERT') {
             setMessages((prev) => [...prev, payload.new]);
+            // Update lastMessagesMap for realtime updates
+            const newMsg = payload.new as any;
+            setLastMessagesMap(prev => {
+              const newMap = new Map(prev);
+              newMap.set(newMsg.conversation_id, { 
+                content: newMsg.content, 
+                attachment_name: newMsg.attachment_name 
+              });
+              return newMap;
+            });
           } else if (payload.eventType === 'UPDATE') {
             setMessages((prev) =>
               prev.map((msg) => (msg.id === payload.new.id ? payload.new : msg))
@@ -158,6 +169,27 @@ const Messagerie = () => {
       if (error) throw error;
 
       setConversations(convData || []);
+
+      // Charger le dernier message de chaque conversation
+      if (convData && convData.length > 0) {
+        const convIds = convData.map(c => c.id);
+        const lastMsgsMap = new Map<string, { content: string | null; attachment_name: string | null }>();
+        
+        for (const convId of convIds) {
+          const { data: lastMsg } = await supabase
+            .from('messages')
+            .select('content, attachment_name')
+            .eq('conversation_id', convId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (lastMsg) {
+            lastMsgsMap.set(convId, { content: lastMsg.content, attachment_name: lastMsg.attachment_name });
+          }
+        }
+        setLastMessagesMap(lastMsgsMap);
+      }
 
       const agentIds = convData?.map(c => c.agent_id) || [];
       if (agentIds.length > 0) {
@@ -305,6 +337,16 @@ const Messagerie = () => {
           });
         }
       }
+
+      // Update lastMessagesMap with the new message
+      setLastMessagesMap(prev => {
+        const newMap = new Map(prev);
+        newMap.set(selectedConv, { 
+          content: content || null, 
+          attachment_name: pendingAttachment?.name || null 
+        });
+        return newMap;
+      });
 
       setMessageText("");
       setPendingAttachment(null);
@@ -1201,8 +1243,9 @@ const Messagerie = () => {
       </div>
       <ScrollArea className="flex-1">
         {conversations.map((conv) => {
+          const lastMsg = lastMessagesMap.get(conv.id);
+          const lastMessageText = lastMsg?.content || (lastMsg?.attachment_name ? `📎 ${lastMsg.attachment_name}` : conv.subject || null);
           const convMessages = messages.filter(m => m.conversation_id === conv.id);
-          const lastMessage = convMessages[convMessages.length - 1];
           const unreadCount = convMessages.filter(m => !m.read && m.sender_type === 'agent').length;
           
           return (
@@ -1210,7 +1253,7 @@ const Messagerie = () => {
               key={conv.id}
               name={getAgentName(conv.agent_id)}
               avatarUrl={null}
-              lastMessage={lastMessage?.content || conv.subject || null}
+              lastMessage={lastMessageText}
               lastMessageTime={conv.last_message_at || conv.created_at}
               unreadCount={unreadCount}
               isSelected={selectedConv === conv.id}
