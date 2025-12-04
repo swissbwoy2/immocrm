@@ -48,6 +48,8 @@ interface SendDossierDialogProps {
   clientEmail?: string;
   offres: Offre[];
   onCandidatureCreated?: () => void;
+  existingCandidatureId?: string;
+  preSelectedOffreId?: string;
 }
 
 export function SendDossierDialog({ 
@@ -57,7 +59,9 @@ export function SendDossierDialog({
   clientName,
   clientEmail,
   offres,
-  onCandidatureCreated
+  onCandidatureCreated,
+  existingCandidatureId,
+  preSelectedOffreId
 }: SendDossierDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -101,8 +105,8 @@ export function SendDossierDialog({
       checkEmailConfiguration();
       loadClientDocuments();
       initializeDefaultTemplates();
-      // Reset form with client email in BCC by default
-      setSelectedOffreId("");
+      // Pre-select offre if provided
+      setSelectedOffreId(preSelectedOffreId || "");
       setSelectedTemplateId('');
       setClientGender('masculin');
       setEmail({
@@ -116,7 +120,7 @@ export function SendDossierDialog({
       setSelectedDocuments([]);
       setLocalFiles([]);
     }
-  }, [open, clientId, clientEmail]);
+  }, [open, clientId, clientEmail, preSelectedOffreId]);
 
   // Cleanup previews on unmount
   useEffect(() => {
@@ -466,26 +470,118 @@ export function SendDossierDialog({
       if (error) throw error;
       if (!data.success) throw new Error(data.error);
 
-      // Create candidature record
-      const { error: candidatureError } = await supabase
-        .from('candidatures')
-        .insert({
-          offre_id: selectedOffreId,
-          client_id: clientId,
-          statut: 'en_attente',
-          dossier_complet: totalAttachments > 0,
-          message_client: email.body_html,
-          date_depot: new Date().toISOString(),
-        });
+      // Update or create candidature record
+      if (existingCandidatureId) {
+        // Update existing candidature
+        const { error: candidatureError } = await supabase
+          .from('candidatures')
+          .update({
+            statut: 'en_attente',
+            dossier_complet: totalAttachments > 0,
+            message_client: email.body_html,
+          })
+          .eq('id', existingCandidatureId);
 
-      if (candidatureError) {
-        console.error('Error creating candidature:', candidatureError);
-        // Don't throw - email was sent successfully
+        if (candidatureError) {
+          console.error('Error updating candidature:', candidatureError);
+        }
+
+        // Update offre status
+        await supabase
+          .from('offres')
+          .update({ statut: 'candidature_deposee' })
+          .eq('id', selectedOffreId);
+      } else {
+        // Create new candidature
+        const { error: candidatureError } = await supabase
+          .from('candidatures')
+          .insert({
+            offre_id: selectedOffreId,
+            client_id: clientId,
+            statut: 'en_attente',
+            dossier_complet: totalAttachments > 0,
+            message_client: email.body_html,
+            date_depot: new Date().toISOString(),
+          });
+
+        if (candidatureError) {
+          console.error('Error creating candidature:', candidatureError);
+        }
+      }
+
+      // Send message to client via messaging
+      try {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('id, user_id, agent_id')
+          .eq('id', clientId)
+          .single();
+
+        if (clientData) {
+          // Get agent ID
+          const { data: agentData } = await supabase
+            .from('agents')
+            .select('id')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+
+          if (agentData) {
+            // Find or create conversation
+            let { data: conv } = await supabase
+              .from('conversations')
+              .select('id')
+              .eq('client_id', clientData.id)
+              .eq('agent_id', agentData.id)
+              .maybeSingle();
+
+            if (!conv) {
+              const { data: newConv } = await supabase
+                .from('conversations')
+                .insert({
+                  client_id: clientData.id,
+                  agent_id: agentData.id,
+                  subject: 'Messages',
+                })
+                .select()
+                .maybeSingle();
+              conv = newConv;
+            }
+
+            if (conv) {
+              const offre = offres.find(o => o.id === selectedOffreId);
+              await supabase.from('messages').insert({
+                conversation_id: conv.id,
+                sender_id: agentData.id,
+                sender_type: 'agent',
+                content: `📤 Votre dossier a été transmis au bailleur pour l'offre : ${offre?.adresse || 'N/A'}.\n\nNous vous ferons un retour dès réception de la réponse de la régie.`,
+              });
+
+              // Update conversation last_message_at
+              await supabase
+                .from('conversations')
+                .update({ last_message_at: new Date().toISOString() })
+                .eq('id', conv.id);
+            }
+          }
+
+          // Create notification for client
+          const selectedOffre = offres.find(o => o.id === selectedOffreId);
+          await supabase.from('notifications').insert({
+            user_id: clientData.user_id,
+            type: 'dossier_envoye',
+            title: 'Dossier transmis',
+            message: `Votre dossier a été envoyé à la régie pour l'offre : ${selectedOffre?.adresse || 'N/A'}`,
+            link: '/client/mes-candidatures',
+          });
+        }
+      } catch (msgError) {
+        console.error('Error sending message to client:', msgError);
+        // Don't fail the whole operation if messaging fails
       }
 
       toast({
         title: "Dossier envoyé",
-        description: `Dossier envoyé avec succès à ${email.recipient_email}. Candidature enregistrée.`,
+        description: `Dossier envoyé avec succès à ${email.recipient_email}. ${existingCandidatureId ? 'Candidature mise à jour.' : 'Candidature enregistrée.'}`,
       });
       
       onCandidatureCreated?.();
