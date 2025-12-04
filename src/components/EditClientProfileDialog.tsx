@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Save, User, DollarSign, Briefcase, Home, Heart } from 'lucide-react';
+import { RegionAutocomplete } from '@/components/RegionAutocomplete';
 
 interface EditClientProfileDialogProps {
   open: boolean;
@@ -504,10 +505,10 @@ export function EditClientProfileDialog({ open, onOpenChange, client, profile, o
               </div>
               <div>
                 <Label>Région recherchée</Label>
-                <Input
+                <RegionAutocomplete
                   value={clientData.region_recherche}
-                  onChange={(e) => setClientData({ ...clientData, region_recherche: e.target.value })}
-                  placeholder="Genève, Lausanne, etc."
+                  onChange={(value) => setClientData({ ...clientData, region_recherche: value })}
+                  placeholder="Tapez une région, commune..."
                 />
               </div>
               <div>

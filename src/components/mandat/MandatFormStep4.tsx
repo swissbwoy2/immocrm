@@ -7,9 +7,10 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { MandatFormData, DECOUVERTES_AGENCE, TYPES_BIEN, PIECES_OPTIONS, REGIONS } from './types';
+import { MandatFormData, DECOUVERTES_AGENCE, TYPES_BIEN, PIECES_OPTIONS } from './types';
 import { Home, Building2, AlertCircle, CheckCircle, Calculator, Users, TrendingUp, Wallet, Info, UserPlus } from 'lucide-react';
 import CapacityGauge from './CapacityGauge';
+import { RegionAutocomplete } from '@/components/RegionAutocomplete';
 
 interface Props {
   data: MandatFormData;
@@ -245,16 +246,14 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
 
           <div className="space-y-2">
             <Label htmlFor="region_recherche">Région *</Label>
-            <Select value={data.region_recherche} onValueChange={(value) => onChange({ region_recherche: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionnez" />
-              </SelectTrigger>
-              <SelectContent>
-                {REGIONS.map((region) => (
-                  <SelectItem key={region} value={region}>{region}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <RegionAutocomplete
+              value={data.region_recherche}
+              onChange={(value) => onChange({ region_recherche: value })}
+              placeholder="Tapez une région, commune ou district..."
+            />
+            <p className="text-xs text-muted-foreground">
+              Ex: Lausanne, Nyon, Crissier, Genève...
+            </p>
           </div>
 
           {/* RENTAL: Budget field */}

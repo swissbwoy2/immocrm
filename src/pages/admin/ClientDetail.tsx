@@ -24,6 +24,7 @@ import { SolvabilityAlert } from '@/components/SolvabilityAlert';
 import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSection';
 import { useClientCandidates } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck, hasStableStatus } from '@/hooks/useSolvabilityCheck';
+import { RegionAutocomplete } from '@/components/RegionAutocomplete';
 
 interface Client {
   id: string;
@@ -930,28 +931,11 @@ export default function ClientDetail() {
                     </div>
                     <div className="space-y-2">
                       <Label>Région de recherche</Label>
-                      <Select 
-                        value={editFormData.region_recherche || ''} 
-                        onValueChange={(value) => setEditFormData({ ...editFormData, region_recherche: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner une région" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Chablais">Chablais</SelectItem>
-                          <SelectItem value="Fribourg">Fribourg</SelectItem>
-                          <SelectItem value="Gros-de-Vaud">Gros-de-Vaud</SelectItem>
-                          <SelectItem value="Lausanne et région">Lausanne et région</SelectItem>
-                          <SelectItem value="Ouest-lausannois">Ouest-lausannois</SelectItem>
-                          <SelectItem value="Lavaux">Lavaux</SelectItem>
-                          <SelectItem value="Nord-vaudois">Nord-vaudois</SelectItem>
-                          <SelectItem value="Nyon et région">Nyon et région</SelectItem>
-                          <SelectItem value="Riviera">Riviera</SelectItem>
-                          <SelectItem value="Valais">Valais</SelectItem>
-                          <SelectItem value="Genève">Genève</SelectItem>
-                          <SelectItem value="Autre">Autre</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <RegionAutocomplete
+                        value={editFormData.region_recherche || ''}
+                        onChange={(value) => setEditFormData({ ...editFormData, region_recherche: value })}
+                        placeholder="Tapez une région, commune..."
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Souhaits particuliers</Label>
