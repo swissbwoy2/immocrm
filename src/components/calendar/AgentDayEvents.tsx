@@ -98,21 +98,42 @@ export function AgentDayEvents({
     return { level: 'normal', label: `${daysDiff}j`, color: 'outline' as const };
   };
 
-  // Combine events and visites
-  const allItems: { type: 'event' | 'visite'; data: any; eventType: string }[] = [];
+  // Group visits by address and time to avoid duplicates
+  const groupVisitesByAddressAndTime = (visites: any[]) => {
+    const groups = new Map<string, any[]>();
+    
+    visites.forEach(visite => {
+      // Key = address + exact time (rounded to minute)
+      const visiteDate = new Date(visite.date_visite);
+      const timeKey = `${visiteDate.getHours()}:${visiteDate.getMinutes()}`;
+      const key = `${visite.adresse}-${timeKey}`;
+      
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(visite);
+    });
+    
+    return Array.from(groups.values());
+  };
+
+  const groupedVisites = groupVisitesByAddressAndTime(visites);
+
+  // Combine events and grouped visites
+  const allItems: { type: 'event' | 'visite-group'; data: any; eventType: string }[] = [];
 
   events.forEach((event) => {
     allItems.push({ type: 'event', data: event, eventType: event.event_type });
   });
 
-  visites.forEach((visite) => {
-    allItems.push({ type: 'visite', data: visite, eventType: 'visite' });
+  groupedVisites.forEach((group) => {
+    allItems.push({ type: 'visite-group', data: group, eventType: 'visite' });
   });
 
   // Sort by time
   allItems.sort((a, b) => {
-    const dateA = new Date(a.type === 'event' ? a.data.event_date : a.data.date_visite);
-    const dateB = new Date(b.type === 'event' ? b.data.event_date : b.data.date_visite);
+    const dateA = new Date(a.type === 'event' ? a.data.event_date : a.data[0].date_visite);
+    const dateB = new Date(b.type === 'event' ? b.data.event_date : b.data[0].date_visite);
     return dateA.getTime() - dateB.getTime();
   });
 
@@ -124,7 +145,7 @@ export function AgentDayEvents({
           {format(date, 'EEEE d MMMM yyyy', { locale: fr })}
         </h3>
         <p className="text-sm text-muted-foreground mt-1">
-          {allItems.length} événement{allItems.length > 1 ? 's' : ''}
+          {allItems.length} élément{allItems.length > 1 ? 's' : ''} ({visites.length} visite{visites.length > 1 ? 's' : ''})
         </p>
       </div>
 
@@ -138,44 +159,39 @@ export function AgentDayEvents({
             <div className="space-y-3">
               {allItems.map((item, idx) => {
                 const isEvent = item.type === 'event';
-                const data = item.data;
-                const eventDate = new Date(isEvent ? data.event_date : data.date_visite);
-
-                if (!isEvent) {
-                  // Render visite
-                  const urgency = getVisiteUrgency(data.date_visite);
+                
+                if (item.type === 'visite-group') {
+                  // Render grouped visites
+                  const group = item.data as any[];
+                  const firstVisite = group[0];
+                  const eventDate = new Date(firstVisite.date_visite);
+                  const urgency = getVisiteUrgency(firstVisite.date_visite);
                   const isUrgent = urgency?.level === 'critical';
-                  const isPast = data.statut === 'effectuee' || new Date(data.date_visite) < new Date();
+                  const allEffectuees = group.every(v => v.statut === 'effectuee');
+                  const isPast = allEffectuees || new Date(firstVisite.date_visite) < new Date();
+                  const hasDeleguee = group.some(v => v.est_deleguee);
 
                   return (
                     <div
-                      key={`visite-${data.id}-${idx}`}
-                      role="button"
-                      tabIndex={0}
+                      key={`visite-group-${firstVisite.id}-${idx}`}
                       className={cn(
-                        'p-3 rounded-lg border cursor-pointer hover:shadow-md transition-all select-none',
-                        'active:scale-[0.99]',
+                        'p-3 rounded-lg border',
                         isUrgent ? 'border-destructive/50 bg-destructive/5' : 
-                        data.est_deleguee ? 'border-green-500/50 bg-green-500/5 ring-2 ring-green-400' : 
+                        hasDeleguee ? 'border-green-500/50 bg-green-500/5' : 
                         'bg-blue-500/10 border-blue-500/30',
                         isPast && 'opacity-60'
                       )}
-                      onClick={() => {
-                        console.log('Visite clicked:', data.id);
-                        onOpenDetail(data);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          onOpenDetail(data);
-                        }
-                      }}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className="text-xs pointer-events-none">Visite</Badge>
-                            {data.est_deleguee && (
+                            {group.length > 1 && (
+                              <Badge variant="secondary" className="text-xs pointer-events-none">
+                                {group.length} clients
+                              </Badge>
+                            )}
+                            {hasDeleguee && (
                               <Badge className="text-xs bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300 pointer-events-none">Déléguée</Badge>
                             )}
                             {urgency && !isPast && (
@@ -186,87 +202,112 @@ export function AgentDayEvents({
                             )}
                             {isPast && (
                               <Badge variant="secondary" className="text-xs pointer-events-none">
-                                {data.statut === 'effectuee' ? 'Effectuée' : 'Passée'}
+                                {allEffectuees ? 'Effectuée' : 'Passée'}
                               </Badge>
                             )}
                           </div>
-                          <h4 className="font-medium mt-1 truncate">{data.adresse}</h4>
+                          <h4 className="font-medium mt-1 truncate">{firstVisite.adresse}</h4>
                           <p className="text-sm flex items-center gap-1 mt-1 text-muted-foreground">
                             <Clock className="h-3 w-3" />
                             {format(eventDate, 'HH:mm')}
                           </p>
-                          {data.client_profile && (
-                            <p className="text-xs flex items-center gap-1 mt-1 text-muted-foreground">
-                              <User className="h-3 w-3" />
-                              {data.est_deleguee && 'Pour '}
-                              {data.client_profile.prenom} {data.client_profile.nom}
-                            </p>
-                          )}
-                          {data.offres && (
+                          {firstVisite.offres && (
                             <p className="text-xs text-muted-foreground mt-1">
-                              {data.offres.pieces} pièces • {data.offres.surface}m² • {data.offres.prix} CHF
+                              {firstVisite.offres.pieces} pièces • {firstVisite.offres.surface}m² • {firstVisite.offres.prix} CHF
                             </p>
                           )}
-                          {data.recommandation_agent && (
-                            <div className="mt-2">
-                              {data.recommandation_agent === 'recommande' && (
-                                <Badge className="text-xs bg-green-100 text-green-700 pointer-events-none">
-                                  <ThumbsUp className="h-3 w-3 mr-1" /> Recommandé
-                                </Badge>
-                              )}
-                              {data.recommandation_agent === 'neutre' && (
-                                <Badge variant="secondary" className="text-xs pointer-events-none">
-                                  <Minus className="h-3 w-3 mr-1" /> Neutre
-                                </Badge>
-                              )}
-                              {data.recommandation_agent === 'deconseille' && (
-                                <Badge variant="destructive" className="text-xs pointer-events-none">
-                                  <ThumbsDown className="h-3 w-3 mr-1" /> Déconseillé
-                                </Badge>
-                              )}
+                          
+                          {/* Liste des clients concernés */}
+                          <div className="mt-2 pt-2 border-t border-current/10">
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {group.length > 1 ? 'Clients concernés :' : 'Client :'}
+                            </span>
+                            <ul className="mt-1 space-y-1">
+                              {group.map((visite, vIdx) => (
+                                <li 
+                                  key={visite.id}
+                                  className="flex items-center justify-between gap-2 text-xs"
+                                >
+                                  <div className="flex items-center gap-1 min-w-0">
+                                    <User className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                    <span className="truncate">
+                                      {visite.est_deleguee && 'Pour '}
+                                      {visite.client_profile?.prenom} {visite.client_profile?.nom}
+                                    </span>
+                                    {visite.statut === 'effectuee' && (
+                                      <CheckCircle className="h-3 w-3 text-green-500 shrink-0" />
+                                    )}
+                                    {visite.est_deleguee && (
+                                      <Badge className="text-[10px] h-4 px-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">Délég.</Badge>
+                                    )}
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 shrink-0"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onOpenDetail(visite);
+                                    }}
+                                  >
+                                    <Eye className="h-3 w-3" />
+                                  </Button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {/* Recommandations si présentes */}
+                          {group.some(v => v.recommandation_agent) && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {group.filter(v => v.recommandation_agent).map(visite => (
+                                <div key={visite.id} className="flex items-center gap-1">
+                                  <span className="text-[10px] text-muted-foreground">
+                                    {visite.client_profile?.prenom}:
+                                  </span>
+                                  {visite.recommandation_agent === 'recommande' && (
+                                    <ThumbsUp className="h-3 w-3 text-green-600" />
+                                  )}
+                                  {visite.recommandation_agent === 'neutre' && (
+                                    <Minus className="h-3 w-3 text-gray-500" />
+                                  )}
+                                  {visite.recommandation_agent === 'deconseille' && (
+                                    <ThumbsDown className="h-3 w-3 text-red-600" />
+                                  )}
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0 relative z-10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            e.preventDefault();
-                            console.log('Eye button clicked:', data.id);
-                            onOpenDetail(data);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
                       </div>
 
-                      {data.statut === 'planifiee' && !isPast && (
-                        <div className="mt-3 pt-3 border-t border-current/10">
-                          <Button
-                            size="sm"
-                            variant={isUrgent ? "destructive" : "default"}
-                            className="w-full text-xs h-8 relative z-10"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              e.preventDefault();
-                              console.log('Marquer effectuee clicked:', data.id);
-                              onMarquerEffectuee(data);
-                            }}
-                          >
-                            {data.est_deleguee ? (
-                              <>
-                                <MessageSquare className="h-3 w-3 mr-1" />
-                                Donner mon feedback
-                              </>
-                            ) : (
-                              <>
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Marquer effectuée
-                              </>
-                            )}
-                          </Button>
+                      {/* Actions pour les visites non effectuées */}
+                      {group.some(v => v.statut === 'planifiee') && !isPast && (
+                        <div className="mt-3 pt-3 border-t border-current/10 space-y-2">
+                          {group.filter(v => v.statut === 'planifiee').map(visite => (
+                            <Button
+                              key={visite.id}
+                              size="sm"
+                              variant={isUrgent ? "destructive" : "outline"}
+                              className="w-full text-xs h-8"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onMarquerEffectuee(visite);
+                              }}
+                            >
+                              {visite.est_deleguee ? (
+                                <>
+                                  <MessageSquare className="h-3 w-3 mr-1" />
+                                  Feedback: {visite.client_profile?.prenom}
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="h-3 w-3 mr-1" />
+                                  Effectuée: {visite.client_profile?.prenom}
+                                </>
+                              )}
+                            </Button>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -274,6 +315,8 @@ export function AgentDayEvents({
                 }
 
                 // Render calendar event
+                const data = item.data;
+                const eventDate = new Date(data.event_date);
                 return (
                   <div
                     key={`event-${data.id}-${idx}`}
