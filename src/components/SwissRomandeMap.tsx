@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MapPin, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { getLocationCoords, findLocation } from '@/data/swissRomandeLocations';
 
-// Coordonnées des régions de Suisse Romande
+// Coordonnées des régions de Suisse Romande (fallback + couleurs)
 const REGIONS_DATA: Record<string, { center: [number, number]; zoom: number; color: string }> = {
   'Genève': { center: [6.1432, 46.2044], zoom: 11, color: '#ef4444' },
   'Lausanne': { center: [6.6323, 46.5197], zoom: 11, color: '#f97316' },
@@ -26,10 +27,46 @@ const REGIONS_DATA: Record<string, { center: [number, number]; zoom: number; col
   'Lavaux': { center: [6.7500, 46.4900], zoom: 12, color: '#10b981' },
   'Riviera': { center: [6.8500, 46.4500], zoom: 11, color: '#f59e0b' },
   'Chablais': { center: [6.9500, 46.3200], zoom: 11, color: '#ef4444' },
-  'Ouest lausannois': { center: [6.5500, 46.5300], zoom: 12, color: '#ec4899' },
+  'Ouest-lausannois': { center: [6.5500, 46.5300], zoom: 12, color: '#ec4899' },
   'Gros-de-Vaud': { center: [6.6200, 46.6500], zoom: 11, color: '#14b8a6' },
   'Nord-vaudois': { center: [6.5000, 46.7800], zoom: 10, color: '#6366f1' },
 };
+
+// Fonction pour obtenir les coordonnées avec matching flexible
+function getFlexibleCoords(regionName: string | null | undefined): { center: [number, number]; zoom: number; color: string } | null {
+  if (!regionName) return null;
+  
+  // 1. Match exact dans REGIONS_DATA
+  if (REGIONS_DATA[regionName]) {
+    return REGIONS_DATA[regionName];
+  }
+  
+  // 2. Utiliser le système de matching flexible
+  const coords = getLocationCoords(regionName);
+  if (coords) {
+    // Trouver la couleur la plus proche
+    const location = findLocation(regionName);
+    let color = '#6366f1'; // default
+    
+    if (location?.parent && REGIONS_DATA[location.parent]) {
+      color = REGIONS_DATA[location.parent].color;
+    } else if (location?.name && REGIONS_DATA[location.name]) {
+      color = REGIONS_DATA[location.name].color;
+    }
+    
+    return { center: coords, zoom: 11, color };
+  }
+  
+  // 3. Essayer de matcher partiellement avec les clés existantes
+  const normalizedRegion = regionName.toLowerCase();
+  for (const [key, data] of Object.entries(REGIONS_DATA)) {
+    if (normalizedRegion.includes(key.toLowerCase()) || key.toLowerCase().includes(normalizedRegion)) {
+      return data;
+    }
+  }
+  
+  return null;
+}
 
 interface Client {
   id: string;
@@ -126,13 +163,16 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
     mapboxgl.accessToken = mapboxToken;
 
     try {
-      // Déterminer le centre et zoom initial
+      // Déterminer le centre et zoom initial avec matching flexible
       let initialCenter: [number, number] = [6.8, 46.5];
       let initialZoom = 8;
 
-      if (isSingleClientMode && clientRegion && REGIONS_DATA[clientRegion]) {
-        initialCenter = REGIONS_DATA[clientRegion].center;
-        initialZoom = REGIONS_DATA[clientRegion].zoom;
+      if (isSingleClientMode && clientRegion) {
+        const regionData = getFlexibleCoords(clientRegion);
+        if (regionData) {
+          initialCenter = regionData.center;
+          initialZoom = regionData.zoom;
+        }
       }
 
       map.current = new mapboxgl.Map({
@@ -176,10 +216,10 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
     markersRef.current = [];
 
     if (isSingleClientMode) {
-      // Mode client unique
-      if (clientRegion && REGIONS_DATA[clientRegion]) {
-        const regionData = REGIONS_DATA[clientRegion];
-        
+      // Mode client unique avec matching flexible
+      const regionData = getFlexibleCoords(clientRegion);
+      
+      if (clientRegion && regionData) {
         const el = document.createElement('div');
         el.style.cssText = `
           width: 48px;
@@ -326,10 +366,11 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
   const resetView = () => {
     if (!map.current) return;
     
-    if (isSingleClientMode && clientRegion && REGIONS_DATA[clientRegion]) {
+    const regionData = getFlexibleCoords(clientRegion);
+    if (isSingleClientMode && clientRegion && regionData) {
       map.current.flyTo({
-        center: REGIONS_DATA[clientRegion].center,
-        zoom: REGIONS_DATA[clientRegion].zoom,
+        center: regionData.center,
+        zoom: regionData.zoom,
         duration: 1000
       });
     } else {
@@ -368,8 +409,9 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
     );
   }
 
-  // En mode client unique, ne pas afficher si pas de région
-  if (isSingleClientMode && !clientRegion) {
+  // En mode client unique, ne pas afficher si pas de région ou coordonnées non trouvées
+  const clientRegionData = getFlexibleCoords(clientRegion);
+  if (isSingleClientMode && (!clientRegion || !clientRegionData)) {
     return null;
   }
 
