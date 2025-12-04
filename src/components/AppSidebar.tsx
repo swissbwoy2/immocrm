@@ -98,7 +98,7 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, userRole } = useAuth();
+  const { user, userRole, signOut } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const { counts } = useNotifications();
   const [hasDrafts, setHasDrafts] = useState(false);
@@ -154,8 +154,7 @@ export function AppSidebar() {
   const userEmail = profile?.email || user.email || '';
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/login');
+    await signOut();
   };
 
   const getNotificationCount = (notifKey: string | null): number => {
