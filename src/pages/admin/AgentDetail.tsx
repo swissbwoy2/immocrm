@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
-import { countUniqueVisitesInRange } from "@/utils/visitesCalculator";
+import { countUniqueVisitesInRange, countUniqueOffresInRange } from "@/utils/visitesCalculator";
 
 interface Agent {
   id: string;
@@ -143,10 +143,12 @@ const AgentDetail = () => {
         setCandidatures(candidaturesData || []);
       }
 
-      // Calculate today's stats
-      const todayOffres = (offresData || []).filter(o => 
-        o.date_envoi && o.date_envoi >= todayStart && o.date_envoi <= todayEnd
-      ).length;
+      // Calculate today's stats - count unique offers (same date + address = 1 offer)
+      const todayOffres = countUniqueOffresInRange(
+        offresData || [],
+        todayStart,
+        todayEnd
+      );
 
       // Count unique visits (same date + address = 1 visit, regardless of clients)
       const todayVisites = countUniqueVisitesInRange(
