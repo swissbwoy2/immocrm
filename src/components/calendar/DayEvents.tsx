@@ -75,21 +75,36 @@ export function DayEvents({ date, events, visites, agents, clients, onStatusChan
     return client?.profiles ? `${client.profiles.prenom} ${client.profiles.nom}` : null;
   };
 
+  // Group visites by address + time
+  const groupVisitesByAddressAndTime = (visitesArray: any[]) => {
+    const groups = new Map<string, any[]>();
+    visitesArray.forEach(visite => {
+      const key = `${visite.adresse}-${visite.date_visite}`;
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(visite);
+    });
+    return Array.from(groups.values());
+  };
+
   // Combine events and visites for the selected day
-  const allItems: { type: 'event' | 'visite'; data: any; eventType: string }[] = [];
+  const allItems: { type: 'event' | 'visite-group'; data: any; eventType: string }[] = [];
 
   events.forEach((event) => {
     allItems.push({ type: 'event', data: event, eventType: event.event_type });
   });
 
-  visites.forEach((visite) => {
-    allItems.push({ type: 'visite', data: visite, eventType: 'visite' });
+  // Add grouped visites
+  const groupedVisites = groupVisitesByAddressAndTime(visites);
+  groupedVisites.forEach((group) => {
+    allItems.push({ type: 'visite-group', data: group, eventType: 'visite' });
   });
 
   // Sort by time
   allItems.sort((a, b) => {
-    const dateA = new Date(a.type === 'event' ? a.data.event_date : a.data.date_visite);
-    const dateB = new Date(b.type === 'event' ? b.data.event_date : b.data.date_visite);
+    const dateA = new Date(a.type === 'event' ? a.data.event_date : a.data[0].date_visite);
+    const dateB = new Date(b.type === 'event' ? b.data.event_date : b.data[0].date_visite);
     return dateA.getTime() - dateB.getTime();
   });
 
@@ -114,8 +129,72 @@ export function DayEvents({ date, events, visites, agents, clients, onStatusChan
           <div className="space-y-3">
             {allItems.map((item, idx) => {
               const isEvent = item.type === 'event';
+              const isVisiteGroup = item.type === 'visite-group';
+
+              if (isVisiteGroup) {
+                const group = item.data as any[];
+                const firstVisite = group[0];
+                const eventDate = new Date(firstVisite.date_visite);
+
+                return (
+                  <div
+                    key={`visite-group-${firstVisite.id}-${idx}`}
+                    className={cn(
+                      'p-3 rounded-lg border',
+                      eventTypeColors.visite
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="text-xs">
+                            {eventTypeLabels.visite}
+                          </Badge>
+                          {group.length > 1 && (
+                            <Badge variant="secondary" className="text-xs">
+                              {group.length} clients
+                            </Badge>
+                          )}
+                        </div>
+                        <h4 className="font-medium mt-1 truncate">
+                          {firstVisite.adresse}
+                        </h4>
+                        <p className="text-sm flex items-center gap-1 mt-1">
+                          <Clock className="h-3 w-3" />
+                          {format(eventDate, 'HH:mm')}
+                        </p>
+                        
+                        {/* Liste des clients */}
+                        <div className="mt-2 space-y-1">
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            Clients concernés :
+                          </p>
+                          <div className="pl-4 space-y-0.5">
+                            {group.map((visite: any) => (
+                              <div key={visite.id} className="text-xs flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-current opacity-50" />
+                                {getClientName(visite.client_id) || 'Client inconnu'}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {firstVisite.agent_id && (
+                          <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+                            <User className="h-3 w-3" />
+                            {getAgentName(firstVisite.agent_id)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              // Regular event rendering
               const data = item.data;
-              const eventDate = new Date(isEvent ? data.event_date : data.date_visite);
+              const eventDate = new Date(data.event_date);
 
               return (
                 <div
@@ -131,12 +210,12 @@ export function DayEvents({ date, events, visites, agents, clients, onStatusChan
                         <Badge variant="outline" className="text-xs">
                           {eventTypeLabels[item.eventType]}
                         </Badge>
-                        {isEvent && data.priority && (
+                        {data.priority && (
                           <Badge className={cn('text-xs', priorityColors[data.priority])}>
                             {data.priority}
                           </Badge>
                         )}
-                        {isEvent && data.status && (
+                        {data.status && (
                           <span className="flex items-center gap-1 text-xs">
                             {statusIcons[data.status]}
                             {data.status}
@@ -144,7 +223,7 @@ export function DayEvents({ date, events, visites, agents, clients, onStatusChan
                         )}
                       </div>
                       <h4 className="font-medium mt-1 truncate">
-                        {isEvent ? data.title : data.adresse}
+                        {data.title}
                       </h4>
                       {!data.all_day && (
                         <p className="text-sm flex items-center gap-1 mt-1">
@@ -152,35 +231,29 @@ export function DayEvents({ date, events, visites, agents, clients, onStatusChan
                           {format(eventDate, 'HH:mm')}
                         </p>
                       )}
-                      {isEvent && data.description && (
+                      {data.description && (
                         <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                           {data.description}
                         </p>
                       )}
                       <div className="flex flex-wrap gap-2 mt-2 text-xs text-muted-foreground">
-                        {(isEvent ? data.agent_id : data.agent_id) && (
+                        {data.agent_id && (
                           <span className="flex items-center gap-1">
                             <User className="h-3 w-3" />
-                            {getAgentName(isEvent ? data.agent_id : data.agent_id)}
+                            {getAgentName(data.agent_id)}
                           </span>
                         )}
-                        {(isEvent ? data.client_id : data.client_id) && (
+                        {data.client_id && (
                           <span className="flex items-center gap-1">
                             <Users className="h-3 w-3" />
-                            {getClientName(isEvent ? data.client_id : data.client_id)}
-                          </span>
-                        )}
-                        {!isEvent && data.adresse && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {data.adresse}
+                            {getClientName(data.client_id)}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {/* Only show delete for real calendar events (not virtual ones from candidatures) */}
-                    {isEvent && onDelete && !data.id.startsWith('signature-') && !data.id.startsWith('etat-lieux-') && (
+                    {/* Only show delete for real calendar events */}
+                    {onDelete && !data.id.startsWith('signature-') && !data.id.startsWith('etat-lieux-') && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -192,8 +265,8 @@ export function DayEvents({ date, events, visites, agents, clients, onStatusChan
                     )}
                   </div>
 
-                  {/* Only show status actions for real calendar events (not virtual ones from candidatures) */}
-                  {isEvent && onStatusChange && data.status !== 'effectue' && !data.id.startsWith('signature-') && !data.id.startsWith('etat-lieux-') && (
+                  {/* Only show status actions for real calendar events */}
+                  {onStatusChange && data.status !== 'effectue' && !data.id.startsWith('signature-') && !data.id.startsWith('etat-lieux-') && (
                     <div className="flex gap-2 mt-3 pt-3 border-t border-current/10">
                       <Button
                         size="sm"
