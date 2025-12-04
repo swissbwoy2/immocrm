@@ -11,7 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { 
   FileCheck, User, MapPin, Calendar, Search, Eye, CheckCircle, XCircle, Clock,
   Filter, Building2, FileSignature, CalendarCheck, Key, Send, AlertTriangle,
-  ChevronDown, ChevronUp, FastForward, Phone
+  ChevronDown, ChevronUp, FastForward, Phone, Trash2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -92,6 +92,7 @@ export default function Candidatures() {
   const [showDatesDialog, setShowDatesDialog] = useState(false);
   const [showEtatLieuxDialog, setShowEtatLieuxDialog] = useState(false);
   const [showForceDialog, setShowForceDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedCandidature, setSelectedCandidature] = useState<Candidature | null>(null);
   const [forceAction, setForceAction] = useState<{ statut: string; label: string } | null>(null);
   
@@ -328,6 +329,27 @@ export default function Candidatures() {
     });
   };
 
+  const handleDeleteCandidature = async () => {
+    if (!selectedCandidature) return;
+    
+    try {
+      const { error } = await supabase
+        .from('candidatures')
+        .delete()
+        .eq('id', selectedCandidature.id);
+
+      if (error) throw error;
+
+      setCandidatures(prev => prev.filter(c => c.id !== selectedCandidature.id));
+      toast({ title: 'Candidature supprimée', description: 'La candidature a été supprimée avec succès' });
+      setShowDeleteDialog(false);
+      setSelectedCandidature(null);
+    } catch (error) {
+      console.error('Error deleting candidature:', error);
+      toast({ title: 'Erreur', description: 'Impossible de supprimer la candidature', variant: 'destructive' });
+    }
+  };
+
   const getStatutLabel = (statut: string) => WORKFLOW_STATUTS[statut]?.label || statut;
   const getStatutBadgeVariant = (statut: string): "default" | "secondary" | "destructive" | "outline" => {
     const color = WORKFLOW_STATUTS[statut]?.color;
@@ -515,6 +537,19 @@ export default function Candidatures() {
             {/* View client button always visible */}
             <Button size="sm" variant="outline" onClick={() => navigate(`/agent/clients/${candidature.client_id}`)}>
               <Eye className="h-4 w-4 mr-1" />Voir fiche client
+            </Button>
+
+            {/* Delete button */}
+            <Button 
+              size="sm" 
+              variant="destructive" 
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                setSelectedCandidature(candidature); 
+                setShowDeleteDialog(true); 
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />Supprimer
             </Button>
           </div>
         </div>
@@ -760,7 +795,40 @@ export default function Candidatures() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowForceDialog(false)}>Annuler</Button>
             <Button onClick={confirmForceProgression} className="bg-orange-600 hover:bg-orange-700">
-              <FastForward className="h-4 w-4 mr-2" />Confirmer
+            <FastForward className="h-4 w-4 mr-2" />Confirmer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Confirmer suppression */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Supprimer la candidature
+            </DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer cette candidature ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedCandidature && (
+            <div className="py-4">
+              <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <p className="text-sm">
+                  <strong>Bien:</strong> {selectedCandidature.offres?.adresse || 'N/A'}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Statut actuel: {getStatutLabel(selectedCandidature.statut)}
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={handleDeleteCandidature}>
+              <Trash2 className="h-4 w-4 mr-2" />Supprimer définitivement
             </Button>
           </DialogFooter>
         </DialogContent>
