@@ -12,7 +12,6 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { AgentStatsSection } from '@/components/stats/AgentStatsSection';
 import { DefaultGoalsSection } from '@/components/stats/DefaultGoalsSection';
 import { AgentBadges } from '@/components/stats/AgentBadges';
-import { SwissRomandeMap } from '@/components/SwissRomandeMap';
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
@@ -336,15 +335,6 @@ export default function AgentDashboard() {
               onClick={() => navigate('/agent/transactions')}
             />
           </div>
-
-          {/* Carte interactive Suisse Romande */}
-          <SwissRomandeMap 
-            clients={clients}
-            onRegionClick={(region) => {
-              console.log('Région sélectionnée:', region);
-              // Optionnel: filtrer ou naviguer vers la liste des clients de cette région
-            }}
-          />
 
           {/* Section Statistiques détaillées */}
           <AgentStatsSection

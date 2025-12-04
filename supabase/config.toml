@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.notify-unassigned-clients.schedule]
 cron = "0 */12 * * *"
+
+[functions.get-mapbox-token]
+verify_jwt = false
