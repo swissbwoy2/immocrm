@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const WORKFLOW_STEPS = [
+  { key: 'dossier_en_cours', label: 'Dossier en cours', description: 'En attente du dépôt par l\'agent' },
   { key: 'en_attente', label: 'En attente', description: 'Dossier envoyé à la régie' },
   { key: 'acceptee', label: 'Acceptée', description: 'Candidature acceptée par la régie' },
   { key: 'bail_conclu', label: 'Client confirme', description: 'Vous confirmez vouloir le bail', clientAction: true },
@@ -28,8 +29,11 @@ const WORKFLOW_STEPS = [
 
 const STEP_ORDER = WORKFLOW_STEPS.map(s => s.key);
 
-// Steps that come before the workflow (candidature_deposee is the starting point)
-const PRE_WORKFLOW_STATUTS = ['envoyee', 'vue', 'interesse', 'visite_planifiee', 'visite_effectuee', 'candidature_deposee'];
+// Steps that come before the workflow
+const PRE_WORKFLOW_STATUTS = ['envoyee', 'vue', 'interesse', 'visite_planifiee'];
+
+// Map visite_effectuee and candidature_deposee to dossier_en_cours
+const DOSSIER_EN_COURS_STATUTS = ['visite_effectuee', 'candidature_deposee'];
 
 interface CandidatureWorkflowInteractiveProps {
   currentStatut: string;
@@ -50,9 +54,11 @@ export function CandidatureWorkflowInteractive({
 
   const isRefused = currentStatut === 'refusee';
   const isPreWorkflow = PRE_WORKFLOW_STATUTS.includes(currentStatut);
+  const isDossierEnCours = DOSSIER_EN_COURS_STATUTS.includes(currentStatut);
   
-  // Map pre-workflow statuses to show progress
-  const effectiveStatut = isPreWorkflow ? 'candidature_deposee' : currentStatut;
+  // Map statuses to workflow steps
+  const effectiveStatut = isPreWorkflow ? 'dossier_en_cours' : 
+    isDossierEnCours ? 'dossier_en_cours' : currentStatut;
   const currentIndex = STEP_ORDER.indexOf(effectiveStatut);
   
   // Calculate progress percentage
@@ -71,10 +77,17 @@ export function CandidatureWorkflowInteractive({
 
   // Get the message for current status
   const getCurrentStatusMessage = () => {
+    if (currentStatut === 'visite_effectuee') {
+      return {
+        title: "Visite effectuée",
+        message: "Vous avez effectué la visite. Si vous souhaitez déposer votre dossier, votre agent s'en chargera.",
+        type: "waiting" as const
+      };
+    }
     if (currentStatut === 'candidature_deposee') {
       return {
-        title: "Candidature déposée",
-        message: "Votre dossier a été soumis. L'agent va le valider et l'envoyer à la régie.",
+        title: "Dossier en préparation",
+        message: "Votre agent prépare votre dossier pour l'envoyer à la régie. Vous serez notifié une fois le dossier déposé.",
         type: "waiting" as const
       };
     }

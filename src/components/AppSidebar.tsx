@@ -62,6 +62,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Mes clients', icon: Users, path: '/agent/mes-clients', notifKey: 'client_assigned' },
         { name: 'Visites', icon: CalendarCheck, path: '/agent/visites', notifKey: 'new_visit' },
         { name: 'Candidatures', icon: FileCheck, path: '/agent/candidatures', notifKey: null },
+        { name: 'Déposer candidature', icon: Clipboard, path: '/agent/deposer-candidature', notifKey: null },
         { name: 'Transactions', icon: DollarSign, path: '/agent/transactions', notifKey: null },
         { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre', notifKey: null },
         { name: 'Offres envoyées', icon: Mail, path: '/agent/offres-envoyees', notifKey: null },
