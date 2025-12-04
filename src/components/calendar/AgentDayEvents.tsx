@@ -33,7 +33,7 @@ interface AgentDayEventsProps {
   onMarquerEffectuee: (visite: any) => void;
   onOpenDetail: (visite: any) => void;
   onOpenEventDetail?: (event: CalendarEvent) => void;
-  onDeleteVisite?: (visiteId: string) => void;
+  onDeleteVisite?: (visiteId: string, cascade?: boolean) => void;
 }
 
 const eventTypeLabels: Record<string, string> = {
@@ -332,38 +332,70 @@ export function AgentDayEvents({
                       {/* Boutons de suppression */}
                       {onDeleteVisite && (
                         <div className="mt-2 pt-2 border-t border-current/10">
-                          {group.map(visite => (
-                            <AlertDialog key={`delete-${visite.id}`}>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="w-full text-xs h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Trash2 className="h-3 w-3 mr-1" />
-                                  Supprimer: {visite.client_profile?.prenom}
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Supprimer cette visite ?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Cette action supprimera la visite pour {visite.client_profile?.prenom} {visite.client_profile?.nom} à {visite.adresse}. Cette action est irréversible.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    onClick={() => onDeleteVisite(visite.id)}
+                          {group.map(visite => {
+                            const isClesRemises = visite.candidature?.statut === 'cles_remises' || visite.candidature?.cles_remises;
+                            return (
+                              <AlertDialog key={`delete-${visite.id}`}>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="w-full text-xs h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={(e) => e.stopPropagation()}
                                   >
-                                    Supprimer
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          ))}
+                                    <Trash2 className="h-3 w-3 mr-1" />
+                                    Supprimer: {visite.client_profile?.prenom}
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Supprimer cette visite ?</AlertDialogTitle>
+                                    <AlertDialogDescription asChild>
+                                      <div>
+                                        {isClesRemises ? (
+                                          <>
+                                            <span className="flex items-center gap-2 text-destructive font-medium mb-2">
+                                              <AlertTriangle className="h-4 w-4" />
+                                              Cette visite est liée à une candidature terminée (clés remises).
+                                            </span>
+                                            <p>Voulez-vous aussi supprimer la transaction associée et réinitialiser le workflow de la candidature ?</p>
+                                          </>
+                                        ) : (
+                                          <p>Cette action supprimera la visite pour {visite.client_profile?.prenom} {visite.client_profile?.nom} à {visite.adresse}. Cette action est irréversible.</p>
+                                        )}
+                                      </div>
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter className={isClesRemises ? "flex-col sm:flex-row gap-2" : ""}>
+                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                    {isClesRemises ? (
+                                      <>
+                                        <AlertDialogAction
+                                          className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                                          onClick={() => onDeleteVisite(visite.id, false)}
+                                        >
+                                          Visite seule
+                                        </AlertDialogAction>
+                                        <AlertDialogAction
+                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                          onClick={() => onDeleteVisite(visite.id, true)}
+                                        >
+                                          Tout supprimer
+                                        </AlertDialogAction>
+                                      </>
+                                    ) : (
+                                      <AlertDialogAction
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        onClick={() => onDeleteVisite(visite.id, false)}
+                                      >
+                                        Supprimer
+                                      </AlertDialogAction>
+                                    )}
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
