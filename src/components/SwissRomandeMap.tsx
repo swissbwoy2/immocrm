@@ -6,7 +6,7 @@ import { MapPin, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { getLocationCoords, findLocation } from '@/data/swissRomandeLocations';
-
+import { getRegionBoundaries, swissRegionsBoundaries } from '@/data/swissRegionsBoundaries';
 // Coordonnées des régions de Suisse Romande (fallback + couleurs)
 const REGIONS_DATA: Record<string, { center: [number, number]; zoom: number; color: string }> = {
   'Genève': { center: [6.1432, 46.2044], zoom: 11, color: '#ef4444' },
@@ -210,6 +210,35 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
       );
 
       map.current.on('load', () => {
+        // Add GeoJSON source for all region boundaries
+        map.current!.addSource('swiss-regions', {
+          type: 'geojson',
+          data: swissRegionsBoundaries as GeoJSON.FeatureCollection
+        });
+
+        // Add fill layer (semi-transparent)
+        map.current!.addLayer({
+          id: 'region-fill',
+          type: 'fill',
+          source: 'swiss-regions',
+          paint: {
+            'fill-color': ['get', 'color'],
+            'fill-opacity': 0
+          }
+        });
+
+        // Add outline layer
+        map.current!.addLayer({
+          id: 'region-outline',
+          type: 'line',
+          source: 'swiss-regions',
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': 0,
+            'line-opacity': 0
+          }
+        });
+
         setMapLoaded(true);
       });
 
@@ -228,6 +257,36 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
       map.current?.remove();
     };
   }, [mapboxToken, isSingleClientMode]);
+
+  // Update region boundaries when selected regions change
+  useEffect(() => {
+    if (!mapLoaded || !map.current) return;
+    
+    if (isSingleClientMode && clientRegions.length > 0) {
+      // Get boundaries for selected regions
+      const boundaries = getRegionBoundaries(clientRegions);
+      const boundaryNames = boundaries.map(b => b.properties.name);
+      
+      // Create filter for selected regions
+      const filter: mapboxgl.FilterSpecification = boundaryNames.length > 0
+        ? ['in', ['get', 'name'], ['literal', boundaryNames]]
+        : ['==', ['get', 'name'], ''];
+      
+      // Update fill layer
+      map.current.setFilter('region-fill', filter);
+      map.current.setPaintProperty('region-fill', 'fill-opacity', 0.15);
+      
+      // Update outline layer
+      map.current.setFilter('region-outline', filter);
+      map.current.setPaintProperty('region-outline', 'line-width', 3);
+      map.current.setPaintProperty('region-outline', 'line-opacity', 0.8);
+    } else {
+      // Hide boundaries in multi-client mode or when no regions
+      map.current.setPaintProperty('region-fill', 'fill-opacity', 0);
+      map.current.setPaintProperty('region-outline', 'line-width', 0);
+      map.current.setPaintProperty('region-outline', 'line-opacity', 0);
+    }
+  }, [mapLoaded, isSingleClientMode, clientRegions]);
 
   // Ajouter les marqueurs
   useEffect(() => {
