@@ -60,16 +60,27 @@ export function CalendarView({ events, visites, selectedDate, onDateSelect, onEv
       }
     });
 
-    // Add visites
-    visites.forEach((visite) => {
-      if (isSameDay(new Date(visite.date_visite), date)) {
-        dayEvents.push({ 
-          type: visite.est_deleguee ? 'visite_deleguee' : 'visite', 
-          event: visite, 
-          isVisite: true,
-          isDelegated: visite.est_deleguee 
-        });
+    // Group visites by address + time
+    const visitesForDay = visites.filter(v => isSameDay(new Date(v.date_visite), date));
+    const groupedVisites = new Map<string, any[]>();
+    
+    visitesForDay.forEach((visite) => {
+      const key = `${visite.adresse}-${visite.date_visite}`;
+      if (!groupedVisites.has(key)) {
+        groupedVisites.set(key, []);
       }
+      groupedVisites.get(key)!.push(visite);
+    });
+    
+    // Add ONE event per grouped visit
+    groupedVisites.forEach((group) => {
+      const firstVisite = group[0];
+      dayEvents.push({ 
+        type: firstVisite.est_deleguee ? 'visite_deleguee' : 'visite', 
+        event: { ...firstVisite, groupedClients: group },
+        isVisite: true,
+        isDelegated: firstVisite.est_deleguee 
+      });
     });
 
     return dayEvents;
