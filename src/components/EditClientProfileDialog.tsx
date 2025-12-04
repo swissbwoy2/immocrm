@@ -504,11 +504,12 @@ export function EditClientProfileDialog({ open, onOpenChange, client, profile, o
                 </div>
               </div>
               <div>
-                <Label>Région recherchée</Label>
+                <Label>Région(s) recherchée(s)</Label>
                 <RegionAutocomplete
                   value={clientData.region_recherche}
                   onChange={(value) => setClientData({ ...clientData, region_recherche: value })}
                   placeholder="Tapez une région, commune..."
+                  multiSelect
                 />
               </div>
               <div>

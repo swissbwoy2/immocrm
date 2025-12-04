@@ -944,11 +944,12 @@ export default function ClientDetail() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Région de recherche</Label>
+                        <Label>Région(s) de recherche</Label>
                         <RegionAutocomplete
                           value={editFormData.region_recherche || ''}
                           onChange={(value) => setEditFormData({ ...editFormData, region_recherche: value })}
                           placeholder="Tapez une région, commune..."
+                          multiSelect
                         />
                       </div>
                       <div className="space-y-2">

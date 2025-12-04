@@ -930,11 +930,12 @@ export default function ClientDetail() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Région de recherche</Label>
+                      <Label>Région(s) de recherche</Label>
                       <RegionAutocomplete
                         value={editFormData.region_recherche || ''}
                         onChange={(value) => setEditFormData({ ...editFormData, region_recherche: value })}
                         placeholder="Tapez une région, commune..."
+                        multiSelect
                       />
                     </div>
                     <div className="space-y-2">

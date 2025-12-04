@@ -32,6 +32,9 @@ const REGIONS_DATA: Record<string, { center: [number, number]; zoom: number; col
   'Nord-vaudois': { center: [6.5000, 46.7800], zoom: 10, color: '#6366f1' },
 };
 
+// Palette de couleurs pour les marqueurs multiples
+const MARKER_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6'];
+
 // Fonction pour obtenir les coordonnées avec matching flexible
 function getFlexibleCoords(regionName: string | null | undefined): { center: [number, number]; zoom: number; color: string } | null {
   if (!regionName) return null;
@@ -66,6 +69,12 @@ function getFlexibleCoords(regionName: string | null | undefined): { center: [nu
   }
   
   return null;
+}
+
+// Parse multiple regions from comma-separated string
+function parseRegions(regionString: string | null | undefined): string[] {
+  if (!regionString) return [];
+  return regionString.split(',').map(r => r.trim()).filter(Boolean);
 }
 
 interface Client {
@@ -125,7 +134,19 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
 
   // Mode client unique ou multi-clients
   const isSingleClientMode = !!client;
-  const clientRegion = client?.region_recherche;
+  const clientRegions = parseRegions(client?.region_recherche);
+
+  // Get all valid region coordinates for single client mode
+  const validClientRegions = React.useMemo(() => {
+    if (!isSingleClientMode) return [];
+    return clientRegions
+      .map((region, index) => ({
+        region,
+        data: getFlexibleCoords(region),
+        color: MARKER_COLORS[index % MARKER_COLORS.length]
+      }))
+      .filter(r => r.data !== null) as { region: string; data: { center: [number, number]; zoom: number; color: string }; color: string }[];
+  }, [clientRegions, isSingleClientMode]);
 
   // Calculer les stats par région (mode multi-clients)
   const regionStats = React.useMemo(() => {
@@ -163,16 +184,16 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
     mapboxgl.accessToken = mapboxToken;
 
     try {
-      // Déterminer le centre et zoom initial avec matching flexible
+      // Déterminer le centre et zoom initial
       let initialCenter: [number, number] = [6.8, 46.5];
       let initialZoom = 8;
 
-      if (isSingleClientMode && clientRegion) {
-        const regionData = getFlexibleCoords(clientRegion);
-        if (regionData) {
-          initialCenter = regionData.center;
-          initialZoom = regionData.zoom;
+      if (isSingleClientMode && validClientRegions.length > 0) {
+        if (validClientRegions.length === 1) {
+          initialCenter = validClientRegions[0].data.center;
+          initialZoom = validClientRegions[0].data.zoom;
         }
+        // For multiple regions, we'll fit bounds after map loads
       }
 
       map.current = new mapboxgl.Map({
@@ -206,7 +227,7 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
       markersRef.current.forEach(marker => marker.remove());
       map.current?.remove();
     };
-  }, [mapboxToken, isSingleClientMode, clientRegion]);
+  }, [mapboxToken, isSingleClientMode]);
 
   // Ajouter les marqueurs
   useEffect(() => {
@@ -216,15 +237,13 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
     markersRef.current = [];
 
     if (isSingleClientMode) {
-      // Mode client unique avec matching flexible
-      const regionData = getFlexibleCoords(clientRegion);
-      
-      if (clientRegion && regionData) {
+      // Mode client unique - afficher plusieurs marqueurs pour chaque région
+      validClientRegions.forEach(({ region, data, color }, index) => {
         const el = document.createElement('div');
         el.style.cssText = `
           width: 48px;
           height: 48px;
-          background: ${regionData.color};
+          background: ${color};
           border: 3px solid white;
           border-radius: 50%;
           display: flex;
@@ -240,7 +259,7 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
         const popup = new mapboxgl.Popup({ offset: 25, closeButton: false })
           .setHTML(`
             <div style="padding: 12px; min-width: 200px;">
-              <h4 style="font-weight: bold; font-size: 16px; margin-bottom: 8px; color: ${regionData.color};">${clientRegion}</h4>
+              <h4 style="font-weight: bold; font-size: 16px; margin-bottom: 8px; color: ${color};">${region}</h4>
               <div style="font-size: 13px; color: #666;">
                 <p style="margin: 4px 0;"><strong>Budget:</strong> ${client?.budget_max?.toLocaleString() || 'Non défini'} CHF</p>
                 <p style="margin: 4px 0;"><strong>Type:</strong> ${client?.type_recherche || 'Non défini'}</p>
@@ -250,7 +269,7 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
           `);
 
         const marker = new mapboxgl.Marker(el)
-          .setLngLat(regionData.center)
+          .setLngLat(data.center)
           .setPopup(popup)
           .addTo(map.current!);
 
@@ -258,6 +277,19 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
         el.addEventListener('mouseleave', () => popup.remove());
         
         markersRef.current.push(marker);
+      });
+
+      // Fit bounds to show all markers if multiple regions
+      if (validClientRegions.length > 1) {
+        const bounds = new mapboxgl.LngLatBounds();
+        validClientRegions.forEach(({ data }) => {
+          bounds.extend(data.center);
+        });
+        map.current.fitBounds(bounds, { 
+          padding: 60,
+          maxZoom: 11,
+          duration: 1000
+        });
       }
     } else {
       // Mode multi-clients
@@ -361,18 +393,29 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
         markersRef.current.push(marker);
       });
     }
-  }, [mapLoaded, regionStats, isSingleClientMode, clientRegion, client, onRegionClick]);
+  }, [mapLoaded, regionStats, isSingleClientMode, validClientRegions, client, onRegionClick]);
 
   const resetView = () => {
     if (!map.current) return;
     
-    const regionData = getFlexibleCoords(clientRegion);
-    if (isSingleClientMode && clientRegion && regionData) {
-      map.current.flyTo({
-        center: regionData.center,
-        zoom: regionData.zoom,
-        duration: 1000
-      });
+    if (isSingleClientMode && validClientRegions.length > 0) {
+      if (validClientRegions.length === 1) {
+        map.current.flyTo({
+          center: validClientRegions[0].data.center,
+          zoom: validClientRegions[0].data.zoom,
+          duration: 1000
+        });
+      } else {
+        const bounds = new mapboxgl.LngLatBounds();
+        validClientRegions.forEach(({ data }) => {
+          bounds.extend(data.center);
+        });
+        map.current.fitBounds(bounds, { 
+          padding: 60,
+          maxZoom: 11,
+          duration: 1000
+        });
+      }
     } else {
       map.current.flyTo({
         center: [6.8, 46.5],
@@ -409,11 +452,17 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
     );
   }
 
-  // En mode client unique, ne pas afficher si pas de région ou coordonnées non trouvées
-  const clientRegionData = getFlexibleCoords(clientRegion);
-  if (isSingleClientMode && (!clientRegion || !clientRegionData)) {
+  // En mode client unique, ne pas afficher si aucune région valide
+  if (isSingleClientMode && validClientRegions.length === 0) {
     return null;
   }
+
+  // Generate title for single client mode
+  const mapTitle = isSingleClientMode 
+    ? validClientRegions.length === 1 
+      ? `Localisation: ${validClientRegions[0].region}`
+      : `Localisations (${validClientRegions.length})`
+    : 'Répartition des clients';
 
   return (
     <Card className={className}>
@@ -421,12 +470,26 @@ export function SwissRomandeMap({ clients = [], client = null, onRegionClick, cl
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
             <MapPin className="w-5 h-5" />
-            {isSingleClientMode ? `Localisation: ${clientRegion}` : 'Répartition des clients'}
+            {mapTitle}
           </CardTitle>
           <Button variant="ghost" size="sm" onClick={resetView}>
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
+        {/* Show region badges in single client mode with multiple regions */}
+        {isSingleClientMode && validClientRegions.length > 1 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {validClientRegions.map(({ region, color }) => (
+              <span 
+                key={region}
+                className="text-xs px-2 py-0.5 rounded-full text-white"
+                style={{ backgroundColor: color }}
+              >
+                {region}
+              </span>
+            ))}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="p-0">
         <div 
