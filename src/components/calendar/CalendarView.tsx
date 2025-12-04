@@ -117,7 +117,7 @@ export function CalendarView({ events, visites, selectedDate, onDateSelect, onEv
   };
 
   return (
-    <div className="bg-card rounded-lg border p-4">
+    <div className="bg-card rounded-lg border p-4 w-full max-w-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold capitalize">
@@ -158,10 +158,10 @@ export function CalendarView({ events, visites, selectedDate, onDateSelect, onEv
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1 w-full">
         {/* Padding for days before month starts */}
         {Array.from({ length: paddingDays }).map((_, index) => (
-          <div key={`padding-${index}`} className="h-24 bg-muted/30 rounded" />
+          <div key={`padding-${index}`} className="h-20 md:h-24 bg-muted/30 rounded min-w-0" />
         ))}
 
         {/* Actual days */}
@@ -174,7 +174,7 @@ export function CalendarView({ events, visites, selectedDate, onDateSelect, onEv
               key={day.toISOString()}
               onClick={() => onDateSelect(day)}
               className={cn(
-                'h-24 p-1 rounded border cursor-pointer transition-colors hover:bg-accent/50',
+                'h-20 md:h-24 p-1 rounded border cursor-pointer transition-colors hover:bg-accent/50 min-w-0',
                 !isSameMonth(day, currentMonth) && 'opacity-50',
                 isToday(day) && 'border-primary border-2',
                 isSelected && 'bg-accent ring-2 ring-primary'

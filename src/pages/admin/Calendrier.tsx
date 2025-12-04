@@ -309,7 +309,7 @@ export default function AdminCalendrier() {
       </details>
 
       {/* Main content - responsive grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 min-w-0">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 min-w-0 w-full">
         {/* Filters sidebar - desktop only */}
         <div className="hidden lg:block lg:col-span-1 min-w-0">
           <EventFilters
