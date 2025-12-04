@@ -245,14 +245,15 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="region_recherche">Région *</Label>
+            <Label htmlFor="region_recherche">Région(s) *</Label>
             <RegionAutocomplete
               value={data.region_recherche}
               onChange={(value) => onChange({ region_recherche: value })}
               placeholder="Tapez une région, commune ou district..."
+              multiSelect
             />
             <p className="text-xs text-muted-foreground">
-              Ex: Lausanne, Nyon, Crissier, Genève...
+              Vous pouvez sélectionner plusieurs régions
             </p>
           </div>
 

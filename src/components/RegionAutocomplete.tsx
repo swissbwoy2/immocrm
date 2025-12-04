@@ -9,7 +9,6 @@ import {
   getLocationTypeIcon, 
   getLocationTypeLabel,
   Location,
-  SWISS_ROMANDE_LOCATIONS
 } from '@/data/swissRomandeLocations';
 import { REGIONS } from '@/components/mandat/types';
 
@@ -19,6 +18,7 @@ interface RegionAutocompleteProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  multiSelect?: boolean;
 }
 
 export function RegionAutocomplete({ 
@@ -26,22 +26,21 @@ export function RegionAutocomplete({
   onChange, 
   placeholder = "Tapez une région, district ou commune...",
   className,
-  disabled = false
+  disabled = false,
+  multiSelect = false
 }: RegionAutocompleteProps) {
-  const [inputValue, setInputValue] = useState(value || '');
+  const [inputValue, setInputValue] = useState('');
   const [suggestions, setSuggestions] = useState<Location[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Vérifier si la valeur actuelle est reconnue
-  const isRecognized = value ? !!findLocation(value) : false;
+  // Parse selected regions from comma-separated value
+  const selectedRegions = value ? value.split(',').map(r => r.trim()).filter(Boolean) : [];
 
-  // Sync input value with prop
-  useEffect(() => {
-    setInputValue(value || '');
-  }, [value]);
+  // Check if a region is recognized
+  const isRegionRecognized = (region: string) => !!findLocation(region);
 
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,10 +50,11 @@ export function RegionAutocomplete({
     if (newValue.length >= 2) {
       const results = searchLocations(newValue, 8);
       
-      // Ajouter les régions prédéfinies qui correspondent
+      // Add predefined regions that match
       const matchingRegions = REGIONS.filter(r => 
         r.toLowerCase().includes(newValue.toLowerCase()) &&
-        !results.some(loc => loc.name === r)
+        !results.some(loc => loc.name === r) &&
+        !selectedRegions.includes(r)
       ).map(r => ({
         name: r,
         type: 'region' as const,
@@ -62,7 +62,12 @@ export function RegionAutocomplete({
         coords: [0, 0] as [number, number]
       }));
       
-      setSuggestions([...results, ...matchingRegions].slice(0, 10));
+      // Filter out already selected regions
+      const filteredResults = [...results, ...matchingRegions]
+        .filter(loc => !selectedRegions.includes(loc.name))
+        .slice(0, 10);
+      
+      setSuggestions(filteredResults);
       setIsOpen(true);
       setSelectedIndex(-1);
     } else {
@@ -74,17 +79,35 @@ export function RegionAutocomplete({
   // Handle selection
   const handleSelect = (location: Location | string) => {
     const name = typeof location === 'string' ? location : location.name;
-    setInputValue(name);
-    onChange(name);
+    
+    if (multiSelect) {
+      // Add to existing selections
+      if (!selectedRegions.includes(name)) {
+        const newRegions = [...selectedRegions, name];
+        onChange(newRegions.join(', '));
+      }
+      setInputValue('');
+    } else {
+      // Single selection mode
+      onChange(name);
+      setInputValue(name);
+    }
+    
     setIsOpen(false);
     setSuggestions([]);
+    inputRef.current?.focus();
   };
 
-  // Handle blur - save value
+  // Remove a selected region (multi-select mode)
+  const handleRemoveRegion = (region: string) => {
+    const newRegions = selectedRegions.filter(r => r !== region);
+    onChange(newRegions.join(', '));
+  };
+
+  // Handle blur
   const handleBlur = () => {
-    // Delay to allow click on suggestion
     setTimeout(() => {
-      if (inputValue !== value) {
+      if (!multiSelect && inputValue !== value) {
         onChange(inputValue);
       }
       setIsOpen(false);
@@ -96,7 +119,13 @@ export function RegionAutocomplete({
     if (!isOpen || suggestions.length === 0) {
       if (e.key === 'Enter') {
         e.preventDefault();
-        onChange(inputValue);
+        if (!multiSelect) {
+          onChange(inputValue);
+        }
+      }
+      // Handle backspace to remove last region in multi-select
+      if (e.key === 'Backspace' && multiSelect && inputValue === '' && selectedRegions.length > 0) {
+        handleRemoveRegion(selectedRegions[selectedRegions.length - 1]);
       }
       return;
     }
@@ -116,7 +145,7 @@ export function RegionAutocomplete({
         e.preventDefault();
         if (selectedIndex >= 0 && suggestions[selectedIndex]) {
           handleSelect(suggestions[selectedIndex]);
-        } else {
+        } else if (!multiSelect) {
           onChange(inputValue);
           setIsOpen(false);
         }
@@ -139,44 +168,91 @@ export function RegionAutocomplete({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Clear value
-  const handleClear = () => {
-    setInputValue('');
+  // Sync input value with prop for single select mode
+  useEffect(() => {
+    if (!multiSelect) {
+      setInputValue(value || '');
+    }
+  }, [value, multiSelect]);
+
+  // Clear all
+  const handleClearAll = () => {
     onChange('');
+    setInputValue('');
     inputRef.current?.focus();
   };
 
   return (
     <div ref={containerRef} className={cn("relative", className)}>
-      <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          ref={inputRef}
-          type="text"
-          value={inputValue}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onFocus={() => inputValue.length >= 2 && setSuggestions(searchLocations(inputValue, 8))}
-          onBlur={handleBlur}
-          placeholder={placeholder}
-          disabled={disabled}
-          className={cn(
-            "pl-9 pr-20",
-            isRecognized && "border-green-500 focus-visible:ring-green-500"
-          )}
-        />
+      <div className={cn(
+        "relative flex flex-wrap items-center gap-1 min-h-10 p-1 border rounded-md bg-background",
+        multiSelect && selectedRegions.length > 0 && "pb-1",
+        disabled && "opacity-50 cursor-not-allowed"
+      )}>
+        {/* Selected regions as badges (multi-select mode) */}
+        {multiSelect && selectedRegions.map((region, index) => (
+          <Badge 
+            key={`${region}-${index}`}
+            variant={isRegionRecognized(region) ? "default" : "secondary"}
+            className={cn(
+              "flex items-center gap-1 text-xs",
+              isRegionRecognized(region) 
+                ? "bg-green-100 text-green-800 border-green-200 hover:bg-green-200" 
+                : "bg-muted text-muted-foreground"
+            )}
+          >
+            <span className="text-sm">{getLocationTypeIcon(findLocation(region)?.type || 'region')}</span>
+            {region}
+            <button
+              type="button"
+              onClick={() => handleRemoveRegion(region)}
+              className="ml-1 hover:text-destructive"
+              disabled={disabled}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        ))}
+        
+        {/* Input field */}
+        <div className="relative flex-1 min-w-[150px]">
+          <MapPin className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            ref={inputRef}
+            type="text"
+            value={inputValue}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onFocus={() => inputValue.length >= 2 && setSuggestions(searchLocations(inputValue, 8))}
+            onBlur={handleBlur}
+            placeholder={multiSelect && selectedRegions.length > 0 ? "Ajouter une région..." : placeholder}
+            disabled={disabled}
+            className={cn(
+              "pl-8 pr-8 border-0 shadow-none focus-visible:ring-0",
+              !multiSelect && isRegionRecognized(value) && "text-green-700"
+            )}
+          />
+        </div>
+
+        {/* Status indicators */}
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-          {isRecognized && (
+          {!multiSelect && value && isRegionRecognized(value) && (
             <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
               <Check className="h-3 w-3 mr-1" />
               OK
             </Badge>
           )}
-          {inputValue && (
+          {multiSelect && selectedRegions.length > 0 && (
+            <Badge variant="outline" className="text-xs">
+              {selectedRegions.filter(isRegionRecognized).length}/{selectedRegions.length}
+            </Badge>
+          )}
+          {(value || selectedRegions.length > 0) && (
             <button
               type="button"
-              onClick={handleClear}
+              onClick={handleClearAll}
               className="p-1 hover:bg-muted rounded"
+              disabled={disabled}
             >
               <X className="h-3 w-3 text-muted-foreground" />
             </button>
@@ -214,7 +290,7 @@ export function RegionAutocomplete({
         </div>
       )}
 
-      {/* Quick suggestions when empty */}
+      {/* No results message */}
       {isOpen && suggestions.length === 0 && inputValue.length >= 2 && (
         <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg p-3">
           <p className="text-sm text-muted-foreground">
