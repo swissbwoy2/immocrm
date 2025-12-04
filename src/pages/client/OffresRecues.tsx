@@ -3,7 +3,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen } from "lucide-react";
+import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen, MessageSquare } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateChances } from "@/utils/chanceCalculator";
@@ -28,6 +29,7 @@ const OffresRecues = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { markTypeAsRead } = useNotifications();
+  const navigate = useNavigate();
   const [offres, setOffres] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOffre, setSelectedOffre] = useState<any | null>(null);
@@ -1910,38 +1912,26 @@ const OffresRecues = () => {
                 <div className="space-y-3">
                   <h4 className="font-semibold">📅 Choisissez une date de visite</h4>
                   
-                  {delegateProposedSlots.length === 0 ? (
-                    <div className="space-y-3">
+{delegateProposedSlots.length === 0 ? (
+                    <div className="p-6 bg-muted rounded-lg text-center space-y-3">
+                      <Calendar className="w-12 h-12 mx-auto text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">
-                        Aucun créneau proposé par l'agent. Veuillez choisir une date :
+                        Votre agent n'a pas encore proposé de créneaux de visite pour cette offre.
                       </p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="delegateDate">Date</Label>
-                          <Input
-                            id="delegateDate"
-                            type="date"
-                            value={delegateDate ? delegateDate.split('T')[0] : ''}
-                            min={new Date().toISOString().split('T')[0]}
-                            onChange={(e) => {
-                              const time = delegateDate ? delegateDate.split('T')[1]?.slice(0, 5) : '10:00';
-                              setDelegateDate(`${e.target.value}T${time}:00`);
-                            }}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="delegateTime">Heure</Label>
-                          <Input
-                            id="delegateTime"
-                            type="time"
-                            value={delegateDate ? delegateDate.split('T')[1]?.slice(0, 5) : '10:00'}
-                            onChange={(e) => {
-                              const date = delegateDate ? delegateDate.split('T')[0] : new Date().toISOString().split('T')[0];
-                              setDelegateDate(`${date}T${e.target.value}:00`);
-                            }}
-                          />
-                        </div>
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Contactez votre agent via la messagerie pour demander des créneaux de visite.
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setDelegateDialogOpen(false);
+                          navigate('/client/messagerie');
+                        }}
+                      >
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        Contacter mon agent
+                      </Button>
                     </div>
                   ) : (
                     <div className="space-y-2">
