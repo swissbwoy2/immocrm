@@ -258,6 +258,34 @@ export default function AdminCalendrier() {
 
   const handleDeleteEvent = async (eventId: string) => {
     try {
+      // Handle virtual events (signature, état des lieux)
+      if (eventId.startsWith('signature-')) {
+        const candidatureId = eventId.replace('signature-', '');
+        const { error } = await supabase
+          .from('candidatures')
+          .update({ date_signature_choisie: null })
+          .eq('id', candidatureId);
+
+        if (error) throw error;
+        toast.success('Date de signature supprimée');
+        loadData();
+        return;
+      }
+
+      if (eventId.startsWith('etat-lieux-')) {
+        const candidatureId = eventId.replace('etat-lieux-', '');
+        const { error } = await supabase
+          .from('candidatures')
+          .update({ date_etat_lieux: null, heure_etat_lieux: null })
+          .eq('id', candidatureId);
+
+        if (error) throw error;
+        toast.success('Date d\'état des lieux supprimée');
+        loadData();
+        return;
+      }
+
+      // Regular calendar events
       const { error } = await supabase
         .from('calendar_events')
         .delete()
