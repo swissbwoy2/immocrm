@@ -7,11 +7,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, User, MessageSquare, ThumbsUp, ThumbsDown, Minus, AlertTriangle, Bell, History, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, Clock, User, MessageSquare, ThumbsUp, ThumbsDown, Minus, AlertTriangle, Bell, History, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useNotifications } from '@/hooks/useNotifications';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 
 export default function AgentVisites() {
@@ -35,6 +46,19 @@ export default function AgentVisites() {
   const handleOpenConfirmDialog = (visite: any) => {
     setSelectedVisite(visite);
     setConfirmDialogOpen(true);
+  };
+
+  const handleDeleteVisite = async (visiteId: string) => {
+    try {
+      const { error } = await supabase.from('visites').delete().eq('id', visiteId);
+      if (error) throw error;
+      toast.success('Visite supprimée');
+      setDetailDialogOpen(false);
+      loadVisites();
+    } catch (error) {
+      console.error('Error deleting visite:', error);
+      toast.error('Erreur lors de la suppression');
+    }
   };
 
   useEffect(() => {
@@ -919,6 +943,31 @@ export default function AgentVisites() {
           )}
 
           <DialogFooter className="flex-col xs:flex-row gap-3">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="w-full xs:w-auto touch-target text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Supprimer
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Supprimer cette visite ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action supprimera la visite à {selectedVisite?.adresse}. Cette action est irréversible.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={() => selectedVisite && handleDeleteVisite(selectedVisite.id)}
+                  >
+                    Supprimer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <Button variant="outline" onClick={() => setDetailDialogOpen(false)} className="w-full xs:w-auto touch-target">
               Fermer
             </Button>

@@ -482,6 +482,18 @@ export default function AgentCalendrier() {
     setDetailDialogOpen(true);
   };
 
+  const handleDeleteVisite = async (visiteId: string) => {
+    try {
+      const { error } = await supabase.from('visites').delete().eq('id', visiteId);
+      if (error) throw error;
+      toast.success('Visite supprimée');
+      loadData();
+    } catch (error) {
+      console.error('Error deleting visite:', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
   const handleOpenEventDetail = (event: CalendarEvent) => {
     setSelectedEvent(event);
     setEventDetailDialogOpen(true);
@@ -628,6 +640,7 @@ export default function AgentCalendrier() {
             onMarquerEffectuee={handleMarquerEffectuee}
             onOpenDetail={handleOpenDetail}
             onOpenEventDetail={handleOpenEventDetail}
+            onDeleteVisite={handleDeleteVisite}
           />
         </div>
       </div>
