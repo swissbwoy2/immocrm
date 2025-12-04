@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { CalendarEvent } from './CalendarView';
+import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
 
 interface AgentDayEventsProps {
   date: Date | null;
@@ -217,45 +218,50 @@ export function AgentDayEvents({
                             </p>
                           )}
                           
-                          {/* Liste des clients concernés */}
-                          <div className="mt-2 pt-2 border-t border-current/10">
-                            <span className="text-xs font-medium text-muted-foreground">
-                              {group.length > 1 ? 'Clients concernés :' : 'Client :'}
-                            </span>
-                            <ul className="mt-1 space-y-1">
-                              {group.map((visite, vIdx) => (
-                                <li 
-                                  key={visite.id}
-                                  className="flex items-center justify-between gap-2 text-xs"
-                                >
-                                  <div className="flex items-center gap-1 min-w-0">
-                                    <User className="h-3 w-3 shrink-0 text-muted-foreground" />
-                                    <span className="truncate">
-                                      {visite.est_deleguee && 'Pour '}
-                                      {visite.client_profile?.prenom} {visite.client_profile?.nom}
-                                    </span>
-                                    {visite.statut === 'effectuee' && (
-                                      <CheckCircle className="h-3 w-3 text-green-500 shrink-0" />
-                                    )}
-                                    {visite.est_deleguee && (
-                                      <Badge className="text-[10px] h-4 px-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">Délég.</Badge>
-                                    )}
-                                  </div>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 shrink-0"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onOpenDetail(visite);
-                                    }}
-                                  >
-                                    <Eye className="h-3 w-3" />
-                                  </Button>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
+                          {/* Liste des clients concernés (dédupliqués) */}
+                          {(() => {
+                            const uniqueClients = getUniqueVisitesByClient(group);
+                            return (
+                              <div className="mt-2 pt-2 border-t border-current/10">
+                                <span className="text-xs font-medium text-muted-foreground">
+                                  {uniqueClients.length > 1 ? 'Clients concernés :' : 'Client :'}
+                                </span>
+                                <ul className="mt-1 space-y-1">
+                                  {uniqueClients.map((visite) => (
+                                    <li 
+                                      key={visite.client_id}
+                                      className="flex items-center justify-between gap-2 text-xs"
+                                    >
+                                      <div className="flex items-center gap-1 min-w-0">
+                                        <User className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                        <span className="truncate">
+                                          {visite.est_deleguee && 'Pour '}
+                                          {visite.client_profile?.prenom} {visite.client_profile?.nom}
+                                        </span>
+                                        {visite.statut === 'effectuee' && (
+                                          <CheckCircle className="h-3 w-3 text-green-500 shrink-0" />
+                                        )}
+                                        {visite.est_deleguee && (
+                                          <Badge className="text-[10px] h-4 px-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">Délég.</Badge>
+                                        )}
+                                      </div>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 shrink-0"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onOpenDetail(visite);
+                                        }}
+                                      >
+                                        <Eye className="h-3 w-3" />
+                                      </Button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            );
+                          })()}
 
                           {/* Recommandations si présentes */}
                           {group.some(v => v.recommandation_agent) && (

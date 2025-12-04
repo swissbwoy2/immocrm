@@ -88,3 +88,15 @@ export function getUniqueOffres<T extends Offre>(offres: T[]): T[] {
     return true;
   });
 }
+
+/**
+ * Deduplicates visits by client_id to show each client only once
+ */
+export function getUniqueVisitesByClient<T extends { client_id: string }>(visites: T[]): T[] {
+  const seen = new Set<string>();
+  return visites.filter(visite => {
+    if (!visite.client_id || seen.has(visite.client_id)) return false;
+    seen.add(visite.client_id);
+    return true;
+  });
+}

@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
+import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
 
 interface Agent {
   id: string;
@@ -513,29 +514,34 @@ export default function AdminCalendrier() {
                 </div>
               )}
 
-              {/* Clients concerned */}
-              <div>
-                <Label className="text-sm font-medium mb-2 block">
-                  Clients concernés ({selectedVisiteGroup.length})
-                </Label>
-                <ul className="space-y-2">
-                  {selectedVisiteGroup.map((visite: any) => (
-                    <li key={visite.id} className="flex items-center justify-between p-2 border rounded-lg">
-                      <span className="text-sm">{getClientName(visite.client_id) || 'Client inconnu'}</span>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => {
-                          setVisiteDetailDialogOpen(false);
-                          navigate(`/admin/clients/${visite.client_id}`);
-                        }}
-                      >
-                        Voir client
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {/* Clients concerned (dédupliqués) */}
+              {(() => {
+                const uniqueClients = getUniqueVisitesByClient(selectedVisiteGroup);
+                return (
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">
+                      Clients concernés ({uniqueClients.length})
+                    </Label>
+                    <ul className="space-y-2">
+                      {uniqueClients.map((visite: any) => (
+                        <li key={visite.client_id} className="flex items-center justify-between p-2 border rounded-lg">
+                          <span className="text-sm">{getClientName(visite.client_id) || 'Client inconnu'}</span>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              setVisiteDetailDialogOpen(false);
+                              navigate(`/admin/clients/${visite.client_id}`);
+                            }}
+                          >
+                            Voir client
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
 
               {/* Agent */}
               {selectedVisiteGroup[0].agent_id && (
