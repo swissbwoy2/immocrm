@@ -156,7 +156,7 @@ export function DayEvents({ date, events, visites, agents, clients, onStatusChan
                             </Badge>
                           )}
                         </div>
-                        <h4 className="font-medium mt-1 truncate">
+                        <h4 className="font-medium mt-1 break-words">
                           {firstVisite.adresse}
                         </h4>
                         <p className="text-sm flex items-center gap-1 mt-1">
@@ -222,7 +222,7 @@ export function DayEvents({ date, events, visites, agents, clients, onStatusChan
                           </span>
                         )}
                       </div>
-                      <h4 className="font-medium mt-1 truncate">
+                      <h4 className="font-medium mt-1 break-words">
                         {data.title}
                       </h4>
                       {!data.all_day && (
