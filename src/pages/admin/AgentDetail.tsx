@@ -7,11 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Mail, Phone, Users, Calendar, Pencil, Save, X, Camera, Power, Target } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Users, Calendar, Pencil, Save, X, Camera, Power, Target, BarChart3, Send, Eye, FileCheck, UserPlus } from "lucide-react";
 import { AgentGoalsDialog } from "@/components/stats/AgentGoalsDialog";
+import { AgentStatsSection } from "@/components/stats/AgentStatsSection";
+import { AgentBadges } from "@/components/stats/AgentBadges";
+import { DailyGoalsHistory } from "@/components/stats/DailyGoalsHistory";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 
 interface Agent {
@@ -55,6 +58,20 @@ const AgentDetail = () => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // Stats data
+  const [offres, setOffres] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [candidatures, setCandidatures] = useState<any[]>([]);
+  const [visites, setVisites] = useState<any[]>([]);
+  
+  // Today's stats
+  const [todayStats, setTodayStats] = useState({
+    offres: 0,
+    visites: 0,
+    candidatures: 0,
+    weekClients: 0
+  });
+  
   const [editForm, setEditForm] = useState({
     prenom: '',
     nom: '',
@@ -64,6 +81,7 @@ const AgentDetail = () => {
   useEffect(() => {
     if (agentId) {
       fetchAgentDetails();
+      fetchStatsData();
     }
   }, [agentId]);
 
@@ -76,6 +94,86 @@ const AgentDetail = () => {
       });
     }
   }, [profile]);
+
+  const fetchStatsData = async () => {
+    if (!agentId) return;
+    
+    const today = new Date();
+    const todayStart = startOfDay(today).toISOString();
+    const todayEnd = endOfDay(today).toISOString();
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 }).toISOString();
+    const weekEnd = endOfWeek(today, { weekStartsOn: 1 }).toISOString();
+
+    try {
+      // Fetch all offres for this agent
+      const { data: offresData } = await supabase
+        .from('offres')
+        .select('*')
+        .eq('agent_id', agentId);
+      setOffres(offresData || []);
+
+      // Fetch all transactions for this agent
+      const { data: transactionsData } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('agent_id', agentId);
+      setTransactions(transactionsData || []);
+
+      // Fetch all visites for this agent
+      const { data: visitesData } = await supabase
+        .from('visites')
+        .select('*')
+        .eq('agent_id', agentId);
+      setVisites(visitesData || []);
+
+      // Fetch all candidatures for clients assigned to this agent
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('agent_id', agentId);
+      
+      const clientIds = clientsData?.map(c => c.id) || [];
+      
+      if (clientIds.length > 0) {
+        const { data: candidaturesData } = await supabase
+          .from('candidatures')
+          .select('*')
+          .in('client_id', clientIds);
+        setCandidatures(candidaturesData || []);
+      }
+
+      // Calculate today's stats
+      const todayOffres = (offresData || []).filter(o => 
+        o.date_envoi && o.date_envoi >= todayStart && o.date_envoi <= todayEnd
+      ).length;
+
+      const todayVisites = (visitesData || []).filter(v => 
+        v.date_visite && v.date_visite >= todayStart && v.date_visite <= todayEnd
+      ).length;
+
+      const todayCandidatures = (candidatures || []).filter(c => 
+        c.created_at && c.created_at >= todayStart && c.created_at <= todayEnd
+      ).length;
+
+      // New clients this week
+      const { data: weekClientsData } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('agent_id', agentId)
+        .gte('date_ajout', weekStart)
+        .lte('date_ajout', weekEnd);
+
+      setTodayStats({
+        offres: todayOffres,
+        visites: todayVisites,
+        candidatures: todayCandidatures,
+        weekClients: weekClientsData?.length || 0
+      });
+
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
 
   const fetchAgentDetails = async () => {
     try {
@@ -395,7 +493,7 @@ const AgentDetail = () => {
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
                       <h1 className="text-3xl font-bold">
                         {profile.prenom} {profile.nom}
                       </h1>
@@ -466,6 +564,61 @@ const AgentDetail = () => {
                 </div>
               </div>
             )}
+          </Card>
+
+          {/* Today's Activity Stats */}
+          <Card className="p-6">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              Activité d'aujourd'hui
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                <Send className="h-6 w-6 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{todayStats.offres}</div>
+                <p className="text-sm text-muted-foreground">Offres envoyées</p>
+              </div>
+              <div className="text-center p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                <Eye className="h-6 w-6 text-green-600 dark:text-green-400 mx-auto mb-2" />
+                <div className="text-3xl font-bold text-green-600 dark:text-green-400">{todayStats.visites}</div>
+                <p className="text-sm text-muted-foreground">Visites planifiées</p>
+              </div>
+              <div className="text-center p-4 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
+                <FileCheck className="h-6 w-6 text-purple-600 dark:text-purple-400 mx-auto mb-2" />
+                <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{todayStats.candidatures}</div>
+                <p className="text-sm text-muted-foreground">Candidatures</p>
+              </div>
+              <div className="text-center p-4 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-200 dark:border-orange-800">
+                <UserPlus className="h-6 w-6 text-orange-600 dark:text-orange-400 mx-auto mb-2" />
+                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{todayStats.weekClients}</div>
+                <p className="text-sm text-muted-foreground">Nouveaux clients (sem.)</p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Badges and Daily Goals History */}
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Badges Section */}
+            <Card className="p-6">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                🏆 Badges
+              </h2>
+              <AgentBadges agentId={agent.id} />
+            </Card>
+
+            {/* Daily Goals History */}
+            <DailyGoalsHistory agentId={agent.id} />
+          </div>
+
+          {/* Full Stats Section */}
+          <Card className="p-6">
+            <AgentStatsSection
+              offres={offres}
+              transactions={transactions}
+              candidatures={candidatures}
+              clients={clients}
+              agentId={agent.id}
+            />
           </Card>
 
           {/* Clients Card */}
