@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
+import { SendDossierDialog } from '@/components/SendDossierDialog';
 
 const WORKFLOW_STATUTS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   'candidature_deposee': { label: 'Candidature reçue', color: 'outline', icon: <FileCheck className="h-4 w-4" /> },
@@ -33,6 +34,14 @@ const WORKFLOW_STATUTS: Record<string, { label: string; color: string; icon: Rea
   'etat_lieux_fixe': { label: 'État des lieux fixé', color: 'default', icon: <Calendar className="h-4 w-4" /> },
   'cles_remises': { label: '🔑 Clés remises', color: 'default', icon: <Key className="h-4 w-4" /> },
 };
+
+interface Offre {
+  id: string;
+  adresse: string;
+  prix: number;
+  pieces?: number | null;
+  date_envoi?: string | null;
+}
 
 interface Candidature {
   id: string;
@@ -94,13 +103,18 @@ export default function Candidatures() {
   const [showEtatLieuxDialog, setShowEtatLieuxDialog] = useState(false);
   const [showForceDialog, setShowForceDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showSendDossierDialog, setShowSendDossierDialog] = useState(false);
   const [selectedCandidature, setSelectedCandidature] = useState<Candidature | null>(null);
+  const [selectedCandidatureForSend, setSelectedCandidatureForSend] = useState<Candidature | null>(null);
   const [forceAction, setForceAction] = useState<{ statut: string; label: string } | null>(null);
   
   // Form states
   const [proposedDates, setProposedDates] = useState(['', '', '']);
   const [etatLieuxDate, setEtatLieuxDate] = useState('');
   const [etatLieuxHeure, setEtatLieuxHeure] = useState('');
+  
+  // Offres for SendDossierDialog
+  const [clientOffres, setClientOffres] = useState<Offre[]>([]);
 
   useEffect(() => {
     if (!user || userRole !== 'agent') {
@@ -434,7 +448,23 @@ export default function Candidatures() {
                   <FileCheck className="h-4 w-4 shrink-0" />
                   <span>Le client souhaite postuler à ce bien. Vérifiez son dossier et envoyez-le à la régie.</span>
                 </div>
-                <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={() => handleStatutChange(candidature.id, 'en_attente')}>
+                <Button 
+                  size="sm" 
+                  className="bg-primary hover:bg-primary/90" 
+                  onClick={async () => {
+                    // Load offre for this candidature
+                    if (candidature.offres) {
+                      setClientOffres([{
+                        id: candidature.offre_id,
+                        adresse: candidature.offres.adresse,
+                        prix: candidature.offres.prix,
+                        pieces: candidature.offres.pieces,
+                      }]);
+                    }
+                    setSelectedCandidatureForSend(candidature);
+                    setShowSendDossierDialog(true);
+                  }}
+                >
                   <Send className="h-4 w-4 mr-1" />Envoyer le dossier à la régie
                 </Button>
                 <Button size="sm" variant="destructive" onClick={() => handleStatutChange(candidature.id, 'refusee')}>
@@ -852,6 +882,42 @@ export default function Candidatures() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* SendDossierDialog for sending candidature to agency */}
+      {selectedCandidatureForSend && (
+        <SendDossierDialog
+          open={showSendDossierDialog}
+          onOpenChange={(open) => {
+            setShowSendDossierDialog(open);
+            if (!open) {
+              setSelectedCandidatureForSend(null);
+              setClientOffres([]);
+            }
+          }}
+          clientId={selectedCandidatureForSend.client_id}
+          clientName={(() => {
+            const profile = selectedCandidatureForSend.clients?.user_id 
+              ? profiles.get(selectedCandidatureForSend.clients.user_id) 
+              : null;
+            return profile ? `${profile.prenom} ${profile.nom}` : 'Client';
+          })()}
+          clientEmail={(() => {
+            const profile = selectedCandidatureForSend.clients?.user_id 
+              ? profiles.get(selectedCandidatureForSend.clients.user_id) 
+              : null;
+            return profile?.email;
+          })()}
+          offres={clientOffres}
+          existingCandidatureId={selectedCandidatureForSend.id}
+          preSelectedOffreId={selectedCandidatureForSend.offre_id}
+          onCandidatureCreated={() => {
+            loadCandidatures();
+            setShowSendDossierDialog(false);
+            setSelectedCandidatureForSend(null);
+            setClientOffres([]);
+          }}
+        />
+      )}
     </main>
   );
 }
