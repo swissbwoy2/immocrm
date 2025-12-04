@@ -266,7 +266,7 @@ export default function ClientCalendrier() {
   const upcomingVisites = visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= new Date());
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 overflow-auto h-full">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
