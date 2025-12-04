@@ -51,6 +51,7 @@ import AgentEnvoyerEmail from "./pages/agent/EnvoyerEmail";
 import AgentHistoriqueEmails from "./pages/agent/HistoriqueEmails";
 import AgentBoiteReception from "./pages/agent/BoiteReception";
 import AgentCandidatures from "./pages/agent/Candidatures";
+import AgentDeposerCandidature from "./pages/agent/DeposerCandidature";
 import ClientDashboard from "./pages/client/Dashboard";
 import ClientDossier from "./pages/client/Dossier";
 import ClientOffresRecues from "./pages/client/OffresRecues";
@@ -127,6 +128,7 @@ const App = () => (
             <Route path="/agent/historique-emails" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentHistoriqueEmails /></AppLayout></ProtectedRoute>} />
             <Route path="/agent/boite-reception" element={<ProtectedRoute allowedRoles={['agent']}><AgentBoiteReception /></ProtectedRoute>} />
             <Route path="/agent/candidatures" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentCandidatures /></AppLayout></ProtectedRoute>} />
+            <Route path="/agent/deposer-candidature" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDeposerCandidature /></AppLayout></ProtectedRoute>} />
 
             {/* Client Routes */}
             <Route path="/client" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDashboard /></AppLayout></ProtectedRoute>} />

@@ -2,7 +2,8 @@ import { CheckCircle, Circle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const WORKFLOW_STEPS = [
-  { key: 'en_attente', label: 'En attente' },
+  { key: 'dossier_en_cours', label: 'Dossier en cours' },
+  { key: 'en_attente', label: 'Dossier envoyé' },
   { key: 'acceptee', label: 'Acceptée' },
   { key: 'bail_conclu', label: 'Client confirme' },
   { key: 'attente_bail', label: 'Validation régie' },
@@ -15,12 +16,20 @@ const WORKFLOW_STEPS = [
 
 const STEP_ORDER = WORKFLOW_STEPS.map(s => s.key);
 
+// Map pre-workflow statuses
+const STATUS_MAP: Record<string, string> = {
+  'visite_effectuee': 'dossier_en_cours',
+  'candidature_deposee': 'dossier_en_cours',
+};
+
 interface CandidatureWorkflowTimelineProps {
   currentStatut: string;
 }
 
 export function CandidatureWorkflowTimeline({ currentStatut }: CandidatureWorkflowTimelineProps) {
-  const currentIndex = STEP_ORDER.indexOf(currentStatut);
+  // Map status to workflow step
+  const effectiveStatut = STATUS_MAP[currentStatut] || currentStatut;
+  const currentIndex = STEP_ORDER.indexOf(effectiveStatut);
   const isRefused = currentStatut === 'refusee';
 
   if (isRefused) {
