@@ -2,11 +2,24 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingUp, Calendar, MapPin, Home, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DollarSign, TrendingUp, Calendar, MapPin, Home, User, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const Transactions = () => {
   const navigate = useNavigate();
@@ -101,6 +114,18 @@ const Transactions = () => {
   const getCommissionSplit = (clientId: string) => {
     const client = clients.get(clientId);
     return client?.commission_split || 50;
+  };
+
+  const handleDeleteTransaction = async (transactionId: string) => {
+    try {
+      const { error } = await supabase.from('transactions').delete().eq('id', transactionId);
+      if (error) throw error;
+      toast.success('Transaction supprimée');
+      loadTransactions();
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      toast.error('Erreur lors de la suppression');
+    }
   };
 
   // Calculer les totaux
@@ -262,9 +287,39 @@ const Transactions = () => {
                     </div>
 
                     {/* Date */}
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground pt-2 border-t">
-                      <Calendar className="h-4 w-4" />
-                      Conclue le {format(new Date(transaction.date_transaction), 'dd MMMM yyyy', { locale: fr })}
+                    <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground pt-2 border-t">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Conclue le {format(new Date(transaction.date_transaction), 'dd MMMM yyyy', { locale: fr })}
+                      </div>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Supprimer cette transaction ?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Cette action supprimera la transaction pour {getClientName(transaction.client_id)}{transaction.adresse ? ` à ${transaction.adresse}` : ''}. Cette action est irréversible.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              onClick={() => handleDeleteTransaction(transaction.id)}
+                            >
+                              Supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </CardContent>
                 </Card>

@@ -10,6 +10,17 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { CalendarEvent } from './CalendarView';
 import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface AgentDayEventsProps {
   date: Date | null;
@@ -22,6 +33,7 @@ interface AgentDayEventsProps {
   onMarquerEffectuee: (visite: any) => void;
   onOpenDetail: (visite: any) => void;
   onOpenEventDetail?: (event: CalendarEvent) => void;
+  onDeleteVisite?: (visiteId: string) => void;
 }
 
 const eventTypeLabels: Record<string, string> = {
@@ -57,7 +69,7 @@ const statusIcons: Record<string, React.ReactNode> = {
 
 export function AgentDayEvents({ 
   date, events, visites, clients, 
-  onStatusChange, onDelete, onEdit, onMarquerEffectuee, onOpenDetail, onOpenEventDetail 
+  onStatusChange, onDelete, onEdit, onMarquerEffectuee, onOpenDetail, onOpenEventDetail, onDeleteVisite 
 }: AgentDayEventsProps) {
   if (!date) {
     return (
@@ -313,6 +325,44 @@ export function AgentDayEvents({
                                 </>
                               )}
                             </Button>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Boutons de suppression */}
+                      {onDeleteVisite && (
+                        <div className="mt-2 pt-2 border-t border-current/10">
+                          {group.map(visite => (
+                            <AlertDialog key={`delete-${visite.id}`}>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="w-full text-xs h-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <Trash2 className="h-3 w-3 mr-1" />
+                                  Supprimer: {visite.client_profile?.prenom}
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Supprimer cette visite ?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Cette action supprimera la visite pour {visite.client_profile?.prenom} {visite.client_profile?.nom} à {visite.adresse}. Cette action est irréversible.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    onClick={() => onDeleteVisite(visite.id)}
+                                  >
+                                    Supprimer
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
                           ))}
                         </div>
                       )}
