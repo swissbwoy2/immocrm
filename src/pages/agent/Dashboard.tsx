@@ -12,6 +12,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { AgentStatsSection } from '@/components/stats/AgentStatsSection';
 import { DefaultGoalsSection } from '@/components/stats/DefaultGoalsSection';
 import { AgentBadges } from '@/components/stats/AgentBadges';
+import { countUniqueOffres } from '@/utils/visitesCalculator';
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
@@ -292,7 +293,7 @@ export default function AgentDashboard() {
             />
             <KPICard 
               title="Offres envoyées" 
-              value={offres.length} 
+              value={countUniqueOffres(offres)} 
               icon={Send}
               onClick={() => navigate('/agent/offres-envoyees')}
             />

@@ -8,7 +8,7 @@ import { History, ChevronLeft, ChevronRight, Target, CheckCircle, XCircle } from
 import { cn } from '@/lib/utils';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { countUniqueVisites } from '@/utils/visitesCalculator';
+import { countUniqueVisites, countUniqueOffres } from '@/utils/visitesCalculator';
 
 interface DailyGoalsHistoryProps {
   agentId: string;
@@ -59,12 +59,15 @@ export function DailyGoalsHistory({ agentId }: DailyGoalsHistoryProps) {
       // Fetch offres for this agent on selected day
       const { data: offres, error: offresError } = await supabase
         .from('offres')
-        .select('id, date_envoi')
+        .select('id, date_envoi, adresse')
         .eq('agent_id', agentId)
         .gte('date_envoi', dayStart.toISOString())
         .lte('date_envoi', dayEnd.toISOString());
       
       if (offresError) throw offresError;
+      
+      // Count unique offers (same date + address = 1 offer, regardless of clients)
+      const uniqueOffresCount = countUniqueOffres(offres || []);
 
       // Fetch visites for this agent on selected day
       const { data: visites, error: visitesError } = await supabase
@@ -104,7 +107,7 @@ export function DailyGoalsHistory({ agentId }: DailyGoalsHistoryProps) {
       }
 
       return {
-        offres: offres?.length || 0,
+        offres: uniqueOffresCount,
         visites: uniqueVisitesCount,
         candidatures: candidatures.length,
         dossiers: candidatures.filter(c => !['cles_remises', 'refusee', 'annulee'].includes(c.statut)).length,

@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DailyGoalsHistory } from './DailyGoalsHistory';
+import { countUniqueOffres, countUniqueVisites } from '@/utils/visitesCalculator';
 
 // Helper function to get UTC day boundaries
 function getUTCDayBoundaries() {
@@ -73,19 +74,21 @@ export function DefaultGoalsSection({ agentId, offres, visites, candidatures, cl
   // Calculate current values for today using UTC boundaries
   const { todayStart, todayEnd } = getUTCDayBoundaries();
 
-  // Filter offers sent today (UTC)
-  const todayOffres = offres.filter(o => {
+  // Filter offers sent today (UTC) - count unique (same date + address = 1 offer)
+  const todayOffresFiltered = offres.filter(o => {
     if (!o.date_envoi) return false;
     const date = new Date(o.date_envoi);
     return date >= todayStart && date <= todayEnd;
-  }).length;
+  });
+  const todayOffres = countUniqueOffres(todayOffresFiltered);
 
-  // Filter visits scheduled today (UTC)
-  const todayVisites = visites.filter(v => {
+  // Filter visits scheduled today (UTC) - count unique (same date + address = 1 visit)
+  const todayVisitesFiltered = visites.filter(v => {
     if (!v.date_visite) return false;
     const date = new Date(v.date_visite);
     return date >= todayStart && date <= todayEnd;
-  }).length;
+  });
+  const todayVisites = countUniqueVisites(todayVisitesFiltered);
 
   // Filter candidatures created today (UTC) - only active ones (exclude completed/refused)
   const activeStatuts = ['en_attente', 'acceptee', 'dossier_envoye', 'bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee'];

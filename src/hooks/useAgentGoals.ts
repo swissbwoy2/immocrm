@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { countUniqueVisites } from '@/utils/visitesCalculator';
+import { countUniqueVisites, countUniqueOffres } from '@/utils/visitesCalculator';
 
 interface AgentGoal {
   id: string;
@@ -94,13 +94,15 @@ export function useAgentGoals(agentId: string | undefined) {
 
         switch (goal.goal_type) {
           case 'offres': {
-            const { count } = await supabase
+            // Fetch offres with adresse to count unique offers
+            const { data: offresData } = await supabase
               .from('offres')
-              .select('*', { count: 'exact', head: true })
+              .select('date_envoi, adresse')
               .eq('agent_id', agentId)
               .gte('date_envoi', start.toISOString())
               .lte('date_envoi', end.toISOString());
-            current = count || 0;
+            // Count unique offers (same date + address = 1 offer)
+            current = countUniqueOffres(offresData || []);
             break;
           }
           case 'transactions': {

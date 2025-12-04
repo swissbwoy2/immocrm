@@ -8,6 +8,7 @@ import { PerformanceChart, MultiSeriesChart } from './PerformanceChart';
 import { GoalProgress } from './GoalProgress';
 import { useAgentGoals } from '@/hooks/useAgentGoals';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getUniqueOffres, getUniqueVisites } from '@/utils/visitesCalculator';
 
 interface AgentStatsSectionProps {
   offres: any[];
@@ -61,13 +62,15 @@ export function AgentStatsSection({
     });
   };
 
-  // Current period data
-  const currentOffres = filterByDateRange(offres, 'date_envoi', dateRange);
+  // Current period data - deduplicated
+  const currentOffresRaw = filterByDateRange(offres, 'date_envoi', dateRange);
+  const currentOffres = getUniqueOffres(currentOffresRaw);
   const currentTransactions = filterByDateRange(transactions, 'date_transaction', dateRange);
   const currentCandidatures = filterByDateRange(candidatures, 'created_at', dateRange);
 
-  // Previous period data for comparison
-  const previousOffres = filterByDateRange(offres, 'date_envoi', previousPeriod);
+  // Previous period data for comparison - deduplicated
+  const previousOffresRaw = filterByDateRange(offres, 'date_envoi', previousPeriod);
+  const previousOffres = getUniqueOffres(previousOffresRaw);
   const previousTransactions = filterByDateRange(transactions, 'date_transaction', previousPeriod);
 
   // Calculate stats
@@ -160,10 +163,11 @@ export function AgentStatsSection({
 
   // Fallback monthly goals if no personalized goals
   const currentMonth = new Date();
-  const monthlyOffres = offres.filter(o => {
+  const monthlyOffresRaw = offres.filter(o => {
     const date = new Date(o.date_envoi);
     return date.getMonth() === currentMonth.getMonth() && date.getFullYear() === currentMonth.getFullYear();
-  }).length;
+  });
+  const monthlyOffres = getUniqueOffres(monthlyOffresRaw).length;
 
   const monthlyTransactions = transactions.filter(t => {
     const date = new Date(t.date_transaction);
