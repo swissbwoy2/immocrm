@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Select,
   SelectContent,
@@ -83,6 +84,8 @@ export default function OffresEnvoyees() {
   const [offerToDelete, setOfferToDelete] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedOffers, setSelectedOffers] = useState<Set<string>>(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -217,6 +220,48 @@ export default function OffresEnvoyees() {
     refusees: offres.filter(o => o.statut === 'refusee').length,
   };
 
+  const toggleOfferSelection = (offerId: string) => {
+    const newSelection = new Set(selectedOffers);
+    if (newSelection.has(offerId)) {
+      newSelection.delete(offerId);
+    } else {
+      newSelection.add(offerId);
+    }
+    setSelectedOffers(newSelection);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedOffers.size === filteredOffres.length) {
+      setSelectedOffers(new Set());
+    } else {
+      setSelectedOffers(new Set(filteredOffres.map(o => o.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      const offerIds = Array.from(selectedOffers);
+      
+      // Delete related data first
+      await supabase.from('visites').delete().in('offre_id', offerIds);
+      await supabase.from('candidatures').delete().in('offre_id', offerIds);
+      await supabase.from('documents').delete().in('offre_id', offerIds);
+      
+      // Delete offers
+      const { error } = await supabase.from('offres').delete().in('id', offerIds);
+      if (error) throw error;
+
+      setOffres(offres.filter(o => !selectedOffers.has(o.id)));
+      setSelectedOffers(new Set());
+      toast.success(`${offerIds.length} offre(s) supprimée(s)`);
+    } catch (error) {
+      console.error('Error bulk deleting:', error);
+      toast.error('Erreur lors de la suppression');
+    } finally {
+      setBulkDeleteDialogOpen(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -300,7 +345,7 @@ export default function OffresEnvoyees() {
           </Card>
         </div>
 
-        {/* Filters */}
+        {/* Filters & Bulk Actions */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -330,20 +375,54 @@ export default function OffresEnvoyees() {
           </Select>
         </div>
 
+        {/* Bulk Selection Bar */}
+        {filteredOffres.length > 0 && (
+          <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Checkbox 
+                checked={selectedOffers.size === filteredOffres.length && filteredOffres.length > 0}
+                onCheckedChange={toggleSelectAll}
+              />
+              <span className="text-sm text-muted-foreground">
+                {selectedOffers.size > 0 
+                  ? `${selectedOffers.size} sélectionnée(s)` 
+                  : 'Tout sélectionner'}
+              </span>
+            </div>
+            {selectedOffers.size > 0 && (
+              <Button 
+                variant="destructive" 
+                size="sm"
+                onClick={() => setBulkDeleteDialogOpen(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Supprimer ({selectedOffers.size})
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* Liste des offres */}
         {filteredOffres.length > 0 ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredOffres.map((offre) => (
-              <Card key={offre.id} className="group hover:shadow-lg transition-all duration-300 hover:border-primary/30 overflow-hidden">
+              <Card key={offre.id} className={`group hover:shadow-lg transition-all duration-300 hover:border-primary/30 overflow-hidden ${selectedOffers.has(offre.id) ? 'ring-2 ring-primary' : ''}`}>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base font-semibold line-clamp-1">
-                        {offre.adresse}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                        <span className="truncate">Pour: {getClientName(offre)}</span>
-                      </p>
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <Checkbox 
+                        checked={selectedOffers.has(offre.id)}
+                        onCheckedChange={() => toggleOfferSelection(offre.id)}
+                        className="mt-1"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base font-semibold line-clamp-1">
+                          {offre.adresse}
+                        </CardTitle>
+                        <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                          <span className="truncate">Pour: {getClientName(offre)}</span>
+                        </p>
+                      </div>
                     </div>
                     <Badge className={`shrink-0 ${getStatutColor(offre.statut)}`}>
                       {getStatutLabel(offre.statut)}
@@ -503,6 +582,29 @@ export default function OffresEnvoyees() {
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDeleteOffer}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer {selectedOffers.size} offre(s) ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action supprimera définitivement les offres sélectionnées ainsi que toutes les visites et candidatures associées.
+              <br /><br />
+              <span className="text-destructive font-medium">Cette action est irréversible.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleBulkDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Supprimer
