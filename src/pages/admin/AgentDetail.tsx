@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
+import { countUniqueVisitesInRange } from "@/utils/visitesCalculator";
 
 interface Agent {
   id: string;
@@ -119,7 +120,7 @@ const AgentDetail = () => {
         .eq('agent_id', agentId);
       setTransactions(transactionsData || []);
 
-      // Fetch all visites for this agent
+      // Fetch all visites for this agent (need adresse for unique counting)
       const { data: visitesData } = await supabase
         .from('visites')
         .select('*')
@@ -147,9 +148,12 @@ const AgentDetail = () => {
         o.date_envoi && o.date_envoi >= todayStart && o.date_envoi <= todayEnd
       ).length;
 
-      const todayVisites = (visitesData || []).filter(v => 
-        v.date_visite && v.date_visite >= todayStart && v.date_visite <= todayEnd
-      ).length;
+      // Count unique visits (same date + address = 1 visit, regardless of clients)
+      const todayVisites = countUniqueVisitesInRange(
+        visitesData || [],
+        todayStart,
+        todayEnd
+      );
 
       const todayCandidatures = (candidatures || []).filter(c => 
         c.created_at && c.created_at >= todayStart && c.created_at <= todayEnd

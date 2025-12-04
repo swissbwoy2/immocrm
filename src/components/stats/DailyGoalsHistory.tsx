@@ -8,6 +8,7 @@ import { History, ChevronLeft, ChevronRight, Target, CheckCircle, XCircle } from
 import { cn } from '@/lib/utils';
 import { format, subDays, startOfDay, endOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { countUniqueVisites } from '@/utils/visitesCalculator';
 
 interface DailyGoalsHistoryProps {
   agentId: string;
@@ -68,12 +69,15 @@ export function DailyGoalsHistory({ agentId }: DailyGoalsHistoryProps) {
       // Fetch visites for this agent on selected day
       const { data: visites, error: visitesError } = await supabase
         .from('visites')
-        .select('id, date_visite')
+        .select('id, date_visite, adresse')
         .eq('agent_id', agentId)
         .gte('date_visite', dayStart.toISOString())
         .lte('date_visite', dayEnd.toISOString());
       
       if (visitesError) throw visitesError;
+      
+      // Count unique visits (same date + address = 1 visit, regardless of clients)
+      const uniqueVisitesCount = countUniqueVisites(visites || []);
 
       // Fetch client IDs for this agent
       const { data: clients, error: clientsError } = await supabase
@@ -101,7 +105,7 @@ export function DailyGoalsHistory({ agentId }: DailyGoalsHistoryProps) {
 
       return {
         offres: offres?.length || 0,
-        visites: visites?.length || 0,
+        visites: uniqueVisitesCount,
         candidatures: candidatures.length,
         dossiers: candidatures.filter(c => !['cles_remises', 'refusee', 'annulee'].includes(c.statut)).length,
         clientCount: clients?.length || 1,
