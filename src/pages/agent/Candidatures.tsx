@@ -21,7 +21,8 @@ import { fr } from 'date-fns/locale';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
 
 const WORKFLOW_STATUTS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  'en_attente': { label: 'En attente', color: 'secondary', icon: <Clock className="h-4 w-4" /> },
+  'candidature_deposee': { label: 'Candidature reçue', color: 'outline', icon: <FileCheck className="h-4 w-4" /> },
+  'en_attente': { label: 'Dossier envoyé', color: 'secondary', icon: <Clock className="h-4 w-4" /> },
   'acceptee': { label: '🎉 Acceptée', color: 'default', icon: <CheckCircle className="h-4 w-4" /> },
   'refusee': { label: 'Refusée', color: 'destructive', icon: <XCircle className="h-4 w-4" /> },
   'bail_conclu': { label: 'Client accepte bail', color: 'default', icon: <FileSignature className="h-4 w-4" /> },
@@ -371,6 +372,7 @@ export default function Candidatures() {
 
   const stats = {
     total: candidatures.length,
+    candidature_deposee: candidatures.filter(c => c.statut === 'candidature_deposee').length,
     en_attente: candidatures.filter(c => c.statut === 'en_attente').length,
     acceptee: candidatures.filter(c => ['acceptee', 'bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe'].includes(c.statut)).length,
     cles_remises: candidatures.filter(c => c.statut === 'cles_remises').length,
@@ -425,7 +427,23 @@ export default function Candidatures() {
           <h4 className="font-semibold">Actions disponibles</h4>
           
           <div className="flex flex-wrap gap-2">
-            {/* En attente */}
+            {/* Candidature reçue - Agent doit envoyer le dossier */}
+            {candidature.statut === 'candidature_deposee' && (
+              <>
+                <div className="w-full flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-md text-sm border border-blue-200 dark:border-blue-800 mb-2">
+                  <FileCheck className="h-4 w-4 shrink-0" />
+                  <span>Le client souhaite postuler à ce bien. Vérifiez son dossier et envoyez-le à la régie.</span>
+                </div>
+                <Button size="sm" className="bg-primary hover:bg-primary/90" onClick={() => handleStatutChange(candidature.id, 'en_attente')}>
+                  <Send className="h-4 w-4 mr-1" />Envoyer le dossier à la régie
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => handleStatutChange(candidature.id, 'refusee')}>
+                  <XCircle className="h-4 w-4 mr-1" />Refuser
+                </Button>
+              </>
+            )}
+
+            {/* En attente (dossier envoyé) */}
             {candidature.statut === 'en_attente' && (
               <>
                 <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatutChange(candidature.id, 'acceptee')}>
@@ -570,9 +588,10 @@ export default function Candidatures() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
           <Card><CardContent className="p-4"><div className="text-2xl font-bold">{stats.total}</div><div className="text-sm text-muted-foreground">Total</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-2xl font-bold text-yellow-600">{stats.en_attente}</div><div className="text-sm text-muted-foreground">En attente</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-2xl font-bold text-blue-600">{stats.candidature_deposee}</div><div className="text-sm text-muted-foreground">À envoyer</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-2xl font-bold text-yellow-600">{stats.en_attente}</div><div className="text-sm text-muted-foreground">Envoyées</div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="text-2xl font-bold text-green-600">{stats.acceptee}</div><div className="text-sm text-muted-foreground">En cours</div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="text-2xl font-bold text-purple-600">{stats.cles_remises}</div><div className="text-sm text-muted-foreground">Clés remises</div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="text-2xl font-bold text-red-600">{stats.refusee}</div><div className="text-sm text-muted-foreground">Refusées</div></CardContent></Card>
