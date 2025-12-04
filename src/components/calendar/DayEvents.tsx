@@ -302,20 +302,44 @@ export function DayEvents({ date, events, visites, agents, clients, onStatusChan
                       </div>
                     </div>
 
-                    {/* Only show delete for real calendar events */}
-                    {onDelete && !data.id.startsWith('signature-') && !data.id.startsWith('etat-lieux-') && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => onDelete(data.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    {/* Delete button for all events */}
+                    {onDelete && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Supprimer cet événement ?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {data.id.startsWith('signature-') 
+                                ? 'La date de signature sera supprimée de la candidature.'
+                                : data.id.startsWith('etat-lieux-')
+                                ? 'La date d\'état des lieux sera supprimée de la candidature.'
+                                : 'Cette action est irréversible.'}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              onClick={() => onDelete(data.id)}
+                            >
+                              Supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     )}
                   </div>
 
-                  {/* Only show status actions for real calendar events */}
+                  {/* Status actions for real calendar events only */}
                   {onStatusChange && data.status !== 'effectue' && !data.id.startsWith('signature-') && !data.id.startsWith('etat-lieux-') && (
                     <div className="flex gap-2 mt-3 pt-3 border-t border-current/10">
                       <Button
