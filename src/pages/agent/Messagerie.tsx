@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -45,6 +46,7 @@ const Messagerie = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { markTypeAsRead } = useNotifications();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [lastMessagesMap, setLastMessagesMap] = useState<Map<string, { content: string | null; attachment_name: string | null }>>(new Map());
@@ -86,6 +88,20 @@ const Messagerie = () => {
     loadAgentAndConversations();
     markTypeAsRead('new_message');
   }, [user?.id]);
+
+  // Auto-select conversation from URL parameter
+  useEffect(() => {
+    const conversationId = searchParams.get('conversationId');
+    if (conversationId && conversations.length > 0) {
+      const exists = conversations.find(c => c.id === conversationId);
+      if (exists) {
+        setSelectedConv(conversationId);
+        // Clean URL
+        searchParams.delete('conversationId');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [conversations, searchParams]);
 
   useEffect(() => {
     if (selectedConv) {
@@ -387,7 +403,7 @@ const Messagerie = () => {
             p_type: 'new_message',
             p_title: 'Nouveau message agent',
             p_message: `${agentName} vous a envoyé un message`,
-            p_link: '/admin/messagerie',
+            p_link: `/admin/messagerie?conversationId=${selectedConv}`,
             p_metadata: { conversation_id: selectedConv }
           });
         } else if (conversation.client_id) {
@@ -403,7 +419,7 @@ const Messagerie = () => {
               p_type: 'new_message',
               p_title: 'Nouveau message',
               p_message: `${agentName} vous a envoyé un message`,
-              p_link: '/client/messagerie',
+              p_link: `/client/messagerie?conversationId=${selectedConv}`,
               p_metadata: { conversation_id: selectedConv }
             });
           }

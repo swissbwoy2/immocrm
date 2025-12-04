@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -27,6 +28,7 @@ const removeAccents = (str: string) => {
 const Messagerie = () => {
   const { user } = useAuth();
   const { markTypeAsRead } = useNotifications();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
@@ -53,6 +55,20 @@ const Messagerie = () => {
     // Mark new_message notifications as read when visiting this page
     markTypeAsRead('new_message');
   }, []);
+
+  // Auto-select conversation from URL parameter
+  useEffect(() => {
+    const conversationId = searchParams.get('conversationId');
+    if (conversationId && conversations.length > 0) {
+      const exists = conversations.find(c => c.id === conversationId);
+      if (exists) {
+        setSelectedConv(conversationId);
+        // Clean URL
+        searchParams.delete('conversationId');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [conversations, searchParams]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -293,7 +309,7 @@ const Messagerie = () => {
             p_type: 'new_message',
             p_title: 'Nouveau message admin',
             p_message: `${adminName} vous a envoyé un message`,
-            p_link: '/agent/messagerie',
+            p_link: `/agent/messagerie?conversationId=${selectedConv}`,
             p_metadata: { conversation_id: selectedConv }
           });
 
@@ -303,7 +319,7 @@ const Messagerie = () => {
               notification_type: 'new_message',
               title: 'Nouveau message admin',
               message: `${adminName} vous a envoyé un message`,
-              link: '/agent/messagerie'
+              link: `/agent/messagerie?conversationId=${selectedConv}`
             }
           });
         }
@@ -322,7 +338,7 @@ const Messagerie = () => {
               p_type: 'new_message',
               p_title: 'Nouveau message',
               p_message: `${adminName} vous a envoyé un message`,
-              p_link: '/client/messagerie',
+              p_link: `/client/messagerie?conversationId=${selectedConv}`,
               p_metadata: { conversation_id: selectedConv }
             });
 
@@ -332,7 +348,7 @@ const Messagerie = () => {
                 notification_type: 'new_message',
                 title: 'Nouveau message',
                 message: `${adminName} vous a envoyé un message`,
-                link: '/client/messagerie'
+                link: `/client/messagerie?conversationId=${selectedConv}`
               }
             });
           }
@@ -351,7 +367,7 @@ const Messagerie = () => {
             p_type: 'new_message',
             p_title: 'Nouveau message',
             p_message: `${adminName} a envoyé un message dans une conversation`,
-            p_link: '/agent/messagerie',
+            p_link: `/agent/messagerie?conversationId=${selectedConv}`,
             p_metadata: { conversation_id: selectedConv }
           });
 
@@ -361,7 +377,7 @@ const Messagerie = () => {
               notification_type: 'new_message',
               title: 'Nouveau message',
               message: `${adminName} a envoyé un message dans une conversation`,
-              link: '/agent/messagerie'
+              link: `/agent/messagerie?conversationId=${selectedConv}`
             }
           });
         }

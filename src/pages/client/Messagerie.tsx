@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -48,6 +48,7 @@ const Messagerie = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { markTypeAsRead } = useNotifications();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
   const [lastMessagesMap, setLastMessagesMap] = useState<Map<string, { content: string | null; attachment_name: string | null }>>(new Map());
@@ -91,6 +92,20 @@ const Messagerie = () => {
     loadClientAndConversations();
     markTypeAsRead('new_message');
   }, [user?.id]);
+
+  // Auto-select conversation from URL parameter
+  useEffect(() => {
+    const conversationId = searchParams.get('conversationId');
+    if (conversationId && conversations.length > 0) {
+      const exists = conversations.find(c => c.id === conversationId);
+      if (exists) {
+        setSelectedConv(conversationId);
+        // Clean URL
+        searchParams.delete('conversationId');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+  }, [conversations, searchParams]);
 
   useEffect(() => {
     if (selectedConv) {
@@ -322,7 +337,7 @@ const Messagerie = () => {
             p_type: 'new_message',
             p_title: 'Nouveau message',
             p_message: `${clientName} vous a envoyé un message`,
-            p_link: '/agent/messagerie',
+            p_link: `/agent/messagerie?conversationId=${selectedConv}`,
             p_metadata: { conversation_id: selectedConv }
           });
 
@@ -332,7 +347,7 @@ const Messagerie = () => {
               notification_type: 'new_message',
               title: 'Nouveau message',
               message: `${clientName} vous a envoyé un message`,
-              link: '/agent/messagerie'
+              link: `/agent/messagerie?conversationId=${selectedConv}`
             }
           });
         }
