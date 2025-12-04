@@ -15,6 +15,7 @@ interface DayEventsProps {
   clients: { id: string; profiles: { prenom: string; nom: string } }[];
   onStatusChange?: (eventId: string, status: string) => void;
   onDelete?: (eventId: string) => void;
+  onVisiteGroupClick?: (visites: any[]) => void;
 }
 
 const eventTypeLabels: Record<string, string> = {
@@ -52,7 +53,7 @@ const statusIcons: Record<string, React.ReactNode> = {
   annule: <XCircle className="h-3 w-3 text-red-500" />,
 };
 
-export function DayEvents({ date, events, visites, agents, clients, onStatusChange, onDelete }: DayEventsProps) {
+export function DayEvents({ date, events, visites, agents, clients, onStatusChange, onDelete, onVisiteGroupClick }: DayEventsProps) {
   if (!date) {
     return (
       <div className="bg-card rounded-lg border p-4 h-full flex items-center justify-center">
@@ -141,8 +142,12 @@ export function DayEvents({ date, events, visites, agents, clients, onStatusChan
                     key={`visite-group-${firstVisite.id}-${idx}`}
                     className={cn(
                       'p-3 rounded-lg border',
-                      eventTypeColors.visite
+                      eventTypeColors.visite,
+                      onVisiteGroupClick && 'cursor-pointer hover:shadow-md transition-all'
                     )}
+                    onClick={() => onVisiteGroupClick?.(group)}
+                    role={onVisiteGroupClick ? "button" : undefined}
+                    tabIndex={onVisiteGroupClick ? 0 : undefined}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
