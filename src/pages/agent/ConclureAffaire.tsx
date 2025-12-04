@@ -77,6 +77,18 @@ export default function ConclureAffaire() {
     loadData();
   }, [user?.id, userRole]);
 
+  // Auto-set transaction type based on client
+  useEffect(() => {
+    const selectedClient = clients.find(c => c.id === formData.clientId);
+    if (selectedClient) {
+      const clientIsAcheteur = selectedClient.type_recherche === 'Acheter';
+      setFormData(prev => ({
+        ...prev,
+        typeTransaction: clientIsAcheteur ? 'achat' : 'location'
+      }));
+    }
+  }, [formData.clientId, clients]);
+
   const loadData = async () => {
     if (!user) return;
     
@@ -249,16 +261,6 @@ export default function ConclureAffaire() {
   const selectedClient = clients.find(c => c.id === formData.clientId);
   const isAchat = formData.typeTransaction === 'achat';
 
-  // Auto-set transaction type based on client
-  useEffect(() => {
-    if (selectedClient) {
-      const clientIsAcheteur = selectedClient.type_recherche === 'Acheter';
-      setFormData(prev => ({
-        ...prev,
-        typeTransaction: clientIsAcheteur ? 'achat' : 'location'
-      }));
-    }
-  }, [selectedClient]);
 
   return (
     <main className="flex-1 overflow-y-auto">
