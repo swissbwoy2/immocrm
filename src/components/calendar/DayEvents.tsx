@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { CalendarEvent } from './CalendarView';
+import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
 
 interface DayEventsProps {
   date: Date | null;
@@ -169,21 +170,26 @@ export function DayEvents({ date, events, visites, agents, clients, onStatusChan
                           {format(eventDate, 'HH:mm')}
                         </p>
                         
-                        {/* Liste des clients */}
-                        <div className="mt-2 space-y-1">
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            Clients concernés :
-                          </p>
-                          <div className="pl-4 space-y-0.5">
-                            {group.map((visite: any) => (
-                              <div key={visite.id} className="text-xs flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-current opacity-50" />
-                                {getClientName(visite.client_id) || 'Client inconnu'}
+                        {/* Liste des clients (dédupliqués) */}
+                        {(() => {
+                          const uniqueClients = getUniqueVisitesByClient(group);
+                          return (
+                            <div className="mt-2 space-y-1">
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Users className="h-3 w-3" />
+                                Clients concernés :
+                              </p>
+                              <div className="pl-4 space-y-0.5">
+                                {uniqueClients.map((visite: any) => (
+                                  <div key={visite.client_id} className="text-xs flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current opacity-50" />
+                                    {getClientName(visite.client_id) || 'Client inconnu'}
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
-                        </div>
+                            </div>
+                          );
+                        })()}
 
                         {firstVisite.agent_id && (
                           <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
