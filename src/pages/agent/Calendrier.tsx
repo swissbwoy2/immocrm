@@ -482,11 +482,57 @@ export default function AgentCalendrier() {
     setDetailDialogOpen(true);
   };
 
-  const handleDeleteVisite = async (visiteId: string) => {
+  const handleDeleteVisite = async (visiteId: string, cascade: boolean = false) => {
     try {
+      // 1. Récupérer les infos de la visite
+      const { data: visite } = await supabase
+        .from('visites')
+        .select('offre_id, client_id, adresse')
+        .eq('id', visiteId)
+        .single();
+
+      if (!visite) throw new Error('Visite non trouvée');
+
+      if (cascade && visite.offre_id && visite.client_id) {
+        // 2. Supprimer la transaction liée (via offre_id + client_id)
+        await supabase
+          .from('transactions')
+          .delete()
+          .eq('offre_id', visite.offre_id)
+          .eq('client_id', visite.client_id);
+
+        // 3. Réinitialiser la candidature liée (remettre à "en_attente")
+        await supabase
+          .from('candidatures')
+          .update({
+            statut: 'en_attente',
+            bail_recu: false,
+            bail_recu_at: null,
+            signature_effectuee: false,
+            signature_effectuee_at: null,
+            date_signature_choisie: null,
+            dates_signature_proposees: null,
+            date_etat_lieux: null,
+            heure_etat_lieux: null,
+            cles_remises: false,
+            cles_remises_at: null,
+            alerte_cles_vue: false,
+            client_accepte_conclure: false,
+            client_accepte_conclure_at: null,
+            agent_valide_regie: false,
+            agent_valide_regie_at: null,
+            recommandation_envoyee: false,
+            avis_google_envoye: false
+          })
+          .eq('offre_id', visite.offre_id)
+          .eq('client_id', visite.client_id);
+      }
+
+      // 4. Supprimer la visite
       const { error } = await supabase.from('visites').delete().eq('id', visiteId);
       if (error) throw error;
-      toast.success('Visite supprimée');
+
+      toast.success(cascade ? 'Visite, transaction et workflow supprimés' : 'Visite supprimée');
       loadData();
     } catch (error) {
       console.error('Error deleting visite:', error);

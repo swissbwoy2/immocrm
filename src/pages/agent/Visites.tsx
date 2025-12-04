@@ -48,11 +48,57 @@ export default function AgentVisites() {
     setConfirmDialogOpen(true);
   };
 
-  const handleDeleteVisite = async (visiteId: string) => {
+  const handleDeleteVisite = async (visiteId: string, cascade: boolean = false) => {
     try {
+      // 1. Récupérer les infos de la visite
+      const { data: visite } = await supabase
+        .from('visites')
+        .select('offre_id, client_id, adresse')
+        .eq('id', visiteId)
+        .single();
+
+      if (!visite) throw new Error('Visite non trouvée');
+
+      if (cascade && visite.offre_id && visite.client_id) {
+        // 2. Supprimer la transaction liée
+        await supabase
+          .from('transactions')
+          .delete()
+          .eq('offre_id', visite.offre_id)
+          .eq('client_id', visite.client_id);
+
+        // 3. Réinitialiser la candidature liée
+        await supabase
+          .from('candidatures')
+          .update({
+            statut: 'en_attente',
+            bail_recu: false,
+            bail_recu_at: null,
+            signature_effectuee: false,
+            signature_effectuee_at: null,
+            date_signature_choisie: null,
+            dates_signature_proposees: null,
+            date_etat_lieux: null,
+            heure_etat_lieux: null,
+            cles_remises: false,
+            cles_remises_at: null,
+            alerte_cles_vue: false,
+            client_accepte_conclure: false,
+            client_accepte_conclure_at: null,
+            agent_valide_regie: false,
+            agent_valide_regie_at: null,
+            recommandation_envoyee: false,
+            avis_google_envoye: false
+          })
+          .eq('offre_id', visite.offre_id)
+          .eq('client_id', visite.client_id);
+      }
+
+      // 4. Supprimer la visite
       const { error } = await supabase.from('visites').delete().eq('id', visiteId);
       if (error) throw error;
-      toast.success('Visite supprimée');
+
+      toast.success(cascade ? 'Visite, transaction et workflow supprimés' : 'Visite supprimée');
       setDetailDialogOpen(false);
       loadVisites();
     } catch (error) {
@@ -97,9 +143,28 @@ export default function AgentVisites() {
 
       const profilesMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
+      // Charger les candidatures liées
+      const offreIds = visitesData?.map(v => v.offre_id).filter(Boolean) || [];
+      const clientIdsFromVisites = visitesData?.map(v => v.client_id).filter(Boolean) || [];
+      
+      let candidaturesMap = new Map();
+      if (offreIds.length > 0) {
+        const { data: candidatures } = await supabase
+          .from('candidatures')
+          .select('*')
+          .in('offre_id', offreIds)
+          .in('client_id', clientIdsFromVisites);
+        
+        candidatures?.forEach(c => {
+          const key = `${c.offre_id}-${c.client_id}`;
+          candidaturesMap.set(key, c);
+        });
+      }
+
       const visitesWithProfiles = visitesData?.map(v => ({
         ...v,
-        client_profile: profilesMap.get(v.clients?.user_id)
+        client_profile: profilesMap.get(v.clients?.user_id),
+        candidature: candidaturesMap.get(`${v.offre_id}-${v.client_id}`) || null
       })) || [];
 
       setVisites(visitesWithProfiles);
@@ -953,18 +1018,47 @@ export default function AgentVisites() {
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Supprimer cette visite ?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Cette action supprimera la visite à {selectedVisite?.adresse}. Cette action est irréversible.
+                  <AlertDialogDescription asChild>
+                    <div>
+                      {selectedVisite?.candidature?.statut === 'cles_remises' || selectedVisite?.candidature?.cles_remises ? (
+                        <>
+                          <span className="flex items-center gap-2 text-destructive font-medium mb-2">
+                            <AlertTriangle className="h-4 w-4" />
+                            Cette visite est liée à une candidature terminée (clés remises).
+                          </span>
+                          <p>Voulez-vous aussi supprimer la transaction associée et réinitialiser le workflow de la candidature ?</p>
+                        </>
+                      ) : (
+                        <p>Cette action supprimera la visite à {selectedVisite?.adresse}. Cette action est irréversible.</p>
+                      )}
+                    </div>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
+                <AlertDialogFooter className={selectedVisite?.candidature?.statut === 'cles_remises' || selectedVisite?.candidature?.cles_remises ? "flex-col sm:flex-row gap-2" : ""}>
                   <AlertDialogCancel>Annuler</AlertDialogCancel>
-                  <AlertDialogAction
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    onClick={() => selectedVisite && handleDeleteVisite(selectedVisite.id)}
-                  >
-                    Supprimer
-                  </AlertDialogAction>
+                  {selectedVisite?.candidature?.statut === 'cles_remises' || selectedVisite?.candidature?.cles_remises ? (
+                    <>
+                      <AlertDialogAction
+                        className="bg-secondary text-secondary-foreground hover:bg-secondary/90"
+                        onClick={() => selectedVisite && handleDeleteVisite(selectedVisite.id, false)}
+                      >
+                        Visite seule
+                      </AlertDialogAction>
+                      <AlertDialogAction
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={() => selectedVisite && handleDeleteVisite(selectedVisite.id, true)}
+                      >
+                        Tout supprimer
+                      </AlertDialogAction>
+                    </>
+                  ) : (
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() => selectedVisite && handleDeleteVisite(selectedVisite.id, false)}
+                    >
+                      Supprimer
+                    </AlertDialogAction>
+                  )}
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
