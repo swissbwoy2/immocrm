@@ -649,10 +649,11 @@ const OffresRecues = () => {
         return;
       }
 
-      // 1. Créer une candidature avec dossier_complet: false
+      // 1. Créer une candidature avec statut 'candidature_deposee' (demande reçue, pas encore envoyé)
       await supabase.from('candidatures').insert({
         offre_id: offre.id,
         client_id: clientData.id,
+        statut: 'candidature_deposee',
         message_client: 'Le client demande l\'aide de l\'agent pour postuler à ce bien.',
         dossier_complet: false
       });

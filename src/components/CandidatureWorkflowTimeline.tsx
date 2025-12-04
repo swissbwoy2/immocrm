@@ -2,7 +2,7 @@ import { CheckCircle, Circle, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const WORKFLOW_STEPS = [
-  { key: 'dossier_en_cours', label: 'Dossier en cours' },
+  { key: 'candidature_deposee', label: 'Demande reçue' },
   { key: 'en_attente', label: 'Dossier envoyé' },
   { key: 'acceptee', label: 'Acceptée' },
   { key: 'bail_conclu', label: 'Client confirme' },
@@ -18,8 +18,8 @@ const STEP_ORDER = WORKFLOW_STEPS.map(s => s.key);
 
 // Map pre-workflow statuses
 const STATUS_MAP: Record<string, string> = {
-  'visite_effectuee': 'dossier_en_cours',
-  'candidature_deposee': 'dossier_en_cours',
+  'visite_effectuee': 'candidature_deposee',
+  'dossier_en_cours': 'candidature_deposee',
 };
 
 interface CandidatureWorkflowTimelineProps {

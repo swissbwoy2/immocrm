@@ -15,8 +15,8 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const WORKFLOW_STEPS = [
-  { key: 'dossier_en_cours', label: 'Dossier en cours', description: 'En attente du dépôt par l\'agent' },
-  { key: 'en_attente', label: 'En attente', description: 'Dossier envoyé à la régie' },
+  { key: 'candidature_deposee', label: 'Demande reçue', description: 'En attente de l\'envoi par l\'agent' },
+  { key: 'en_attente', label: 'Dossier envoyé', description: 'Dossier envoyé à la régie' },
   { key: 'acceptee', label: 'Acceptée', description: 'Candidature acceptée par la régie' },
   { key: 'bail_conclu', label: 'Client confirme', description: 'Vous confirmez vouloir le bail', clientAction: true },
   { key: 'attente_bail', label: 'Validation régie', description: 'Agent valide avec la régie' },
@@ -32,8 +32,8 @@ const STEP_ORDER = WORKFLOW_STEPS.map(s => s.key);
 // Steps that come before the workflow
 const PRE_WORKFLOW_STATUTS = ['envoyee', 'vue', 'interesse', 'visite_planifiee'];
 
-// Map visite_effectuee and candidature_deposee to dossier_en_cours
-const DOSSIER_EN_COURS_STATUTS = ['visite_effectuee', 'candidature_deposee'];
+// Map visite_effectuee to candidature_deposee
+const CANDIDATURE_DEPOSEE_STATUTS = ['visite_effectuee'];
 
 interface CandidatureWorkflowInteractiveProps {
   currentStatut: string;
@@ -54,11 +54,11 @@ export function CandidatureWorkflowInteractive({
 
   const isRefused = currentStatut === 'refusee';
   const isPreWorkflow = PRE_WORKFLOW_STATUTS.includes(currentStatut);
-  const isDossierEnCours = DOSSIER_EN_COURS_STATUTS.includes(currentStatut);
+  const isCandidatureDeposee = CANDIDATURE_DEPOSEE_STATUTS.includes(currentStatut);
   
   // Map statuses to workflow steps
-  const effectiveStatut = isPreWorkflow ? 'dossier_en_cours' : 
-    isDossierEnCours ? 'dossier_en_cours' : currentStatut;
+  const effectiveStatut = isPreWorkflow ? 'candidature_deposee' : 
+    isCandidatureDeposee ? 'candidature_deposee' : currentStatut;
   const currentIndex = STEP_ORDER.indexOf(effectiveStatut);
   
   // Calculate progress percentage
@@ -86,8 +86,8 @@ export function CandidatureWorkflowInteractive({
     }
     if (currentStatut === 'candidature_deposee') {
       return {
-        title: "Dossier en préparation",
-        message: "Votre agent prépare votre dossier pour l'envoyer à la régie. Vous serez notifié une fois le dossier déposé.",
+        title: "Demande de candidature reçue",
+        message: "Votre agent vérifie votre dossier et l'enverra à la régie. Vous serez notifié dès que le dossier sera envoyé.",
         type: "waiting" as const
       };
     }
