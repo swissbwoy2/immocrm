@@ -53,6 +53,7 @@ interface Agent {
 interface Client {
   id: string;
   user_id: string;
+  agent_id: string | null;
 }
 
 export default function AdminOffresEnvoyees() {
@@ -104,10 +105,10 @@ export default function AdminOffresEnvoyees() {
       if (agentsError) throw agentsError;
       setAgents(agentsData || []);
 
-      // Charger les clients
+      // Charger les clients avec leur agent assigné
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
-        .select('id, user_id');
+        .select('id, user_id, agent_id');
       
       if (clientsError) throw clientsError;
       setClients(clientsData || []);
@@ -189,10 +190,16 @@ export default function AdminOffresEnvoyees() {
 
     setTransferring(true);
     try {
-      // Trouver l'agent assigné au client cible
+      // Trouver le client cible et son agent assigné
       const targetClient = clients.find(c => c.id === selectedTargetClient);
       
-      // Créer une nouvelle offre pour le nouveau client
+      if (!targetClient?.agent_id) {
+        toast.error("Ce client n'a pas d'agent assigné");
+        setTransferring(false);
+        return;
+      }
+
+      // Créer une nouvelle offre pour le nouveau client avec l'agent assigné
       const { data: newOffre, error: offreError } = await supabase
         .from('offres')
         .insert({
@@ -212,7 +219,7 @@ export default function AdminOffresEnvoyees() {
           concierge_tel: selectedOffre.concierge_tel,
           locataire_nom: selectedOffre.locataire_nom,
           locataire_tel: selectedOffre.locataire_tel,
-          agent_id: selectedOffre.agent_id, // Garder le même agent
+          agent_id: targetClient.agent_id, // Utiliser l'agent assigné au client
           client_id: selectedTargetClient,
           statut: 'envoyee',
           date_envoi: new Date().toISOString()
@@ -221,6 +228,62 @@ export default function AdminOffresEnvoyees() {
         .single();
 
       if (offreError) throw offreError;
+
+      // Chercher la conversation existante entre le client et son agent
+      const { data: existingConv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('client_id', selectedTargetClient)
+        .eq('agent_id', targetClient.agent_id)
+        .eq('conversation_type', 'client-agent')
+        .maybeSingle();
+
+      let conversationId = existingConv?.id;
+
+      // Si pas de conversation, en créer une
+      if (!conversationId) {
+        const { data: newConv, error: convError } = await supabase
+          .from('conversations')
+          .insert({
+            client_id: selectedTargetClient,
+            agent_id: targetClient.agent_id,
+            subject: 'Échanges',
+            conversation_type: 'client-agent',
+            status: 'active'
+          })
+          .select()
+          .single();
+
+        if (convError) throw convError;
+        conversationId = newConv.id;
+
+        // Ajouter l'agent dans conversation_agents
+        await supabase
+          .from('conversation_agents')
+          .insert({
+            conversation_id: conversationId,
+            agent_id: targetClient.agent_id
+          });
+      }
+
+      // Créer le message avec l'offre attachée (au nom de l'agent)
+      const { error: messageError } = await supabase
+        .from('messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: targetClient.agent_id,
+          sender_type: 'agent',
+          content: `Nouvelle offre : ${selectedOffre.adresse} - CHF ${selectedOffre.prix.toLocaleString()}/mois`,
+          offre_id: newOffre.id
+        });
+
+      if (messageError) throw messageError;
+
+      // Mettre à jour last_message_at de la conversation
+      await supabase
+        .from('conversations')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', conversationId);
 
       const targetClientName = getClientName(selectedTargetClient);
 
