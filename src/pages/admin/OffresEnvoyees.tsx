@@ -5,14 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Send, MapPin, Home, Calendar, User, Filter, Eye, ExternalLink, Phone, Building } from "lucide-react";
+import { Send, MapPin, Home, Calendar, User, Filter, Eye, ExternalLink, Phone, Building, Forward } from "lucide-react";
 import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface Offre {
   id: string;
@@ -69,6 +70,11 @@ export default function AdminOffresEnvoyees() {
   // Dialog state
   const [selectedOffre, setSelectedOffre] = useState<Offre | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  
+  // Transfer dialog state
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [selectedTargetAgent, setSelectedTargetAgent] = useState<string>("");
+  const [transferring, setTransferring] = useState(false);
 
   useEffect(() => {
     if (!user || userRole !== 'admin') {
@@ -166,6 +172,68 @@ export default function AdminOffresEnvoyees() {
   const handleOpenOffreDetail = (offre: Offre) => {
     setSelectedOffre(offre);
     setDetailDialogOpen(true);
+  };
+
+  const handleOpenTransferDialog = (offre: Offre, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSelectedOffre(offre);
+    setSelectedTargetAgent("");
+    setTransferDialogOpen(true);
+  };
+
+  const handleTransferOffre = async () => {
+    if (!selectedOffre || !selectedTargetAgent) {
+      toast.error("Veuillez sélectionner un agent");
+      return;
+    }
+
+    setTransferring(true);
+    try {
+      // Créer une nouvelle offre avec le nouvel agent
+      const { data: newOffre, error: offreError } = await supabase
+        .from('offres')
+        .insert({
+          titre: selectedOffre.titre,
+          adresse: selectedOffre.adresse,
+          prix: selectedOffre.prix,
+          pieces: selectedOffre.pieces,
+          surface: selectedOffre.surface,
+          type_bien: selectedOffre.type_bien,
+          description: selectedOffre.description,
+          lien_annonce: selectedOffre.lien_annonce,
+          disponibilite: selectedOffre.disponibilite,
+          etage: selectedOffre.etage,
+          code_immeuble: selectedOffre.code_immeuble,
+          commentaires: selectedOffre.commentaires,
+          concierge_nom: selectedOffre.concierge_nom,
+          concierge_tel: selectedOffre.concierge_tel,
+          locataire_nom: selectedOffre.locataire_nom,
+          locataire_tel: selectedOffre.locataire_tel,
+          agent_id: selectedTargetAgent,
+          client_id: null, // Pas de client assigné, l'agent choisira
+          statut: 'envoyee',
+          date_envoi: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (offreError) throw offreError;
+
+      const sourceAgentName = getAgentName(selectedOffre.agent_id);
+      const targetAgentName = getAgentName(selectedTargetAgent);
+
+      toast.success(`Offre transférée à ${targetAgentName}`);
+      setTransferDialogOpen(false);
+      setDetailDialogOpen(false);
+      
+      // Recharger les données
+      loadData();
+    } catch (error) {
+      console.error('Erreur transfert offre:', error);
+      toast.error("Erreur lors du transfert de l'offre");
+    } finally {
+      setTransferring(false);
+    }
   };
 
   // Filtrage
@@ -350,6 +418,15 @@ export default function AdminOffresEnvoyees() {
                   </div>
 
                   <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={(e) => handleOpenTransferDialog(offre, e)}
+                      className="relative z-10"
+                    >
+                      <Forward className="w-4 h-4 mr-1" />
+                      Transférer
+                    </Button>
                     {offre.client_id && (
                       <Button 
                         variant="outline" 
@@ -529,7 +606,17 @@ export default function AdminOffresEnvoyees() {
             </div>
           )}
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 sm:gap-0 flex-wrap">
+            <Button 
+              variant="secondary"
+              onClick={() => {
+                setDetailDialogOpen(false);
+                handleOpenTransferDialog(selectedOffre!);
+              }}
+            >
+              <Forward className="w-4 h-4 mr-2" />
+              Transférer à un agent
+            </Button>
             {selectedOffre?.lien_annonce && (
               <Button 
                 variant="outline" 
@@ -548,6 +635,72 @@ export default function AdminOffresEnvoyees() {
                 Voir le client
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog transfert offre */}
+      <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Transférer l'offre à un autre agent</DialogTitle>
+            <DialogDescription>
+              Cette offre sera dupliquée et attribuée à l'agent sélectionné.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedOffre && (
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <h4 className="font-medium">{selectedOffre.titre || selectedOffre.adresse}</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  CHF {selectedOffre.prix.toLocaleString()}/mois
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Envoyée par: {getAgentName(selectedOffre.agent_id)}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Sélectionner l'agent destinataire</Label>
+                <Select value={selectedTargetAgent} onValueChange={setSelectedTargetAgent}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir un agent..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {agents
+                      .filter(agent => agent.id !== selectedOffre.agent_id)
+                      .map(agent => (
+                        <SelectItem key={agent.id} value={agent.id}>
+                          {getAgentName(agent.id)}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTransferDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleTransferOffre} 
+              disabled={!selectedTargetAgent || transferring}
+            >
+              {transferring ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Transfert...
+                </>
+              ) : (
+                <>
+                  <Forward className="w-4 h-4 mr-2" />
+                  Transférer
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
