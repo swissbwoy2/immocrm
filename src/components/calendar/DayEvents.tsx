@@ -4,6 +4,7 @@ import { Calendar, Clock, User, Users, MapPin, CheckCircle, XCircle, AlertCircle
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { CalendarEvent } from './CalendarView';
 import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
@@ -16,6 +17,7 @@ interface DayEventsProps {
   clients: { id: string; profiles: { prenom: string; nom: string } }[];
   onStatusChange?: (eventId: string, status: string) => void;
   onDelete?: (eventId: string) => void;
+  onDeleteVisite?: (visiteId: string) => void;
   onVisiteGroupClick?: (visites: any[]) => void;
 }
 
@@ -54,7 +56,7 @@ const statusIcons: Record<string, React.ReactNode> = {
   annule: <XCircle className="h-3 w-3 text-red-500" />,
 };
 
-export function DayEvents({ date, events, visites, agents, clients, onStatusChange, onDelete, onVisiteGroupClick }: DayEventsProps) {
+export function DayEvents({ date, events, visites, agents, clients, onStatusChange, onDelete, onDeleteVisite, onVisiteGroupClick }: DayEventsProps) {
   if (!date) {
     return (
       <div className="bg-card rounded-lg border p-4 h-full flex items-center justify-center">
@@ -198,6 +200,43 @@ export function DayEvents({ date, events, visites, agents, clients, onStatusChan
                           </div>
                         )}
                       </div>
+
+                      {/* Delete button for visite */}
+                      {onDeleteVisite && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Supprimer cette visite ?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Cette action est irréversible. La visite sera également supprimée du calendrier 
+                                {group.length > 1 ? ' de tous les clients concernés' : ' du client'}.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Annuler</AlertDialogCancel>
+                              <AlertDialogAction
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  group.forEach((visite) => onDeleteVisite(visite.id));
+                                }}
+                              >
+                                Supprimer
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </div>
                   </div>
                 );

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { isSameDay, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Plus, Calendar as CalendarIcon, MapPin, Phone, ExternalLink, Home, User, Building2 } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, MapPin, Phone, ExternalLink, Home, User, Building2, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -12,6 +12,7 @@ import { EventFilters } from '@/components/calendar/EventFilters';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
 import { DayEvents } from '@/components/calendar/DayEvents';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
@@ -272,6 +273,43 @@ export default function AdminCalendrier() {
     }
   };
 
+  const handleDeleteVisite = async (visiteId: string) => {
+    try {
+      const { error } = await supabase
+        .from('visites')
+        .delete()
+        .eq('id', visiteId);
+
+      if (error) throw error;
+
+      toast.success('Visite supprimée');
+      loadData();
+    } catch (error: any) {
+      console.error('Error deleting visite:', error);
+      toast.error('Erreur lors de la suppression de la visite');
+    }
+  };
+
+  const handleDeleteVisiteGroup = async (visiteGroup: any[]) => {
+    try {
+      for (const visite of visiteGroup) {
+        const { error } = await supabase
+          .from('visites')
+          .delete()
+          .eq('id', visite.id);
+
+        if (error) throw error;
+      }
+
+      toast.success('Visite(s) supprimée(s)');
+      setVisiteDetailDialogOpen(false);
+      loadData();
+    } catch (error: any) {
+      console.error('Error deleting visite group:', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
   const handleVisiteGroupClick = (visiteGroup: any[]) => {
     setSelectedVisiteGroup(visiteGroup);
     setVisiteDetailDialogOpen(true);
@@ -375,6 +413,7 @@ export default function AdminCalendrier() {
             clients={clients}
             onStatusChange={handleStatusChange}
             onDelete={handleDeleteEvent}
+            onDeleteVisite={handleDeleteVisite}
             onVisiteGroupClick={handleVisiteGroupClick}
           />
         </div>
@@ -565,6 +604,34 @@ export default function AdminCalendrier() {
           )}
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
+            {selectedVisiteGroup && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive">
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Supprimer la visite
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette visite sera supprimée pour tous les clients concernés. 
+                      Ils ne la verront plus dans leur calendrier.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={() => handleDeleteVisiteGroup(selectedVisiteGroup)}
+                    >
+                      Supprimer
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
             {selectedVisiteGroup?.[0].offres?.lien_annonce && (
               <Button 
                 variant="outline" 
