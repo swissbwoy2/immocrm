@@ -73,7 +73,7 @@ export default function AdminOffresEnvoyees() {
   
   // Transfer dialog state
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
-  const [selectedTargetAgent, setSelectedTargetAgent] = useState<string>("");
+  const [selectedTargetClient, setSelectedTargetClient] = useState<string>("");
   const [transferring, setTransferring] = useState(false);
 
   useEffect(() => {
@@ -177,19 +177,22 @@ export default function AdminOffresEnvoyees() {
   const handleOpenTransferDialog = (offre: Offre, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setSelectedOffre(offre);
-    setSelectedTargetAgent("");
+    setSelectedTargetClient("");
     setTransferDialogOpen(true);
   };
 
   const handleTransferOffre = async () => {
-    if (!selectedOffre || !selectedTargetAgent) {
-      toast.error("Veuillez sélectionner un agent");
+    if (!selectedOffre || !selectedTargetClient) {
+      toast.error("Veuillez sélectionner un client");
       return;
     }
 
     setTransferring(true);
     try {
-      // Créer une nouvelle offre avec le nouvel agent
+      // Trouver l'agent assigné au client cible
+      const targetClient = clients.find(c => c.id === selectedTargetClient);
+      
+      // Créer une nouvelle offre pour le nouveau client
       const { data: newOffre, error: offreError } = await supabase
         .from('offres')
         .insert({
@@ -209,8 +212,8 @@ export default function AdminOffresEnvoyees() {
           concierge_tel: selectedOffre.concierge_tel,
           locataire_nom: selectedOffre.locataire_nom,
           locataire_tel: selectedOffre.locataire_tel,
-          agent_id: selectedTargetAgent,
-          client_id: null, // Pas de client assigné, l'agent choisira
+          agent_id: selectedOffre.agent_id, // Garder le même agent
+          client_id: selectedTargetClient,
           statut: 'envoyee',
           date_envoi: new Date().toISOString()
         })
@@ -219,10 +222,9 @@ export default function AdminOffresEnvoyees() {
 
       if (offreError) throw offreError;
 
-      const sourceAgentName = getAgentName(selectedOffre.agent_id);
-      const targetAgentName = getAgentName(selectedTargetAgent);
+      const targetClientName = getClientName(selectedTargetClient);
 
-      toast.success(`Offre transférée à ${targetAgentName}`);
+      toast.success(`Offre envoyée à ${targetClientName}`);
       setTransferDialogOpen(false);
       setDetailDialogOpen(false);
       
@@ -230,7 +232,7 @@ export default function AdminOffresEnvoyees() {
       loadData();
     } catch (error) {
       console.error('Erreur transfert offre:', error);
-      toast.error("Erreur lors du transfert de l'offre");
+      toast.error("Erreur lors de l'envoi de l'offre");
     } finally {
       setTransferring(false);
     }
@@ -425,7 +427,7 @@ export default function AdminOffresEnvoyees() {
                       className="relative z-10"
                     >
                       <Forward className="w-4 h-4 mr-1" />
-                      Transférer
+                      Envoyer à un client
                     </Button>
                     {offre.client_id && (
                       <Button 
@@ -615,7 +617,7 @@ export default function AdminOffresEnvoyees() {
               }}
             >
               <Forward className="w-4 h-4 mr-2" />
-              Transférer à un agent
+              Envoyer à un client
             </Button>
             {selectedOffre?.lien_annonce && (
               <Button 
@@ -639,13 +641,13 @@ export default function AdminOffresEnvoyees() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog transfert offre */}
+      {/* Dialog transfert offre à un client */}
       <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Transférer l'offre à un autre agent</DialogTitle>
+            <DialogTitle>Envoyer l'offre à un autre client</DialogTitle>
             <DialogDescription>
-              Cette offre sera dupliquée et attribuée à l'agent sélectionné.
+              Cette offre sera dupliquée et envoyée au client sélectionné.
             </DialogDescription>
           </DialogHeader>
 
@@ -659,20 +661,25 @@ export default function AdminOffresEnvoyees() {
                 <p className="text-sm text-muted-foreground">
                   Envoyée par: {getAgentName(selectedOffre.agent_id)}
                 </p>
+                {selectedOffre.client_id && (
+                  <p className="text-sm text-muted-foreground">
+                    Client actuel: {getClientName(selectedOffre.client_id)}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label>Sélectionner l'agent destinataire</Label>
-                <Select value={selectedTargetAgent} onValueChange={setSelectedTargetAgent}>
+                <Label>Sélectionner le client destinataire</Label>
+                <Select value={selectedTargetClient} onValueChange={setSelectedTargetClient}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Choisir un agent..." />
+                    <SelectValue placeholder="Choisir un client..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {agents
-                      .filter(agent => agent.id !== selectedOffre.agent_id)
-                      .map(agent => (
-                        <SelectItem key={agent.id} value={agent.id}>
-                          {getAgentName(agent.id)}
+                    {clients
+                      .filter(client => client.id !== selectedOffre.client_id)
+                      .map(client => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {getClientName(client.id)}
                         </SelectItem>
                       ))}
                   </SelectContent>
@@ -687,17 +694,17 @@ export default function AdminOffresEnvoyees() {
             </Button>
             <Button 
               onClick={handleTransferOffre} 
-              disabled={!selectedTargetAgent || transferring}
+              disabled={!selectedTargetClient || transferring}
             >
               {transferring ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                  Transfert...
+                  Envoi...
                 </>
               ) : (
                 <>
                   <Forward className="w-4 h-4 mr-2" />
-                  Transférer
+                  Envoyer
                 </>
               )}
             </Button>
