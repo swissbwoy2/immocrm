@@ -32,6 +32,7 @@ import { calculateDaysElapsed } from '@/utils/calculations';
 import { Progress } from '@/components/ui/progress';
 import { ClientTypeBadge } from '@/components/ClientTypeBadge';
 import { ClientNotesManager } from '@/components/ClientNotesManager';
+import { SwissRomandeMap } from '@/components/SwissRomandeMap';
 
 interface Client {
   id: string;
@@ -1342,6 +1343,9 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </Card>
+
+          {/* Carte de localisation */}
+          <SwissRomandeMap client={client} />
 
           {/* Autres informations */}
           <Card>
