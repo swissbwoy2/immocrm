@@ -79,7 +79,7 @@ export default function AgentNotifications() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between page-header">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Bell className="h-6 w-6" />
@@ -90,14 +90,18 @@ export default function AgentNotifications() {
           </p>
         </div>
         {counts.total > 0 && (
-          <Button variant="outline" onClick={() => markAllAsRead()}>
+          <Button 
+            variant="outline" 
+            onClick={() => markAllAsRead()}
+            className="hover:scale-105 transition-transform"
+          >
             <Check className="h-4 w-4 mr-2" />
             Tout marquer comme lu
           </Button>
         )}
       </div>
 
-      <Card>
+      <Card className="animate-fade-in">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg">Toutes les notifications</CardTitle>
@@ -111,26 +115,30 @@ export default function AgentNotifications() {
         </CardHeader>
         <CardContent>
           {filteredNotifications.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Bell className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Aucune notification</p>
+            <div className="text-center py-12 text-muted-foreground empty-state">
+              <Bell className="h-12 w-12 mx-auto mb-4 opacity-50 empty-state-icon" />
+              <p className="text-lg font-medium mb-1">Aucune notification</p>
+              <p className="text-sm">Vous êtes à jour !</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredNotifications.map((notification) => (
+              {filteredNotifications.map((notification, index) => (
                 <div
                   key={notification.id}
                   className={cn(
-                    "flex items-start gap-4 p-4 rounded-lg border cursor-pointer transition-colors hover:bg-muted/50",
-                    !notification.read && "bg-primary/5 border-primary/20"
+                    "flex items-start gap-4 p-4 rounded-lg border cursor-pointer transition-all duration-200",
+                    "hover:bg-muted/50 hover:translate-x-1 hover:shadow-sm",
+                    !notification.read && "bg-primary/5 border-primary/20 border-l-4 border-l-primary",
+                    "animate-fade-in"
                   )}
+                  style={{ animationDelay: `${index * 50}ms` }}
                   onClick={() => handleNotificationClick(notification)}
                 >
-                  <span className="text-2xl">
+                  <span className="text-2xl animate-bounce-in" style={{ animationDelay: `${index * 50 + 100}ms` }}>
                     {getNotificationIcon(notification.type)}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <p className={cn(
                         "font-medium",
                         !notification.read && "font-semibold"
@@ -141,7 +149,7 @@ export default function AgentNotifications() {
                         {getNotificationTypeName(notification.type)}
                       </Badge>
                       {!notification.read && (
-                        <Badge variant="default" className="text-xs">
+                        <Badge variant="default" className="text-xs animate-pulse-soft">
                           Nouveau
                         </Badge>
                       )}
@@ -156,11 +164,12 @@ export default function AgentNotifications() {
                       {' '}({formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: fr })})
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 action-button-group">
                     {!notification.read && (
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="hover:bg-green-100 hover:text-green-600 transition-colors"
                         onClick={(e) => {
                           e.stopPropagation();
                           markAsRead(notification.id);
@@ -172,6 +181,7 @@ export default function AgentNotifications() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="hover:bg-destructive/10 hover:text-destructive transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteNotification(notification.id);

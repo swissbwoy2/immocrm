@@ -384,7 +384,10 @@ const MesClients = () => {
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <p className="text-muted-foreground">Chargement...</p>
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground animate-pulse-soft">Chargement des clients...</p>
+        </div>
       </div>
     );
   }
@@ -392,31 +395,33 @@ const MesClients = () => {
   return (
     <div className="flex-1 overflow-auto">
         <div className="p-4 md:p-8">
-          <div className="mb-6">
+          <div className="mb-6 page-header">
             <h1 className="text-3xl font-bold text-foreground">Clients</h1>
+            <p className="text-muted-foreground mt-1">Gérez et suivez vos clients</p>
           </div>
 
           {/* Barre de recherche */}
-          <div className="mb-4">
+          <div className="mb-4 animate-fade-in">
             <Input
               placeholder="Rechercher un client par nom ou prénom..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md"
+              className="max-w-md input-focus-glow transition-all duration-200"
             />
           </div>
 
           {/* Filtres Régions */}
-          <div className="mb-4">
+          <div className="mb-4 animate-fade-in" style={{ animationDelay: '50ms' }}>
             <p className="text-sm font-medium mb-2">Régions</p>
             <div className="flex flex-wrap gap-2">
-              {regions.map(region => (
+              {regions.map((region, index) => (
                 <Button
                   key={region}
                   variant={selectedRegions.includes(region) ? "default" : "outline"}
                   size="sm"
                   onClick={() => toggleRegion(region)}
-                  className="text-xs"
+                  className="text-xs transition-all duration-200 hover:scale-105"
+                  style={{ animationDelay: `${index * 20}ms` }}
                 >
                   {region}
                 </Button>
@@ -425,16 +430,16 @@ const MesClients = () => {
           </div>
 
           {/* Filtres Nombre de pièces */}
-          <div className="mb-4">
+          <div className="mb-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
             <p className="text-sm font-medium mb-2">Nombre de pièces</p>
             <div className="flex flex-wrap gap-2">
-              {nombrePieces.map(pieces => (
+              {nombrePieces.map((pieces, index) => (
                 <Button
                   key={pieces}
                   variant={selectedPieces.includes(pieces) ? "default" : "outline"}
                   size="sm"
                   onClick={() => togglePieces(pieces)}
-                  className="text-xs"
+                  className="text-xs transition-all duration-200 hover:scale-105"
                 >
                   {pieces}
                 </Button>
@@ -443,14 +448,14 @@ const MesClients = () => {
           </div>
 
           {/* Filtre par type de recherche */}
-          <div className="mb-4">
+          <div className="mb-4 animate-fade-in" style={{ animationDelay: '150ms' }}>
             <p className="text-sm font-medium mb-2">Type de recherche</p>
             <div className="flex flex-wrap gap-2">
               <Button
                 variant={selectedTypeRecherche === 'all' ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedTypeRecherche('all')}
-                className="text-xs"
+                className="text-xs transition-all duration-200 hover:scale-105"
               >
                 Tous ({allClients.length})
               </Button>
@@ -458,7 +463,7 @@ const MesClients = () => {
                 variant={selectedTypeRecherche === 'Louer' ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedTypeRecherche('Louer')}
-                className="text-xs bg-blue-600 hover:bg-blue-700"
+                className="text-xs bg-blue-600 hover:bg-blue-700 transition-all duration-200 hover:scale-105"
               >
                 <Key className="w-3 h-3 mr-1" />
                 Location ({clientsLocation})
