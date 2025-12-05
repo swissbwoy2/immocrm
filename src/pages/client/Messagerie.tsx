@@ -464,7 +464,7 @@ const Messagerie = () => {
             offre_id: offreId,
             client_id: clientData.id,
             message_client: 'Le client demande l\'aide de l\'agent pour postuler à ce bien.',
-            statut: 'en_attente',
+            statut: 'candidature_deposee',
             dossier_complet: false
           });
 
@@ -837,7 +837,7 @@ const Messagerie = () => {
         offre_id: selectedOffre.id,
         client_id: clientData.id,
         message_client: messageClient || null,
-        statut: 'en_attente',
+        statut: 'candidature_deposee',
         dossier_complet: true
       }).select().single();
 
