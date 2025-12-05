@@ -173,7 +173,8 @@ export default function ClientCalendrier() {
             conversation_id: conv.id,
             sender_id: user?.id,
             sender_type: 'client',
-            content: `✅ **Le client est intéressé par l'offre suite à la visite**\n\n🏠 Adresse: ${visite.offres.adresse}\n💰 Loyer: ${visite.offres.prix.toLocaleString()} CHF/mois\n📅 Visite effectuée le: ${formatDate(visite.date_visite)}`
+            content: `✅ **Le client est intéressé par l'offre suite à la visite**\n\n🏠 Adresse: ${visite.offres.adresse}\n💰 Loyer: ${visite.offres.prix.toLocaleString()} CHF/mois\n📅 Visite effectuée le: ${formatDate(visite.date_visite)}`,
+            offre_id: visite.offre_id
           });
         }
       }
@@ -234,7 +235,8 @@ export default function ClientCalendrier() {
             conversation_id: conv.id,
             sender_id: user?.id,
             sender_type: 'client',
-            content: `❌ **Le client a refusé l'offre suite à la visite**\n\n🏠 Adresse: ${visite.offres.adresse}\n📅 Visite effectuée le: ${formatDate(visite.date_visite)}`
+            content: `❌ **Le client a refusé l'offre suite à la visite**\n\n🏠 Adresse: ${visite.offres.adresse}\n📅 Visite effectuée le: ${formatDate(visite.date_visite)}`,
+            offre_id: visite.offre_id
           });
         }
       }

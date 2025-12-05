@@ -640,7 +640,8 @@ const Messagerie = () => {
               conversation_id: selectedConv,
               sender_id: user.id,
               sender_type: 'agent',
-              content: `✅ **Visite confirmée**\n\n📍 ${offre.adresse}\n📅 ${new Date(visiteNormale.date_visite).toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}\n🕐 ${new Date(visiteNormale.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}\n\nJe confirme votre présence pour cette visite. À bientôt !`
+              content: `✅ **Visite confirmée**\n\n📍 ${offre.adresse}\n📅 ${new Date(visiteNormale.date_visite).toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}\n🕐 ${new Date(visiteNormale.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}\n\nJe confirme votre présence pour cette visite. À bientôt !`,
+              offre_id: offreId
             });
 
             await supabase.from('offres').update({ statut: 'visite_confirmee' }).eq('id', offreId);
@@ -668,7 +669,8 @@ const Messagerie = () => {
               conversation_id: selectedConv,
               sender_id: user.id,
               sender_type: 'agent',
-              content: `✅ J'ai confirmé la visite déléguée pour ${offre.adresse}. Je vous ferai un retour détaillé après la visite.`
+              content: `✅ J'ai confirmé la visite déléguée pour ${offre.adresse}. Je vous ferai un retour détaillé après la visite.`,
+              offre_id: offreId
             });
 
             toast({ title: "Visite déléguée confirmée" });
@@ -694,7 +696,8 @@ const Messagerie = () => {
               conversation_id: selectedConv,
               sender_id: user.id,
               sender_type: 'agent',
-              content: `❌ Je ne suis malheureusement pas disponible pour cette date de visite déléguée. Pouvez-vous me proposer une autre date ?`
+              content: `❌ Je ne suis malheureusement pas disponible pour cette date de visite déléguée. Pouvez-vous me proposer une autre date ?`,
+              offre_id: offreId
             });
 
             toast({ title: "Visite déléguée refusée" });
