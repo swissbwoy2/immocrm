@@ -134,11 +134,21 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
+      </div>
+      
+      <Card className="w-full max-w-md login-card-float relative">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
-            <img src={logoImmorama} alt="Immo-Rama" className="h-20 object-contain" />
+            <img 
+              src={logoImmorama} 
+              alt="Immo-Rama" 
+              className="h-20 object-contain transition-transform duration-300 hover:scale-105" 
+            />
           </div>
           <div>
             <CardTitle className="text-2xl">Logisorama</CardTitle>
@@ -149,9 +159,9 @@ export default function Login() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '100ms' }}>
               <Label htmlFor="email">Email</Label>
-              <div className="relative">
+              <div className="relative input-focus-glow rounded-md transition-all duration-200">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   id="email"
@@ -159,16 +169,16 @@ export default function Login() {
                   placeholder="votre.email@example.ch"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                   required
                   disabled={loading}
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 animate-fade-in" style={{ animationDelay: '200ms' }}>
               <Label htmlFor="password">Mot de passe</Label>
-              <div className="relative">
+              <div className="relative input-focus-glow rounded-md transition-all duration-200">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   id="password"
@@ -176,15 +186,25 @@ export default function Login() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
                   required
                   disabled={loading}
                 />
               </div>
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Connexion...' : 'Se connecter'}
+            <Button 
+              type="submit" 
+              className="w-full btn-press animate-fade-in transition-all duration-200 hover:shadow-lg" 
+              style={{ animationDelay: '300ms' }}
+              disabled={loading}
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                  Connexion...
+                </span>
+              ) : 'Se connecter'}
             </Button>
 
             {/* Mot de passe oublié */}

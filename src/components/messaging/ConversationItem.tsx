@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { ChatAvatar } from './ChatAvatar';
 import { format, isToday, isYesterday } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Archive } from 'lucide-react';
 
 interface ConversationItemProps {
   name: string;
@@ -45,35 +46,54 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
     <button
       onClick={onClick}
       className={cn(
-        'w-full flex items-center gap-3 p-3 hover:bg-muted/50 transition-colors border-b border-border/50',
-        isSelected && 'bg-muted/70',
-        'focus:outline-none focus:bg-muted/50'
+        'w-full flex items-center gap-3 p-3 border-b border-border/50',
+        'transition-all duration-200 ease-out',
+        'hover:bg-muted/60 hover:translate-x-1',
+        'active:scale-[0.99]',
+        isSelected && 'bg-primary/10 border-l-2 border-l-primary hover:bg-primary/15',
+        isArchived && 'opacity-60',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50'
       )}
     >
-      <ChatAvatar name={name} avatarUrl={avatarUrl} size="md" />
+      <div className="relative">
+        <ChatAvatar name={name} avatarUrl={avatarUrl} size="md" />
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-primary text-primary-foreground text-[10px] font-bold rounded-full animate-bounce-soft">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+      </div>
       
       <div className="flex-1 min-w-0 text-left">
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="font-semibold text-sm text-foreground truncate">
+        <div className="flex items-center justify-between mb-0.5">
+          <h3 className={cn(
+            "font-semibold text-sm text-foreground truncate",
+            unreadCount > 0 && "text-foreground",
+            isSelected && "text-primary"
+          )}>
             {name}
-            {isArchived && (
-              <span className="ml-2 text-xs text-muted-foreground">(Archivée)</span>
-            )}
           </h3>
           {lastMessageTime && (
-            <span className="text-xs text-muted-foreground ml-2 shrink-0">
+            <span className={cn(
+              "text-[10px] ml-2 shrink-0",
+              unreadCount > 0 ? "text-primary font-semibold" : "text-muted-foreground"
+            )}>
               {formatMessageTime(lastMessageTime)}
             </span>
           )}
         </div>
         
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground truncate">
+        <div className="flex items-center justify-between gap-2">
+          <p className={cn(
+            "text-xs truncate",
+            unreadCount > 0 ? "text-foreground font-medium" : "text-muted-foreground"
+          )}>
             {lastMessage || 'Aucun message'}
           </p>
-          {unreadCount > 0 && (
-            <span className="ml-2 shrink-0 min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-primary text-primary-foreground text-xs font-medium rounded-full">
-              {unreadCount > 99 ? '99+' : unreadCount}
+          {isArchived && (
+            <span className="shrink-0 flex items-center gap-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+              <Archive className="h-3 w-3" />
+              Archivée
             </span>
           )}
         </div>
