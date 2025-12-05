@@ -79,6 +79,21 @@ const ClientVisitesDeleguees = lazy(() => import("./pages/client/VisitesDeleguee
 const ClientNotifications = lazy(() => import("./pages/client/Notifications"));
 const ClientParametres = lazy(() => import("./pages/client/Parametres"));
 
+// Apporteur pages
+const ApporteurDashboard = lazy(() => import("./pages/apporteur/Dashboard"));
+const ApporteurSoumettreClient = lazy(() => import("./pages/apporteur/SoumettreClient"));
+const ApporteurMesReferrals = lazy(() => import("./pages/apporteur/MesReferrals"));
+const ApporteurCommissions = lazy(() => import("./pages/apporteur/Commissions"));
+const ApporteurMonContrat = lazy(() => import("./pages/apporteur/MonContrat"));
+const ApporteurMonProfil = lazy(() => import("./pages/apporteur/MonProfil"));
+const ApporteurNotifications = lazy(() => import("./pages/apporteur/Notifications"));
+const ApporteurParametres = lazy(() => import("./pages/apporteur/Parametres"));
+
+// Admin Apporteurs pages
+const AdminApporteurs = lazy(() => import("./pages/admin/Apporteurs"));
+const AdminApporteurDetail = lazy(() => import("./pages/admin/ApporteurDetail"));
+const AdminReferrals = lazy(() => import("./pages/admin/Referrals"));
+
 // Optimized QueryClient with caching
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -165,6 +180,21 @@ const App = () => (
               <Route path="/client/documents" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDocuments /></AppLayout></ProtectedRoute>} />
               <Route path="/client/notifications" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientNotifications /></AppLayout></ProtectedRoute>} />
               <Route path="/client/parametres" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientParametres /></AppLayout></ProtectedRoute>} />
+
+              {/* Apporteur Routes */}
+              <Route path="/apporteur" element={<ProtectedRoute allowedRoles={['apporteur']}><AppLayout><ApporteurDashboard /></AppLayout></ProtectedRoute>} />
+              <Route path="/apporteur/soumettre-client" element={<ProtectedRoute allowedRoles={['apporteur']}><AppLayout><ApporteurSoumettreClient /></AppLayout></ProtectedRoute>} />
+              <Route path="/apporteur/mes-referrals" element={<ProtectedRoute allowedRoles={['apporteur']}><AppLayout><ApporteurMesReferrals /></AppLayout></ProtectedRoute>} />
+              <Route path="/apporteur/commissions" element={<ProtectedRoute allowedRoles={['apporteur']}><AppLayout><ApporteurCommissions /></AppLayout></ProtectedRoute>} />
+              <Route path="/apporteur/mon-contrat" element={<ProtectedRoute allowedRoles={['apporteur']}><AppLayout><ApporteurMonContrat /></AppLayout></ProtectedRoute>} />
+              <Route path="/apporteur/profil" element={<ProtectedRoute allowedRoles={['apporteur']}><AppLayout><ApporteurMonProfil /></AppLayout></ProtectedRoute>} />
+              <Route path="/apporteur/notifications" element={<ProtectedRoute allowedRoles={['apporteur']}><AppLayout><ApporteurNotifications /></AppLayout></ProtectedRoute>} />
+              <Route path="/apporteur/parametres" element={<ProtectedRoute allowedRoles={['apporteur']}><AppLayout><ApporteurParametres /></AppLayout></ProtectedRoute>} />
+
+              {/* Admin Apporteurs Routes */}
+              <Route path="/admin/apporteurs" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminApporteurs /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/apporteurs/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminApporteurDetail /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/referrals" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminReferrals /></AppLayout></ProtectedRoute>} />
 
               {/* Public Routes */}
               <Route path="/download/:token" element={<DownloadFiles />} />
