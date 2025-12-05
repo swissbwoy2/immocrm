@@ -72,6 +72,7 @@ const MesCandidatures = () => {
   const [sendingRecommendation, setSendingRecommendation] = useState(false);
   const [currentCandidatureId, setCurrentCandidatureId] = useState<string | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [showThankYouDialog, setShowThankYouDialog] = useState(false);
 
   const toggleCard = (offreId: string) => {
     setExpandedCards(prev => {
@@ -306,8 +307,21 @@ const MesCandidatures = () => {
     }
   };
 
-  const openGoogleMaps = () => {
+  const openGoogleMaps = async (candidatureId?: string) => {
     window.open('https://share.google/rQl4mbAJowzSW2V8m', '_blank');
+    
+    // Track the click and show thank you message
+    if (candidatureId) {
+      await supabase
+        .from('candidatures')
+        .update({ avis_google_envoye: true })
+        .eq('id', candidatureId);
+      
+      // Refresh data to update UI
+      loadData();
+    }
+    
+    setShowThankYouDialog(true);
   };
 
   if (loading) {
@@ -670,11 +684,12 @@ const MesCandidatures = () => {
                                 </Button>
                                 <Button 
                                   variant="outline"
-                                  onClick={openGoogleMaps}
+                                  onClick={() => openGoogleMaps(candidature?.id)}
                                   className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                                  disabled={candidature?.avis_google_envoye}
                                 >
                                   <Star className="h-4 w-4 mr-2" />
-                                  Noter sur Google
+                                  {candidature?.avis_google_envoye ? 'Merci pour votre avis !' : 'Noter sur Google'}
                                 </Button>
                               </div>
                             </div>
@@ -749,6 +764,36 @@ const MesCandidatures = () => {
             </Button>
             <Button onClick={handleSendRecommendations} disabled={sendingRecommendation}>
               {sendingRecommendation ? 'Envoi...' : 'Envoyer les recommandations'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Thank You Dialog */}
+      <Dialog open={showThankYouDialog} onOpenChange={setShowThankYouDialog}>
+        <DialogContent className="max-w-md text-center">
+          <DialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900 rounded-full flex items-center justify-center">
+                <Star className="h-8 w-8 text-amber-500" />
+              </div>
+            </div>
+            <DialogTitle className="text-2xl">Merci infiniment ! 🙏</DialogTitle>
+            <DialogDescription className="text-base mt-4 space-y-3">
+              <p>
+                Votre avis compte énormément pour nous et aide d'autres personnes 
+                à nous faire confiance dans leur recherche de logement.
+              </p>
+              <p className="text-amber-600 dark:text-amber-400 font-medium">
+                Grâce à vous, nous pouvons continuer à accompagner des familles 
+                vers leur nouveau chez-soi !
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button onClick={() => setShowThankYouDialog(false)} className="w-full">
+              <Sparkles className="h-4 w-4 mr-2" />
+              Avec plaisir !
             </Button>
           </DialogFooter>
         </DialogContent>

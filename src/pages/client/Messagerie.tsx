@@ -70,6 +70,7 @@ const Messagerie = () => {
   const [delegateDialogOpen, setDelegateDialogOpen] = useState(false);
   const [candidatureDialogOpen, setCandidatureDialogOpen] = useState(false);
   const [recommendationDialogOpen, setRecommendationDialogOpen] = useState(false);
+  const [thankYouDialogOpen, setThankYouDialogOpen] = useState(false);
   const [selectedOffre, setSelectedOffre] = useState<any>(null);
   const [selectedCandidature, setSelectedCandidature] = useState<any>(null);
   const [visitDate, setVisitDate] = useState("");
@@ -603,6 +604,7 @@ const Messagerie = () => {
               .update({ avis_google_envoye: true })
               .eq('id', candidature.id);
           }
+          setThankYouDialogOpen(true);
           return;
 
         case 'recommander':
@@ -1504,6 +1506,36 @@ const Messagerie = () => {
             <Button variant="outline" onClick={() => setRecommendationDialogOpen(false)}>Annuler</Button>
             <Button onClick={sendRecommendations}>
               <Mail className="h-4 w-4 mr-2" /> Envoyer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Remerciement Google */}
+      <Dialog open={thankYouDialogOpen} onOpenChange={setThankYouDialogOpen}>
+        <DialogContent className="max-w-md text-center">
+          <DialogHeader>
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900 rounded-full flex items-center justify-center">
+                <Star className="h-8 w-8 text-amber-500" />
+              </div>
+            </div>
+            <DialogTitle className="text-2xl">Merci infiniment ! 🙏</DialogTitle>
+            <DialogDescription className="text-base mt-4 space-y-3">
+              <p>
+                Votre avis compte énormément pour nous et aide d'autres personnes 
+                à nous faire confiance dans leur recherche de logement.
+              </p>
+              <p className="text-amber-600 dark:text-amber-400 font-medium">
+                Grâce à vous, nous pouvons continuer à accompagner des familles 
+                vers leur nouveau chez-soi !
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button onClick={() => setThankYouDialogOpen(false)} className="w-full">
+              <PartyPopper className="h-4 w-4 mr-2" />
+              Avec plaisir !
             </Button>
           </DialogFooter>
         </DialogContent>

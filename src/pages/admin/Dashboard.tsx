@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
 import { AdminStatsSection } from '@/components/stats/AdminStatsSection';
+import { RecommendationStats } from '@/components/stats/RecommendationStats';
 
 const adminMenu = [
   { name: 'Tableau de bord', icon: Users, path: '/admin' },
@@ -272,6 +273,11 @@ export default function AdminDashboard() {
               transactions={transactions}
               offres={offres}
             />
+          </div>
+
+          {/* Statistiques de recommandation */}
+          <div className="mb-8">
+            <RecommendationStats />
           </div>
 
           {/* Répartition des agents */}
