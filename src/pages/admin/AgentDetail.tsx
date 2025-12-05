@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Mail, Phone, Users, Calendar, Pencil, Save, X, Camera, Power, Target, BarChart3, Send, Eye, FileCheck, UserPlus } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Users, Calendar, Pencil, Save, X, Camera, Power, Target, BarChart3, Send, Eye, FileCheck, UserPlus, MessageSquare } from "lucide-react";
 import { AgentGoalsDialog } from "@/components/stats/AgentGoalsDialog";
 import { AgentStatsSection } from "@/components/stats/AgentStatsSection";
 import { AgentBadges } from "@/components/stats/AgentBadges";
@@ -396,6 +396,53 @@ const AgentDetail = () => {
     }
   };
 
+  const handleSendMessage = async () => {
+    if (!agent) return;
+    
+    try {
+      // Get current admin user id
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      // Check if a conversation already exists
+      const { data: existingConv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('agent_id', agent.id)
+        .eq('admin_user_id', user.id)
+        .eq('conversation_type', 'admin-agent')
+        .maybeSingle();
+      
+      if (existingConv) {
+        navigate(`/admin/messagerie?conversationId=${existingConv.id}`);
+        return;
+      }
+      
+      // Create a new admin-agent conversation
+      const { data, error } = await supabase
+        .from('conversations')
+        .insert({
+          agent_id: agent.id,
+          admin_user_id: user.id,
+          conversation_type: 'admin-agent',
+          last_message_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      navigate(`/admin/messagerie?conversationId=${data.id}`);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de créer la conversation',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -510,7 +557,11 @@ const AgentDetail = () => {
                         <Pencil className="h-4 w-4 mr-1" />
                         Modifier
                       </Button>
-                      <AgentGoalsDialog 
+                      <Button size="sm" variant="outline" onClick={handleSendMessage}>
+                        <MessageSquare className="h-4 w-4 mr-1" />
+                        Message
+                      </Button>
+                      <AgentGoalsDialog
                         agentId={agent.id} 
                         agentName={`${profile.prenom} ${profile.nom}`}
                         trigger={
