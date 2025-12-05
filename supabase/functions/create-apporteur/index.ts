@@ -23,31 +23,29 @@ Deno.serve(async (req) => {
 
     console.log(`Creating apporteur for ${email}`);
 
-    // Generate a random password
-    const password = crypto.randomUUID().slice(0, 12);
-
-    // Create the user
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    // Use inviteUserByEmail to automatically send invitation email
+    const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
       email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        nom,
-        prenom,
-      },
-    });
+      {
+        redirectTo: `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/first-login`,
+        data: {
+          nom,
+          prenom,
+        },
+      }
+    );
 
-    if (authError) {
-      console.error('Auth error:', authError);
-      throw new Error(`Erreur lors de la création de l'utilisateur: ${authError.message}`);
+    if (inviteError) {
+      console.error('Invite error:', inviteError);
+      throw new Error(`Erreur lors de l'invitation: ${inviteError.message}`);
     }
 
-    if (!authData.user) {
+    if (!inviteData.user) {
       throw new Error('Utilisateur non créé');
     }
 
-    const userId = authData.user.id;
-    console.log('User created:', userId);
+    const userId = inviteData.user.id;
+    console.log('User invited:', userId);
 
     // Create profile
     const { error: profileError } = await supabase
@@ -81,7 +79,7 @@ Deno.serve(async (req) => {
       throw new Error(`Erreur lors de l'attribution du rôle: ${roleError.message}`);
     }
 
-    // Create apporteur entry
+    // Create apporteur entry with correct values (10% commission, no minimums)
     const dateExpiration = new Date();
     dateExpiration.setFullYear(dateExpiration.getFullYear() + 1);
 
@@ -91,9 +89,9 @@ Deno.serve(async (req) => {
         user_id: userId,
         statut: 'en_attente',
         date_expiration: dateExpiration.toISOString(),
-        taux_commission: 20,
-        minimum_vente: 500,
-        minimum_location: 150,
+        taux_commission: 10,
+        minimum_vente: 0,
+        minimum_location: 0,
       })
       .select()
       .single();
@@ -106,20 +104,7 @@ Deno.serve(async (req) => {
 
     console.log('Apporteur created:', apporteurData.id);
 
-    // Generate magic link for password setup
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
-      email,
-      options: {
-        redirectTo: `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/first-login`,
-      },
-    });
-
-    if (linkError) {
-      console.warn('Could not generate magic link:', linkError);
-    }
-
-    // Create notification for admin
+    // Create notification for the apporteur
     await supabase
       .from('notifications')
       .insert({
@@ -134,7 +119,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         apporteur: apporteurData,
-        magicLink: linkData?.properties?.action_link,
+        message: 'Apporteur créé avec succès. Un email d\'invitation a été envoyé.',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
