@@ -266,6 +266,51 @@ export default function AdminOffresEnvoyees() {
           });
       }
 
+      // Récupérer le nom du client cible pour la personnalisation
+      const targetClientProfile = profiles.get(targetClient.user_id);
+      const clientName = targetClientProfile 
+        ? `${targetClientProfile.prenom} ${targetClientProfile.nom}` 
+        : 'Client';
+
+      // Créer le message complet comme dans EnvoyerOffre
+      const messageLines = [
+        `Nouvelle Offre pour Votre Recherche d'Appartement`,
+        ``,
+        `Bonjour ${clientName} 👋,`,
+        ``,
+        `Nous avons trouvé une offre qui pourrait correspondre à vos critères de recherche ! Voici les détails de ce bien immobilier :`,
+        ``,
+        `📍 Localisation : ${selectedOffre.adresse}`,
+        `💰 Prix : ${selectedOffre.prix.toLocaleString()} CHF`,
+      ];
+      
+      if (selectedOffre.surface) messageLines.push(`📐 Surface : ${selectedOffre.surface} m²`);
+      if (selectedOffre.pieces) messageLines.push(`🏠 Nombre de pièces : ${selectedOffre.pieces}`);
+      if (selectedOffre.etage) messageLines.push(`🏢 Étage : ${selectedOffre.etage}`);
+      if (selectedOffre.disponibilite) messageLines.push(`📅 Disponibilité : ${selectedOffre.disponibilite}`);
+      if (selectedOffre.type_bien) messageLines.push(`🏘️ Type de bien : ${selectedOffre.type_bien}`);
+      if (selectedOffre.description) {
+        messageLines.push(``);
+        messageLines.push(`Description :`);
+        messageLines.push(selectedOffre.description);
+      }
+      if (selectedOffre.lien_annonce) {
+        messageLines.push(``);
+        messageLines.push(`🔗 Voir l'annonce complète : ${selectedOffre.lien_annonce}`);
+      }
+      if (selectedOffre.commentaires) {
+        messageLines.push(``);
+        messageLines.push(`💬 Commentaires : ${selectedOffre.commentaires}`);
+      }
+      
+      messageLines.push(``);
+      messageLines.push(`Pour toute question, n'hésitez pas à nous appeler au +41 21 634 28 39 ou à répondre directement à ce message.`);
+      messageLines.push(``);
+      messageLines.push(`Cordialement,`);
+      messageLines.push(`L'équipe Immo-rama.ch`);
+
+      const messageContent = messageLines.join('\n');
+
       // Créer le message avec l'offre attachée (au nom de l'agent)
       const { error: messageError } = await supabase
         .from('messages')
@@ -273,7 +318,7 @@ export default function AdminOffresEnvoyees() {
           conversation_id: conversationId,
           sender_id: targetClient.agent_id,
           sender_type: 'agent',
-          content: `Nouvelle offre : ${selectedOffre.adresse} - CHF ${selectedOffre.prix.toLocaleString()}/mois`,
+          content: messageContent,
           offre_id: newOffre.id
         });
 
