@@ -154,12 +154,50 @@ export const ResendOfferDialog = ({
           }
         }
 
-        // Créer le message avec l'offre
-        const messageContent = `Nouvelle offre : ${offer.adresse}\nPrix : CHF ${offer.prix}.-${
-          offer.pieces ? `\nPièces : ${offer.pieces}` : ''
-        }${offer.surface ? `\nSurface : ${offer.surface} m²` : ''}${
-          offer.description ? `\n\n${offer.description}` : ''
-        }${offer.lien_annonce ? `\n\nLien annonce : ${offer.lien_annonce}` : ''}`;
+        // Récupérer le nom du client pour la personnalisation
+        const client = clients.find(c => c.id === clientId);
+        const clientName = client?.profiles 
+          ? `${client.profiles.prenom} ${client.profiles.nom}` 
+          : 'Client';
+
+        // Créer le message complet comme dans EnvoyerOffre
+        const messageLines = [
+          `Nouvelle Offre pour Votre Recherche d'Appartement`,
+          ``,
+          `Bonjour ${clientName} 👋,`,
+          ``,
+          `Nous avons trouvé une offre qui pourrait correspondre à vos critères de recherche ! Voici les détails de ce bien immobilier :`,
+          ``,
+          `📍 Localisation : ${offer.adresse}`,
+          `💰 Prix : ${offer.prix.toLocaleString()} CHF`,
+        ];
+        
+        if (offer.surface) messageLines.push(`📐 Surface : ${offer.surface} m²`);
+        if (offer.pieces) messageLines.push(`🏠 Nombre de pièces : ${offer.pieces}`);
+        if (offer.etage) messageLines.push(`🏢 Étage : ${offer.etage}`);
+        if (offer.disponibilite) messageLines.push(`📅 Disponibilité : ${offer.disponibilite}`);
+        if (offer.type_bien) messageLines.push(`🏘️ Type de bien : ${offer.type_bien}`);
+        if (offer.description) {
+          messageLines.push(``);
+          messageLines.push(`Description :`);
+          messageLines.push(offer.description);
+        }
+        if (offer.lien_annonce) {
+          messageLines.push(``);
+          messageLines.push(`🔗 Voir l'annonce complète : ${offer.lien_annonce}`);
+        }
+        if (offer.commentaires) {
+          messageLines.push(``);
+          messageLines.push(`💬 Commentaires : ${offer.commentaires}`);
+        }
+        
+        messageLines.push(``);
+        messageLines.push(`Pour toute question, n'hésitez pas à nous appeler au +41 21 634 28 39 ou à répondre directement à ce message.`);
+        messageLines.push(``);
+        messageLines.push(`Cordialement,`);
+        messageLines.push(`L'équipe Immo-rama.ch`);
+
+        const messageContent = messageLines.join('\n');
 
         const { error: messageError } = await supabase.from('messages').insert({
           conversation_id: conversationId,
