@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -87,6 +87,17 @@ const getMenuForRole = (role: string) => {
         { name: 'Mes documents', icon: FileText, path: '/client/documents', notifKey: null },
         { name: 'Notifications', icon: Bell, path: '/client/notifications', notifKey: 'total' },
         { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
+      ];
+    case 'apporteur':
+      return [
+        { name: 'Tableau de bord', icon: LayoutDashboard, path: '/apporteur', notifKey: null },
+        { name: 'Soumettre un client', icon: UserPlus, path: '/apporteur/soumettre-client', notifKey: null },
+        { name: 'Mes referrals', icon: Handshake, path: '/apporteur/mes-referrals', notifKey: null },
+        { name: 'Commissions', icon: Wallet, path: '/apporteur/commissions', notifKey: null },
+        { name: 'Mon contrat', icon: FileText, path: '/apporteur/mon-contrat', notifKey: null },
+        { name: 'Mon profil', icon: User, path: '/apporteur/profil', notifKey: null },
+        { name: 'Notifications', icon: Bell, path: '/apporteur/notifications', notifKey: 'total' },
+        { name: 'Paramètres', icon: Settings, path: '/apporteur/parametres', notifKey: null },
       ];
     default:
       return [];
