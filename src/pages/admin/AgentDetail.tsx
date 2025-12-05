@@ -416,7 +416,7 @@ const AgentDetail = () => {
       if (existingConv) {
         navigate({
           pathname: '/admin/messagerie',
-          search: `conversationId=${existingConv.id}`
+          search: `?conversationId=${existingConv.id}`
         });
         return;
       }
@@ -437,7 +437,7 @@ const AgentDetail = () => {
       
       navigate({
         pathname: '/admin/messagerie',
-        search: `conversationId=${data.id}`
+        search: `?conversationId=${data.id}`
       });
     } catch (error) {
       console.error('Error creating conversation:', error);

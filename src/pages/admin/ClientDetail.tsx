@@ -518,7 +518,7 @@ export default function ClientDetail() {
       if (existingConv) {
         navigate({
           pathname: '/admin/messagerie',
-          search: `conversationId=${existingConv.id}`
+          search: `?conversationId=${existingConv.id}`
         });
         return;
       }
@@ -542,7 +542,7 @@ export default function ClientDetail() {
       
       navigate({
         pathname: '/admin/messagerie',
-        search: `conversationId=${data.id}`
+        search: `?conversationId=${data.id}`
       });
     } catch (error) {
       console.error('Error creating conversation:', error);
