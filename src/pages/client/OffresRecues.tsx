@@ -834,7 +834,8 @@ const OffresRecues = () => {
         offre_id: selectedOffre.id,
         client_id: clientData.id,
         message_client: messageClient,
-        dossier_complet: true
+        dossier_complet: true,
+        statut: 'candidature_deposee'
       });
 
       await supabase
@@ -1139,10 +1140,6 @@ const OffresRecues = () => {
                       <Button size="sm" variant="outline" onClick={() => handleDeleguerVisite(offre)}>
                         <Calendar className="mr-2 h-4 w-4" />
                         Déléguer à l'agent
-                      </Button>
-                      <Button size="sm" variant="secondary" onClick={() => handlePostulerDirect(offre)}>
-                        <User className="mr-2 h-4 w-4" />
-                        Demander aide agent
                       </Button>
                       {offre.statut !== 'interesse' && (
                         <>
