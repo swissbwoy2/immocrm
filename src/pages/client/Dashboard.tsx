@@ -431,16 +431,19 @@ export default function ClientDashboard() {
     <>
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 md:p-8">
-          <div className="mb-8 flex items-center justify-between">
+          {/* Header with personalized welcome */}
+          <div className="mb-8 flex items-center justify-between page-header">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Mon tableau de bord</h1>
+              <h1 className="text-3xl font-bold text-foreground">
+                Bonjour{clientProfile?.prenom ? `, ${clientProfile.prenom}` : ''} 👋
+              </h1>
               <p className="text-muted-foreground">
                 {isAcheteur 
                   ? 'Suivez l\'avancement de votre projet d\'achat immobilier' 
                   : 'Suivez l\'avancement de votre recherche de logement'}
               </p>
               {isAcheteur && (
-                <Badge variant="outline" className="mt-2 text-blue-600 border-blue-300">
+                <Badge variant="outline" className="mt-2 text-blue-600 border-blue-300 animate-fade-in">
                   <Home className="w-3 h-3 mr-1" />
                   Achat immobilier
                 </Badge>
@@ -448,17 +451,26 @@ export default function ClientDashboard() {
             </div>
             <div className="flex gap-2">
               {counts.new_message > 0 && (
-                <Button variant="outline" onClick={() => navigate('/client/messagerie')} className="relative">
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/client/messagerie')} 
+                  className="relative animate-fade-in hover:scale-105 transition-transform"
+                >
                   <Bell className="w-4 h-4 mr-2" />
                   Messages
-                  <Badge variant="destructive" className="ml-2">{counts.new_message}</Badge>
+                  <Badge variant="destructive" className="ml-2 animate-bounce-soft">{counts.new_message}</Badge>
                 </Button>
               )}
               {counts.new_offer > 0 && (
-                <Button variant="outline" onClick={() => navigate('/client/offres-recues')} className="relative">
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/client/offres-recues')} 
+                  className="relative animate-fade-in hover:scale-105 transition-transform"
+                  style={{ animationDelay: '100ms' }}
+                >
                   <Send className="w-4 h-4 mr-2" />
                   Offres
-                  <Badge variant="destructive" className="ml-2">{counts.new_offer}</Badge>
+                  <Badge variant="destructive" className="ml-2 animate-bounce-soft">{counts.new_offer}</Badge>
                 </Button>
               )}
             </div>
@@ -466,10 +478,10 @@ export default function ClientDashboard() {
 
           {/* Alerte compte non actif */}
           {profileActif === false && (
-            <Card className="mb-6 border-orange-500 bg-orange-50 dark:bg-orange-950/30">
+            <Card className="mb-6 border-orange-500 bg-orange-50 dark:bg-orange-950/30 animate-fade-in">
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
-                  <AlertTriangle className="w-5 h-5 text-orange-500 mt-0.5" />
+                  <AlertTriangle className="w-5 h-5 text-orange-500 mt-0.5 animate-pulse-soft" />
                   <div className="flex-1">
                     <p className="font-medium text-foreground">
                       ⏳ Compte en attente d'activation
@@ -478,7 +490,7 @@ export default function ClientDashboard() {
                       Votre profil n'a pas encore été activé par votre agent. Veuillez patienter ou contacter votre agent pour activer votre compte.
                     </p>
                     {agent && (
-                      <Button size="sm" variant="outline" className="mt-4" onClick={() => navigate('/client/messagerie')}>
+                      <Button size="sm" variant="outline" className="mt-4 hover:scale-105 transition-transform" onClick={() => navigate('/client/messagerie')}>
                         Contacter mon agent
                       </Button>
                     )}
@@ -490,7 +502,7 @@ export default function ClientDashboard() {
 
           {/* Alerte documents manquants */}
           {profileActif !== false && (
-            <div className="mb-6">
+            <div className="mb-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
               <MissingDocumentsAlert 
                 documents={documents} 
                 candidatureStatut={candidatures[0]?.statut}

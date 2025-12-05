@@ -1,3 +1,4 @@
+import React from 'react';
 import { Bell, Check, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +36,18 @@ const getNotificationIcon = (type: string) => {
 export function NotificationBell() {
   const { notifications, counts, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const navigate = useNavigate();
+  const [isAnimating, setIsAnimating] = React.useState(false);
+  const prevCount = React.useRef(counts.total);
+
+  // Animate bell when new notifications arrive
+  React.useEffect(() => {
+    if (counts.total > prevCount.current) {
+      setIsAnimating(true);
+      const timer = setTimeout(() => setIsAnimating(false), 500);
+      return () => clearTimeout(timer);
+    }
+    prevCount.current = counts.total;
+  }, [counts.total]);
 
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.read) {
@@ -50,25 +63,38 @@ export function NotificationBell() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className={cn(
+            "relative transition-transform duration-200 hover:scale-110",
+            isAnimating && "notification-bell-ring"
+          )}
+        >
+          <Bell className={cn(
+            "h-5 w-5 transition-colors",
+            counts.total > 0 && "text-primary"
+          )} />
           {counts.total > 0 && (
             <NotificationBadge 
               count={counts.total} 
-              className="absolute -top-1 -right-1"
+              className="absolute -top-1 -right-1 animate-bounce-in"
             />
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h4 className="font-semibold">Notifications</h4>
+      <PopoverContent className="w-80 p-0 animate-scale-in" align="end">
+        <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+          <h4 className="font-semibold flex items-center gap-2">
+            <Bell className="h-4 w-4" />
+            Notifications
+          </h4>
           {counts.total > 0 && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => markAllAsRead()}
-              className="text-xs"
+              className="text-xs hover:bg-primary/10 transition-colors"
             >
               <Check className="h-3 w-3 mr-1" />
               Tout marquer lu
@@ -78,22 +104,26 @@ export function NotificationBell() {
         
         <ScrollArea className="h-[300px]">
           {recentNotifications.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              Aucune notification
+            <div className="p-8 text-center text-muted-foreground empty-state">
+              <Bell className="h-12 w-12 mx-auto mb-3 opacity-20 empty-state-icon" />
+              <p className="text-sm">Aucune notification</p>
             </div>
           ) : (
             <div className="divide-y">
-              {recentNotifications.map((notification) => (
+              {recentNotifications.map((notification, index) => (
                 <div
                   key={notification.id}
                   className={cn(
-                    "p-3 hover:bg-muted/50 cursor-pointer transition-colors",
-                    !notification.read && "bg-primary/5"
+                    "p-3 cursor-pointer transition-all duration-200",
+                    "hover:bg-muted/50 hover:translate-x-1",
+                    !notification.read && "bg-primary/5 border-l-2 border-l-primary",
+                    "animate-fade-in"
                   )}
+                  style={{ animationDelay: `${index * 50}ms` }}
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <div className="flex items-start gap-3">
-                    <span className="text-lg">
+                    <span className="text-lg animate-bounce-in" style={{ animationDelay: `${index * 50 + 100}ms` }}>
                       {getNotificationIcon(notification.type)}
                     </span>
                     <div className="flex-1 min-w-0">
@@ -107,13 +137,13 @@ export function NotificationBell() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 shrink-0"
+                          className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
                           onClick={(e) => {
                             e.stopPropagation();
                             deleteNotification(notification.id);
                           }}
                         >
-                          <Trash2 className="h-3 w-3 text-muted-foreground" />
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                       {notification.message && (
@@ -129,7 +159,7 @@ export function NotificationBell() {
                       </p>
                     </div>
                     {!notification.read && (
-                      <div className="w-2 h-2 bg-primary rounded-full shrink-0 mt-1" />
+                      <div className="w-2 h-2 bg-primary rounded-full shrink-0 mt-1 animate-pulse-soft" />
                     )}
                   </div>
                 </div>
@@ -139,13 +169,12 @@ export function NotificationBell() {
         </ScrollArea>
         
         {notifications.length > 10 && (
-          <div className="p-2 border-t text-center">
+          <div className="p-2 border-t text-center bg-muted/20">
             <Button
               variant="ghost"
               size="sm"
-              className="text-xs w-full"
+              className="text-xs w-full hover:bg-primary/10 transition-colors"
               onClick={() => {
-                // Navigate to notifications page based on role
                 const path = window.location.pathname.split('/')[1];
                 navigate(`/${path}/notifications`);
               }}

@@ -254,114 +254,142 @@ export default function AgentDashboard() {
   return (
     <main className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8 space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
+          {/* Header with personalized welcome */}
+          <div className="flex items-center justify-between page-header">
             <div>
               <h1 className="text-3xl font-bold">Tableau de bord</h1>
               <p className="text-muted-foreground mt-1">Gérez vos clients et vos offres</p>
             </div>
             {counts.new_message > 0 && (
-              <Button variant="outline" onClick={() => navigate('/agent/messagerie')} className="relative">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/agent/messagerie')} 
+                className="relative animate-fade-in hover:scale-105 transition-transform"
+              >
                 <Bell className="w-4 h-4 mr-2" />
                 Messages
-                <Badge variant="destructive" className="ml-2">{counts.new_message}</Badge>
+                <Badge variant="destructive" className="ml-2 animate-bounce-soft">{counts.new_message}</Badge>
               </Button>
             )}
           </div>
 
-          {/* KPIs - Responsive grid */}
+          {/* KPIs - Responsive grid with staggered animations */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4 xl:gap-4 2xl:grid-cols-5">
-            <KPICard 
-              title="Clients actifs" 
-              value={clientsActifs} 
-              icon={Users}
-              onClick={() => navigate('/agent/mes-clients')}
-            />
-            <KPICard 
-              title="Location" 
-              value={clientsLocation} 
-              icon={Key}
-              onClick={() => navigate('/agent/mes-clients')}
-              subtitle="clients"
-            />
-            <KPICard 
-              title="Achat" 
-              value={clientsAchat} 
-              icon={Home}
-              onClick={() => navigate('/agent/mes-clients')}
-              variant={clientsAchat > 0 ? 'success' : 'default'}
-              subtitle="clients"
-            />
-            <KPICard 
-              title="Offres envoyées" 
-              value={countUniqueOffres(offres)} 
-              icon={Send}
-              onClick={() => navigate('/agent/offres-envoyees')}
-            />
-            <KPICard 
-              title="Candidatures" 
-              value={candidatures.length} 
-              icon={FileCheck}
-              onClick={() => navigate('/agent/candidatures')}
-              variant={candidatures.filter(c => c.statut === 'en_attente').length > 0 ? 'warning' : 'default'}
-              subtitle={`${candidatures.filter(c => c.statut === 'en_attente').length} en attente`}
-            />
-            <KPICard 
-              title="Messages non lus" 
-              value={counts.new_message} 
-              icon={MessageSquare}
-              onClick={() => navigate('/agent/messagerie')}
-              variant={counts.new_message > 0 ? 'danger' : 'default'}
-            />
-            <KPICard 
-              title="Affaires conclues" 
-              value={transactions.filter(t => t.statut === 'conclue').length} 
-              icon={CheckCircle}
-              variant="success"
-              subtitle="total"
-              onClick={() => navigate('/agent/transactions')}
-            />
-            <KPICard 
-              title="Commission pot." 
-              value={`${totalCommissionPotentielle.toLocaleString()}`} 
-              icon={DollarSign}
-              variant="default"
-              subtitle="CHF (3 mois)"
-            />
-            <KPICard 
-              title="Ce mois" 
-              value={`${commissionsCeMois.toLocaleString()}`} 
-              icon={DollarSign}
-              variant="success"
-              subtitle={`CHF (${transactionsCeMois.length} affaire${transactionsCeMois.length > 1 ? 's' : ''})`}
-              onClick={() => navigate('/agent/transactions')}
-            />
+            <div className="animate-fade-in" style={{ animationDelay: '0ms' }}>
+              <KPICard 
+                title="Clients actifs" 
+                value={clientsActifs} 
+                icon={Users}
+                onClick={() => navigate('/agent/mes-clients')}
+              />
+            </div>
+            <div className="animate-fade-in" style={{ animationDelay: '50ms' }}>
+              <KPICard 
+                title="Location" 
+                value={clientsLocation} 
+                icon={Key}
+                onClick={() => navigate('/agent/mes-clients')}
+                subtitle="clients"
+              />
+            </div>
+            <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+              <KPICard 
+                title="Achat" 
+                value={clientsAchat} 
+                icon={Home}
+                onClick={() => navigate('/agent/mes-clients')}
+                variant={clientsAchat > 0 ? 'success' : 'default'}
+                subtitle="clients"
+              />
+            </div>
+            <div className="animate-fade-in" style={{ animationDelay: '150ms' }}>
+              <KPICard 
+                title="Offres envoyées" 
+                value={countUniqueOffres(offres)} 
+                icon={Send}
+                onClick={() => navigate('/agent/offres-envoyees')}
+              />
+            </div>
+            <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+              <KPICard 
+                title="Candidatures" 
+                value={candidatures.length} 
+                icon={FileCheck}
+                onClick={() => navigate('/agent/candidatures')}
+                variant={candidatures.filter(c => c.statut === 'en_attente').length > 0 ? 'warning' : 'default'}
+                subtitle={`${candidatures.filter(c => c.statut === 'en_attente').length} en attente`}
+              />
+            </div>
+            <div className="animate-fade-in" style={{ animationDelay: '250ms' }}>
+              <KPICard 
+                title="Messages non lus" 
+                value={counts.new_message} 
+                icon={MessageSquare}
+                onClick={() => navigate('/agent/messagerie')}
+                variant={counts.new_message > 0 ? 'danger' : 'default'}
+              />
+            </div>
+            <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
+              <KPICard 
+                title="Affaires conclues" 
+                value={transactions.filter(t => t.statut === 'conclue').length} 
+                icon={CheckCircle}
+                variant="success"
+                subtitle="total"
+                onClick={() => navigate('/agent/transactions')}
+              />
+            </div>
+            <div className="animate-fade-in" style={{ animationDelay: '350ms' }}>
+              <KPICard 
+                title="Commission pot." 
+                value={`${totalCommissionPotentielle.toLocaleString()}`} 
+                icon={DollarSign}
+                variant="default"
+                subtitle="CHF (3 mois)"
+              />
+            </div>
+            <div className="animate-fade-in" style={{ animationDelay: '400ms' }}>
+              <KPICard 
+                title="Ce mois" 
+                value={`${commissionsCeMois.toLocaleString()}`} 
+                icon={DollarSign}
+                variant="success"
+                subtitle={`CHF (${transactionsCeMois.length} affaire${transactionsCeMois.length > 1 ? 's' : ''})`}
+                onClick={() => navigate('/agent/transactions')}
+              />
+            </div>
           </div>
 
           {/* Section Statistiques détaillées */}
-          <AgentStatsSection
-            offres={offres}
-            transactions={transactions}
-            candidatures={candidatures}
-            clients={clients}
-            agentId={agent?.id || ''}
-          />
+          <div className="animate-fade-in" style={{ animationDelay: '450ms' }}>
+            <AgentStatsSection
+              offres={offres}
+              transactions={transactions}
+              candidatures={candidatures}
+              clients={clients}
+              agentId={agent?.id || ''}
+            />
+          </div>
 
           {/* Objectifs journaliers par défaut */}
-          <DefaultGoalsSection
-            agentId={agent?.id || ''}
-            offres={offres}
-            visites={visites}
-            candidatures={candidatures}
-            clients={clients}
-          />
+          <div className="animate-fade-in" style={{ animationDelay: '500ms' }}>
+            <DefaultGoalsSection
+              agentId={agent?.id || ''}
+              offres={offres}
+              visites={visites}
+              candidatures={candidatures}
+              clients={clients}
+            />
+          </div>
 
           {/* Badges et récompenses */}
-          <AgentBadges agentId={agent?.id || ''} />
+          <div className="animate-fade-in" style={{ animationDelay: '550ms' }}>
+            <AgentBadges agentId={agent?.id || ''} />
+          </div>
 
           {/* Visites déléguées */}
           {visitesDelegues.length > 0 && (
-            <Card className="border-primary/20 bg-primary/5">
+            <Card className="border-primary/20 bg-primary/5 animate-fade-in card-interactive" style={{ animationDelay: '600ms' }}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-lg font-semibold flex items-center gap-2">
