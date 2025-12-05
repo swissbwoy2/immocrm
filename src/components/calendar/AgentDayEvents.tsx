@@ -73,9 +73,15 @@ export function AgentDayEvents({
 }: AgentDayEventsProps) {
   if (!date) {
     return (
-      <div className="bg-card rounded-lg border p-4 h-full flex items-center justify-center">
-        <p className="text-muted-foreground text-center">
-          Sélectionnez un jour pour voir les événements
+      <div className="bg-card rounded-xl border shadow-sm p-6 h-full flex flex-col items-center justify-center animate-fade-in">
+        <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4 animate-pulse-soft">
+          <Calendar className="h-8 w-8 text-muted-foreground/50" />
+        </div>
+        <p className="text-muted-foreground text-center font-medium">
+          Sélectionnez un jour
+        </p>
+        <p className="text-muted-foreground/60 text-sm text-center mt-1">
+          pour voir les événements
         </p>
       </div>
     );
@@ -151,23 +157,38 @@ export function AgentDayEvents({
   });
 
   return (
-    <div className="bg-card rounded-lg border h-full flex flex-col">
-      <div className="p-4 border-b">
+    <div className="bg-card rounded-xl border shadow-sm h-full flex flex-col animate-fade-in">
+      <div className="p-4 border-b bg-gradient-to-r from-primary/5 to-transparent">
         <h3 className="font-semibold flex items-center gap-2">
-          <Calendar className="h-4 w-4" />
-          {format(date, 'EEEE d MMMM yyyy', { locale: fr })}
+          <div className="p-1.5 rounded-lg bg-primary/10">
+            <Calendar className="h-4 w-4 text-primary" />
+          </div>
+          <span className="capitalize">{format(date, 'EEEE d MMMM', { locale: fr })}</span>
         </h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          {allItems.length} élément{allItems.length > 1 ? 's' : ''} ({visites.length} visite{visites.length > 1 ? 's' : ''})
+        <p className="text-sm text-muted-foreground mt-1 ml-9">
+          {allItems.length === 0 ? (
+            'Aucun événement'
+          ) : (
+            <>
+              <span className="font-medium text-foreground">{allItems.length}</span> élément{allItems.length > 1 ? 's' : ''}
+              {visites.length > 0 && (
+                <span className="text-blue-600 dark:text-blue-400"> • {visites.length} visite{visites.length > 1 ? 's' : ''}</span>
+              )}
+            </>
+          )}
         </p>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-4">
           {allItems.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              Aucun événement ce jour
-            </p>
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                <Calendar className="h-6 w-6 text-muted-foreground/50" />
+              </div>
+              <p className="text-muted-foreground font-medium">Aucun événement</p>
+              <p className="text-muted-foreground/60 text-sm mt-1">Journée libre</p>
+            </div>
           ) : (
             <div className="space-y-3">
               {allItems.map((item, idx) => {

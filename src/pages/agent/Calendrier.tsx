@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar, Pencil, Trash2, MapPin, Home, Phone, Upload, X, Image, Video } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar, Pencil, Trash2, MapPin, Home, Phone, Upload, X, Image, Video, Loader2, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const candidatureStatusLabels: Record<string, string> = {
   en_attente: 'En attente',
@@ -625,8 +626,12 @@ export default function AgentCalendrier() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <div className="relative">
+          <div className="w-16 h-16 rounded-full border-4 border-primary/20"></div>
+          <div className="absolute top-0 left-0 w-16 h-16 rounded-full border-4 border-transparent border-t-primary animate-spin"></div>
+        </div>
+        <p className="text-muted-foreground animate-pulse">Chargement du calendrier...</p>
       </div>
     );
   }
@@ -634,21 +639,28 @@ export default function AgentCalendrier() {
   return (
     <div className="p-4 md:p-6 space-y-6 overflow-auto h-full">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <CalendarIcon className="h-6 w-6" />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 page-header">
+        <div className="animate-fade-in">
+          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-primary/10 animate-bounce-soft">
+              <CalendarIcon className="h-6 w-6 text-primary" />
+            </div>
             Mon calendrier
           </h1>
-          <p className="text-muted-foreground">
-            {visites.filter(v => v.statut === 'planifiee').length} visites à venir • {events.length} événements
+          <p className="text-muted-foreground mt-1 ml-12">
+            <span className="font-medium text-blue-600 dark:text-blue-400">{visites.filter(v => v.statut === 'planifiee').length}</span> visites à venir
+            <span className="mx-2">•</span>
+            <span className="font-medium">{events.length}</span> événements
           </p>
         </div>
-        <Button onClick={() => {
-          setFormMode('create');
-          setEditingEvent(null);
-          setShowEventForm(true);
-        }}>
+        <Button 
+          onClick={() => {
+            setFormMode('create');
+            setEditingEvent(null);
+            setShowEventForm(true);
+          }}
+          className="animate-fade-in animate-delay-100 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Nouvel événement
         </Button>
@@ -656,41 +668,58 @@ export default function AgentCalendrier() {
 
       {/* Urgent visits alert */}
       {visitesUrgentes.length > 0 && (
-        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
-            <h2 className="font-semibold text-destructive">
-              {visitesUrgentes.length} visite{visitesUrgentes.length > 1 ? 's' : ''} urgente{visitesUrgentes.length > 1 ? 's' : ''}
-            </h2>
-          </div>
-          <div className="space-y-2">
-            {visitesUrgentes.map(visite => (
-              <div key={visite.id} className="flex items-center justify-between p-2 bg-background rounded">
-                <div>
-                  <p className="font-medium">{visite.adresse}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
-                    {visite.client_profile && ` • ${visite.client_profile.prenom} ${visite.client_profile.nom}`}
-                  </p>
-                </div>
-                <Button 
-                  size="sm" 
-                  variant="destructive"
-                  onClick={() => handleMarquerEffectuee(visite)}
-                >
-                  {visite.est_deleguee ? 'Feedback' : 'Effectuée'}
-                </Button>
+        <Alert variant="destructive" className="animate-fade-in animate-delay-150 border-destructive/50 bg-destructive/10">
+          <AlertTriangle className="h-5 w-5 animate-pulse" />
+          <AlertDescription>
+            <div className="ml-2">
+              <h2 className="font-semibold text-destructive mb-2">
+                {visitesUrgentes.length} visite{visitesUrgentes.length > 1 ? 's' : ''} urgente{visitesUrgentes.length > 1 ? 's' : ''} !
+              </h2>
+              <div className="space-y-2">
+                {visitesUrgentes.map((visite, idx) => (
+                  <div 
+                    key={visite.id} 
+                    className="flex items-center justify-between p-3 bg-background/80 backdrop-blur rounded-lg border border-destructive/20 shadow-sm transition-all duration-200 hover:shadow-md"
+                    style={{ animationDelay: `${idx * 50}ms` }}
+                  >
+                    <div>
+                      <p className="font-medium">{visite.adresse}</p>
+                      <p className="text-sm text-muted-foreground">
+                        <Clock className="h-3 w-3 inline mr-1" />
+                        {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+                        {visite.client_profile && (
+                          <>
+                            <span className="mx-1">•</span>
+                            <User className="h-3 w-3 inline mr-1" />
+                            {visite.client_profile.prenom} {visite.client_profile.nom}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      className="shadow-sm hover:shadow-md transition-all"
+                      onClick={() => handleMarquerEffectuee(visite)}
+                    >
+                      {visite.est_deleguee ? 'Feedback' : 'Effectuée'}
+                    </Button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Filter */}
-      <div className="flex items-center gap-4">
-        <Label className="text-sm">Filtrer par client:</Label>
+      <div className="flex items-center gap-4 p-3 bg-muted/30 rounded-xl animate-fade-in animate-delay-200">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Filter className="h-4 w-4" />
+          <Label className="text-sm font-medium">Filtrer par client</Label>
+        </div>
         <Select value={filterClient} onValueChange={setFilterClient}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-[220px] bg-background border-muted-foreground/20 focus:ring-primary/30">
             <SelectValue placeholder="Tous les clients" />
           </SelectTrigger>
           <SelectContent>
@@ -707,7 +736,7 @@ export default function AgentCalendrier() {
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0 w-full">
         {/* Calendar */}
-        <div className="lg:col-span-2 min-w-0 overflow-hidden">
+        <div className="lg:col-span-2 min-w-0 overflow-hidden animate-fade-in animate-delay-300">
           <CalendarView
             events={filteredEvents}
             visites={filteredVisites}
@@ -718,7 +747,7 @@ export default function AgentCalendrier() {
         </div>
 
         {/* Day events */}
-        <div className="min-w-0 h-[600px]">
+        <div className="min-w-0 h-[600px] animate-fade-in animate-delay-400">
           <AgentDayEvents
             date={selectedDate}
             events={selectedDayEvents}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -30,8 +30,8 @@ interface CalendarViewProps {
 const eventTypeColors: Record<string, string> = {
   visite: 'bg-blue-500',
   visite_deleguee: 'bg-green-600 ring-2 ring-green-300',
-  rappel: 'bg-yellow-500',
-  rendez_vous: 'bg-green-500',
+  rappel: 'bg-amber-500',
+  rendez_vous: 'bg-emerald-500',
   tache: 'bg-orange-500',
   reunion: 'bg-purple-500',
   signature: 'bg-emerald-600',
@@ -117,16 +117,22 @@ export function CalendarView({ events, visites, selectedDate, onDateSelect, onEv
   };
 
   return (
-    <div className="bg-card rounded-lg border p-4 w-full max-w-full overflow-hidden">
+    <div className="bg-card rounded-xl border shadow-sm p-4 md:p-6 w-full max-w-full overflow-hidden animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold capitalize">
-          {format(currentMonth, 'MMMM yyyy', { locale: fr })}
-        </h2>
-        <div className="flex gap-2">
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <Calendar className="h-5 w-5 text-primary" />
+          </div>
+          <h2 className="text-xl font-semibold capitalize">
+            {format(currentMonth, 'MMMM yyyy', { locale: fr })}
+          </h2>
+        </div>
+        <div className="flex gap-1">
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
+            className="h-9 w-9 rounded-lg hover:bg-primary/10 transition-all duration-200"
             onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -134,13 +140,15 @@ export function CalendarView({ events, visites, selectedDate, onDateSelect, onEv
           <Button
             variant="outline"
             size="sm"
+            className="h-9 px-3 rounded-lg font-medium hover:bg-primary hover:text-primary-foreground transition-all duration-200"
             onClick={() => setCurrentMonth(new Date())}
           >
             Aujourd'hui
           </Button>
           <Button
-            variant="outline"
+            variant="ghost"
             size="icon"
+            className="h-9 w-9 rounded-lg hover:bg-primary/10 transition-all duration-200"
             onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
           >
             <ChevronRight className="h-4 w-4" />
@@ -150,8 +158,14 @@ export function CalendarView({ events, visites, selectedDate, onDateSelect, onEv
 
       {/* Week days header */}
       <div className="grid grid-cols-7 gap-1 mb-2">
-        {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((day) => (
-          <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
+        {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((day, idx) => (
+          <div 
+            key={day} 
+            className={cn(
+              "text-center text-sm font-medium py-2 rounded-lg",
+              idx >= 5 ? "text-muted-foreground/70" : "text-muted-foreground"
+            )}
+          >
             {day}
           </div>
         ))}
@@ -161,28 +175,35 @@ export function CalendarView({ events, visites, selectedDate, onDateSelect, onEv
       <div className="grid grid-cols-7 gap-1 w-full">
         {/* Padding for days before month starts */}
         {Array.from({ length: paddingDays }).map((_, index) => (
-          <div key={`padding-${index}`} className="h-20 md:h-24 bg-muted/30 rounded min-w-0" />
+          <div key={`padding-${index}`} className="h-20 md:h-24 bg-muted/20 rounded-lg min-w-0" />
         ))}
 
         {/* Actual days */}
-        {days.map((day) => {
+        {days.map((day, dayIndex) => {
           const dayEvents = getEventsForDay(day);
           const isSelected = selectedDate && isSameDay(day, selectedDate);
+          const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
           return (
             <div
               key={day.toISOString()}
               onClick={() => onDateSelect(day)}
+              style={{ animationDelay: `${dayIndex * 10}ms` }}
               className={cn(
-                'h-20 md:h-24 p-1 rounded border cursor-pointer transition-colors hover:bg-accent/50 min-w-0',
-                !isSameMonth(day, currentMonth) && 'opacity-50',
-                isToday(day) && 'border-primary border-2',
-                isSelected && 'bg-accent ring-2 ring-primary'
+                'h-20 md:h-24 p-1.5 rounded-lg border cursor-pointer transition-all duration-200 min-w-0 group',
+                'hover:bg-accent/50 hover:border-primary/30 hover:shadow-sm hover:-translate-y-0.5',
+                !isSameMonth(day, currentMonth) && 'opacity-40',
+                isWeekend && 'bg-muted/30',
+                isToday(day) && 'border-primary border-2 bg-primary/5',
+                isSelected && 'bg-accent ring-2 ring-primary shadow-md',
+                'animate-fade-in'
               )}
             >
               <div className={cn(
-                'text-sm font-medium mb-1',
-                isToday(day) && 'text-primary'
+                'text-sm font-medium mb-1 transition-colors',
+                isToday(day) && 'text-primary font-bold',
+                isSelected && 'text-primary',
+                isWeekend && !isToday(day) && !isSelected && 'text-muted-foreground'
               )}>
                 {format(day, 'd')}
               </div>
@@ -192,7 +213,8 @@ export function CalendarView({ events, visites, selectedDate, onDateSelect, onEv
                     key={idx}
                     onClick={(e) => handleEventClick(e, item)}
                     className={cn(
-                      'text-[9px] px-1 py-0.5 rounded truncate text-white cursor-pointer hover:opacity-80 transition-opacity',
+                      'text-[9px] px-1.5 py-0.5 rounded truncate text-white cursor-pointer',
+                      'transition-all duration-200 hover:opacity-90 hover:scale-[1.02]',
                       eventTypeColors[item.type] || 'bg-gray-500'
                     )}
                     title={item.isVisite ? item.event.adresse : item.event.title}
@@ -201,7 +223,7 @@ export function CalendarView({ events, visites, selectedDate, onDateSelect, onEv
                   </div>
                 ))}
                 {dayEvents.length > 3 && (
-                  <div className="text-[10px] text-muted-foreground">
+                  <div className="text-[10px] text-muted-foreground font-medium pl-1">
                     +{dayEvents.length - 3} autres
                   </div>
                 )}
@@ -212,39 +234,26 @@ export function CalendarView({ events, visites, selectedDate, onDateSelect, onEv
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t">
-        <div className="flex items-center gap-1.5">
-          <div className={cn('w-3 h-3 rounded', eventTypeColors.visite)} />
-          <span className="text-xs text-muted-foreground">Visite</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className={cn('w-3 h-3 rounded ring-2 ring-green-300', eventTypeColors.visite_deleguee)} />
-          <span className="text-xs text-muted-foreground">Visite déléguée</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className={cn('w-3 h-3 rounded', eventTypeColors.signature)} />
-          <span className="text-xs text-muted-foreground">Signature</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className={cn('w-3 h-3 rounded', eventTypeColors.etat_lieux)} />
-          <span className="text-xs text-muted-foreground">État des lieux</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className={cn('w-3 h-3 rounded', eventTypeColors.rappel)} />
-          <span className="text-xs text-muted-foreground">Rappel</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className={cn('w-3 h-3 rounded', eventTypeColors.rendez_vous)} />
-          <span className="text-xs text-muted-foreground">RDV</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className={cn('w-3 h-3 rounded', eventTypeColors.tache)} />
-          <span className="text-xs text-muted-foreground">Tâche</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className={cn('w-3 h-3 rounded', eventTypeColors.reunion)} />
-          <span className="text-xs text-muted-foreground">Réunion</span>
-        </div>
+      <div className="flex flex-wrap gap-3 md:gap-4 mt-6 pt-4 border-t">
+        {[
+          { type: 'visite', label: 'Visite', ring: false },
+          { type: 'visite_deleguee', label: 'Visite déléguée', ring: true },
+          { type: 'signature', label: 'Signature', ring: false },
+          { type: 'etat_lieux', label: 'État des lieux', ring: false },
+          { type: 'rappel', label: 'Rappel', ring: false },
+          { type: 'rendez_vous', label: 'RDV', ring: false },
+          { type: 'tache', label: 'Tâche', ring: false },
+          { type: 'reunion', label: 'Réunion', ring: false },
+        ].map(({ type, label, ring }) => (
+          <div key={type} className="flex items-center gap-1.5 group cursor-default">
+            <div className={cn(
+              'w-3 h-3 rounded transition-transform group-hover:scale-125',
+              eventTypeColors[type],
+              ring && 'ring-2 ring-green-300'
+            )} />
+            <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{label}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
