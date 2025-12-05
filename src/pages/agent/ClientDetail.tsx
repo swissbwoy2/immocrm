@@ -465,7 +465,10 @@ export default function ClientDetail() {
         .maybeSingle();
       
       if (existingConv) {
-        navigate(`/agent/messagerie?conversationId=${existingConv.id}`);
+        navigate({
+          pathname: '/agent/messagerie',
+          search: `conversationId=${existingConv.id}`
+        });
         return;
       }
       
@@ -486,7 +489,10 @@ export default function ClientDetail() {
       
       if (error) throw error;
       
-      navigate(`/agent/messagerie?conversationId=${data.id}`);
+      navigate({
+        pathname: '/agent/messagerie',
+        search: `conversationId=${data.id}`
+      });
     } catch (error) {
       console.error('Error creating conversation:', error);
       toast({
