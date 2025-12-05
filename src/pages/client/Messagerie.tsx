@@ -596,7 +596,7 @@ const Messagerie = () => {
           break;
 
         case 'avis_google':
-          window.open('https://g.page/r/CQpCCH4CyVqsEBM/review', '_blank');
+          window.open('https://share.google/rQl4mbAJowzSW2V8m', '_blank');
           if (candidature) {
             await supabase
               .from('candidatures')
