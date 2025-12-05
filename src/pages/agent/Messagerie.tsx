@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -1138,62 +1138,76 @@ const Messagerie = () => {
             </div>
           )}
           
-          {selectedMessages.map((msg) => {
-            const isSent = msg.sender_type === 'agent';
-            // Déterminer le nom de l'expéditeur selon le type d'expéditeur
-            let senderName: string | undefined;
-            if (isSent) {
-              senderName = undefined; // Nos propres messages (agent)
-            } else if (msg.sender_type === 'admin') {
-              // Message envoyé par un admin - récupérer le nom de l'admin via sender_id
-              senderName = contactsMap[msg.sender_id]?.name || 'Admin';
-            } else {
-              // Message envoyé par un client
-              senderName = getContactInfo(currentConversation).name;
-            }
+          {/* Calculer le dernier message pour chaque offre */}
+          {(() => {
+            const lastMessageByOffre = new Map<string, string>();
+            selectedMessages.forEach(msg => {
+              if (msg.offre_id) {
+                lastMessageByOffre.set(msg.offre_id, msg.id);
+              }
+            });
             
-            // Check for special button tag
-            const deposerButtonData = parseDeposerButtonTag(msg.content || '');
-            const cleanContent = cleanMessageContent(msg.content || '');
-            
-            return (
-              <div key={msg.id}>
-                <MessageBubble
-                  content={cleanContent}
-                  isSent={isSent}
-                  timestamp={msg.created_at}
-                  read={msg.read}
-                  senderName={senderName}
-                  attachmentUrl={msg.attachment_url}
-                  attachmentName={msg.attachment_name}
-                  attachmentType={msg.attachment_type}
-                  attachmentSize={msg.attachment_size}
-                  payload={msg.payload as any}
-                />
-                {/* Bouton Déposer candidature si tag présent dans message client */}
-                {deposerButtonData && msg.sender_type === 'client' && (
-                  <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[75%] md:max-w-[60%]`}>
-                    <Button 
-                      className="w-full"
-                      onClick={() => navigate(`/agent/deposer-candidature?clientId=${deposerButtonData.clientId}&offreId=${deposerButtonData.offreId}`)}
-                    >
-                      <FileEdit className="mr-2 h-4 w-4" />
-                      Déposer la candidature
-                    </Button>
-                  </div>
-                )}
-                {msg.offre_id && offresMap[msg.offre_id] && (
-                  <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[75%] md:max-w-[60%]`}>
-                    <OffreCard offre={offresMap[msg.offre_id]} />
-                    <OffreActions 
-                      offre={offresMap[msg.offre_id]} 
-                      onAction={(action) => handleOffreAction(msg.offre_id, action)}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
+            return selectedMessages.map((msg) => {
+              const isSent = msg.sender_type === 'agent';
+              // Déterminer le nom de l'expéditeur selon le type d'expéditeur
+              let senderName: string | undefined;
+              if (isSent) {
+                senderName = undefined; // Nos propres messages (agent)
+              } else if (msg.sender_type === 'admin') {
+                // Message envoyé par un admin - récupérer le nom de l'admin via sender_id
+                senderName = contactsMap[msg.sender_id]?.name || 'Admin';
+              } else {
+                // Message envoyé par un client
+                senderName = getContactInfo(currentConversation).name;
+              }
+              
+              // Check for special button tag
+              const deposerButtonData = parseDeposerButtonTag(msg.content || '');
+              const cleanContent = cleanMessageContent(msg.content || '');
+              
+              // N'afficher l'OffreCard que sur le dernier message de chaque offre
+              const isLastMessageForOffre = msg.offre_id && 
+                lastMessageByOffre.get(msg.offre_id) === msg.id;
+              
+              return (
+                <div key={msg.id}>
+                  <MessageBubble
+                    content={cleanContent}
+                    isSent={isSent}
+                    timestamp={msg.created_at}
+                    read={msg.read}
+                    senderName={senderName}
+                    attachmentUrl={msg.attachment_url}
+                    attachmentName={msg.attachment_name}
+                    attachmentType={msg.attachment_type}
+                    attachmentSize={msg.attachment_size}
+                    payload={msg.payload as any}
+                  />
+                  {/* Bouton Déposer candidature si tag présent dans message client */}
+                  {deposerButtonData && msg.sender_type === 'client' && (
+                    <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[75%] md:max-w-[60%]`}>
+                      <Button 
+                        className="w-full"
+                        onClick={() => navigate(`/agent/deposer-candidature?clientId=${deposerButtonData.clientId}&offreId=${deposerButtonData.offreId}`)}
+                      >
+                        <FileEdit className="mr-2 h-4 w-4" />
+                        Déposer la candidature
+                      </Button>
+                    </div>
+                  )}
+                  {isLastMessageForOffre && offresMap[msg.offre_id!] && (
+                    <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[75%] md:max-w-[60%]`}>
+                      <OffreCard offre={offresMap[msg.offre_id!]} />
+                      <OffreActions 
+                        offre={offresMap[msg.offre_id!]} 
+                        onAction={(action) => handleOffreAction(msg.offre_id, action)}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            });
+          })()}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>

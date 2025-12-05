@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -1287,6 +1287,17 @@ const Messagerie = () => {
     />
   );
 
+  // Calculer le dernier message pour chaque offre
+  const lastMessageByOffre = useMemo(() => {
+    const map = new Map<string, string>();
+    selectedMessages.forEach(msg => {
+      if (msg.offre_id) {
+        map.set(msg.offre_id, msg.id); // Garder le dernier (ordre chronologique)
+      }
+    });
+    return map;
+  }, [selectedMessages]);
+
   const chatView = selectedConv ? (
     <div className="flex-1 flex flex-col min-h-0 chat-background">
       <ScrollArea className="flex-1 p-4">
@@ -1303,6 +1314,10 @@ const Messagerie = () => {
               senderName = getAgentName(currentConversation?.agent_id);
             }
             
+            // N'afficher l'OffreCard que sur le dernier message de chaque offre
+            const isLastMessageForOffre = msg.offre_id && 
+              lastMessageByOffre.get(msg.offre_id) === msg.id;
+            
             return (
               <div key={msg.id}>
                 <MessageBubble
@@ -1317,11 +1332,11 @@ const Messagerie = () => {
                   attachmentSize={msg.attachment_size}
                   payload={msg.payload as any}
                 />
-                {msg.offre_id && offresMap[msg.offre_id] && (
+                {isLastMessageForOffre && offresMap[msg.offre_id!] && (
                   <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[75%] md:max-w-[60%]`}>
-                    <OffreCard offre={offresMap[msg.offre_id]} />
+                    <OffreCard offre={offresMap[msg.offre_id!]} />
                     <OffreActions 
-                      offre={offresMap[msg.offre_id]} 
+                      offre={offresMap[msg.offre_id!]} 
                       onAction={(action, data) => handleOffreAction(msg.offre_id, action, data)}
                     />
                   </div>
