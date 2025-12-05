@@ -34,6 +34,7 @@ import { ClientTypeBadge } from '@/components/ClientTypeBadge';
 import { ClientNotesManager } from '@/components/ClientNotesManager';
 import { SwissRomandeMap } from '@/components/SwissRomandeMap';
 import { RegionAutocomplete } from '@/components/RegionAutocomplete';
+import { ApporteurInfoCard } from '@/components/ApporteurInfoCard';
 
 interface Client {
   id: string;
@@ -1130,6 +1131,9 @@ export default function ClientDetail() {
             </Button>
           </div>
         </div>
+
+        {/* Apporteur Info Card */}
+        <ApporteurInfoCard clientId={client.id} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Informations personnelles */}

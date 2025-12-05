@@ -25,6 +25,7 @@ import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSectio
 import { useClientCandidates } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck, hasStableStatus } from '@/hooks/useSolvabilityCheck';
 import { RegionAutocomplete } from '@/components/RegionAutocomplete';
+import { ApporteurInfoCard } from '@/components/ApporteurInfoCard';
 
 interface Client {
   id: string;
@@ -1104,6 +1105,9 @@ export default function ClientDetail() {
             key={documentsRefreshKey}
           />
         )}
+
+        {/* Apporteur Info Card */}
+        <ApporteurInfoCard clientId={client.id} isAdmin={true} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Situation financière */}
