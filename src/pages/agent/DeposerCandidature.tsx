@@ -10,7 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Send, Users, Home, Mail, CheckCircle, FileEdit, Paperclip, FileText, Image, File, Upload, X, Eye, AlertCircle, Settings } from "lucide-react";
+import { Loader2, Send, Users, Home, Mail, CheckCircle, FileEdit, Paperclip, FileText, Image, File, Upload, X, Eye, AlertCircle, Settings, FileSignature } from "lucide-react";
 import { ClientMultiSelect } from "@/components/ClientMultiSelect";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEmailTemplates } from "@/hooks/useEmailTemplates";
@@ -941,6 +941,26 @@ export default function DeposerCandidature() {
                 rows={8}
               />
             </div>
+
+            {/* Signature preview */}
+            {signatureHtml && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <FileSignature className="h-4 w-4" />
+                  Signature (sera ajoutée automatiquement)
+                </Label>
+                <div 
+                  className="p-3 bg-muted/50 rounded-lg border border-border text-sm"
+                  dangerouslySetInnerHTML={{ __html: signatureHtml }}
+                />
+              </div>
+            )}
+            
+            {!signatureHtml && (
+              <p className="text-sm text-muted-foreground italic">
+                Aucune signature configurée. Vous pouvez en ajouter une dans vos paramètres email.
+              </p>
+            )}
           </CardContent>
         </Card>
 
