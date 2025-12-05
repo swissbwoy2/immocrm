@@ -517,18 +517,13 @@ export default function DeposerCandidature() {
       // Combine all attachments
       const attachments = [...clientDocAttachments, ...localFileAttachments];
 
-      // Build final email body with signature
-      const finalBodyHtml = signatureHtml 
-        ? `${bodyHtml}<br/><br/>${signatureHtml}` 
-        : bodyHtml;
-
-      // Send email
+      // Send email - signature will be added by the edge function
       const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-smtp-email', {
         body: {
           recipient_email: recipientEmail,
           recipient_name: recipientName,
           subject: subject,
-          body_html: finalBodyHtml,
+          body_html: bodyHtml,
           attachments: attachments.length > 0 ? attachments : undefined,
         },
       });
