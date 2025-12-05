@@ -113,6 +113,14 @@ export function AgentNewAdminConversationDialog({ agentId, onConversationCreated
 
       if (error) throw error;
 
+      // Add agent to conversation_agents for proper RLS access
+      await supabase
+        .from('conversation_agents')
+        .insert({
+          conversation_id: data.id,
+          agent_id: agentId,
+        });
+
       toast({
         title: "Conversation créée",
         description: `Conversation avec ${admin.prenom} ${admin.nom} créée avec succès`,

@@ -434,6 +434,14 @@ const AgentDetail = () => {
         .single();
       
       if (error) throw error;
+
+      // Add agent to conversation_agents for proper RLS access
+      await supabase
+        .from('conversation_agents')
+        .insert({
+          conversation_id: data.id,
+          agent_id: agent.id,
+        });
       
       navigate({
         pathname: '/admin/messagerie',
