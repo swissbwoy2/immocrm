@@ -36,6 +36,8 @@ const getMenuForRole = (role: string) => {
         { name: 'Tableau de bord', icon: LayoutDashboard, path: '/admin', notifKey: null },
         { name: 'Calendrier', icon: Calendar, path: '/admin/calendrier', notifKey: null },
         { name: 'Agents', icon: UserCog, path: '/admin/agents', notifKey: null },
+        { name: 'Apporteurs', icon: Handshake, path: '/admin/apporteurs', notifKey: null },
+        { name: 'Referrals', icon: Link, path: '/admin/referrals', notifKey: null },
         { name: 'Clients', icon: Users, path: '/admin/clients', notifKey: 'new_client_activated' },
         { name: 'Demandes activation', icon: UserPlus, path: '/admin/demandes-activation', notifKey: 'activation_request' },
         { name: 'Factures AbaNinja', icon: Receipt, path: '/admin/factures-abaninja', notifKey: null },
