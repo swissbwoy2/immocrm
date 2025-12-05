@@ -491,6 +491,9 @@ const Messagerie = () => {
                 senderName={senderName}
                 attachmentUrl={msg.attachment_url}
                 attachmentName={msg.attachment_name}
+                attachmentType={msg.attachment_type}
+                attachmentSize={msg.attachment_size}
+                payload={msg.payload as any}
               />
             );
           })}

@@ -1313,6 +1313,9 @@ const Messagerie = () => {
                   senderName={senderName}
                   attachmentUrl={msg.attachment_url}
                   attachmentName={msg.attachment_name}
+                  attachmentType={msg.attachment_type}
+                  attachmentSize={msg.attachment_size}
+                  payload={msg.payload as any}
                 />
                 {msg.offre_id && offresMap[msg.offre_id] && (
                   <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[75%] md:max-w-[60%]`}>

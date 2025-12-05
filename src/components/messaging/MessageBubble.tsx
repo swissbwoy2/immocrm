@@ -3,6 +3,12 @@ import { cn } from '@/lib/utils';
 import { Check, CheckCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { MessageAttachment } from '@/components/MessageAttachment';
+
+interface MessagePayload {
+  type?: string;
+  medias?: Array<{url: string, type: string, name: string, size: number}>;
+}
 
 interface MessageBubbleProps {
   content: string;
@@ -12,6 +18,9 @@ interface MessageBubbleProps {
   senderName?: string;
   attachmentUrl?: string | null;
   attachmentName?: string | null;
+  attachmentType?: string | null;
+  attachmentSize?: number | null;
+  payload?: MessagePayload | null;
   className?: string;
 }
 
@@ -23,6 +32,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   senderName,
   attachmentUrl,
   attachmentName,
+  attachmentType,
+  attachmentSize,
+  payload,
   className,
 }) => {
   const formattedTime = format(new Date(timestamp), 'HH:mm', { locale: fr });
@@ -59,18 +71,31 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             )}
           />
 
-          {/* Attachment */}
+          {/* Payload medias (multiple) */}
+          {payload?.medias && payload.medias.length > 0 && (
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              {payload.medias.map((media, idx) => (
+                <MessageAttachment
+                  key={idx}
+                  url={media.url}
+                  type={media.type}
+                  name={media.name}
+                  size={media.size}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Single Attachment */}
           {attachmentUrl && (
-            <a
-              href={attachmentUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 mb-2 p-2 rounded bg-background/50 hover:bg-background/80 transition-colors"
-            >
-              <span className="text-sm text-primary font-medium truncate">
-                {attachmentName || 'Fichier joint'}
-              </span>
-            </a>
+            <div className="mb-2">
+              <MessageAttachment
+                url={attachmentUrl}
+                type={attachmentType || 'application/octet-stream'}
+                name={attachmentName || 'Fichier joint'}
+                size={attachmentSize || 0}
+              />
+            </div>
           )}
 
           {/* Message content */}
