@@ -403,7 +403,8 @@ export default function AgentVisites() {
           conversation_id: conv.id,
           sender_id: user!.id,
           sender_type: 'agent',
-          content: `🏠 **Retour de la visite déléguée**\n\n📍 ${selectedVisite.adresse}\n${selectedVisite.offres ? `💰 ${selectedVisite.offres.prix?.toLocaleString()} CHF/mois` : ''}\n\n${recommandationEmoji} **${recommandationText}**\n\n📝 Feedback:\n${feedbackText}${postulationMessage}`
+          content: `🏠 **Retour de la visite déléguée**\n\n📍 ${selectedVisite.adresse}\n${selectedVisite.offres ? `💰 ${selectedVisite.offres.prix?.toLocaleString()} CHF/mois` : ''}\n\n${recommandationEmoji} **${recommandationText}**\n\n📝 Feedback:\n${feedbackText}${postulationMessage}`,
+          payload: feedbackMedias.length > 0 ? { type: 'visite_feedback', visite_id: selectedVisite.id, medias: feedbackMedias } : null
         });
       }
 

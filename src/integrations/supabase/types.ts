@@ -1353,6 +1353,7 @@ export type Database = {
           created_at: string | null
           id: string
           offre_id: string | null
+          payload: Json | null
           read: boolean | null
           sender_id: string
           sender_type: string
@@ -1367,6 +1368,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           offre_id?: string | null
+          payload?: Json | null
           read?: boolean | null
           sender_id: string
           sender_type: string
@@ -1381,6 +1383,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           offre_id?: string | null
+          payload?: Json | null
           read?: boolean | null
           sender_id?: string
           sender_type?: string

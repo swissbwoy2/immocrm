@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar, Pencil, Trash2, MapPin, Home, Phone } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar, Pencil, Trash2, MapPin, Home, Phone, Upload, X, Image, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { CalendarView, CalendarEvent } from '@/components/calendar/CalendarView';
@@ -112,6 +113,8 @@ export default function AgentCalendrier() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [recommandation, setRecommandation] = useState<'recommande' | 'neutre' | 'deconseille'>('neutre');
+  const [feedbackMedias, setFeedbackMedias] = useState<{url: string, type: string, name: string, size: number}[]>([]);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -401,11 +404,49 @@ export default function AgentCalendrier() {
     }
   };
 
+  const handleMediaUpload = async (files: FileList) => {
+    if (!selectedVisite) return;
+    setUploadingMedia(true);
+    const newMedias = [...feedbackMedias];
+    
+    for (const file of Array.from(files)) {
+      try {
+        const filePath = `visites/${selectedVisite.id}/${Date.now()}_${file.name}`;
+        const { error } = await supabase.storage
+          .from('client-documents')
+          .upload(filePath, file);
+        
+        if (!error) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('client-documents')
+            .getPublicUrl(filePath);
+          
+          newMedias.push({
+            url: publicUrl,
+            type: file.type,
+            name: file.name,
+            size: file.size
+          });
+        }
+      } catch (err) {
+        console.error('Error uploading file:', err);
+      }
+    }
+    
+    setFeedbackMedias(newMedias);
+    setUploadingMedia(false);
+  };
+
+  const removeMedia = (index: number) => {
+    setFeedbackMedias(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleMarquerEffectuee = async (visite: any) => {
     if (visite.est_deleguee) {
       setSelectedVisite(visite);
       setFeedbackText(visite.feedback_agent || '');
       setRecommandation(visite.recommandation_agent || 'neutre');
+      setFeedbackMedias((visite.medias as any[]) || []);
       setFeedbackDialogOpen(true);
     } else {
       try {
@@ -435,7 +476,8 @@ export default function AgentCalendrier() {
         .update({
           statut: 'effectuee',
           feedback_agent: feedbackText,
-          recommandation_agent: recommandation
+          recommandation_agent: recommandation,
+          medias: feedbackMedias
         })
         .eq('id', selectedVisite.id);
 
@@ -464,12 +506,14 @@ export default function AgentCalendrier() {
           conversation_id: conv.id,
           sender_id: user!.id,
           sender_type: 'agent',
-          content: `🏠 **Retour de la visite déléguée**\n\n📍 ${selectedVisite.adresse}\n\n${recommandationEmoji} **${recommandationText}**\n\n📝 Feedback:\n${feedbackText}`
+          content: `🏠 **Retour de la visite déléguée**\n\n📍 ${selectedVisite.adresse}\n\n${recommandationEmoji} **${recommandationText}**\n\n📝 Feedback:\n${feedbackText}`,
+          payload: feedbackMedias.length > 0 ? { type: 'visite_feedback', visite_id: selectedVisite.id, medias: feedbackMedias } : null
         });
       }
 
       toast.success('✅ Feedback enregistré');
       setFeedbackDialogOpen(false);
+      setFeedbackMedias([]);
       loadData();
     } catch (error) {
       console.error('Error saving feedback:', error);
@@ -856,6 +900,51 @@ export default function AgentCalendrier() {
                   placeholder="Décrivez l'état du bien, l'ambiance, les points positifs/négatifs..."
                   rows={6}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Photos/Vidéos de la visite (optionnel)</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    onChange={(e) => e.target.files && handleMediaUpload(e.target.files)}
+                    disabled={uploadingMedia}
+                    className="flex-1"
+                  />
+                  {uploadingMedia && (
+                    <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
+                  )}
+                </div>
+                {feedbackMedias.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+                    {feedbackMedias.map((media, idx) => (
+                      <div key={idx} className="relative group">
+                        {media.type.startsWith('image/') ? (
+                          <img src={media.url} alt="" className="w-full h-24 object-cover rounded" />
+                        ) : (
+                          <video src={media.url} className="w-full h-24 object-cover rounded" />
+                        )}
+                        <Button
+                          size="icon"
+                          variant="destructive"
+                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeMedia(idx)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                        <div className="absolute bottom-1 left-1">
+                          {media.type.startsWith('image/') ? (
+                            <Image className="h-4 w-4 text-white drop-shadow" />
+                          ) : (
+                            <Video className="h-4 w-4 text-white drop-shadow" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
