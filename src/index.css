@@ -131,220 +131,187 @@ All colors MUST be HSL.
   }
 }
 
-/* Animation keyframes */
+/* GPU-accelerated animation keyframes - using translate3d for hardware acceleration */
 @layer utilities {
-  /* Fade animations */
+  /* Fade animations - GPU optimized */
   @keyframes fade-in {
     from {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translate3d(0, 8px, 0);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: translate3d(0, 0, 0);
     }
   }
 
   @keyframes fade-in-scale {
     from {
       opacity: 0;
-      transform: scale(0.95);
+      transform: scale3d(0.95, 0.95, 1);
     }
     to {
       opacity: 1;
-      transform: scale(1);
+      transform: scale3d(1, 1, 1);
     }
   }
 
   @keyframes fade-in-up {
     from {
       opacity: 0;
-      transform: translateY(20px);
+      transform: translate3d(0, 16px, 0);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: translate3d(0, 0, 0);
     }
   }
 
   @keyframes slide-in-from-bottom {
     from {
       opacity: 0;
-      transform: translateY(20px);
+      transform: translate3d(0, 16px, 0);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: translate3d(0, 0, 0);
     }
   }
 
   @keyframes slide-in-from-left {
     from {
       opacity: 0;
-      transform: translateX(-20px);
+      transform: translate3d(-16px, 0, 0);
     }
     to {
       opacity: 1;
-      transform: translateX(0);
+      transform: translate3d(0, 0, 0);
     }
   }
 
   @keyframes slide-in-from-right {
     from {
       opacity: 0;
-      transform: translateX(20px);
+      transform: translate3d(16px, 0, 0);
     }
     to {
       opacity: 1;
-      transform: translateX(0);
+      transform: translate3d(0, 0, 0);
     }
   }
 
   @keyframes pulse-soft {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.7;
-    }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
   }
 
   @keyframes shimmer {
-    0% {
-      background-position: -200% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
   }
 
   @keyframes bounce-soft {
-    0%, 100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-5px);
-    }
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50% { transform: translate3d(0, -4px, 0); }
   }
 
   @keyframes bounce-in {
     0% {
       opacity: 0;
-      transform: scale(0.3);
+      transform: scale3d(0.3, 0.3, 1);
     }
-    50% {
-      transform: scale(1.05);
-    }
-    70% {
-      transform: scale(0.9);
-    }
+    50% { transform: scale3d(1.05, 1.05, 1); }
+    70% { transform: scale3d(0.95, 0.95, 1); }
     100% {
       opacity: 1;
-      transform: scale(1);
+      transform: scale3d(1, 1, 1);
     }
   }
 
   @keyframes celebration {
-    0% {
-      transform: scale(1);
-    }
-    25% {
-      transform: scale(1.1);
-    }
-    50% {
-      transform: scale(1);
-    }
-    75% {
-      transform: scale(1.05);
-    }
-    100% {
-      transform: scale(1);
-    }
+    0%, 100% { transform: scale3d(1, 1, 1); }
+    25% { transform: scale3d(1.08, 1.08, 1); }
+    50% { transform: scale3d(1, 1, 1); }
+    75% { transform: scale3d(1.04, 1.04, 1); }
   }
 
   @keyframes confetti-fall {
     0% {
-      transform: translateY(-100%) rotate(0deg);
+      transform: translate3d(0, -100%, 0) rotate(0deg);
       opacity: 1;
     }
     100% {
-      transform: translateY(100vh) rotate(720deg);
+      transform: translate3d(0, 100vh, 0) rotate(720deg);
       opacity: 0;
     }
   }
 
   @keyframes wiggle {
-    0%, 100% {
-      transform: rotate(-3deg);
-    }
-    50% {
-      transform: rotate(3deg);
-    }
+    0%, 100% { transform: rotate3d(0, 0, 1, -3deg); }
+    50% { transform: rotate3d(0, 0, 1, 3deg); }
   }
 
   @keyframes glow-pulse {
-    0%, 100% {
-      box-shadow: 0 0 5px hsl(var(--primary) / 0.3);
-    }
-    50% {
-      box-shadow: 0 0 20px hsl(var(--primary) / 0.6);
-    }
+    0%, 100% { box-shadow: 0 0 4px hsl(var(--primary) / 0.3); }
+    50% { box-shadow: 0 0 16px hsl(var(--primary) / 0.5); }
   }
 
   @keyframes float {
-    0%, 100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-10px);
-    }
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50% { transform: translate3d(0, -8px, 0); }
   }
 
   @keyframes scale-in {
     from {
       opacity: 0;
-      transform: scale(0.9);
+      transform: scale3d(0.92, 0.92, 1);
     }
     to {
       opacity: 1;
-      transform: scale(1);
+      transform: scale3d(1, 1, 1);
     }
   }
 
   @keyframes slide-up-fade {
     from {
       opacity: 0;
-      transform: translateY(10px);
+      transform: translate3d(0, 8px, 0);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
+      transform: translate3d(0, 0, 0);
     }
   }
 
-  /* Animation utilities */
+  /* Animation utilities - GPU accelerated with faster durations */
   .animate-fade-in {
-    animation: fade-in 0.4s ease-out forwards;
+    will-change: transform, opacity;
+    animation: fade-in 0.2s ease-out forwards;
   }
 
   .animate-fade-in-scale {
-    animation: fade-in-scale 0.3s ease-out forwards;
+    will-change: transform, opacity;
+    animation: fade-in-scale 0.15s ease-out forwards;
   }
 
   .animate-fade-in-up {
-    animation: fade-in-up 0.5s ease-out forwards;
+    will-change: transform, opacity;
+    animation: fade-in-up 0.25s ease-out forwards;
   }
 
   .animate-slide-in-bottom {
-    animation: slide-in-from-bottom 0.4s ease-out forwards;
+    will-change: transform, opacity;
+    animation: slide-in-from-bottom 0.2s ease-out forwards;
   }
 
   .animate-slide-in-left {
-    animation: slide-in-from-left 0.3s ease-out forwards;
+    will-change: transform, opacity;
+    animation: slide-in-from-left 0.2s ease-out forwards;
   }
 
   .animate-slide-in-right {
-    animation: slide-in-from-right 0.3s ease-out forwards;
+    will-change: transform, opacity;
+    animation: slide-in-from-right 0.2s ease-out forwards;
   }
 
   .animate-pulse-soft {
@@ -359,23 +326,26 @@ All colors MUST be HSL.
       hsl(var(--muted)) 100%
     );
     background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
+    animation: shimmer 1.2s infinite;
   }
 
   .animate-bounce-soft {
-    animation: bounce-soft 1s ease-in-out infinite;
+    will-change: transform;
+    animation: bounce-soft 0.8s ease-in-out infinite;
   }
 
   .animate-bounce-in {
-    animation: bounce-in 0.5s ease-out forwards;
+    will-change: transform, opacity;
+    animation: bounce-in 0.35s ease-out forwards;
   }
 
   .animate-celebration {
-    animation: celebration 0.6s ease-out;
+    animation: celebration 0.5s ease-out;
   }
 
   .animate-wiggle {
-    animation: wiggle 0.5s ease-in-out;
+    will-change: transform;
+    animation: wiggle 0.4s ease-in-out;
   }
 
   .animate-glow-pulse {
@@ -383,27 +353,50 @@ All colors MUST be HSL.
   }
 
   .animate-float {
-    animation: float 3s ease-in-out infinite;
+    will-change: transform;
+    animation: float 2.5s ease-in-out infinite;
   }
 
   .animate-scale-in {
-    animation: scale-in 0.3s ease-out forwards;
+    will-change: transform, opacity;
+    animation: scale-in 0.15s ease-out forwards;
   }
 
   .animate-slide-up-fade {
-    animation: slide-up-fade 0.3s ease-out forwards;
+    will-change: transform, opacity;
+    animation: slide-up-fade 0.2s ease-out forwards;
   }
 
-  /* Staggered animation delays */
-  .animate-delay-75 { animation-delay: 75ms; }
-  .animate-delay-100 { animation-delay: 100ms; }
-  .animate-delay-150 { animation-delay: 150ms; }
-  .animate-delay-200 { animation-delay: 200ms; }
-  .animate-delay-300 { animation-delay: 300ms; }
-  .animate-delay-400 { animation-delay: 400ms; }
-  .animate-delay-500 { animation-delay: 500ms; }
-  .animate-delay-600 { animation-delay: 600ms; }
-  .animate-delay-700 { animation-delay: 700ms; }
+  /* Staggered animation delays - reduced for snappier feel */
+  .animate-delay-75 { animation-delay: 50ms; }
+  .animate-delay-100 { animation-delay: 75ms; }
+  .animate-delay-150 { animation-delay: 100ms; }
+  .animate-delay-200 { animation-delay: 125ms; }
+  .animate-delay-300 { animation-delay: 175ms; }
+  .animate-delay-400 { animation-delay: 225ms; }
+  .animate-delay-500 { animation-delay: 275ms; }
+  .animate-delay-600 { animation-delay: 325ms; }
+  .animate-delay-700 { animation-delay: 375ms; }
+
+  /* Reduce motion for users who prefer it */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in,
+    .animate-fade-in-scale,
+    .animate-fade-in-up,
+    .animate-slide-in-bottom,
+    .animate-slide-in-left,
+    .animate-slide-in-right,
+    .animate-bounce-soft,
+    .animate-bounce-in,
+    .animate-wiggle,
+    .animate-float,
+    .animate-scale-in,
+    .animate-slide-up-fade {
+      animation: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+  }
 
   /* Custom scrollbar styles */
   .scrollbar-thin {

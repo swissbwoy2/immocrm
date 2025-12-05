@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -26,7 +26,6 @@ export interface NotificationCounts {
   new_visit: number;
   visit_reminder: number;
   activation_request: number;
-  // Candidature notifications
   candidature_acceptee: number;
   candidature_refusee: number;
   candidature_bail_conclu: number;
@@ -36,42 +35,75 @@ export interface NotificationCounts {
   candidature_signature_effectuee: number;
   candidature_etat_lieux_fixe: number;
   candidature_cles_remises: number;
-  // Admin candidature notifications (all types combined)
   candidature_admin: number;
-  // Delegated visits
   visit_confirmed: number;
   visit_refused: number;
 }
+
+const INITIAL_COUNTS: NotificationCounts = {
+  total: 0,
+  new_client_activated: 0,
+  client_assigned: 0,
+  client_removed: 0,
+  client_updated: 0,
+  new_message: 0,
+  new_offer: 0,
+  new_visit: 0,
+  visit_reminder: 0,
+  activation_request: 0,
+  candidature_acceptee: 0,
+  candidature_refusee: 0,
+  candidature_bail_conclu: 0,
+  candidature_attente_bail: 0,
+  candidature_bail_recu: 0,
+  candidature_signature_planifiee: 0,
+  candidature_signature_effectuee: 0,
+  candidature_etat_lieux_fixe: 0,
+  candidature_cles_remises: 0,
+  candidature_admin: 0,
+  visit_confirmed: 0,
+  visit_refused: 0,
+};
+
+// Helper function to calculate counts - defined outside hook for stability
+const calculateCounts = (notifs: Notification[]): NotificationCounts => {
+  const unread = notifs.filter(n => !n.read);
+  const countByType = (type: string) => unread.filter(n => n.type === type).length;
+  
+  return {
+    total: unread.length,
+    new_client_activated: countByType('new_client_activated'),
+    client_assigned: countByType('client_assigned'),
+    client_removed: countByType('client_removed'),
+    client_updated: countByType('client_updated'),
+    new_message: countByType('new_message'),
+    new_offer: countByType('new_offer'),
+    new_visit: countByType('new_visit'),
+    visit_reminder: countByType('visit_reminder'),
+    activation_request: countByType('activation_request'),
+    candidature_acceptee: countByType('candidature_acceptee'),
+    candidature_refusee: countByType('candidature_refusee'),
+    candidature_bail_conclu: countByType('candidature_bail_conclu'),
+    candidature_attente_bail: countByType('candidature_attente_bail'),
+    candidature_bail_recu: countByType('candidature_bail_recu'),
+    candidature_signature_planifiee: countByType('candidature_signature_planifiee'),
+    candidature_signature_effectuee: countByType('candidature_signature_effectuee'),
+    candidature_etat_lieux_fixe: countByType('candidature_etat_lieux_fixe'),
+    candidature_cles_remises: countByType('candidature_cles_remises'),
+    candidature_admin: unread.filter(n => n.type.includes('_admin') || n.type.startsWith('candidature_')).length,
+    visit_confirmed: countByType('visit_confirmed'),
+    visit_refused: countByType('visit_refused'),
+  };
+};
 
 export const useNotifications = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [counts, setCounts] = useState<NotificationCounts>({
-    total: 0,
-    new_client_activated: 0,
-    client_assigned: 0,
-    client_removed: 0,
-    client_updated: 0,
-    new_message: 0,
-    new_offer: 0,
-    new_visit: 0,
-    visit_reminder: 0,
-    activation_request: 0,
-    candidature_acceptee: 0,
-    candidature_refusee: 0,
-    candidature_bail_conclu: 0,
-    candidature_attente_bail: 0,
-    candidature_bail_recu: 0,
-    candidature_signature_planifiee: 0,
-    candidature_signature_effectuee: 0,
-    candidature_etat_lieux_fixe: 0,
-    candidature_cles_remises: 0,
-    candidature_admin: 0,
-    visit_confirmed: 0,
-    visit_refused: 0,
-  });
   const [loading, setLoading] = useState(true);
+
+  // Memoize counts calculation
+  const counts = useMemo(() => calculateCounts(notifications), [notifications]);
 
   const loadNotifications = useCallback(async () => {
     if (!user) return;
@@ -86,48 +118,18 @@ export const useNotifications = () => {
 
       if (error) throw error;
 
-      // Cast the data to our Notification type
       const typedNotifications = (data || []).map(n => ({
         ...n,
         metadata: n.metadata as Record<string, any> | null
       })) as Notification[];
 
       setNotifications(typedNotifications);
-      updateCounts(typedNotifications);
     } catch (error) {
       console.error('Error loading notifications:', error);
     } finally {
       setLoading(false);
     }
   }, [user]);
-
-  const updateCounts = (notifs: Notification[]) => {
-    const unread = notifs.filter(n => !n.read);
-    setCounts({
-      total: unread.length,
-      new_client_activated: unread.filter(n => n.type === 'new_client_activated').length,
-      client_assigned: unread.filter(n => n.type === 'client_assigned').length,
-      client_removed: unread.filter(n => n.type === 'client_removed').length,
-      client_updated: unread.filter(n => n.type === 'client_updated').length,
-      new_message: unread.filter(n => n.type === 'new_message').length,
-      new_offer: unread.filter(n => n.type === 'new_offer').length,
-      new_visit: unread.filter(n => n.type === 'new_visit').length,
-      visit_reminder: unread.filter(n => n.type === 'visit_reminder').length,
-      activation_request: unread.filter(n => n.type === 'activation_request').length,
-      candidature_acceptee: unread.filter(n => n.type === 'candidature_acceptee').length,
-      candidature_refusee: unread.filter(n => n.type === 'candidature_refusee').length,
-      candidature_bail_conclu: unread.filter(n => n.type === 'candidature_bail_conclu').length,
-      candidature_attente_bail: unread.filter(n => n.type === 'candidature_attente_bail').length,
-      candidature_bail_recu: unread.filter(n => n.type === 'candidature_bail_recu').length,
-      candidature_signature_planifiee: unread.filter(n => n.type === 'candidature_signature_planifiee').length,
-      candidature_signature_effectuee: unread.filter(n => n.type === 'candidature_signature_effectuee').length,
-      candidature_etat_lieux_fixe: unread.filter(n => n.type === 'candidature_etat_lieux_fixe').length,
-      candidature_cles_remises: unread.filter(n => n.type === 'candidature_cles_remises').length,
-      candidature_admin: unread.filter(n => n.type.includes('_admin') || n.type.startsWith('candidature_')).length,
-      visit_confirmed: unread.filter(n => n.type === 'visit_confirmed').length,
-      visit_refused: unread.filter(n => n.type === 'visit_refused').length,
-    });
-  };
 
   const markAsRead = useCallback(async (notificationId: string) => {
     if (!user) return;
@@ -141,13 +143,9 @@ export const useNotifications = () => {
 
       if (error) throw error;
 
-      setNotifications(prev => {
-        const updated = prev.map(n => 
-          n.id === notificationId ? { ...n, read: true } : n
-        );
-        updateCounts(updated);
-        return updated;
-      });
+      setNotifications(prev => 
+        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
+      );
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -165,11 +163,7 @@ export const useNotifications = () => {
 
       if (error) throw error;
 
-      setNotifications(prev => {
-        const updated = prev.map(n => ({ ...n, read: true }));
-        updateCounts(updated);
-        return updated;
-      });
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
@@ -188,13 +182,9 @@ export const useNotifications = () => {
 
       if (error) throw error;
 
-      setNotifications(prev => {
-        const updated = prev.map(n => 
-          n.type === type ? { ...n, read: true } : n
-        );
-        updateCounts(updated);
-        return updated;
-      });
+      setNotifications(prev => 
+        prev.map(n => n.type === type ? { ...n, read: true } : n)
+      );
     } catch (error) {
       console.error('Error marking type notifications as read:', error);
     }
@@ -212,11 +202,7 @@ export const useNotifications = () => {
 
       if (error) throw error;
 
-      setNotifications(prev => {
-        const updated = prev.filter(n => n.id !== notificationId);
-        updateCounts(updated);
-        return updated;
-      });
+      setNotifications(prev => prev.filter(n => n.id !== notificationId));
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
@@ -233,7 +219,6 @@ export const useNotifications = () => {
 
     const channel = supabase
       .channel('notifications-realtime')
-      // Écouter les nouvelles notifications
       .on(
         'postgres_changes',
         {
@@ -248,20 +233,14 @@ export const useNotifications = () => {
             metadata: payload.new.metadata as Record<string, any> | null
           } as Notification;
           
-          setNotifications(prev => {
-            const updated = [newNotification, ...prev];
-            updateCounts(updated);
-            return updated;
-          });
+          setNotifications(prev => [newNotification, ...prev]);
 
-          // Afficher un toast pour la nouvelle notification
           toast({
             title: newNotification.title,
             description: newNotification.message || undefined,
           });
         }
       )
-      // Écouter les mises à jour (mark as read depuis autre appareil)
       .on(
         'postgres_changes',
         {
@@ -271,18 +250,15 @@ export const useNotifications = () => {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          setNotifications(prev => {
-            const updated = prev.map(n => 
+          setNotifications(prev => 
+            prev.map(n => 
               n.id === payload.new.id 
                 ? { ...payload.new, metadata: payload.new.metadata as Record<string, any> | null } as Notification 
                 : n
-            );
-            updateCounts(updated);
-            return updated;
-          });
+            )
+          );
         }
       )
-      // Écouter les suppressions
       .on(
         'postgres_changes',
         {
@@ -292,11 +268,7 @@ export const useNotifications = () => {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          setNotifications(prev => {
-            const updated = prev.filter(n => n.id !== payload.old.id);
-            updateCounts(updated);
-            return updated;
-          });
+          setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
         }
       )
       .subscribe();
