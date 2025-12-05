@@ -615,7 +615,7 @@ const AgentDetail = () => {
                   <div className="flex items-center gap-2 text-sm">
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">Clients assignés:</span>
-                    <span>{agent.nombre_clients_assignes}</span>
+                    <span>{clients.length}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
