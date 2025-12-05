@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -666,7 +667,7 @@ const OffresRecues = () => {
         .update({ statut: 'candidature_deposee' })
         .eq('id', offre.id);
 
-      // 3. Notifier l'agent via messagerie
+      // 3. Notifier l'agent via messagerie avec un tag spécial pour le bouton
       if (clientData.agent_id) {
         let { data: conv } = await supabase
           .from('conversations')
@@ -689,11 +690,25 @@ const OffresRecues = () => {
         }
 
         if (conv) {
+          // Message enrichi avec tag spécial pour le bouton
+          const messageContent = `📝 **DEMANDE DE DÉPÔT DE CANDIDATURE**
+
+🏠 **Bien concerné:**
+- Adresse: ${offre.adresse}
+- Loyer: ${offre.prix?.toLocaleString()} CHF/mois
+- Type: ${offre.type_bien || 'N/A'}
+
+✅ **Visite effectuée** - J'ai consulté les médias de la visite
+
+💼 Je souhaite que vous déposiez mon dossier auprès de la régie.
+
+[BOUTON_DEPOSER_CANDIDATURE:${offre.id}:${clientData.id}]`;
+
           await supabase.from('messages').insert({
             conversation_id: conv.id,
             sender_id: user!.id,
             sender_type: 'client',
-            content: `🆘 **DEMANDE D'AIDE POUR POSTULATION**\n\n🏠 **Bien concerné:**\n- Adresse: ${offre.adresse}\n- Loyer: ${offre.prix.toLocaleString()} CHF/mois\n- Type: ${offre.type_bien || 'N/A'}\n\n💼 **Le client souhaite que vous postuliez pour lui à ce bien.**\n\nMerci de prendre en charge la postulation avec les documents du client disponibles dans son dossier.`
+            content: messageContent
           });
         }
       }
@@ -1417,6 +1432,45 @@ const OffresRecues = () => {
                           <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded border border-yellow-200 dark:border-yellow-800">
                             <p className="text-sm font-medium mb-1">💬 Retour de l'agent après visite :</p>
                             <p className="text-sm">{visiteForOffre.feedback_agent}</p>
+                          </div>
+                        )}
+                        
+                        {/* Médias de la visite */}
+                        {visiteForOffre.medias && (visiteForOffre.medias as any[]).length > 0 && (
+                          <div className="mt-3">
+                            <p className="text-sm font-medium mb-2">📸 Photos/Vidéos de la visite :</p>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                              {(visiteForOffre.medias as any[]).map((media: any, idx: number) => (
+                                <Dialog key={idx}>
+                                  <DialogTrigger asChild>
+                                    <div className="cursor-pointer hover:opacity-80 transition-opacity rounded-lg overflow-hidden border">
+                                      {media.type?.startsWith('image/') ? (
+                                        <img 
+                                          src={media.url} 
+                                          alt={media.name || 'Photo de visite'} 
+                                          className="w-full h-20 object-cover"
+                                        />
+                                      ) : (
+                                        <video 
+                                          src={media.url} 
+                                          className="w-full h-20 object-cover"
+                                        />
+                                      )}
+                                    </div>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-4xl">
+                                    <DialogHeader>
+                                      <DialogTitle>{media.name || 'Média de la visite'}</DialogTitle>
+                                    </DialogHeader>
+                                    {media.type?.startsWith('image/') ? (
+                                      <img src={media.url} alt="" className="w-full rounded" />
+                                    ) : (
+                                      <video src={media.url} controls className="w-full rounded" />
+                                    )}
+                                  </DialogContent>
+                                </Dialog>
+                              ))}
+                            </div>
                           </div>
                         )}
                         

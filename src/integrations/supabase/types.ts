@@ -1974,6 +1974,7 @@ export type Database = {
           est_deleguee: boolean | null
           feedback_agent: string | null
           id: string
+          medias: Json | null
           notes: string | null
           offre_id: string | null
           recommandation_agent: string | null
@@ -1989,6 +1990,7 @@ export type Database = {
           est_deleguee?: boolean | null
           feedback_agent?: string | null
           id?: string
+          medias?: Json | null
           notes?: string | null
           offre_id?: string | null
           recommandation_agent?: string | null
@@ -2004,6 +2006,7 @@ export type Database = {
           est_deleguee?: boolean | null
           feedback_agent?: string | null
           id?: string
+          medias?: Json | null
           notes?: string | null
           offre_id?: string | null
           recommandation_agent?: string | null

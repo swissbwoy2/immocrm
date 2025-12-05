@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { 
   Search, Home, Send,
-  Check, X, Clock, FileSignature, Key, Calendar, Plus, Trash2
+  Check, X, Clock, FileSignature, Key, Calendar, Plus, Trash2, FileEdit
 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,10 +42,26 @@ const removeAccents = (str: string) => {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 };
 
+// Helper to parse the special button tag for deposer candidature
+const parseDeposerButtonTag = (content: string) => {
+  const regex = /\[BOUTON_DEPOSER_CANDIDATURE:([^:]+):([^\]]+)\]/;
+  const match = content?.match(regex);
+  if (match) {
+    return { offreId: match[1], clientId: match[2] };
+  }
+  return null;
+};
+
+// Helper to clean message content from special tags
+const cleanMessageContent = (content: string) => {
+  return content?.replace(/\[BOUTON_DEPOSER_CANDIDATURE:[^\]]+\]/g, '').trim() || '';
+};
+
 const Messagerie = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const { markTypeAsRead } = useNotifications();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
@@ -1136,10 +1152,14 @@ const Messagerie = () => {
               senderName = getContactInfo(currentConversation).name;
             }
             
+            // Check for special button tag
+            const deposerButtonData = parseDeposerButtonTag(msg.content || '');
+            const cleanContent = cleanMessageContent(msg.content || '');
+            
             return (
               <div key={msg.id}>
                 <MessageBubble
-                  content={msg.content || ''}
+                  content={cleanContent}
                   isSent={isSent}
                   timestamp={msg.created_at}
                   read={msg.read}
@@ -1147,6 +1167,18 @@ const Messagerie = () => {
                   attachmentUrl={msg.attachment_url}
                   attachmentName={msg.attachment_name}
                 />
+                {/* Bouton Déposer candidature si tag présent dans message client */}
+                {deposerButtonData && msg.sender_type === 'client' && (
+                  <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[75%] md:max-w-[60%]`}>
+                    <Button 
+                      className="w-full"
+                      onClick={() => navigate(`/agent/deposer-candidature?clientId=${deposerButtonData.clientId}&offreId=${deposerButtonData.offreId}`)}
+                    >
+                      <FileEdit className="mr-2 h-4 w-4" />
+                      Déposer la candidature
+                    </Button>
+                  </div>
+                )}
                 {msg.offre_id && offresMap[msg.offre_id] && (
                   <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[75%] md:max-w-[60%]`}>
                     <OffreCard offre={offresMap[msg.offre_id]} />
