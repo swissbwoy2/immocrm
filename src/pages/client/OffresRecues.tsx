@@ -317,6 +317,7 @@ const OffresRecues = () => {
             sender_id: user?.id,
             sender_type: 'client',
             content: messageContent,
+            offre_id: offre.id
           });
         }
       }
@@ -399,6 +400,7 @@ const OffresRecues = () => {
                 sender_id: user?.id,
                 sender_type: 'client',
                 content: messageContent,
+                offre_id: offre.id
               });
           }
         }
@@ -600,7 +602,8 @@ const OffresRecues = () => {
           conversation_id: conv.id,
           sender_id: user!.id,
           sender_type: 'client',
-          content: `🏠 **Demande de visite déléguée à l'agent**\n\n📍 Adresse: ${selectedOffre.adresse}\n💰 Loyer: ${selectedOffre.prix.toLocaleString()} CHF/mois\n📅 Date souhaitée: ${formattedDate} à ${formattedTime}\n\nLe client souhaite que vous effectuiez la visite pour lui à cette date.`
+          content: `🏠 **Demande de visite déléguée à l'agent**\n\n📍 Adresse: ${selectedOffre.adresse}\n💰 Loyer: ${selectedOffre.prix.toLocaleString()} CHF/mois\n📅 Date souhaitée: ${formattedDate} à ${formattedTime}\n\nLe client souhaite que vous effectuiez la visite pour lui à cette date.`,
+          offre_id: selectedOffre.id
         });
       }
 
@@ -708,7 +711,8 @@ const OffresRecues = () => {
             conversation_id: conv.id,
             sender_id: user!.id,
             sender_type: 'client',
-            content: messageContent
+            content: messageContent,
+            offre_id: offre.id
           });
         }
       }
@@ -871,7 +875,8 @@ const OffresRecues = () => {
             conversation_id: conv.id,
             sender_id: user!.id,
             sender_type: 'client',
-            content: messageContent
+            content: messageContent,
+            offre_id: selectedOffre.id
           });
         }
       }
@@ -998,6 +1003,7 @@ const OffresRecues = () => {
             sender_id: user?.id,
             sender_type: 'client',
             content: `📅 **NOUVELLE VISITE PLANIFIÉE**\n\n🏠 Adresse: ${selectedOffre.adresse}\n💰 Loyer: ${selectedOffre.prix.toLocaleString()} CHF/mois\n📆 Date: ${new Date(selectedDate).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n⏰ Heure: ${new Date(selectedDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}\n\n✅ Le client confirme sa présence pour cette visite.`,
+            offre_id: selectedOffre.id
           });
       }
 

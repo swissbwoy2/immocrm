@@ -176,6 +176,7 @@ const MesCandidatures = () => {
             sender_id: user?.id,
             sender_type: 'client',
             content: messageContent,
+            offre_id: offre.id
           });
         }
       }

@@ -419,7 +419,8 @@ const Messagerie = () => {
             conversation_id: selectedConv,
             sender_id: user.id,
             sender_type: 'client',
-            content: `✅ Je suis intéressé(e) par cette offre !`
+            content: `✅ Je suis intéressé(e) par cette offre !`,
+            offre_id: offreId
           });
 
           // Notify agent
@@ -477,7 +478,8 @@ const Messagerie = () => {
             conversation_id: selectedConv,
             sender_id: user.id,
             sender_type: 'client',
-            content: `🆘 J'ai besoin de votre aide pour postuler au bien ${offre.adresse}. Pouvez-vous m'accompagner dans les démarches ?`
+            content: `🆘 J'ai besoin de votre aide pour postuler au bien ${offre.adresse}. Pouvez-vous m'accompagner dans les démarches ?`,
+            offre_id: offreId
           });
 
           toast({ title: "Demande envoyée", description: "Votre agent va vous contacter" });
@@ -500,7 +502,8 @@ const Messagerie = () => {
             conversation_id: selectedConv,
             sender_id: user.id,
             sender_type: 'client',
-            content: `✅ J'ai effectué la visite du bien ${offre.adresse}`
+            content: `✅ J'ai effectué la visite du bien ${offre.adresse}`,
+            offre_id: offreId
           });
 
           // Notify agent
@@ -533,7 +536,8 @@ const Messagerie = () => {
               conversation_id: selectedConv,
               sender_id: user.id,
               sender_type: 'client',
-              content: `🎉 Je confirme vouloir conclure le bail pour ${offre.adresse} !`
+              content: `🎉 Je confirme vouloir conclure le bail pour ${offre.adresse} !`,
+              offre_id: offreId
             });
 
             toast({ title: "Confirmation envoyée", description: "Votre agent valide avec la régie" });
@@ -570,7 +574,8 @@ const Messagerie = () => {
                 conversation_id: selectedConv,
                 sender_id: user.id,
                 sender_type: 'client',
-                content: `📅 J'ai choisi la date de signature : ${format(new Date(selectedDateObj.date), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })} à ${selectedDateObj.lieu}`
+                content: `📅 J'ai choisi la date de signature : ${format(new Date(selectedDateObj.date), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })} à ${selectedDateObj.lieu}`,
+                offre_id: offreId
               });
 
               // Notify agent
@@ -620,7 +625,8 @@ const Messagerie = () => {
             conversation_id: selectedConv,
             sender_id: user.id,
             sender_type: 'client',
-            content: `❌ Cette offre ne correspond pas à mes critères.`
+            content: `❌ Cette offre ne correspond pas à mes critères.`,
+            offre_id: offreId
           });
 
           toast({ title: "Offre refusée" });
@@ -689,7 +695,8 @@ const Messagerie = () => {
         conversation_id: selectedConv,
         sender_id: user.id,
         sender_type: 'client',
-        content: `📅 J'ai planifié une visite pour le ${formattedDate} au ${selectedOffre.adresse}`
+        content: `📅 J'ai planifié une visite pour le ${formattedDate} au ${selectedOffre.adresse}`,
+        offre_id: selectedOffre.id
       });
 
       // Notify agent
@@ -780,7 +787,8 @@ const Messagerie = () => {
         conversation_id: selectedConv,
         sender_id: user.id,
         sender_type: 'client',
-        content: `🏠 **Demande de visite déléguée**\n\n📍 ${selectedOffre.adresse}\n📅 Date souhaitée : ${formattedDate}\n${delegateNotes ? `📝 Notes : ${delegateNotes}` : ''}\n\nPouvez-vous effectuer cette visite pour moi ?`
+        content: `🏠 **Demande de visite déléguée**\n\n📍 ${selectedOffre.adresse}\n📅 Date souhaitée : ${formattedDate}\n${delegateNotes ? `📝 Notes : ${delegateNotes}` : ''}\n\nPouvez-vous effectuer cette visite pour moi ?`,
+        offre_id: selectedOffre.id
       });
 
       // Notify agent
@@ -850,7 +858,8 @@ const Messagerie = () => {
         conversation_id: selectedConv,
         sender_id: user.id,
         sender_type: 'client',
-        content: `📝 **Candidature déposée**\n\n📍 ${selectedOffre.adresse}\n💰 ${selectedOffre.prix?.toLocaleString()} CHF/mois\n${messageClient ? `\n💬 Message : ${messageClient}` : ''}`
+        content: `📝 **Candidature déposée**\n\n📍 ${selectedOffre.adresse}\n💰 ${selectedOffre.prix?.toLocaleString()} CHF/mois\n${messageClient ? `\n💬 Message : ${messageClient}` : ''}`,
+        offre_id: selectedOffre.id
       });
 
       // Notify agent
