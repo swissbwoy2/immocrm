@@ -414,10 +414,7 @@ const AgentDetail = () => {
         .maybeSingle();
       
       if (existingConv) {
-        navigate({
-          pathname: '/admin/messagerie',
-          search: `?conversationId=${existingConv.id}`
-        });
+        navigate(`/admin/messagerie?conversationId=${existingConv.id}`);
         return;
       }
       
@@ -443,10 +440,7 @@ const AgentDetail = () => {
           agent_id: agent.id,
         });
       
-      navigate({
-        pathname: '/admin/messagerie',
-        search: `?conversationId=${data.id}`
-      });
+      navigate(`/admin/messagerie?conversationId=${data.id}`);
     } catch (error) {
       console.error('Error creating conversation:', error);
       toast({
