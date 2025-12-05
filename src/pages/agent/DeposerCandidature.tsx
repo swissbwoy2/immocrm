@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -55,6 +56,7 @@ interface LocalFile {
 export default function DeposerCandidature() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [clients, setClients] = useState<Client[]>([]);
@@ -68,6 +70,10 @@ export default function DeposerCandidature() {
   const [bodyHtml, setBodyHtml] = useState("");
   const [agentId, setAgentId] = useState<string | null>(null);
   const [signatureHtml, setSignatureHtml] = useState<string>('');
+  
+  // URL params for pre-filling
+  const preClientId = searchParams.get('clientId');
+  const preOffreId = searchParams.get('offreId');
 
   // Email templates
   const { getTemplatesWithDefaults, initializeDefaultTemplates } = useEmailTemplates('dossier');
@@ -96,6 +102,24 @@ export default function DeposerCandidature() {
   useEffect(() => {
     initializeDefaultTemplates();
   }, []);
+
+  // Pre-fill from URL params when data is loaded
+  useEffect(() => {
+    if (!loading && clients.length > 0 && offres.length > 0) {
+      if (preClientId && !selectedClientIds.length) {
+        const clientExists = clients.find(c => c.id === preClientId);
+        if (clientExists) {
+          setSelectedClientIds([preClientId]);
+        }
+      }
+      if (preOffreId && !selectedOffreId) {
+        const offreExists = offres.find(o => o.id === preOffreId);
+        if (offreExists) {
+          setSelectedOffreId(preOffreId);
+        }
+      }
+    }
+  }, [loading, clients, offres, preClientId, preOffreId]);
 
   // Load documents when clients are selected
   useEffect(() => {
@@ -512,19 +536,44 @@ export default function DeposerCandidature() {
       if (emailError) throw emailError;
       if (!emailResult?.success) throw new Error(emailResult?.error || "Erreur d'envoi");
 
-      // Create candidature for each selected client
+      // Create or update candidature for each selected client
       let successCount = 0;
       for (const clientId of selectedClientIds) {
-        const { error: candidatureError } = await supabase
+        // Check if a candidature already exists (e.g., created by client request)
+        const { data: existingCandidature } = await supabase
           .from('candidatures')
-          .insert({
-            offre_id: selectedOffreId,
-            client_id: clientId,
-            statut: 'en_attente',
-            dossier_complet: true,
-            date_depot: new Date().toISOString(),
-            message_client: bodyHtml,
-          });
+          .select('id')
+          .eq('offre_id', selectedOffreId)
+          .eq('client_id', clientId)
+          .maybeSingle();
+
+        let candidatureError;
+        if (existingCandidature) {
+          // Update existing candidature
+          const { error } = await supabase
+            .from('candidatures')
+            .update({
+              statut: 'en_attente',
+              dossier_complet: true,
+              date_depot: new Date().toISOString(),
+              message_client: bodyHtml,
+            })
+            .eq('id', existingCandidature.id);
+          candidatureError = error;
+        } else {
+          // Create new candidature
+          const { error } = await supabase
+            .from('candidatures')
+            .insert({
+              offre_id: selectedOffreId,
+              client_id: clientId,
+              statut: 'en_attente',
+              dossier_complet: true,
+              date_depot: new Date().toISOString(),
+              message_client: bodyHtml,
+            });
+          candidatureError = error;
+        }
 
         if (!candidatureError) {
           successCount++;

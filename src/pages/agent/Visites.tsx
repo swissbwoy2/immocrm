@@ -6,9 +6,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Clock, User, MessageSquare, ThumbsUp, ThumbsDown, Minus, AlertTriangle, Bell, History, CheckCircle, XCircle, Trash2 } from 'lucide-react';
+import { Calendar, Clock, User, MessageSquare, ThumbsUp, ThumbsDown, Minus, AlertTriangle, Bell, History, CheckCircle, XCircle, Trash2, Upload, X, Image, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -40,6 +41,10 @@ export default function AgentVisites() {
   const [agentId, setAgentId] = useState<string | null>(null);
   const [selectedVisites, setSelectedVisites] = useState<Set<string>>(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  
+  // Media upload states
+  const [feedbackMedias, setFeedbackMedias] = useState<{url: string, type: string, name: string, size: number}[]>([]);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
   const handleOpenDetail = (visite: any) => {
     setSelectedVisite(visite);
@@ -279,12 +284,50 @@ export default function AgentVisites() {
     }
   };
 
+  const handleMediaUpload = async (files: FileList) => {
+    if (!selectedVisite) return;
+    setUploadingMedia(true);
+    const newMedias = [...feedbackMedias];
+    
+    for (const file of Array.from(files)) {
+      try {
+        const filePath = `visites/${selectedVisite.id}/${Date.now()}_${file.name}`;
+        const { error } = await supabase.storage
+          .from('client-documents')
+          .upload(filePath, file);
+        
+        if (!error) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('client-documents')
+            .getPublicUrl(filePath);
+          
+          newMedias.push({
+            url: publicUrl,
+            type: file.type,
+            name: file.name,
+            size: file.size
+          });
+        }
+      } catch (err) {
+        console.error('Error uploading file:', err);
+      }
+    }
+    
+    setFeedbackMedias(newMedias);
+    setUploadingMedia(false);
+  };
+
+  const removeMedia = (index: number) => {
+    setFeedbackMedias(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleMarquerEffectuee = async (visite: any) => {
     if (visite.est_deleguee) {
       // Pour les visites déléguées, ouvrir le dialog de feedback
       setSelectedVisite(visite);
       setFeedbackText(visite.feedback_agent || '');
       setRecommandation(visite.recommandation_agent || 'neutre');
+      setFeedbackMedias((visite.medias as any[]) || []);
       setFeedbackDialogOpen(true);
     } else {
       // Pour les visites normales, juste marquer comme effectuée
@@ -315,7 +358,8 @@ export default function AgentVisites() {
         .update({
           statut: 'effectuee',
           feedback_agent: feedbackText,
-          recommandation_agent: recommandation
+          recommandation_agent: recommandation,
+          medias: feedbackMedias
         })
         .eq('id', selectedVisite.id);
 
@@ -365,6 +409,7 @@ export default function AgentVisites() {
 
       toast.success('✅ Feedback enregistré et client notifié');
       setFeedbackDialogOpen(false);
+      setFeedbackMedias([]);
       await loadVisites();
     } catch (error) {
       console.error('Error saving feedback:', error);
@@ -933,6 +978,56 @@ export default function AgentVisites() {
                 />
                 <p className="text-xs text-muted-foreground">
                   Ce feedback sera partagé avec votre client pour l'aider dans sa décision
+                </p>
+              </div>
+
+              {/* Upload de médias */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Image className="h-4 w-4" />
+                  Photos / Vidéos de la visite
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    onChange={(e) => e.target.files && handleMediaUpload(e.target.files)}
+                    disabled={uploadingMedia}
+                    className="flex-1"
+                  />
+                  {uploadingMedia && (
+                    <span className="text-xs text-muted-foreground">Upload...</span>
+                  )}
+                </div>
+                {feedbackMedias.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
+                    {feedbackMedias.map((media, idx) => (
+                      <div key={idx} className="relative group rounded-lg overflow-hidden border">
+                        {media.type.startsWith('image/') ? (
+                          <img src={media.url} alt={media.name} className="w-full h-24 object-cover" />
+                        ) : (
+                          <div className="w-full h-24 bg-muted flex items-center justify-center">
+                            <Video className="h-8 w-8 text-muted-foreground" />
+                          </div>
+                        )}
+                        <Button
+                          size="icon"
+                          variant="destructive"
+                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeMedia(idx)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                        <p className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 truncate">
+                          {media.name}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Ces médias seront visibles par le client pour l'aider à prendre sa décision
                 </p>
               </div>
             </div>
