@@ -174,6 +174,102 @@ export type Database = {
           },
         ]
       }
+      apporteurs: {
+        Row: {
+          adresse: string | null
+          bic_swift: string | null
+          civilite: string | null
+          code_parrainage: string | null
+          code_postal: string | null
+          contrat_pdf_url: string | null
+          contrat_signe: boolean | null
+          created_at: string | null
+          date_expiration: string | null
+          date_signature: string | null
+          dispositions_particulieres: string | null
+          iban: string | null
+          id: string
+          minimum_location: number | null
+          minimum_vente: number | null
+          nom_banque: string | null
+          nombre_clients_referes: number | null
+          notes_admin: string | null
+          pays: string | null
+          piece_identite_url: string | null
+          signature_data: string | null
+          statut: string | null
+          taux_commission: number | null
+          telephone: string | null
+          titulaire_compte: string | null
+          total_commissions_gagnees: number | null
+          updated_at: string | null
+          user_id: string
+          ville: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          bic_swift?: string | null
+          civilite?: string | null
+          code_parrainage?: string | null
+          code_postal?: string | null
+          contrat_pdf_url?: string | null
+          contrat_signe?: boolean | null
+          created_at?: string | null
+          date_expiration?: string | null
+          date_signature?: string | null
+          dispositions_particulieres?: string | null
+          iban?: string | null
+          id?: string
+          minimum_location?: number | null
+          minimum_vente?: number | null
+          nom_banque?: string | null
+          nombre_clients_referes?: number | null
+          notes_admin?: string | null
+          pays?: string | null
+          piece_identite_url?: string | null
+          signature_data?: string | null
+          statut?: string | null
+          taux_commission?: number | null
+          telephone?: string | null
+          titulaire_compte?: string | null
+          total_commissions_gagnees?: number | null
+          updated_at?: string | null
+          user_id: string
+          ville?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          bic_swift?: string | null
+          civilite?: string | null
+          code_parrainage?: string | null
+          code_postal?: string | null
+          contrat_pdf_url?: string | null
+          contrat_signe?: boolean | null
+          created_at?: string | null
+          date_expiration?: string | null
+          date_signature?: string | null
+          dispositions_particulieres?: string | null
+          iban?: string | null
+          id?: string
+          minimum_location?: number | null
+          minimum_vente?: number | null
+          nom_banque?: string | null
+          nombre_clients_referes?: number | null
+          notes_admin?: string | null
+          pays?: string | null
+          piece_identite_url?: string | null
+          signature_data?: string | null
+          statut?: string | null
+          taux_commission?: number | null
+          telephone?: string | null
+          titulaire_compte?: string | null
+          total_commissions_gagnees?: number | null
+          updated_at?: string | null
+          user_id?: string
+          ville?: string | null
+        }
+        Relationships: []
+      }
       calendar_events: {
         Row: {
           agent_id: string | null
@@ -1638,6 +1734,103 @@ export type Database = {
         }
         Relationships: []
       }
+      referrals: {
+        Row: {
+          apporteur_id: string | null
+          client_email: string | null
+          client_id: string | null
+          client_nom: string
+          client_prenom: string | null
+          client_telephone: string | null
+          created_at: string | null
+          date_conclusion: string | null
+          date_paiement: string | null
+          date_validation: string | null
+          demande_mandat_id: string | null
+          id: string
+          lieu_situation: string | null
+          montant_commission: number | null
+          montant_frais_agence: number | null
+          notes: string | null
+          notes_admin: string | null
+          reference_virement: string | null
+          statut: string | null
+          taux_commission: number | null
+          type_affaire: string
+          updated_at: string | null
+        }
+        Insert: {
+          apporteur_id?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          client_nom: string
+          client_prenom?: string | null
+          client_telephone?: string | null
+          created_at?: string | null
+          date_conclusion?: string | null
+          date_paiement?: string | null
+          date_validation?: string | null
+          demande_mandat_id?: string | null
+          id?: string
+          lieu_situation?: string | null
+          montant_commission?: number | null
+          montant_frais_agence?: number | null
+          notes?: string | null
+          notes_admin?: string | null
+          reference_virement?: string | null
+          statut?: string | null
+          taux_commission?: number | null
+          type_affaire: string
+          updated_at?: string | null
+        }
+        Update: {
+          apporteur_id?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          client_nom?: string
+          client_prenom?: string | null
+          client_telephone?: string | null
+          created_at?: string | null
+          date_conclusion?: string | null
+          date_paiement?: string | null
+          date_validation?: string | null
+          demande_mandat_id?: string | null
+          id?: string
+          lieu_situation?: string | null
+          montant_commission?: number | null
+          montant_frais_agence?: number | null
+          notes?: string | null
+          notes_admin?: string | null
+          reference_virement?: string | null
+          statut?: string | null
+          taux_commission?: number | null
+          type_affaire?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_apporteur_id_fkey"
+            columns: ["apporteur_id"]
+            isOneToOne: false
+            referencedRelation: "apporteurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_demande_mandat_id_fkey"
+            columns: ["demande_mandat_id"]
+            isOneToOne: false
+            referencedRelation: "demandes_mandat"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       renouvellements_mandat: {
         Row: {
           agent_id: string | null
@@ -2064,6 +2257,7 @@ export type Database = {
         Args: { agent_uuid: string }
         Returns: undefined
       }
+      generate_parrainage_code: { Args: never; Returns: string }
       get_client_agent_id: {
         Args: { _client_user_id: string }
         Returns: string
@@ -2094,7 +2288,7 @@ export type Database = {
       is_my_assigned_agent: { Args: { _agent_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "agent" | "client"
+      app_role: "admin" | "agent" | "client" | "apporteur"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2222,7 +2416,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "agent", "client"],
+      app_role: ["admin", "agent", "client", "apporteur"],
     },
   },
 } as const
