@@ -67,6 +67,7 @@ export default function DeposerCandidature() {
   const [subject, setSubject] = useState("");
   const [bodyHtml, setBodyHtml] = useState("");
   const [agentId, setAgentId] = useState<string | null>(null);
+  const [signatureHtml, setSignatureHtml] = useState<string>('');
 
   // Email templates
   const { getTemplatesWithDefaults, initializeDefaultTemplates } = useEmailTemplates('dossier');
@@ -120,11 +121,24 @@ export default function DeposerCandidature() {
     
     setLoading(true);
     try {
+      // Load agent data
       const { data: agentData } = await supabase
         .from('agents')
         .select('id')
         .eq('user_id', user.id)
         .single();
+
+      // Load email signature
+      const { data: emailConfig } = await supabase
+        .from('email_configurations')
+        .select('signature_html')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .single();
+
+      if (emailConfig?.signature_html) {
+        setSignatureHtml(emailConfig.signature_html);
+      }
 
       if (agentData) {
         setAgentId(agentData.id);
@@ -479,13 +493,18 @@ export default function DeposerCandidature() {
       // Combine all attachments
       const attachments = [...clientDocAttachments, ...localFileAttachments];
 
+      // Build final email body with signature
+      const finalBodyHtml = signatureHtml 
+        ? `${bodyHtml}<br/><br/>${signatureHtml}` 
+        : bodyHtml;
+
       // Send email
       const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-smtp-email', {
         body: {
           recipient_email: recipientEmail,
           recipient_name: recipientName,
           subject: subject,
-          body_html: bodyHtml,
+          body_html: finalBodyHtml,
           attachments: attachments.length > 0 ? attachments : undefined,
         },
       });
