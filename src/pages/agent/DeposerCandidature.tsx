@@ -961,6 +961,40 @@ export default function DeposerCandidature() {
                 Aucune signature configurée. Vous pouvez en ajouter une dans vos paramètres email.
               </p>
             )}
+
+            {/* Full email preview */}
+            {(bodyHtml || subject) && (
+              <div className="space-y-2 pt-4 border-t">
+                <Label className="flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  Aperçu de l'email final
+                </Label>
+                <div className="border rounded-lg overflow-hidden">
+                  {/* Email header */}
+                  <div className="bg-muted/50 p-3 border-b space-y-1 text-sm">
+                    <p><span className="font-medium">À :</span> {recipientEmail || '(non renseigné)'} {recipientName && `<${recipientName}>`}</p>
+                    <p><span className="font-medium">Objet :</span> {subject || '(non renseigné)'}</p>
+                    {totalAttachments > 0 && (
+                      <p className="flex items-center gap-1">
+                        <Paperclip className="h-3 w-3" />
+                        <span className="font-medium">Pièces jointes :</span> {totalAttachments} fichier(s)
+                      </p>
+                    )}
+                  </div>
+                  {/* Email body */}
+                  <div className="p-4 bg-background max-h-[400px] overflow-y-auto">
+                    <div 
+                      className="prose prose-sm max-w-none whitespace-pre-wrap"
+                      dangerouslySetInnerHTML={{ 
+                        __html: signatureHtml 
+                          ? `${bodyHtml.replace(/\n/g, '<br/>')}<br/><br/>${signatureHtml}` 
+                          : bodyHtml.replace(/\n/g, '<br/>') 
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
