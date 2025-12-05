@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  userRole: 'admin' | 'agent' | 'client' | null;
+  userRole: 'admin' | 'agent' | 'client' | 'apporteur' | null;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -16,7 +16,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [userRole, setUserRole] = useState<'admin' | 'agent' | 'client' | null>(null);
+  const [userRole, setUserRole] = useState<'admin' | 'agent' | 'client' | 'apporteur' | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) throw error;
-      setUserRole(data.role as 'admin' | 'agent' | 'client');
+      setUserRole(data.role as 'admin' | 'agent' | 'client' | 'apporteur');
 
       // If this is an agent, activate them on first login
       if (data.role === 'agent') {
@@ -74,6 +74,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (agentData?.statut === 'en_attente') {
           await supabase
             .from('agents')
+            .update({ statut: 'actif' })
+            .eq('user_id', userId);
+        }
+      }
+
+      // If this is an apporteur, activate them on first login
+      if (data.role === 'apporteur') {
+        const { data: apporteurData } = await supabase
+          .from('apporteurs')
+          .select('statut')
+          .eq('user_id', userId)
+          .single();
+
+        if (apporteurData?.statut === 'en_attente') {
+          await supabase
+            .from('apporteurs')
             .update({ statut: 'actif' })
             .eq('user_id', userId);
         }
