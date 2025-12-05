@@ -52,16 +52,24 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 19% 20%;
     --sidebar-ring: 217 91% 60%;
+
+    /* Enhanced design tokens */
+    --shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.05);
+    --shadow-md: 0 4px 6px -1px hsl(222 47% 11% / 0.1), 0 2px 4px -2px hsl(222 47% 11% / 0.1);
+    --shadow-lg: 0 10px 15px -3px hsl(222 47% 11% / 0.1), 0 4px 6px -4px hsl(222 47% 11% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(222 47% 11% / 0.1), 0 8px 10px -6px hsl(222 47% 11% / 0.1);
+    --shadow-glow: 0 0 20px hsl(217 91% 60% / 0.3);
+    --shadow-card-hover: 0 10px 40px -10px hsl(217 91% 60% / 0.2);
   }
 
   .dark {
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
 
-    --card: 217 19% 20%;
+    --card: 217 19% 17%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 217 19% 20%;
+    --popover: 217 19% 17%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 217 91% 60%;
@@ -85,18 +93,26 @@ All colors MUST be HSL.
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 217 19% 20%;
-    --input: 217 19% 20%;
+    --border: 217 19% 25%;
+    --input: 217 19% 25%;
     --ring: 217 91% 60%;
     
-    --sidebar-background: 222 47% 11%;
+    --sidebar-background: 222 47% 8%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 19% 20%;
+    --sidebar-accent: 217 19% 15%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 19% 20%;
+    --sidebar-border: 217 19% 15%;
     --sidebar-ring: 217 91% 60%;
+
+    /* Enhanced design tokens - dark mode */
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.3), 0 4px 6px -4px hsl(0 0% 0% / 0.3);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.4), 0 8px 10px -6px hsl(0 0% 0% / 0.3);
+    --shadow-glow: 0 0 30px hsl(217 91% 60% / 0.4);
+    --shadow-card-hover: 0 10px 40px -10px hsl(217 91% 60% / 0.3);
   }
 }
 
@@ -106,12 +122,166 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* Smooth scrolling globally */
+  html {
+    scroll-behavior: smooth;
   }
 }
 
-/* Custom scrollbar styles for better tablet/mobile experience */
+/* Animation keyframes */
 @layer utilities {
+  /* Fade animations */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fade-in-scale {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes slide-in-from-bottom {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slide-in-from-left {
+    from {
+      opacity: 0;
+      transform: translateX(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes pulse-soft {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  @keyframes bounce-soft {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-5px);
+    }
+  }
+
+  @keyframes celebration {
+    0% {
+      transform: scale(1);
+    }
+    25% {
+      transform: scale(1.1);
+    }
+    50% {
+      transform: scale(1);
+    }
+    75% {
+      transform: scale(1.05);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes confetti-fall {
+    0% {
+      transform: translateY(-100%) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(100vh) rotate(720deg);
+      opacity: 0;
+    }
+  }
+
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out forwards;
+  }
+
+  .animate-fade-in-scale {
+    animation: fade-in-scale 0.3s ease-out forwards;
+  }
+
+  .animate-slide-in-bottom {
+    animation: slide-in-from-bottom 0.4s ease-out forwards;
+  }
+
+  .animate-slide-in-left {
+    animation: slide-in-from-left 0.3s ease-out forwards;
+  }
+
+  .animate-pulse-soft {
+    animation: pulse-soft 2s ease-in-out infinite;
+  }
+
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--muted-foreground) / 0.1) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  .animate-bounce-soft {
+    animation: bounce-soft 1s ease-in-out infinite;
+  }
+
+  .animate-celebration {
+    animation: celebration 0.6s ease-out;
+  }
+
+  /* Staggered animation delays */
+  .animate-delay-100 { animation-delay: 100ms; }
+  .animate-delay-200 { animation-delay: 200ms; }
+  .animate-delay-300 { animation-delay: 300ms; }
+  .animate-delay-400 { animation-delay: 400ms; }
+  .animate-delay-500 { animation-delay: 500ms; }
+
+  /* Custom scrollbar styles */
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
@@ -150,21 +320,10 @@ All colors MUST be HSL.
   /* WhatsApp-style message bubbles */
   .message-bubble-sent,
   .message-bubble-received {
-    animation: message-appear 0.15s ease-out;
+    animation: fade-in-scale 0.2s ease-out;
   }
 
-  @keyframes message-appear {
-    from {
-      opacity: 0;
-      transform: scale(0.95) translateY(4px);
-    }
-    to {
-      opacity: 1;
-      transform: scale(1) translateY(0);
-    }
-  }
-
-  /* WhatsApp-style chat background pattern (optional) */
+  /* WhatsApp-style chat background pattern */
   .chat-background {
     background-color: hsl(var(--background));
     background-image: 
@@ -175,7 +334,12 @@ All colors MUST be HSL.
 
   /* Smooth conversation item hover */
   .conversation-item-hover {
-    transition: background-color 0.15s ease;
+    transition: all 0.2s ease;
+  }
+
+  .conversation-item-hover:hover {
+    background-color: hsl(var(--muted) / 0.7);
+    transform: translateX(2px);
   }
 
   /* Safe area support for mobile devices */
@@ -197,5 +361,111 @@ All colors MUST be HSL.
   .smooth-scroll {
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
+  }
+
+  /* Card hover effects */
+  .card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* KPI card gradient backgrounds */
+  .kpi-gradient-default {
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.05) 0%, hsl(var(--primary) / 0.15) 100%);
+  }
+
+  .kpi-gradient-success {
+    background: linear-gradient(135deg, hsl(var(--success) / 0.05) 0%, hsl(var(--success) / 0.15) 100%);
+  }
+
+  .kpi-gradient-warning {
+    background: linear-gradient(135deg, hsl(var(--warning) / 0.05) 0%, hsl(var(--warning) / 0.15) 100%);
+  }
+
+  .kpi-gradient-danger {
+    background: linear-gradient(135deg, hsl(var(--destructive) / 0.05) 0%, hsl(var(--destructive) / 0.15) 100%);
+  }
+
+  /* Sidebar item active indicator */
+  .sidebar-item-active {
+    position: relative;
+  }
+
+  .sidebar-item-active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 60%;
+    background: hsl(var(--sidebar-primary));
+    border-radius: 0 2px 2px 0;
+  }
+
+  /* Progress bar glow effect */
+  .progress-glow {
+    box-shadow: 0 0 10px hsl(var(--primary) / 0.3);
+  }
+
+  /* Badge pulse animation */
+  .badge-pulse {
+    animation: pulse-soft 2s ease-in-out infinite;
+  }
+
+  /* Goal achieved celebration effect */
+  .goal-achieved {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .goal-achieved::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      45deg,
+      transparent 30%,
+      hsl(var(--success) / 0.1) 50%,
+      transparent 70%
+    );
+    background-size: 200% 200%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* Notification badge bounce */
+  .notification-bounce {
+    animation: bounce-soft 0.5s ease-out;
+  }
+
+  /* Login card floating effect */
+  .login-card-float {
+    animation: fade-in-scale 0.5s ease-out;
+    box-shadow: var(--shadow-xl);
+  }
+
+  .login-card-float:hover {
+    box-shadow: var(--shadow-glow), var(--shadow-xl);
+  }
+
+  /* Input focus glow */
+  .input-focus-glow:focus-within {
+    box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+  }
+
+  /* Button press effect */
+  .btn-press:active {
+    transform: scale(0.98);
+  }
+
+  /* Glass effect */
+  .glass-effect {
+    background: hsl(var(--background) / 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
   }
 }

@@ -237,14 +237,14 @@ export function AppSidebar() {
                       <NavLink
                         to={item.path}
                         end={item.path === '/admin' || item.path === '/agent' || item.path === '/client'}
-                        className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-sidebar-accent/50 transition-colors"
-                        activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                        className="flex items-center gap-2 px-3 py-2 rounded-md transition-all duration-200 hover:bg-sidebar-accent/50 hover:translate-x-1 group/item"
+                        activeClassName="bg-sidebar-accent text-sidebar-accent-foreground sidebar-item-active"
                         onClick={handleNavClick}
                       >
-                        <item.icon className="w-5 h-5 flex-shrink-0" />
+                        <item.icon className="w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover/item:scale-110" />
                         <span className="truncate flex-1">{item.name}</span>
                         {hasDrafts && item.path === '/agent/envoyer-offre' && (
-                          <span className="text-orange-500 text-sm" title="Brouillons sauvegardés">📝</span>
+                          <span className="text-orange-500 text-sm animate-pulse-soft" title="Brouillons sauvegardés">📝</span>
                         )}
                         {notifCount > 0 && (
                           <NotificationBadge count={notifCount} />
