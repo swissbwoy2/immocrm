@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, 
   FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download, Eye, Upload, MailPlus,
-  FileCheck, CheckCircle, XCircle, Clock, Pencil, Trash2, FilePlus, Users
+  FileCheck, CheckCircle, XCircle, Clock, Pencil, Trash2, FilePlus, Users, MessageSquare
 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SendDossierDialog } from '@/components/SendDossierDialog';
@@ -451,6 +451,52 @@ export default function ClientDetail() {
     }
   };
 
+  const handleSendMessage = async () => {
+    if (!client || !agentId) return;
+    
+    try {
+      // Vérifier si une conversation existe déjà
+      const { data: existingConv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('client_id', client.id)
+        .eq('agent_id', agentId)
+        .eq('conversation_type', 'client-agent')
+        .maybeSingle();
+      
+      if (existingConv) {
+        navigate(`/agent/messagerie?conversationId=${existingConv.id}`);
+        return;
+      }
+      
+      // Créer une nouvelle conversation
+      const clientName = `${profile?.prenom} ${profile?.nom}`.trim();
+      const { data, error } = await supabase
+        .from('conversations')
+        .insert({
+          agent_id: agentId,
+          client_id: client.id,
+          client_name: clientName,
+          subject: `Conversation avec ${clientName}`,
+          last_message_at: new Date().toISOString(),
+          conversation_type: 'client-agent',
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      navigate(`/agent/messagerie?conversationId=${data.id}`);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de créer la conversation',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handlePreview = async (document: any) => {
     setSelectedDocument(document);
     
@@ -621,6 +667,11 @@ export default function ClientDetail() {
               <MailPlus className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Envoyer dossier</span>
               <span className="sm:hidden">Dossier</span>
+            </Button>
+            <Button variant="outline" className="w-full sm:w-auto" onClick={handleSendMessage}>
+              <MessageSquare className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Message</span>
+              <span className="sm:hidden">Msg</span>
             </Button>
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
               <DialogTrigger asChild>

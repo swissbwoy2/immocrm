@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare } from 'lucide-react';
 import { ClientActivityStats } from '@/components/admin/ClientActivityStats';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -490,6 +490,64 @@ export default function ClientDetail() {
     }
   };
 
+  const handleSendMessage = async () => {
+    if (!client) return;
+    
+    try {
+      // Trouver l'agent assigné
+      const agentIdToUse = client.agent_id;
+      
+      if (!agentIdToUse) {
+        toast({
+          title: 'Erreur',
+          description: "Ce client n'a pas d'agent assigné. Assignez d'abord un agent.",
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Vérifier si une conversation existe déjà
+      const { data: existingConv } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('client_id', client.id)
+        .eq('agent_id', agentIdToUse)
+        .eq('conversation_type', 'client-agent')
+        .maybeSingle();
+      
+      if (existingConv) {
+        navigate(`/admin/messagerie?conversationId=${existingConv.id}`);
+        return;
+      }
+      
+      // Créer une nouvelle conversation
+      const clientName = `${profile?.prenom} ${profile?.nom}`.trim();
+      const { data, error } = await supabase
+        .from('conversations')
+        .insert({
+          agent_id: agentIdToUse,
+          client_id: client.id,
+          client_name: clientName,
+          subject: `Conversation avec ${clientName}`,
+          last_message_at: new Date().toISOString(),
+          conversation_type: 'client-agent',
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      navigate(`/admin/messagerie?conversationId=${data.id}`);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de créer la conversation',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -590,6 +648,11 @@ export default function ClientDetail() {
               <MailPlus className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Envoyer dossier</span>
               <span className="sm:hidden">Dossier</span>
+            </Button>
+            <Button variant="outline" className="w-full sm:w-auto" onClick={handleSendMessage}>
+              <MessageSquare className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Message</span>
+              <span className="sm:hidden">Msg</span>
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
