@@ -1151,7 +1151,7 @@ const OffresRecues = () => {
                   )}
                   {offre.statut === 'visite_effectuee' && (
                     <>
-                      <Button size="sm" onClick={() => handleDeposerCandidature(offre)}>
+                      <Button size="sm" onClick={() => handlePostulerDirect(offre)}>
                         <FileCheck className="mr-2 h-4 w-4" />
                         Déposer ma candidature
                       </Button>
@@ -1463,7 +1463,7 @@ const OffresRecues = () => {
                     </Button>
                   )}
                   {selectedOffre.statut === 'visite_effectuee' && (
-                    <Button size="sm" onClick={() => { handleDeposerCandidature(selectedOffre); setDetailsDialogOpen(false); }}>
+                    <Button size="sm" onClick={() => { handlePostulerDirect(selectedOffre); setDetailsDialogOpen(false); }}>
                       <FileCheck className="mr-2 h-4 w-4" />
                       Déposer ma candidature
                     </Button>
