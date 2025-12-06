@@ -652,29 +652,57 @@ export default function ClientDashboard() {
           {profileActif !== false && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               {/* Alerte de solvabilité - différente selon Louer ou Acheter */}
-              {isAcheteur ? (
-                <PurchaseSolvabilityAlert result={purchaseSolvabilityResult} />
-              ) : (
-                <SolvabilityAlert result={solvabilityResult} />
-              )}
+              <div className="animate-fade-in group" style={{ animationDelay: '220ms' }}>
+                <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-1 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                  </div>
+                  <div className="relative">
+                    {isAcheteur ? (
+                      <PurchaseSolvabilityAlert result={purchaseSolvabilityResult} />
+                    ) : (
+                      <SolvabilityAlert result={solvabilityResult} />
+                    )}
+                  </div>
+                </div>
+              </div>
               
               {/* Checklist du dossier */}
-              <DossierChecklistCard
-                clientName={clientFullName}
-                candidates={candidates}
-                documents={documents}
-              />
+              <div className="animate-fade-in group" style={{ animationDelay: '280ms' }}>
+                <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-1 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                  </div>
+                  <div className="relative">
+                    <DossierChecklistCard
+                      clientName={clientFullName}
+                      candidates={candidates}
+                      documents={documents}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
           {/* Gestion des candidats */}
           {profileActif !== false && (
-            <div className="mb-8">
-              <ClientCandidatesManager
-                clientId={client.id}
-                clientRevenus={client.revenus_mensuels || 0}
-                budgetDemande={client.budget_max || 0}
-              />
+            <div className="mb-8 animate-fade-in group" style={{ animationDelay: '340ms' }}>
+              <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-1 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                </div>
+                <div className="relative">
+                  <ClientCandidatesManager
+                    clientId={client.id}
+                    clientRevenus={client.revenus_mensuels || 0}
+                    budgetDemande={client.budget_max || 0}
+                  />
+                </div>
+              </div>
             </div>
           )}
 
@@ -701,396 +729,527 @@ export default function ClientDashboard() {
             if (candidaturesEnCours.length === 0) return null;
 
             return (
-              <Card className="card-interactive mb-8 border-2 border-primary/50 bg-gradient-to-r from-primary/5 to-primary/10 shadow-lg animate-fade-in">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
-                      <FileCheck className="w-5 h-5" />
-                      🚀 Vos candidatures en cours
-                    </CardTitle>
-                    <Badge variant="default" className="animate-pulse text-lg px-3 py-1">
-                      {candidaturesEnCours.length}
-                    </Badge>
+              <div className="mb-8 animate-fade-in group">
+                <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border-2 border-primary/30 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/20 transition-all duration-500">
+                  {/* Gradient background */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10" />
+                  
+                  {/* Animated glow */}
+                  <div className="absolute inset-0 opacity-50 group-hover:opacity-100 transition-opacity duration-500">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {candidaturesEnCours.slice(0, 3).map(cand => {
-                    const statusInfo = getStatusInfo(cand.statut);
-                    
-                    return (
-                      <div 
-                        key={cand.id}
-                        className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:scale-[1.01] hover:shadow-md ${statusInfo.color}`}
-                        onClick={() => navigate('/client/mes-candidatures')}
-                      >
-                        <div className="flex items-start justify-between gap-3 mb-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold truncate">{cand.offres?.adresse}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {cand.offres?.pieces} pièces • {cand.offres?.prix?.toLocaleString()} CHF/mois
-                            </p>
-                          </div>
-                          <Badge className={`${statusInfo.textColor} border-2 font-bold`} variant="outline">
-                            {statusInfo.label}
-                          </Badge>
+                  
+                  <div className="relative p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-primary/20 group-hover:bg-primary/30 transition-colors duration-300">
+                          <FileCheck className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
                         </div>
-                        
-                        {/* Barre de progression */}
-                        <div className="mt-3">
-                          <div className="flex justify-between text-xs mb-1">
-                            <span className="text-muted-foreground">Progression du dossier</span>
-                            <span className={`font-bold ${statusInfo.textColor}`}>{statusInfo.progress}%</span>
-                          </div>
-                          <Progress 
-                            value={statusInfo.progress} 
-                            className="h-2"
-                          />
-                          <p className={`text-xs mt-2 font-medium ${statusInfo.textColor}`}>
-                            Étape {statusInfo.step}/9 : {statusInfo.label}
-                          </p>
-                        </div>
+                        <h3 className="text-lg font-semibold text-primary">🚀 Vos candidatures en cours</h3>
                       </div>
-                    );
-                  })}
-                  <Button 
-                    variant="default"
-                    size="lg" 
-                    className="w-full mt-2"
-                    onClick={() => navigate('/client/mes-candidatures')}
-                  >
-                    <FileCheck className="w-4 h-4 mr-2" />
-                    Voir toutes mes candidatures
-                  </Button>
-                </CardContent>
-              </Card>
+                      <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-lg px-3 py-1 shadow-lg shadow-primary/30 animate-pulse-soft">
+                        {candidaturesEnCours.length}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {candidaturesEnCours.slice(0, 3).map((cand, index) => {
+                        const statusInfo = getStatusInfo(cand.statut);
+                        
+                        return (
+                          <div 
+                            key={cand.id}
+                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all hover:scale-[1.01] hover:shadow-lg backdrop-blur-sm ${statusInfo.color} hover:border-primary/30 group/item`}
+                            onClick={() => navigate('/client/mes-candidatures')}
+                            style={{ animationDelay: `${index * 50}ms` }}
+                          >
+                            <div className="flex items-start justify-between gap-3 mb-3">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold truncate group-hover/item:text-primary transition-colors">{cand.offres?.adresse}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {cand.offres?.pieces} pièces • {cand.offres?.prix?.toLocaleString()} CHF/mois
+                                </p>
+                              </div>
+                              <Badge className={`${statusInfo.textColor} border-2 font-bold shadow-sm`} variant="outline">
+                                {statusInfo.label}
+                              </Badge>
+                            </div>
+                            
+                            {/* Barre de progression premium */}
+                            <div className="mt-3">
+                              <div className="flex justify-between text-xs mb-1">
+                                <span className="text-muted-foreground">Progression du dossier</span>
+                                <span className={`font-bold ${statusInfo.textColor}`}>{statusInfo.progress}%</span>
+                              </div>
+                              <div className="relative h-2 rounded-full overflow-hidden bg-background/50">
+                                <Progress 
+                                  value={statusInfo.progress} 
+                                  className="h-2"
+                                  indicatorClassName="bg-gradient-to-r from-primary via-primary/80 to-accent shadow-lg shadow-primary/30"
+                                />
+                              </div>
+                              <p className={`text-xs mt-2 font-medium ${statusInfo.textColor}`}>
+                                Étape {statusInfo.step}/9 : {statusInfo.label}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    <Button 
+                      size="lg" 
+                      className="w-full mt-4 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] transition-all duration-300"
+                      onClick={() => navigate('/client/mes-candidatures')}
+                    >
+                      <FileCheck className="w-4 h-4 mr-2" />
+                      Voir toutes mes candidatures
+                    </Button>
+                  </div>
+                </div>
+              </div>
             );
           })()}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Mon mandat */}
-            <Card className="card-interactive animate-fade-in" style={{ animationDelay: '100ms' }}>
-              <CardHeader>
-                <CardTitle>
-                  {isAcheteur ? '🏠 Mon projet d\'achat' : '📋 Mon mandat'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {profileActif === false ? (
-                  /* État compte non actif */
-                  <div className="text-center py-4">
-                    <div className="p-4 bg-orange-100 dark:bg-orange-950/30 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4">
-                      <AlertTriangle className="w-8 h-8 text-orange-500" />
+            {/* Mon mandat - Premium Card */}
+            <div className="animate-fade-in group" style={{ animationDelay: '100ms' }}>
+              <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-1">
+                {/* Gradient background on hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                
+                {/* Shine effect on hover */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                </div>
+                
+                <div className="relative p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
+                      {isAcheteur ? (
+                        <Home className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
+                      ) : (
+                        <FileText className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
+                      )}
                     </div>
-                    <p className="font-medium text-foreground mb-2">Compte en attente d'activation</p>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      La progression de votre mandat sera disponible dès que votre profil sera activé par votre agent.
-                    </p>
-                    <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Date d'inscription</p>
-                        <p className="font-medium">{new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</p>
+                    <h3 className="text-lg font-semibold">
+                      {isAcheteur ? 'Mon projet d\'achat' : 'Mon mandat'}
+                    </h3>
+                  </div>
+                  
+                  {profileActif === false ? (
+                    /* État compte non actif */
+                    <div className="text-center py-4">
+                      <div className="p-4 bg-orange-100 dark:bg-orange-950/30 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4 animate-pulse-soft">
+                        <AlertTriangle className="w-8 h-8 text-orange-500" />
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Statut</p>
-                        <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-orange-100 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400">
-                          En attente
-                        </span>
+                      <p className="font-medium text-foreground mb-2">Compte en attente d'activation</p>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        La progression de votre mandat sera disponible dès que votre profil sera activé par votre agent.
+                      </p>
+                      <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300">
+                          <p className="text-sm text-muted-foreground">Date d'inscription</p>
+                          <p className="font-medium">{new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300">
+                          <p className="text-sm text-muted-foreground">Statut</p>
+                          <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-orange-100 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400">
+                            En attente
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="text-muted-foreground">Progression du mandat</span>
+                          <span className="font-medium text-orange-500">En attente</span>
+                        </div>
+                        <div className="relative h-3 rounded-full bg-orange-100 dark:bg-orange-950/30 overflow-hidden">
+                          <Progress 
+                            value={0} 
+                            className="h-3 bg-transparent"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 via-orange-500/20 to-orange-400/20 animate-pulse" />
+                        </div>
+                        <p className="text-xs text-orange-500 mt-2 text-center">
+                          ⏳ Sera activée dès que votre profil sera validé
+                        </p>
                       </div>
                     </div>
-                    <div className="mt-4">
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-muted-foreground">Progression du mandat</span>
-                        <span className="font-medium text-orange-500">En attente</span>
+                  ) : (
+                    /* État compte actif */
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 border border-transparent hover:border-primary/10">
+                          <p className="text-sm text-muted-foreground">Date de début</p>
+                          <p className="font-medium">{new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 border border-transparent hover:border-primary/10">
+                          <p className="text-sm text-muted-foreground">Temps restant</p>
+                          <p className="font-medium">{formatTimeRemaining(daysRemaining)}</p>
+                        </div>
+                        <div className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 border border-transparent hover:border-primary/10">
+                          <p className="text-sm text-muted-foreground">Statut</p>
+                          <span className={`inline-block px-2 py-1 rounded text-xs font-medium shadow-sm ${
+                            daysRemaining > 30 ? 'bg-success/10 text-success shadow-success/20' :
+                            daysRemaining > 0 ? 'bg-warning/10 text-warning shadow-warning/20' :
+                            'bg-destructive/10 text-destructive shadow-destructive/20'
+                          }`}>
+                            {daysRemaining > 0 ? 'Actif' : 'Expiré'}
+                          </span>
+                        </div>
+                        <div className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 border border-transparent hover:border-primary/10">
+                          <p className="text-sm text-muted-foreground">
+                            {isAcheteur ? 'Prix d\'achat recherché' : 'Budget recherché'}
+                          </p>
+                          <p className="font-medium">
+                            {client.budget_max?.toLocaleString('fr-CH')} CHF
+                            {!isAcheteur && '/mois'}
+                          </p>
+                        </div>
                       </div>
-                      <Progress 
-                        value={0} 
-                        className="h-3 bg-orange-100 dark:bg-orange-950/30"
-                      />
-                      <p className="text-xs text-orange-500 mt-2 text-center">
-                        ⏳ Sera activée dès que votre profil sera validé
+                      <div>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="text-muted-foreground">Progression du mandat (90 jours)</span>
+                          <span className="font-medium">{Math.round(progressPercent)}%</span>
+                        </div>
+                        <div className="relative h-3 rounded-full overflow-hidden bg-muted/50">
+                          <Progress 
+                            value={progressPercent} 
+                            className="h-3"
+                            indicatorClassName={`${
+                              daysRemaining > 30 ? 'bg-gradient-to-r from-success to-emerald-400' :
+                              daysRemaining > 0 ? 'bg-gradient-to-r from-warning to-orange-400' :
+                              'bg-gradient-to-r from-destructive to-red-400'
+                            } shadow-lg ${
+                              daysRemaining > 30 ? 'shadow-success/30' :
+                              daysRemaining > 0 ? 'shadow-warning/30' :
+                              'shadow-destructive/30'
+                            }`}
+                          />
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                          <span>Début: {new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</span>
+                          <span>{daysRemaining > 0 ? `${Math.floor(daysRemaining)} jours restants` : 'Expiré'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Mon agent - Premium Card */}
+            <div className="animate-fade-in group" style={{ animationDelay: '150ms' }}>
+              <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-1">
+                {/* Gradient background on hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                
+                {/* Shine effect on hover */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                </div>
+                
+                <div className="relative p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
+                      <User className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
+                    </div>
+                    <h3 className="text-lg font-semibold">Mon agent</h3>
+                  </div>
+                  
+                  {agent ? (
+                    <div className="flex items-start gap-4">
+                      <div className="relative">
+                        <Avatar className="h-14 w-14 border-2 border-primary/20 shadow-lg shadow-primary/10 group-hover:shadow-primary/20 transition-shadow duration-300">
+                          <AvatarImage src={agent.avatar_url || undefined} />
+                          <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-primary font-semibold">
+                            {agent.prenom?.[0]}{agent.nom?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-card shadow-sm animate-pulse-soft" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-lg">{agent.prenom} {agent.nom}</p>
+                        <p className="text-sm text-muted-foreground mt-1 hover:text-primary transition-colors cursor-pointer">{agent.email}</p>
+                        <p className="text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer">{agent.telephone}</p>
+                        <Button 
+                          size="sm" 
+                          className="mt-4 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-105 transition-all duration-300"
+                          onClick={() => navigate('/client/messagerie')}
+                        >
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          Message
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-6">
+                      <div className="relative inline-block">
+                        <div className="p-4 bg-gradient-to-br from-muted/50 to-muted/30 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4 shadow-inner">
+                          <User className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                        <div className="absolute inset-0 rounded-full border-2 border-dashed border-muted-foreground/30 animate-spin-slow" style={{ animationDuration: '10s' }} />
+                      </div>
+                      <p className="text-muted-foreground font-medium">Aucun agent assigné</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Un agent vous sera bientôt attribué pour vous accompagner dans votre recherche.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section financière spécifique aux acheteurs - Premium Card */}
+          {isAcheteur && profileActif !== false && (
+            <div className="mb-8 animate-fade-in group" style={{ animationDelay: '200ms' }}>
+              <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-blue-200/50 dark:border-blue-800/50 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-500 hover:-translate-y-1">
+                {/* Gradient background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5" />
+                
+                {/* Shine effect on hover */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                </div>
+                
+                <div className="relative p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 rounded-xl bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors duration-300">
+                      <Home className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform duration-300" />
+                    </div>
+                    <h3 className="text-lg font-semibold">Capacité d'achat</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border border-blue-200/30 dark:border-blue-800/30 hover:border-blue-400/50 hover:scale-[1.02] transition-all duration-300 group/item">
+                      <p className="text-xs text-muted-foreground mb-1">Prix max finançable</p>
+                      <p className="text-lg font-bold text-blue-600 group-hover/item:text-blue-500 transition-colors">
+                        {purchaseSolvabilityResult.prixAchatMax.toLocaleString('fr-CH')} CHF
+                      </p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border border-blue-200/30 dark:border-blue-800/30 hover:border-blue-400/50 hover:scale-[1.02] transition-all duration-300 group/item">
+                      <p className="text-xs text-muted-foreground mb-1">Apport disponible</p>
+                      <p className={`text-lg font-bold transition-colors ${
+                        purchaseSolvabilityResult.apportManquant === 0 ? 'text-success group-hover/item:text-emerald-500' : 'text-warning group-hover/item:text-orange-500'
+                      }`}>
+                        {(client.apport_personnel || 0).toLocaleString('fr-CH')} CHF
+                      </p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border border-blue-200/30 dark:border-blue-800/30 hover:border-blue-400/50 hover:scale-[1.02] transition-all duration-300 group/item">
+                      <p className="text-xs text-muted-foreground mb-1">Charges mensuelles</p>
+                      <p className="text-lg font-bold group-hover/item:text-foreground transition-colors">
+                        {purchaseSolvabilityResult.chargesMensuelles.toLocaleString('fr-CH')} CHF
+                      </p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border border-blue-200/30 dark:border-blue-800/30 hover:border-blue-400/50 hover:scale-[1.02] transition-all duration-300 group/item">
+                      <p className="text-xs text-muted-foreground mb-1">Taux d'effort</p>
+                      <p className={`text-lg font-bold transition-colors ${
+                        purchaseSolvabilityResult.tauxEffort <= 33 ? 'text-success group-hover/item:text-emerald-500' : 'text-destructive group-hover/item:text-red-500'
+                      }`}>
+                        {purchaseSolvabilityResult.tauxEffort}%
                       </p>
                     </div>
                   </div>
-                ) : (
-                  /* État compte actif */
-                  <>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Date de début</p>
-                        <p className="font-medium">{new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Temps restant</p>
-                        <p className="font-medium">{formatTimeRemaining(daysRemaining)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Statut</p>
-                        <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                          daysRemaining > 30 ? 'bg-success/10 text-success' :
-                          daysRemaining > 0 ? 'bg-warning/10 text-warning' :
-                          'bg-destructive/10 text-destructive'
-                        }`}>
-                          {daysRemaining > 0 ? 'Actif' : 'Expiré'}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          {isAcheteur ? 'Prix d\'achat recherché' : 'Budget recherché'}
-                        </p>
-                        <p className="font-medium">
-                          {client.budget_max?.toLocaleString('fr-CH')} CHF
-                          {!isAcheteur && '/mois'}
-                        </p>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-muted-foreground">Progression du mandat (90 jours)</span>
-                        <span className="font-medium">{Math.round(progressPercent)}%</span>
-                      </div>
-                      <Progress 
-                        value={progressPercent} 
-                        className="h-3"
-                        indicatorClassName={
-                          daysRemaining > 30 ? 'bg-success' :
-                          daysRemaining > 0 ? 'bg-warning' :
-                          'bg-destructive'
-                        }
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>Début: {new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</span>
-                        <span>{daysRemaining > 0 ? `${Math.floor(daysRemaining)} jours restants` : 'Expiré'}</span>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Mon agent */}
-            <Card className="card-interactive animate-fade-in" style={{ animationDelay: '150ms' }}>
-              <CardHeader>
-                <CardTitle>👤 Mon agent</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {agent ? (
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-primary/10 rounded-full">
-                      <User className="w-6 h-6 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{agent.prenom} {agent.nom}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{agent.email}</p>
-                      <p className="text-sm text-muted-foreground">{agent.telephone}</p>
-                      <Button 
-                        size="sm" 
-                        variant="outline" 
-                        className="mt-4"
-                        onClick={() => navigate('/client/messagerie')}
-                      >
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Message
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-6">
-                    <div className="p-4 bg-muted/50 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4">
-                      <User className="w-8 h-8 text-muted-foreground" />
-                    </div>
-                    <p className="text-muted-foreground font-medium">Aucun agent assigné</p>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Un agent vous sera bientôt attribué pour vous accompagner dans votre recherche.
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Section financière spécifique aux acheteurs */}
-          {isAcheteur && profileActif !== false && (
-            <Card className="card-interactive mb-8 border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/10 animate-fade-in" style={{ animationDelay: '200ms' }}>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Home className="w-5 h-5 text-blue-600" />
-                  Capacité d'achat
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-3 bg-background/80 rounded-lg">
-                    <p className="text-xs text-muted-foreground">Prix max finançable</p>
-                    <p className="text-lg font-bold text-blue-600">
-                      {purchaseSolvabilityResult.prixAchatMax.toLocaleString('fr-CH')} CHF
-                    </p>
-                  </div>
-                  <div className="p-3 bg-background/80 rounded-lg">
-                    <p className="text-xs text-muted-foreground">Apport disponible</p>
-                    <p className={`text-lg font-bold ${
-                      purchaseSolvabilityResult.apportManquant === 0 ? 'text-green-600' : 'text-orange-600'
-                    }`}>
-                      {(client.apport_personnel || 0).toLocaleString('fr-CH')} CHF
-                    </p>
-                  </div>
-                  <div className="p-3 bg-background/80 rounded-lg">
-                    <p className="text-xs text-muted-foreground">Charges mensuelles</p>
-                    <p className="text-lg font-bold">
-                      {purchaseSolvabilityResult.chargesMensuelles.toLocaleString('fr-CH')} CHF
-                    </p>
-                  </div>
-                  <div className="p-3 bg-background/80 rounded-lg">
-                    <p className="text-xs text-muted-foreground">Taux d'effort</p>
-                    <p className={`text-lg font-bold ${
-                      purchaseSolvabilityResult.tauxEffort <= 33 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {purchaseSolvabilityResult.tauxEffort}%
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-200/30 dark:border-blue-800/30">
+                    <p className="text-xs text-blue-700 dark:text-blue-400">
+                      📊 <strong>Calcul suisse:</strong> Apport min. 26% (20% achat + 5% notaire + 1% entretien). 
+                      Charges théoriques = 7%/an. Max 33% du revenu brut annuel.
                     </p>
                   </div>
                 </div>
-                <div className="p-3 bg-blue-100/50 dark:bg-blue-900/20 rounded-lg">
-                  <p className="text-xs text-blue-700 dark:text-blue-400">
-                    📊 <strong>Calcul suisse:</strong> Apport min. 26% (20% achat + 5% notaire + 1% entretien). 
-                    Charges théoriques = 7%/an. Max 33% du revenu brut annuel.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
 
-          {/* Prochaines visites */}
-          <Card className="card-interactive mb-8 animate-fade-in" style={{ animationDelay: '250ms' }}>
-            <CardHeader>
-              <CardTitle>📅 Prochaines visites</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length > 0 ? (
-                <>
-                  {visites
-                    .filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now)
-                    .slice(0, 3)
-                    .map(visite => (
-                      <div 
-                        key={visite.id} 
-                        className="p-4 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+          {/* Prochaines visites - Premium Card */}
+          <div className="mb-8 animate-fade-in group" style={{ animationDelay: '250ms' }}>
+            <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500">
+              {/* Gradient background on hover */}
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              
+              {/* Shine effect on hover */}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              </div>
+              
+              <div className="relative p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
+                    <Calendar className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
+                  </div>
+                  <h3 className="text-lg font-semibold">Prochaines visites</h3>
+                  {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length > 0 && (
+                    <Badge variant="secondary" className="ml-auto animate-pulse-soft">
+                      {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length}
+                    </Badge>
+                  )}
+                </div>
+                
+                <div className="space-y-3">
+                  {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length > 0 ? (
+                    <>
+                      {visites
+                        .filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now)
+                        .slice(0, 3)
+                        .map((visite, index) => (
+                          <div 
+                            key={visite.id} 
+                            className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 cursor-pointer hover:bg-muted/60 hover:scale-[1.01] hover:shadow-md transition-all duration-300 group/item"
+                            onClick={() => navigate('/client/visites')}
+                            style={{ animationDelay: `${index * 50}ms` }}
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <p className="font-medium group-hover/item:text-primary transition-colors">{visite.adresse}</p>
+                                {visite.offres && (
+                                  <p className="text-sm text-muted-foreground mt-1">
+                                    {visite.offres.pieces} pièces • {visite.offres.surface}m² • {visite.offres.prix} CHF/mois
+                                  </p>
+                                )}
+                                <div className="flex items-center gap-2 mt-2">
+                                  <Badge variant="outline" className="text-xs bg-primary/5 border-primary/20">
+                                    📅 {new Date(visite.date_visite).toLocaleDateString('fr-CH')} à {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      <Button 
+                        variant="ghost" 
+                        className="w-full text-sm text-primary hover:bg-primary/10 hover:scale-[1.02] transition-all duration-300"
                         onClick={() => navigate('/client/visites')}
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <p className="font-medium">{visite.adresse}</p>
-                            {visite.offres && (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {visite.offres.pieces} pièces • {visite.offres.surface}m² • {visite.offres.prix} CHF/mois
-                              </p>
-                            )}
-                            <p className="text-xs text-muted-foreground mt-2">
-                              📅 {new Date(visite.date_visite).toLocaleDateString('fr-CH')} à {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                          </div>
-                        </div>
+                        Voir toutes les visites →
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="p-4 bg-muted/30 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4">
+                        <Calendar className="w-8 h-8 text-muted-foreground" />
                       </div>
-                    ))}
-                  <Button 
-                    variant="ghost" 
-                    className="w-full text-sm text-primary"
-                    onClick={() => navigate('/client/visites')}
-                  >
-                    Voir toutes les visites →
-                  </Button>
-                </>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p className="text-sm">Aucune visite planifiée</p>
+                      <p className="text-muted-foreground font-medium">Aucune visite planifiée</p>
+                      <p className="text-sm text-muted-foreground mt-1">Vos prochaines visites apparaîtront ici</p>
+                    </div>
+                  )}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Candidatures récentes */}
-          <Card className="card-interactive animate-fade-in" style={{ animationDelay: '300ms' }}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>📝 Mes candidatures récentes</CardTitle>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => navigate('/client/mes-candidatures')}
-                >
-                  Voir tout
-                </Button>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {offres.length > 0 ? (
-                <>
-                  {offres.slice(0, 3).map(offre => {
-                    const getStatutLabel = (statut: string) => {
-                      switch (statut) {
-                        case 'envoyee': return 'Envoyée';
-                        case 'vue': return 'Vue';
-                        case 'interesse': return 'Intéressé';
-                        case 'visite_planifiee': return 'Visite planifiée';
-                        case 'visite_effectuee': return 'Visite effectuée';
-                        case 'candidature_deposee': return 'Candidature déposée';
-                        case 'acceptee': return 'Acceptée ✓';
-                        case 'refusee': return 'Refusée';
-                        default: return statut;
-                      }
-                    };
+            </div>
+          </div>
 
-                    const getStatutBadgeVariant = (statut: string): "default" | "secondary" | "destructive" | "outline" => {
-                      switch (statut) {
-                        case 'envoyee': return 'secondary';
-                        case 'vue': return 'outline';
-                        case 'interesse': return 'default';
-                        case 'visite_planifiee': return 'default';
-                        case 'visite_effectuee': return 'default';
-                        case 'candidature_deposee': return 'default';
-                        case 'acceptee': return 'default';
-                        case 'refusee': return 'destructive';
-                        default: return 'secondary';
-                      }
-                    };
-
-                    return (
-                      <div 
-                        key={offre.id} 
-                        className="p-4 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
-                        onClick={() => navigate('/client/mes-candidatures')}
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1">
-                            <p className="font-medium">{offre.adresse}</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {offre.pieces} pièces • {offre.surface}m² • {offre.prix?.toLocaleString('fr-CH')} CHF/mois
-                            </p>
-                          </div>
-                          <Badge variant={getStatutBadgeVariant(offre.statut)} className="ml-2">
-                            {getStatutLabel(offre.statut)}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Envoyée le {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
-                        </p>
-                      </div>
-                    );
-                  })}
+          {/* Candidatures récentes - Premium Card */}
+          <div className="animate-fade-in group" style={{ animationDelay: '300ms' }}>
+            <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500">
+              {/* Gradient background on hover */}
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              
+              {/* Shine effect on hover */}
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              </div>
+              
+              <div className="relative p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
+                      <FileText className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
+                    </div>
+                    <h3 className="text-lg font-semibold">Mes candidatures récentes</h3>
+                    {offres.length > 0 && (
+                      <Badge variant="secondary" className="animate-pulse-soft">
+                        {offres.length}
+                      </Badge>
+                    )}
+                  </div>
                   <Button 
                     variant="ghost" 
-                    className="w-full text-sm text-primary"
+                    size="sm"
+                    className="hover:bg-primary/10 hover:scale-105 transition-all duration-300"
                     onClick={() => navigate('/client/mes-candidatures')}
                   >
-                    Voir toutes les candidatures →
+                    Voir tout
                   </Button>
-                </>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p className="text-sm">Aucune candidature déposée</p>
-                  <p className="text-xs mt-1">Votre agent vous enverra des offres bientôt</p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                
+                <div className="space-y-3">
+                  {offres.length > 0 ? (
+                    <>
+                      {offres.slice(0, 3).map((offre, index) => {
+                        const getStatutLabel = (statut: string) => {
+                          switch (statut) {
+                            case 'envoyee': return 'Envoyée';
+                            case 'vue': return 'Vue';
+                            case 'interesse': return 'Intéressé';
+                            case 'visite_planifiee': return 'Visite planifiée';
+                            case 'visite_effectuee': return 'Visite effectuée';
+                            case 'candidature_deposee': return 'Candidature déposée';
+                            case 'acceptee': return 'Acceptée ✓';
+                            case 'refusee': return 'Refusée';
+                            default: return statut;
+                          }
+                        };
+
+                        const getStatutBadgeClass = (statut: string) => {
+                          switch (statut) {
+                            case 'envoyee': return 'bg-muted text-muted-foreground';
+                            case 'vue': return 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
+                            case 'interesse': return 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400';
+                            case 'visite_planifiee': return 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400';
+                            case 'visite_effectuee': return 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400';
+                            case 'candidature_deposee': return 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400';
+                            case 'acceptee': return 'bg-success/10 text-success shadow-success/20';
+                            case 'refusee': return 'bg-destructive/10 text-destructive';
+                            default: return 'bg-muted text-muted-foreground';
+                          }
+                        };
+
+                        return (
+                          <div 
+                            key={offre.id} 
+                            className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 cursor-pointer hover:bg-muted/60 hover:scale-[1.01] hover:shadow-md transition-all duration-300 group/item"
+                            onClick={() => navigate('/client/mes-candidatures')}
+                            style={{ animationDelay: `${index * 50}ms` }}
+                          >
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex-1">
+                                <p className="font-medium group-hover/item:text-primary transition-colors">{offre.adresse}</p>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {offre.pieces} pièces • {offre.surface}m² • {offre.prix?.toLocaleString('fr-CH')} CHF/mois
+                                </p>
+                              </div>
+                              <Badge className={`ml-2 ${getStatutBadgeClass(offre.statut)} shadow-sm`}>
+                                {getStatutLabel(offre.statut)}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Envoyée le {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
+                            </p>
+                          </div>
+                        );
+                      })}
+                      <Button 
+                        variant="ghost" 
+                        className="w-full text-sm text-primary hover:bg-primary/10 hover:scale-[1.02] transition-all duration-300"
+                        onClick={() => navigate('/client/mes-candidatures')}
+                      >
+                        Voir toutes les candidatures →
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="p-4 bg-muted/30 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4">
+                        <FileText className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                      <p className="text-muted-foreground font-medium">Aucune candidature déposée</p>
+                      <p className="text-sm text-muted-foreground mt-1">Votre agent vous enverra des offres bientôt</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
