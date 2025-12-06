@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen, MessageSquare, Sparkles, Building2 } from "lucide-react";
+import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen, MessageSquare, Sparkles, Building2, Star, TrendingUp, Zap, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +25,85 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+
+// Floating particles component
+const FloatingParticles = () => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    {[...Array(6)].map((_, i) => (
+      <div
+        key={i}
+        className="absolute w-2 h-2 rounded-full bg-primary/20 animate-float"
+        style={{
+          left: `${15 + i * 15}%`,
+          top: `${20 + (i % 3) * 20}%`,
+          animationDelay: `${i * 0.5}s`,
+          animationDuration: `${3 + i * 0.5}s`
+        }}
+      />
+    ))}
+  </div>
+);
+
+// Skeleton card for loading state
+const OffreSkeletonCard = ({ index }: { index: number }) => (
+  <Card 
+    className="overflow-hidden p-6 animate-fade-in"
+    style={{ animationDelay: `${index * 100}ms` }}
+  >
+    <div className="flex items-start justify-between mb-4">
+      <div className="flex-1 space-y-3">
+        <Skeleton className="h-6 w-3/4" />
+        <div className="flex gap-2">
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-5 w-32" />
+        </div>
+      </div>
+      <div className="text-right space-y-2">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-4 w-16 ml-auto" />
+      </div>
+    </div>
+    <div className="grid grid-cols-3 gap-4 mb-4">
+      {[...Array(3)].map((_, i) => (
+        <Skeleton key={i} className="h-10 w-full rounded-lg" />
+      ))}
+    </div>
+    <Skeleton className="h-4 w-full mb-2" />
+    <Skeleton className="h-4 w-2/3 mb-4" />
+    <div className="flex gap-2 pt-4 border-t">
+      <Skeleton className="h-9 w-32" />
+      <Skeleton className="h-9 w-28" />
+    </div>
+  </Card>
+);
+
+// Animated counter component
+const AnimatedValue = ({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) => {
+  const [displayValue, setDisplayValue] = useState(0);
+  
+  useEffect(() => {
+    const duration = 1000;
+    const steps = 30;
+    const stepValue = value / steps;
+    let current = 0;
+    
+    const timer = setInterval(() => {
+      current += stepValue;
+      if (current >= value) {
+        setDisplayValue(value);
+        clearInterval(timer);
+      } else {
+        setDisplayValue(Math.floor(current));
+      }
+    }, duration / steps);
+    
+    return () => clearInterval(timer);
+  }, [value]);
+  
+  return <span>{prefix}{displayValue.toLocaleString()}{suffix}</span>;
+};
 
 const OffresRecues = () => {
   const { toast } = useToast();
@@ -995,52 +1074,105 @@ const OffresRecues = () => {
     }
   };
 
+  // Premium loading state
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-4">
-        <div className="relative">
-          <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-          <Building2 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-primary" />
+      <div className="flex-1 overflow-auto">
+        <div className="p-4 md:p-8">
+          {/* Header skeleton */}
+          <div className="mb-8 animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <Skeleton className="h-12 w-12 rounded-xl" />
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-4 w-64" />
+              </div>
+            </div>
+          </div>
+          
+          {/* Cards skeleton */}
+          <div className="grid gap-6">
+            {[...Array(3)].map((_, i) => (
+              <OffreSkeletonCard key={i} index={i} />
+            ))}
+          </div>
         </div>
-        <p className="text-muted-foreground animate-pulse">Chargement des offres...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="p-4 md:p-8">
-        {/* Header avec animation */}
-        <div className="mb-8 animate-fade-in">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 backdrop-blur-sm">
-              <Home className="h-6 w-6 text-primary" />
+    <div className="flex-1 overflow-auto relative">
+      {/* Mesh gradient background */}
+      <div className="fixed inset-0 pointer-events-none opacity-30">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-primary/20 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+      </div>
+
+      <div className="p-4 md:p-8 relative z-10">
+        {/* Ultra-Premium Header */}
+        <div className="mb-8 animate-fade-in relative">
+          <FloatingParticles />
+          
+          <div className="flex items-center gap-4 mb-4">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/50 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
+              <div className="relative p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 backdrop-blur-sm border border-primary/20">
+                <Home className="h-7 w-7 text-primary animate-pulse" />
+              </div>
             </div>
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/60 bg-clip-text text-transparent">
                 Offres Reçues
               </h1>
-              <p className="text-muted-foreground">Consultez les biens qui vous sont proposés</p>
+              <p className="text-muted-foreground mt-1">Découvrez les biens sélectionnés pour vous</p>
             </div>
           </div>
+          
           {offres.length > 0 && (
-            <Badge variant="secondary" className="mt-2">
-              <Sparkles className="w-3 h-3 mr-1" />
-              {offres.length} offre{offres.length > 1 ? 's' : ''} disponible{offres.length > 1 ? 's' : ''}
-            </Badge>
+            <div className="flex items-center gap-3 flex-wrap">
+              <Badge 
+                variant="secondary" 
+                className="px-4 py-2 text-sm bg-gradient-to-r from-primary/20 to-primary/5 border-primary/20 shadow-lg shadow-primary/5 animate-glow-pulse"
+              >
+                <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
+                <AnimatedValue value={offres.length} /> offre{offres.length > 1 ? 's' : ''} disponible{offres.length > 1 ? 's' : ''}
+              </Badge>
+              <Badge variant="outline" className="px-3 py-1.5 text-xs">
+                <TrendingUp className="w-3 h-3 mr-1" />
+                {offres.filter(o => o.statut === 'interesse').length} intéressantes
+              </Badge>
+            </div>
           )}
         </div>
 
         {offres.length === 0 ? (
-          <Card className="p-12 text-center bg-gradient-to-br from-card to-muted/20 border-dashed animate-fade-in">
-            <div className="max-w-md mx-auto space-y-4">
-              <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                <Home className="w-10 h-10 text-primary/60" />
+          /* Premium Empty State */
+          <Card className="relative overflow-hidden p-12 text-center border-dashed animate-fade-in group">
+            {/* Animated background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            <div className="relative max-w-md mx-auto space-y-6">
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary/20 rounded-full blur-2xl animate-pulse" />
+                <div className="relative w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-2 border-primary/20 shadow-xl shadow-primary/10">
+                  <Home className="w-12 h-12 text-primary/60 animate-bounce" style={{ animationDuration: '2s' }} />
+                </div>
               </div>
-              <h3 className="text-xl font-semibold">Aucune offre pour le moment</h3>
-              <p className="text-muted-foreground">
-                Votre agent vous enverra des offres correspondant à vos critères de recherche.
-              </p>
+              
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  Aucune offre pour le moment
+                </h3>
+                <p className="text-muted-foreground max-w-sm mx-auto">
+                  Votre agent recherche activement les biens qui correspondent à vos critères. Vous serez notifié dès qu'une nouvelle offre sera disponible.
+                </p>
+              </div>
+              
+              <div className="flex items-center justify-center gap-2 text-sm text-primary">
+                <Zap className="w-4 h-4 animate-pulse" />
+                <span>Recherche en cours...</span>
+              </div>
             </div>
           </Card>
         ) : (
@@ -1051,81 +1183,126 @@ const OffresRecues = () => {
               return (
                 <Card 
                   key={offre.id} 
-                  className="group relative overflow-hidden p-6 cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm border-border/50 hover:border-primary/30 animate-fade-in"
+                  className={cn(
+                    "group relative overflow-hidden cursor-pointer transition-all duration-500",
+                    "bg-gradient-to-br from-card via-card to-card/80 backdrop-blur-sm",
+                    "border border-border/50 hover:border-primary/40",
+                    "hover:shadow-2xl hover:shadow-primary/10",
+                    "animate-fade-in"
+                  )}
                   onClick={() => handleViewDetails(offre)}
-                  style={{ animationDelay: `${index * 50}ms` }}
+                  style={{ animationDelay: `${index * 80}ms` }}
                 >
-                  {/* Effet de shine au survol */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                  {/* Animated gradient border effect */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-primary/10 rounded-lg" />
+                  </div>
+                  
+                  {/* Shine effect */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                   </div>
 
-                  <div className="relative z-10">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
+                  {/* Status indicator line */}
+                  <div className={cn(
+                    "absolute top-0 left-0 w-1 h-full transition-all duration-300",
+                    offre.statut === 'interesse' && "bg-green-500",
+                    offre.statut === 'visite_planifiee' && "bg-blue-500",
+                    offre.statut === 'visite_effectuee' && "bg-emerald-500",
+                    offre.statut === 'candidature_deposee' && "bg-purple-500",
+                    offre.statut === 'acceptee' && "bg-yellow-500",
+                    offre.statut === 'refusee' && "bg-red-500",
+                    !['interesse', 'visite_planifiee', 'visite_effectuee', 'candidature_deposee', 'acceptee', 'refusee'].includes(offre.statut) && "bg-muted-foreground/30"
+                  )} />
+
+                  <div className="relative z-10 p-6">
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-5">
+                      <div className="flex-1 pr-4">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">{offre.adresse}</h3>
-                          <Badge variant={variant} className="shadow-sm">{label}</Badge>
+                          <h3 className="text-xl font-bold group-hover:text-primary transition-colors duration-300">
+                            {offre.adresse}
+                          </h3>
+                          <Badge 
+                            variant={variant} 
+                            className="shadow-sm transition-transform duration-300 group-hover:scale-105"
+                          >
+                            {label}
+                          </Badge>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5 opacity-80">
                             <Calendar className="h-4 w-4" />
                             Reçue le {new Date(offre.date_envoi).toLocaleDateString('fr-FR')}
                           </div>
                           
                           {offre.agent?.profile && (
                             <div className="flex items-center gap-2">
-                              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/20">
-                                <span className="text-xs font-medium text-primary">
+                              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center border border-primary/20 shadow-inner">
+                                <span className="text-xs font-semibold text-primary">
                                   {offre.agent.profile.prenom[0]}{offre.agent.profile.nom[0]}
                                 </span>
                               </div>
                               <span className="text-sm">
-                                Envoyée par <strong>{offre.agent.profile.prenom} {offre.agent.profile.nom}</strong>
+                                Par <strong className="text-foreground">{offre.agent.profile.prenom}</strong>
                               </span>
                             </div>
                           )}
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">CHF {offre.prix.toLocaleString()}</p>
+                        <p className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                          CHF <AnimatedValue value={offre.prix} />
+                        </p>
                         <p className="text-sm text-muted-foreground">par mois</p>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4 mb-4 p-3 rounded-lg bg-muted/30 backdrop-blur-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-background/50">
-                          <Home className="h-4 w-4 text-muted-foreground" />
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-3 gap-3 mb-5">
+                      {[
+                        { icon: Home, label: 'Pièces', value: offre.pieces, color: 'from-blue-500/20 to-blue-500/5' },
+                        { icon: Square, label: 'Surface', value: `${offre.surface} m²`, color: 'from-emerald-500/20 to-emerald-500/5' },
+                        { icon: MapPin, label: 'Étage', value: offre.etage, color: 'from-amber-500/20 to-amber-500/5' }
+                      ].map((stat, i) => (
+                        <div 
+                          key={i}
+                          className={cn(
+                            "relative overflow-hidden p-3 rounded-xl",
+                            "bg-gradient-to-br", stat.color,
+                            "border border-border/30",
+                            "transition-all duration-300 hover:scale-[1.02] hover:shadow-md"
+                          )}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-1.5 rounded-lg bg-background/50 backdrop-blur-sm">
+                              <stat.icon className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">{stat.label}</p>
+                              <p className="text-sm font-semibold">{stat.value}</p>
+                            </div>
+                          </div>
                         </div>
-                        <span className="text-sm font-medium">{offre.pieces} pièces</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-background/50">
-                          <Square className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <span className="text-sm font-medium">{offre.surface} m²</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="p-1.5 rounded-md bg-background/50">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <span className="text-sm font-medium">{offre.etage} étage</span>
-                      </div>
+                      ))}
                     </div>
 
-                    <p className="text-sm mb-4 line-clamp-2 text-muted-foreground">{offre.description}</p>
+                    {/* Description */}
+                    <p className="text-sm mb-4 line-clamp-2 text-muted-foreground leading-relaxed">
+                      {offre.description}
+                    </p>
 
                     {offre.disponibilite && (
-                      <p className="text-sm text-muted-foreground mb-4 flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Disponible dès le {offre.disponibilite}
-                      </p>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4 p-2 rounded-lg bg-muted/30 w-fit">
+                        <Clock className="h-4 w-4 text-primary/70" />
+                        <span>Disponible dès le <strong>{offre.disponibilite}</strong></span>
+                      </div>
                     )}
 
+                    {/* Chance Indicator */}
                     {(offre.statut === 'interesse' || offre.statut === 'visite_planifiee' || 
                       offre.statut === 'visite_effectuee' || offre.statut === 'candidature_deposee') && (
-                      <div className="mb-4">
+                      <div className="mb-5 p-3 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 border border-border/30">
                         <ChanceIndicator
                           {...calculateChances(
                             offre,
@@ -1143,32 +1320,60 @@ const OffresRecues = () => {
                       </div>
                     )}
 
-                    <div className="flex gap-2 flex-wrap pt-4 border-t border-border/50" onClick={(e) => e.stopPropagation()}>
-                      <Button variant="default" size="sm" className="shadow-sm" onClick={() => handleViewDetails(offre)}>
-                        <Info className="mr-2 h-4 w-4" />
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 flex-wrap pt-5 border-t border-border/30" onClick={(e) => e.stopPropagation()}>
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        className="shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 group/btn"
+                        onClick={() => handleViewDetails(offre)}
+                      >
+                        <Info className="mr-2 h-4 w-4 group-hover/btn:rotate-12 transition-transform" />
                         Voir les détails
+                        <ArrowRight className="ml-1 h-3 w-3 opacity-0 -translate-x-2 group-hover/btn:opacity-100 group-hover/btn:translate-x-0 transition-all" />
                       </Button>
+                      
                       {offre.lien_annonce && (
                         <LinkPreviewCard url={offre.lien_annonce} />
                       )}
+                      
                       {(offre.statut === 'envoyee' || offre.statut === 'vue' || offre.statut === 'interesse') && (
                         <>
-                          <Button size="sm" onClick={() => handlePlanVisit(offre)}>
-                            <Calendar className="mr-2 h-4 w-4" />
+                          <Button 
+                            size="sm" 
+                            className="group/btn"
+                            onClick={() => handlePlanVisit(offre)}
+                          >
+                            <Calendar className="mr-2 h-4 w-4 group-hover/btn:scale-110 transition-transform" />
                             Planifier une visite
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => handleDeleguerVisite(offre)}>
-                            <Calendar className="mr-2 h-4 w-4" />
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="group/btn hover:border-primary/50"
+                            onClick={() => handleDeleguerVisite(offre)}
+                          >
+                            <User className="mr-2 h-4 w-4 group-hover/btn:scale-110 transition-transform" />
                             Déléguer à l'agent
                           </Button>
                           {offre.statut !== 'interesse' && (
                             <>
-                              <Button size="sm" onClick={() => updateStatut(offre.id, 'interesse')}>
-                                <Heart className="mr-2 h-4 w-4" />
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="hover:bg-green-500/10 hover:border-green-500/50 hover:text-green-600 group/btn"
+                                onClick={() => updateStatut(offre.id, 'interesse')}
+                              >
+                                <Heart className="mr-2 h-4 w-4 group-hover/btn:scale-125 group-hover/btn:text-green-500 transition-all" />
                                 Intéressé
                               </Button>
-                              <Button size="sm" variant="destructive" onClick={() => updateStatut(offre.id, 'refusee')}>
-                                <X className="mr-2 h-4 w-4" />
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="hover:bg-destructive/10 hover:border-destructive/50 hover:text-destructive group/btn"
+                                onClick={() => updateStatut(offre.id, 'refusee')}
+                              >
+                                <X className="mr-2 h-4 w-4 group-hover/btn:rotate-90 transition-transform" />
                                 Refuser
                               </Button>
                             </>
@@ -1176,22 +1381,41 @@ const OffresRecues = () => {
                         </>
                       )}
                       {offre.statut === 'visite_planifiee' && (
-                        <Button size="sm" onClick={() => updateStatut(offre.id, 'visite_effectuee')}>
-                          <Check className="mr-2 h-4 w-4" />
-                          Marquer la visite comme effectuée
+                        <Button 
+                          size="sm" 
+                          className="bg-emerald-600 hover:bg-emerald-700 group/btn"
+                          onClick={() => updateStatut(offre.id, 'visite_effectuee')}
+                        >
+                          <Check className="mr-2 h-4 w-4 group-hover/btn:scale-125 transition-transform" />
+                          Marquer visite effectuée
                         </Button>
                       )}
                       {offre.statut === 'visite_effectuee' && (
                         <>
-                          <Button size="sm" onClick={() => handlePostulerDirect(offre)}>
-                            <FileCheck className="mr-2 h-4 w-4" />
+                          <Button 
+                            size="sm"
+                            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 group/btn"
+                            onClick={() => handlePostulerDirect(offre)}
+                          >
+                            <FileCheck className="mr-2 h-4 w-4 group-hover/btn:scale-110 transition-transform" />
                             Déposer ma candidature
+                            <Sparkles className="ml-1 h-3 w-3 animate-pulse" />
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => updateStatut(offre.id, 'interesse')}>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="hover:border-primary/50"
+                            onClick={() => updateStatut(offre.id, 'interesse')}
+                          >
                             <Heart className="mr-2 h-4 w-4" />
-                            Marquer comme intéressé
+                            Intéressé
                           </Button>
-                          <Button size="sm" variant="destructive" onClick={() => updateStatut(offre.id, 'refusee')}>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="hover:bg-destructive/10 hover:border-destructive/50 hover:text-destructive"
+                            onClick={() => updateStatut(offre.id, 'refusee')}
+                          >
                             <X className="mr-2 h-4 w-4" />
                             Refuser
                           </Button>
@@ -1205,12 +1429,14 @@ const OffresRecues = () => {
           </div>
         )}
 
-        {/* Dialog des détails */}
+        {/* Dialog des détails - Ultra Glass Effect */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background to-muted/20 backdrop-blur-xl border-border/50">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-background/95 backdrop-blur-2xl border-border/50 shadow-2xl">
             <DialogHeader>
-              <DialogTitle className="text-2xl flex items-center gap-2">
-                <Building2 className="h-6 w-6 text-primary" />
+              <DialogTitle className="text-2xl flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
+                  <Building2 className="h-6 w-6 text-primary" />
+                </div>
                 Détails de l'offre
               </DialogTitle>
               <DialogDescription>
@@ -1245,7 +1471,10 @@ const OffresRecues = () => {
                   
                   return (
                     <div className="border-b border-border/50 pb-4">
-                      <h4 className="font-semibold mb-3">📊 Suivi de votre candidature</h4>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-primary" />
+                        Suivi de votre candidature
+                      </h4>
                       <CandidatureWorkflowInteractive 
                         currentStatut={effectiveStatut}
                         candidature={candidature}
@@ -1255,242 +1484,182 @@ const OffresRecues = () => {
                   );
                 })()}
 
-                <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 backdrop-blur-sm">
-                  <h4 className="font-semibold mb-3">📋 Caractéristiques</h4>
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/20 backdrop-blur-sm border border-border/30">
+                  <h4 className="font-semibold mb-4 flex items-center gap-2">
+                    <Star className="h-4 w-4 text-amber-500" />
+                    Caractéristiques
+                  </h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 rounded-lg bg-background/50">
-                        <Home className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Pièces</p>
-                        <p className="font-medium">{selectedOffre.pieces}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 rounded-lg bg-background/50">
-                        <Square className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Surface</p>
-                        <p className="font-medium">{selectedOffre.surface} m²</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="p-2 rounded-lg bg-background/50">
-                        <MapPin className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Étage</p>
-                        <p className="font-medium">{selectedOffre.etage}</p>
-                      </div>
-                    </div>
-                    {selectedOffre.type_bien && (
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 rounded-lg bg-background/50">
-                          <Home className="h-5 w-5 text-muted-foreground" />
+                    {[
+                      { icon: Home, label: 'Pièces', value: selectedOffre.pieces },
+                      { icon: Square, label: 'Surface', value: `${selectedOffre.surface} m²` },
+                      { icon: MapPin, label: 'Étage', value: selectedOffre.etage },
+                      selectedOffre.type_bien && { icon: Building2, label: 'Type', value: selectedOffre.type_bien },
+                      selectedOffre.disponibilite && { icon: Calendar, label: 'Disponibilité', value: selectedOffre.disponibilite }
+                    ].filter(Boolean).map((item: any, i) => (
+                      <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-background/50 border border-border/20">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <item.icon className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Type</p>
-                          <p className="font-medium">{selectedOffre.type_bien}</p>
+                          <p className="text-xs text-muted-foreground">{item.label}</p>
+                          <p className="font-medium">{item.value}</p>
                         </div>
                       </div>
-                    )}
-                    {selectedOffre.disponibilite && (
-                      <div className="flex items-center gap-2">
-                        <div className="p-2 rounded-lg bg-background/50">
-                          <Calendar className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Disponibilité</p>
-                          <p className="font-medium">{selectedOffre.disponibilite}</p>
-                        </div>
-                      </div>
-                    )}
+                    ))}
                   </div>
                 </div>
 
                 {selectedOffre.description && (
-                  <div>
-                    <h4 className="font-semibold mb-2">📝 Description</h4>
-                    <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedOffre.description}</p>
+                  <div className="space-y-2">
+                    <h4 className="font-semibold flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-primary" />
+                      Description
+                    </h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed p-4 rounded-xl bg-muted/20">
+                      {selectedOffre.description}
+                    </p>
                   </div>
                 )}
 
                 {(selectedOffre.code_immeuble || selectedOffre.concierge_nom || selectedOffre.locataire_nom) && (
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 backdrop-blur-sm">
-                    <h4 className="font-semibold mb-3">🏢 Informations pratiques</h4>
+                  <div className="p-5 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/20 backdrop-blur-sm border border-border/30">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <Info className="h-4 w-4 text-primary" />
+                      Informations pratiques
+                    </h4>
                     <div className="space-y-2">
                       {selectedOffre.code_immeuble && (
-                        <div className="flex justify-between">
+                        <div className="flex justify-between p-2 rounded-lg hover:bg-background/50 transition-colors">
                           <span className="text-sm text-muted-foreground">Code immeuble</span>
                           <span className="text-sm font-medium">{selectedOffre.code_immeuble}</span>
                         </div>
                       )}
                       {selectedOffre.concierge_nom && (
-                        <div className="flex justify-between">
+                        <div className="flex justify-between p-2 rounded-lg hover:bg-background/50 transition-colors">
                           <span className="text-sm text-muted-foreground">Concierge</span>
-                          <span className="text-sm font-medium">
-                            {selectedOffre.concierge_nom}
-                            {selectedOffre.concierge_tel && ` - ${selectedOffre.concierge_tel}`}
-                          </span>
+                          <span className="text-sm font-medium">{selectedOffre.concierge_nom} - {selectedOffre.concierge_tel}</span>
                         </div>
                       )}
                       {selectedOffre.locataire_nom && (
-                        <div className="flex justify-between">
+                        <div className="flex justify-between p-2 rounded-lg hover:bg-background/50 transition-colors">
                           <span className="text-sm text-muted-foreground">Locataire actuel</span>
-                          <span className="text-sm font-medium">
-                            {selectedOffre.locataire_nom}
-                            {selectedOffre.locataire_tel && ` - ${selectedOffre.locataire_tel}`}
-                          </span>
+                          <span className="text-sm font-medium">{selectedOffre.locataire_nom} - {selectedOffre.locataire_tel}</span>
                         </div>
                       )}
-                    </div>
-                  </div>
-                )}
-
-                {(selectedOffre.statut === 'interesse' || selectedOffre.statut === 'visite_planifiee' || 
-                  selectedOffre.statut === 'visite_effectuee' || selectedOffre.statut === 'candidature_deposee') && (
-                  <ChanceIndicator
-                    {...calculateChances(
-                      selectedOffre,
-                      clientData,
-                      documentsStats[selectedOffre.id] || documentsStats['global'] || {
-                        fiche_salaire: 0,
-                        extrait_poursuites: 0,
-                        piece_identite: 0,
-                        permis_sejour: 0
-                      },
-                      visites
-                    )}
-                  />
-                )}
-
-                {selectedOffre.agent?.profile && (
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 backdrop-blur-sm border border-primary/20">
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">
-                      <User className="h-5 w-5" />
-                      👤 Votre agent
-                    </h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center border border-primary/20">
-                          <span className="text-sm font-medium text-primary">
-                            {selectedOffre.agent.profile.prenom[0]}{selectedOffre.agent.profile.nom[0]}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium">{selectedOffre.agent.profile.prenom} {selectedOffre.agent.profile.nom}</p>
-                          <p className="text-sm text-muted-foreground">{selectedOffre.agent.profile.email}</p>
-                        </div>
-                      </div>
-                      {selectedOffre.agent.profile.telephone && (
-                        <Button variant="outline" size="sm" className="w-full" onClick={(e) => {
-                          e.stopPropagation();
-                          window.location.href = `tel:${selectedOffre.agent.profile.telephone}`;
-                        }}>
-                          📞 {selectedOffre.agent.profile.telephone}
-                        </Button>
-                      )}
-                      <Button variant="default" size="sm" className="w-full" onClick={(e) => {
-                        e.stopPropagation();
-                        navigate('/client/messagerie');
-                      }}>
-                        <MessageSquare className="mr-2 h-4 w-4" />
-                        Envoyer un message
-                      </Button>
                     </div>
                   </div>
                 )}
 
                 {selectedOffre.commentaires && (
-                  <div>
-                    <h4 className="font-semibold mb-2">💬 Commentaires de l'agent</h4>
-                    <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedOffre.commentaires}</p>
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-amber-50/80 to-amber-50/30 dark:from-amber-950/30 dark:to-amber-950/10 border border-amber-200/50 dark:border-amber-800/50">
+                    <h4 className="font-semibold mb-2 text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Commentaires de l'agent
+                    </h4>
+                    <p className="text-sm text-amber-700 dark:text-amber-300">{selectedOffre.commentaires}</p>
                   </div>
                 )}
 
-                <div className="flex gap-2 flex-wrap pt-4 border-t border-border/50">
-                  {selectedOffre.lien_annonce && (
+                {selectedOffre.lien_annonce && (
+                  <div className="pt-4 border-t border-border/50">
+                    <h4 className="font-semibold mb-3">🔗 Annonce originale</h4>
                     <LinkPreviewCard url={selectedOffre.lien_annonce} />
-                  )}
-                  {(selectedOffre.statut === 'envoyee' || selectedOffre.statut === 'vue') && (
-                    <>
-                      <Button size="sm" onClick={() => { handlePlanVisit(selectedOffre); setDetailsDialogOpen(false); }}>
-                        <Calendar className="mr-2 h-4 w-4" />
-                        Visiter ce bien
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => { updateStatut(selectedOffre.id, 'refusee'); setDetailsDialogOpen(false); }}>
-                        <X className="mr-2 h-4 w-4" />
-                        Refuser
-                      </Button>
-                    </>
-                  )}
-                  {selectedOffre.statut === 'visite_planifiee' && (
-                    <Button size="sm" onClick={() => { updateStatut(selectedOffre.id, 'visite_effectuee'); setDetailsDialogOpen(false); }}>
-                      <Check className="mr-2 h-4 w-4" />
-                      Marquer la visite comme effectuée
-                    </Button>
-                  )}
-                  {selectedOffre.statut === 'visite_effectuee' && (
-                    <Button size="sm" onClick={() => { handlePostulerDirect(selectedOffre); setDetailsDialogOpen(false); }}>
-                      <FileCheck className="mr-2 h-4 w-4" />
-                      Déposer ma candidature
-                    </Button>
-                  )}
-                </div>
+                  </div>
+                )}
+
+                {(selectedOffre.statut === 'interesse' || selectedOffre.statut === 'visite_planifiee' || 
+                  selectedOffre.statut === 'visite_effectuee' || selectedOffre.statut === 'candidature_deposee') && (
+                  <div className="pt-4 border-t border-border/50">
+                    <h4 className="font-semibold mb-3 flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-primary" />
+                      Vos chances
+                    </h4>
+                    <ChanceIndicator
+                      {...calculateChances(
+                        selectedOffre,
+                        clientData,
+                        documentsStats[selectedOffre.id] || documentsStats['global'] || {
+                          fiche_salaire: 0,
+                          extrait_poursuites: 0,
+                          piece_identite: 0,
+                          permis_sejour: 0
+                        },
+                        visites
+                      )}
+                    />
+                  </div>
+                )}
               </div>
             )}
+
+            <DialogFooter className="flex-shrink-0 pt-4 border-t border-border/50">
+              <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>
+                Fermer
+              </Button>
+              {selectedOffre && (selectedOffre.statut === 'envoyee' || selectedOffre.statut === 'vue' || selectedOffre.statut === 'interesse') && (
+                <Button onClick={() => {
+                  setDetailsDialogOpen(false);
+                  handlePlanVisit(selectedOffre);
+                }}>
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Planifier une visite
+                </Button>
+              )}
+              {selectedOffre && selectedOffre.statut === 'visite_effectuee' && (
+                <Button 
+                  className="bg-gradient-to-r from-primary to-primary/80"
+                  onClick={() => {
+                    setDetailsDialogOpen(false);
+                    handlePostulerDirect(selectedOffre);
+                  }}
+                >
+                  <FileCheck className="mr-2 h-4 w-4" />
+                  Déposer ma candidature
+                </Button>
+              )}
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        {/* Dialog de planification de visite */}
+        {/* Dialog de visite */}
         <Dialog open={visitDialogOpen} onOpenChange={setVisitDialogOpen}>
-          <DialogContent className="max-w-md bg-gradient-to-br from-background to-muted/20 backdrop-blur-xl border-border/50">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-background/95 backdrop-blur-2xl border-border/50">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-primary" />
+                <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/5">
+                  <Calendar className="h-5 w-5 text-blue-500" />
+                </div>
                 Planifier une visite
               </DialogTitle>
               <DialogDescription>
-                Sélectionnez un créneau proposé par votre agent
+                Choisissez une date et heure pour visiter le bien
               </DialogDescription>
             </DialogHeader>
-            
+
             {selectedOffre && (
               <div className="space-y-4">
-                <div className="p-3 rounded-lg bg-gradient-to-br from-muted/50 to-muted/20">
-                  <h4 className="font-semibold text-sm mb-2">{selectedOffre.adresse}</h4>
-                  <p className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">CHF {selectedOffre.prix.toLocaleString()}/mois</p>
+                <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 border border-border/30">
+                  <h4 className="font-semibold text-sm">{selectedOffre.adresse}</h4>
+                  <p className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mt-1">
+                    CHF {selectedOffre.prix.toLocaleString()}/mois
+                  </p>
                 </div>
 
                 <div className="space-y-4">
-                  <Label className="text-base font-semibold">
-                    {proposedSlots.length > 0 
-                      ? "Choisissez un créneau proposé par votre agent" 
-                      : "Aucun créneau proposé"}
-                  </Label>
+                  <Label className="text-base font-semibold">Sélectionnez un créneau</Label>
                   
                   {proposedSlots.length === 0 ? (
-                    <div className="p-6 bg-gradient-to-br from-muted/50 to-muted/20 rounded-xl text-center space-y-3">
-                      <div className="w-12 h-12 mx-auto rounded-full bg-muted flex items-center justify-center">
-                        <Calendar className="w-6 h-6 text-muted-foreground" />
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Votre agent n'a pas encore proposé de créneaux de visite pour cette offre.
+                    <div className="p-4 bg-gradient-to-br from-muted/50 to-muted/20 rounded-xl text-center border border-border/30">
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Aucun créneau pré-programmé disponible
                       </p>
-                      <Button 
-                        variant="default"
-                        size="sm" 
-                        className="mt-2"
-                        onClick={() => {
-                          setVisitDialogOpen(false);
-                          handleDeleguerVisite(selectedOffre);
-                        }}
-                      >
-                        <User className="mr-2 h-4 w-4" />
-                        Demander à l'agent d'organiser
-                      </Button>
+                      <Input
+                        type="datetime-local"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="bg-background/50"
+                      />
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -1498,7 +1667,10 @@ const OffresRecues = () => {
                         <Button
                           key={slot.id}
                           variant={selectedDate === slot.date_visite ? "default" : "outline"}
-                          className="w-full justify-start text-left h-auto py-4"
+                          className={cn(
+                            "w-full justify-start text-left h-auto py-4 transition-all duration-300",
+                            selectedDate === slot.date_visite && "shadow-lg shadow-primary/20"
+                          )}
                           onClick={() => setSelectedDate(slot.date_visite)}
                         >
                           <div className="flex items-start gap-3 w-full">
@@ -1552,7 +1724,10 @@ const OffresRecues = () => {
                   
                   {selectedDate && (
                     <div className="p-4 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl border border-primary/20">
-                      <p className="text-sm font-medium mb-1">✅ Créneau sélectionné :</p>
+                      <p className="text-sm font-medium mb-1 flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-primary" />
+                        Créneau sélectionné
+                      </p>
                       <p className="text-sm">
                         <strong>
                           {new Date(selectedDate).toLocaleDateString('fr-FR', { 
@@ -1580,7 +1755,12 @@ const OffresRecues = () => {
               <Button variant="outline" onClick={() => setVisitDialogOpen(false)}>
                 Annuler
               </Button>
-              <Button onClick={confirmVisit} disabled={!selectedDate}>
+              <Button 
+                onClick={confirmVisit} 
+                disabled={!selectedDate}
+                className="shadow-lg shadow-primary/20"
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
                 Confirmer la visite
               </Button>
             </DialogFooter>
@@ -1589,11 +1769,13 @@ const OffresRecues = () => {
 
         {/* Dialog de candidature */}
         <Dialog open={candidatureDialogOpen} onOpenChange={setCandidatureDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background to-muted/20 backdrop-blur-xl border-border/50">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-background/95 backdrop-blur-2xl border-border/50">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <FileCheck className="h-5 w-5 text-primary" />
-                📝 Déposer ma candidature
+                <div className="p-2 rounded-xl bg-gradient-to-br from-purple-500/20 to-purple-500/5">
+                  <FileCheck className="h-5 w-5 text-purple-500" />
+                </div>
+                Déposer ma candidature
               </DialogTitle>
               <DialogDescription>
                 Complétez votre candidature en fournissant tous les documents requis
@@ -1839,7 +2021,11 @@ const OffresRecues = () => {
               <Button variant="outline" onClick={() => setCandidatureDialogOpen(false)}>
                 Annuler
               </Button>
-              <Button onClick={confirmCandidature} disabled={!accepteConditions || uploadingDocs}>
+              <Button 
+                onClick={confirmCandidature} 
+                disabled={!accepteConditions || uploadingDocs}
+                className="shadow-lg shadow-primary/20"
+              >
                 {uploadingDocs ? (
                   <>
                     <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
@@ -1858,10 +2044,12 @@ const OffresRecues = () => {
 
         {/* Dialog de délégation */}
         <Dialog open={delegateDialogOpen} onOpenChange={setDelegateDialogOpen}>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background to-muted/20 backdrop-blur-xl border-border/50">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-background/95 backdrop-blur-2xl border-border/50">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
+                <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5">
+                  <User className="h-5 w-5 text-emerald-500" />
+                </div>
                 Déléguer la visite à votre agent
               </DialogTitle>
               <DialogDescription>
@@ -1979,10 +2167,12 @@ const OffresRecues = () => {
 
         {/* Dialog Visite Requise */}
         <Dialog open={visitRequiredAlertOpen} onOpenChange={setVisitRequiredAlertOpen}>
-          <DialogContent className="max-w-md bg-gradient-to-br from-background to-muted/20 backdrop-blur-xl border-border/50">
+          <DialogContent className="max-w-md bg-background/95 backdrop-blur-2xl border-border/50">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <Info className="h-5 w-5 text-amber-500" />
+                <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/5">
+                  <Info className="h-5 w-5 text-amber-500" />
+                </div>
                 Visite obligatoire
               </DialogTitle>
             </DialogHeader>
