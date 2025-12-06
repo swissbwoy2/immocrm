@@ -245,28 +245,60 @@ serve(async (req) => {
     
     console.log(`Sending email from: ${fromEmail} to: ${profile.email}`);
     
-    const { data: emailData, error: emailError } = await resend.emails.send({
-      from: fromEmail,
-      to: [profile.email],
-      subject: `${getNotificationIcon(notification_type)} ${title}`,
-      html: emailHtml,
-    });
+    // Retry logic with exponential backoff for rate limiting
+    const maxRetries = 3;
+    let lastError: any = null;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // Add delay for retries (exponential backoff)
+        if (attempt > 0) {
+          const delay = Math.pow(2, attempt) * 500; // 1s, 2s, 4s
+          console.log(`Rate limited, waiting ${delay}ms before retry ${attempt + 1}/${maxRetries}`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+        const { data: emailData, error: emailError } = await resend.emails.send({
+          from: fromEmail,
+          to: [profile.email],
+          subject: `${getNotificationIcon(notification_type)} ${title}`,
+          html: emailHtml,
+        });
 
-    if (emailError) {
-      console.error("Error sending email:", emailError);
-      throw emailError;
+        if (emailError) {
+          // Check if it's a rate limit error (cast to any for checking properties)
+          const errAny = emailError as any;
+          if (errAny.statusCode === 429 || errAny.name === 'rate_limit_exceeded') {
+            lastError = emailError;
+            console.log(`Rate limit hit on attempt ${attempt + 1}, will retry...`);
+            continue;
+          }
+          throw emailError;
+        }
+
+        console.log(`Email notification sent successfully to ${profile.email}`, emailData);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: "Notification email sent",
+            email_id: emailData?.id 
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (err: any) {
+        lastError = err;
+        if (err.statusCode === 429 || err.name === 'rate_limit_exceeded') {
+          console.log(`Rate limit error on attempt ${attempt + 1}`);
+          continue;
+        }
+        throw err;
+      }
     }
-
-    console.log(`Email notification sent successfully to ${profile.email}`, emailData);
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: "Notification email sent",
-        email_id: emailData?.id 
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    
+    // All retries exhausted
+    console.error("Max retries reached, email not sent:", lastError);
+    throw new Error("Rate limit exceeded after retries");
 
   } catch (error: any) {
     console.error("Error in send-notification-email:", error);
