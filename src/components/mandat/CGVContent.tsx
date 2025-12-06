@@ -85,10 +85,28 @@ export default function CGVContent({ typeRecherche }: Props) {
               <h4 className="font-semibold">Informations bancaires pour l'activation de vos recherches</h4>
             </div>
             <p className="text-xs text-muted-foreground">Votre dossier sera activé dès réception du paiement ou de la preuve de paiement.</p>
-            <div className="mt-3 p-3 bg-background/50 rounded-lg">
-              <p className="text-sm font-medium">
-                Acompte pour l'activation de vos recherches de bien à acheter: <span className="text-primary font-bold">2'500 CHF</span>
-              </p>
+            <div className="mt-3 p-3 bg-background/50 rounded-lg space-y-3">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-foreground">BANQUE RAIFFEISEN DU GROS DE VAUD</p>
+                <p className="text-sm text-muted-foreground">Agence Immo-Rama</p>
+                <p className="text-sm text-muted-foreground">Chemin de l'Esparcette 5</p>
+                <p className="text-sm text-muted-foreground">1023 Crissier</p>
+              </div>
+              <div className="pt-2 border-t border-border/50 space-y-1">
+                <p className="text-sm">
+                  <span className="text-muted-foreground">IBAN : </span>
+                  <span className="font-mono font-medium text-foreground">CH87 8080 8004 9815 5643 7</span>
+                </p>
+                <p className="text-sm">
+                  <span className="text-muted-foreground">SWIFT-BIC : </span>
+                  <span className="font-mono font-medium text-foreground">RAIFCH22</span>
+                </p>
+              </div>
+              <div className="pt-2 border-t border-border/50">
+                <p className="text-sm font-medium">
+                  Acompte pour l'activation de vos recherches de bien à acheter: <span className="text-primary font-bold">2'500 CHF</span>
+                </p>
+              </div>
             </div>
           </Card>
         </div>
@@ -179,10 +197,28 @@ export default function CGVContent({ typeRecherche }: Props) {
             <h4 className="font-semibold">Informations bancaires pour l'activation de vos recherches</h4>
           </div>
           <p className="text-xs text-muted-foreground">Votre dossier sera activé dès réception du paiement ou de la preuve de paiement.</p>
-          <div className="mt-3 p-3 bg-background/50 rounded-lg">
-            <p className="text-sm font-medium">
-              Acompte pour l'activation de vos recherches de logement à louer: <span className="text-primary font-bold">300 CHF</span>
-            </p>
+          <div className="mt-3 p-3 bg-background/50 rounded-lg space-y-3">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">BANQUE RAIFFEISEN DU GROS DE VAUD</p>
+              <p className="text-sm text-muted-foreground">Agence Immo-Rama</p>
+              <p className="text-sm text-muted-foreground">Chemin de l'Esparcette 5</p>
+              <p className="text-sm text-muted-foreground">1023 Crissier</p>
+            </div>
+            <div className="pt-2 border-t border-border/50 space-y-1">
+              <p className="text-sm">
+                <span className="text-muted-foreground">IBAN : </span>
+                <span className="font-mono font-medium text-foreground">CH87 8080 8004 9815 5643 7</span>
+              </p>
+              <p className="text-sm">
+                <span className="text-muted-foreground">SWIFT-BIC : </span>
+                <span className="font-mono font-medium text-foreground">RAIFCH22</span>
+              </p>
+            </div>
+            <div className="pt-2 border-t border-border/50">
+              <p className="text-sm font-medium">
+                Acompte pour l'activation de vos recherches de logement à louer: <span className="text-primary font-bold">300 CHF</span>
+              </p>
+            </div>
           </div>
         </Card>
       </div>
