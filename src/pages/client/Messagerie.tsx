@@ -34,6 +34,7 @@ import { MessagingLayout } from "@/components/MessagingLayout";
 import { ChatAvatar } from "@/components/messaging/ChatAvatar";
 import { PremiumMessageBubble } from "@/components/messaging/PremiumMessageBubble";
 import { PremiumConversationItem } from "@/components/messaging/PremiumConversationItem";
+// Force rebuild
 import { ChatInput } from "@/components/messaging/ChatInput";
 import { ChatHeader } from "@/components/messaging/ChatHeader";
 import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
