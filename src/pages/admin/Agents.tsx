@@ -2,14 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Mail, Phone, Users, Trash2, RefreshCw } from "lucide-react";
+import { Plus, Mail, Phone, Users, Trash2, RefreshCw, UserCog, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PremiumPageHeader, PremiumCard, PremiumKPICard, PremiumEmptyState } from "@/components/premium";
 
 interface AgentWithProfile {
   id: string;
@@ -53,7 +53,6 @@ const Agents = () => {
 
       if (error) throw error;
 
-      // Fetch profiles separately
       const userIds = agentsData?.map(a => a.user_id) || [];
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
@@ -62,7 +61,6 @@ const Agents = () => {
 
       if (profilesError) throw profilesError;
 
-      // Merge data
       const mergedData = agentsData?.map(agent => ({
         ...agent,
         profiles: profilesData?.find(p => p.id === agent.user_id) || {
@@ -87,7 +85,6 @@ const Agents = () => {
     }
   };
 
-
   const handleAddAgent = async () => {
     if (!formData.nom || !formData.prenom || !formData.email || !formData.telephone) {
       toast({ title: "Erreur", description: "Veuillez remplir tous les champs", variant: "destructive" });
@@ -95,7 +92,6 @@ const Agents = () => {
     }
 
     try {
-      // Call edge function to create agent with admin privileges
       const { data, error } = await supabase.functions.invoke('create-agent', {
         body: {
           prenom: formData.prenom,
@@ -131,7 +127,6 @@ const Agents = () => {
 
       const newStatus = !currentStatus;
       
-      // Mettre à jour le profil
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ actif: newStatus })
@@ -139,7 +134,6 @@ const Agents = () => {
 
       if (profileError) throw profileError;
 
-      // Synchroniser le statut de l'agent
       const { error: agentError } = await supabase
         .from('agents')
         .update({ statut: newStatus ? 'actif' : 'inactif' })
@@ -211,10 +205,20 @@ const Agents = () => {
     agent.profiles.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const stats = {
+    total: agents.length,
+    actifs: agents.filter(a => a.profiles.actif).length,
+    enAttente: agents.filter(a => a.statut === 'en_attente').length,
+    totalClients: agents.reduce((sum, a) => sum + (a.nombre_clients_assignes || 0), 0),
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="relative">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border border-primary/30"></div>
+        </div>
       </div>
     );
   }
@@ -222,16 +226,17 @@ const Agents = () => {
   return (
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8">
-          {/* Header responsive */}
-          <div className="mb-6 md:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Gestion des Agents</h1>
-              <p className="text-sm md:text-base text-muted-foreground">Gérez votre équipe ({agents.length} agents)</p>
-            </div>
+        {/* Premium Header */}
+        <PremiumPageHeader
+          title="Gestion des Agents"
+          subtitle={`Gérez votre équipe de ${agents.length} agents`}
+          badge="Équipe"
+          icon={UserCog}
+          action={
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" className="w-full sm:w-auto">
-                  <Plus className="mr-2 h-4 w-4" />
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
                   Nouvel Agent
                 </Button>
               </DialogTrigger>
@@ -262,30 +267,81 @@ const Agents = () => {
                 </div>
               </DialogContent>
             </Dialog>
-          </div>
+          }
+        />
 
-          <div className="mb-4 md:mb-6">
-            <Input
-              placeholder="Rechercher un agent..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full sm:max-w-md"
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8">
+          <PremiumKPICard
+            title="Total Agents"
+            value={stats.total}
+            icon={UserCog}
+            delay={0}
+          />
+          <PremiumKPICard
+            title="Actifs"
+            value={stats.actifs}
+            icon={Users}
+            variant="success"
+            delay={50}
+          />
+          <PremiumKPICard
+            title="En attente"
+            value={stats.enAttente}
+            icon={RefreshCw}
+            variant={stats.enAttente > 0 ? 'warning' : 'default'}
+            delay={100}
+          />
+          <PremiumKPICard
+            title="Clients gérés"
+            value={stats.totalClients}
+            icon={Users}
+            delay={150}
+          />
+        </div>
+
+        {/* Search */}
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher un agent..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 w-full sm:max-w-md"
+          />
+        </div>
+
+        {/* Agents List */}
+        <div className="grid gap-3 md:gap-4">
+          {filteredAgents.length === 0 ? (
+            <PremiumEmptyState
+              icon={UserCog}
+              title="Aucun agent trouvé"
+              description={searchTerm ? "Essayez une autre recherche" : "Commencez par ajouter un agent"}
+              action={
+                !searchTerm && (
+                  <Button onClick={() => setIsDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Ajouter un agent
+                  </Button>
+                )
+              }
             />
-          </div>
-
-          <div className="grid gap-3 md:gap-4">
-            {filteredAgents.map((agent, index) => {
-              return (
-                <Card 
-                  key={agent.id} 
-                  className="card-interactive p-4 md:p-6 cursor-pointer animate-fade-in"
-                  style={{ animationDelay: `${index * 40}ms`, animationFillMode: 'backwards' }}
+          ) : (
+            filteredAgents.map((agent, index) => (
+              <PremiumCard 
+                key={agent.id} 
+                delay={index * 40}
+                className="cursor-pointer"
+              >
+                <div 
+                  className="p-4 md:p-6"
                   onClick={() => navigate(`/admin/agents/${agent.id}`)}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                     {/* Avatar et infos */}
                     <div className="flex items-start gap-3 md:gap-4 flex-1">
-                      <Avatar className="h-10 w-10 md:h-12 md:w-12 flex-shrink-0">
+                      <Avatar className="h-10 w-10 md:h-12 md:w-12 flex-shrink-0 ring-2 ring-primary/10 group-hover:ring-primary/30 transition-all">
                         <AvatarImage src={agent.profiles.avatar_url || undefined} alt={`${agent.profiles.prenom} ${agent.profiles.nom}`} />
                         <AvatarFallback className="bg-primary/10 text-primary text-sm md:text-base">
                           {agent.profiles.prenom?.[0]}{agent.profiles.nom?.[0]}
@@ -298,7 +354,7 @@ const Agents = () => {
                             {agent.profiles.actif ? "Actif" : "Inactif"}
                           </Badge>
                           {agent.statut === 'en_attente' && (
-                            <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950 dark:text-orange-300 dark:border-orange-800">
+                            <Badge variant="outline" className="text-xs bg-warning/10 text-warning border-warning/30">
                               En attente d'activation
                             </Badge>
                           )}
@@ -320,30 +376,27 @@ const Agents = () => {
                       </div>
                     </div>
                     
-                    {/* Boutons d'action - empilés verticalement sur mobile */}
-                    <div className="flex sm:flex-col gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l sm:pl-4">
+                    {/* Boutons d'action */}
+                    <div 
+                      className="flex sm:flex-col gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l border-border/50 sm:pl-4"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {agent.statut === 'en_attente' && (
                         <Button
                           variant="outline"
                           size="sm"
                           className="flex-1 sm:flex-none text-xs md:text-sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            resendInvitation(agent.user_id, agent.profiles.email);
-                          }}
+                          onClick={() => resendInvitation(agent.user_id, agent.profiles.email)}
                         >
                           <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
-                          Renvoyer invitation
+                          Renvoyer
                         </Button>
                       )}
                       <Button
                         variant={agent.profiles.actif ? "outline" : "default"}
                         size="sm"
                         className="flex-1 sm:flex-none text-xs md:text-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleAgentStatus(agent.id, agent.profiles.actif);
-                        }}
+                        onClick={() => toggleAgentStatus(agent.id, agent.profiles.actif)}
                       >
                         {agent.profiles.actif ? "Désactiver" : "Activer"}
                       </Button>
@@ -351,20 +404,18 @@ const Agents = () => {
                         variant="destructive"
                         size="sm"
                         className="flex-1 sm:flex-none text-xs md:text-sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteAgent(agent.user_id);
-                        }}
+                        onClick={() => deleteAgent(agent.user_id)}
                       >
                         <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
                         Supprimer
                       </Button>
                     </div>
                   </div>
-                </Card>
-              );
-            })}
-          </div>
+                </div>
+              </PremiumCard>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,16 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -22,11 +13,21 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { Search, Plus, Eye, Users, DollarSign, UserCheck, UserX } from 'lucide-react';
+import { Search, Plus, Eye, Users, DollarSign, UserCheck, UserX, Handshake } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { 
+  PremiumPageHeader, 
+  PremiumKPICard, 
+  PremiumTable, 
+  PremiumTableHeader, 
+  PremiumTableRow,
+  PremiumEmptyState,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow
+} from '@/components/premium';
 
 interface Apporteur {
   id: string;
@@ -71,7 +72,6 @@ export default function AdminApporteurs() {
 
       if (error) throw error;
 
-      // Load profiles for each apporteur
       const apporteursWithProfiles = await Promise.all(
         (data || []).map(async (apporteur) => {
           const { data: profile } = await supabase
@@ -166,128 +166,137 @@ export default function AdminApporteurs() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="relative">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border border-primary/30"></div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Apporteurs d'affaires</h1>
-          <p className="text-muted-foreground">
-            Gérez les apporteurs d'affaires partenaires
-          </p>
-        </div>
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Nouvel apporteur
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Créer un apporteur d'affaires</DialogTitle>
-              <DialogDescription>
-                Un email d'invitation sera envoyé à l'apporteur
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Prénom</Label>
-                  <Input
-                    value={newApporteur.prenom}
-                    onChange={(e) => setNewApporteur({ ...newApporteur, prenom: e.target.value })}
-                  />
+    <div className="flex-1 overflow-auto">
+      <div className="p-4 md:p-8">
+        {/* Premium Header */}
+        <PremiumPageHeader
+          title="Apporteurs d'affaires"
+          subtitle="Gérez les apporteurs d'affaires partenaires"
+          badge="Partenaires"
+          icon={Handshake}
+          action={
+            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <DialogTrigger asChild>
+                <Button className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Nouvel apporteur
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Créer un apporteur d'affaires</DialogTitle>
+                  <DialogDescription>
+                    Un email d'invitation sera envoyé à l'apporteur
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Prénom</Label>
+                      <Input
+                        value={newApporteur.prenom}
+                        onChange={(e) => setNewApporteur({ ...newApporteur, prenom: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nom</Label>
+                      <Input
+                        value={newApporteur.nom}
+                        onChange={(e) => setNewApporteur({ ...newApporteur, nom: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input
+                      type="email"
+                      value={newApporteur.email}
+                      onChange={(e) => setNewApporteur({ ...newApporteur, email: e.target.value })}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Nom</Label>
-                  <Input
-                    value={newApporteur.nom}
-                    onChange={(e) => setNewApporteur({ ...newApporteur, nom: e.target.value })}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={newApporteur.email}
-                  onChange={(e) => setNewApporteur({ ...newApporteur, email: e.target.value })}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                Annuler
-              </Button>
-              <Button onClick={handleCreateApporteur} disabled={creating}>
-                {creating ? 'Création...' : 'Créer'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '0ms' }}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium group-hover:text-primary transition-colors">Total Apporteurs</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground group-hover:scale-110 group-hover:text-primary transition-all" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '50ms' }}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium group-hover:text-green-500 transition-colors">Actifs</CardTitle>
-            <UserCheck className="h-4 w-4 text-green-500 group-hover:scale-110 transition-transform" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{stats.actifs}</div>
-          </CardContent>
-        </Card>
-        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '100ms' }}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium group-hover:text-blue-500 transition-colors">Total Referrals</CardTitle>
-            <Users className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{stats.totalReferrals}</div>
-          </CardContent>
-        </Card>
-        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '150ms' }}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium group-hover:text-green-500 transition-colors">Commissions versées</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-500 group-hover:scale-110 transition-transform" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">CHF {stats.totalCommissions.toFixed(0)}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Rechercher par nom, email ou code..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+                    Annuler
+                  </Button>
+                  <Button onClick={handleCreateApporteur} disabled={creating}>
+                    {creating ? 'Création...' : 'Créer'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          }
         />
-      </div>
 
-      {/* Table */}
-      <Card className="card-interactive animate-fade-in" style={{ animationDelay: '200ms' }}>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-8">
+          <PremiumKPICard
+            title="Total Apporteurs"
+            value={stats.total}
+            icon={Users}
+            delay={0}
+          />
+          <PremiumKPICard
+            title="Actifs"
+            value={stats.actifs}
+            icon={UserCheck}
+            variant="success"
+            delay={50}
+          />
+          <PremiumKPICard
+            title="Total Referrals"
+            value={stats.totalReferrals}
+            icon={Users}
+            delay={100}
+          />
+          <PremiumKPICard
+            title="Commissions versées"
+            value={stats.totalCommissions}
+            icon={DollarSign}
+            variant="success"
+            subtitle="CHF"
+            delay={150}
+          />
+        </div>
+
+        {/* Search */}
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher par nom, email ou code..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
+        {/* Table */}
+        {filteredApporteurs.length === 0 ? (
+          <PremiumEmptyState
+            icon={Handshake}
+            title="Aucun apporteur trouvé"
+            description={search ? "Essayez une autre recherche" : "Commencez par ajouter un apporteur"}
+            action={
+              !search && (
+                <Button onClick={() => setShowCreateDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Ajouter un apporteur
+                </Button>
+              )
+            }
+          />
+        ) : (
+          <PremiumTable>
+            <PremiumTableHeader>
               <TableRow>
                 <TableHead>Apporteur</TableHead>
                 <TableHead>Code</TableHead>
@@ -297,75 +306,67 @@ export default function AdminApporteurs() {
                 <TableHead>Contrat</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            </TableHeader>
+            </PremiumTableHeader>
             <TableBody>
-              {filteredApporteurs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Aucun apporteur trouvé
+              {filteredApporteurs.map((apporteur) => (
+                <PremiumTableRow key={apporteur.id}>
+                  <TableCell>
+                    <div>
+                      <div className="font-medium">
+                        {apporteur.profile?.prenom} {apporteur.profile?.nom}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {apporteur.profile?.email}
+                      </div>
+                    </div>
                   </TableCell>
-                </TableRow>
-              ) : (
-                filteredApporteurs.map((apporteur) => (
-                  <TableRow key={apporteur.id}>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {apporteur.profile?.prenom} {apporteur.profile?.nom}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {apporteur.profile?.email}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <code className="text-sm bg-muted px-2 py-1 rounded">
-                        {apporteur.code_parrainage}
-                      </code>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusConfig[apporteur.statut]?.variant || 'secondary'}>
-                        {statusConfig[apporteur.statut]?.label || apporteur.statut}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{apporteur.nombre_clients_referes}</TableCell>
-                    <TableCell>CHF {apporteur.total_commissions_gagnees?.toFixed(0) || 0}</TableCell>
-                    <TableCell>
-                      {apporteur.contrat_signe ? (
-                        <Badge variant="outline" className="bg-green-50">Signé</Badge>
-                      ) : (
-                        <Badge variant="secondary">Non signé</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => navigate(`/admin/apporteurs/${apporteur.id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => toggleStatus(apporteur)}
-                        >
-                          {apporteur.statut === 'actif' ? (
-                            <UserX className="h-4 w-4 text-destructive" />
-                          ) : (
-                            <UserCheck className="h-4 w-4 text-green-500" />
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+                  <TableCell>
+                    <code className="text-sm bg-muted px-2 py-1 rounded">
+                      {apporteur.code_parrainage}
+                    </code>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={statusConfig[apporteur.statut]?.variant || 'secondary'}>
+                      {statusConfig[apporteur.statut]?.label || apporteur.statut}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{apporteur.nombre_clients_referes}</TableCell>
+                  <TableCell>CHF {apporteur.total_commissions_gagnees?.toFixed(0) || 0}</TableCell>
+                  <TableCell>
+                    {apporteur.contrat_signe ? (
+                      <Badge variant="outline" className="bg-success/10 text-success border-success/30">Signé</Badge>
+                    ) : (
+                      <Badge variant="secondary">Non signé</Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => navigate(`/admin/apporteurs/${apporteur.id}`)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => toggleStatus(apporteur)}
+                      >
+                        {apporteur.statut === 'actif' ? (
+                          <UserX className="h-4 w-4 text-destructive" />
+                        ) : (
+                          <UserCheck className="h-4 w-4 text-success" />
+                        )}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </PremiumTableRow>
+              ))}
             </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+          </PremiumTable>
+        )}
+      </div>
     </div>
   );
 }
