@@ -478,7 +478,7 @@ export default function ClientDashboard() {
 
           {/* Alerte compte non actif */}
           {profileActif === false && (
-            <Card className="mb-6 border-orange-500 bg-orange-50 dark:bg-orange-950/30 animate-fade-in">
+            <Card className="card-interactive mb-6 border-orange-500 bg-orange-50 dark:bg-orange-950/30 animate-fade-in">
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
                   <AlertTriangle className="w-5 h-5 text-orange-500 mt-0.5 animate-pulse-soft" />
@@ -513,7 +513,7 @@ export default function ClientDashboard() {
 
           {/* Alerte mandat */}
           {profileActif !== false && daysRemaining > 0 && daysRemaining <= 30 && (
-            <Card className="mb-6 border-warning bg-warning/5">
+            <Card className="card-interactive mb-6 border-warning bg-warning/5 animate-fade-in" style={{ animationDelay: '50ms' }}>
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
                   <AlertTriangle className="w-5 h-5 text-warning mt-0.5" />
@@ -539,7 +539,7 @@ export default function ClientDashboard() {
           )}
 
           {profileActif !== false && daysRemaining <= 0 && (
-            <Card className="mb-6 border-destructive bg-destructive/5">
+            <Card className="card-interactive mb-6 border-destructive bg-destructive/5 animate-fade-in" style={{ animationDelay: '50ms' }}>
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
                   <AlertTriangle className="w-5 h-5 text-destructive mt-0.5" />
@@ -653,7 +653,7 @@ export default function ClientDashboard() {
             if (candidaturesEnCours.length === 0) return null;
 
             return (
-              <Card className="mb-8 border-2 border-primary/50 bg-gradient-to-r from-primary/5 to-primary/10 shadow-lg">
+              <Card className="card-interactive mb-8 border-2 border-primary/50 bg-gradient-to-r from-primary/5 to-primary/10 shadow-lg animate-fade-in">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
@@ -720,7 +720,7 @@ export default function ClientDashboard() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
             {/* Mon mandat */}
-            <Card>
+            <Card className="card-interactive animate-fade-in" style={{ animationDelay: '100ms' }}>
               <CardHeader>
                 <CardTitle>
                   {isAcheteur ? '🏠 Mon projet d\'achat' : '📋 Mon mandat'}
@@ -820,7 +820,7 @@ export default function ClientDashboard() {
             </Card>
 
             {/* Mon agent */}
-            <Card>
+            <Card className="card-interactive animate-fade-in" style={{ animationDelay: '150ms' }}>
               <CardHeader>
                 <CardTitle>👤 Mon agent</CardTitle>
               </CardHeader>
@@ -862,7 +862,7 @@ export default function ClientDashboard() {
 
           {/* Section financière spécifique aux acheteurs */}
           {isAcheteur && profileActif !== false && (
-            <Card className="mb-8 border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/10">
+            <Card className="card-interactive mb-8 border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/10 animate-fade-in" style={{ animationDelay: '200ms' }}>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Home className="w-5 h-5 text-blue-600" />
@@ -911,7 +911,7 @@ export default function ClientDashboard() {
           )}
 
           {/* Prochaines visites */}
-          <Card className="mb-8">
+          <Card className="card-interactive mb-8 animate-fade-in" style={{ animationDelay: '250ms' }}>
             <CardHeader>
               <CardTitle>📅 Prochaines visites</CardTitle>
             </CardHeader>
@@ -959,7 +959,7 @@ export default function ClientDashboard() {
           </Card>
 
           {/* Candidatures récentes */}
-          <Card>
+          <Card className="card-interactive animate-fade-in" style={{ animationDelay: '300ms' }}>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>📝 Mes candidatures récentes</CardTitle>
