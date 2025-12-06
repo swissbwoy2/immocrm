@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   FileText, Upload, Download, Trash2, File, 
-  Image as ImageIcon, FileSpreadsheet, AlertCircle, Eye, Pencil, ClipboardList 
+  Image as ImageIcon, FileSpreadsheet, AlertCircle, Eye, Pencil, ClipboardList,
+  Sparkles, FolderOpen
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -85,7 +86,6 @@ export default function Documents() {
       
       setClientId(clientData.id);
 
-      // Charger TOUS les documents du client (y compris ceux uploadés par admin/agent)
       const { data: docsData, error } = await supabase
         .from('documents')
         .select('*')
@@ -95,7 +95,6 @@ export default function Documents() {
       if (error) throw error;
       setDocuments(docsData || []);
 
-      // Charger les demandes de documents en attente
       const { data: requestsData } = await supabase
         .from('document_requests')
         .select('*')
@@ -137,7 +136,7 @@ export default function Documents() {
   };
 
   const validateFile = (file: File): boolean => {
-    const maxSize = 1024 * 1024 * 1024; // 1GB
+    const maxSize = 1024 * 1024 * 1024;
     if (file.size > maxSize) {
       toast({
         title: 'Fichier trop volumineux',
@@ -194,7 +193,6 @@ export default function Documents() {
 
       if (dbError) throw dbError;
 
-      // Auto-mark matching document request as fulfilled
       if (clientId && selectedType !== 'autre') {
         const { data: pendingRequest } = await supabase
           .from('document_requests')
@@ -279,7 +277,6 @@ export default function Documents() {
     try {
       let blobUrl: string;
       
-      // Si l'URL est une data URL (base64)
       if (document.url?.startsWith('data:')) {
         const base64Data = document.url.split(',')[1];
         const binaryString = atob(base64Data);
@@ -293,7 +290,6 @@ export default function Documents() {
         const blob = new Blob([bytes], { type: document.type });
         blobUrl = URL.createObjectURL(blob);
       } else {
-        // Télécharger le fichier en blob depuis le storage
         const { data, error } = await supabase.storage
           .from('client-documents')
           .download(document.url);
@@ -410,7 +406,18 @@ export default function Documents() {
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <p className="text-muted-foreground">Chargement...</p>
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 animate-pulse" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <FileText className="w-8 h-8 text-primary animate-pulse" />
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <div className="h-2 w-32 bg-gradient-to-r from-primary/20 via-primary/40 to-primary/20 rounded-full animate-pulse" />
+            <p className="text-sm text-muted-foreground">Chargement des documents...</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -418,214 +425,295 @@ export default function Documents() {
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8 space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">Mes documents</h1>
-              <p className="text-muted-foreground">
-                {documents.length} document{documents.length > 1 ? 's' : ''}
-              </p>
+        {/* Header animé avec glassmorphism */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 p-6 md:p-8">
+          {/* Effets de fond */}
+          <div className="absolute inset-0 overflow-hidden">
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+            <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-primary/5 rounded-full blur-2xl" />
+          </div>
+          
+          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
+                  <FolderOpen className="w-7 h-7 text-primary-foreground" />
+                </div>
+                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-background border-2 border-primary flex items-center justify-center">
+                  <Sparkles className="w-3 h-3 text-primary" />
+                </div>
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  Mes documents
+                </h1>
+                <p className="text-muted-foreground flex items-center gap-2 mt-1">
+                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                    {documents.length}
+                  </span>
+                  document{documents.length > 1 ? 's' : ''} dans votre espace
+                </p>
+              </div>
             </div>
-            <Button onClick={() => setUploadDialogOpen(true)}>
+            
+            <Button 
+              onClick={() => setUploadDialogOpen(true)}
+              className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25 transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
               <Upload className="w-4 h-4 mr-2" />
               Ajouter un document
             </Button>
           </div>
+        </div>
 
-          {/* Info banner */}
-          <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950">
-            <CardContent className="flex items-start gap-3 pt-6">
-              <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
-              <div className="text-sm text-blue-800 dark:text-blue-200">
-                <p className="font-medium mb-2">Documents requis (Personnes salariées sans garant) :</p>
-                <ul className="list-disc list-inside space-y-1.5">
-                  <li>Formulaire de demande de recherches dûment complété et signé</li>
-                  <li>Copie de carte d'identité/passeport (si suisse) OU Copie du permis de séjour</li>
-                  <li>Copie des 3 dernières fiches de salaire et du contrat de travail</li>
-                  <li>Attestation de l'employeur</li>
-                  <li>Copie de la déclaration d'impôts (si indépendant)</li>
-                  <li>Attestation de l'Office des Poursuites (antérieure à 3 mois)</li>
-                  <li>Attestation de domicile ou d'établissement de la commune actuelle</li>
-                  <li>Copie de la RC-ménage (assurance responsabilité civile)</li>
-                </ul>
-                <p className="text-xs mt-3 italic">
-                  Note : Toute personne mariée ou en partenariat enregistré devra remettre tous les documents précédemment cités.
-                </p>
+        {/* Info banner modernisé */}
+        <Card className="relative overflow-hidden border-blue-200/50 bg-gradient-to-br from-blue-50/80 to-blue-50/30 dark:from-blue-950/50 dark:to-blue-950/20 backdrop-blur-sm">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/50 via-transparent to-transparent dark:from-blue-900/30" />
+          <CardContent className="relative flex items-start gap-4 pt-6">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/25">
+              <AlertCircle className="w-5 h-5 text-white" />
+            </div>
+            <div className="text-sm text-blue-800 dark:text-blue-200 space-y-3">
+              <p className="font-semibold text-base">Documents requis (Personnes salariées sans garant) :</p>
+              <ul className="grid gap-2">
+                {[
+                  'Formulaire de demande de recherches dûment complété et signé',
+                  'Copie de carte d\'identité/passeport (si suisse) OU Copie du permis de séjour',
+                  'Copie des 3 dernières fiches de salaire et du contrat de travail',
+                  'Attestation de l\'employeur',
+                  'Copie de la déclaration d\'impôts (si indépendant)',
+                  'Attestation de l\'Office des Poursuites (antérieure à 3 mois)',
+                  'Attestation de domicile ou d\'établissement de la commune actuelle',
+                  'Copie de la RC-ménage (assurance responsabilité civile)'
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    </span>
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs italic opacity-80 border-t border-blue-200/50 dark:border-blue-800/50 pt-3 mt-3">
+                Note : Toute personne mariée ou en partenariat enregistré devra remettre tous les documents précédemment cités.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Documents demandés par l'agent */}
+        {documentRequests.length > 0 && (
+          <Card className="relative overflow-hidden border-orange-200/50 bg-gradient-to-br from-orange-50/80 to-orange-50/30 dark:from-orange-950/50 dark:to-orange-950/20 backdrop-blur-sm">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-orange-100/50 via-transparent to-transparent dark:from-orange-900/30" />
+            <CardHeader className="relative pb-3">
+              <CardTitle className="flex items-center gap-3 text-orange-800 dark:text-orange-200">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/25">
+                  <ClipboardList className="w-5 h-5 text-white" />
+                </div>
+                <span>Documents demandés par votre agent</span>
+                <Badge className="ml-auto bg-orange-500 hover:bg-orange-600 text-white border-0">
+                  {documentRequests.length}
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="relative">
+              <div className="space-y-3">
+                {documentRequests.map((request, index) => (
+                  <div 
+                    key={request.id} 
+                    className="group relative flex items-center justify-between p-4 rounded-xl bg-background/80 backdrop-blur-sm border border-orange-200/50 dark:border-orange-800/50 hover:border-orange-300 dark:hover:border-orange-700 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/5 to-orange-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
+                    <div className="relative flex-1">
+                      <p className="font-medium">{request.document_label}</p>
+                      {request.note && (
+                        <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
+                          <span>📝</span> {request.note}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Demandé le {new Date(request.created_at).toLocaleDateString('fr-CH')}
+                      </p>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      onClick={() => {
+                        setSelectedType(request.document_type);
+                        setUploadDialogOpen(true);
+                      }}
+                      className="relative overflow-hidden bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md shadow-orange-500/25"
+                    >
+                      <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
+                      <Upload className="w-4 h-4 mr-2" />
+                      Uploader
+                    </Button>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
+        )}
 
-          {/* Documents demandés par l'agent */}
-          {documentRequests.length > 0 && (
-            <Card className="border-orange-200 bg-orange-50 dark:bg-orange-950">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-orange-800 dark:text-orange-200">
-                  <ClipboardList className="w-5 h-5" />
-                  📋 Documents demandés par votre agent
-                  <Badge variant="secondary" className="ml-2">
-                    {documentRequests.length}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {documentRequests.map((request) => (
-                    <div 
-                      key={request.id} 
-                      className="flex items-center justify-between p-3 rounded-lg bg-background border"
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{request.document_label}</p>
-                        {request.note && (
+        {/* Liste des documents */}
+        {documents.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {documents.map((doc, index) => {
+              const Icon = getFileIcon(doc.type);
+              return (
+                <Card 
+                  key={doc.id} 
+                  className="group relative overflow-hidden bg-gradient-to-br from-card to-card/80 border-border/50 hover:border-primary/30 transition-all duration-500 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 animate-fade-in"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  {/* Shine effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                  
+                  <CardHeader className="relative pb-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                          <Icon className="w-6 h-6 text-primary" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <CardTitle className="text-sm truncate group-hover:text-primary transition-colors" title={doc.nom}>
+                            {doc.nom}
+                          </CardTitle>
                           <p className="text-xs text-muted-foreground mt-1">
-                            📝 {request.note}
+                            {formatFileSize(doc.taille)}
                           </p>
-                        )}
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Demandé le {new Date(request.created_at).toLocaleDateString('fr-CH')}
-                        </p>
-                      </div>
-                      <Button 
-                        size="sm" 
-                        onClick={() => {
-                          setSelectedType(request.document_type);
-                          setUploadDialogOpen(true);
-                        }}
-                      >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Uploader
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Liste des documents */}
-          {documents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {documents.map((doc) => {
-                const Icon = getFileIcon(doc.type);
-                return (
-                  <Card key={doc.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-start gap-3 flex-1 min-w-0">
-                          <Icon className="w-8 h-8 text-primary flex-shrink-0 mt-1" />
-                          <div className="min-w-0 flex-1">
-                            <CardTitle className="text-sm truncate" title={doc.nom}>
-                              {doc.nom}
-                            </CardTitle>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {formatFileSize(doc.taille)}
-                            </p>
-                          </div>
                         </div>
                       </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="space-y-2">
-                        <Badge variant="outline" className="text-xs">
+                    </div>
+                  </CardHeader>
+                  <CardContent className="relative space-y-3">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline" className="text-xs bg-primary/5 border-primary/20">
                           {getTypeLabel(doc.type_document)}
                         </Badge>
                         {doc.offre_id && (
-                          <Badge variant="secondary" className="text-xs ml-2">
+                          <Badge className="text-xs bg-secondary/80 text-secondary-foreground border-0">
                             📝 Candidature
                           </Badge>
                         )}
-                        <p className="text-xs text-muted-foreground">
-                          Ajouté le {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
-                        </p>
                       </div>
-                      
-                      {doc.type.includes('image') && doc.url && doc.url.startsWith('data:') && (
+                      <p className="text-xs text-muted-foreground">
+                        Ajouté le {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
+                      </p>
+                    </div>
+                    
+                    {doc.type.includes('image') && doc.url && doc.url.startsWith('data:') && (
+                      <div className="relative overflow-hidden rounded-lg">
                         <img 
                           src={doc.url} 
                           alt={doc.nom}
-                          className="w-full h-32 object-cover rounded-lg"
+                          className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-500"
                         />
-                      )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    )}
 
-                      <div className="flex gap-2">
-                        {(doc.type.includes('image') || doc.type === 'application/pdf') && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handlePreview(doc)}
-                          >
-                            <Eye className="w-3 h-3 mr-1" />
-                            Aperçu
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setDocumentToRename(doc);
-                            setNewDocumentName(doc.nom);
-                            setRenameDialogOpen(true);
-                          }}
-                        >
-                          <Pencil className="w-3 h-3" />
-                        </Button>
+                    <div className="flex gap-2 pt-2">
+                      {(doc.type.includes('image') || doc.type === 'application/pdf') && (
                         <Button
                           size="sm"
                           variant="outline"
-                          className="flex-1"
-                          onClick={() => handleDownload(doc)}
+                          onClick={() => handlePreview(doc)}
+                          className="hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
                         >
-                          <Download className="w-3 h-3 mr-1" />
-                          Télécharger
+                          <Eye className="w-3 h-3 mr-1" />
+                          Aperçu
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setSelectedDoc(doc);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="w-3 h-3 text-red-500" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <FileText className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">Aucun document</h3>
-                <p className="text-muted-foreground mb-4">
-                  Commencez par uploader vos documents importants
-                </p>
-                <Button onClick={() => setUploadDialogOpen(true)}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Ajouter un document
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setDocumentToRename(doc);
+                          setNewDocumentName(doc.nom);
+                          setRenameDialogOpen(true);
+                        }}
+                        className="hover:bg-primary/10 hover:text-primary"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
+                        onClick={() => handleDownload(doc)}
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Télécharger
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setSelectedDoc(doc);
+                          setDeleteDialogOpen(true);
+                        }}
+                        className="hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <Card className="relative overflow-hidden border-dashed border-2 border-muted-foreground/20 bg-gradient-to-br from-muted/30 to-muted/10">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
+            <CardContent className="relative py-16 text-center">
+              <div className="relative inline-flex mb-6">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
+                  <FileText className="w-10 h-10 text-muted-foreground" />
+                </div>
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-background border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
+                  <Upload className="w-4 h-4 text-muted-foreground" />
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Aucun document</h3>
+              <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                Commencez par uploader vos documents importants pour constituer votre dossier
+              </p>
+              <Button 
+                onClick={() => setUploadDialogOpen(true)}
+                className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25"
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                <Upload className="w-4 h-4 mr-2" />
+                Ajouter un document
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
-      {/* Upload Dialog */}
+      {/* Upload Dialog modernisé */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle>Ajouter un document</DialogTitle>
-            <DialogDescription>
-              Formats acceptés : PDF, JPG, PNG (max 10 MB)
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
+                <Upload className="w-5 h-5 text-primary-foreground" />
+              </div>
+              Ajouter un document
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Formats acceptés : PDF, JPG, PNG (max 1 GB)
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 mb-4">
+          <div className="space-y-4 my-4">
             <div className="space-y-2">
-              <Label>Type de document</Label>
+              <Label className="text-sm font-medium">Type de document</Label>
               <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background/50 border-border/50 focus:border-primary/50">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -645,64 +733,74 @@ export default function Documents() {
           </div>
 
           <div
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            className={`relative overflow-hidden border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
               dragActive
-                ? 'border-primary bg-primary/5'
-                : 'border-muted-foreground/25 hover:border-primary/50'
+                ? 'border-primary bg-primary/10 scale-[1.02]'
+                : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30'
             }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
           >
-            <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            {selectedFile ? (
-              <div className="space-y-3">
-                <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-sm font-medium">{selectedFile.name}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formatFileSize(selectedFile.size)}
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedFile(null);
-                    if (fileInputRef.current) fileInputRef.current.value = '';
-                  }}
-                >
-                  Changer de fichier
-                </Button>
+            {/* Gradient background on drag */}
+            <div className={`absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5 transition-opacity duration-300 ${dragActive ? 'opacity-100' : 'opacity-0'}`} />
+            
+            <div className="relative">
+              <div className={`w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center transition-all duration-300 ${dragActive ? 'scale-110 from-primary/20 to-primary/10' : ''}`}>
+                <Upload className={`w-8 h-8 transition-colors duration-300 ${dragActive ? 'text-primary' : 'text-muted-foreground'}`} />
               </div>
-            ) : (
-              <>
-                <p className="text-sm font-medium mb-2">
-                  Glissez-déposez votre fichier ici
-                </p>
-                <p className="text-xs text-muted-foreground mb-4">ou</p>
-                <Button
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Sélectionner un fichier
-                </Button>
-              </>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files?.[0]) {
-                  handleFileSelect(e.target.files[0]);
-                }
-              }}
-            />
+              
+              {selectedFile ? (
+                <div className="space-y-3">
+                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                    <p className="text-sm font-medium text-foreground">{selectedFile.name}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatFileSize(selectedFile.size)}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}
+                    className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                  >
+                    Changer de fichier
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm font-medium mb-2">
+                    Glissez-déposez votre fichier ici
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-4">ou</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="hover:bg-primary/10 hover:text-primary hover:border-primary/30"
+                  >
+                    Sélectionner un fichier
+                  </Button>
+                </>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.[0]) {
+                    handleFileSelect(e.target.files[0]);
+                  }
+                }}
+              />
+            </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button 
               variant="outline" 
               onClick={() => {
@@ -710,20 +808,29 @@ export default function Documents() {
                 setSelectedFile(null);
                 setSelectedType('autre');
               }}
+              className="hover:bg-muted"
             >
               Annuler
             </Button>
             <Button 
               onClick={handleConfirmUpload}
               disabled={!selectedFile || isUploading}
+              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25"
             >
-              {isUploading ? 'Upload en cours...' : 'Confirmer l\'upload'}
+              {isUploading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
+                  Upload en cours...
+                </>
+              ) : (
+                <>Confirmer l'upload</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Preview Dialog */}
+      {/* Preview Dialog modernisé */}
       <Dialog 
         open={previewDialogOpen} 
         onOpenChange={(open) => {
@@ -733,31 +840,39 @@ export default function Documents() {
           }
         }}
       >
-        <DialogContent className="max-w-5xl max-h-[95vh]">
+        <DialogContent className="max-w-5xl max-h-[95vh] border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle>{previewDocument?.nom}</DialogTitle>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                <Eye className="w-4 h-4 text-primary" />
+              </div>
+              {previewDocument?.nom}
+            </DialogTitle>
           </DialogHeader>
-          <div className="h-[80vh]">
+          <div className="h-[80vh] rounded-xl overflow-hidden bg-muted/30">
             {previewDocument?.type?.includes('pdf') ? (
               <object
                 data={previewUrl}
                 type="application/pdf"
-                className="w-full h-full rounded-lg"
+                className="w-full h-full"
               >
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center mb-4">
+                    <FileText className="w-8 h-8" />
+                  </div>
                   <p className="mb-4">Impossible d'afficher le PDF dans le navigateur.</p>
-                  <Button onClick={() => handleDownload(previewDocument)}>
+                  <Button onClick={() => handleDownload(previewDocument)} className="bg-gradient-to-r from-primary to-primary/90">
                     <Download className="w-4 h-4 mr-2" />
                     Télécharger le PDF
                   </Button>
                 </div>
               </object>
             ) : previewDocument?.type?.includes('image') ? (
-              <div className="h-full overflow-auto flex justify-center items-start">
+              <div className="h-full overflow-auto flex justify-center items-start p-4">
                 <img 
                   src={previewUrl} 
                   alt={previewDocument?.nom}
-                  className="max-w-full h-auto rounded-lg"
+                  className="max-w-full h-auto rounded-lg shadow-2xl"
                 />
               </div>
             ) : (
@@ -769,45 +884,63 @@ export default function Documents() {
         </DialogContent>
       </Dialog>
 
-      {/* Rename Dialog */}
+      {/* Rename Dialog modernisé */}
       <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle>Renommer le document</DialogTitle>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                <Pencil className="w-5 h-5 text-primary" />
+              </div>
+              Renommer le document
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Nouveau nom</Label>
+              <Label className="text-sm font-medium">Nouveau nom</Label>
               <Input
                 value={newDocumentName}
                 onChange={(e) => setNewDocumentName(e.target.value)}
                 placeholder="Nom du document"
+                className="bg-background/50 border-border/50 focus:border-primary/50"
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
               Annuler
             </Button>
-            <Button onClick={handleRename} disabled={!newDocumentName.trim()}>
+            <Button 
+              onClick={handleRename} 
+              disabled={!newDocumentName.trim()}
+              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+            >
               Renommer
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
+      {/* Delete Dialog modernisé */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer le document</AlertDialogTitle>
-            <AlertDialogDescription>
-              Êtes-vous sûr de vouloir supprimer "{selectedDoc?.nom}" ? Cette action est irréversible.
+            <AlertDialogTitle className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/10 flex items-center justify-center">
+                <Trash2 className="w-5 h-5 text-destructive" />
+              </div>
+              Supprimer le document
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              Êtes-vous sûr de vouloir supprimer "<span className="font-medium text-foreground">{selectedDoc?.nom}</span>" ? Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="hover:bg-muted">Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete} 
+              className="bg-gradient-to-r from-destructive to-destructive/90 hover:from-destructive/90 hover:to-destructive text-destructive-foreground"
+            >
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
