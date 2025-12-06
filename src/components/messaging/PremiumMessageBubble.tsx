@@ -47,7 +47,7 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
       className={cn(
         'flex w-full mb-2',
         isSent ? 'justify-end' : 'justify-start',
-        'animate-fade-in opacity-0',
+        'animate-fade-in',
         className
       )}
     >
