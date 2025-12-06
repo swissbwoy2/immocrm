@@ -315,58 +315,58 @@ export default function FacturesAbaNinja() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <Card className="p-4">
+          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '0ms' }}>
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-950">
-                <Receipt className="h-5 w-5 text-blue-600" />
+                <Receipt className="h-5 w-5 text-blue-600 group-hover:scale-110 transition-transform" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{demandes.length}</p>
+                <p className="text-2xl font-bold group-hover:scale-105 transition-transform">{demandes.length}</p>
                 <p className="text-xs text-muted-foreground">Total factures</p>
               </div>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '50ms' }}>
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-orange-100 dark:bg-orange-950">
-                <Clock className="h-5 w-5 text-orange-600" />
+                <Clock className="h-5 w-5 text-orange-600 group-hover:scale-110 transition-transform" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{pendingInvoices.length}</p>
+                <p className="text-2xl font-bold group-hover:scale-105 transition-transform">{pendingInvoices.length}</p>
                 <p className="text-xs text-muted-foreground">En attente</p>
               </div>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '100ms' }}>
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-green-100 dark:bg-green-950">
-                <CheckCircle className="h-5 w-5 text-green-600" />
+                <CheckCircle className="h-5 w-5 text-green-600 group-hover:scale-110 transition-transform" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{paidInvoices.length}</p>
+                <p className="text-2xl font-bold group-hover:scale-105 transition-transform">{paidInvoices.length}</p>
                 <p className="text-xs text-muted-foreground">Payées</p>
               </div>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '150ms' }}>
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-full bg-emerald-100 dark:bg-emerald-950">
-                <CreditCard className="h-5 w-5 text-emerald-600" />
+                <CreditCard className="h-5 w-5 text-emerald-600 group-hover:scale-110 transition-transform" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{totalPaid.toLocaleString()}</p>
+                <p className="text-2xl font-bold group-hover:scale-105 transition-transform">{totalPaid.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground">CHF encaissés</p>
               </div>
             </div>
           </Card>
           {/* Overdue invoices alert */}
-          <Card className={`p-4 ${overdueInvoices.length > 0 ? 'bg-red-50 dark:bg-red-950/30 border-red-200' : ''}`}>
+          <Card className={`card-interactive p-4 animate-fade-in group ${overdueInvoices.length > 0 ? 'bg-red-50 dark:bg-red-950/30 border-red-200' : ''}`} style={{ animationDelay: '200ms' }}>
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-full ${overdueInvoices.length > 0 ? 'bg-red-100 dark:bg-red-950' : 'bg-gray-100 dark:bg-gray-950'}`}>
-                <Clock className={`h-5 w-5 ${overdueInvoices.length > 0 ? 'text-red-600' : 'text-gray-600'}`} />
+                <Clock className={`h-5 w-5 group-hover:scale-110 transition-transform ${overdueInvoices.length > 0 ? 'text-red-600' : 'text-gray-600'}`} />
               </div>
               <div>
-                <p className={`text-2xl font-bold ${overdueInvoices.length > 0 ? 'text-red-600' : ''}`}>{overdueInvoices.length}</p>
+                <p className={`text-2xl font-bold group-hover:scale-105 transition-transform ${overdueInvoices.length > 0 ? 'text-red-600' : ''}`}>{overdueInvoices.length}</p>
                 <p className="text-xs text-muted-foreground">&gt; 7 jours</p>
               </div>
             </div>
@@ -375,7 +375,7 @@ export default function FacturesAbaNinja() {
 
         {/* Overdue invoices alert banner */}
         {overdueInvoices.length > 0 && (
-          <Card className="p-4 bg-red-50 dark:bg-red-950/30 border-red-200">
+          <Card className="card-interactive p-4 bg-red-50 dark:bg-red-950/30 border-red-200 animate-fade-in" style={{ animationDelay: '250ms' }}>
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-full bg-red-100 dark:bg-red-900">

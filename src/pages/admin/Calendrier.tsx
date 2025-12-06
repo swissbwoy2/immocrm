@@ -384,10 +384,10 @@ export default function AdminCalendrier() {
 
       {/* Mobile: Filters collapsible */}
       <details className="lg:hidden">
-        <summary className="text-sm font-medium cursor-pointer p-3 bg-muted/50 rounded-lg">
+        <summary className="text-sm font-medium cursor-pointer p-3 bg-muted/50 rounded-lg card-interactive">
           Filtres avancés
         </summary>
-        <div className="mt-3">
+        <div className="mt-3 animate-fade-in">
           <EventFilters
             agents={agents}
             clients={clients}
@@ -406,7 +406,7 @@ export default function AdminCalendrier() {
       {/* Main content - responsive grid */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 min-w-0 w-full">
         {/* Filters sidebar - desktop only */}
-        <div className="hidden lg:block lg:col-span-1 min-w-0">
+        <div className="hidden lg:block lg:col-span-1 min-w-0 animate-fade-in" style={{ animationDelay: '0ms' }}>
           <EventFilters
             agents={agents}
             clients={clients}
@@ -422,7 +422,7 @@ export default function AdminCalendrier() {
         </div>
 
         {/* Calendar */}
-        <div className="lg:col-span-2 min-w-0 overflow-hidden">
+        <div className="lg:col-span-2 min-w-0 overflow-hidden animate-fade-in" style={{ animationDelay: '50ms' }}>
           <CalendarView
             events={filteredEvents}
             visites={filteredVisites}
@@ -432,7 +432,7 @@ export default function AdminCalendrier() {
         </div>
 
         {/* Day events */}
-        <div className="lg:col-span-1 min-w-0 h-[400px] md:h-[600px]">
+        <div className="lg:col-span-1 min-w-0 h-[400px] md:h-[600px] animate-fade-in" style={{ animationDelay: '100ms' }}>
           <DayEvents
             date={selectedDate}
             events={selectedDayEvents}
@@ -460,7 +460,7 @@ export default function AdminCalendrier() {
 
       {/* Visite detail dialog */}
       <Dialog open={visiteDetailDialogOpen} onOpenChange={setVisiteDetailDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto animate-fade-in">
           <DialogHeader>
             <DialogTitle>Détails de la visite</DialogTitle>
           </DialogHeader>
