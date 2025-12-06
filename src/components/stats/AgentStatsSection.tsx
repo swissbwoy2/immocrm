@@ -202,144 +202,173 @@ export function AgentStatsSection({
       </div>
 
       {/* Personalized Goals or Default Goals */}
-      <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            {hasPersonalizedGoals ? (
-              <>
-                <Sparkles className="h-5 w-5 text-primary" />
-                Mes objectifs personnalisés
-              </>
+      <div className="animate-fade-in" style={{ animationDelay: '0ms', animationFillMode: 'both' }}>
+        <Card className="group bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20 transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              {hasPersonalizedGoals ? (
+                <>
+                  <Sparkles className="h-5 w-5 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
+                  <span className="transition-transform duration-300 group-hover:scale-[1.02] origin-left">Mes objectifs personnalisés</span>
+                </>
+              ) : (
+                <>
+                  <Target className="h-5 w-5 text-primary transition-transform duration-300 group-hover:scale-110" />
+                  <span className="transition-transform duration-300 group-hover:scale-[1.02] origin-left">Objectifs du mois</span>
+                </>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {goalsLoading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Skeleton className="h-32" />
+                <Skeleton className="h-32" />
+                <Skeleton className="h-32" />
+              </div>
+            ) : hasPersonalizedGoals ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {personalizedGoals.map((goal, index) => (
+                  <div key={goal.id} className="animate-fade-in" style={{ animationDelay: `${50 + index * 50}ms`, animationFillMode: 'both' }}>
+                    <GoalProgress
+                      title={`${goal.title} (${periodLabels[goal.period]})`}
+                      current={goal.current}
+                      goal={goal.target_value}
+                      unit={goal.goal_type === 'commissions' ? 'CHF' : ''}
+                      icon={goalTypeToIcon[goal.goal_type] || 'target'}
+                    />
+                  </div>
+                ))}
+              </div>
             ) : (
-              <>
-                <Target className="h-5 w-5 text-primary" />
-                Objectifs du mois
-              </>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="animate-fade-in" style={{ animationDelay: '50ms', animationFillMode: 'both' }}>
+                  <GoalProgress
+                    title="Offres envoyées"
+                    current={monthlyOffres}
+                    goal={20}
+                    unit="offres"
+                    icon="flame"
+                  />
+                </div>
+                <div className="animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
+                  <GoalProgress
+                    title="Affaires conclues"
+                    current={monthlyTransactions}
+                    goal={3}
+                    unit="affaires"
+                    icon="trophy"
+                  />
+                </div>
+                <div className="animate-fade-in" style={{ animationDelay: '150ms', animationFillMode: 'both' }}>
+                  <GoalProgress
+                    title="Commissions"
+                    current={monthlyCommissions}
+                    goal={5000}
+                    unit="CHF"
+                    icon="star"
+                  />
+                </div>
+              </div>
             )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {goalsLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Skeleton className="h-32" />
-              <Skeleton className="h-32" />
-              <Skeleton className="h-32" />
-            </div>
-          ) : hasPersonalizedGoals ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {personalizedGoals.map((goal) => (
-                <GoalProgress
-                  key={goal.id}
-                  title={`${goal.title} (${periodLabels[goal.period]})`}
-                  current={goal.current}
-                  goal={goal.target_value}
-                  unit={goal.goal_type === 'commissions' ? 'CHF' : ''}
-                  icon={goalTypeToIcon[goal.goal_type] || 'target'}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <GoalProgress
-                title="Offres envoyées"
-                current={monthlyOffres}
-                goal={20}
-                unit="offres"
-                icon="flame"
-              />
-              <GoalProgress
-                title="Affaires conclues"
-                current={monthlyTransactions}
-                goal={3}
-                unit="affaires"
-                icon="trophy"
-              />
-              <GoalProgress
-                title="Commissions"
-                current={monthlyCommissions}
-                goal={5000}
-                unit="CHF"
-                icon="star"
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatsCard
-          title="Offres envoyées"
-          value={stats.offresEnvoyees}
-          previousValue={stats.previousOffresEnvoyees}
-          currentValue={stats.offresEnvoyees}
-          icon={Send}
-          description={`${dateRange.label}`}
-        />
-        <StatsCard
-          title="Affaires conclues"
-          value={stats.affairesConclues}
-          previousValue={stats.previousAffairesConclues}
-          currentValue={stats.affairesConclues}
-          icon={CheckCircle}
-          variant="success"
-        />
-        <StatsCard
-          title="Commissions"
-          value={`${stats.commissionsGagnees.toLocaleString()} CHF`}
-          previousValue={stats.previousCommissions}
-          currentValue={stats.commissionsGagnees}
-          icon={DollarSign}
-          variant="success"
-        />
-        <StatsCard
-          title="Taux conversion"
-          value={`${stats.tauxConversion}%`}
-          icon={Target}
-          description="Offres → Affaires"
-        />
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Charts */}
+      {/* Stats Cards with staggered animations */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Offres envoyées"
+            value={stats.offresEnvoyees}
+            previousValue={stats.previousOffresEnvoyees}
+            currentValue={stats.offresEnvoyees}
+            icon={Send}
+            description={`${dateRange.label}`}
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '250ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Affaires conclues"
+            value={stats.affairesConclues}
+            previousValue={stats.previousAffairesConclues}
+            currentValue={stats.affairesConclues}
+            icon={CheckCircle}
+            variant="success"
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '300ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Commissions"
+            value={`${stats.commissionsGagnees.toLocaleString()} CHF`}
+            previousValue={stats.previousCommissions}
+            currentValue={stats.commissionsGagnees}
+            icon={DollarSign}
+            variant="success"
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '350ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Taux conversion"
+            value={`${stats.tauxConversion}%`}
+            icon={Target}
+            description="Offres → Affaires"
+          />
+        </div>
+      </div>
+
+      {/* Charts with staggered animations */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <MultiSeriesChart
-          title="Activité"
-          series={activitySeries}
-          dateRange={dateRange}
-        />
-        <PerformanceChart
-          title="Commissions gagnées"
-          data={commissionsChartData}
-          dateRange={dateRange}
-          color="hsl(142, 76%, 36%)"
-          valueLabel="CHF"
-        />
+        <div className="animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'both' }}>
+          <MultiSeriesChart
+            title="Activité"
+            series={activitySeries}
+            dateRange={dateRange}
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '450ms', animationFillMode: 'both' }}>
+          <PerformanceChart
+            title="Commissions gagnées"
+            data={commissionsChartData}
+            dateRange={dateRange}
+            color="hsl(142, 76%, 36%)"
+            valueLabel="CHF"
+          />
+        </div>
       </div>
 
-      {/* Candidatures stats */}
+      {/* Candidatures stats with staggered animations */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatsCard
-          title="Candidatures totales"
-          value={currentCandidatures.length}
-          icon={FileCheck}
-        />
-        <StatsCard
-          title="Acceptées"
-          value={stats.candidaturesAcceptees}
-          icon={CheckCircle}
-          variant="success"
-        />
-        <StatsCard
-          title="En cours"
-          value={stats.candidaturesEnCours}
-          icon={Calendar}
-          variant="warning"
-        />
-        <StatsCard
-          title="Clients actifs"
-          value={stats.clientsActifs}
-          icon={Users}
-        />
+        <div className="animate-fade-in" style={{ animationDelay: '500ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Candidatures totales"
+            value={currentCandidatures.length}
+            icon={FileCheck}
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '550ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Acceptées"
+            value={stats.candidaturesAcceptees}
+            icon={CheckCircle}
+            variant="success"
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '600ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="En cours"
+            value={stats.candidaturesEnCours}
+            icon={Calendar}
+            variant="warning"
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '650ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Clients actifs"
+            value={stats.clientsActifs}
+            icon={Users}
+          />
+        </div>
       </div>
     </div>
   );
