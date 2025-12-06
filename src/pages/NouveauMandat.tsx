@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight, Send, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Send, Loader2, Sparkles, Check } from 'lucide-react';
 import logoImmorama from '@/assets/logo-immorama-2023.png';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,16 +14,17 @@ import MandatFormStep4 from '@/components/mandat/MandatFormStep4';
 import MandatFormStep5 from '@/components/mandat/MandatFormStep5';
 import MandatFormStep6 from '@/components/mandat/MandatFormStep6';
 import MandatFormStep7 from '@/components/mandat/MandatFormStep7';
+import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 
 const STORAGE_KEY = 'mandat_form_data';
 const STEPS = [
-  { title: 'Informations personnelles', component: MandatFormStep1 },
-  { title: 'Situation actuelle', component: MandatFormStep2 },
-  { title: 'Situation financière', component: MandatFormStep3 },
-  { title: 'Candidats', component: MandatFormStep5 },
-  { title: 'Critères de recherche', component: MandatFormStep4 },
-  { title: 'Documents', component: MandatFormStep6 },
-  { title: 'Signature', component: MandatFormStep7 },
+  { title: 'Informations personnelles', component: MandatFormStep1, icon: '👤' },
+  { title: 'Situation actuelle', component: MandatFormStep2, icon: '🏠' },
+  { title: 'Situation financière', component: MandatFormStep3, icon: '💼' },
+  { title: 'Candidats', component: MandatFormStep5, icon: '👥' },
+  { title: 'Critères de recherche', component: MandatFormStep4, icon: '🔍' },
+  { title: 'Documents', component: MandatFormStep6, icon: '📄' },
+  { title: 'Signature', component: MandatFormStep7, icon: '✍️' },
 ];
 
 export default function NouveauMandat() {
@@ -162,7 +162,7 @@ export default function NouveauMandat() {
               prenom: formData.prenom,
               nom: formData.nom,
               email: formData.email,
-              demande_id: null // Pas encore d'ID de demande
+              demande_id: null
             }
           });
 
@@ -178,7 +178,7 @@ export default function NouveauMandat() {
         }
       }
 
-      // ÉTAPE 3: INSERT UNIQUE avec toutes les données (y compris AbaNinja)
+      // ÉTAPE 3: INSERT UNIQUE avec toutes les données
       const insertData = {
         email: formData.email,
         prenom: formData.prenom,
@@ -224,7 +224,6 @@ export default function NouveauMandat() {
         cgv_acceptees_at: new Date().toISOString(),
         code_promo: formData.code_promo,
         montant_acompte: montantAcompte,
-        // Inclure les données AbaNinja directement
         abaninja_client_uuid: abaninjaClientUuid,
         abaninja_invoice_id: abaninjaInvoiceId,
         abaninja_invoice_ref: abaninjaInvoiceRef,
@@ -240,10 +239,8 @@ export default function NouveauMandat() {
 
       const demandeId = insertedData.id;
 
-      // Créer notification pour les admins via la fonction RPC (bypass RLS)
+      // Créer notification pour les admins
       try {
-        // L'admin user_id est connu: 4c2ee841-a48b-4d7d-8ed6-3eac9ea124e8
-        // On utilise la fonction RPC create_notification qui a SECURITY DEFINER
         await supabase.rpc('create_notification', {
           p_user_id: '4c2ee841-a48b-4d7d-8ed6-3eac9ea124e8',
           p_type: 'nouvelle_demande_mandat',
@@ -255,7 +252,6 @@ export default function NouveauMandat() {
         console.log('Admin notification created');
       } catch (notifError) {
         console.error('Error creating notification:', notifError);
-        // Ne pas bloquer le flux
       }
 
       // Envoyer le mandat signé en PDF par email
@@ -307,7 +303,6 @@ export default function NouveauMandat() {
         console.log('Mandat PDF email sent');
       } catch (emailError) {
         console.error('Error sending mandat PDF email:', emailError);
-        // Don't block the flow if email fails
       }
 
       // ÉTAPE 4: Créer automatiquement le compte client
@@ -366,13 +361,11 @@ export default function NouveauMandat() {
         }
       } catch (accountError) {
         console.error('Error creating client account:', accountError);
-        // Ne pas bloquer le flux si la création de compte échoue
       }
 
       // Nettoyer le localStorage
       localStorage.removeItem(STORAGE_KEY);
 
-      // Message de confirmation avec détails
       const invoiceMessage = abaninjaInvoiceRef 
         ? ` La facture n°${abaninjaInvoiceRef} vous a été envoyée.`
         : '';
@@ -395,88 +388,180 @@ export default function NouveauMandat() {
   const StepComponent = STEPS[currentStep].component;
   const progress = ((currentStep + 1) / STEPS.length) * 100;
 
-  // Callback to jump to candidats step (step 4 = index 3)
   const handleAddCoBuyer = () => {
     setCurrentStep(3);
     window.scrollTo(0, 0);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10 py-8 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <img src={logoImmorama} alt="Immo-Rama" className="h-16 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold">Mandat de recherche</h1>
-          <p className="text-muted-foreground">
-            {currentStep < 4 
-              ? 'Étape par étape vers votre nouveau logement'
-              : formData.type_recherche === 'Acheter' 
-                ? 'Pour un bien immobilier à acheter' 
-                : 'Pour un logement à louer'}
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/10" />
+      <div className="fixed inset-0 opacity-30">
+        <FloatingParticles />
+      </div>
+      
+      {/* Ambient Light Effects */}
+      <div className="fixed top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
+      <div className="fixed bottom-0 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+
+      <div className="relative z-10 py-8 px-4">
+        <div className="max-w-2xl mx-auto">
+          {/* Premium Header */}
+          <div className="text-center mb-8">
+            <div className="relative inline-block mb-4">
+              <div className="absolute inset-0 bg-primary/20 blur-xl animate-pulse" />
+              <img 
+                src={logoImmorama} 
+                alt="Immo-Rama" 
+                className="h-16 mx-auto relative z-10 drop-shadow-lg transition-transform hover:scale-105" 
+              />
+            </div>
+            <div className="relative">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
+                Mandat de recherche
+              </h1>
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent/20 blur-lg opacity-50" />
+            </div>
+            <p className="text-muted-foreground mt-2 flex items-center justify-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+              {currentStep < 4 
+                ? 'Étape par étape vers votre nouveau logement'
+                : formData.type_recherche === 'Acheter' 
+                  ? 'Pour un bien immobilier à acheter' 
+                  : 'Pour un logement à louer'}
+              <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+            </p>
+          </div>
+
+          {/* Premium Progress Bar */}
+          <div className="mb-8">
+            {/* Step indicators */}
+            <div className="flex justify-between items-center mb-4">
+              {STEPS.map((step, index) => (
+                <div 
+                  key={index}
+                  className={`flex flex-col items-center transition-all duration-500 ${
+                    index <= currentStep ? 'opacity-100' : 'opacity-40'
+                  }`}
+                >
+                  <div className={`
+                    relative w-10 h-10 rounded-full flex items-center justify-center text-lg
+                    transition-all duration-500 transform
+                    ${index < currentStep 
+                      ? 'bg-gradient-to-br from-green-400 to-green-600 text-white shadow-lg shadow-green-500/30 scale-100' 
+                      : index === currentStep 
+                        ? 'bg-gradient-to-br from-primary to-primary/80 text-white shadow-lg shadow-primary/30 scale-110 ring-4 ring-primary/20' 
+                        : 'bg-muted text-muted-foreground'
+                    }
+                  `}>
+                    {index < currentStep ? (
+                      <Check className="h-5 w-5 animate-scale-in" />
+                    ) : (
+                      <span>{step.icon}</span>
+                    )}
+                    {index === currentStep && (
+                      <div className="absolute inset-0 rounded-full bg-primary/30 animate-ping" />
+                    )}
+                  </div>
+                  <span className={`text-xs mt-2 text-center max-w-[80px] hidden sm:block ${
+                    index === currentStep ? 'text-primary font-semibold' : 'text-muted-foreground'
+                  }`}>
+                    {step.title}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Progress bar */}
+            <div className="relative h-2 bg-muted/50 rounded-full overflow-hidden backdrop-blur-sm">
+              <div 
+                className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary via-primary to-accent transition-all duration-700 ease-out rounded-full"
+                style={{ width: `${progress}%` }}
+              >
+                {/* Shine effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_2s_infinite]" />
+              </div>
+              {/* Glow effect */}
+              <div 
+                className="absolute inset-y-0 left-0 bg-primary/30 blur-md transition-all duration-700"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+
+            {/* Step info */}
+            <div className="flex justify-between text-sm mt-3">
+              <span className="text-muted-foreground">
+                Étape <span className="text-primary font-bold">{currentStep + 1}</span> sur {STEPS.length}
+              </span>
+              <span className="text-primary font-medium flex items-center gap-1">
+                {STEPS[currentStep].icon} {STEPS[currentStep].title}
+              </span>
+            </div>
+          </div>
+
+          {/* Premium Form Card */}
+          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-2xl shadow-primary/5 overflow-hidden">
+            {/* Card shine effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+            
+            <CardContent className="pt-6 relative z-10">
+              <div className="animate-fade-in">
+                {currentStep === 4 ? (
+                  <MandatFormStep4 data={formData} onChange={handleChange} onAddCoBuyer={handleAddCoBuyer} />
+                ) : (
+                  <StepComponent data={formData} onChange={handleChange} />
+                )}
+              </div>
+            </CardContent>
+
+            <CardFooter className="flex justify-between gap-4 border-t border-border/50 pt-6 relative z-10 bg-muted/20">
+              <Button
+                variant="outline"
+                onClick={currentStep === 0 ? () => navigate('/login') : handlePrevious}
+                className="gap-2 group backdrop-blur-sm bg-background/50 hover:bg-background/80 transition-all duration-300"
+              >
+                <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+                {currentStep === 0 ? 'Retour' : 'Précédent'}
+              </Button>
+
+              {currentStep < STEPS.length - 1 ? (
+                <Button 
+                  onClick={handleNext} 
+                  className="gap-2 group bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25 transition-all duration-300 hover:shadow-xl hover:shadow-primary/30"
+                >
+                  Suivant
+                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSubmit}
+                  disabled={submitting || !formData.cgv_acceptees || !formData.signature_data}
+                  className="gap-2 group bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 disabled:opacity-50"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Envoi...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                      Envoyer la demande
+                    </>
+                  )}
+                </Button>
+              )}
+            </CardFooter>
+          </Card>
+
+          {/* Info */}
+          <p className="text-center text-xs text-muted-foreground mt-6 flex items-center justify-center gap-2">
+            <Sparkles className="h-3 w-3 text-primary/50" />
+            Vos recherches seront activées dès réception de l'acompte.
+            <Sparkles className="h-3 w-3 text-primary/50" />
           </p>
         </div>
-
-        {/* Progress */}
-        <div className="mb-6">
-          <div className="flex justify-between text-sm text-muted-foreground mb-2">
-            <span>Étape {currentStep + 1} sur {STEPS.length}</span>
-            <span>{STEPS[currentStep].title}</span>
-          </div>
-          <Progress value={progress} className="h-2" />
-        </div>
-
-        {/* Form */}
-        <Card>
-          <CardContent className="pt-6">
-            {currentStep === 4 ? (
-              <MandatFormStep4 data={formData} onChange={handleChange} onAddCoBuyer={handleAddCoBuyer} />
-            ) : (
-              <StepComponent data={formData} onChange={handleChange} />
-            )}
-          </CardContent>
-
-          <CardFooter className="flex justify-between gap-4 border-t pt-6">
-            <Button
-              variant="outline"
-              onClick={currentStep === 0 ? () => navigate('/login') : handlePrevious}
-              className="gap-2"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              {currentStep === 0 ? 'Retour' : 'Précédent'}
-            </Button>
-
-            {currentStep < STEPS.length - 1 ? (
-              <Button onClick={handleNext} className="gap-2">
-                Suivant
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                onClick={handleSubmit}
-                disabled={submitting || !formData.cgv_acceptees || !formData.signature_data}
-                className="gap-2"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Envoi...
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-4 w-4" />
-                    Envoyer la demande
-                  </>
-                )}
-              </Button>
-            )}
-          </CardFooter>
-        </Card>
-
-        {/* Info */}
-        <p className="text-center text-xs text-muted-foreground mt-4">
-          Vos recherches seront activées dès réception de l'acompte.
-        </p>
       </div>
     </div>
   );
