@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { 
   Calendar, Clock, MapPin, Home, 
-  Maximize, User, Phone, KeyRound, CalendarCheck, Check, X, FileCheck, Eye, EyeOff, ThumbsUp, Users
+  Maximize, User, Phone, KeyRound, CalendarCheck, Check, X, FileCheck, Eye, EyeOff, ThumbsUp, Users, Sparkles
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -110,7 +110,6 @@ export default function Visites() {
 
   const marquerVisiteEffectuee = async (visite: any) => {
     try {
-      // Update visite status
       const { error: visiteError } = await supabase
         .from('visites')
         .update({ statut: 'effectuee' })
@@ -121,7 +120,6 @@ export default function Visites() {
         throw visiteError;
       }
 
-      // Update offre status only if offre_id exists
       if (visite.offre_id) {
         const { error: offreError } = await supabase
           .from('offres')
@@ -130,11 +128,9 @@ export default function Visites() {
 
         if (offreError) {
           console.error('Error updating offre:', offreError);
-          // Don't throw, visite is already updated
         }
       }
 
-      // Envoyer un message automatique pour proposer de postuler
       if (visite.offres) {
         const { data: clientData } = await supabase
           .from('clients')
@@ -316,39 +312,57 @@ export default function Visites() {
   };
 
   if (loading) {
-  return (
-    <div className="flex h-screen items-center justify-center pb-safe">
-      <p className="text-muted-foreground">Chargement...</p>
-    </div>
-  );
+    return (
+      <div className="min-h-screen flex items-center justify-center relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10" />
+        <div className="relative">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary/30 absolute inset-0" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+        </div>
+      </div>
+    );
   }
 
-  // Séparer les visites à venir et passées
   const now = new Date();
   const visitesAVenir = visites.filter(v => new Date(v.date_visite) >= now && v.statut === 'planifiee');
   const visitesPassees = visites.filter(v => new Date(v.date_visite) < now || v.statut !== 'planifiee');
 
-  const renderVisiteCard = (visite: any) => {
+  const renderVisiteCard = (visite: any, index: number) => {
     const isExpanded = expandedCards.has(visite.id);
     const isPast = new Date(visite.date_visite) < now || visite.statut !== 'planifiee';
 
     return (
-      <Card key={visite.id} className={`transition-shadow ${isPast ? 'opacity-80' : 'hover:shadow-lg'}`}>
-        <CardHeader className="pb-3">
-          {/* Layout mobile-first avec prix en haut sur mobile */}
+      <Card 
+        key={visite.id} 
+        className={`group relative overflow-hidden border-0 shadow-xl hover:shadow-2xl transition-all duration-500 ${
+          isPast 
+            ? 'bg-gradient-to-br from-card via-card to-muted/30 opacity-90' 
+            : 'bg-gradient-to-br from-card via-card to-primary/5'
+        }`}
+        style={{ animationDelay: `${index * 100}ms` }}
+      >
+        {/* Shine effect */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+        </div>
+
+        {!isPast && (
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary animate-gradient-x" />
+        )}
+
+        <CardHeader className="relative pb-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            {/* Prix en premier sur mobile */}
             {visite.offres && (
               <div className="flex items-center justify-between sm:order-2 sm:flex-col sm:items-end">
                 <div className="text-left sm:text-right">
-                  <p className="text-xl sm:text-2xl font-bold text-primary">
+                  <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                     {visite.offres.prix?.toLocaleString('fr-CH')} CHF
                   </p>
                   <p className="text-xs text-muted-foreground">/mois</p>
                 </div>
                 <Button
                   variant="ghost"
-                  className="touch-target h-10 w-10 p-0 shrink-0"
+                  className="touch-target h-10 w-10 p-0 shrink-0 hover:bg-primary/10 transition-colors"
                   onClick={() => toggleCardExpanded(visite.id)}
                 >
                   {isExpanded ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -356,33 +370,31 @@ export default function Visites() {
               </div>
             )}
             
-            {/* Adresse et badges */}
             <div className="flex-1 min-w-0 sm:order-1">
               <CardTitle className="text-base sm:text-lg leading-tight mb-2">
                 {visite.adresse}
               </CardTitle>
               
-              {/* Badges avec scroll horizontal sur mobile si nécessaire */}
               <div className="flex flex-wrap gap-1.5 max-w-full overflow-x-auto scrollbar-thin pb-1">
                 {visite.statut === 'effectuee' ? (
-                  <Badge variant="secondary" className="text-xs shrink-0">
+                  <Badge className="text-xs shrink-0 bg-gradient-to-r from-emerald-500 to-green-500 text-white border-0 shadow-lg shadow-emerald-500/25">
                     <Check className="w-3 h-3 mr-1" />
                     Effectuée
                   </Badge>
                 ) : (
-                  <Badge variant="default" className="text-xs shrink-0">
+                  <Badge className="text-xs shrink-0 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-0 shadow-lg shadow-primary/25">
                     <CalendarCheck className="w-3 h-3 mr-1" />
                     Planifiée
                   </Badge>
                 )}
                 {visite.est_deleguee && (
-                  <Badge variant="outline" className="text-xs shrink-0">
+                  <Badge variant="outline" className="text-xs shrink-0 bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30">
                     <Users className="w-3 h-3 mr-1" />
                     Déléguée
                   </Badge>
                 )}
                 {visite.recommandation_agent && (
-                  <Badge variant="outline" className="text-xs shrink-0 bg-success/10 text-success border-success/20">
+                  <Badge variant="outline" className="text-xs shrink-0 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
                     <ThumbsUp className="w-3 h-3 mr-1" />
                     Recommandé
                   </Badge>
@@ -391,33 +403,35 @@ export default function Visites() {
             </div>
           </div>
 
-          {/* Date/heure avec meilleure lisibilité mobile */}
-          <div className="flex items-center gap-2 mt-3 p-3 bg-primary/5 rounded-lg">
-            <Calendar className="w-5 h-5 text-primary shrink-0" />
+          <div className="flex items-center gap-2 mt-3 p-3 bg-gradient-to-br from-primary/10 to-primary/5 backdrop-blur-sm rounded-xl border border-primary/20">
+            <div className="p-1.5 bg-primary/20 rounded-lg">
+              <Calendar className="w-4 h-4 text-primary" />
+            </div>
             <span className="text-sm sm:text-base font-medium">{formatShortDate(visite.date_visite)}</span>
-            <Clock className="w-5 h-5 text-muted-foreground shrink-0 ml-auto sm:ml-2" />
+            <div className="p-1.5 bg-primary/20 rounded-lg ml-auto sm:ml-2">
+              <Clock className="w-4 h-4 text-primary" />
+            </div>
             <span className="text-sm sm:text-base font-medium">
               {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
         </CardHeader>
 
-        {/* Contenu étendu avec espacement amélioré */}
         {isExpanded && (
-          <CardContent className="space-y-5 pt-0">
-            {/* Date complète */}
-            <div className="p-3 sm:p-4 bg-primary/5 rounded-lg border border-primary/20">
-              <p className="font-medium text-sm sm:text-base">
+          <CardContent className="relative space-y-5 pt-0">
+            <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+              <p className="font-medium text-sm sm:text-base capitalize">
                 {formatDate(visite.date_visite)}
               </p>
             </div>
 
-            {/* Caractéristiques du bien - grid responsive */}
             {visite.offres && (
               <div className="grid grid-cols-1 xs:grid-cols-2 gap-3">
                 {visite.offres.pieces && (
-                  <div className="flex items-center gap-2.5 p-3 bg-muted/50 rounded-lg">
-                    <Home className="w-5 h-5 text-muted-foreground shrink-0" />
+                  <div className="flex items-center gap-2.5 p-3 bg-gradient-to-br from-muted/50 to-muted/30 backdrop-blur-sm rounded-xl border border-border/50">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Home className="w-4 h-4 text-primary" />
+                    </div>
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">Pièces</p>
                       <p className="font-semibold text-sm sm:text-base truncate">{visite.offres.pieces}</p>
@@ -426,8 +440,10 @@ export default function Visites() {
                 )}
 
                 {visite.offres.surface && (
-                  <div className="flex items-center gap-2.5 p-3 bg-muted/50 rounded-lg">
-                    <Maximize className="w-5 h-5 text-muted-foreground shrink-0" />
+                  <div className="flex items-center gap-2.5 p-3 bg-gradient-to-br from-muted/50 to-muted/30 backdrop-blur-sm rounded-xl border border-border/50">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Maximize className="w-4 h-4 text-primary" />
+                    </div>
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">Surface</p>
                       <p className="font-semibold text-sm sm:text-base truncate">{visite.offres.surface} m²</p>
@@ -436,8 +452,10 @@ export default function Visites() {
                 )}
 
                 {visite.offres.etage && (
-                  <div className="flex items-center gap-2.5 p-3 bg-muted/50 rounded-lg">
-                    <MapPin className="w-5 h-5 text-muted-foreground shrink-0" />
+                  <div className="flex items-center gap-2.5 p-3 bg-gradient-to-br from-muted/50 to-muted/30 backdrop-blur-sm rounded-xl border border-border/50">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <MapPin className="w-4 h-4 text-primary" />
+                    </div>
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">Étage</p>
                       <p className="font-semibold text-sm sm:text-base truncate">{visite.offres.etage}</p>
@@ -446,8 +464,10 @@ export default function Visites() {
                 )}
 
                 {visite.offres.disponibilite && (
-                  <div className="flex items-center gap-2.5 p-3 bg-muted/50 rounded-lg">
-                    <Calendar className="w-5 h-5 text-muted-foreground shrink-0" />
+                  <div className="flex items-center gap-2.5 p-3 bg-gradient-to-br from-muted/50 to-muted/30 backdrop-blur-sm rounded-xl border border-border/50">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <Calendar className="w-4 h-4 text-primary" />
+                    </div>
                     <div className="min-w-0">
                       <p className="text-xs text-muted-foreground">Disponible</p>
                       <p className="font-semibold text-sm sm:text-base truncate">{visite.offres.disponibilite}</p>
@@ -457,14 +477,18 @@ export default function Visites() {
               </div>
             )}
 
-            {/* Informations pratiques avec meilleur espacement */}
             {visite.offres && (visite.offres.code_immeuble || visite.offres.concierge_nom || visite.offres.locataire_nom) && (
               <div>
-                <h4 className="font-semibold text-sm sm:text-base mb-3">📋 Informations pratiques</h4>
+                <h4 className="font-semibold text-sm sm:text-base mb-3 flex items-center gap-2">
+                  <span className="p-1.5 bg-amber-500/10 rounded-lg">📋</span>
+                  Informations pratiques
+                </h4>
                 <div className="grid grid-cols-1 gap-3">
                   {visite.offres.code_immeuble && (
-                    <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                      <KeyRound className="w-4 h-4 text-primary shrink-0" />
+                    <div className="flex items-center gap-2 p-3 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-xl border border-amber-500/20">
+                      <div className="p-2 bg-amber-500/20 rounded-lg">
+                        <KeyRound className="w-4 h-4 text-amber-600" />
+                      </div>
                       <div className="min-w-0">
                         <p className="text-xs text-muted-foreground">Code</p>
                         <p className="font-bold text-sm">{visite.offres.code_immeuble}</p>
@@ -473,15 +497,17 @@ export default function Visites() {
                   )}
 
                   {visite.offres.concierge_nom && (
-                    <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                      <User className="w-4 h-4 text-primary shrink-0" />
+                    <div className="flex items-center gap-2 p-3 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-xl border border-blue-500/20">
+                      <div className="p-2 bg-blue-500/20 rounded-lg">
+                        <User className="w-4 h-4 text-blue-600" />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-muted-foreground">Concierge</p>
                         <p className="font-medium text-sm truncate">{visite.offres.concierge_nom}</p>
                         {visite.offres.concierge_tel && (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 mt-1">
                             <Phone className="w-3 h-3 text-muted-foreground" />
-                            <a href={`tel:${visite.offres.concierge_tel}`} className="text-xs text-primary truncate">
+                            <a href={`tel:${visite.offres.concierge_tel}`} className="text-xs text-primary truncate hover:underline">
                               {visite.offres.concierge_tel}
                             </a>
                           </div>
@@ -491,15 +517,17 @@ export default function Visites() {
                   )}
 
                   {visite.offres.locataire_nom && (
-                    <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
-                      <User className="w-4 h-4 text-primary shrink-0" />
+                    <div className="flex items-center gap-2 p-3 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl border border-purple-500/20">
+                      <div className="p-2 bg-purple-500/20 rounded-lg">
+                        <User className="w-4 h-4 text-purple-600" />
+                      </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-muted-foreground">Locataire actuel</p>
                         <p className="font-medium text-sm truncate">{visite.offres.locataire_nom}</p>
                         {visite.offres.locataire_tel && (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 mt-1">
                             <Phone className="w-3 h-3 text-muted-foreground" />
-                            <a href={`tel:${visite.offres.locataire_tel}`} className="text-xs text-primary truncate">
+                            <a href={`tel:${visite.offres.locataire_tel}`} className="text-xs text-primary truncate hover:underline">
                               {visite.offres.locataire_tel}
                             </a>
                           </div>
@@ -511,30 +539,28 @@ export default function Visites() {
               </div>
             )}
 
-            {/* Recommandation agent */}
             {visite.recommandation_agent && (
-              <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-                <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                  💬 Recommandation: {visite.recommandation_agent}
+              <div className="p-4 bg-gradient-to-r from-emerald-500/10 to-green-500/10 border border-emerald-500/20 rounded-xl">
+                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300 flex items-start gap-2">
+                  <ThumbsUp className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  {visite.recommandation_agent}
                 </p>
               </div>
             )}
 
-            {/* Notes */}
             {visite.notes && (
-              <div className="p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              <div className="p-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/20 rounded-xl">
+                <p className="text-sm text-amber-700 dark:text-amber-300">
                   💡 {visite.notes}
                 </p>
               </div>
             )}
 
-            {/* Actions avec zones tactiles optimisées */}
             <div className="space-y-3">
               {visite.statut === 'planifiee' && visite.offres?.statut !== 'visite_effectuee' && (
                 <Button 
                   onClick={() => marquerVisiteEffectuee(visite)}
-                  className="w-full touch-target"
+                  className="w-full touch-target bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25"
                   size="lg"
                 >
                   <Check className="mr-2 h-5 w-5" />
@@ -546,15 +572,14 @@ export default function Visites() {
                visite.offres?.statut !== 'interesse' && 
                visite.offres?.statut !== 'refusee' && 
                visite.offres?.statut !== 'candidature_deposee' && (
-                <div className="p-4 bg-muted rounded-lg space-y-3">
+                <div className="p-4 bg-gradient-to-br from-muted/50 to-muted/30 backdrop-blur-sm rounded-xl border border-border/50 space-y-3">
                   <p className="text-sm font-medium text-center">
                     Souhaitez-vous donner suite ?
                   </p>
                   <div className="grid grid-cols-1 gap-3">
                     <Button 
-                      variant="default"
                       size="lg"
-                      className="w-full touch-target"
+                      className="w-full touch-target bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white shadow-lg shadow-emerald-500/25"
                       onClick={() => accepterOffre(visite)}
                     >
                       <Check className="mr-2 h-5 w-5" />
@@ -563,7 +588,7 @@ export default function Visites() {
                     <Button 
                       variant="outline"
                       size="lg"
-                      className="w-full touch-target"
+                      className="w-full touch-target border-primary/30 hover:bg-primary/10"
                       onClick={() => navigate('/client/offres-recues')}
                     >
                       <FileCheck className="mr-2 h-5 w-5" />
@@ -572,7 +597,7 @@ export default function Visites() {
                     <Button 
                       variant="destructive"
                       size="lg"
-                      className="w-full touch-target"
+                      className="w-full touch-target bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 shadow-lg shadow-red-500/25"
                       onClick={() => refuserOffre(visite)}
                     >
                       <X className="mr-2 h-5 w-5" />
@@ -587,7 +612,7 @@ export default function Visites() {
                   variant="outline"
                   size="sm"
                   onClick={() => navigate('/client/offres-recues')}
-                  className="flex-1"
+                  className="flex-1 border-border/50 hover:bg-muted"
                 >
                   Voir l'offre
                 </Button>
@@ -599,12 +624,11 @@ export default function Visites() {
           </CardContent>
         )}
 
-        {/* Actions rapides quand fermé */}
         {!isExpanded && visite.statut === 'planifiee' && (
-          <CardContent className="pt-0">
+          <CardContent className="relative pt-0">
             <Button 
               onClick={() => marquerVisiteEffectuee(visite)}
-              className="w-full"
+              className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25"
               size="sm"
             >
               <Check className="mr-2 h-4 w-4" />
@@ -618,25 +642,60 @@ export default function Visites() {
 
   return (
     <div className="flex-1 overflow-y-auto smooth-scroll">
-      <div className="p-4 md:p-8 space-y-6 pb-safe">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Mes visites</h1>
-          <p className="text-muted-foreground text-sm">
-            {visites.length} visite{visites.length > 1 ? 's' : ''} au total
-          </p>
+      {/* Animated Header */}
+      <div className="relative overflow-hidden rounded-2xl mx-4 mt-4 mb-6">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/80 to-primary animate-gradient-x" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent_60%)]" />
+        
+        {/* Floating Particles */}
+        <div className="absolute inset-0 overflow-hidden">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-2 h-2 bg-white/20 rounded-full animate-float"
+              style={{
+                left: `${15 + i * 15}%`,
+                top: `${20 + (i % 3) * 25}%`,
+                animationDelay: `${i * 0.5}s`,
+                animationDuration: `${3 + i * 0.5}s`
+              }}
+            />
+          ))}
         </div>
 
+        <div className="relative z-10 p-6 md:p-8">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 shadow-lg">
+              <Calendar className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
+                Mes visites
+                <Sparkles className="h-5 w-5 text-white/70 animate-pulse" />
+              </h1>
+              <p className="text-white/80 mt-1">
+                {visites.length} visite{visites.length > 1 ? 's' : ''} au total
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4 md:p-8 pt-0 space-y-6 pb-safe">
         {/* Section Visites à venir */}
         {visitesAVenir.length > 0 && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-primary" />
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-primary/20 to-primary/10 rounded-lg">
+                <Calendar className="w-5 h-5 text-primary" />
+              </div>
               <h2 className="text-lg font-semibold">À venir</h2>
-              <Badge variant="default" className="ml-auto">{visitesAVenir.length}</Badge>
+              <Badge className="ml-auto bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-0 shadow-lg shadow-primary/25">
+                {visitesAVenir.length}
+              </Badge>
             </div>
             <div className="grid grid-cols-1 gap-4">
-              {visitesAVenir.map(renderVisiteCard)}
+              {visitesAVenir.map((visite, index) => renderVisiteCard(visite, index))}
             </div>
           </div>
         )}
@@ -644,27 +703,40 @@ export default function Visites() {
         {/* Section Visites passées */}
         {visitesPassees.length > 0 && (
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Check className="w-5 h-5 text-muted-foreground" />
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-muted to-muted/50 rounded-lg">
+                <Check className="w-5 h-5 text-muted-foreground" />
+              </div>
               <h2 className="text-lg font-semibold text-muted-foreground">Passées</h2>
-              <Badge variant="secondary" className="ml-auto">{visitesPassees.length}</Badge>
+              <Badge variant="secondary" className="ml-auto">
+                {visitesPassees.length}
+              </Badge>
             </div>
             <div className="grid grid-cols-1 gap-4">
-              {visitesPassees.map(renderVisiteCard)}
+              {visitesPassees.map((visite, index) => renderVisiteCard(visite, index))}
             </div>
           </div>
         )}
 
         {/* État vide */}
         {visites.length === 0 && (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Calendar className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+          <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-card via-card to-muted/20 shadow-xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10" />
+            <CardContent className="relative py-12 text-center">
+              <div className="relative mx-auto w-20 h-20 mb-4">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full animate-pulse" />
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <Calendar className="w-10 h-10 text-primary animate-float" />
+                </div>
+              </div>
               <h3 className="text-lg font-semibold mb-2">Aucune visite planifiée</h3>
-              <p className="text-muted-foreground mb-4">
+              <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
                 Vous n'avez pas de visite programmée pour le moment.
               </p>
-              <Button onClick={() => navigate('/client/offres-recues')}>
+              <Button 
+                onClick={() => navigate('/client/offres-recues')}
+                className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25"
+              >
                 Voir mes offres
               </Button>
             </CardContent>
