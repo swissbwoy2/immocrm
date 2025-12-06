@@ -19,7 +19,7 @@ import {
 import { 
   Send, Home, Heart, Calendar, X, FileText, ExternalLink,
   Check, Clock, Key, Star, Mail, User, PartyPopper, FileSignature,
-  MapPin, AlertCircle
+  MapPin, AlertCircle, MessageCircle, Sparkles, Search
 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,12 +32,16 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { MessagingLayout } from "@/components/MessagingLayout";
 import { ChatAvatar } from "@/components/messaging/ChatAvatar";
-import { MessageBubble } from "@/components/messaging/MessageBubble";
-import { ConversationItem } from "@/components/messaging/ConversationItem";
+import { PremiumMessageBubble } from "@/components/messaging/PremiumMessageBubble";
+import { PremiumConversationItem } from "@/components/messaging/PremiumConversationItem";
 import { ChatInput } from "@/components/messaging/ChatInput";
 import { ChatHeader } from "@/components/messaging/ChatHeader";
+import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
+import { FloatingParticles, MeshGradientBackground, ChatPatternBackground } from "@/components/messaging/FloatingParticles";
+import { PremiumOffreCard } from "@/components/messaging/PremiumOffreCard";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 const removeAccents = (str: string) => {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -64,6 +68,9 @@ const Messagerie = () => {
     name: string;
     size: number;
   } | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
   // Dialog states
   const [visitDialogOpen, setVisitDialogOpen] = useState(false);
@@ -1259,36 +1266,100 @@ const Messagerie = () => {
     return null;
   };
 
+  // Filter conversations by search
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
+    const query = removeAccents(searchQuery.toLowerCase());
+    return conversations.filter(conv => {
+      const agentName = removeAccents(getAgentName(conv.agent_id).toLowerCase());
+      return agentName.includes(query);
+    });
+  }, [conversations, searchQuery, agentsMap]);
+
   const conversationsList = (
-    <>
-      <div className="p-4 border-b border-border/50">
-        <div className="flex items-center gap-2">
+    <div className="flex flex-col h-full relative overflow-hidden">
+      {/* Premium background effects */}
+      <FloatingParticles count={10} className="opacity-30" />
+      
+      {/* Premium Header */}
+      <div className="relative z-10 p-4 border-b border-border/30 bg-gradient-to-r from-background via-background to-background/95 backdrop-blur-sm">
+        <div className="flex items-center gap-3 mb-4">
           <SidebarTrigger className="shrink-0" />
-          <h2 className="font-semibold text-lg">Messages</h2>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="font-bold text-xl gradient-text">Messages</h2>
+              <Sparkles className="h-4 w-4 text-primary animate-pulse" />
+            </div>
+            {conversations.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {conversations.length} conversation{conversations.length > 1 ? 's' : ''}
+              </p>
+            )}
+          </div>
+          {/* Unread badge */}
+          {conversations.some(c => messages.filter(m => m.conversation_id === c.id && !m.read && m.sender_type === 'agent').length > 0) && (
+            <Badge className="bg-primary/20 text-primary border-primary/30 animate-pulse">
+              Nouveau
+            </Badge>
+          )}
+        </div>
+        
+        {/* Search bar */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Rechercher..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={cn(
+              "pl-9 bg-muted/50 border-border/50",
+              "focus:bg-background focus:border-primary/50 focus:ring-2 focus:ring-primary/20",
+              "transition-all duration-300"
+            )}
+          />
         </div>
       </div>
-      <ScrollArea className="flex-1">
-        {conversations.map((conv) => {
-          const lastMsg = lastMessagesMap.get(conv.id);
-          const lastMessageText = lastMsg?.content || (lastMsg?.attachment_name ? `📎 ${lastMsg.attachment_name}` : conv.subject || null);
-          const convMessages = messages.filter(m => m.conversation_id === conv.id);
-          const unreadCount = convMessages.filter(m => !m.read && m.sender_type === 'agent').length;
-          
-          return (
-            <ConversationItem
-              key={conv.id}
-              name={getAgentName(conv.agent_id)}
-              avatarUrl={null}
-              lastMessage={lastMessageText}
-              lastMessageTime={conv.last_message_at || conv.created_at}
-              unreadCount={unreadCount}
-              isSelected={selectedConv === conv.id}
-              onClick={() => setSelectedConv(conv.id)}
-            />
-          );
-        })}
+      
+      {/* Conversations list */}
+      <ScrollArea className="flex-1 relative z-10">
+        {isLoadingConversations ? (
+          <ConversationListSkeleton />
+        ) : filteredConversations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4 animate-float">
+              <MessageCircle className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <p className="text-muted-foreground font-medium">
+              {searchQuery ? 'Aucune conversation trouvée' : 'Aucune conversation'}
+            </p>
+            <p className="text-xs text-muted-foreground/70 mt-1">
+              {searchQuery ? 'Essayez un autre terme' : 'Vos messages apparaîtront ici'}
+            </p>
+          </div>
+        ) : (
+          filteredConversations.map((conv, index) => {
+            const lastMsg = lastMessagesMap.get(conv.id);
+            const lastMessageText = lastMsg?.content || (lastMsg?.attachment_name ? `📎 ${lastMsg.attachment_name}` : conv.subject || null);
+            const convMessages = messages.filter(m => m.conversation_id === conv.id);
+            const unreadCount = convMessages.filter(m => !m.read && m.sender_type === 'agent').length;
+            
+            return (
+              <PremiumConversationItem
+                key={conv.id}
+                name={getAgentName(conv.agent_id)}
+                avatarUrl={null}
+                lastMessage={lastMessageText}
+                lastMessageTime={conv.last_message_at || conv.created_at}
+                unreadCount={unreadCount}
+                isSelected={selectedConv === conv.id}
+                onClick={() => setSelectedConv(conv.id)}
+                index={index}
+              />
+            );
+          })
+        )}
       </ScrollArea>
-    </>
+    </div>
   );
 
   const chatHeader = currentConversation && (
@@ -1310,55 +1381,67 @@ const Messagerie = () => {
   }, [selectedMessages]);
 
   const chatView = selectedConv ? (
-    <div className="flex-1 flex flex-col min-h-0 chat-background">
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-2 max-w-4xl mx-auto">
-          {selectedMessages.map((msg) => {
-            const isSent = msg.sender_type === 'client';
-            // Déterminer le nom de l'expéditeur selon le type
-            let senderName: string | undefined;
-            if (isSent) {
-              senderName = undefined; // Nos propres messages
-            } else if (msg.sender_type === 'admin') {
-              senderName = 'Admin';
-            } else {
-              senderName = getAgentName(currentConversation?.agent_id);
-            }
-            
-            // N'afficher l'OffreCard que sur le dernier message de chaque offre
-            const isLastMessageForOffre = msg.offre_id && 
-              lastMessageByOffre.get(msg.offre_id) === msg.id;
-            
-            return (
-              <div key={msg.id}>
-                <MessageBubble
-                  content={msg.content || ''}
-                  isSent={isSent}
-                  timestamp={msg.created_at}
-                  read={msg.read}
-                  senderName={senderName}
-                  attachmentUrl={msg.attachment_url}
-                  attachmentName={msg.attachment_name}
-                  attachmentType={msg.attachment_type}
-                  attachmentSize={msg.attachment_size}
-                  payload={msg.payload as any}
-                />
-                {isLastMessageForOffre && offresMap[msg.offre_id!] && (
-                  <div className={`mt-2 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[75%] md:max-w-[60%]`}>
-                    <OffreCard offre={offresMap[msg.offre_id!]} />
-                    <OffreActions 
-                      offre={offresMap[msg.offre_id!]} 
-                      onAction={(action, data) => handleOffreAction(msg.offre_id, action, data)}
-                    />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          <div ref={messagesEndRef} />
-        </div>
+    <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
+      {/* Premium background */}
+      <MeshGradientBackground />
+      <ChatPatternBackground />
+      
+      {/* Messages area */}
+      <ScrollArea className="flex-1 p-4 relative z-10">
+        {isLoadingMessages ? (
+          <MessagesListSkeleton />
+        ) : (
+          <div className="space-y-3 max-w-4xl mx-auto">
+            {selectedMessages.map((msg, index) => {
+              const isSent = msg.sender_type === 'client';
+              // Déterminer le nom de l'expéditeur selon le type
+              let senderName: string | undefined;
+              if (isSent) {
+                senderName = undefined; // Nos propres messages
+              } else if (msg.sender_type === 'admin') {
+                senderName = 'Admin';
+              } else {
+                senderName = getAgentName(currentConversation?.agent_id);
+              }
+              
+              // N'afficher l'OffreCard que sur le dernier message de chaque offre
+              const isLastMessageForOffre = msg.offre_id && 
+                lastMessageByOffre.get(msg.offre_id) === msg.id;
+              
+              return (
+                <div key={msg.id}>
+                  <PremiumMessageBubble
+                    content={msg.content || ''}
+                    isSent={isSent}
+                    timestamp={msg.created_at}
+                    read={msg.read}
+                    senderName={senderName}
+                    attachmentUrl={msg.attachment_url}
+                    attachmentName={msg.attachment_name}
+                    attachmentType={msg.attachment_type}
+                    attachmentSize={msg.attachment_size}
+                    payload={msg.payload as any}
+                    index={index}
+                  />
+                  {isLastMessageForOffre && offresMap[msg.offre_id!] && (
+                    <div className={`mt-3 ${isSent ? 'ml-auto' : 'mr-auto'} max-w-[80%] md:max-w-[65%] animate-slide-up`}>
+                      <PremiumOffreCard offre={offresMap[msg.offre_id!]} />
+                      <OffreActions 
+                        offre={offresMap[msg.offre_id!]} 
+                        onAction={(action, data) => handleOffreAction(msg.offre_id, action, data)}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </ScrollArea>
-      <div>
+      
+      {/* Input area */}
+      <div className="relative z-10 border-t border-border/30 bg-gradient-to-t from-background to-background/95 backdrop-blur-xl">
         <MessageAttachmentUploader
           conversationId={selectedConv}
           onAttachmentReady={setPendingAttachment}
@@ -1372,9 +1455,12 @@ const Messagerie = () => {
 
       {/* Dialog Planifier Visite */}
       <Dialog open={visitDialogOpen} onOpenChange={setVisitDialogOpen}>
-        <DialogContent>
+        <DialogContent className="glass-premium border-border/50">
           <DialogHeader>
-            <DialogTitle>📅 Planifier une visite</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Planifier une visite
+            </DialogTitle>
             <DialogDescription>
               Choisissez la date et l'heure de votre visite pour {selectedOffre?.adresse}
             </DialogDescription>
@@ -1388,12 +1474,13 @@ const Messagerie = () => {
                 value={visitDate}
                 onChange={(e) => setVisitDate(e.target.value)}
                 min={new Date().toISOString().slice(0, 16)}
+                className="mt-1.5"
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setVisitDialogOpen(false)}>Annuler</Button>
-            <Button onClick={confirmPlanVisit} disabled={!visitDate}>
+            <Button onClick={confirmPlanVisit} disabled={!visitDate} className="bg-gradient-to-r from-primary to-primary/80">
               <Calendar className="h-4 w-4 mr-2" /> Confirmer
             </Button>
           </DialogFooter>
@@ -1402,9 +1489,12 @@ const Messagerie = () => {
 
       {/* Dialog Déléguer Visite */}
       <Dialog open={delegateDialogOpen} onOpenChange={setDelegateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="glass-premium border-border/50">
           <DialogHeader>
-            <DialogTitle>🏠 Déléguer la visite à votre agent</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="h-5 w-5 text-primary" />
+              Déléguer la visite à votre agent
+            </DialogTitle>
             <DialogDescription>
               Votre agent effectuera la visite pour vous et vous fera un retour détaillé.
             </DialogDescription>
@@ -1418,6 +1508,7 @@ const Messagerie = () => {
                 value={delegateDate}
                 onChange={(e) => setDelegateDate(e.target.value)}
                 min={new Date().toISOString().slice(0, 16)}
+                className="mt-1.5"
               />
             </div>
             <div>
@@ -1427,12 +1518,13 @@ const Messagerie = () => {
                 value={delegateNotes}
                 onChange={(e) => setDelegateNotes(e.target.value)}
                 placeholder="Points à vérifier, questions à poser..."
+                className="mt-1.5"
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDelegateDialogOpen(false)}>Annuler</Button>
-            <Button onClick={confirmDelegateVisit} disabled={!delegateDate}>
+            <Button onClick={confirmDelegateVisit} disabled={!delegateDate} className="bg-gradient-to-r from-primary to-primary/80">
               <User className="h-4 w-4 mr-2" /> Déléguer
             </Button>
           </DialogFooter>
