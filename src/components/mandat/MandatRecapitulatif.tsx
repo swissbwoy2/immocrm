@@ -322,12 +322,23 @@ export default function MandatRecapitulatif({ data }: Props) {
           </div>
           <div className="text-3xl font-bold text-primary">{acompte} CHF</div>
         </div>
-        <div className="mt-4 p-3 bg-background/50 rounded-lg text-sm">
-          <p className="font-medium mb-2">Coordonnées bancaires:</p>
-          <div className="space-y-1 text-muted-foreground">
-            <p>Bénéficiaire: <span className="text-foreground font-medium">IMMO-RAMA SA</span></p>
-            <p>IBAN: <span className="text-foreground font-medium">CH93 0076 7000 E525 8472 5</span></p>
-            <p>BIC: <span className="text-foreground font-medium">BCVLCH2LXXX</span></p>
+        <div className="mt-4 p-3 bg-background/50 rounded-lg text-sm space-y-3">
+          <p className="font-medium">Coordonnées bancaires:</p>
+          <div className="space-y-1">
+            <p className="font-semibold text-foreground">BANQUE RAIFFEISEN DU GROS DE VAUD</p>
+            <p className="text-muted-foreground">Agence Immo-Rama</p>
+            <p className="text-muted-foreground">Chemin de l'Esparcette 5</p>
+            <p className="text-muted-foreground">1023 Crissier</p>
+          </div>
+          <div className="pt-2 border-t border-border/50 space-y-1">
+            <p>
+              <span className="text-muted-foreground">IBAN : </span>
+              <span className="font-mono font-medium text-foreground">CH87 8080 8004 9815 5643 7</span>
+            </p>
+            <p>
+              <span className="text-muted-foreground">SWIFT-BIC : </span>
+              <span className="font-mono font-medium text-foreground">RAIFCH22</span>
+            </p>
           </div>
         </div>
         {data.code_promo && (
