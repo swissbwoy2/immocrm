@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Mail, Phone, Users, Calendar, Pencil, Save, X, Camera, Power, Target, BarChart3, Send, Eye, FileCheck, UserPlus, MessageSquare } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Users, Calendar, Pencil, Save, X, Camera, Power, Target, BarChart3, Send, Eye, FileCheck, UserPlus, MessageSquare, Sparkles, TrendingUp, ChevronRight, MapPin, Wallet } from "lucide-react";
 import { AgentGoalsDialog } from "@/components/stats/AgentGoalsDialog";
 import { AgentStatsSection } from "@/components/stats/AgentStatsSection";
 import { AgentBadges } from "@/components/stats/AgentBadges";
@@ -17,6 +17,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek } from "date-fns";
 import { fr } from "date-fns/locale";
 import { countUniqueVisitesInRange, countUniqueOffresInRange } from "@/utils/visitesCalculator";
+import { PremiumKPICard } from "@/components/premium/PremiumKPICard";
+import { PremiumCard } from "@/components/premium/PremiumCard";
+import { cn } from "@/lib/utils";
 
 interface Agent {
   id: string;
@@ -453,18 +456,29 @@ const AgentDetail = () => {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex-1 flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-primary/20 rounded-full animate-spin border-t-primary" />
+            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin border-b-primary/40" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+          </div>
+          <p className="text-muted-foreground animate-pulse">Chargement...</p>
+        </div>
       </div>
     );
   }
 
   if (!agent || !profile) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Agent introuvable</h2>
-          <Button onClick={() => navigate('/admin/agents')}>
+      <div className="flex-1 flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <div className="w-20 h-20 mx-auto bg-muted rounded-full flex items-center justify-center">
+            <Users className="w-10 h-10 text-muted-foreground" />
+          </div>
+          <h2 className="text-2xl font-bold">Agent introuvable</h2>
+          <p className="text-muted-foreground">Cet agent n'existe pas ou a été supprimé</p>
+          <Button onClick={() => navigate('/admin/agents')} className="mt-4">
+            <ArrowLeft className="mr-2 h-4 w-4" />
             Retour aux agents
           </Button>
         </div>
@@ -474,24 +488,37 @@ const AgentDetail = () => {
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="p-4 md:p-8">
+      <div className="p-4 md:p-8 space-y-6">
+        {/* Back Button */}
         <Button
           variant="ghost"
           onClick={() => navigate('/admin/agents')}
-          className="mb-4"
+          className="group hover:bg-primary/10 transition-all duration-300"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
           Retour
         </Button>
 
-        <div className="space-y-6">
-          {/* Header Card */}
-          <Card className="p-6">
-            <div className="flex items-start gap-6 mb-6">
-              <div className="relative">
-                <Avatar className="h-24 w-24">
+        {/* Premium Header Card */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-background to-accent/10 border border-border/50 animate-fade-in">
+          {/* Floating particles */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-8 right-16 w-32 h-32 bg-primary/10 rounded-full blur-3xl animate-float" />
+            <div className="absolute bottom-8 left-24 w-24 h-24 bg-accent/10 rounded-full blur-2xl animate-float" style={{ animationDelay: '1s' }} />
+            <div className="absolute top-1/2 right-1/3 w-20 h-20 bg-primary/5 rounded-full blur-xl animate-float" style={{ animationDelay: '2s' }} />
+          </div>
+
+          <div className="relative p-6 md:p-8">
+            <div className="flex flex-col lg:flex-row items-start gap-6">
+              {/* Avatar Section */}
+              <div className="relative group">
+                <div className={cn(
+                  "absolute inset-0 rounded-full blur-lg transition-all duration-500",
+                  profile.actif ? "bg-primary/30 group-hover:bg-primary/50" : "bg-muted/30"
+                )} />
+                <Avatar className="relative h-28 w-28 ring-4 ring-background shadow-xl transition-transform duration-300 group-hover:scale-105">
                   <AvatarImage src={profile.avatar_url || undefined} alt={`${profile.prenom} ${profile.nom}`} />
-                  <AvatarFallback className="text-2xl bg-primary/10 text-primary">
+                  <AvatarFallback className="text-3xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold">
                     {profile.prenom?.[0]}{profile.nom?.[0]}
                   </AvatarFallback>
                 </Avatar>
@@ -505,234 +532,334 @@ const AgentDetail = () => {
                 <Button
                   size="icon"
                   variant="secondary"
-                  className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full"
+                  className="absolute -bottom-1 -right-1 h-9 w-9 rounded-full shadow-lg transition-all duration-300 hover:scale-110 hover:bg-primary hover:text-primary-foreground"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
                 >
-                  <Camera className="h-4 w-4" />
+                  {uploading ? (
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
-              <div className="flex-1">
+
+              {/* Info Section */}
+              <div className="flex-1 min-w-0">
                 {isEditing ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Prénom</Label>
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-muted-foreground">Prénom</Label>
                         <Input
                           value={editForm.prenom}
                           onChange={(e) => setEditForm({ ...editForm, prenom: e.target.value })}
                           placeholder="Prénom"
+                          className="bg-background/50 backdrop-blur-sm"
                         />
                       </div>
-                      <div>
-                        <Label>Nom</Label>
+                      <div className="space-y-2">
+                        <Label className="text-muted-foreground">Nom</Label>
                         <Input
                           value={editForm.nom}
                           onChange={(e) => setEditForm({ ...editForm, nom: e.target.value })}
                           placeholder="Nom"
+                          className="bg-background/50 backdrop-blur-sm"
                         />
                       </div>
                     </div>
-                    <div>
-                      <Label>Téléphone</Label>
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground">Téléphone</Label>
                       <Input
                         value={editForm.telephone}
                         onChange={(e) => setEditForm({ ...editForm, telephone: e.target.value })}
                         placeholder="+41 XX XXX XX XX"
+                        className="bg-background/50 backdrop-blur-sm max-w-sm"
                       />
                     </div>
-                    <div className="flex gap-2">
-                      <Button onClick={handleSave} disabled={saving}>
-                        <Save className="h-4 w-4 mr-2" />
+                    <div className="flex gap-2 pt-2">
+                      <Button onClick={handleSave} disabled={saving} className="gap-2">
+                        <Save className="h-4 w-4" />
                         {saving ? 'Sauvegarde...' : 'Sauvegarder'}
                       </Button>
-                      <Button variant="outline" onClick={handleCancel} disabled={saving}>
-                        <X className="h-4 w-4 mr-2" />
+                      <Button variant="outline" onClick={handleCancel} disabled={saving} className="gap-2 bg-background/50">
+                        <X className="h-4 w-4" />
                         Annuler
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <>
-                    <div className="flex items-center gap-3 mb-2 flex-wrap">
-                      <h1 className="text-3xl font-bold">
+                  <div className="animate-fade-in">
+                    <div className="flex items-center gap-3 mb-3 flex-wrap">
+                      <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                         {profile.prenom} {profile.nom}
                       </h1>
-                      <Badge variant={profile.actif ? "default" : "secondary"}>
+                      <Badge 
+                        variant={profile.actif ? "default" : "secondary"}
+                        className={cn(
+                          "transition-all duration-300",
+                          profile.actif && "bg-success/90 hover:bg-success animate-pulse-soft"
+                        )}
+                      >
                         {profile.actif ? "Actif" : "Inactif"}
                       </Badge>
-                      <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
-                        <Pencil className="h-4 w-4 mr-1" />
+                    </div>
+                    <p className="text-muted-foreground mb-4 flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      Agent immobilier
+                    </p>
+                    
+                    {/* Action Buttons */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={() => setIsEditing(true)}
+                        className="gap-2 bg-background/50 backdrop-blur-sm hover:bg-background/80 transition-all duration-300"
+                      >
+                        <Pencil className="h-4 w-4" />
                         Modifier
                       </Button>
-                      <Button size="sm" variant="outline" onClick={handleSendMessage}>
-                        <MessageSquare className="h-4 w-4 mr-1" />
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        onClick={handleSendMessage}
+                        className="gap-2 bg-background/50 backdrop-blur-sm hover:bg-background/80 transition-all duration-300"
+                      >
+                        <MessageSquare className="h-4 w-4" />
                         Message
                       </Button>
                       <AgentGoalsDialog
                         agentId={agent.id} 
                         agentName={`${profile.prenom} ${profile.nom}`}
                         trigger={
-                          <Button size="sm" variant="outline">
-                            <Target className="h-4 w-4 mr-1" />
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className="gap-2 bg-background/50 backdrop-blur-sm hover:bg-background/80 transition-all duration-300"
+                          >
+                            <Target className="h-4 w-4" />
                             Objectifs
                           </Button>
                         }
                       />
                     </div>
-                    <p className="text-muted-foreground">Agent immobilier</p>
-                    <div className="flex items-center gap-3 mt-3 pt-3 border-t">
+
+                    {/* Status Toggle */}
+                    <div className="flex items-center gap-3 pt-3 border-t border-border/50">
                       <Power className="h-4 w-4 text-muted-foreground" />
-                      <Label htmlFor="agent-actif" className="text-sm">Statut de l'agent</Label>
+                      <Label htmlFor="agent-actif" className="text-sm">Statut</Label>
                       <Switch
                         id="agent-actif"
                         checked={profile.actif}
                         onCheckedChange={handleToggleActif}
                       />
-                      <span className="text-sm text-muted-foreground">
+                      <span className={cn(
+                        "text-sm font-medium transition-colors",
+                        profile.actif ? "text-success" : "text-muted-foreground"
+                      )}>
                         {profile.actif ? 'Actif' : 'Inactif'}
                       </span>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
+
+              {/* Contact Info Cards */}
+              {!isEditing && (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-1 gap-3 w-full lg:w-auto lg:min-w-[280px]">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-background/50 backdrop-blur-sm border border-border/50 transition-all duration-300 hover:bg-background/80 hover:shadow-md">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Mail className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">Email</p>
+                      <p className="text-sm font-medium truncate">{profile.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-background/50 backdrop-blur-sm border border-border/50 transition-all duration-300 hover:bg-background/80 hover:shadow-md">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Phone className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">Téléphone</p>
+                      <p className="text-sm font-medium">{profile.telephone || 'Non renseigné'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-background/50 backdrop-blur-sm border border-border/50 transition-all duration-300 hover:bg-background/80 hover:shadow-md">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Users className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">Clients</p>
+                      <p className="text-sm font-medium">{clients.length} assignés</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-background/50 backdrop-blur-sm border border-border/50 transition-all duration-300 hover:bg-background/80 hover:shadow-md">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Calendar className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">Membre depuis</p>
+                      <p className="text-sm font-medium">{format(new Date(agent.created_at), "d MMM yyyy", { locale: fr })}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
+          </div>
+        </div>
 
-            {!isEditing && (
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Email:</span>
-                    <span>{profile.email}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Téléphone:</span>
-                    <span>{profile.telephone || 'Non renseigné'}</span>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Clients assignés:</span>
-                    <span>{clients.length}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Créé le:</span>
-                    <span>
-                      {format(new Date(agent.created_at), "d MMMM yyyy", { locale: fr })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </Card>
-
-          {/* Today's Activity Stats */}
-          <Card className="p-6">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+        {/* Today's Activity Stats - Premium KPI Cards */}
+        <div className="space-y-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-primary/10">
               <BarChart3 className="h-5 w-5 text-primary" />
-              Activité d'aujourd'hui
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                <Send className="h-6 w-6 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
-                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{todayStats.offres}</div>
-                <p className="text-sm text-muted-foreground">Offres envoyées</p>
-              </div>
-              <div className="text-center p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
-                <Eye className="h-6 w-6 text-green-600 dark:text-green-400 mx-auto mb-2" />
-                <div className="text-3xl font-bold text-green-600 dark:text-green-400">{todayStats.visites}</div>
-                <p className="text-sm text-muted-foreground">Visites planifiées</p>
-              </div>
-              <div className="text-center p-4 bg-purple-50 dark:bg-purple-950/30 rounded-lg border border-purple-200 dark:border-purple-800">
-                <FileCheck className="h-6 w-6 text-purple-600 dark:text-purple-400 mx-auto mb-2" />
-                <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{todayStats.candidatures}</div>
-                <p className="text-sm text-muted-foreground">Candidatures</p>
-              </div>
-              <div className="text-center p-4 bg-orange-50 dark:bg-orange-950/30 rounded-lg border border-orange-200 dark:border-orange-800">
-                <UserPlus className="h-6 w-6 text-orange-600 dark:text-orange-400 mx-auto mb-2" />
-                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{todayStats.weekClients}</div>
-                <p className="text-sm text-muted-foreground">Nouveaux clients (sem.)</p>
-              </div>
             </div>
-          </Card>
+            <h2 className="text-xl font-bold">Activité d'aujourd'hui</h2>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <PremiumKPICard
+              title="Offres envoyées"
+              value={todayStats.offres}
+              icon={Send}
+              variant="default"
+              delay={0}
+            />
+            <PremiumKPICard
+              title="Visites planifiées"
+              value={todayStats.visites}
+              icon={Eye}
+              variant="success"
+              delay={100}
+            />
+            <PremiumKPICard
+              title="Candidatures"
+              value={todayStats.candidatures}
+              icon={FileCheck}
+              variant="warning"
+              delay={200}
+            />
+            <PremiumKPICard
+              title="Nouveaux clients (sem.)"
+              value={todayStats.weekClients}
+              icon={UserPlus}
+              variant="danger"
+              delay={300}
+            />
+          </div>
+        </div>
 
-          {/* Badges and Daily Goals History */}
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Badges Section */}
-            <Card className="p-6">
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                🏆 Badges
-              </h2>
-              <AgentBadges agentId={agent.id} />
-            </Card>
+        {/* Badges and Daily Goals History */}
+        <div className="grid md:grid-cols-2 gap-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
+          {/* Badges Section */}
+          <PremiumCard className="p-6">
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <span className="text-2xl">🏆</span>
+              Badges
+            </h2>
+            <AgentBadges agentId={agent.id} />
+          </PremiumCard>
 
-            {/* Daily Goals History */}
-            <DailyGoalsHistory agentId={agent.id} />
+          {/* Daily Goals History */}
+          <DailyGoalsHistory agentId={agent.id} />
+        </div>
+
+        {/* Full Stats Section */}
+        <PremiumCard className="p-6 animate-fade-in">
+          <AgentStatsSection
+            offres={offres}
+            transactions={transactions}
+            candidatures={candidatures}
+            clients={clients}
+            agentId={agent.id}
+          />
+        </PremiumCard>
+
+        {/* Premium Clients Card */}
+        <div className="space-y-4 animate-fade-in" style={{ animationDelay: '400ms' }}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Users className="h-5 w-5 text-primary" />
+              </div>
+              <h2 className="text-xl font-bold">Clients assignés</h2>
+              <Badge variant="secondary" className="ml-2">{clients.length}</Badge>
+            </div>
           </div>
 
-          {/* Full Stats Section */}
-          <Card className="p-6">
-            <AgentStatsSection
-              offres={offres}
-              transactions={transactions}
-              candidatures={candidatures}
-              clients={clients}
-              agentId={agent.id}
-            />
-          </Card>
-
-          {/* Clients Card */}
-          <Card className="p-6">
-            <h2 className="text-2xl font-bold mb-4">
-              Clients assignés ({clients.length})
-            </h2>
-
-            {clients.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                Aucun client assigné à cet agent
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {clients.map((client) => (
-                  <Card
-                    key={client.id}
-                    className="p-4 cursor-pointer hover:bg-accent/50 transition-colors"
-                    onClick={() => navigate(`/admin/clients/${client.id}`)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold">
-                            {client.profiles.prenom} {client.profiles.nom}
-                          </h3>
-                          <Badge variant="outline">{client.statut || 'actif'}</Badge>
-                        </div>
-                        <div className="grid md:grid-cols-3 gap-2 text-sm text-muted-foreground">
-                          <div>
-                            <span className="font-medium">Budget:</span>{" "}
+          {clients.length === 0 ? (
+            <PremiumCard className="p-12">
+              <div className="text-center space-y-4">
+                <div className="w-16 h-16 mx-auto bg-muted rounded-full flex items-center justify-center">
+                  <Users className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Aucun client assigné</h3>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    Cet agent n'a pas encore de clients assignés
+                  </p>
+                </div>
+              </div>
+            </PremiumCard>
+          ) : (
+            <div className="grid gap-3">
+              {clients.map((client, index) => (
+                <div
+                  key={client.id}
+                  className={cn(
+                    "group relative overflow-hidden rounded-xl border border-border/50 bg-card p-4",
+                    "cursor-pointer transition-all duration-300",
+                    "hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5",
+                    "animate-fade-in"
+                  )}
+                  style={{ animationDelay: `${(index + 1) * 50}ms` }}
+                  onClick={() => navigate(`/admin/clients/${client.id}`)}
+                >
+                  {/* Hover glow effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  
+                  <div className="relative flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <h3 className="font-semibold text-lg group-hover:text-primary transition-colors">
+                          {client.profiles.prenom} {client.profiles.nom}
+                        </h3>
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            "transition-colors",
+                            client.statut === 'actif' && "border-success/50 text-success",
+                            client.statut === 'en_pause' && "border-warning/50 text-warning",
+                            client.statut === 'archive' && "border-muted-foreground/50"
+                          )}
+                        >
+                          {client.statut || 'actif'}
+                        </Badge>
+                      </div>
+                      <div className="grid sm:grid-cols-3 gap-3 text-sm">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Wallet className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">
                             {client.budget_max ? `${client.budget_max.toLocaleString()} CHF` : 'N/A'}
-                          </div>
-                          <div>
-                            <span className="font-medium">Pièces:</span>{" "}
-                            {client.pieces || 'N/A'}
-                          </div>
-                          <div>
-                            <span className="font-medium">Région:</span>{" "}
-                            {client.region_recherche || 'N/A'}
-                          </div>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <TrendingUp className="h-4 w-4 flex-shrink-0" />
+                          <span>{client.pieces ? `${client.pieces} pièces` : 'N/A'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <MapPin className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">{client.region_recherche || 'N/A'}</span>
                         </div>
                       </div>
                     </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </Card>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
