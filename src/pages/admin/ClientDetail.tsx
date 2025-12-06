@@ -1294,23 +1294,58 @@ export default function ClientDetail() {
         </div>
 
         {/* Solvability Alert - wrapped in premium container */}
-        <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+        <div 
+          className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-1 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
+          style={{ animationDelay: '100ms' }}
+        >
+          {/* Glow effect based on solvability */}
+          <div className={`absolute inset-0 opacity-20 transition-opacity duration-500 ${solvabilityResult.isSolvable ? 'bg-gradient-to-br from-green-500/20 to-transparent' : 'bg-gradient-to-br from-red-500/20 to-transparent'}`} />
+          {/* Shine effect */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+          </div>
           <SolvabilityAlert 
             result={solvabilityResult} 
-            className="mb-6"
+            className="relative z-10"
           />
         </div>
 
-        {/* Client Activity Stats - with animation */}
-        <div className="animate-fade-in" style={{ animationDelay: '150ms' }}>
+        {/* Client Activity Stats - with premium wrapper */}
+        <div 
+          className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
+          style={{ animationDelay: '150ms' }}
+        >
+          {/* Shine effect */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+          </div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
+              <TrendingUp className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
+            </div>
+            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors duration-300">Statistiques d'activité</h3>
+          </div>
           <ClientActivityStats 
             clientId={client.id} 
             clientUserId={client.user_id}
           />
         </div>
 
-        {/* Candidates Manager - with animation */}
-        <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+        {/* Candidates Manager - with premium wrapper */}
+        <div 
+          className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
+          style={{ animationDelay: '200ms' }}
+        >
+          {/* Shine effect */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+          </div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
+              <Users className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
+            </div>
+            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors duration-300">Co-candidats du dossier</h3>
+          </div>
           <ClientCandidatesManager
             clientId={client.id}
             clientRevenus={client.revenus_mensuels}
@@ -1319,9 +1354,22 @@ export default function ClientDetail() {
           />
         </div>
 
-        {/* Candidate Documents - with animation */}
+        {/* Candidate Documents - with premium wrapper */}
         {candidates.length > 0 && (
-          <div className="animate-fade-in" style={{ animationDelay: '250ms' }}>
+          <div 
+            className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
+            style={{ animationDelay: '250ms' }}
+          >
+            {/* Shine effect */}
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+              <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+            </div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
+                <FileText className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
+              </div>
+              <h3 className="font-semibold text-lg group-hover:text-primary transition-colors duration-300">Documents des co-candidats</h3>
+            </div>
             <CandidateDocumentsSection 
               clientId={client.id}
               clientUserId={client.user_id}
@@ -1331,8 +1379,15 @@ export default function ClientDetail() {
           </div>
         )}
 
-        {/* Apporteur Info Card - with animation */}
-        <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
+        {/* Apporteur Info Card - with premium wrapper */}
+        <div 
+          className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
+          style={{ animationDelay: '300ms' }}
+        >
+          {/* Shine effect */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+          </div>
           <ApporteurInfoCard clientId={client.id} isAdmin={true} />
         </div>
 
@@ -1423,19 +1478,19 @@ export default function ClientDetail() {
                   </div>
                 )}
               </div>
-              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <p className="text-xs text-muted-foreground mb-1">État civil</p>
-                  <p className="font-medium text-sm">{client.etat_civil || 'Non renseigné'}</p>
+                  <p className="font-medium text-sm group-hover:text-primary/90 transition-colors">{client.etat_civil || 'Non renseigné'}</p>
                 </div>
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <p className="text-xs text-muted-foreground mb-1">Nationalité</p>
-                  <p className="font-medium text-sm">{client.nationalite || 'Non renseigné'}</p>
+                  <p className="font-medium text-sm group-hover:text-primary/90 transition-colors">{client.nationalite || 'Non renseigné'}</p>
                 </div>
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm col-span-2">
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default col-span-2">
                   <p className="text-xs text-muted-foreground mb-1">Type de permis</p>
-                  <p className="font-medium text-sm">{client.type_permis || 'Non renseigné'}</p>
+                  <p className="font-medium text-sm group-hover:text-primary/90 transition-colors">{client.type_permis || 'Non renseigné'}</p>
                 </div>
               </div>
             </CardContent>
@@ -1445,16 +1500,16 @@ export default function ClientDetail() {
           <PremiumCard icon={Building2} title="Situation actuelle" delay={450}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <p className="text-xs text-muted-foreground mb-1">Gérance actuelle</p>
                   <p className="font-medium text-sm">{client.gerance_actuelle || 'Non renseigné'}</p>
                 </div>
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <p className="text-xs text-muted-foreground mb-1">Contact gérance</p>
                   <p className="font-medium text-sm">{client.contact_gerance || 'Non renseigné'}</p>
                 </div>
               </div>
-              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="grid grid-cols-2 gap-4">
                 <PremiumStatCard 
                   label="Loyer brut actuel"
@@ -1462,20 +1517,20 @@ export default function ClientDetail() {
                   prefix="CHF "
                   animated
                 />
-                <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
+                <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <p className="text-sm text-muted-foreground mb-2">Depuis le</p>
                   <p className="font-medium">
                     {client.depuis_le ? new Date(client.depuis_le).toLocaleDateString('fr-CH') : 'Non renseigné'}
                   </p>
                 </div>
               </div>
-              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <p className="text-xs text-muted-foreground mb-1">Pièces actuel</p>
                   <p className="font-medium text-sm">{client.pieces_actuel || 'Non renseigné'}</p>
                 </div>
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <p className="text-xs text-muted-foreground mb-1">Motif du changement</p>
                   <p className="font-medium text-xs line-clamp-2">{client.motif_changement || 'Non renseigné'}</p>
                 </div>
@@ -1487,16 +1542,16 @@ export default function ClientDetail() {
           <PremiumCard icon={Briefcase} title="Situation professionnelle" delay={500}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <p className="text-xs text-muted-foreground mb-1">Profession</p>
                   <p className="font-medium text-sm">{client.profession || 'Non renseigné'}</p>
                 </div>
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <p className="text-xs text-muted-foreground mb-1">Employeur</p>
                   <p className="font-medium text-sm">{client.employeur || 'Non renseigné'}</p>
                 </div>
               </div>
-              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="grid grid-cols-2 gap-4">
                 <PremiumStatCard 
                   label="Revenus mensuels nets"
@@ -1505,7 +1560,7 @@ export default function ClientDetail() {
                   variant="success"
                   animated
                 />
-                <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
+                <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <p className="text-sm text-muted-foreground mb-2">Date d'engagement</p>
                   <p className="font-medium">
                     {client.date_engagement ? new Date(client.date_engagement).toLocaleDateString('fr-CH') : 'Non renseigné'}
@@ -1513,7 +1568,7 @@ export default function ClientDetail() {
                 </div>
               </div>
               {calculateAnciennete(client.date_engagement) && (
-                <div className="p-3 rounded-xl bg-primary/10 border border-primary/30 backdrop-blur-sm">
+                <div className="p-3 rounded-xl bg-primary/10 border border-primary/30 backdrop-blur-sm hover:bg-primary/15 hover:shadow-[0_0_15px_rgba(var(--primary),0.2)] transition-all duration-300">
                   <p className="text-xs text-muted-foreground mb-1">Ancienneté</p>
                   <p className="font-medium text-primary">{calculateAnciennete(client.date_engagement)}</p>
                 </div>
@@ -1525,30 +1580,30 @@ export default function ClientDetail() {
           <PremiumCard icon={Home} title="Critères de recherche" delay={550}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <p className="text-xs text-muted-foreground mb-1">Type de bien</p>
                   <p className="font-medium text-sm">{client.type_bien || 'Non renseigné'}</p>
                 </div>
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <p className="text-xs text-muted-foreground mb-1">Nombre de pièces</p>
                   <p className="font-medium text-sm">{client.pieces || 'Non renseigné'}</p>
                 </div>
               </div>
-              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-              <div className="p-3 rounded-xl bg-primary/10 border border-primary/30 backdrop-blur-sm">
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="p-3 rounded-xl bg-primary/10 border border-primary/30 backdrop-blur-sm hover:bg-primary/15 hover:shadow-[0_0_15px_rgba(var(--primary),0.2)] transition-all duration-300">
                 <p className="text-xs text-muted-foreground mb-2">Région de recherche</p>
                 <p className="font-medium text-sm text-primary">{client.region_recherche || 'Non renseigné'}</p>
               </div>
               {client.nombre_occupants && (
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <p className="text-xs text-muted-foreground mb-1">Nombre d'occupants</p>
                   <p className="font-medium text-sm">{client.nombre_occupants}</p>
                 </div>
               )}
               {client.souhaits_particuliers && (
                 <>
-                  <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-                  <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 transition-all duration-300">
                     <p className="text-xs text-muted-foreground mb-2">Souhaits particuliers</p>
                     <p className="text-sm">{client.souhaits_particuliers}</p>
                   </div>
@@ -1561,32 +1616,32 @@ export default function ClientDetail() {
           <PremiumCard icon={FileText} title="Autres informations" delay={600}>
             <CardContent className="space-y-4">
               {client.utilisation_logement && (
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <p className="text-xs text-muted-foreground mb-1">Utilisation du logement</p>
                   <p className="font-medium text-sm">{client.utilisation_logement}</p>
                 </div>
               )}
-              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
-                  <div className={`w-3 h-3 rounded-full ${client.animaux ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-muted-foreground/30'}`} />
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
+                  <div className={`w-3 h-3 rounded-full transition-all duration-300 ${client.animaux ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)] animate-pulse' : 'bg-muted-foreground/30'}`} />
                   <span className="text-sm">Animaux</span>
                 </div>
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
-                  <div className={`w-3 h-3 rounded-full ${client.instrument_musique ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-muted-foreground/30'}`} />
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
+                  <div className={`w-3 h-3 rounded-full transition-all duration-300 ${client.instrument_musique ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)] animate-pulse' : 'bg-muted-foreground/30'}`} />
                   <span className="text-sm">Instrument de musique</span>
                 </div>
               </div>
               {client.vehicules && (
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                   <p className="text-xs text-muted-foreground mb-1">Véhicules</p>
                   <p className="font-medium text-sm">{client.numero_plaques || 'Oui'}</p>
                 </div>
               )}
               {client.decouverte_agence && (
                 <>
-                  <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-                  <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
                     <p className="text-xs text-muted-foreground mb-1">Comment a découvert l'agence</p>
                     <p className="font-medium text-sm">{client.decouverte_agence}</p>
                   </div>
@@ -1637,8 +1692,8 @@ export default function ClientDetail() {
               </div>
               {client.note_agent && (
                 <>
-                  <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-                  <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 transition-all duration-300">
                     <p className="text-xs text-muted-foreground mb-2">Notes de l'agent</p>
                     <p className="text-sm">{client.note_agent}</p>
                   </div>
