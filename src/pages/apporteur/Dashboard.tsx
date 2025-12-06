@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, DollarSign, Clock, CheckCircle, Copy, QrCode, Link, TrendingUp } from 'lucide-react';
+import { Users, DollarSign, Clock, CheckCircle, Copy, Link, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -109,9 +109,9 @@ export default function ApporteurDashboard() {
       </div>
 
       {/* Code Parrainage */}
-      <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+      <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20 card-interactive animate-fade-in" style={{ animationDelay: '0ms' }}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 transition-transform duration-300 group-hover:translate-x-1">
             <Link className="h-5 w-5" />
             Votre lien de parrainage
           </CardTitle>
@@ -131,6 +131,7 @@ export default function ApporteurDashboard() {
                   variant="outline"
                   size="icon"
                   onClick={() => copyToClipboard(apporteur?.code_parrainage || '')}
+                  className="hover:scale-110 transition-transform"
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
@@ -151,6 +152,7 @@ export default function ApporteurDashboard() {
                 variant="outline"
                 size="icon"
                 onClick={() => copyToClipboard(referralLink)}
+                className="hover:scale-110 transition-transform"
               >
                 <Copy className="h-4 w-4" />
               </Button>
@@ -167,46 +169,54 @@ export default function ApporteurDashboard() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="group card-interactive animate-fade-in" style={{ animationDelay: '50ms' }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Referrals</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <div className="p-2 rounded-lg bg-primary/10 transition-transform duration-300 group-hover:scale-110">
+              <Users className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total_referrals}</div>
+            <div className="text-2xl font-bold transition-transform duration-300 group-hover:scale-105 origin-left">{stats.total_referrals}</div>
             <p className="text-xs text-muted-foreground">Clients référés</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="group card-interactive animate-fade-in" style={{ animationDelay: '100ms' }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">En attente</CardTitle>
-            <Clock className="h-4 w-4 text-orange-500" />
+            <div className="p-2 rounded-lg bg-warning/10 transition-transform duration-300 group-hover:scale-110">
+              <Clock className="h-4 w-4 text-warning" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.referrals_en_attente}</div>
+            <div className="text-2xl font-bold transition-transform duration-300 group-hover:scale-105 origin-left">{stats.referrals_en_attente}</div>
             <p className="text-xs text-muted-foreground">Referrals en cours</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="group card-interactive animate-fade-in" style={{ animationDelay: '150ms' }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Commissions gagnées</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-500" />
+            <div className="p-2 rounded-lg bg-success/10 transition-transform duration-300 group-hover:scale-110">
+              <DollarSign className="h-4 w-4 text-success" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">CHF {stats.total_commissions.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-success transition-transform duration-300 group-hover:scale-105 origin-left">CHF {stats.total_commissions.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">Total versé</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="group card-interactive animate-fade-in" style={{ animationDelay: '200ms' }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">En attente paiement</CardTitle>
-            <TrendingUp className="h-4 w-4 text-blue-500" />
+            <div className="p-2 rounded-lg bg-primary/10 transition-transform duration-300 group-hover:scale-110">
+              <TrendingUp className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">CHF {stats.commissions_en_attente.toFixed(2)}</div>
+            <div className="text-2xl font-bold transition-transform duration-300 group-hover:scale-105 origin-left">CHF {stats.commissions_en_attente.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">À recevoir</p>
           </CardContent>
         </Card>
@@ -214,24 +224,24 @@ export default function ApporteurDashboard() {
 
       {/* Quick Actions */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="card-interactive animate-fade-in" style={{ animationDelay: '250ms' }}>
           <CardHeader>
-            <CardTitle>Actions rapides</CardTitle>
+            <CardTitle className="transition-transform duration-300 group-hover:translate-x-1">Actions rapides</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Button className="w-full justify-start" asChild>
+            <Button className="w-full justify-start hover:scale-[1.02] transition-transform" asChild>
               <a href="/apporteur/soumettre-client">
                 <Users className="mr-2 h-4 w-4" />
                 Soumettre un nouveau client
               </a>
             </Button>
-            <Button variant="outline" className="w-full justify-start" asChild>
+            <Button variant="outline" className="w-full justify-start hover:scale-[1.02] transition-transform" asChild>
               <a href="/apporteur/mes-referrals">
                 <CheckCircle className="mr-2 h-4 w-4" />
                 Voir mes referrals
               </a>
             </Button>
-            <Button variant="outline" className="w-full justify-start" asChild>
+            <Button variant="outline" className="w-full justify-start hover:scale-[1.02] transition-transform" asChild>
               <a href="/apporteur/commissions">
                 <DollarSign className="mr-2 h-4 w-4" />
                 Historique des commissions
@@ -240,12 +250,12 @@ export default function ApporteurDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-interactive animate-fade-in" style={{ animationDelay: '300ms' }}>
           <CardHeader>
-            <CardTitle>Rappel des conditions</CardTitle>
+            <CardTitle className="transition-transform duration-300 group-hover:translate-x-1">Rappel des conditions</CardTitle>
             <CardDescription>Article 2 de votre contrat</CardDescription>
           </CardHeader>
-        <CardContent className="space-y-2 text-sm">
+          <CardContent className="space-y-2 text-sm">
             <p>• Commission : <strong>{apporteur?.taux_commission ?? 10}%</strong> des frais d'agence</p>
             <p>• Minimum vente : <strong>CHF {apporteur?.minimum_vente ?? 0}</strong></p>
             <p>• Minimum location : <strong>CHF {apporteur?.minimum_location ?? 0}</strong></p>
