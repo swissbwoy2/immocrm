@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Calendar, Users, DollarSign, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield, UserX, ChevronRight, Wallet } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield, UserX, ChevronRight, Sparkles, Filter } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { useNavigate } from "react-router-dom";
@@ -15,6 +14,31 @@ import { hasStableStatus } from "@/hooks/useSolvabilityCheck";
 import { CUMULATIVE_TYPES } from "@/hooks/useClientCandidates";
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 import { cn } from "@/lib/utils";
+
+// Animated counter component
+function AnimatedCounter({ value, suffix = "" }: { value: number; suffix?: string }) {
+  const [displayValue, setDisplayValue] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const duration = 800;
+    const startTime = Date.now();
+    const startValue = displayValue;
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(Math.round(startValue + (value - startValue) * easeOut));
+      
+      if (progress < 1) requestAnimationFrame(animate);
+    };
+    
+    requestAnimationFrame(animate);
+  }, [value]);
+
+  return <span ref={ref}>{displayValue}{suffix}</span>;
+}
 
 interface Client {
   id: string;
@@ -424,69 +448,150 @@ const Clients = () => {
           }
         />
 
-        {/* Filtres responsive */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-4 animate-fade-in">
-          <Input
-            placeholder="Rechercher un client..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:max-w-md bg-background/50 backdrop-blur-sm"
-          />
-          <Select value={filterAgent} onValueChange={setFilterAgent}>
-            <SelectTrigger className="w-full sm:w-[200px] bg-background/50 backdrop-blur-sm">
-              <SelectValue placeholder="Filtrer par agent" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les agents</SelectItem>
-              {agents.map(agent => (
-                <SelectItem key={agent.id} value={agent.id}>
-                  {agent.profile.prenom} {agent.profile.nom}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant={showUnassignedOnly ? "default" : "outline"}
-            onClick={() => setShowUnassignedOnly(!showUnassignedOnly)}
-            className="w-full sm:w-auto"
-          >
-            <UserX className="w-4 h-4 mr-2" />
-            Sans agent
-          </Button>
-        </div>
+        {/* Premium Filter Section */}
+        <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-4 md:p-6 mb-6 animate-fade-in">
+          {/* Subtle background particles */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-2 right-10 w-16 h-16 bg-primary/5 rounded-full blur-2xl animate-float" />
+            <div className="absolute bottom-2 left-20 w-12 h-12 bg-accent/5 rounded-full blur-xl animate-float" style={{ animationDelay: '1s' }} />
+          </div>
+          
+          <div className="relative z-10">
+            {/* Header with filter icon */}
+            <div className="flex items-center gap-2 mb-4">
+              <Filter className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Filtres de recherche</span>
+              {(selectedRegions.length > 0 || selectedPieces.length > 0 || showUnassignedOnly || filterAgent !== 'all') && (
+                <Badge className="bg-primary/20 text-primary border-0 text-[10px] animate-scale-in">
+                  {selectedRegions.length + selectedPieces.length + (showUnassignedOnly ? 1 : 0) + (filterAgent !== 'all' ? 1 : 0)} actifs
+                </Badge>
+              )}
+            </div>
 
-        {/* Filtres dépliables sur mobile */}
-        <details className="mb-4 sm:hidden">
-          <summary className="text-sm font-medium cursor-pointer p-2 bg-muted/50 rounded-md">Filtres avancés</summary>
-          <div className="mt-3 space-y-4">
-            {/* Filtres Régions */}
-            <div>
-              <p className="text-xs font-medium mb-2">Régions</p>
-              <div className="flex flex-wrap gap-1.5">
+            {/* Main filters row */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <div className="relative flex-1 sm:max-w-md group">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
+                <Input
+                  placeholder="Rechercher un client..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-background/50 backdrop-blur-sm border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              </div>
+              <Select value={filterAgent} onValueChange={setFilterAgent}>
+                <SelectTrigger className="w-full sm:w-[200px] bg-background/50 backdrop-blur-sm border-border/50 hover:border-primary/30 transition-colors">
+                  <SelectValue placeholder="Filtrer par agent" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les agents</SelectItem>
+                  {agents.map(agent => (
+                    <SelectItem key={agent.id} value={agent.id}>
+                      {agent.profile.prenom} {agent.profile.nom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant={showUnassignedOnly ? "default" : "outline"}
+                onClick={() => setShowUnassignedOnly(!showUnassignedOnly)}
+                className={cn(
+                  "w-full sm:w-auto transition-all duration-300",
+                  showUnassignedOnly && "shadow-[0_0_15px_rgba(var(--primary),0.3)]"
+                )}
+              >
+                <UserX className="w-4 h-4 mr-2" />
+                Sans agent
+              </Button>
+            </div>
+
+            {/* Filtres dépliables sur mobile */}
+            <details className="sm:hidden">
+              <summary className="text-sm font-medium cursor-pointer p-2 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                <span className="flex items-center gap-2">
+                  <Sparkles className="w-3 h-3 text-primary" />
+                  Filtres avancés
+                </span>
+              </summary>
+              <div className="mt-3 space-y-4 animate-fade-in">
+                {/* Filtres Régions */}
+                <div>
+                  <p className="text-xs font-medium mb-2 text-muted-foreground">Régions</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {regions.map(region => (
+                      <Button
+                        key={region}
+                        variant={selectedRegions.includes(region) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => toggleRegion(region)}
+                        className={cn(
+                          "text-[10px] h-7 px-2 transition-all duration-300",
+                          selectedRegions.includes(region) && "shadow-[0_0_10px_rgba(var(--primary),0.3)]"
+                        )}
+                      >
+                        {region}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                {/* Filtres Nombre de pièces */}
+                <div>
+                  <p className="text-xs font-medium mb-2 text-muted-foreground">Nombre de pièces</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {nombrePieces.map(pieces => (
+                      <Button
+                        key={pieces}
+                        variant={selectedPieces.includes(pieces) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => togglePieces(pieces)}
+                        className={cn(
+                          "text-[10px] h-7 px-2 transition-all duration-300",
+                          selectedPieces.includes(pieces) && "shadow-[0_0_10px_rgba(var(--primary),0.3)]"
+                        )}
+                      >
+                        {pieces}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            {/* Filtres Régions - desktop */}
+            <div className="mb-4 hidden sm:block">
+              <p className="text-xs font-medium mb-2 text-muted-foreground">Régions</p>
+              <div className="flex flex-wrap gap-2">
                 {regions.map(region => (
                   <Button
                     key={region}
                     variant={selectedRegions.includes(region) ? "default" : "outline"}
                     size="sm"
                     onClick={() => toggleRegion(region)}
-                    className="text-[10px] h-7 px-2"
+                    className={cn(
+                      "text-xs transition-all duration-300 hover:scale-105",
+                      selectedRegions.includes(region) && "shadow-[0_0_12px_rgba(var(--primary),0.3)]"
+                    )}
                   >
                     {region}
                   </Button>
                 ))}
               </div>
             </div>
-            {/* Filtres Nombre de pièces */}
-            <div>
-              <p className="text-xs font-medium mb-2">Nombre de pièces</p>
-              <div className="flex flex-wrap gap-1.5">
+
+            {/* Filtres Nombre de pièces - desktop */}
+            <div className="hidden sm:block">
+              <p className="text-xs font-medium mb-2 text-muted-foreground">Nombre de pièces</p>
+              <div className="flex flex-wrap gap-2">
                 {nombrePieces.map(pieces => (
                   <Button
                     key={pieces}
                     variant={selectedPieces.includes(pieces) ? "default" : "outline"}
                     size="sm"
                     onClick={() => togglePieces(pieces)}
-                    className="text-[10px] h-7 px-2"
+                    className={cn(
+                      "text-xs transition-all duration-300 hover:scale-105",
+                      selectedPieces.includes(pieces) && "shadow-[0_0_12px_rgba(var(--primary),0.3)]"
+                    )}
                   >
                     {pieces}
                   </Button>
@@ -494,98 +599,65 @@ const Clients = () => {
               </div>
             </div>
           </div>
-        </details>
+        </div>
 
-        {/* Filtres Régions - desktop */}
-        <div className="mb-4 hidden sm:block">
-          <p className="text-sm font-medium mb-2">Régions</p>
-          <div className="flex flex-wrap gap-2">
-            {regions.map(region => (
+        {/* Premium Sort Section */}
+        <div className="mb-4 md:mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs md:text-sm font-medium text-muted-foreground">Trier par:</p>
+            {[
+              { field: 'date' as SortField, label: 'Date' },
+              { field: 'name' as SortField, label: 'Nom' },
+              { field: 'agent' as SortField, label: 'Agent' },
+              { field: 'budget' as SortField, label: 'Budget' },
+              { field: 'days' as SortField, label: 'Jours' },
+            ].map(({ field, label }) => (
               <Button
-                key={region}
-                variant={selectedRegions.includes(region) ? "default" : "outline"}
+                key={field}
+                variant={sortField === field ? "default" : "outline"}
                 size="sm"
-                onClick={() => toggleRegion(region)}
-                className="text-xs"
+                onClick={() => toggleSort(field)}
+                className={cn(
+                  "text-[10px] md:text-xs h-7 transition-all duration-300",
+                  sortField === field && "shadow-[0_0_12px_rgba(var(--primary),0.3)]"
+                )}
               >
-                {region}
+                <ArrowUpDown className={cn(
+                  "h-3 w-3 mr-1 transition-transform",
+                  sortField === field && sortOrder === 'asc' && "rotate-180"
+                )} />
+                {label}
               </Button>
             ))}
           </div>
-        </div>
-
-        {/* Filtres Nombre de pièces - desktop */}
-        <div className="mb-4 hidden sm:block">
-          <p className="text-sm font-medium mb-2">Nombre de pièces</p>
-          <div className="flex flex-wrap gap-2">
-            {nombrePieces.map(pieces => (
-              <Button
-                key={pieces}
-                variant={selectedPieces.includes(pieces) ? "default" : "outline"}
-                size="sm"
-                onClick={() => togglePieces(pieces)}
-                className="text-xs"
-              >
-                {pieces}
-              </Button>
-            ))}
+          
+          {/* Animated results counter */}
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+            <Users className="w-3.5 h-3.5 text-primary" />
+            <span className="text-sm font-medium text-primary">
+              <AnimatedCounter value={sortedClients.length} /> client{sortedClients.length > 1 ? 's' : ''}
+            </span>
           </div>
         </div>
 
-        {/* Tri */}
-        <div className="mb-4 md:mb-6 flex flex-wrap items-center gap-2">
-          <p className="text-xs md:text-sm font-medium">Trier par:</p>
-          <Button
-            variant={sortField === 'date' ? "default" : "outline"}
-            size="sm"
-            onClick={() => toggleSort('date')}
-            className="text-[10px] md:text-xs h-7"
-          >
-            <ArrowUpDown className="h-3 w-3 mr-1" />
-            Date
-          </Button>
-          <Button
-            variant={sortField === 'name' ? "default" : "outline"}
-            size="sm"
-            onClick={() => toggleSort('name')}
-            className="text-[10px] md:text-xs h-7"
-          >
-            <ArrowUpDown className="h-3 w-3 mr-1" />
-            Nom
-          </Button>
-          <Button
-            variant={sortField === 'agent' ? "default" : "outline"}
-            size="sm"
-            onClick={() => toggleSort('agent')}
-            className="text-[10px] md:text-xs h-7"
-          >
-            <ArrowUpDown className="h-3 w-3 mr-1" />
-            Agent
-          </Button>
-          <Button
-            variant={sortField === 'budget' ? "default" : "outline"}
-            size="sm"
-            onClick={() => toggleSort('budget')}
-            className="text-[10px] md:text-xs h-7"
-          >
-            <ArrowUpDown className="h-3 w-3 mr-1" />
-            Budget
-          </Button>
-          <Button
-            variant={sortField === 'days' ? "default" : "outline"}
-            size="sm"
-            onClick={() => toggleSort('days')}
-            className="text-[10px] md:text-xs h-7"
-          >
-            <ArrowUpDown className="h-3 w-3 mr-1" />
-            Jours
-          </Button>
-        </div>
+        {/* Empty state */}
+        {sortedClients.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 animate-fade-in">
+            <div className="relative mb-4">
+              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+                <Users className="w-10 h-10 text-primary/50" />
+              </div>
+              <div className="absolute inset-0 w-20 h-20 rounded-full bg-primary/20 animate-ping opacity-50" />
+            </div>
+            <h3 className="text-lg font-medium text-foreground mb-1">Aucun client trouvé</h3>
+            <p className="text-sm text-muted-foreground text-center max-w-sm">
+              Modifiez vos filtres ou importez des clients via CSV
+            </p>
+          </div>
+        )}
 
-        <p className="text-sm text-muted-foreground mb-4">{sortedClients.length} client{sortedClients.length > 1 ? 's' : ''}</p>
-
-        {/* Grid de clients - responsive */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+        {/* Premium Grid de clients */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {sortedClients.map((client, index) => {
             const profile = clientProfiles.get(client.user_id);
             const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
@@ -636,17 +708,37 @@ const Clients = () => {
               <div 
                 key={client.id} 
                 className={cn(
-                  "group relative overflow-hidden rounded-xl border border-border/50 bg-card p-3 md:p-4",
-                  "cursor-pointer transition-all duration-300 flex flex-col",
-                  "hover:shadow-xl hover:border-primary/30 hover:-translate-y-1",
+                  "group relative overflow-hidden rounded-2xl bg-card/90 backdrop-blur-xl p-4 md:p-5",
+                  "border border-border/50 cursor-pointer flex flex-col",
+                  "transition-all duration-500 ease-out",
+                  "hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:border-primary/40 hover:-translate-y-2",
                   "animate-fade-in",
-                  !isSolvable && "border-destructive/30"
+                  !isSolvable && "border-destructive/30 hover:border-destructive/50"
                 )}
-                style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
+                style={{ animationDelay: `${Math.min(index * 50, 400)}ms` }}
                 onClick={() => navigate(`/admin/clients/${client.id}`)}
               >
-                {/* Hover glow effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                {/* Animated glow border on hover */}
+                <div className={cn(
+                  "absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none",
+                  isSolvable 
+                    ? "shadow-[inset_0_0_20px_rgba(var(--primary),0.15)]" 
+                    : "shadow-[inset_0_0_20px_rgba(var(--destructive),0.15)]"
+                )} />
+                
+                {/* Shine effect on hover */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none overflow-hidden rounded-2xl">
+                  <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12" />
+                </div>
+                
+                {/* Floating particles */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <div className="absolute top-3 right-12 w-8 h-8 bg-primary/10 rounded-full blur-xl animate-float" />
+                  <div className="absolute bottom-8 left-4 w-6 h-6 bg-accent/10 rounded-full blur-lg animate-float" style={{ animationDelay: '0.5s' }} />
+                </div>
+                
+                {/* Background gradient */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl" />
                 {/* Boutons d'actions - plus gros sur mobile */}
                 <div className="absolute top-2 right-2 flex gap-0.5 md:gap-1">
                   {/* Bouton Renvoyer invitation */}
@@ -707,37 +799,54 @@ const Clients = () => {
                   </AlertDialog>
                 </div>
 
-                {/* SECTION 1: Identité avec statut solvabilité */}
-                <div className="mb-2 md:mb-3 pb-2 md:pb-3 border-b pr-20">
-                  <div className="flex items-center gap-2 flex-wrap mb-1 md:mb-2">
-                    <h3 className="text-base md:text-lg font-semibold text-primary">
-                      {profile.prenom} {profile.nom}
-                    </h3>
-                    {!client.agent_id && (
-                      <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-[10px]">
-                        Sans agent
-                      </Badge>
-                    )}
-                    {isSolvable ? (
-                      <Badge className="bg-green-600 text-white text-[10px]">
-                        <CheckCircle className="w-3 h-3 mr-0.5" />
-                        Solvable
-                      </Badge>
-                    ) : (
-                      <Badge variant="destructive" className="text-[10px]">
-                        <AlertTriangle className="w-3 h-3 mr-0.5" />
-                        Non solvable
-                      </Badge>
-                    )}
+                {/* SECTION 1: Identité avec statut solvabilité - Premium */}
+                <div className="relative z-10 mb-3 md:mb-4 pb-3 md:pb-4 border-b border-border/30 pr-20">
+                  {/* Premium Avatar/Initials */}
+                  <div className="flex items-start gap-3 mb-2">
+                    <div className={cn(
+                      "w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-sm md:text-base font-bold shrink-0",
+                      "bg-gradient-to-br shadow-lg transition-all duration-300",
+                      isSolvable 
+                        ? "from-primary/20 to-primary/10 text-primary group-hover:shadow-[0_0_20px_rgba(var(--primary),0.3)]" 
+                        : "from-destructive/20 to-destructive/10 text-destructive group-hover:shadow-[0_0_20px_rgba(var(--destructive),0.3)]"
+                    )}>
+                      {profile.prenom.charAt(0)}{profile.nom.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base md:text-lg font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent truncate">
+                        {profile.prenom} {profile.nom}
+                      </h3>
+                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                        {!client.agent_id && (
+                          <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30 text-[10px] animate-pulse-soft">
+                            Sans agent
+                          </Badge>
+                        )}
+                        {isSolvable ? (
+                          <Badge className="bg-green-500/20 text-green-600 border border-green-500/30 text-[10px] shadow-[0_0_10px_rgba(34,197,94,0.2)]">
+                            <CheckCircle className="w-3 h-3 mr-0.5" />
+                            Solvable
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-destructive/20 text-destructive border border-destructive/30 text-[10px] animate-pulse-soft">
+                            <AlertTriangle className="w-3 h-3 mr-0.5" />
+                            Non solvable
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-0.5 md:space-y-1 text-xs md:text-sm">
+                  <div className="space-y-1 text-xs md:text-sm pl-[52px] md:pl-[60px]">
                     <div className="flex items-center gap-1.5 md:gap-2 text-muted-foreground">
-                      <MapPin className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                      <MapPin className="h-3 w-3 md:h-3.5 md:w-3.5 flex-shrink-0" />
                       <span className="truncate">{client.nationalite || 'Non renseigné'}</span>
                     </div>
                     <div className="flex items-center gap-1.5 md:gap-2">
-                      <Users className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0 text-muted-foreground" />
-                      <span className={`truncate ${!clientHasStableStatus ? 'text-orange-600 font-medium' : 'text-muted-foreground'}`}>
+                      <Users className="h-3 w-3 md:h-3.5 md:w-3.5 flex-shrink-0 text-muted-foreground" />
+                      <span className={cn(
+                        "truncate",
+                        !clientHasStableStatus ? 'text-orange-600 font-medium' : 'text-muted-foreground'
+                      )}>
                         Permis: {client.type_permis || '-'}
                         {!clientHasStableStatus && ' ⚠️'}
                       </span>
@@ -745,102 +854,127 @@ const Clients = () => {
                   </div>
                 </div>
 
-                {/* SECTION 2: Finances avec solvabilité */}
-                <div className="mb-2 md:mb-3 pb-2 md:pb-3 border-b">
-                  <p className="text-xs md:text-sm font-medium mb-1 md:mb-2">💰 Finances</p>
+                {/* SECTION 2: Finances - Premium */}
+                <div className="relative z-10 mb-3 md:mb-4 pb-3 md:pb-4 border-b border-border/30">
+                  <p className="text-xs md:text-sm font-medium mb-2 flex items-center gap-1.5">
+                    <span className="text-base">💰</span> Finances
+                  </p>
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-muted/30 p-1.5 md:p-2 rounded text-center">
+                    <div className="bg-gradient-to-br from-muted/50 to-muted/30 p-2 md:p-2.5 rounded-xl text-center border border-border/30">
                       <p className="text-[10px] md:text-xs text-muted-foreground">Revenu total</p>
-                      <p className="text-xs md:text-sm font-semibold">CHF {totalRevenus.toLocaleString()}</p>
+                      <p className="text-xs md:text-sm font-bold">CHF {totalRevenus.toLocaleString()}</p>
                     </div>
-                    <div className={`p-1.5 md:p-2 rounded text-center ${budgetOk ? 'bg-primary/10' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                    <div className={cn(
+                      "p-2 md:p-2.5 rounded-xl text-center border transition-all",
+                      budgetOk 
+                        ? 'bg-gradient-to-br from-primary/15 to-primary/5 border-primary/30' 
+                        : 'bg-gradient-to-br from-destructive/15 to-destructive/5 border-destructive/30'
+                    )}>
                       <p className="text-[10px] md:text-xs text-muted-foreground">Budget max</p>
-                      <p className={`text-xs md:text-sm font-semibold ${budgetOk ? 'text-primary' : 'text-red-600'}`}>
+                      <p className={cn(
+                        "text-xs md:text-sm font-bold",
+                        budgetOk ? 'text-primary' : 'text-destructive'
+                      )}>
                         CHF {budgetDemande.toLocaleString()}
                       </p>
                     </div>
                   </div>
                   {/* Info garant */}
                   {validGarant && (
-                    <div className="mt-1.5 flex items-center gap-1 text-[10px] text-green-600">
+                    <div className="mt-2 flex items-center gap-1.5 text-[10px] text-green-600 bg-green-500/10 px-2 py-1 rounded-full w-fit">
                       <Shield className="w-3 h-3" />
-                      <span>Garant valide</span>
+                      <span className="font-medium">Garant valide</span>
                     </div>
                   )}
                   {excludedCandidates > 0 && (
-                    <div className="mt-1 flex items-center gap-1 text-[10px] text-orange-600">
-                      <AlertTriangle className="w-3 h-3" />
+                    <div className="mt-1.5 flex items-center gap-1 text-[10px] text-orange-600">
+                      <AlertTriangle className="w-3 h-3 animate-pulse-soft" />
                       <span>{excludedCandidates} candidat(s) non comptabilisé(s)</span>
                     </div>
                   )}
                 </div>
 
-                {/* SECTION 3: Contact - condensé */}
-                <div className="mb-2 md:mb-3 pb-2 md:pb-3 border-b">
-                  <p className="text-xs md:text-sm font-medium mb-1 md:mb-2">📞 Contact</p>
-                  <div className="space-y-0.5 text-xs md:text-sm">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <Phone className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                {/* SECTION 3: Contact - Premium */}
+                <div className="relative z-10 mb-3 md:mb-4 pb-3 md:pb-4 border-b border-border/30">
+                  <p className="text-xs md:text-sm font-medium mb-2 flex items-center gap-1.5">
+                    <span className="text-base">📞</span> Contact
+                  </p>
+                  <div className="space-y-1 text-xs md:text-sm">
+                    <div className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+                      <Phone className="h-3 w-3 md:h-3.5 md:w-3.5 flex-shrink-0" />
                       <span className="truncate">{profile.telephone || '-'}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <Mail className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0" />
+                    <div className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
+                      <Mail className="h-3 w-3 md:h-3.5 md:w-3.5 flex-shrink-0" />
                       <span className="truncate text-[10px] md:text-xs">{profile.email}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* SECTION 4: Recherche */}
-                <div className="mb-2 md:mb-3">
-                  <p className="text-xs md:text-sm font-medium mb-1 md:mb-2">🏠 Recherche</p>
+                {/* SECTION 4: Recherche - Premium */}
+                <div className="relative z-10 mb-3 md:mb-4">
+                  <p className="text-xs md:text-sm font-medium mb-2 flex items-center gap-1.5">
+                    <span className="text-base">🏠</span> Recherche
+                  </p>
                   <div className="flex gap-1.5 flex-wrap">
-                    <Badge variant="secondary" className="text-[10px] md:text-xs">
+                    <Badge className="bg-secondary/80 text-secondary-foreground border-0 text-[10px] md:text-xs hover:bg-secondary transition-colors">
                       {client.type_bien || 'Location'}
                     </Badge>
-                    <Badge variant="secondary" className="text-[10px] md:text-xs">
+                    <Badge className="bg-secondary/80 text-secondary-foreground border-0 text-[10px] md:text-xs hover:bg-secondary transition-colors">
                       {client.pieces || 0} pièces
                     </Badge>
-                    <Badge variant="outline" className="text-[10px] md:text-xs">
+                    <Badge variant="outline" className="text-[10px] md:text-xs bg-background/50 hover:bg-background transition-colors">
                       {client.region_recherche || 'N/A'}
                     </Badge>
                   </div>
                 </div>
 
-                {/* Agent assigné */}
-                <div className="text-xs text-muted-foreground mb-2 md:mb-3 pb-2 md:pb-3 border-b">
-                  <div className="flex items-center gap-1.5">
-                    <Users className="h-3 w-3 md:h-4 md:w-4" />
-                    <span className="truncate">Agent: {getAgentName(client.agent_id)}</span>
+                {/* Agent assigné - Premium */}
+                <div className="relative z-10 text-xs text-muted-foreground mb-3 md:mb-4 pb-3 md:pb-4 border-b border-border/30">
+                  <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                    <Users className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                    <span className="truncate">Agent: <span className="font-medium text-foreground">{getAgentName(client.agent_id)}</span></span>
                   </div>
                 </div>
 
-                {/* Date et barre de progression */}
-                <div className="mt-auto">
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                {/* Date et barre de progression - Premium */}
+                <div className="relative z-10 mt-auto">
+                  <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-1 text-muted-foreground text-[10px] md:text-xs">
                       <Calendar className="h-2.5 w-2.5 md:h-3 md:w-3" />
                       <span>{new Date(client.date_ajout || client.created_at || '').toLocaleDateString('fr-CH')}</span>
                     </div>
-                    <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] md:text-xs font-medium ${
-                      daysElapsed < 60 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                      daysElapsed < 90 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                      'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                    }`}>
+                    <div className={cn(
+                      "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold transition-all",
+                      daysElapsed < 60 
+                        ? 'bg-green-500/20 text-green-600 shadow-[0_0_10px_rgba(34,197,94,0.2)]' 
+                        : daysElapsed < 90 
+                          ? 'bg-orange-500/20 text-orange-600 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
+                          : 'bg-red-500/20 text-red-600 shadow-[0_0_10px_rgba(239,68,68,0.2)] animate-pulse-soft'
+                    )}>
                       <span>J+{Math.floor(daysElapsed)}</span>
                     </div>
                   </div>
 
-                  {/* Barre de progression */}
-                  <div className="w-full bg-muted rounded-full h-1.5 md:h-2">
+                  {/* Premium Progress bar with glow */}
+                  <div className="relative w-full bg-muted/50 rounded-full h-2 overflow-hidden">
                     <div
-                      className={`h-1.5 md:h-2 rounded-full transition-all ${
-                        daysElapsed < 60 ? 'bg-success' :
-                        daysElapsed < 90 ? 'bg-warning' :
-                        'bg-destructive'
-                      }`}
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500",
+                        daysElapsed < 60 
+                          ? 'bg-gradient-to-r from-green-500 to-green-400 shadow-[0_0_8px_rgba(34,197,94,0.4)]' 
+                          : daysElapsed < 90 
+                            ? 'bg-gradient-to-r from-orange-500 to-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.4)]' 
+                            : 'bg-gradient-to-r from-red-500 to-red-400 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
+                      )}
                       style={{ width: `${Math.min(progressPercent, 100)}%` }}
                     />
                   </div>
+                </div>
+                
+                {/* Navigation indicator */}
+                <div className="absolute bottom-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
+                  <ChevronRight className="w-5 h-5 text-primary" />
                 </div>
                 
                 {/* Hover arrow indicator */}
