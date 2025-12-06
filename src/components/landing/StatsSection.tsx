@@ -22,7 +22,6 @@ export function StatsSection() {
   useEffect(() => {
     const loadStats = async () => {
       try {
-        // Get real stats from database
         const [clientsResult, transactionsResult] = await Promise.all([
           supabase.from('clients').select('id', { count: 'exact', head: true }),
           supabase.from('transactions').select('id', { count: 'exact', head: true }).eq('statut', 'conclu'),
@@ -34,8 +33,7 @@ export function StatsSection() {
           satisfaction: 98,
           avgDays: 45,
         });
-      } catch (error) {
-        // Fallback values if database query fails
+      } catch {
         setStats({
           clients: 500,
           transactions: 250,
@@ -72,42 +70,46 @@ export function StatsSection() {
       value: stats.clients,
       suffix: '+',
       label: 'Clients accompagnés',
-      color: 'text-blue-500',
-      bgColor: 'bg-blue-500/10',
+      gradient: 'from-blue-500 to-cyan-500',
     },
     {
       icon: Home,
       value: stats.transactions,
       suffix: '+',
       label: 'Biens trouvés',
-      color: 'text-green-500',
-      bgColor: 'bg-green-500/10',
+      gradient: 'from-green-500 to-emerald-500',
     },
     {
       icon: Star,
       value: stats.satisfaction,
       suffix: '%',
       label: 'Satisfaction client',
-      color: 'text-yellow-500',
-      bgColor: 'bg-yellow-500/10',
+      gradient: 'from-yellow-500 to-orange-500',
     },
     {
       icon: Clock,
       value: stats.avgDays,
       suffix: ' jours',
       label: 'Délai moyen de recherche',
-      color: 'text-purple-500',
-      bgColor: 'bg-purple-500/10',
+      gradient: 'from-purple-500 to-pink-500',
     },
   ];
 
   return (
-    <section id="stats-section" className="py-20 bg-muted/30">
-      <div className="container mx-auto px-4">
+    <section id="stats-section" className="py-24 relative overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0 bg-muted/30" />
+      <div className="absolute inset-0 mesh-gradient opacity-40" />
+
+      <div className="container mx-auto px-4 relative z-10">
         {/* Section header */}
         <div className="text-center mb-16 animate-fade-in">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Nos résultats parlent d'eux-mêmes
+          <div className="inline-flex items-center gap-2 glass-morphism rounded-full px-4 py-2 mb-4">
+            <Star className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-primary">Nos résultats</span>
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
+            Nos résultats parlent <span className="gradient-text-animated">d'eux-mêmes</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Des chiffres qui témoignent de notre engagement envers nos clients
@@ -119,16 +121,20 @@ export function StatsSection() {
           {statItems.map((stat, index) => (
             <div
               key={index}
-              className="bg-card border border-border rounded-xl p-6 text-center card-interactive animate-fade-in group"
+              className="glass-morphism rounded-xl p-6 text-center card-shine card-3d animate-fade-in group"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              {/* Icon */}
-              <div className={`w-14 h-14 ${stat.bgColor} rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform`}>
-                <stat.icon className={`h-7 w-7 ${stat.color}`} />
+              {/* Icon with gradient */}
+              <div className="relative mx-auto w-16 h-16 mb-4">
+                <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}>
+                  <stat.icon className="h-8 w-8 text-white" />
+                </div>
+                {/* Glow effect */}
+                <div className={`absolute inset-0 w-16 h-16 rounded-2xl bg-gradient-to-br ${stat.gradient} blur-xl opacity-0 group-hover:opacity-40 transition-opacity`} />
               </div>
 
-              {/* Value */}
-              <div className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+              {/* Value with glow animation */}
+              <div className="text-3xl md:text-4xl font-bold text-foreground mb-2 stats-glow">
                 {isVisible ? (
                   <AnimatedCounter 
                     value={stat.value} 
@@ -142,7 +148,7 @@ export function StatsSection() {
               </div>
 
               {/* Label */}
-              <p className="text-muted-foreground text-sm">
+              <p className="text-muted-foreground text-sm font-medium">
                 {stat.label}
               </p>
             </div>
