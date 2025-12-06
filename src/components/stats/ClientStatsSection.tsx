@@ -115,108 +115,128 @@ export function ClientStatsSection({
       </div>
 
       {/* Mandate Progress */}
-      <Card className={daysRemaining <= 30 ? 'border-warning/50 bg-warning/5' : ''}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Durée du mandat
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm">
-              <span>Jour {daysElapsed} / 90</span>
-              <span className={daysRemaining <= 30 ? 'text-warning font-medium' : ''}>
-                {daysRemaining > 0 ? `${daysRemaining} jours restants` : 'Mandat expiré'}
-              </span>
+      <div className="animate-fade-in" style={{ animationDelay: '0ms', animationFillMode: 'both' }}>
+        <Card className={`group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${daysRemaining <= 30 ? 'border-warning/50 bg-warning/5' : 'border-primary/10 hover:border-primary/30'}`}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
+              <span className="transition-transform duration-300 group-hover:scale-[1.02] origin-left">Durée du mandat</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span>Jour {daysElapsed} / 90</span>
+                <span className={daysRemaining <= 30 ? 'text-warning font-medium' : ''}>
+                  {daysRemaining > 0 ? `${daysRemaining} jours restants` : 'Mandat expiré'}
+                </span>
+              </div>
+              <Progress value={mandatProgress} className="h-3" />
             </div>
-            <Progress value={mandatProgress} className="h-3" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatsCard
-          title="Offres reçues"
-          value={stats.offresRecues}
-          icon={Home}
-          description={`${stats.tauxVue}% consultées`}
-        />
-        <StatsCard
-          title="Visites effectuées"
-          value={stats.visitesEffectuees}
-          icon={Calendar}
-          description={`${stats.visitesAVenir} à venir`}
-        />
-        <StatsCard
-          title="Candidatures"
-          value={stats.candidaturesDeposees}
-          icon={FileCheck}
-          description={`${stats.candidaturesEnCours} en cours`}
-        />
-        <StatsCard
-          title="Acceptées"
-          value={stats.candidaturesAcceptees}
-          icon={CheckCircle}
-          variant={stats.candidaturesAcceptees > 0 ? 'success' : 'default'}
-        />
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Charts */}
+      {/* Stats Cards with staggered animations */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="animate-fade-in" style={{ animationDelay: '50ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Offres reçues"
+            value={stats.offresRecues}
+            icon={Home}
+            description={`${stats.tauxVue}% consultées`}
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Visites effectuées"
+            value={stats.visitesEffectuees}
+            icon={Calendar}
+            description={`${stats.visitesAVenir} à venir`}
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '150ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Candidatures"
+            value={stats.candidaturesDeposees}
+            icon={FileCheck}
+            description={`${stats.candidaturesEnCours} en cours`}
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Acceptées"
+            value={stats.candidaturesAcceptees}
+            icon={CheckCircle}
+            variant={stats.candidaturesAcceptees > 0 ? 'success' : 'default'}
+          />
+        </div>
+      </div>
+
+      {/* Charts with staggered animations */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <PerformanceChart
-          title="Offres reçues"
-          data={offresChartData}
-          dateRange={dateRange}
-          valueLabel="offres"
-        />
-        <PerformanceChart
-          title="Visites"
-          data={visitesChartData}
-          dateRange={dateRange}
-          color="hsl(142, 76%, 36%)"
-          valueLabel="visites"
-        />
+        <div className="animate-fade-in" style={{ animationDelay: '250ms', animationFillMode: 'both' }}>
+          <PerformanceChart
+            title="Offres reçues"
+            data={offresChartData}
+            dateRange={dateRange}
+            valueLabel="offres"
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '300ms', animationFillMode: 'both' }}>
+          <PerformanceChart
+            title="Visites"
+            data={visitesChartData}
+            dateRange={dateRange}
+            color="hsl(142, 76%, 36%)"
+            valueLabel="visites"
+          />
+        </div>
       </div>
 
       {/* Search Progress Funnel */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            Progression de votre recherche
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {searchPhases.map((phase, index) => {
-              const progress = Math.min((phase.value / phase.target) * 100, 100);
-              const isComplete = phase.value >= phase.target;
-              
-              return (
-                <div key={phase.name} className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="flex items-center gap-2">
-                      {isComplete && <CheckCircle className="h-4 w-4 text-green-500" />}
-                      <span className={isComplete ? 'text-green-600 font-medium' : ''}>
-                        {index + 1}. {phase.name}
+      <div className="animate-fade-in" style={{ animationDelay: '350ms', animationFillMode: 'both' }}>
+        <Card className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-primary/10 hover:border-primary/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3" />
+              <span className="transition-transform duration-300 group-hover:scale-[1.02] origin-left">Progression de votre recherche</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {searchPhases.map((phase, index) => {
+                const progress = Math.min((phase.value / phase.target) * 100, 100);
+                const isComplete = phase.value >= phase.target;
+                
+                return (
+                  <div 
+                    key={phase.name} 
+                    className="space-y-2 animate-fade-in" 
+                    style={{ animationDelay: `${400 + index * 50}ms`, animationFillMode: 'both' }}
+                  >
+                    <div className="flex justify-between text-sm">
+                      <span className="flex items-center gap-2">
+                        {isComplete && <CheckCircle className="h-4 w-4 text-success" />}
+                        <span className={isComplete ? 'text-success font-medium' : ''}>
+                          {index + 1}. {phase.name}
+                        </span>
                       </span>
-                    </span>
-                    <span className="text-muted-foreground">
-                      {phase.value} / {phase.target}
-                    </span>
+                      <span className="text-muted-foreground">
+                        {phase.value} / {phase.target}
+                      </span>
+                    </div>
+                    <Progress 
+                      value={progress} 
+                      className={`h-2 ${isComplete ? '[&>div]:bg-success' : ''}`}
+                    />
                   </div>
-                  <Progress 
-                    value={progress} 
-                    className={`h-2 ${isComplete ? '[&>div]:bg-green-500' : ''}`}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
