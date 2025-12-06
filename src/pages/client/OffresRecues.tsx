@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen, MessageSquare } from "lucide-react";
+import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen, MessageSquare, Sparkles, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -55,7 +55,6 @@ const OffresRecues = () => {
   const [proposedSlots, setProposedSlots] = useState<any[]>([]);
   const [candidatures, setCandidatures] = useState<any[]>([]);
   
-  // Documents existants du dossier client
   const [existingDocuments, setExistingDocuments] = useState<any[]>([]);
   const [selectedExistingSalaire, setSelectedExistingSalaire] = useState<string[]>([]);
   const [selectedExistingPoursuites, setSelectedExistingPoursuites] = useState<string | null>(null);
@@ -68,7 +67,6 @@ const OffresRecues = () => {
     loadDocumentsStats();
     loadExistingDocuments();
     loadCandidatures();
-    // Mark new_offer notifications as read when visiting this page
     markTypeAsRead('new_offer');
   }, [user?.id]);
 
@@ -88,7 +86,7 @@ const OffresRecues = () => {
         .from('documents')
         .select('*')
         .eq('client_id', clientData.id)
-        .is('offre_id', null) // Documents du dossier global, pas liés à une offre
+        .is('offre_id', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -206,7 +204,6 @@ const OffresRecues = () => {
 
       if (error) throw error;
 
-      // Compter les documents par offre
       const stats: any = {};
       data?.forEach((doc: any) => {
         const offreId = doc.offre_id || 'global';
@@ -253,14 +250,12 @@ const OffresRecues = () => {
     }
   };
 
-  // Rafraîchir les données après upload
   const refreshData = () => {
     loadDocumentsStats();
     loadVisites();
     loadCandidatures();
   };
 
-  // Handler pour progresser dans le workflow
   const handleProgressWorkflow = async (nextStatut: string, candidatureId: string) => {
     try {
       const { error } = await supabase
@@ -276,7 +271,6 @@ const OffresRecues = () => {
 
       if (error) throw error;
 
-      // Notify agent
       const candidature = candidatures.find(c => c.id === candidatureId);
       const offre = offres.find(o => o.id === candidature?.offre_id);
       
@@ -338,7 +332,6 @@ const OffresRecues = () => {
   };
 
   const updateStatut = async (offreId: string, newStatut: string) => {
-    // Si c'est une visite planifiée, ouvrir le dialog de sélection de date
     if (newStatut === 'visite_planifiee') {
       const offre = offres.find(o => o.id === offreId);
       if (offre) {
@@ -358,7 +351,6 @@ const OffresRecues = () => {
 
       if (error) throw error;
 
-      // Créer un message automatique pour notifier l'agent
       if (newStatut === 'interesse' || newStatut === 'refusee') {
         const { data: clientData } = await supabase
           .from('clients')
@@ -367,7 +359,6 @@ const OffresRecues = () => {
           .maybeSingle();
 
         if (clientData?.agent_id) {
-          // Trouver ou créer une conversation
           let { data: conv } = await supabase
             .from('conversations')
             .select('id')
@@ -405,8 +396,6 @@ const OffresRecues = () => {
           }
         }
       }
-
-      // NE PLUS créer automatiquement de visite ici - c'est fait dans confirmVisit()
 
       setOffres(offres.map(o => o.id === offreId ? { ...o, statut: newStatut } : o));
       toast({ title: "Succès", description: "Statut mis à jour et agent notifié" });
@@ -489,7 +478,6 @@ const OffresRecues = () => {
     setDocumentPieceIdentite(null);
     setMessageClient('');
     setAccepteConditions(false);
-    // Reset existing document selections
     setSelectedExistingSalaire([]);
     setSelectedExistingPoursuites(null);
     setSelectedExistingIdentite(null);
@@ -500,7 +488,6 @@ const OffresRecues = () => {
     setSelectedOffre(offre);
     setDelegateDate("");
     
-    // Charger les créneaux proposés par l'agent pour cette offre
     const { data: slots, error } = await supabase
       .from('visites')
       .select('*')
@@ -546,7 +533,6 @@ const OffresRecues = () => {
         return;
       }
 
-      // Créer une visite déléguée avec la date sélectionnée
       await supabase.from('visites').insert({
         offre_id: selectedOffre.id,
         client_id: clientData.id,
@@ -558,13 +544,11 @@ const OffresRecues = () => {
         notes: 'Visite déléguée à l\'agent par le client'
       });
 
-      // Marquer l'offre comme intéressée
       await supabase
         .from('offres')
         .update({ statut: 'interesse' })
         .eq('id', selectedOffre.id);
 
-      // Notifier l'agent
       let { data: conv } = await supabase
         .from('conversations')
         .select('id')
@@ -626,14 +610,12 @@ const OffresRecues = () => {
   };
 
   const handlePostulerDirect = async (offre: any) => {
-    // Vérifier si une visite a été effectuée pour cette offre
     const visiteEffectuee = visites.find(v => 
       v.offre_id === offre.id && 
       v.statut === 'effectuee'
     );
     
     if (!visiteEffectuee) {
-      // Afficher l'alerte au lieu de continuer
       setSelectedOffre(offre);
       setVisitRequiredAlertOpen(true);
       return;
@@ -655,7 +637,6 @@ const OffresRecues = () => {
         return;
       }
 
-      // 1. Créer une candidature avec statut 'candidature_deposee' (demande reçue, pas encore envoyé)
       await supabase.from('candidatures').insert({
         offre_id: offre.id,
         client_id: clientData.id,
@@ -664,13 +645,11 @@ const OffresRecues = () => {
         dossier_complet: false
       });
 
-      // 2. Marquer l'offre comme candidature en cours
       await supabase
         .from('offres')
         .update({ statut: 'candidature_deposee' })
         .eq('id', offre.id);
 
-      // 3. Notifier l'agent via messagerie avec un tag spécial pour le bouton
       if (clientData.agent_id) {
         let { data: conv } = await supabase
           .from('conversations')
@@ -693,7 +672,6 @@ const OffresRecues = () => {
         }
 
         if (conv) {
-          // Message enrichi avec tag spécial pour le bouton
           const messageContent = `📝 **DEMANDE DE DÉPÔT DE CANDIDATURE**
 
 🏠 **Bien concerné:**
@@ -745,7 +723,6 @@ const OffresRecues = () => {
       return;
     }
 
-    // Vérifier les fiches de salaire (upload OU sélection existante)
     const totalSalaireCount = documentsFicheSalaire.filter(f => f).length + selectedExistingSalaire.length;
     if (totalSalaireCount < 3) {
       toast({
@@ -756,7 +733,6 @@ const OffresRecues = () => {
       return;
     }
 
-    // Vérifier extrait poursuites (upload OU sélection existante)
     if (!documentExtraitPoursuites && !selectedExistingPoursuites) {
       toast({
         title: 'Document manquant',
@@ -766,7 +742,6 @@ const OffresRecues = () => {
       return;
     }
 
-    // Vérifier pièce d'identité (upload OU sélection existante)
     if (!documentPieceIdentite && !selectedExistingIdentite) {
       toast({
         title: 'Document manquant',
@@ -779,7 +754,6 @@ const OffresRecues = () => {
     setUploadingDocs(true);
 
     try {
-      // Upload new files si fournis
       const salaireUploads = documentsFicheSalaire.length > 0 
         ? await Promise.all(
             documentsFicheSalaire.filter(f => f).map(file =>
@@ -804,7 +778,6 @@ const OffresRecues = () => {
         );
       }
 
-      // Lier les documents existants sélectionnés à cette offre
       if (selectedExistingSalaire.length > 0) {
         await supabase
           .from('documents')
@@ -911,7 +884,6 @@ const OffresRecues = () => {
     setSelectedOffre(offre);
     setSelectedDate("");
     
-    // Charger les créneaux proposés par l'agent pour cette offre
     const { data: slots, error } = await supabase
       .from('visites')
       .select('*')
@@ -955,7 +927,6 @@ const OffresRecues = () => {
         return;
       }
 
-      // Créer la visite avec la date sélectionnée
       await supabase
         .from('visites')
         .insert({
@@ -968,13 +939,11 @@ const OffresRecues = () => {
           notes: 'Visite demandée par le client',
         });
 
-      // Mettre à jour le statut de l'offre
       await supabase
         .from('offres')
         .update({ statut: 'visite_planifiee', updated_at: new Date().toISOString() })
         .eq('id', selectedOffre.id);
 
-      // Notifier l'agent
       let { data: conv } = await supabase
         .from('conversations')
         .select('id')
@@ -1014,7 +983,6 @@ const OffresRecues = () => {
         description: `Rendez-vous confirmé le ${new Date(selectedDate).toLocaleDateString('fr-FR')} à ${new Date(selectedDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}. Votre agent a été notifié.`
       });
       
-      // Rafraîchir la liste des offres
       await loadOffres();
       refreshData();
     } catch (error) {
@@ -1029,8 +997,12 @@ const OffresRecues = () => {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <p className="text-muted-foreground">Chargement...</p>
+      <div className="flex-1 flex flex-col items-center justify-center gap-4">
+        <div className="relative">
+          <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+          <Building2 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 text-primary" />
+        </div>
+        <p className="text-muted-foreground animate-pulse">Chargement des offres...</p>
       </div>
     );
   }
@@ -1038,121 +1010,186 @@ const OffresRecues = () => {
   return (
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Offres Reçues</h1>
-          <p className="text-muted-foreground">Consultez les biens qui vous sont proposés</p>
+        {/* Header avec animation */}
+        <div className="mb-8 animate-fade-in">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 backdrop-blur-sm">
+              <Home className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                Offres Reçues
+              </h1>
+              <p className="text-muted-foreground">Consultez les biens qui vous sont proposés</p>
+            </div>
+          </div>
+          {offres.length > 0 && (
+            <Badge variant="secondary" className="mt-2">
+              <Sparkles className="w-3 h-3 mr-1" />
+              {offres.length} offre{offres.length > 1 ? 's' : ''} disponible{offres.length > 1 ? 's' : ''}
+            </Badge>
+          )}
         </div>
 
-        <div className="grid gap-6">
-          {offres.map((offre, index) => {
-            const { label, variant } = formatStatutOffre(offre.statut);
-            
-            return (
-              <Card 
-                key={offre.id} 
-                className="card-interactive p-6 cursor-pointer hover:shadow-lg transition-shadow animate-fade-in"
-                onClick={() => handleViewDetails(offre)}
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl font-semibold">{offre.adresse}</h3>
-                      <Badge variant={variant}>{label}</Badge>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        Reçue le {new Date(offre.date_envoi).toLocaleDateString('fr-FR')}
-                      </div>
-                      
-                      {offre.agent?.profile && (
-                        <div className="flex items-center gap-2">
-                          <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-xs font-medium text-primary">
-                              {offre.agent.profile.prenom[0]}{offre.agent.profile.nom[0]}
-                            </span>
-                          </div>
-                          <span className="text-sm">
-                            Envoyée par <strong>{offre.agent.profile.prenom} {offre.agent.profile.nom}</strong>
-                          </span>
+        {offres.length === 0 ? (
+          <Card className="p-12 text-center bg-gradient-to-br from-card to-muted/20 border-dashed animate-fade-in">
+            <div className="max-w-md mx-auto space-y-4">
+              <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                <Home className="w-10 h-10 text-primary/60" />
+              </div>
+              <h3 className="text-xl font-semibold">Aucune offre pour le moment</h3>
+              <p className="text-muted-foreground">
+                Votre agent vous enverra des offres correspondant à vos critères de recherche.
+              </p>
+            </div>
+          </Card>
+        ) : (
+          <div className="grid gap-6">
+            {offres.map((offre, index) => {
+              const { label, variant } = formatStatutOffre(offre.statut);
+              
+              return (
+                <Card 
+                  key={offre.id} 
+                  className="group relative overflow-hidden p-6 cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm border-border/50 hover:border-primary/30 animate-fade-in"
+                  onClick={() => handleViewDetails(offre)}
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  {/* Effet de shine au survol */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                  </div>
+
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">{offre.adresse}</h3>
+                          <Badge variant={variant} className="shadow-sm">{label}</Badge>
                         </div>
-                      )}
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            Reçue le {new Date(offre.date_envoi).toLocaleDateString('fr-FR')}
+                          </div>
+                          
+                          {offre.agent?.profile && (
+                            <div className="flex items-center gap-2">
+                              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/20">
+                                <span className="text-xs font-medium text-primary">
+                                  {offre.agent.profile.prenom[0]}{offre.agent.profile.nom[0]}
+                                </span>
+                              </div>
+                              <span className="text-sm">
+                                Envoyée par <strong>{offre.agent.profile.prenom} {offre.agent.profile.nom}</strong>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">CHF {offre.prix.toLocaleString()}</p>
+                        <p className="text-sm text-muted-foreground">par mois</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-primary">CHF {offre.prix.toLocaleString()}</p>
-                    <p className="text-sm text-muted-foreground">par mois</p>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-3 gap-4 mb-4">
-                  <div className="flex items-center gap-2">
-                    <Home className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{offre.pieces} pièces</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Square className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{offre.surface} m²</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{offre.etage} étage</span>
-                  </div>
-                </div>
+                    <div className="grid grid-cols-3 gap-4 mb-4 p-3 rounded-lg bg-muted/30 backdrop-blur-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-md bg-background/50">
+                          <Home className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <span className="text-sm font-medium">{offre.pieces} pièces</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-md bg-background/50">
+                          <Square className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <span className="text-sm font-medium">{offre.surface} m²</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="p-1.5 rounded-md bg-background/50">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <span className="text-sm font-medium">{offre.etage} étage</span>
+                      </div>
+                    </div>
 
-                <p className="text-sm mb-4 line-clamp-2">{offre.description}</p>
+                    <p className="text-sm mb-4 line-clamp-2 text-muted-foreground">{offre.description}</p>
 
-                {offre.disponibilite && (
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Disponible dès le {offre.disponibilite}
-                  </p>
-                )}
+                    {offre.disponibilite && (
+                      <p className="text-sm text-muted-foreground mb-4 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Disponible dès le {offre.disponibilite}
+                      </p>
+                    )}
 
-                {/* Indicateur de chances */}
-                {(offre.statut === 'interesse' || offre.statut === 'visite_planifiee' || 
-                  offre.statut === 'visite_effectuee' || offre.statut === 'candidature_deposee') && (
-                  <div className="mb-4">
-                    <ChanceIndicator
-                      {...calculateChances(
-                        offre,
-                        clientData,
-                        documentsStats[offre.id] || documentsStats['global'] || {
-                          fiche_salaire: 0,
-                          extrait_poursuites: 0,
-                          piece_identite: 0,
-                          permis_sejour: 0
-                        },
-                        visites
+                    {(offre.statut === 'interesse' || offre.statut === 'visite_planifiee' || 
+                      offre.statut === 'visite_effectuee' || offre.statut === 'candidature_deposee') && (
+                      <div className="mb-4">
+                        <ChanceIndicator
+                          {...calculateChances(
+                            offre,
+                            clientData,
+                            documentsStats[offre.id] || documentsStats['global'] || {
+                              fiche_salaire: 0,
+                              extrait_poursuites: 0,
+                              piece_identite: 0,
+                              permis_sejour: 0
+                            },
+                            visites
+                          )}
+                          compact
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 flex-wrap pt-4 border-t border-border/50" onClick={(e) => e.stopPropagation()}>
+                      <Button variant="default" size="sm" className="shadow-sm" onClick={() => handleViewDetails(offre)}>
+                        <Info className="mr-2 h-4 w-4" />
+                        Voir les détails
+                      </Button>
+                      {offre.lien_annonce && (
+                        <LinkPreviewCard url={offre.lien_annonce} />
                       )}
-                      compact
-                    />
-                  </div>
-                )}
-
-                <div className="flex gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
-                  <Button variant="default" size="sm" onClick={() => handleViewDetails(offre)}>
-                    <Info className="mr-2 h-4 w-4" />
-                    Voir les détails
-                  </Button>
-                  {offre.lien_annonce && (
-                    <LinkPreviewCard url={offre.lien_annonce} />
-                  )}
-                  {(offre.statut === 'envoyee' || offre.statut === 'vue' || offre.statut === 'interesse') && (
-                    <>
-                      <Button size="sm" onClick={() => handlePlanVisit(offre)}>
-                        <Calendar className="mr-2 h-4 w-4" />
-                        Planifier une visite
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleDeleguerVisite(offre)}>
-                        <Calendar className="mr-2 h-4 w-4" />
-                        Déléguer à l'agent
-                      </Button>
-                      {offre.statut !== 'interesse' && (
+                      {(offre.statut === 'envoyee' || offre.statut === 'vue' || offre.statut === 'interesse') && (
                         <>
-                          <Button size="sm" onClick={() => updateStatut(offre.id, 'interesse')}>
+                          <Button size="sm" onClick={() => handlePlanVisit(offre)}>
+                            <Calendar className="mr-2 h-4 w-4" />
+                            Planifier une visite
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => handleDeleguerVisite(offre)}>
+                            <Calendar className="mr-2 h-4 w-4" />
+                            Déléguer à l'agent
+                          </Button>
+                          {offre.statut !== 'interesse' && (
+                            <>
+                              <Button size="sm" onClick={() => updateStatut(offre.id, 'interesse')}>
+                                <Heart className="mr-2 h-4 w-4" />
+                                Intéressé
+                              </Button>
+                              <Button size="sm" variant="destructive" onClick={() => updateStatut(offre.id, 'refusee')}>
+                                <X className="mr-2 h-4 w-4" />
+                                Refuser
+                              </Button>
+                            </>
+                          )}
+                        </>
+                      )}
+                      {offre.statut === 'visite_planifiee' && (
+                        <Button size="sm" onClick={() => updateStatut(offre.id, 'visite_effectuee')}>
+                          <Check className="mr-2 h-4 w-4" />
+                          Marquer la visite comme effectuée
+                        </Button>
+                      )}
+                      {offre.statut === 'visite_effectuee' && (
+                        <>
+                          <Button size="sm" onClick={() => handlePostulerDirect(offre)}>
+                            <FileCheck className="mr-2 h-4 w-4" />
+                            Déposer ma candidature
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => updateStatut(offre.id, 'interesse')}>
                             <Heart className="mr-2 h-4 w-4" />
-                            Intéressé
+                            Marquer comme intéressé
                           </Button>
                           <Button size="sm" variant="destructive" onClick={() => updateStatut(offre.id, 'refusee')}>
                             <X className="mr-2 h-4 w-4" />
@@ -1160,41 +1197,22 @@ const OffresRecues = () => {
                           </Button>
                         </>
                       )}
-                    </>
-                  )}
-                  {offre.statut === 'visite_planifiee' && (
-                    <Button size="sm" onClick={() => updateStatut(offre.id, 'visite_effectuee')}>
-                      <Check className="mr-2 h-4 w-4" />
-                      Marquer la visite comme effectuée
-                    </Button>
-                  )}
-                  {offre.statut === 'visite_effectuee' && (
-                    <>
-                      <Button size="sm" onClick={() => handlePostulerDirect(offre)}>
-                        <FileCheck className="mr-2 h-4 w-4" />
-                        Déposer ma candidature
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => updateStatut(offre.id, 'interesse')}>
-                        <Heart className="mr-2 h-4 w-4" />
-                        Marquer comme intéressé
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => updateStatut(offre.id, 'refusee')}>
-                        <X className="mr-2 h-4 w-4" />
-                        Refuser
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
 
         {/* Dialog des détails */}
         <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background to-muted/20 backdrop-blur-xl border-border/50">
             <DialogHeader>
-              <DialogTitle className="text-2xl">Détails de l'offre</DialogTitle>
+              <DialogTitle className="text-2xl flex items-center gap-2">
+                <Building2 className="h-6 w-6 text-primary" />
+                Détails de l'offre
+              </DialogTitle>
               <DialogDescription>
                 Informations complètes sur le bien proposé
               </DialogDescription>
@@ -1202,8 +1220,7 @@ const OffresRecues = () => {
             
             {selectedOffre && (
               <div className="space-y-6">
-                {/* En-tête */}
-                <div className="border-b pb-4">
+                <div className="border-b border-border/50 pb-4">
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <h3 className="text-xl font-semibold">{selectedOffre.adresse}</h3>
@@ -1212,13 +1229,12 @@ const OffresRecues = () => {
                       </Badge>
                     </div>
                     <div className="text-right">
-                      <p className="text-3xl font-bold text-primary">CHF {selectedOffre.prix.toLocaleString()}</p>
+                      <p className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">CHF {selectedOffre.prix.toLocaleString()}</p>
                       <p className="text-sm text-muted-foreground">par mois</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Workflow de candidature - affiché si candidature_deposee ou après */}
                 {(() => {
                   const candidature = candidatures.find(c => c.offre_id === selectedOffre.id);
                   const showWorkflow = ['candidature_deposee', 'en_attente', 'acceptee', 'bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(candidature?.statut || selectedOffre.statut);
@@ -1228,7 +1244,7 @@ const OffresRecues = () => {
                   const effectiveStatut = candidature?.statut || selectedOffre.statut;
                   
                   return (
-                    <div className="border-b pb-4">
+                    <div className="border-b border-border/50 pb-4">
                       <h4 className="font-semibold mb-3">📊 Suivi de votre candidature</h4>
                       <CandidatureWorkflowInteractive 
                         currentStatut={effectiveStatut}
@@ -1239,26 +1255,31 @@ const OffresRecues = () => {
                   );
                 })()}
 
-                {/* Caractéristiques principales */}
-                <div>
+                <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 backdrop-blur-sm">
                   <h4 className="font-semibold mb-3">📋 Caractéristiques</h4>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="flex items-center gap-2">
-                      <Home className="h-5 w-5 text-muted-foreground" />
+                      <div className="p-2 rounded-lg bg-background/50">
+                        <Home className="h-5 w-5 text-muted-foreground" />
+                      </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Pièces</p>
                         <p className="font-medium">{selectedOffre.pieces}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Square className="h-5 w-5 text-muted-foreground" />
+                      <div className="p-2 rounded-lg bg-background/50">
+                        <Square className="h-5 w-5 text-muted-foreground" />
+                      </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Surface</p>
                         <p className="font-medium">{selectedOffre.surface} m²</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <MapPin className="h-5 w-5 text-muted-foreground" />
+                      <div className="p-2 rounded-lg bg-background/50">
+                        <MapPin className="h-5 w-5 text-muted-foreground" />
+                      </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Étage</p>
                         <p className="font-medium">{selectedOffre.etage}</p>
@@ -1266,7 +1287,9 @@ const OffresRecues = () => {
                     </div>
                     {selectedOffre.type_bien && (
                       <div className="flex items-center gap-2">
-                        <Home className="h-5 w-5 text-muted-foreground" />
+                        <div className="p-2 rounded-lg bg-background/50">
+                          <Home className="h-5 w-5 text-muted-foreground" />
+                        </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Type</p>
                           <p className="font-medium">{selectedOffre.type_bien}</p>
@@ -1275,7 +1298,9 @@ const OffresRecues = () => {
                     )}
                     {selectedOffre.disponibilite && (
                       <div className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-muted-foreground" />
+                        <div className="p-2 rounded-lg bg-background/50">
+                          <Calendar className="h-5 w-5 text-muted-foreground" />
+                        </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Disponibilité</p>
                           <p className="font-medium">{selectedOffre.disponibilite}</p>
@@ -1285,7 +1310,6 @@ const OffresRecues = () => {
                   </div>
                 </div>
 
-                {/* Description */}
                 {selectedOffre.description && (
                   <div>
                     <h4 className="font-semibold mb-2">📝 Description</h4>
@@ -1293,9 +1317,8 @@ const OffresRecues = () => {
                   </div>
                 )}
 
-                {/* Informations pratiques */}
                 {(selectedOffre.code_immeuble || selectedOffre.concierge_nom || selectedOffre.locataire_nom) && (
-                  <div>
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20 backdrop-blur-sm">
                     <h4 className="font-semibold mb-3">🏢 Informations pratiques</h4>
                     <div className="space-y-2">
                       {selectedOffre.code_immeuble && (
@@ -1326,7 +1349,6 @@ const OffresRecues = () => {
                   </div>
                 )}
 
-                {/* Indicateur de chances détaillé */}
                 {(selectedOffre.statut === 'interesse' || selectedOffre.statut === 'visite_planifiee' || 
                   selectedOffre.statut === 'visite_effectuee' || selectedOffre.statut === 'candidature_deposee') && (
                   <ChanceIndicator
@@ -1344,161 +1366,51 @@ const OffresRecues = () => {
                   />
                 )}
 
-                {/* Section Agent */}
                 {selectedOffre.agent?.profile && (
-                  <div className="bg-muted/30 p-4 rounded-lg">
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 backdrop-blur-sm border border-primary/20">
                     <h4 className="font-semibold mb-3 flex items-center gap-2">
                       <User className="h-5 w-5" />
                       👤 Votre agent
                     </h4>
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center border border-primary/20">
                           <span className="text-sm font-medium text-primary">
                             {selectedOffre.agent.profile.prenom[0]}{selectedOffre.agent.profile.nom[0]}
                           </span>
                         </div>
                         <div>
-                          <p className="font-medium">
-                            {selectedOffre.agent.profile.prenom} {selectedOffre.agent.profile.nom}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Agent immobilier</p>
+                          <p className="font-medium">{selectedOffre.agent.profile.prenom} {selectedOffre.agent.profile.nom}</p>
+                          <p className="text-sm text-muted-foreground">{selectedOffre.agent.profile.email}</p>
                         </div>
                       </div>
-                      
-                      <div className="flex gap-2 flex-wrap">
-                        <Button variant="outline" size="sm" asChild>
-                          <a href={`mailto:${selectedOffre.agent.profile.email}`}>
-                            📧 {selectedOffre.agent.profile.email}
-                          </a>
+                      {selectedOffre.agent.profile.telephone && (
+                        <Button variant="outline" size="sm" className="w-full" onClick={(e) => {
+                          e.stopPropagation();
+                          window.location.href = `tel:${selectedOffre.agent.profile.telephone}`;
+                        }}>
+                          📞 {selectedOffre.agent.profile.telephone}
                         </Button>
-                        {selectedOffre.agent.profile.telephone && (
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={`tel:${selectedOffre.agent.profile.telephone}`}>
-                              📞 {selectedOffre.agent.profile.telephone}
-                            </a>
-                          </Button>
-                        )}
-                      </div>
+                      )}
+                      <Button variant="default" size="sm" className="w-full" onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/client/messagerie');
+                      }}>
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        Envoyer un message
+                      </Button>
                     </div>
                   </div>
                 )}
 
-                {/* Commentaires de l'agent */}
                 {selectedOffre.commentaires && (
                   <div>
-                    <h4 className="font-semibold mb-2">💬 Commentaires de votre agent</h4>
+                    <h4 className="font-semibold mb-2">💬 Commentaires de l'agent</h4>
                     <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedOffre.commentaires}</p>
                   </div>
                 )}
 
-                {/* Section Visite planifiée/effectuée */}
-                {(() => {
-                  const visiteForOffre = visites.find(v => v.offre_id === selectedOffre.id);
-                  if (!visiteForOffre) return null;
-                  
-                  return (
-                    <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <h4 className="font-semibold mb-3 flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-blue-600" />
-                        {visiteForOffre.statut === 'effectuee' ? '✅ Visite effectuée' : '📅 Visite planifiée'}
-                        {visiteForOffre.est_deleguee && (
-                          <Badge variant="outline" className="ml-2 text-xs">Déléguée à l'agent</Badge>
-                        )}
-                      </h4>
-                      <div className="space-y-3">
-                        {/* Date et heure complètes */}
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">
-                            {new Date(visiteForOffre.date_visite).toLocaleDateString('fr-FR', {
-                              weekday: 'long',
-                              day: 'numeric', 
-                              month: 'long',
-                              year: 'numeric'
-                            })} à {new Date(visiteForOffre.date_visite).toLocaleTimeString('fr-FR', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </span>
-                        </div>
-                        
-                        {/* Notes de l'agent sur la visite */}
-                        {visiteForOffre.notes && (
-                          <div className="mt-2 p-3 bg-white/50 dark:bg-black/20 rounded">
-                            <p className="text-sm font-medium mb-1">📝 Notes :</p>
-                            <p className="text-sm text-muted-foreground">{visiteForOffre.notes}</p>
-                          </div>
-                        )}
-                        
-                        {/* Feedback agent après visite */}
-                        {visiteForOffre.feedback_agent && (
-                          <div className="mt-2 p-3 bg-yellow-50 dark:bg-yellow-950/30 rounded border border-yellow-200 dark:border-yellow-800">
-                            <p className="text-sm font-medium mb-1">💬 Retour de l'agent après visite :</p>
-                            <p className="text-sm">{visiteForOffre.feedback_agent}</p>
-                          </div>
-                        )}
-                        
-                        {/* Médias de la visite */}
-                        {visiteForOffre.medias && (visiteForOffre.medias as any[]).length > 0 && (
-                          <div className="mt-3">
-                            <p className="text-sm font-medium mb-2">📸 Photos/Vidéos de la visite :</p>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                              {(visiteForOffre.medias as any[]).map((media: any, idx: number) => (
-                                <Dialog key={idx}>
-                                  <DialogTrigger asChild>
-                                    <div className="cursor-pointer hover:opacity-80 transition-opacity rounded-lg overflow-hidden border">
-                                      {media.type?.startsWith('image/') ? (
-                                        <img 
-                                          src={media.url} 
-                                          alt={media.name || 'Photo de visite'} 
-                                          className="w-full h-20 object-cover"
-                                        />
-                                      ) : (
-                                        <video 
-                                          src={media.url} 
-                                          className="w-full h-20 object-cover"
-                                        />
-                                      )}
-                                    </div>
-                                  </DialogTrigger>
-                                  <DialogContent className="max-w-4xl">
-                                    <DialogHeader>
-                                      <DialogTitle>{media.name || 'Média de la visite'}</DialogTitle>
-                                    </DialogHeader>
-                                    {media.type?.startsWith('image/') ? (
-                                      <img src={media.url} alt="" className="w-full rounded" />
-                                    ) : (
-                                      <video src={media.url} controls className="w-full rounded" />
-                                    )}
-                                  </DialogContent>
-                                </Dialog>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Recommandation de l'agent */}
-                        {visiteForOffre.recommandation_agent && (
-                          <div className="mt-2">
-                            <Badge variant={
-                              visiteForOffre.recommandation_agent === 'fortement_recommande' ? 'default' :
-                              visiteForOffre.recommandation_agent === 'recommande' ? 'secondary' : 'outline'
-                            } className="text-sm">
-                              {visiteForOffre.recommandation_agent === 'fortement_recommande' && '⭐⭐⭐ Fortement recommandé'}
-                              {visiteForOffre.recommandation_agent === 'recommande' && '⭐⭐ Recommandé'}
-                              {visiteForOffre.recommandation_agent === 'neutre' && '⭐ Neutre'}
-                              {visiteForOffre.recommandation_agent === 'non_recommande' && '❌ Non recommandé'}
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Actions */}
-                <div className="flex gap-2 flex-wrap pt-4 border-t">
+                <div className="flex gap-2 flex-wrap pt-4 border-t border-border/50">
                   {selectedOffre.lien_annonce && (
                     <LinkPreviewCard url={selectedOffre.lien_annonce} />
                   )}
@@ -1534,9 +1446,12 @@ const OffresRecues = () => {
 
         {/* Dialog de planification de visite */}
         <Dialog open={visitDialogOpen} onOpenChange={setVisitDialogOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md bg-gradient-to-br from-background to-muted/20 backdrop-blur-xl border-border/50">
             <DialogHeader>
-              <DialogTitle>Planifier une visite</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-primary" />
+                Planifier une visite
+              </DialogTitle>
               <DialogDescription>
                 Sélectionnez un créneau proposé par votre agent
               </DialogDescription>
@@ -1544,9 +1459,9 @@ const OffresRecues = () => {
             
             {selectedOffre && (
               <div className="space-y-4">
-                <div>
+                <div className="p-3 rounded-lg bg-gradient-to-br from-muted/50 to-muted/20">
                   <h4 className="font-semibold text-sm mb-2">{selectedOffre.adresse}</h4>
-                  <p className="text-2xl font-bold text-primary">CHF {selectedOffre.prix.toLocaleString()}/mois</p>
+                  <p className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">CHF {selectedOffre.prix.toLocaleString()}/mois</p>
                 </div>
 
                 <div className="space-y-4">
@@ -1557,8 +1472,10 @@ const OffresRecues = () => {
                   </Label>
                   
                   {proposedSlots.length === 0 ? (
-                    <div className="p-6 bg-muted rounded-lg text-center space-y-3">
-                      <Calendar className="w-12 h-12 mx-auto text-muted-foreground" />
+                    <div className="p-6 bg-gradient-to-br from-muted/50 to-muted/20 rounded-xl text-center space-y-3">
+                      <div className="w-12 h-12 mx-auto rounded-full bg-muted flex items-center justify-center">
+                        <Calendar className="w-6 h-6 text-muted-foreground" />
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         Votre agent n'a pas encore proposé de créneaux de visite pour cette offre.
                       </p>
@@ -1613,7 +1530,7 @@ const OffresRecues = () => {
                   )}
                   
                   {proposedSlots.length > 0 && (
-                    <div className="text-xs text-muted-foreground pt-3 border-t space-y-2">
+                    <div className="text-xs text-muted-foreground pt-3 border-t border-border/50 space-y-2">
                       <p className="flex items-center gap-1">
                         <Info className="h-3 w-3" />
                         Aucun créneau ne vous convient ?
@@ -1634,7 +1551,7 @@ const OffresRecues = () => {
                   )}
                   
                   {selectedDate && (
-                    <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+                    <div className="p-4 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl border border-primary/20">
                       <p className="text-sm font-medium mb-1">✅ Créneau sélectionné :</p>
                       <p className="text-sm">
                         <strong>
@@ -1672,9 +1589,12 @@ const OffresRecues = () => {
 
         {/* Dialog de candidature */}
         <Dialog open={candidatureDialogOpen} onOpenChange={setCandidatureDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background to-muted/20 backdrop-blur-xl border-border/50">
             <DialogHeader>
-              <DialogTitle>📝 Déposer ma candidature</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <FileCheck className="h-5 w-5 text-primary" />
+                📝 Déposer ma candidature
+              </DialogTitle>
               <DialogDescription>
                 Complétez votre candidature en fournissant tous les documents requis
               </DialogDescription>
@@ -1682,20 +1602,20 @@ const OffresRecues = () => {
 
             {selectedOffre && (
               <div className="space-y-6 py-4">
-                <Card className="bg-muted">
+                <Card className="bg-gradient-to-br from-muted/50 to-muted/20 border-border/50">
                   <CardContent className="pt-4">
                     <h4 className="font-semibold mb-2">Bien concerné</h4>
                     <p className="text-sm">{selectedOffre.adresse}</p>
-                    <p className="text-lg font-bold text-primary mt-1">
+                    <p className="text-lg font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mt-1">
                       CHF {selectedOffre.prix.toLocaleString()}/mois
                     </p>
                   </CardContent>
                 </Card>
 
                 {selectedOffre.statut !== 'visite_effectuee' && (
-                  <div className="p-4 bg-orange-50 dark:bg-orange-950 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-50/50 dark:from-orange-950/50 dark:to-orange-950/20 rounded-xl border border-orange-200 dark:border-orange-800/50">
                     <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                      ⚠️ <strong>Important :</strong> Une visite du bien sera obligatoire avant la validation finale de votre candidature. Vous ou votre agent devrez effectuer cette visite pour confirmer votre intérêt.
+                      ⚠️ <strong>Important :</strong> Une visite du bien sera obligatoire avant la validation finale de votre candidature.
                     </p>
                   </div>
                 )}
@@ -1704,7 +1624,7 @@ const OffresRecues = () => {
                   <h4 className="font-semibold">Documents à fournir (obligatoires)</h4>
 
                   {/* Fiches de salaire */}
-                  <div className="border rounded-lg p-4">
+                  <div className="border border-border/50 rounded-xl p-4 bg-gradient-to-br from-card to-card/50">
                     <Label className="text-base font-medium">
                       📄 3 dernières fiches de salaire *
                     </Label>
@@ -1712,9 +1632,8 @@ const OffresRecues = () => {
                       Vos 3 derniers bulletins de salaire ({documentsFicheSalaire.filter(f => f).length + selectedExistingSalaire.length}/3 fournis)
                     </p>
                     
-                    {/* Documents existants du dossier */}
                     {existingDocuments.filter(d => d.type_document === 'fiche_salaire').length > 0 && (
-                      <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                      <div className="mb-3 p-3 bg-gradient-to-br from-blue-50/80 to-blue-50/30 dark:from-blue-950/30 dark:to-blue-950/10 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
                         <p className="text-sm font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2 mb-2">
                           <FolderOpen className="h-4 w-4" />
                           Sélectionner depuis mon dossier :
@@ -1746,7 +1665,6 @@ const OffresRecues = () => {
                       </div>
                     )}
                     
-                    {/* Upload nouveaux fichiers */}
                     <p className="text-sm text-muted-foreground mb-2">
                       {existingDocuments.filter(d => d.type_document === 'fiche_salaire').length > 0 ? 'Ou uploader de nouveaux fichiers :' : 'Uploader vos fichiers :'}
                     </p>
@@ -1774,7 +1692,7 @@ const OffresRecues = () => {
                   </div>
 
                   {/* Extrait poursuites */}
-                  <div className="border rounded-lg p-4">
+                  <div className="border border-border/50 rounded-xl p-4 bg-gradient-to-br from-card to-card/50">
                     <Label className="text-base font-medium">
                       📋 Extrait de l'office des poursuites *
                     </Label>
@@ -1782,9 +1700,8 @@ const OffresRecues = () => {
                       Datant de moins de 3 mois
                     </p>
                     
-                    {/* Documents existants du dossier */}
                     {existingDocuments.filter(d => d.type_document === 'extrait_poursuites').length > 0 && (
-                      <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                      <div className="mb-3 p-3 bg-gradient-to-br from-blue-50/80 to-blue-50/30 dark:from-blue-950/30 dark:to-blue-950/10 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
                         <p className="text-sm font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2 mb-2">
                           <FolderOpen className="h-4 w-4" />
                           Sélectionner depuis mon dossier :
@@ -1834,7 +1751,7 @@ const OffresRecues = () => {
                   </div>
 
                   {/* Pièce d'identité */}
-                  <div className="border rounded-lg p-4">
+                  <div className="border border-border/50 rounded-xl p-4 bg-gradient-to-br from-card to-card/50">
                     <Label className="text-base font-medium">
                       🪪 Pièce d'identité / ID suisse *
                     </Label>
@@ -1842,9 +1759,8 @@ const OffresRecues = () => {
                       Document valable (carte identité, passeport, permis de séjour)
                     </p>
                     
-                    {/* Documents existants du dossier */}
                     {existingDocuments.filter(d => d.type_document === 'piece_identite' || d.type_document === 'permis_sejour').length > 0 && (
-                      <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                      <div className="mb-3 p-3 bg-gradient-to-br from-blue-50/80 to-blue-50/30 dark:from-blue-950/30 dark:to-blue-950/10 rounded-lg border border-blue-200/50 dark:border-blue-800/50">
                         <p className="text-sm font-medium text-blue-800 dark:text-blue-200 flex items-center gap-2 mb-2">
                           <FolderOpen className="h-4 w-4" />
                           Sélectionner depuis mon dossier :
@@ -1894,45 +1810,39 @@ const OffresRecues = () => {
                   </div>
                 </div>
 
+                {/* Message optionnel */}
                 <div className="space-y-2">
-                  <Label>Message / Motivation (optionnel)</Label>
+                  <Label>💬 Message à votre agent (optionnel)</Label>
                   <Textarea
-                    placeholder="Présentez-vous et expliquez pourquoi ce bien vous intéresse..."
+                    placeholder="Avez-vous des informations complémentaires à transmettre ?"
                     value={messageClient}
                     onChange={(e) => setMessageClient(e.target.value)}
-                    rows={4}
+                    className="bg-background/50"
                   />
                 </div>
 
-                <div className="flex items-start gap-2 p-4 bg-muted rounded-lg">
+                {/* Conditions */}
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/20">
                   <Checkbox
-                    id="conditions"
+                    id="accepte-conditions"
                     checked={accepteConditions}
-                    onCheckedChange={(checked) => setAccepteConditions(checked as boolean)}
+                    onCheckedChange={(checked) => setAccepteConditions(checked === true)}
                   />
-                  <Label htmlFor="conditions" className="text-sm cursor-pointer">
-                    Je confirme que tous les documents fournis sont authentiques et à jour.
-                    Je comprends que mon dossier sera examiné par l'agent et le propriétaire.
+                  <Label htmlFor="accepte-conditions" className="text-sm cursor-pointer">
+                    Je confirme l'exactitude des informations fournies et autorise votre agence à transmettre mon dossier à la régie concernée.
                   </Label>
                 </div>
               </div>
             )}
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setCandidatureDialogOpen(false)}
-                disabled={uploadingDocs}
-              >
+            <DialogFooter className="flex-shrink-0 pt-4 border-t border-border/50">
+              <Button variant="outline" onClick={() => setCandidatureDialogOpen(false)}>
                 Annuler
               </Button>
-              <Button
-                onClick={confirmCandidature}
-                disabled={uploadingDocs || !accepteConditions}
-              >
+              <Button onClick={confirmCandidature} disabled={!accepteConditions || uploadingDocs}>
                 {uploadingDocs ? (
                   <>
-                    <Upload className="mr-2 h-4 w-4 animate-spin" />
+                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
                     Envoi en cours...
                   </>
                 ) : (
@@ -1946,56 +1856,43 @@ const OffresRecues = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Dialog de délégation de visite */}
+        {/* Dialog de délégation */}
         <Dialog open={delegateDialogOpen} onOpenChange={setDelegateDialogOpen}>
-          <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
-            <DialogHeader className="flex-shrink-0">
-              <DialogTitle>Déléguer la visite à votre agent</DialogTitle>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-gradient-to-br from-background to-muted/20 backdrop-blur-xl border-border/50">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <User className="h-5 w-5 text-primary" />
+                Déléguer la visite à votre agent
+              </DialogTitle>
               <DialogDescription>
-                Choisissez une date et votre agent effectuera la visite pour vous
+                Votre agent effectuera la visite pour vous et vous fera un compte-rendu
               </DialogDescription>
             </DialogHeader>
 
             {selectedOffre && (
-              <div className="space-y-4 py-4 overflow-y-auto flex-1 pr-2">
-                <div className="p-4 bg-muted rounded-lg">
-                  <h4 className="font-semibold mb-2">Bien concerné</h4>
-                  <p className="text-sm">{selectedOffre.adresse}</p>
-                  <p className="text-lg font-bold text-primary mt-1">
-                    CHF {selectedOffre.prix.toLocaleString()}/mois
-                  </p>
+              <div className="space-y-4">
+                <div className="p-3 rounded-lg bg-gradient-to-br from-muted/50 to-muted/20">
+                  <h4 className="font-semibold text-sm">{selectedOffre.adresse}</h4>
+                  <p className="text-lg font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent mt-1">CHF {selectedOffre.prix.toLocaleString()}/mois</p>
                 </div>
 
-                {/* Sélection de date/heure */}
-                <div className="space-y-3">
-                  <h4 className="font-semibold">📅 Choisissez une date de visite</h4>
+                <div className="space-y-4">
+                  <Label className="text-base font-semibold">Choisissez une date pour la visite</Label>
                   
-{delegateProposedSlots.length === 0 ? (
-                    <div className="p-6 bg-muted rounded-lg text-center space-y-3">
-                      <Calendar className="w-12 h-12 mx-auto text-muted-foreground" />
+                  {delegateProposedSlots.length === 0 ? (
+                    <div className="p-4 bg-gradient-to-br from-muted/50 to-muted/20 rounded-xl text-center">
                       <p className="text-sm text-muted-foreground">
-                        Votre agent n'a pas encore proposé de créneaux de visite pour cette offre.
+                        Aucun créneau pré-programmé. Sélectionnez une date :
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        Contactez votre agent via la messagerie pour demander des créneaux de visite.
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          setDelegateDialogOpen(false);
-                          navigate('/client/messagerie');
-                        }}
-                      >
-                        <MessageSquare className="mr-2 h-4 w-4" />
-                        Contacter mon agent
-                      </Button>
+                      <Input
+                        type="datetime-local"
+                        value={delegateDate}
+                        onChange={(e) => setDelegateDate(e.target.value)}
+                        className="mt-3"
+                      />
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">
-                        Créneaux proposés par l'agent :
-                      </p>
                       {delegateProposedSlots.map((slot) => (
                         <Button
                           key={slot.id}
@@ -2032,7 +1929,7 @@ const OffresRecues = () => {
                   )}
                   
                   {delegateDate && (
-                    <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                    <div className="p-3 bg-gradient-to-br from-primary/20 to-primary/5 rounded-xl border border-primary/20">
                       <p className="text-sm font-medium">✅ Date sélectionnée :</p>
                       <p className="text-sm mt-1">
                         <strong>
@@ -2055,7 +1952,7 @@ const OffresRecues = () => {
                   )}
                 </div>
 
-                <div className="p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="p-4 bg-gradient-to-br from-blue-50/80 to-blue-50/30 dark:from-blue-950/30 dark:to-blue-950/10 rounded-xl border border-blue-200/50 dark:border-blue-800/50">
                   <p className="text-sm text-blue-800 dark:text-blue-200">
                     <strong>📋 Comment ça marche :</strong>
                     <ul className="list-disc list-inside mt-2 space-y-1">
@@ -2069,7 +1966,7 @@ const OffresRecues = () => {
               </div>
             )}
 
-            <DialogFooter className="flex-shrink-0 pt-4 border-t">
+            <DialogFooter className="flex-shrink-0 pt-4 border-t border-border/50">
               <Button variant="outline" onClick={() => setDelegateDialogOpen(false)}>
                 Annuler
               </Button>
@@ -2082,7 +1979,7 @@ const OffresRecues = () => {
 
         {/* Dialog Visite Requise */}
         <Dialog open={visitRequiredAlertOpen} onOpenChange={setVisitRequiredAlertOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md bg-gradient-to-br from-background to-muted/20 backdrop-blur-xl border-border/50">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Info className="h-5 w-5 text-amber-500" />
