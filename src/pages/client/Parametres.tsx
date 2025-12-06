@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
-import { Camera, Save, Mail, Phone, User, Bell } from 'lucide-react';
+import { Camera, Save, Mail, Phone, User, Bell, Settings, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -134,36 +134,59 @@ export default function ClientParametres() {
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="relative">
+          <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+          <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-r-primary/40 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+        </div>
       </div>
     );
   }
 
   return (
     <div className="flex-1 overflow-auto">
-      <div className="p-4 md:p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Paramètres</h1>
-          <p className="text-muted-foreground">Gérez votre profil et vos préférences</p>
+      <div className="p-4 md:p-8 space-y-6">
+        {/* Header modernisé */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6">
+          <div className="absolute inset-0 bg-grid-pattern opacity-5" />
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
+          <div className="relative">
+            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
+                <Settings className="h-6 w-6 text-primary" />
+              </div>
+              Paramètres
+            </h1>
+            <p className="text-muted-foreground mt-1">Gérez votre profil et vos préférences</p>
+          </div>
         </div>
 
         <div className="grid gap-6 max-w-2xl">
           {/* Photo de profil */}
-          <Card>
-            <CardHeader>
+          <Card className="group card-interactive overflow-hidden border-0 shadow-lg">
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+            </div>
+            <CardHeader className="bg-gradient-to-r from-muted/50 to-transparent">
               <CardTitle className="flex items-center gap-2">
-                <Camera className="w-5 h-5" />
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <Camera className="w-4 h-4 text-primary" />
+                </div>
                 Photo de profil
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <div className="flex items-center gap-6">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={profile?.avatar_url} alt={`${profile?.prenom} ${profile?.nom}`} />
-                  <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                    {profile?.prenom?.[0]}{profile?.nom?.[0]}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative group/avatar">
+                  <Avatar className="h-24 w-24 ring-4 ring-primary/10 transition-all duration-300 group-hover/avatar:ring-primary/30">
+                    <AvatarImage src={profile?.avatar_url} alt={`${profile?.prenom} ${profile?.nom}`} />
+                    <AvatarFallback className="text-2xl bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold">
+                      {profile?.prenom?.[0]}{profile?.nom?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                    <Camera className="w-6 h-6 text-white" />
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <input
                     ref={fileInputRef}
@@ -175,8 +198,16 @@ export default function ClientParametres() {
                   <Button 
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploading}
+                    className="relative overflow-hidden"
                   >
-                    {uploading ? 'Téléchargement...' : 'Changer la photo'}
+                    {uploading ? (
+                      <>
+                        <div className="absolute inset-0 bg-gradient-to-r from-primary/50 to-primary animate-pulse" />
+                        <span className="relative">Téléchargement...</span>
+                      </>
+                    ) : (
+                      'Changer la photo'
+                    )}
                   </Button>
                   <p className="text-xs text-muted-foreground">
                     JPG, PNG ou WebP. Max 5 Mo.
@@ -187,76 +218,90 @@ export default function ClientParametres() {
           </Card>
 
           {/* Informations personnelles */}
-          <Card>
-            <CardHeader>
+          <Card className="group card-interactive overflow-hidden border-0 shadow-lg">
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+            </div>
+            <CardHeader className="bg-gradient-to-r from-muted/50 to-transparent">
               <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5" />
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <User className="w-4 h-4 text-primary" />
+                </div>
                 Informations personnelles
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Prénom</Label>
+                  <Label className="text-sm font-medium">Prénom</Label>
                   <Input
                     value={prenom}
                     onChange={(e) => setPrenom(e.target.value)}
                     placeholder="Prénom"
+                    className="transition-all duration-300 focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Nom</Label>
+                  <Label className="text-sm font-medium">Nom</Label>
                   <Input
                     value={nom}
                     onChange={(e) => setNom(e.target.value)}
                     placeholder="Nom"
+                    className="transition-all duration-300 focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
               </div>
-              <div>
-                <Label className="text-muted-foreground flex items-center gap-1">
+              <div className="p-3 rounded-lg bg-muted/50">
+                <Label className="text-muted-foreground flex items-center gap-2 text-sm">
                   <Mail className="w-4 h-4" />
                   Email
                 </Label>
                 <div className="font-medium mt-1">{profile?.email}</div>
               </div>
               <div className="space-y-2">
-                <Label className="flex items-center gap-1">
-                  <Phone className="w-4 h-4" />
+                <Label className="flex items-center gap-2 text-sm font-medium">
+                  <Phone className="w-4 h-4 text-muted-foreground" />
                   Téléphone
                 </Label>
                 <Input
                   value={telephone}
                   onChange={(e) => setTelephone(e.target.value)}
                   placeholder="+41 XX XXX XX XX"
-                  className="max-w-xs"
+                  className="max-w-xs transition-all duration-300 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
               <Button 
                 onClick={handleSaveProfile}
                 disabled={saving || (telephone === profile?.telephone && prenom === profile?.prenom && nom === profile?.nom)}
+                className="relative overflow-hidden group/btn"
               >
-                <Save className="w-4 h-4 mr-2" />
-                {saving ? 'Sauvegarde...' : 'Sauvegarder les modifications'}
+                <span className="absolute inset-0 bg-gradient-to-r from-primary to-primary/80 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                <Save className="w-4 h-4 mr-2 relative" />
+                <span className="relative">{saving ? 'Sauvegarde...' : 'Sauvegarder les modifications'}</span>
               </Button>
             </CardContent>
           </Card>
 
           {/* Préférences de notification */}
-          <Card>
-            <CardHeader>
+          <Card className="group card-interactive overflow-hidden border-0 shadow-lg">
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -skew-x-12 translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000" />
+            </div>
+            <CardHeader className="bg-gradient-to-r from-muted/50 to-transparent">
               <CardTitle className="flex items-center gap-2">
-                <Bell className="w-5 h-5" />
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <Bell className="w-4 h-4 text-primary" />
+                </div>
                 Notifications
               </CardTitle>
               <CardDescription>
                 Gérez vos préférences de notification
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+            <CardContent className="space-y-4 pt-6">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-muted/50 to-transparent border border-border/50 hover:border-primary/30 transition-colors">
                 <div className="space-y-0.5">
-                  <Label htmlFor="notifications-email">Notifications par email</Label>
+                  <Label htmlFor="notifications-email" className="font-medium">Notifications par email</Label>
                   <p className="text-sm text-muted-foreground">
                     Recevoir une copie des notifications par email
                   </p>
@@ -280,6 +325,7 @@ export default function ClientParametres() {
                       toast.error('Erreur lors de la mise à jour');
                     }
                   }}
+                  className="data-[state=checked]:bg-primary"
                 />
               </div>
             </CardContent>

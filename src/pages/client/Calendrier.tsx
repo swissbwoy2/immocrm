@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isSameDay } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CalendarView, CalendarEvent } from '@/components/calendar/CalendarView';
 import { ClientDayEvents } from '@/components/calendar/ClientDayEvents';
 import { useNotifications } from '@/hooks/useNotifications';
+import { Badge } from '@/components/ui/badge';
 
 export default function ClientCalendrier() {
   const navigate = useNavigate();
@@ -260,7 +261,10 @@ export default function ClientCalendrier() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="relative">
+          <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+          <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-r-primary/40 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+        </div>
       </div>
     );
   }
@@ -269,27 +273,42 @@ export default function ClientCalendrier() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 overflow-auto h-full">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <CalendarIcon className="h-6 w-6" />
-          Mon calendrier
-        </h1>
-        <p className="text-muted-foreground">
-          {upcomingVisites.length} visite{upcomingVisites.length > 1 ? 's' : ''} à venir
-        </p>
+      {/* Header modernisé */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6">
+        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
+        <div className="relative">
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 animate-pulse-slow">
+              <CalendarIcon className="h-6 w-6 text-primary" />
+            </div>
+            Mon calendrier
+          </h1>
+          <div className="flex items-center gap-2 mt-2">
+            {upcomingVisites.length > 0 ? (
+              <Badge variant="default" className="bg-gradient-to-r from-primary to-primary/80 glow-breathe">
+                <Sparkles className="w-3 h-3 mr-1" />
+                {upcomingVisites.length} visite{upcomingVisites.length > 1 ? 's' : ''} à venir
+              </Badge>
+            ) : (
+              <span className="text-muted-foreground text-sm">Aucune visite planifiée</span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0 w-full">
         {/* Calendar */}
         <div className="lg:col-span-2 min-w-0 overflow-hidden">
-          <CalendarView
-            events={events}
-            visites={visites}
-            selectedDate={selectedDate}
-            onDateSelect={setSelectedDate}
-          />
+          <div className="glass-morphism rounded-2xl p-1">
+            <CalendarView
+              events={events}
+              visites={visites}
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+            />
+          </div>
         </div>
 
         {/* Day events */}
@@ -308,15 +327,25 @@ export default function ClientCalendrier() {
 
       {/* Empty state when no visites */}
       {visites.length === 0 && (
-        <div className="text-center py-12 bg-card rounded-lg border">
-          <CalendarIcon className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-lg font-semibold mb-2">Aucune visite planifiée</h3>
-          <p className="text-muted-foreground mb-4">
-            Vous n'avez pas de visite programmée pour le moment.
-          </p>
-          <Button onClick={() => navigate('/client/offres-recues')}>
-            Voir mes offres
-          </Button>
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 p-8 text-center">
+          <div className="absolute inset-0 bg-grid-pattern opacity-5" />
+          <div className="relative">
+            <div className="inline-block relative mb-4">
+              <CalendarIcon className="w-16 h-16 text-muted-foreground/50 animate-float" />
+              <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Aucune visite planifiée</h3>
+            <p className="text-muted-foreground mb-4">
+              Vous n'avez pas de visite programmée pour le moment.
+            </p>
+            <Button 
+              onClick={() => navigate('/client/offres-recues')}
+              className="relative overflow-hidden group"
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-primary to-primary/80 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <span className="relative">Voir mes offres</span>
+            </Button>
+          </div>
         </div>
       )}
     </div>
