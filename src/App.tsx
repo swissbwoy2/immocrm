@@ -12,6 +12,7 @@ import { PageLoader } from "./components/PageLoader";
 // Eager load critical pages
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import Landing from "./pages/Landing";
 
 // Lazy load all other pages
 const NouveauMandat = lazy(() => import("./pages/NouveauMandat"));
@@ -115,7 +116,7 @@ const App = () => (
         <AuthProvider>
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              <Route path="/" element={<Navigate to="/login" replace />} />
+              <Route path="/" element={<Landing />} />
               <Route path="/setup" element={<Setup />} />
               <Route path="/login" element={<Login />} />
               <Route path="/nouveau-mandat" element={<NouveauMandat />} />
