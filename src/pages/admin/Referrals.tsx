@@ -24,7 +24,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Search, Filter, CheckCircle, DollarSign, Clock, Users } from 'lucide-react';
+import { Search, Filter, CheckCircle, DollarSign, Clock, Users, Phone, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Referral {
@@ -33,6 +33,7 @@ interface Referral {
   client_nom: string;
   client_prenom: string | null;
   client_telephone: string | null;
+  client_email: string | null;
   lieu_situation: string | null;
   type_affaire: string;
   statut: string;
@@ -40,8 +41,10 @@ interface Referral {
   montant_commission: number | null;
   reference_virement: string | null;
   created_at: string;
+  taux_commission?: number;
   apporteur?: {
     code_parrainage: string;
+    taux_commission: number;
     profile?: {
       nom: string;
       prenom: string;
@@ -80,7 +83,7 @@ export default function AdminReferrals() {
         (data || []).map(async (referral) => {
           const { data: apporteur } = await supabase
             .from('apporteurs')
-            .select('code_parrainage, user_id')
+            .select('code_parrainage, user_id, taux_commission')
             .eq('id', referral.apporteur_id)
             .single();
 
@@ -317,9 +320,23 @@ export default function AdminReferrals() {
                         <div className="font-medium">
                           {referral.client_prenom} {referral.client_nom}
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {referral.lieu_situation}
-                        </div>
+                        {referral.client_telephone && (
+                          <div className="text-sm text-muted-foreground flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {referral.client_telephone}
+                          </div>
+                        )}
+                        {referral.client_email && (
+                          <div className="text-sm text-muted-foreground flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {referral.client_email}
+                          </div>
+                        )}
+                        {referral.lieu_situation && (
+                          <div className="text-sm text-muted-foreground">
+                            {referral.lieu_situation}
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -407,7 +424,7 @@ export default function AdminReferrals() {
               />
               {fraisAgence && (
                 <p className="text-sm text-muted-foreground">
-                  Commission estimée (20%): CHF {(parseFloat(fraisAgence) * 0.2).toFixed(2)}
+                  Commission estimée ({validateDialog.referral?.apporteur?.taux_commission || 10}%): CHF {(parseFloat(fraisAgence) * ((validateDialog.referral?.apporteur?.taux_commission || 10) / 100)).toFixed(2)}
                 </p>
               )}
             </div>
