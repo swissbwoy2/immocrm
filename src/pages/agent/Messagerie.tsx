@@ -38,8 +38,9 @@ import { ChatHeader } from "@/components/messaging/ChatHeader";
 import { FloatingParticles, MeshGradientBackground, ChatPatternBackground } from "@/components/messaging/FloatingParticles";
 import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
 import { PremiumOffreCard } from "@/components/messaging/PremiumOffreCard";
-import { format } from "date-fns";
+import { format, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import DateSeparator from "@/components/messaging/DateSeparator";
 
 const removeAccents = (str: string) => {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -1172,7 +1173,7 @@ const Messagerie = () => {
               }
             });
             
-            return selectedMessages.map((msg) => {
+            return selectedMessages.map((msg, index) => {
               const isSent = msg.sender_type === 'agent';
               // Déterminer le nom de l'expéditeur selon le type d'expéditeur
               let senderName: string | undefined;
@@ -1194,8 +1195,13 @@ const Messagerie = () => {
               const isLastMessageForOffre = msg.offre_id && 
                 lastMessageByOffre.get(msg.offre_id) === msg.id;
               
+              // Afficher le séparateur de date si c'est le premier message ou si le jour a changé
+              const showDateSeparator = index === 0 || 
+                !isSameDay(parseISO(msg.created_at), parseISO(selectedMessages[index - 1].created_at));
+              
               return (
                 <div key={msg.id}>
+                  {showDateSeparator && <DateSeparator date={msg.created_at} />}
                   <PremiumMessageBubble
                     content={cleanContent}
                     isSent={isSent}

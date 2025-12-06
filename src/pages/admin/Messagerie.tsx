@@ -22,6 +22,8 @@ import { ChatHeader } from "@/components/messaging/ChatHeader";
 import { ChatPatternBackground } from "@/components/messaging/FloatingParticles";
 import { FloatingParticles, MeshGradientBackground } from "@/components/messaging/FloatingParticles";
 import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
+import DateSeparator from "@/components/messaging/DateSeparator";
+import { isSameDay, parseISO } from "date-fns";
 
 // Fonction pour retirer les accents des chaînes pour une recherche plus flexible
 const removeAccents = (str: string) => {
@@ -509,20 +511,26 @@ const Messagerie = () => {
               const isSent = msg.sender_type === 'admin';
               const senderName = isSent ? undefined : msg.senderName;
               
+              // Afficher le séparateur de date si c'est le premier message ou si le jour a changé
+              const showDateSeparator = index === 0 || 
+                !isSameDay(parseISO(msg.created_at), parseISO(selectedMessages[index - 1].created_at));
+              
               return (
-                <PremiumMessageBubble
-                  key={msg.id}
-                  content={msg.content || ''}
-                  isSent={isSent}
-                  timestamp={msg.created_at}
-                  read={msg.read}
-                  senderName={senderName}
-                  attachmentUrl={msg.attachment_url}
-                  attachmentName={msg.attachment_name}
-                  attachmentType={msg.attachment_type}
-                  attachmentSize={msg.attachment_size}
-                  payload={msg.payload as any}
-                />
+                <div key={msg.id}>
+                  {showDateSeparator && <DateSeparator date={msg.created_at} />}
+                  <PremiumMessageBubble
+                    content={msg.content || ''}
+                    isSent={isSent}
+                    timestamp={msg.created_at}
+                    read={msg.read}
+                    senderName={senderName}
+                    attachmentUrl={msg.attachment_url}
+                    attachmentName={msg.attachment_name}
+                    attachmentType={msg.attachment_type}
+                    attachmentSize={msg.attachment_size}
+                    payload={msg.payload as any}
+                  />
+                </div>
               );
             })}
             <div ref={messagesEndRef} />
