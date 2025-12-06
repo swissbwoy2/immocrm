@@ -154,81 +154,101 @@ export function AdminStatsSection({
         <DateRangeFilter value={dateRange} onChange={setDateRange} />
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards with staggered animations */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        <StatsCard
-          title="Revenus agence"
-          value={`${stats.revenusAgence.toLocaleString()} CHF`}
-          previousValue={stats.previousRevenus}
-          currentValue={stats.revenusAgence}
-          icon={DollarSign}
-          variant="success"
-        />
-        <StatsCard
-          title="Comm. agents"
-          value={`${stats.commissionsAgents.toLocaleString()} CHF`}
-          icon={DollarSign}
-        />
-        <StatsCard
-          title="Affaires conclues"
-          value={stats.affairesConclues}
-          previousValue={stats.previousAffaires}
-          currentValue={stats.affairesConclues}
-          icon={CheckCircle}
-          variant="success"
-        />
-        <StatsCard
-          title="Offres envoyées"
-          value={stats.offresEnvoyees}
-          previousValue={stats.previousOffresEnvoyees}
-          currentValue={stats.offresEnvoyees}
-          icon={Send}
-        />
-        <StatsCard
-          title="Nouveaux clients"
-          value={stats.nouveauxClients}
-          previousValue={stats.previousNouveauxClients}
-          currentValue={stats.nouveauxClients}
-          icon={Users}
-        />
-        <StatsCard
-          title="Agents"
-          value={stats.totalAgents}
-          description={`${stats.agentsActifs} actif(s)`}
-          icon={UserCog}
-        />
+        <div className="animate-fade-in" style={{ animationDelay: '0ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Revenus agence"
+            value={`${stats.revenusAgence.toLocaleString()} CHF`}
+            previousValue={stats.previousRevenus}
+            currentValue={stats.revenusAgence}
+            icon={DollarSign}
+            variant="success"
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '50ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Comm. agents"
+            value={`${stats.commissionsAgents.toLocaleString()} CHF`}
+            icon={DollarSign}
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Affaires conclues"
+            value={stats.affairesConclues}
+            previousValue={stats.previousAffaires}
+            currentValue={stats.affairesConclues}
+            icon={CheckCircle}
+            variant="success"
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '150ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Offres envoyées"
+            value={stats.offresEnvoyees}
+            previousValue={stats.previousOffresEnvoyees}
+            currentValue={stats.offresEnvoyees}
+            icon={Send}
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Nouveaux clients"
+            value={stats.nouveauxClients}
+            previousValue={stats.previousNouveauxClients}
+            currentValue={stats.nouveauxClients}
+            icon={Users}
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '250ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Agents"
+            value={stats.totalAgents}
+            description={`${stats.agentsActifs} actif(s)`}
+            icon={UserCog}
+          />
+        </div>
       </div>
 
-      {/* Charts */}
+      {/* Charts with staggered animations */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <MultiSeriesChart
-          title="Activité globale"
-          series={activitySeries}
-          dateRange={dateRange}
-        />
-        <PerformanceChart
-          title="Revenus de l'agence"
-          data={revenusChartData}
-          dateRange={dateRange}
-          color="hsl(142, 76%, 36%)"
-          valueLabel="CHF"
-        />
+        <div className="animate-fade-in" style={{ animationDelay: '300ms', animationFillMode: 'both' }}>
+          <MultiSeriesChart
+            title="Activité globale"
+            series={activitySeries}
+            dateRange={dateRange}
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '350ms', animationFillMode: 'both' }}>
+          <PerformanceChart
+            title="Revenus de l'agence"
+            data={revenusChartData}
+            dateRange={dateRange}
+            color="hsl(142, 76%, 36%)"
+            valueLabel="CHF"
+          />
+        </div>
       </div>
 
-      {/* Leaderboards */}
+      {/* Leaderboards with staggered animations */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Leaderboard
-          title="Top agents - Commissions"
-          entries={agentLeaderboard}
-          valueLabel="CHF"
-          maxEntries={5}
-        />
-        <Leaderboard
-          title="Top agents - Offres envoyées"
-          entries={agentOffresLeaderboard}
-          valueLabel="offres"
-          maxEntries={5}
-        />
+        <div className="animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'both' }}>
+          <Leaderboard
+            title="Top agents - Commissions"
+            entries={agentLeaderboard}
+            valueLabel="CHF"
+            maxEntries={5}
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '450ms', animationFillMode: 'both' }}>
+          <Leaderboard
+            title="Top agents - Offres envoyées"
+            entries={agentOffresLeaderboard}
+            valueLabel="offres"
+            maxEntries={5}
+          />
+        </div>
       </div>
     </div>
   );
