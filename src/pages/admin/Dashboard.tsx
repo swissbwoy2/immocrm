@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send, Bell, Power } from 'lucide-react';
+import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send, Bell, Power, Sparkles } from 'lucide-react';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -147,7 +147,10 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="relative">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border border-primary/30"></div>
+        </div>
       </div>
     );
   }
@@ -187,18 +190,31 @@ export default function AdminDashboard() {
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8">
-          {/* Header with welcome message */}
-          <div className="mb-8 page-header">
-            <div className="flex items-center justify-between">
+          {/* Header avec dégradé animé */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-6 md:p-8 mb-8 animate-fade-in">
+            {/* Particules flottantes */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <div className="absolute top-4 right-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl animate-float-particle" style={{ animationDelay: '0s' }} />
+              <div className="absolute bottom-4 left-20 w-20 h-20 bg-accent/10 rounded-full blur-2xl animate-float-particle" style={{ animationDelay: '1s' }} />
+              <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-primary/5 rounded-full blur-xl animate-float-particle" style={{ animationDelay: '2s' }} />
+            </div>
+            
+            <div className="relative z-10 flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold text-foreground">Tableau de bord</h1>
-                <p className="text-muted-foreground">Vue d'ensemble de l'activité</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-6 h-6 text-primary animate-pulse-soft" />
+                  <span className="text-sm font-medium text-primary/80 uppercase tracking-wider">Administration</span>
+                </div>
+                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent animate-gradient-text bg-[length:200%_auto]">
+                  Tableau de bord
+                </h1>
+                <p className="text-muted-foreground mt-2">Vue d'ensemble de l'activité</p>
               </div>
               {counts.new_message > 0 && (
                 <Button 
                   variant="outline" 
                   onClick={() => navigate('/admin/messagerie')} 
-                  className="relative animate-fade-in hover:scale-105 transition-transform"
+                  className="relative glass-morphism border-primary/20 hover:scale-105 transition-all duration-300"
                 >
                   <Bell className="w-4 h-4 mr-2" />
                   Messages
@@ -208,115 +224,159 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* KPIs - Optimisé pour tablette */}
+          {/* KPIs avec effets modernes */}
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3 md:gap-4 mb-8">
-            <div className="animate-fade-in" style={{ animationDelay: '0ms' }}>
-              <KPICard 
-                title="Clients actifs" 
-                value={clientsActifs} 
-                icon={Users}
-                onClick={() => navigate('/admin/clients')}
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '0ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Clients actifs" 
+                  value={clientsActifs} 
+                  icon={Users}
+                  onClick={() => navigate('/admin/clients')}
+                />
+              </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '50ms' }}>
-              <KPICard 
-                title="Agents" 
-                value={totalAgents}
-                subtitle={`${agentsActifs} actif(s)`}
-                icon={UserCog}
-                onClick={() => navigate('/admin/agents')}
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '50ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Agents" 
+                  value={totalAgents}
+                  subtitle={`${agentsActifs} actif(s)`}
+                  icon={UserCog}
+                  onClick={() => navigate('/admin/agents')}
+                />
+              </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
-              <KPICard 
-                title="Offres" 
-                value={totalOffresEnvoyees} 
-                icon={Send}
-                onClick={() => navigate('/admin/offres-envoyees')}
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '100ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Offres" 
+                  value={totalOffresEnvoyees} 
+                  icon={Send}
+                  onClick={() => navigate('/admin/offres-envoyees')}
+                />
+              </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '150ms' }}>
-              <KPICard 
-                title="Affaires conclues" 
-                value={transactions.filter(t => t.statut === 'conclue').length} 
-                icon={CheckCircle} 
-                variant="success"
-                subtitle={`${transactionsConcluesMois} ce mois`}
-                onClick={() => navigate('/admin/transactions')}
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '150ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-success/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-success/30 via-emerald-400/30 to-success/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Affaires conclues" 
+                  value={transactions.filter(t => t.statut === 'conclue').length} 
+                  icon={CheckCircle} 
+                  variant="success"
+                  subtitle={`${transactionsConcluesMois} ce mois`}
+                  onClick={() => navigate('/admin/transactions')}
+                />
+              </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
-              <KPICard 
-                title="Critiques" 
-                value={clientsCritiques.length} 
-                icon={Clock} 
-                variant={clientsCritiques.length > 0 ? 'warning' : 'default'}
-                subtitle="≤30j restants"
-                onClick={() => navigate('/admin/mandats')}
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '200ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-warning/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-warning/30 via-orange-400/30 to-warning/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Critiques" 
+                  value={clientsCritiques.length} 
+                  icon={Clock} 
+                  variant={clientsCritiques.length > 0 ? 'warning' : 'default'}
+                  subtitle="≤30j restants"
+                  onClick={() => navigate('/admin/mandats')}
+                />
+              </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '250ms' }}>
-              <KPICard 
-                title="Expirés" 
-                value={clientsExpires.length} 
-                icon={AlertTriangle} 
-                variant={clientsExpires.length > 0 ? 'danger' : 'default'}
-                subtitle=">90 jours"
-                onClick={() => navigate('/admin/mandats')}
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '250ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-destructive/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-destructive/30 via-red-400/30 to-destructive/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Expirés" 
+                  value={clientsExpires.length} 
+                  icon={AlertTriangle} 
+                  variant={clientsExpires.length > 0 ? 'danger' : 'default'}
+                  subtitle=">90 jours"
+                  onClick={() => navigate('/admin/mandats')}
+                />
+              </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
-              <KPICard 
-                title="Revenus agence" 
-                value={`${revenusAgenceMois.toLocaleString()}`} 
-                icon={DollarSign} 
-                variant="success"
-                subtitle="CHF ce mois"
-                onClick={() => navigate('/admin/transactions')}
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '300ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-success/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-success/30 via-emerald-400/30 to-success/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Revenus agence" 
+                  value={`${revenusAgenceMois.toLocaleString()}`} 
+                  icon={DollarSign} 
+                  variant="success"
+                  subtitle="CHF ce mois"
+                  onClick={() => navigate('/admin/transactions')}
+                />
+              </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '350ms' }}>
-              <KPICard 
-                title="Commission totale" 
-                value={`${transactions.filter(t => t.statut === 'conclue').reduce((sum, t) => sum + (t.part_agence || 0), 0).toLocaleString()}`} 
-                icon={DollarSign} 
-                subtitle="CHF total"
-                onClick={() => navigate('/admin/transactions')}
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '350ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Commission totale" 
+                  value={`${transactions.filter(t => t.statut === 'conclue').reduce((sum, t) => sum + (t.part_agence || 0), 0).toLocaleString()}`} 
+                  icon={DollarSign} 
+                  subtitle="CHF total"
+                  onClick={() => navigate('/admin/transactions')}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Section Statistiques détaillées */}
+          {/* Section Statistiques détaillées avec glassmorphism */}
           <div className="mb-8 animate-fade-in" style={{ animationDelay: '400ms' }}>
-            <AdminStatsSection
-              agents={agents}
-              clients={clients}
-              transactions={transactions}
-              offres={offres}
-            />
+            <Card className="relative overflow-hidden border-border/50 hover:shadow-xl transition-all duration-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-50" />
+              <CardContent className="relative p-0">
+                <AdminStatsSection
+                  agents={agents}
+                  clients={clients}
+                  transactions={transactions}
+                  offres={offres}
+                />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Statistiques de recommandation */}
           <div className="mb-8 animate-fade-in" style={{ animationDelay: '450ms' }}>
-            <RecommendationStats />
+            <Card className="relative overflow-hidden border-border/50 hover:shadow-xl transition-all duration-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-primary/5 opacity-50" />
+              <CardContent className="relative p-0">
+                <RecommendationStats />
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Répartition des agents */}
-          <Card className="mb-8 animate-fade-in card-interactive" style={{ animationDelay: '500ms' }}>
-            <CardHeader>
+          {/* Répartition des agents avec effets modernes */}
+          <Card className="mb-8 animate-fade-in group relative overflow-hidden hover:shadow-xl transition-all duration-500" style={{ animationDelay: '500ms' }}>
+            {/* Effet shine au hover */}
+            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+            </div>
+            
+            <CardHeader className="relative">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base md:text-lg">Répartition des clients</CardTitle>
-                <p className="text-xs text-muted-foreground">
+                <CardTitle className="text-base md:text-lg flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 group-hover:scale-110 transition-transform duration-300">
+                    <Users className="w-4 h-4 text-primary" />
+                  </div>
+                  Répartition des clients
+                </CardTitle>
+                <Badge variant="outline" className="text-xs glass-morphism">
                   Critique = ≤30 jours restants
-                </p>
+                </Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              {/* Vue tableau sur desktop, vue cartes sur mobile/tablette */}
+            <CardContent className="relative">
+              {/* Vue tableau sur desktop avec effets de survol */}
               <div className="hidden lg:block overflow-x-auto">
                 <table className="w-full min-w-[700px]">
                   <thead>
-                    <tr className="border-b">
+                    <tr className="border-b bg-gradient-to-r from-muted/30 to-muted/10">
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Agent</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Statut</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Clients</th>
@@ -456,60 +516,75 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Alertes */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base md:text-lg">Alertes</CardTitle>
+          {/* Alertes avec design moderne */}
+          <Card className="relative overflow-hidden group hover:shadow-xl transition-all duration-500">
+            <div className="absolute inset-0 bg-gradient-to-br from-warning/5 via-transparent to-destructive/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            <CardHeader className="relative">
+              <CardTitle className="text-base md:text-lg flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-warning/20 to-warning/10 group-hover:scale-110 transition-transform duration-300">
+                  <AlertTriangle className="w-4 h-4 text-warning" />
+                </div>
+                Alertes
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 md:space-y-4">
+            <CardContent className="relative space-y-3 md:space-y-4">
               {clientsSansAgent > 0 && (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-warning/10 rounded-lg border border-warning/20">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-warning/10 rounded-lg border border-warning/20 hover:shadow-lg hover:shadow-warning/10 transition-all duration-300 animate-fade-in">
                   <div className="flex items-center gap-3">
-                    <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-warning flex-shrink-0" />
+                    <div className="p-2 rounded-full bg-warning/20 animate-pulse-soft">
+                      <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-warning flex-shrink-0" />
+                    </div>
                     <div>
                       <p className="font-medium text-sm md:text-base">{clientsSansAgent} client(s) sans agent</p>
                       <p className="text-xs md:text-sm text-muted-foreground">Assignez un agent pour démarrer le suivi</p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto" onClick={() => navigate('/admin/assignations')}>
+                  <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto hover:scale-105 transition-transform" onClick={() => navigate('/admin/assignations')}>
                     Assigner
                   </Button>
                 </div>
               )}
 
               {clientsCritiques.length > 0 && (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-warning/10 rounded-lg border border-warning/20">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-warning/10 rounded-lg border border-warning/20 hover:shadow-lg hover:shadow-warning/10 transition-all duration-300 animate-fade-in" style={{ animationDelay: '50ms' }}>
                   <div className="flex items-center gap-3">
-                    <Clock className="w-4 h-4 md:w-5 md:h-5 text-warning flex-shrink-0" />
+                    <div className="p-2 rounded-full bg-warning/20 animate-pulse-soft">
+                      <Clock className="w-4 h-4 md:w-5 md:h-5 text-warning flex-shrink-0" />
+                    </div>
                     <div>
                       <p className="font-medium text-sm md:text-base">{clientsCritiques.length} mandat(s) critique(s)</p>
                       <p className="text-xs md:text-sm text-muted-foreground">30 jours ou moins avant expiration</p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto" onClick={() => navigate('/admin/mandats')}>
+                  <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto hover:scale-105 transition-transform" onClick={() => navigate('/admin/mandats')}>
                     Voir les mandats
                   </Button>
                 </div>
               )}
 
               {clientsExpires.length > 0 && (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-destructive/10 rounded-lg border border-destructive/20">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 md:p-4 bg-destructive/10 rounded-lg border border-destructive/20 hover:shadow-lg hover:shadow-destructive/10 transition-all duration-300 animate-fade-in" style={{ animationDelay: '100ms' }}>
                   <div className="flex items-center gap-3">
-                    <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-destructive flex-shrink-0" />
+                    <div className="p-2 rounded-full bg-destructive/20 animate-pulse-soft">
+                      <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-destructive flex-shrink-0" />
+                    </div>
                     <div>
                       <p className="font-medium text-sm md:text-base">{clientsExpires.length} mandat(s) expiré(s)</p>
                       <p className="text-xs md:text-sm text-muted-foreground">Plus de 90 jours - renouvellement requis</p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto text-destructive hover:text-destructive" onClick={() => navigate('/admin/mandats')}>
+                  <Button variant="outline" size="sm" className="text-xs md:text-sm w-full sm:w-auto text-destructive hover:text-destructive hover:scale-105 transition-transform" onClick={() => navigate('/admin/mandats')}>
                     Gérer
                   </Button>
                 </div>
               )}
 
               {clientsSansAgent === 0 && clientsCritiques.length === 0 && clientsExpires.length === 0 && (
-                <div className="flex items-center gap-3 p-3 md:p-4 bg-success/10 rounded-lg border border-success/20">
-                  <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-success flex-shrink-0" />
+                <div className="flex items-center gap-3 p-3 md:p-4 bg-success/10 rounded-lg border border-success/20 animate-fade-in">
+                  <div className="p-2 rounded-full bg-success/20">
+                    <CheckCircle className="w-4 h-4 md:w-5 md:h-5 text-success flex-shrink-0" />
+                  </div>
                   <p className="text-sm text-muted-foreground">Aucune alerte - tout est en ordre</p>
                 </div>
               )}
