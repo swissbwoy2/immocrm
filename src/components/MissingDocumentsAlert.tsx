@@ -1,8 +1,8 @@
-import { AlertTriangle, FileText, CheckCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertTriangle, FileText, CheckCircle, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { Progress } from '@/components/ui/progress';
 
 // Documents requis pour un dossier complet (avant acceptation)
 const REQUIRED_DOCUMENTS = [
@@ -68,73 +68,130 @@ export function MissingDocumentsAlert({
     if (variant === 'compact') return null;
     
     return (
-      <Card className="border-green-200 bg-green-50 dark:bg-green-950/20">
-        <CardContent className="flex items-center gap-3 py-4">
-          <CheckCircle className="w-5 h-5 text-green-600" />
-          <span className="text-sm text-green-700 dark:text-green-400 font-medium">
-            ✅ Votre dossier est complet !
-          </span>
-        </CardContent>
-      </Card>
+      <div className="group relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-success/30 hover:border-success/50 hover:shadow-xl hover:shadow-success/10 transition-all duration-500 animate-fade-in">
+        {/* Gradient background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-success/10 via-transparent to-emerald-500/10" />
+        
+        {/* Shine effect on hover */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-success/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+        </div>
+        
+        <div className="relative flex items-center gap-4 p-5">
+          <div className="p-3 rounded-xl bg-success/20 group-hover:bg-success/30 transition-colors duration-300">
+            <CheckCircle className="w-6 h-6 text-success group-hover:scale-110 transition-transform duration-300" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-success flex items-center gap-2">
+              <Sparkles className="w-4 h-4 animate-pulse-soft" />
+              Votre dossier est complet !
+            </p>
+            <p className="text-sm text-muted-foreground mt-0.5">Tous les documents requis ont été ajoutés</p>
+          </div>
+          <div className="hidden sm:flex items-center justify-center w-12 h-12 rounded-full bg-success/20 text-success font-bold text-lg">
+            100%
+          </div>
+        </div>
+      </div>
     );
   }
 
   if (variant === 'compact') {
     return (
-      <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg border border-amber-200 dark:border-amber-800">
-        <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-        <span className="text-sm text-amber-700 dark:text-amber-400">
-          {missingRequired.length} document{missingRequired.length > 1 ? 's' : ''} manquant{missingRequired.length > 1 ? 's' : ''}
-        </span>
-        <Button 
-          variant="link" 
-          size="sm" 
-          className="text-amber-700 dark:text-amber-400 p-0 h-auto"
-          onClick={() => navigate('/client/documents')}
-        >
-          Compléter
-        </Button>
+      <div className="group relative overflow-hidden rounded-xl bg-card/80 backdrop-blur-xl border border-warning/30 hover:border-warning/50 transition-all duration-300 animate-fade-in">
+        <div className="absolute inset-0 bg-gradient-to-r from-warning/5 via-transparent to-orange-500/5" />
+        <div className="relative flex items-center gap-3 p-3">
+          <div className="p-1.5 rounded-lg bg-warning/20">
+            <AlertTriangle className="w-4 h-4 text-warning" />
+          </div>
+          <span className="text-sm text-warning font-medium">
+            {missingRequired.length} document{missingRequired.length > 1 ? 's' : ''} manquant{missingRequired.length > 1 ? 's' : ''}
+          </span>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="ml-auto text-warning hover:text-warning hover:bg-warning/10 transition-all duration-300"
+            onClick={() => navigate('/client/documents')}
+          >
+            Compléter →
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base text-amber-700 dark:text-amber-400">
-          <AlertTriangle className="w-5 h-5" />
-          Documents manquants
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Progress bar */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-xs">
-            <span className="text-amber-600 dark:text-amber-500">Progression du dossier</span>
-            <span className="text-amber-700 dark:text-amber-400 font-medium">{completionPercentage}%</span>
+    <div className="group relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-warning/30 hover:border-warning/50 hover:shadow-xl hover:shadow-warning/10 transition-all duration-500 animate-fade-in">
+      {/* Gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-warning/10 via-transparent to-orange-500/10" />
+      
+      {/* Animated particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
+        <div className="absolute top-4 right-10 w-16 h-16 bg-warning/20 rounded-full blur-2xl animate-float-particle" style={{ animationDelay: '0s' }} />
+        <div className="absolute bottom-4 left-10 w-12 h-12 bg-orange-400/20 rounded-full blur-xl animate-float-particle" style={{ animationDelay: '1s' }} />
+      </div>
+      
+      {/* Shine effect on hover */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-warning/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+      </div>
+      
+      <div className="relative p-6">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-5">
+          <div className="p-2.5 rounded-xl bg-warning/20 group-hover:bg-warning/30 transition-colors duration-300">
+            <AlertTriangle className="w-5 h-5 text-warning group-hover:scale-110 transition-transform duration-300" />
           </div>
-          <div className="h-2 bg-amber-200 dark:bg-amber-800 rounded-full overflow-hidden">
+          <h3 className="text-lg font-semibold text-warning">Documents manquants</h3>
+          <Badge className="ml-auto bg-warning/20 text-warning border-warning/30 hover:bg-warning/30 transition-colors">
+            {missingRequired.length} restant{missingRequired.length > 1 ? 's' : ''}
+          </Badge>
+        </div>
+
+        {/* Progress bar premium */}
+        <div className="mb-5 p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border border-warning/20">
+          <div className="flex justify-between text-sm mb-2">
+            <span className="text-muted-foreground font-medium">Progression du dossier</span>
+            <span className="text-warning font-bold">{completionPercentage}%</span>
+          </div>
+          <div className="relative h-3 rounded-full overflow-hidden bg-warning/10">
+            <Progress 
+              value={completionPercentage} 
+              className="h-3 bg-transparent"
+              indicatorClassName="bg-gradient-to-r from-warning via-orange-400 to-amber-400 shadow-lg shadow-warning/30"
+            />
+            {/* Glow effect */}
             <div 
-              className="h-full bg-amber-500 rounded-full transition-all"
+              className="absolute top-0 h-full bg-gradient-to-r from-warning/50 to-transparent blur-sm rounded-full"
               style={{ width: `${completionPercentage}%` }}
             />
+          </div>
+          <div className="flex justify-between text-xs text-muted-foreground mt-2">
+            <span>{REQUIRED_DOCUMENTS.length - missingRequired.length} / {REQUIRED_DOCUMENTS.length} documents</span>
+            <span>{missingRequired.length > 0 ? `${missingRequired.length} à ajouter` : 'Complet !'}</span>
           </div>
         </div>
 
         {/* Documents requis manquants */}
         {missingRequired.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+          <div className="space-y-3 mb-5">
+            <p className="text-sm font-medium text-foreground">
               Pour compléter votre dossier, veuillez ajouter :
             </p>
             <div className="flex flex-wrap gap-2">
-              {missingRequired.map(doc => (
+              {missingRequired.map((doc, index) => (
                 <Badge 
                   key={doc.key} 
                   variant="outline" 
-                  className="bg-white dark:bg-amber-950 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400"
+                  className="group/badge relative overflow-hidden bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border-warning/30 text-foreground hover:border-warning/50 hover:scale-105 transition-all duration-300 py-2 px-3 cursor-default animate-fade-in"
+                  style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  {doc.emoji} {doc.label}
+                  {/* Badge glow on hover */}
+                  <div className="absolute inset-0 bg-warning/5 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-300" />
+                  <span className="relative flex items-center gap-2">
+                    <span className="text-base">{doc.emoji}</span>
+                    <span>{doc.label}</span>
+                  </span>
                 </Badge>
               ))}
             </div>
@@ -143,35 +200,42 @@ export function MissingDocumentsAlert({
 
         {/* Documents post-signature manquants */}
         {shouldShowPostSignature && missingPostSignature.length > 0 && (
-          <div className="space-y-2 pt-2 border-t border-amber-200 dark:border-amber-800">
-            <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
-              🔑 Avant la remise des clés, ajoutez :
+          <div className="space-y-3 mb-5 pt-4 border-t border-warning/20">
+            <p className="text-sm font-medium text-foreground flex items-center gap-2">
+              <span className="text-lg">🔑</span>
+              Avant la remise des clés, ajoutez :
             </p>
             <div className="flex flex-wrap gap-2">
-              {missingPostSignature.map(doc => (
+              {missingPostSignature.map((doc, index) => (
                 <Badge 
                   key={doc.key} 
                   variant="outline" 
-                  className="bg-white dark:bg-amber-950 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400"
+                  className="group/badge relative overflow-hidden bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border-primary/30 text-foreground hover:border-primary/50 hover:scale-105 transition-all duration-300 py-2 px-3 cursor-default animate-fade-in"
+                  style={{ animationDelay: `${index * 50}ms` }}
                 >
-                  {doc.emoji} {doc.label}
+                  <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover/badge:opacity-100 transition-opacity duration-300" />
+                  <span className="relative flex items-center gap-2">
+                    <span className="text-base">{doc.emoji}</span>
+                    <span>{doc.label}</span>
+                  </span>
                 </Badge>
               ))}
             </div>
           </div>
         )}
 
+        {/* CTA Button premium */}
         <Button 
-          variant="outline" 
-          size="sm"
-          className="w-full border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950"
+          size="lg"
+          className="w-full bg-gradient-to-r from-warning to-orange-500 hover:from-warning/90 hover:to-orange-500/90 text-warning-foreground shadow-lg shadow-warning/20 hover:shadow-warning/30 hover:scale-[1.02] transition-all duration-300 group/btn"
           onClick={() => navigate('/client/documents')}
         >
-          <FileText className="w-4 h-4 mr-2" />
+          <FileText className="w-4 h-4 mr-2 group-hover/btn:rotate-6 transition-transform duration-300" />
           Ajouter des documents
+          <Sparkles className="w-4 h-4 ml-2 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300" />
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
