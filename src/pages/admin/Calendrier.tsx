@@ -7,10 +7,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { CalendarView, CalendarEvent } from '@/components/calendar/CalendarView';
-import { EventFilters } from '@/components/calendar/EventFilters';
+import { CalendarEvent } from '@/components/calendar/CalendarView';
+import { PremiumCalendarView } from '@/components/calendar/PremiumCalendarView';
+import { PremiumEventFilters } from '@/components/calendar/PremiumEventFilters';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
-import { DayEvents } from '@/components/calendar/DayEvents';
+import { PremiumDayEvents } from '@/components/calendar/PremiumDayEvents';
+import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
@@ -358,7 +360,10 @@ export default function AdminCalendrier() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="relative">
+          <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+          <div className="absolute inset-0 w-16 h-16 rounded-full border-4 border-transparent border-r-primary/40 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+        </div>
       </div>
     );
   }
@@ -366,29 +371,25 @@ export default function AdminCalendrier() {
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6 overflow-auto h-full">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5 md:h-6 md:w-6" />
-            Calendrier
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Gérez les rendez-vous, rappels et visites
-          </p>
-        </div>
-        <Button onClick={() => setShowEventForm(true)} size="sm" className="w-full sm:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          Nouvel événement
-        </Button>
-      </div>
+      <PremiumPageHeader
+        title="Calendrier"
+        subtitle="Gérez les rendez-vous, rappels et visites"
+        icon={CalendarIcon}
+        action={
+          <Button onClick={() => setShowEventForm(true)} size="sm" className="gap-2">
+            <Plus className="h-4 w-4" />
+            Nouvel événement
+          </Button>
+        }
+      />
 
       {/* Mobile: Filters collapsible */}
       <details className="lg:hidden">
-        <summary className="text-sm font-medium cursor-pointer p-3 bg-muted/50 rounded-lg card-interactive">
+        <summary className="text-sm font-medium cursor-pointer p-3 bg-muted/50 rounded-xl backdrop-blur-sm border border-border/50">
           Filtres avancés
         </summary>
         <div className="mt-3 animate-fade-in">
-          <EventFilters
+          <PremiumEventFilters
             agents={agents}
             clients={clients}
             selectedAgent={filterAgent}
@@ -407,7 +408,7 @@ export default function AdminCalendrier() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 min-w-0 w-full">
         {/* Filters sidebar - desktop only */}
         <div className="hidden lg:block lg:col-span-1 min-w-0 animate-fade-in" style={{ animationDelay: '0ms' }}>
-          <EventFilters
+          <PremiumEventFilters
             agents={agents}
             clients={clients}
             selectedAgent={filterAgent}
@@ -423,7 +424,7 @@ export default function AdminCalendrier() {
 
         {/* Calendar */}
         <div className="lg:col-span-2 min-w-0 overflow-hidden animate-fade-in" style={{ animationDelay: '50ms' }}>
-          <CalendarView
+          <PremiumCalendarView
             events={filteredEvents}
             visites={filteredVisites}
             selectedDate={selectedDate}
@@ -433,7 +434,7 @@ export default function AdminCalendrier() {
 
         {/* Day events */}
         <div className="lg:col-span-1 min-w-0 h-[400px] md:h-[600px] animate-fade-in" style={{ animationDelay: '100ms' }}>
-          <DayEvents
+          <PremiumDayEvents
             date={selectedDate}
             events={selectedDayEvents}
             visites={selectedDayVisites}

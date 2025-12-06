@@ -12,9 +12,11 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { CalendarView, CalendarEvent } from '@/components/calendar/CalendarView';
+import { CalendarEvent } from '@/components/calendar/CalendarView';
+import { PremiumCalendarView } from '@/components/calendar/PremiumCalendarView';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
 import { AgentDayEvents } from '@/components/calendar/AgentDayEvents';
+import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
@@ -737,7 +739,7 @@ export default function AgentCalendrier() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0 w-full">
         {/* Calendar */}
         <div className="lg:col-span-2 min-w-0 overflow-hidden animate-fade-in animate-delay-300">
-          <CalendarView
+          <PremiumCalendarView
             events={filteredEvents}
             visites={filteredVisites}
             selectedDate={selectedDate}
