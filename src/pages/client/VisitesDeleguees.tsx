@@ -128,8 +128,8 @@ export default function VisitesDeleguees() {
               Votre agent n'a pas encore confirmé ces demandes de visites
             </p>
             <div className="grid gap-4">
-              {visitesEnAttente.map(visite => (
-                <Card key={visite.id} className="border-amber-300 dark:border-amber-700">
+              {visitesEnAttente.map((visite, index) => (
+                <Card key={visite.id} className="card-interactive border-amber-300 dark:border-amber-700 animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -182,8 +182,8 @@ export default function VisitesDeleguees() {
               Votre agent va effectuer ces visites pour vous
             </p>
             <div className="grid gap-4">
-              {visitesConfirmees.map(visite => (
-                <Card key={visite.id} className="border-blue-300 dark:border-blue-700">
+              {visitesConfirmees.map((visite, index) => (
+                <Card key={visite.id} className="card-interactive border-blue-300 dark:border-blue-700 animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -243,8 +243,8 @@ export default function VisitesDeleguees() {
               <Badge variant="secondary">{visitesRefusees.length}</Badge>
             </h2>
             <div className="grid gap-4">
-              {visitesRefusees.map(visite => (
-                <Card key={visite.id} className="opacity-75">
+              {visitesRefusees.map((visite, index) => (
+                <Card key={visite.id} className="card-interactive opacity-75 animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -300,12 +300,12 @@ export default function VisitesDeleguees() {
           </h2>
           {visitesEffectuees.length > 0 ? (
             <div className="grid gap-4">
-              {visitesEffectuees.map(visite => {
+              {visitesEffectuees.map((visite, index) => {
                 const recommandationConfig = getRecommandationConfig(visite.recommandation_agent);
                 const Icon = recommandationConfig?.icon;
 
-                return (
-                  <Card key={visite.id}>
+                  return (
+                  <Card key={visite.id} className="card-interactive animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
@@ -371,7 +371,7 @@ export default function VisitesDeleguees() {
               })}
             </div>
           ) : (
-            <Card>
+            <Card className="card-interactive animate-fade-in">
               <CardContent className="py-8 text-center text-muted-foreground">
                 <p className="mb-4">Aucune visite déléguée effectuée pour le moment</p>
                 <Button onClick={() => navigate('/client/offres-recues')}>
@@ -384,7 +384,7 @@ export default function VisitesDeleguees() {
 
         {/* Message si aucune visite */}
         {visites.length === 0 && (
-          <Card>
+          <Card className="card-interactive animate-fade-in">
             <CardContent className="py-8 text-center text-muted-foreground">
               <p className="mb-4">Vous n'avez pas encore délégué de visites à votre agent</p>
               <p className="text-sm mb-4">

@@ -1044,14 +1044,15 @@ const OffresRecues = () => {
         </div>
 
         <div className="grid gap-6">
-          {offres.map((offre) => {
+          {offres.map((offre, index) => {
             const { label, variant } = formatStatutOffre(offre.statut);
             
             return (
               <Card 
                 key={offre.id} 
-                className="p-6 cursor-pointer hover:shadow-lg transition-shadow"
+                className="card-interactive p-6 cursor-pointer hover:shadow-lg transition-shadow animate-fade-in"
                 onClick={() => handleViewDetails(offre)}
+                style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
