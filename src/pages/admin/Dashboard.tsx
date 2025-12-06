@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send, Bell, Power, Sparkles } from 'lucide-react';
-import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +12,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
 import { AdminStatsSection } from '@/components/stats/AdminStatsSection';
 import { RecommendationStats } from '@/components/stats/RecommendationStats';
+import { PremiumKPICard } from '@/components/premium';
 
 const adminMenu = [
   { name: 'Tableau de bord', icon: Users, path: '/admin' },
@@ -224,106 +224,74 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* KPIs avec effets modernes */}
+          {/* KPIs avec composants Premium */}
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3 md:gap-4 mb-8">
-            <div className="animate-fade-in group" style={{ animationDelay: '0ms' }}>
-              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
-                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
-                <KPICard 
-                  title="Clients actifs" 
-                  value={clientsActifs} 
-                  icon={Users}
-                  onClick={() => navigate('/admin/clients')}
-                />
-              </div>
-            </div>
-            <div className="animate-fade-in group" style={{ animationDelay: '50ms' }}>
-              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
-                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
-                <KPICard 
-                  title="Agents" 
-                  value={totalAgents}
-                  subtitle={`${agentsActifs} actif(s)`}
-                  icon={UserCog}
-                  onClick={() => navigate('/admin/agents')}
-                />
-              </div>
-            </div>
-            <div className="animate-fade-in group" style={{ animationDelay: '100ms' }}>
-              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
-                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
-                <KPICard 
-                  title="Offres" 
-                  value={totalOffresEnvoyees} 
-                  icon={Send}
-                  onClick={() => navigate('/admin/offres-envoyees')}
-                />
-              </div>
-            </div>
-            <div className="animate-fade-in group" style={{ animationDelay: '150ms' }}>
-              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-success/10 transition-all duration-500">
-                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-success/30 via-emerald-400/30 to-success/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
-                <KPICard 
-                  title="Affaires conclues" 
-                  value={transactions.filter(t => t.statut === 'conclue').length} 
-                  icon={CheckCircle} 
-                  variant="success"
-                  subtitle={`${transactionsConcluesMois} ce mois`}
-                  onClick={() => navigate('/admin/transactions')}
-                />
-              </div>
-            </div>
-            <div className="animate-fade-in group" style={{ animationDelay: '200ms' }}>
-              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-warning/10 transition-all duration-500">
-                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-warning/30 via-orange-400/30 to-warning/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
-                <KPICard 
-                  title="Critiques" 
-                  value={clientsCritiques.length} 
-                  icon={Clock} 
-                  variant={clientsCritiques.length > 0 ? 'warning' : 'default'}
-                  subtitle="≤30j restants"
-                  onClick={() => navigate('/admin/mandats')}
-                />
-              </div>
-            </div>
-            <div className="animate-fade-in group" style={{ animationDelay: '250ms' }}>
-              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-destructive/10 transition-all duration-500">
-                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-destructive/30 via-red-400/30 to-destructive/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
-                <KPICard 
-                  title="Expirés" 
-                  value={clientsExpires.length} 
-                  icon={AlertTriangle} 
-                  variant={clientsExpires.length > 0 ? 'danger' : 'default'}
-                  subtitle=">90 jours"
-                  onClick={() => navigate('/admin/mandats')}
-                />
-              </div>
-            </div>
-            <div className="animate-fade-in group" style={{ animationDelay: '300ms' }}>
-              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-success/10 transition-all duration-500">
-                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-success/30 via-emerald-400/30 to-success/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
-                <KPICard 
-                  title="Revenus agence" 
-                  value={`${revenusAgenceMois.toLocaleString()}`} 
-                  icon={DollarSign} 
-                  variant="success"
-                  subtitle="CHF ce mois"
-                  onClick={() => navigate('/admin/transactions')}
-                />
-              </div>
-            </div>
-            <div className="animate-fade-in group" style={{ animationDelay: '350ms' }}>
-              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
-                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
-                <KPICard 
-                  title="Commission totale" 
-                  value={`${transactions.filter(t => t.statut === 'conclue').reduce((sum, t) => sum + (t.part_agence || 0), 0).toLocaleString()}`} 
-                  icon={DollarSign} 
-                  subtitle="CHF total"
-                  onClick={() => navigate('/admin/transactions')}
-                />
-              </div>
-            </div>
+            <PremiumKPICard 
+              title="Clients actifs" 
+              value={clientsActifs} 
+              icon={Users}
+              onClick={() => navigate('/admin/clients')}
+              delay={0}
+            />
+            <PremiumKPICard 
+              title="Agents" 
+              value={totalAgents}
+              subtitle={`${agentsActifs} actif(s)`}
+              icon={UserCog}
+              onClick={() => navigate('/admin/agents')}
+              delay={50}
+            />
+            <PremiumKPICard 
+              title="Offres" 
+              value={totalOffresEnvoyees} 
+              icon={Send}
+              onClick={() => navigate('/admin/offres-envoyees')}
+              delay={100}
+            />
+            <PremiumKPICard 
+              title="Affaires conclues" 
+              value={transactions.filter(t => t.statut === 'conclue').length} 
+              icon={CheckCircle} 
+              variant="success"
+              subtitle={`${transactionsConcluesMois} ce mois`}
+              onClick={() => navigate('/admin/transactions')}
+              delay={150}
+            />
+            <PremiumKPICard 
+              title="Critiques" 
+              value={clientsCritiques.length} 
+              icon={Clock} 
+              variant={clientsCritiques.length > 0 ? 'warning' : 'default'}
+              subtitle="≤30j restants"
+              onClick={() => navigate('/admin/mandats')}
+              delay={200}
+            />
+            <PremiumKPICard 
+              title="Expirés" 
+              value={clientsExpires.length} 
+              icon={AlertTriangle} 
+              variant={clientsExpires.length > 0 ? 'danger' : 'default'}
+              subtitle=">90 jours"
+              onClick={() => navigate('/admin/mandats')}
+              delay={250}
+            />
+            <PremiumKPICard 
+              title="Revenus agence" 
+              value={revenusAgenceMois} 
+              icon={DollarSign} 
+              variant="success"
+              subtitle="CHF ce mois"
+              onClick={() => navigate('/admin/transactions')}
+              delay={300}
+            />
+            <PremiumKPICard 
+              title="Commission totale" 
+              value={transactions.filter(t => t.statut === 'conclue').reduce((sum, t) => sum + (t.part_agence || 0), 0)} 
+              icon={DollarSign} 
+              subtitle="CHF total"
+              onClick={() => navigate('/admin/transactions')}
+              delay={350}
+            />
           </div>
 
           {/* Section Statistiques détaillées avec glassmorphism */}
