@@ -225,40 +225,40 @@ export default function AdminReferrals() {
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '0ms' }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Referrals</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium group-hover:text-primary transition-colors">Total Referrals</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground group-hover:scale-110 group-hover:text-primary transition-all" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{stats.total}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '50ms' }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">En attente</CardTitle>
-            <Clock className="h-4 w-4 text-orange-500" />
+            <CardTitle className="text-sm font-medium group-hover:text-orange-500 transition-colors">En attente</CardTitle>
+            <Clock className="h-4 w-4 text-orange-500 group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.enAttente}</div>
+            <div className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{stats.enAttente}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '100ms' }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">À payer</CardTitle>
-            <DollarSign className="h-4 w-4 text-orange-500" />
+            <CardTitle className="text-sm font-medium group-hover:text-orange-500 transition-colors">À payer</CardTitle>
+            <DollarSign className="h-4 w-4 text-orange-500 group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">CHF {stats.aPayer.toFixed(0)}</div>
+            <div className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">CHF {stats.aPayer.toFixed(0)}</div>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '150ms' }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total payé</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-sm font-medium group-hover:text-green-500 transition-colors">Total payé</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-500 group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">CHF {stats.totalPaye.toFixed(0)}</div>
+            <div className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">CHF {stats.totalPaye.toFixed(0)}</div>
           </CardContent>
         </Card>
       </div>
@@ -291,7 +291,7 @@ export default function AdminReferrals() {
       </div>
 
       {/* Table */}
-      <Card>
+      <Card className="card-interactive animate-fade-in" style={{ animationDelay: '200ms' }}>
         <CardContent className="p-0">
           <Table>
             <TableHeader>

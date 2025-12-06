@@ -274,11 +274,12 @@ const Agents = () => {
           </div>
 
           <div className="grid gap-3 md:gap-4">
-            {filteredAgents.map((agent) => {
+            {filteredAgents.map((agent, index) => {
               return (
                 <Card 
                   key={agent.id} 
-                  className="p-4 md:p-6 cursor-pointer hover:bg-accent/50 transition-colors"
+                  className="card-interactive p-4 md:p-6 cursor-pointer animate-fade-in"
+                  style={{ animationDelay: `${index * 40}ms`, animationFillMode: 'backwards' }}
                   onClick={() => navigate(`/admin/agents/${agent.id}`)}
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start gap-4">
