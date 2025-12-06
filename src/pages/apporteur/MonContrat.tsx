@@ -3,14 +3,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { FileText, Download, Calendar, CheckCircle, AlertTriangle, AlertCircle, Loader2 } from 'lucide-react';
+import { FileText, Download, Calendar, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import SignaturePad from '@/components/mandat/SignaturePad';
 
 interface ContratData {
@@ -31,13 +33,15 @@ interface ProfileData {
   email: string;
 }
 
-interface ApporteurData {
-  civilite: string | null;
-  adresse: string | null;
-  code_postal: string | null;
-  ville: string | null;
-  iban: string | null;
-  telephone: string | null;
+interface FormData {
+  civilite: string;
+  adresse: string;
+  code_postal: string;
+  ville: string;
+  telephone: string;
+  iban: string;
+  nom_banque: string;
+  titulaire_compte: string;
 }
 
 export default function MonContrat() {
@@ -45,13 +49,24 @@ export default function MonContrat() {
   const navigate = useNavigate();
   const [contrat, setContrat] = useState<ContratData | null>(null);
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [apporteurData, setApporteurData] = useState<ApporteurData | null>(null);
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState(false);
   
   // États pour le formulaire de signature
   const [acceptConditions, setAcceptConditions] = useState(false);
   const [signatureData, setSignatureData] = useState('');
+  
+  // État pour les champs éditables du formulaire
+  const [formData, setFormData] = useState<FormData>({
+    civilite: '',
+    adresse: '',
+    code_postal: '',
+    ville: '',
+    telephone: '',
+    iban: '',
+    nom_banque: '',
+    titulaire_compte: '',
+  });
 
   useEffect(() => {
     if (user) {
@@ -78,13 +93,16 @@ export default function MonContrat() {
         .single();
 
       if (apporteur) {
-        setApporteurData({
-          civilite: apporteur.civilite,
-          adresse: apporteur.adresse,
-          code_postal: apporteur.code_postal,
-          ville: apporteur.ville,
-          iban: apporteur.iban,
-          telephone: apporteur.telephone,
+        // Pré-remplir le formulaire avec les données existantes
+        setFormData({
+          civilite: apporteur.civilite || '',
+          adresse: apporteur.adresse || '',
+          code_postal: apporteur.code_postal || '',
+          ville: apporteur.ville || '',
+          telephone: apporteur.telephone || '',
+          iban: apporteur.iban || '',
+          nom_banque: apporteur.nom_banque || '',
+          titulaire_compte: apporteur.titulaire_compte || '',
         });
         setContrat({
           contrat_signe: apporteur.contrat_signe,
@@ -105,14 +123,18 @@ export default function MonContrat() {
     }
   };
 
-  // Vérifier si les informations personnelles sont complètes
-  const isProfileComplete = apporteurData?.civilite && 
-    apporteurData?.adresse && 
-    apporteurData?.code_postal && 
-    apporteurData?.ville && 
-    apporteurData?.iban;
+  // Vérifier si les informations du formulaire sont complètes
+  const isFormComplete = formData.civilite && 
+    formData.adresse && 
+    formData.code_postal && 
+    formData.ville && 
+    formData.iban;
 
-  const canSign = isProfileComplete && acceptConditions && signatureData;
+  const canSign = isFormComplete && acceptConditions && signatureData;
+  
+  const handleFormChange = (field: keyof FormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
   const handleSignContract = async () => {
     if (!canSign || !user) return;
@@ -126,11 +148,21 @@ export default function MonContrat() {
       const { error } = await supabase
         .from('apporteurs')
         .update({
+          // Données du contrat
           contrat_signe: true,
           signature_data: signatureData,
           date_signature: now.toISOString(),
           date_expiration: expirationDate.toISOString(),
           statut: 'actif',
+          // Informations personnelles du formulaire
+          civilite: formData.civilite,
+          adresse: formData.adresse,
+          code_postal: formData.code_postal,
+          ville: formData.ville,
+          telephone: formData.telephone || null,
+          iban: formData.iban,
+          nom_banque: formData.nom_banque || null,
+          titulaire_compte: formData.titulaire_compte || null,
         })
         .eq('user_id', user.id);
 
@@ -181,22 +213,124 @@ export default function MonContrat() {
         <div>
           <h1 className="text-3xl font-bold">Signer mon contrat</h1>
           <p className="text-muted-foreground">
-            Veuillez lire et signer votre contrat d'apporteur d'affaires
+            Remplissez vos informations puis signez votre contrat d'apporteur d'affaires
           </p>
         </div>
 
-        {/* Alerte si profil incomplet */}
-        {!isProfileComplete && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Veuillez compléter vos informations personnelles avant de signer le contrat.{' '}
-              <Link to="/apporteur/mon-profil" className="underline font-medium">
-                Compléter mon profil →
-              </Link>
-            </AlertDescription>
-          </Alert>
-        )}
+        {/* Formulaire d'informations personnelles */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Vos informations personnelles</CardTitle>
+            <CardDescription>Ces informations apparaîtront dans le contrat</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Civilité */}
+              <div className="space-y-2">
+                <Label htmlFor="civilite">Civilité *</Label>
+                <Select
+                  value={formData.civilite}
+                  onValueChange={(value) => handleFormChange('civilite', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionnez" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="M.">M.</SelectItem>
+                    <SelectItem value="Mme">Mme</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Téléphone */}
+              <div className="space-y-2">
+                <Label htmlFor="telephone">Téléphone</Label>
+                <Input
+                  id="telephone"
+                  value={formData.telephone}
+                  onChange={(e) => handleFormChange('telephone', e.target.value)}
+                  placeholder="+41 XX XXX XX XX"
+                />
+              </div>
+            </div>
+
+            {/* Adresse */}
+            <div className="space-y-2">
+              <Label htmlFor="adresse">Adresse *</Label>
+              <Input
+                id="adresse"
+                value={formData.adresse}
+                onChange={(e) => handleFormChange('adresse', e.target.value)}
+                placeholder="Rue et numéro"
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Code postal */}
+              <div className="space-y-2">
+                <Label htmlFor="code_postal">Code postal *</Label>
+                <Input
+                  id="code_postal"
+                  value={formData.code_postal}
+                  onChange={(e) => handleFormChange('code_postal', e.target.value)}
+                  placeholder="1000"
+                />
+              </div>
+              
+              {/* Ville */}
+              <div className="space-y-2">
+                <Label htmlFor="ville">Ville *</Label>
+                <Input
+                  id="ville"
+                  value={formData.ville}
+                  onChange={(e) => handleFormChange('ville', e.target.value)}
+                  placeholder="Lausanne"
+                />
+              </div>
+            </div>
+
+            <div className="border-t pt-4 mt-4">
+              <h4 className="font-medium mb-4">Coordonnées bancaires</h4>
+              
+              {/* IBAN */}
+              <div className="space-y-2 mb-4">
+                <Label htmlFor="iban">IBAN *</Label>
+                <Input
+                  id="iban"
+                  value={formData.iban}
+                  onChange={(e) => handleFormChange('iban', e.target.value)}
+                  placeholder="CH93 0076 2011 6238 5295 7"
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Nom de la banque */}
+                <div className="space-y-2">
+                  <Label htmlFor="nom_banque">Nom de la banque</Label>
+                  <Input
+                    id="nom_banque"
+                    value={formData.nom_banque}
+                    onChange={(e) => handleFormChange('nom_banque', e.target.value)}
+                    placeholder="UBS, Credit Suisse, etc."
+                  />
+                </div>
+                
+                {/* Titulaire du compte */}
+                <div className="space-y-2">
+                  <Label htmlFor="titulaire_compte">Titulaire du compte</Label>
+                  <Input
+                    id="titulaire_compte"
+                    value={formData.titulaire_compte}
+                    onChange={(e) => handleFormChange('titulaire_compte', e.target.value)}
+                    placeholder="Nom du titulaire"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <p className="text-sm text-muted-foreground">* Champs obligatoires</p>
+          </CardContent>
+        </Card>
 
         {/* Conditions de rémunération */}
         <Card>
@@ -234,8 +368,8 @@ export default function MonContrat() {
               <div className="text-center font-bold text-lg mb-6">CONTRAT D'APPORTEUR D'AFFAIRES</div>
               
               <p>Entre les soussignés,</p>
-              <p><strong>{apporteurData?.civilite || '[Civilité]'} {profile?.prenom || '[Prénom]'} {profile?.nom || '[Nom]'}</strong></p>
-              <p>Demeurant à : {apporteurData?.adresse || '[Adresse]'}, {apporteurData?.code_postal || '[CP]'} {apporteurData?.ville || '[Ville]'}</p>
+              <p><strong>{formData.civilite || '[Civilité]'} {profile?.prenom || '[Prénom]'} {profile?.nom || '[Nom]'}</strong></p>
+              <p>Demeurant à : {formData.adresse || '[Adresse]'}, {formData.code_postal || '[CP]'} {formData.ville || '[Ville]'}</p>
               <p>Désigné ci-après « l'apporteur d'affaires », d'une part et</p>
               
               <p className="mt-4"><strong>Immo-Rama Crissier, Ramazani</strong></p>
@@ -341,7 +475,6 @@ export default function MonContrat() {
                 id="acceptConditions"
                 checked={acceptConditions}
                 onCheckedChange={(checked) => setAcceptConditions(checked === true)}
-                disabled={!isProfileComplete}
               />
               <label
                 htmlFor="acceptConditions"
@@ -381,9 +514,9 @@ export default function MonContrat() {
               )}
             </Button>
 
-            {!isProfileComplete && (
+            {!isFormComplete && (
               <p className="text-sm text-muted-foreground text-center">
-                Complétez d'abord votre profil pour pouvoir signer.
+                Veuillez remplir tous les champs obligatoires (*) pour pouvoir signer.
               </p>
             )}
           </CardContent>
@@ -501,8 +634,8 @@ export default function MonContrat() {
             <div className="text-center font-bold text-lg mb-6">CONTRAT D'APPORTEUR D'AFFAIRES</div>
             
             <p>Entre les soussignés,</p>
-            <p><strong>{apporteurData?.civilite} {profile?.prenom} {profile?.nom}</strong></p>
-            <p>Demeurant à : {apporteurData?.adresse}, {apporteurData?.code_postal} {apporteurData?.ville}</p>
+            <p><strong>{formData.civilite} {profile?.prenom} {profile?.nom}</strong></p>
+            <p>Demeurant à : {formData.adresse}, {formData.code_postal} {formData.ville}</p>
             <p>Désigné ci-après « l'apporteur d'affaires », d'une part et</p>
             
             <p className="mt-4"><strong>Immo-Rama Crissier, Ramazani</strong></p>
