@@ -1,11 +1,11 @@
-import { AlertTriangle, CheckCircle, Shield, UserPlus, AlertCircle, Ban, FileWarning, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertTriangle, CheckCircle, Shield, UserPlus, AlertCircle, Ban, FileWarning, Lightbulb, ChevronDown, ChevronUp, Sparkles, TrendingUp, Wallet, Target, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SolvabilityResult } from '@/hooks/useSolvabilityCheck';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Progress } from '@/components/ui/progress';
 
 interface SolvabilityAlertProps {
   result: SolvabilityResult;
@@ -45,47 +45,56 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
 
   const criticalProblems = problems.filter(p => p.type === 'critical');
   const warningProblems = problems.filter(p => p.type === 'warning');
+  
+  // Calcul du pourcentage de solvabilité
+  const solvabilityPercentage = budgetDemande > 0 
+    ? Math.min(Math.round((budgetPossible / budgetDemande) * 100), 100)
+    : 100;
 
   // Affichage compact amélioré pour le dashboard
   if (compact) {
     if (isSolvable && problems.length === 0) {
       return (
-        <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
-          <CheckCircle className="w-5 h-5 text-green-600" />
-          <span className="text-sm font-medium text-green-700 dark:text-green-400">
-            Dossier solvable
-          </span>
-          {hasValidGarant && (
-            <Badge variant="outline" className="ml-auto text-green-600 border-green-300">
-              <Shield className="w-3 h-3 mr-1" />
-              Garant valide
-            </Badge>
-          )}
+        <div className="group relative overflow-hidden rounded-xl bg-card/80 backdrop-blur-xl border border-success/30 hover:border-success/50 transition-all duration-300 animate-fade-in">
+          <div className="absolute inset-0 bg-gradient-to-r from-success/5 via-transparent to-emerald-500/5" />
+          <div className="relative flex items-center gap-3 p-4">
+            <div className="p-2 rounded-lg bg-success/20 group-hover:bg-success/30 transition-colors">
+              <CheckCircle className="w-5 h-5 text-success" />
+            </div>
+            <span className="text-sm font-medium text-success">
+              Dossier solvable
+            </span>
+            {hasValidGarant && (
+              <Badge variant="outline" className="ml-auto text-success border-success/30 bg-success/10">
+                <Shield className="w-3 h-3 mr-1" />
+                Garant valide
+              </Badge>
+            )}
+          </div>
         </div>
       );
     }
 
-    // Vue compacte améliorée avec TOUS les problèmes visibles
+    // Vue compacte premium
     return (
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-        <div className="p-4 bg-red-50 dark:bg-red-950/20 rounded-lg border border-red-200 dark:border-red-900">
+        <div className="group relative overflow-hidden rounded-xl bg-card/80 backdrop-blur-xl border border-destructive/30 hover:border-destructive/50 transition-all duration-300 animate-fade-in">
+          <div className="absolute inset-0 bg-gradient-to-br from-destructive/10 via-transparent to-red-500/10" />
+          
           <CollapsibleTrigger asChild>
-            <div className="cursor-pointer">
+            <div className="relative cursor-pointer p-4">
               <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="p-2 rounded-lg bg-destructive/20">
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-2">
-                    <p className="text-sm font-bold text-red-700 dark:text-red-400">
-                      ⚠️ Dossier non solvable
+                    <p className="text-sm font-bold text-destructive">
+                      Dossier non solvable
                     </p>
                     {criticalProblems.length > 0 && (
-                      <Badge variant="destructive" className="text-xs">
+                      <Badge variant="destructive" className="text-xs shadow-lg shadow-destructive/20">
                         {criticalProblems.length} bloquant{criticalProblems.length > 1 ? 's' : ''}
-                      </Badge>
-                    )}
-                    {warningProblems.length > 0 && (
-                      <Badge variant="outline" className="text-xs border-orange-300 text-orange-700">
-                        {warningProblems.length} alerte{warningProblems.length > 1 ? 's' : ''}
                       </Badge>
                     )}
                     <div className="ml-auto">
@@ -97,32 +106,15 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
                     </div>
                   </div>
 
-                  {/* Résumé rapide des problèmes critiques */}
-                  {criticalProblems.length > 0 && (
-                    <div className="space-y-1 mb-2">
-                      {criticalProblems.slice(0, isExpanded ? undefined : 2).map((problem, index) => (
-                        <div key={index} className="flex items-start gap-2 text-xs">
-                          <span className="text-red-600 font-medium">❌</span>
-                          <span className="text-red-700 dark:text-red-400">{problem.message}</span>
-                        </div>
-                      ))}
-                      {!isExpanded && criticalProblems.length > 2 && (
-                        <p className="text-xs text-red-500">
-                          +{criticalProblems.length - 2} autre{criticalProblems.length - 2 > 1 ? 's' : ''} problème{criticalProblems.length - 2 > 1 ? 's' : ''} bloquant{criticalProblems.length - 2 > 1 ? 's' : ''}...
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Récapitulatif budget */}
-                  <div className="flex gap-4 text-xs mb-2 p-2 bg-white/50 dark:bg-black/20 rounded">
+                  {/* Résumé budget */}
+                  <div className="flex gap-4 text-xs p-2 bg-background/50 backdrop-blur-sm rounded-lg border border-border/50">
                     <div>
-                      <span className="text-muted-foreground">Budget demandé:</span>
+                      <span className="text-muted-foreground">Demandé:</span>
                       <span className="font-medium ml-1">{budgetDemande.toLocaleString()} CHF</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Budget possible:</span>
-                      <span className={cn("font-medium ml-1", budgetPossible >= budgetDemande ? "text-green-600" : "text-red-600")}>
+                      <span className="text-muted-foreground">Possible:</span>
+                      <span className={cn("font-medium ml-1", budgetPossible >= budgetDemande ? "text-success" : "text-destructive")}>
                         {budgetPossible.toLocaleString()} CHF
                       </span>
                     </div>
@@ -132,60 +124,31 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
             </div>
           </CollapsibleTrigger>
 
-          <CollapsibleContent className="pt-3 space-y-3">
-            {/* Solutions détaillées */}
-            <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+          <CollapsibleContent className="relative px-4 pb-4 space-y-3">
+            {/* Solutions */}
+            <div className="p-3 bg-primary/5 backdrop-blur-sm rounded-lg border border-primary/20">
               <div className="flex items-center gap-2 mb-2">
-                <Lightbulb className="w-4 h-4 text-blue-600" />
-                <span className="font-medium text-sm text-blue-700 dark:text-blue-400">Comment résoudre ?</span>
+                <Lightbulb className="w-4 h-4 text-primary" />
+                <span className="font-medium text-sm text-primary">Solutions</span>
               </div>
               <div className="space-y-2">
                 {criticalProblems.map((problem, index) => (
-                  <div key={index} className="text-xs p-2 bg-white/50 dark:bg-black/20 rounded">
-                    <p className="font-medium text-red-700 dark:text-red-400 mb-1">
-                      🔴 {problem.message}
-                    </p>
-                    <p className="text-blue-600 dark:text-blue-400">
-                      ➡️ {problem.solution}
-                    </p>
-                  </div>
-                ))}
-                {warningProblems.map((problem, index) => (
-                  <div key={index} className="text-xs p-2 bg-white/50 dark:bg-black/20 rounded">
-                    <p className="font-medium text-orange-700 dark:text-orange-400 mb-1">
-                      🟠 {problem.message}
-                    </p>
-                    <p className="text-blue-600 dark:text-blue-400">
-                      ➡️ {problem.solution}
-                    </p>
+                  <div key={index} className="text-xs p-2 bg-background/50 rounded">
+                    <p className="font-medium text-destructive mb-1">❌ {problem.message}</p>
+                    <p className="text-primary">➡️ {problem.solution}</p>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Candidats exclus */}
-            {excludedCandidates.length > 0 && (
-              <div className="text-xs p-2 bg-orange-100/50 dark:bg-orange-900/20 rounded">
-                <p className="font-medium text-orange-700 dark:text-orange-400 mb-1">
-                  ⚠️ Candidats non comptabilisés dans le calcul:
-                </p>
-                {excludedCandidates.map((c, i) => (
-                  <p key={i} className="text-orange-600">
-                    • {c.name} ({CANDIDATE_TYPE_LABELS[c.type] || c.type}): {c.reason}
-                  </p>
-                ))}
-              </div>
-            )}
-
             {onAddCandidate && (
               <Button 
                 size="sm" 
-                variant="outline" 
-                className="w-full h-8 text-xs border-primary text-primary hover:bg-primary/10"
+                className="w-full bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] transition-all duration-300"
                 onClick={onAddCandidate}
               >
                 <UserPlus className="w-3 h-3 mr-1" />
-                Ajouter un candidat (garant, co-débiteur...)
+                Ajouter un candidat
               </Button>
             )}
           </CollapsibleContent>
@@ -194,68 +157,168 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
     );
   }
 
-  // Affichage complet
+  // Affichage complet premium
   return (
-    <Card className={cn(isSolvable ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/10' : 'border-red-500/50 bg-red-50/30 dark:bg-red-950/10', className)}>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          {isSolvable ? (
-            <>
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              <span className="text-green-700 dark:text-green-400">Dossier solvable</span>
-              {solvabilitySource === 'garant' && (
-                <Badge variant="outline" className="ml-2 text-green-600 border-green-300">
-                  Via garant
-                </Badge>
-              )}
-            </>
-          ) : (
-            <>
-              <AlertTriangle className="w-5 h-5 text-red-600" />
-              <span className="text-red-700 dark:text-red-400">Dossier non solvable</span>
-              <Badge variant="destructive" className="ml-2">
-                {criticalProblems.length} problème{criticalProblems.length > 1 ? 's' : ''} bloquant{criticalProblems.length > 1 ? 's' : ''}
-              </Badge>
-            </>
-          )}
-        </CardTitle>
-      </CardHeader>
+    <div className={cn(
+      "group relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border transition-all duration-500 hover:shadow-xl animate-fade-in",
+      isSolvable 
+        ? 'border-success/30 hover:border-success/50 hover:shadow-success/10' 
+        : 'border-destructive/30 hover:border-destructive/50 hover:shadow-destructive/10',
+      className
+    )}>
+      {/* Gradient background */}
+      <div className={cn(
+        "absolute inset-0",
+        isSolvable 
+          ? 'bg-gradient-to-br from-success/10 via-transparent to-emerald-500/10' 
+          : 'bg-gradient-to-br from-destructive/10 via-transparent to-red-500/10'
+      )} />
       
-      <CardContent className="space-y-4">
-        {/* Résumé financier */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-background/50 rounded-lg">
-          <div>
-            <p className="text-xs text-muted-foreground">Revenus client</p>
-            <p className="text-lg font-semibold">{clientRevenus.toLocaleString()} CHF</p>
+      {/* Animated particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
+        <div className={cn(
+          "absolute top-4 right-10 w-16 h-16 rounded-full blur-2xl animate-float-particle",
+          isSolvable ? 'bg-success/20' : 'bg-destructive/20'
+        )} style={{ animationDelay: '0s' }} />
+        <div className={cn(
+          "absolute bottom-4 left-10 w-12 h-12 rounded-full blur-xl animate-float-particle",
+          isSolvable ? 'bg-emerald-400/20' : 'bg-red-400/20'
+        )} style={{ animationDelay: '1s' }} />
+      </div>
+      
+      {/* Shine effect on hover */}
+      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+        <div className={cn(
+          "absolute inset-0 bg-gradient-to-r from-transparent to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000",
+          isSolvable ? 'via-success/10' : 'via-destructive/10'
+        )} />
+      </div>
+      
+      <div className="relative p-6">
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-5">
+          <div className={cn(
+            "p-2.5 rounded-xl transition-colors duration-300",
+            isSolvable 
+              ? 'bg-success/20 group-hover:bg-success/30' 
+              : 'bg-destructive/20 group-hover:bg-destructive/30'
+          )}>
+            {isSolvable ? (
+              <CheckCircle className="w-5 h-5 text-success group-hover:scale-110 transition-transform duration-300" />
+            ) : (
+              <AlertTriangle className="w-5 h-5 text-destructive group-hover:scale-110 transition-transform duration-300" />
+            )}
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Revenus totaux</p>
-            <p className="text-lg font-semibold">{totalRevenus.toLocaleString()} CHF</p>
+          <div className="flex-1">
+            <h3 className={cn(
+              "text-lg font-semibold flex items-center gap-2",
+              isSolvable ? 'text-success' : 'text-destructive'
+            )}>
+              {isSolvable ? (
+                <>
+                  <Sparkles className="w-4 h-4 animate-pulse-soft" />
+                  Dossier solvable
+                </>
+              ) : (
+                'Dossier non solvable'
+              )}
+            </h3>
+            {solvabilitySource === 'garant' && (
+              <p className="text-xs text-muted-foreground mt-0.5">Via garant</p>
+            )}
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Budget demandé</p>
-            <p className="text-lg font-semibold">{budgetDemande.toLocaleString()} CHF</p>
+          {isSolvable ? (
+            hasValidGarant && (
+              <Badge className="bg-success/20 text-success border-success/30 shadow-sm">
+                <Shield className="w-3 h-3 mr-1" />
+                Garant valide
+              </Badge>
+            )
+          ) : (
+            <Badge variant="destructive" className="shadow-lg shadow-destructive/20">
+              {criticalProblems.length} bloquant{criticalProblems.length > 1 ? 's' : ''}
+            </Badge>
+          )}
+        </div>
+
+        {/* Résumé financier premium */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+          <div className="group/item p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border border-border/30 hover:border-primary/30 hover:scale-[1.02] transition-all duration-300">
+            <div className="flex items-center gap-2 mb-1">
+              <Wallet className="w-3.5 h-3.5 text-muted-foreground group-hover/item:text-primary transition-colors" />
+              <p className="text-xs text-muted-foreground">Revenus client</p>
+            </div>
+            <p className="text-lg font-bold group-hover/item:text-primary transition-colors">{clientRevenus.toLocaleString()} CHF</p>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">
-              Budget possible {solvabilitySource === 'garant' && '(via garant)'}
-            </p>
-            <p className={cn("text-lg font-semibold", budgetPossible >= budgetDemande ? 'text-green-600' : 'text-red-600')}>
+          <div className="group/item p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border border-border/30 hover:border-primary/30 hover:scale-[1.02] transition-all duration-300">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp className="w-3.5 h-3.5 text-muted-foreground group-hover/item:text-primary transition-colors" />
+              <p className="text-xs text-muted-foreground">Revenus totaux</p>
+            </div>
+            <p className="text-lg font-bold group-hover/item:text-primary transition-colors">{totalRevenus.toLocaleString()} CHF</p>
+          </div>
+          <div className="group/item p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border border-border/30 hover:border-warning/30 hover:scale-[1.02] transition-all duration-300">
+            <div className="flex items-center gap-2 mb-1">
+              <Target className="w-3.5 h-3.5 text-muted-foreground group-hover/item:text-warning transition-colors" />
+              <p className="text-xs text-muted-foreground">Budget demandé</p>
+            </div>
+            <p className="text-lg font-bold group-hover/item:text-warning transition-colors">{budgetDemande.toLocaleString()} CHF</p>
+          </div>
+          <div className="group/item p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border border-border/30 hover:scale-[1.02] transition-all duration-300" style={{ borderColor: budgetPossible >= budgetDemande ? 'hsl(var(--success) / 0.3)' : 'hsl(var(--destructive) / 0.3)' }}>
+            <div className="flex items-center gap-2 mb-1">
+              <Calculator className="w-3.5 h-3.5 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">
+                Budget possible {solvabilitySource === 'garant' && '(garant)'}
+              </p>
+            </div>
+            <p className={cn(
+              "text-lg font-bold transition-colors",
+              budgetPossible >= budgetDemande ? 'text-success' : 'text-destructive'
+            )}>
               {budgetPossible.toLocaleString()} CHF
             </p>
           </div>
         </div>
 
+        {/* Barre de solvabilité */}
+        {budgetDemande > 0 && (
+          <div className="mb-5 p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border border-border/30">
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-muted-foreground font-medium">Capacité de solvabilité</span>
+              <span className={cn(
+                "font-bold",
+                solvabilityPercentage >= 100 ? 'text-success' : solvabilityPercentage >= 80 ? 'text-warning' : 'text-destructive'
+              )}>
+                {solvabilityPercentage}%
+              </span>
+            </div>
+            <div className="relative h-3 rounded-full overflow-hidden bg-muted/30">
+              <Progress 
+                value={solvabilityPercentage} 
+                className="h-3 bg-transparent"
+                indicatorClassName={cn(
+                  "shadow-lg",
+                  solvabilityPercentage >= 100 
+                    ? 'bg-gradient-to-r from-success via-emerald-400 to-green-400 shadow-success/30' 
+                    : solvabilityPercentage >= 80 
+                      ? 'bg-gradient-to-r from-warning via-orange-400 to-amber-400 shadow-warning/30'
+                      : 'bg-gradient-to-r from-destructive via-red-400 to-rose-400 shadow-destructive/30'
+                )}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Statut du permis client */}
         {!clientHasStableStatus && (
-          <div className="flex items-center gap-3 p-3 bg-orange-100 dark:bg-orange-900/30 rounded-lg border border-orange-200 dark:border-orange-800">
-            <FileWarning className="w-5 h-5 text-orange-600" />
+          <div className="flex items-center gap-3 p-4 mb-5 rounded-xl bg-gradient-to-r from-warning/10 to-orange-500/10 border border-warning/30 hover:border-warning/50 transition-all duration-300">
+            <div className="p-2 rounded-lg bg-warning/20">
+              <FileWarning className="w-5 h-5 text-warning" />
+            </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-orange-700 dark:text-orange-400">
-                ⚠️ Permis non stable détecté
-              </p>
-              <p className="text-xs text-orange-600 dark:text-orange-500">
-                Un garant avec permis B/C ou nationalité suisse est nécessaire pour valider le dossier
+              <p className="text-sm font-medium text-warning">Permis non stable détecté</p>
+              <p className="text-xs text-muted-foreground">
+                Un garant avec permis B/C ou nationalité suisse est nécessaire
               </p>
             </div>
           </div>
@@ -263,54 +326,57 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
 
         {/* Info garant valide */}
         {hasValidGarant && garantInfo && (
-          <div className="flex items-center gap-3 p-3 bg-green-100 dark:bg-green-900/30 rounded-lg">
-            <Shield className="w-5 h-5 text-green-600" />
+          <div className="flex items-center gap-3 p-4 mb-5 rounded-xl bg-gradient-to-r from-success/10 to-emerald-500/10 border border-success/30 hover:border-success/50 transition-all duration-300">
+            <div className="p-2 rounded-lg bg-success/20">
+              <Shield className="w-5 h-5 text-success" />
+            </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-green-700 dark:text-green-400">
-                ✅ Garant valide: {garantInfo.nom}
+              <p className="text-sm font-medium text-success flex items-center gap-2">
+                <Sparkles className="w-3 h-3" />
+                Garant valide: {garantInfo.nom}
               </p>
-              <p className="text-xs text-green-600 dark:text-green-500">
-                Revenus: {garantInfo.revenus.toLocaleString()} CHF → Garantit jusqu'à {garantInfo.maxLoyer.toLocaleString()} CHF/mois
+              <p className="text-xs text-muted-foreground">
+                Revenus: {garantInfo.revenus.toLocaleString()} CHF → Max {garantInfo.maxLoyer.toLocaleString()} CHF/mois
                 {garantInfo.permis && ` • Permis ${garantInfo.permis}`}
               </p>
             </div>
-            <Badge className="bg-green-600 text-white">
+            <Badge className="bg-success text-success-foreground shadow-sm">
               Permis stable
             </Badge>
           </div>
         )}
 
-        {/* Problèmes détectés avec solutions claires */}
+        {/* Problèmes détectés */}
         {problems.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-4 mb-5">
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <p className="text-sm font-bold text-foreground">
+              <AlertCircle className="w-5 h-5 text-destructive" />
+              <p className="text-sm font-bold">
                 Problèmes à résoudre ({problems.length})
               </p>
             </div>
             
             {/* Problèmes critiques */}
             {criticalProblems.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-red-600 uppercase tracking-wide">
-                  🔴 Problèmes bloquants (à résoudre obligatoirement)
+              <div className="space-y-3">
+                <p className="text-xs font-medium text-destructive uppercase tracking-wide flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                  Problèmes bloquants
                 </p>
                 {criticalProblems.map((problem, index) => (
                   <div 
                     key={index} 
-                    className="p-4 rounded-lg bg-red-100 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-700"
+                    className="p-4 rounded-xl bg-gradient-to-br from-destructive/10 to-red-500/10 border border-destructive/30 hover:border-destructive/50 transition-all duration-300 animate-fade-in"
+                    style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-red-200 dark:bg-red-800 flex items-center justify-center flex-shrink-0">
-                        <span className="text-red-700 dark:text-red-300 font-bold">{index + 1}</span>
+                      <div className="w-8 h-8 rounded-full bg-destructive/20 flex items-center justify-center flex-shrink-0">
+                        <span className="text-destructive font-bold text-sm">{index + 1}</span>
                       </div>
                       <div className="flex-1">
-                        <p className="font-semibold text-red-800 dark:text-red-300 mb-2">
-                          {problem.message}
-                        </p>
-                        <div className="p-2 bg-white/50 dark:bg-black/30 rounded">
-                          <p className="text-sm text-blue-700 dark:text-blue-400 flex items-start gap-2">
+                        <p className="font-semibold text-destructive mb-2">{problem.message}</p>
+                        <div className="p-3 bg-background/50 backdrop-blur-sm rounded-lg border border-primary/20">
+                          <p className="text-sm text-primary flex items-start gap-2">
                             <Lightbulb className="w-4 h-4 mt-0.5 flex-shrink-0" />
                             <span><strong>Solution:</strong> {problem.solution}</span>
                           </p>
@@ -324,24 +390,22 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
 
             {/* Alertes */}
             {warningProblems.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-orange-600 uppercase tracking-wide">
-                  🟠 Alertes (recommandations)
+              <div className="space-y-3">
+                <p className="text-xs font-medium text-warning uppercase tracking-wide flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-warning" />
+                  Alertes
                 </p>
                 {warningProblems.map((problem, index) => (
                   <div 
                     key={index} 
-                    className="p-3 rounded-lg bg-orange-100 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800"
+                    className="p-3 rounded-xl bg-gradient-to-r from-warning/10 to-orange-500/10 border border-warning/30 hover:border-warning/50 transition-all duration-300 animate-fade-in"
+                    style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-orange-600" />
+                      <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-warning" />
                       <div className="flex-1">
-                        <p className="font-medium text-orange-700 dark:text-orange-400 mb-1">
-                          {problem.message}
-                        </p>
-                        <p className="text-xs text-orange-600 dark:text-orange-500">
-                          💡 {problem.solution}
-                        </p>
+                        <p className="font-medium text-warning mb-1">{problem.message}</p>
+                        <p className="text-xs text-muted-foreground">💡 {problem.solution}</p>
                       </div>
                     </div>
                   </div>
@@ -351,28 +415,28 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
           </div>
         )}
 
-        {/* Candidats exclus du calcul */}
+        {/* Candidats exclus */}
         {excludedCandidates.length > 0 && (
-          <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-            <div className="flex items-center gap-2 mb-2">
-              <Ban className="w-4 h-4 text-orange-600" />
-              <p className="text-sm font-medium text-orange-700 dark:text-orange-400">
+          <div className="p-4 mb-5 rounded-xl bg-gradient-to-r from-warning/10 to-orange-500/10 border border-warning/30">
+            <div className="flex items-center gap-2 mb-3">
+              <Ban className="w-4 h-4 text-warning" />
+              <p className="text-sm font-medium text-warning">
                 Candidats non comptabilisés ({excludedCandidates.length})
               </p>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-2">
               {excludedCandidates.map((candidate, index) => (
-                <div key={index} className="flex items-center justify-between text-xs p-2 bg-white/50 dark:bg-black/20 rounded">
-                  <span className="text-orange-600 dark:text-orange-500">
+                <div key={index} className="flex items-center justify-between text-xs p-3 bg-background/50 backdrop-blur-sm rounded-lg border border-border/30">
+                  <span className="text-foreground font-medium">
                     {candidate.name} ({CANDIDATE_TYPE_LABELS[candidate.type] || candidate.type})
                   </span>
-                  <span className="text-orange-500 dark:text-orange-600">
-                    ⚠️ {candidate.reason}
-                  </span>
+                  <Badge variant="outline" className="text-warning border-warning/30">
+                    {candidate.reason}
+                  </Badge>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-orange-500 mt-2 p-2 bg-orange-100 dark:bg-orange-900/30 rounded">
+            <p className="text-xs text-muted-foreground mt-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
               💡 <strong>Pour comptabiliser ces revenus:</strong> Ces candidats doivent avoir un permis B, C ou être de nationalité suisse
             </p>
           </div>
@@ -380,18 +444,28 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
 
         {/* Bouton ajouter candidat */}
         {!isSolvable && onAddCandidate && (
-          <Button onClick={onAddCandidate} className="w-full" size="lg">
-            <UserPlus className="w-4 h-4 mr-2" />
-            Ajouter un candidat au dossier (garant, co-débiteur...)
+          <Button 
+            onClick={onAddCandidate} 
+            size="lg"
+            className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] transition-all duration-300 group/btn"
+          >
+            <UserPlus className="w-4 h-4 mr-2 group-hover/btn:scale-110 transition-transform" />
+            Ajouter un candidat au dossier
+            <Sparkles className="w-4 h-4 ml-2 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
           </Button>
         )}
 
         {/* Info sur le calcul */}
-        <div className="p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground">
-          📊 <strong>Règle de calcul:</strong> Budget possible = Revenus totaux ÷ 3. 
-          Les revenus ne sont comptabilisés que pour les personnes avec permis B, C ou nationalité suisse.
+        <div className="p-4 rounded-xl bg-gradient-to-r from-muted/30 to-muted/20 border border-border/30 text-xs text-muted-foreground mt-5">
+          <div className="flex items-start gap-2">
+            <Calculator className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
+            <p>
+              <strong className="text-foreground">Règle de calcul:</strong> Budget possible = Revenus totaux ÷ 3. 
+              Les revenus ne sont comptabilisés que pour les personnes avec permis B, C ou nationalité suisse.
+            </p>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
