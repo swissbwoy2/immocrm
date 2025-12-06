@@ -84,10 +84,10 @@ export function PerformanceChart({
   const comparisonTotal = chartData.reduce((sum, d) => sum + d.comparison, 0);
 
   return (
-    <Card>
+    <Card className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-primary/10 hover:border-primary/30">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-medium">{title}</CardTitle>
+          <CardTitle className="text-base font-medium transition-transform duration-300 group-hover:scale-[1.02] origin-left">{title}</CardTitle>
           <div className="text-right">
             <p className="text-2xl font-bold">{total}</p>
             {showComparison && comparisonTotal > 0 && (
@@ -203,9 +203,9 @@ export function MultiSeriesChart({ title, series, dateRange }: MultiSeriesChartP
   }, [series, dateRange, daysDiff]);
 
   return (
-    <Card>
+    <Card className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-primary/10 hover:border-primary/30">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium">{title}</CardTitle>
+        <CardTitle className="text-base font-medium transition-transform duration-300 group-hover:scale-[1.02] origin-left">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-[250px]">

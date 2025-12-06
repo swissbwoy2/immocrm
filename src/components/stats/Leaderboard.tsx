@@ -39,18 +39,19 @@ export function Leaderboard({
   const sortedEntries = [...entries].sort((a, b) => b.value - a.value).slice(0, maxEntries);
 
   return (
-    <Card>
+    <Card className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-primary/10 hover:border-primary/30">
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-medium flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-yellow-500" />
-          {title}
+          <Trophy className="h-5 w-5 text-yellow-500 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
+          <span className="transition-transform duration-300 group-hover:scale-[1.02] origin-left">{title}</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2">
         {sortedEntries.map((entry, index) => {
           const rank = index + 1;
           const rankInfo = rankIcons[index] || null;
           const isHighlighted = entry.id === highlightId;
+          const isTopRank = index === 0;
           
           let rankChange: 'up' | 'down' | 'same' | null = null;
           if (showRankChange && entry.previousRank !== undefined) {
@@ -63,11 +64,12 @@ export function Leaderboard({
             <div
               key={entry.id}
               className={cn(
-                "flex items-center gap-3 p-3 rounded-lg transition-colors",
-                isHighlighted 
-                  ? "bg-primary/10 border border-primary/30" 
-                  : "hover:bg-muted/50"
+                "flex items-center gap-3 p-3 rounded-lg transition-all duration-200",
+                "hover:bg-muted/50 hover:translate-x-1",
+                isHighlighted && "bg-primary/10 border border-primary/30",
+                isTopRank && !isHighlighted && "bg-yellow-500/5"
               )}
+              style={{ animationDelay: `${index * 50}ms` }}
             >
               {/* Rank */}
               <div className={cn(
