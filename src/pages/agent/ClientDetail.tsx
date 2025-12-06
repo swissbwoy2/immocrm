@@ -593,18 +593,28 @@ export default function ClientDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex-1 flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-primary/20 rounded-full animate-spin border-t-primary" />
+            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin border-b-primary/40" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+          </div>
+          <p className="text-muted-foreground animate-pulse">Chargement du client...</p>
+        </div>
       </div>
     );
   }
 
   if (!client || !profile) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Client non trouvé</h2>
-          <Button onClick={() => navigate('/agent/mes-clients')}>
+      <div className="flex-1 flex items-center justify-center min-h-screen">
+        <div className="text-center space-y-4">
+          <div className="w-20 h-20 mx-auto bg-muted rounded-full flex items-center justify-center">
+            <User className="w-10 h-10 text-muted-foreground" />
+          </div>
+          <h2 className="text-2xl font-bold">Client non trouvé</h2>
+          <p className="text-muted-foreground">Ce client n'existe pas ou a été supprimé</p>
+          <Button onClick={() => navigate('/agent/mes-clients')} className="mt-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Retour aux clients
           </Button>

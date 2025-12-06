@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Calendar, Users, DollarSign, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield, UserX } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, DollarSign, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield, UserX, ChevronRight, Wallet } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { useNavigate } from "react-router-dom";
@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 import { CSVImportDialog } from "@/components/CSVImportDialog";
 import { hasStableStatus } from "@/hooks/useSolvabilityCheck";
 import { CUMULATIVE_TYPES } from "@/hooks/useClientCandidates";
+import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
+import { cn } from "@/lib/utils";
 
 interface Client {
   id: string;
@@ -369,8 +371,14 @@ const Clients = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="flex-1 flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-primary/20 rounded-full animate-spin border-t-primary" />
+            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin border-b-primary/40" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+          </div>
+          <p className="text-muted-foreground animate-pulse">Chargement des clients...</p>
+        </div>
       </div>
     );
   }
@@ -378,20 +386,18 @@ const Clients = () => {
   return (
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8">
-        <div className="mb-6">
-          {/* Header responsive */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Gestion des Clients</h1>
-              <p className="text-sm md:text-base text-muted-foreground">Vue d'ensemble ({clients.length} clients)</p>
-            </div>
+        <PremiumPageHeader
+          title="Gestion des Clients"
+          subtitle={`${clients.length} clients au total`}
+          icon={Users}
+          badge="Administration"
+          action={
             <div className="flex flex-wrap gap-2">
               <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="sm" disabled={clients.length === 0 || deleting}>
                     <Trash2 className="w-4 h-4 mr-1 md:mr-2" />
                     <span className="hidden sm:inline">{deleting ? 'Suppression...' : 'Supprimer tous'}</span>
-                    <span className="sm:hidden">{deleting ? '...' : 'Tout suppr.'}</span>
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -399,7 +405,7 @@ const Clients = () => {
                     <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
                     <AlertDialogDescription>
                       Cette action est irréversible. Cela supprimera définitivement tous les clients ({clients.length}) 
-                      et toutes leurs données associées (profils, comptes utilisateurs).
+                      et toutes leurs données associées.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -413,22 +419,21 @@ const Clients = () => {
               <Button onClick={() => setShowImportDialog(true)} size="sm">
                 <Upload className="h-4 w-4 mr-1 md:mr-2" />
                 <span className="hidden sm:inline">Importer CSV</span>
-                <span className="sm:hidden">Import</span>
               </Button>
             </div>
-          </div>
-        </div>
+          }
+        />
 
         {/* Filtres responsive */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row gap-3 mb-4 animate-fade-in">
           <Input
             placeholder="Rechercher un client..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full sm:max-w-md"
+            className="w-full sm:max-w-md bg-background/50 backdrop-blur-sm"
           />
           <Select value={filterAgent} onValueChange={setFilterAgent}>
-            <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectTrigger className="w-full sm:w-[200px] bg-background/50 backdrop-blur-sm">
               <SelectValue placeholder="Filtrer par agent" />
             </SelectTrigger>
             <SelectContent>
@@ -628,14 +633,20 @@ const Clients = () => {
             if (!profile) return null;
 
             return (
-              <Card 
+              <div 
                 key={client.id} 
-                className={`card-interactive p-3 md:p-4 flex flex-col relative cursor-pointer animate-fade-in ${
-                  !isSolvable ? 'border-red-200 dark:border-red-900' : ''
-                }`}
-                style={{ animationDelay: `${Math.min(index * 30, 300)}ms`, animationFillMode: 'backwards' }}
+                className={cn(
+                  "group relative overflow-hidden rounded-xl border border-border/50 bg-card p-3 md:p-4",
+                  "cursor-pointer transition-all duration-300 flex flex-col",
+                  "hover:shadow-xl hover:border-primary/30 hover:-translate-y-1",
+                  "animate-fade-in",
+                  !isSolvable && "border-destructive/30"
+                )}
+                style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
                 onClick={() => navigate(`/admin/clients/${client.id}`)}
               >
+                {/* Hover glow effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                 {/* Boutons d'actions - plus gros sur mobile */}
                 <div className="absolute top-2 right-2 flex gap-0.5 md:gap-1">
                   {/* Bouton Renvoyer invitation */}
@@ -823,15 +834,18 @@ const Clients = () => {
                   <div className="w-full bg-muted rounded-full h-1.5 md:h-2">
                     <div
                       className={`h-1.5 md:h-2 rounded-full transition-all ${
-                        daysElapsed < 60 ? 'bg-green-500' :
-                        daysElapsed < 90 ? 'bg-orange-500' :
-                        'bg-red-500'
+                        daysElapsed < 60 ? 'bg-success' :
+                        daysElapsed < 90 ? 'bg-warning' :
+                        'bg-destructive'
                       }`}
                       style={{ width: `${Math.min(progressPercent, 100)}%` }}
                     />
                   </div>
                 </div>
-              </Card>
+                
+                {/* Hover arrow indicator */}
+                <ChevronRight className="absolute bottom-4 right-4 h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+              </div>
             );
           })}
         </div>

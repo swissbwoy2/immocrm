@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Upload, Shield, CheckCircle, FileWarning, Home, Key, Bell } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Upload, Shield, CheckCircle, FileWarning, Home, Key, Bell, ChevronRight, Wallet, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateDaysElapsed } from "@/utils/calculations";
@@ -13,6 +13,8 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { hasStableStatus } from "@/hooks/useSolvabilityCheck";
 import { CUMULATIVE_TYPES } from "@/hooks/useClientCandidates";
 import { ClientTypeBadge } from "@/components/ClientTypeBadge";
+import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
+import { cn } from "@/lib/utils";
 
 const MesClients = () => {
   const navigate = useNavigate();
@@ -383,10 +385,13 @@ const MesClients = () => {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground animate-pulse-soft">Chargement des clients...</p>
+      <div className="flex-1 flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-primary/20 rounded-full animate-spin border-t-primary" />
+            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin border-b-primary/40" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+          </div>
+          <p className="text-muted-foreground animate-pulse">Chargement des clients...</p>
         </div>
       </div>
     );
@@ -395,10 +400,12 @@ const MesClients = () => {
   return (
     <div className="flex-1 overflow-auto">
         <div className="p-4 md:p-8">
-          <div className="mb-6 page-header">
-            <h1 className="text-3xl font-bold text-foreground">Clients</h1>
-            <p className="text-muted-foreground mt-1">Gérez et suivez vos clients</p>
-          </div>
+          <PremiumPageHeader
+            title="Mes Clients"
+            subtitle={`${allClients.length} clients assignés`}
+            icon={Users}
+            badge="Portfolio"
+          />
 
           {/* Barre de recherche */}
           <div className="mb-4 animate-fade-in">
@@ -501,9 +508,9 @@ const MesClients = () => {
             </Button>
           </div>
 
-          {/* Grid de clients */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sortedClients.map((client) => {
+          {/* Grid de clients - Premium */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {sortedClients.map((client, index) => {
               const isAcheteur = client.typeRecherche === 'Acheter';
               const daysElapsed = calculateDaysElapsed(client.dateInscription);
               const daysRemaining = 90 - daysElapsed;
@@ -511,9 +518,16 @@ const MesClients = () => {
               const isCritical = daysElapsed >= 60;
 
               return (
-                <Card 
+                <div 
                   key={client.id} 
-                  className="p-4 flex flex-col relative cursor-pointer hover:shadow-lg transition-shadow"
+                  className={cn(
+                    "group relative overflow-hidden rounded-xl border border-border/50 bg-card p-4",
+                    "cursor-pointer transition-all duration-300",
+                    "hover:shadow-xl hover:border-primary/30 hover:-translate-y-1",
+                    "animate-fade-in flex flex-col",
+                    !client.isSolvable && "border-destructive/30"
+                  )}
+                  style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
                   onClick={() => navigate(`/agent/clients/${client.id}`)}
                 >
                   {/* Actions en haut à droite */}
@@ -779,7 +793,15 @@ const MesClients = () => {
                       </div>
                     )}
                   </div>
-                </Card>
+                  
+                  {/* Hover arrow indicator */}
+                  <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <ChevronRight className="h-5 w-5 text-primary" />
+                  </div>
+                  
+                  {/* Hover glow effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                </div>
               );
             })}
           </div>
