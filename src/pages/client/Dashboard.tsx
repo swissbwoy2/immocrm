@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KPICard } from '@/components/KPICard';
 import { Button } from '@/components/ui/button';
@@ -350,7 +350,10 @@ export default function ClientDashboard() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="relative">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border border-primary/30"></div>
+        </div>
       </div>
     );
   }
@@ -384,19 +387,22 @@ export default function ClientDashboard() {
   if (!client) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
-        <Card className="max-w-md">
-          <CardContent className="pt-6 text-center">
-            <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-orange-500" />
+        <Card className="max-w-md relative overflow-hidden group hover:shadow-xl transition-all duration-500">
+          <div className="absolute inset-0 bg-gradient-to-br from-warning/10 via-transparent to-destructive/10" />
+          <CardContent className="relative pt-6 text-center">
+            <div className="p-4 rounded-full bg-orange-100 dark:bg-orange-950/30 w-16 h-16 mx-auto flex items-center justify-center mb-4 animate-pulse-soft">
+              <AlertTriangle className="w-8 h-8 text-orange-500" />
+            </div>
             <h2 className="text-xl font-semibold mb-2">Profil non chargé</h2>
             <p className="text-muted-foreground mb-4">
               Impossible de charger votre profil client. Cliquez sur le bouton ci-dessous pour réessayer.
             </p>
             <div className="space-y-2">
-              <Button onClick={loadData} className="w-full">
+              <Button onClick={loadData} className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Rafraîchir
               </Button>
-              <Button onClick={handleInitializeProfile} variant="outline" className="w-full">
+              <Button onClick={handleInitializeProfile} variant="outline" className="w-full hover:scale-[1.02] transition-transform">
                 Forcer le chargement
               </Button>
             </div>
@@ -431,57 +437,74 @@ export default function ClientDashboard() {
     <>
       <div className="flex-1 overflow-y-auto">
         <div className="p-4 md:p-8">
-          {/* Header with personalized welcome */}
-          <div className="mb-8 flex items-center justify-between page-header">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                Bonjour{clientProfile?.prenom ? `, ${clientProfile.prenom}` : ''} 👋
-              </h1>
-              <p className="text-muted-foreground">
-                {isAcheteur 
-                  ? 'Suivez l\'avancement de votre projet d\'achat immobilier' 
-                  : 'Suivez l\'avancement de votre recherche de logement'}
-              </p>
-              {isAcheteur && (
-                <Badge variant="outline" className="mt-2 text-blue-600 border-blue-300 animate-fade-in">
-                  <Home className="w-3 h-3 mr-1" />
-                  Achat immobilier
-                </Badge>
-              )}
+          {/* Header avec dégradé animé */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-6 md:p-8 mb-8 animate-fade-in">
+            {/* Particules flottantes */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <div className="absolute top-4 right-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl animate-float-particle" style={{ animationDelay: '0s' }} />
+              <div className="absolute bottom-4 left-20 w-20 h-20 bg-accent/10 rounded-full blur-2xl animate-float-particle" style={{ animationDelay: '1s' }} />
+              <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-primary/5 rounded-full blur-xl animate-float-particle" style={{ animationDelay: '2s' }} />
             </div>
-            <div className="flex gap-2">
-              {counts.new_message > 0 && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate('/client/messagerie')} 
-                  className="relative animate-fade-in hover:scale-105 transition-transform"
-                >
-                  <Bell className="w-4 h-4 mr-2" />
-                  Messages
-                  <Badge variant="destructive" className="ml-2 animate-bounce-soft">{counts.new_message}</Badge>
-                </Button>
-              )}
-              {counts.new_offer > 0 && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate('/client/offres-recues')} 
-                  className="relative animate-fade-in hover:scale-105 transition-transform"
-                  style={{ animationDelay: '100ms' }}
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  Offres
-                  <Badge variant="destructive" className="ml-2 animate-bounce-soft">{counts.new_offer}</Badge>
-                </Button>
-              )}
+            
+            <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-6 h-6 text-primary animate-pulse-soft" />
+                  <span className="text-sm font-medium text-primary/80 uppercase tracking-wider">
+                    {isAcheteur ? 'Projet d\'achat' : 'Recherche de logement'}
+                  </span>
+                </div>
+                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent animate-gradient-text bg-[length:200%_auto]">
+                  Bonjour{clientProfile?.prenom ? `, ${clientProfile.prenom}` : ''} 👋
+                </h1>
+                <p className="text-muted-foreground mt-2 max-w-xl">
+                  {isAcheteur 
+                    ? 'Suivez l\'avancement de votre projet d\'achat immobilier' 
+                    : 'Suivez l\'avancement de votre recherche de logement'}
+                </p>
+                {isAcheteur && (
+                  <Badge variant="outline" className="mt-3 text-blue-600 border-blue-300 glass-morphism animate-fade-in">
+                    <Home className="w-3 h-3 mr-1" />
+                    Achat immobilier
+                  </Badge>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {counts.new_message > 0 && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate('/client/messagerie')} 
+                    className="relative glass-morphism border-primary/20 hover:scale-105 transition-all duration-300"
+                  >
+                    <Bell className="w-4 h-4 mr-2" />
+                    Messages
+                    <Badge variant="destructive" className="ml-2 animate-bounce-soft">{counts.new_message}</Badge>
+                  </Button>
+                )}
+                {counts.new_offer > 0 && (
+                  <Button 
+                    variant="outline" 
+                    onClick={() => navigate('/client/offres-recues')} 
+                    className="relative glass-morphism border-primary/20 hover:scale-105 transition-all duration-300"
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Offres
+                    <Badge variant="destructive" className="ml-2 animate-bounce-soft">{counts.new_offer}</Badge>
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Alerte compte non actif */}
+          {/* Alerte compte non actif avec design moderne */}
           {profileActif === false && (
-            <Card className="card-interactive mb-6 border-orange-500 bg-orange-50 dark:bg-orange-950/30 animate-fade-in">
-              <CardContent className="p-6">
+            <Card className="relative overflow-hidden mb-6 border-orange-500/50 animate-fade-in group hover:shadow-xl transition-all duration-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-transparent to-orange-600/5" />
+              <CardContent className="relative p-6">
                 <div className="flex items-start gap-4">
-                  <AlertTriangle className="w-5 h-5 text-orange-500 mt-0.5 animate-pulse-soft" />
+                  <div className="p-2 rounded-full bg-orange-500/20 animate-pulse-soft">
+                    <AlertTriangle className="w-5 h-5 text-orange-500" />
+                  </div>
                   <div className="flex-1">
                     <p className="font-medium text-foreground">
                       ⏳ Compte en attente d'activation
@@ -554,50 +577,75 @@ export default function ClientDashboard() {
             </Card>
           )}
 
-          {/* KPIs */}
+          {/* KPIs avec effets modernes */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-8">
-            <KPICard
-              title="Offres reçues"
-              value={stats.offresRecues}
-              icon={Home}
-              subtitle={stats.offresNonVues > 0 ? `${stats.offresNonVues} nouvelles` : undefined}
-              variant={stats.offresNonVues > 0 ? 'warning' : 'default'}
-              onClick={() => navigate('/client/offres-recues')}
-            />
+            <div className="animate-fade-in group" style={{ animationDelay: '0ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard
+                  title="Offres reçues"
+                  value={stats.offresRecues}
+                  icon={Home}
+                  subtitle={stats.offresNonVues > 0 ? `${stats.offresNonVues} nouvelles` : undefined}
+                  variant={stats.offresNonVues > 0 ? 'warning' : 'default'}
+                  onClick={() => navigate('/client/offres-recues')}
+                />
+              </div>
+            </div>
 
-            <KPICard
-              title="Visites à venir"
-              value={stats.visitesAVenir}
-              icon={Calendar}
-              onClick={() => navigate('/client/visites')}
-            />
+            <div className="animate-fade-in group" style={{ animationDelay: '50ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard
+                  title="Visites à venir"
+                  value={stats.visitesAVenir}
+                  icon={Calendar}
+                  onClick={() => navigate('/client/visites')}
+                />
+              </div>
+            </div>
 
-            <KPICard
-              title="Visites effectuées"
-              value={stats.visitesEffectuees}
-              icon={Calendar}
-              variant="success"
-              onClick={() => navigate('/client/visites')}
-            />
+            <div className="animate-fade-in group" style={{ animationDelay: '100ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-success/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-success/30 via-emerald-400/30 to-success/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard
+                  title="Visites effectuées"
+                  value={stats.visitesEffectuees}
+                  icon={Calendar}
+                  variant="success"
+                  onClick={() => navigate('/client/visites')}
+                />
+              </div>
+            </div>
 
-            <KPICard
-              title="Candidatures"
-              value={stats.candidaturesDeposees}
-              icon={FileCheck}
-              subtitle={stats.candidaturesEnAttente > 0 ? `${stats.candidaturesEnAttente} en attente` : undefined}
-              variant={stats.candidaturesEnAttente > 0 ? 'warning' : 'default'}
-              onClick={() => navigate('/client/mes-candidatures')}
-            />
+            <div className="animate-fade-in group" style={{ animationDelay: '150ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-warning/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-warning/30 via-orange-400/30 to-warning/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard
+                  title="Candidatures"
+                  value={stats.candidaturesDeposees}
+                  icon={FileCheck}
+                  subtitle={stats.candidaturesEnAttente > 0 ? `${stats.candidaturesEnAttente} en attente` : undefined}
+                  variant={stats.candidaturesEnAttente > 0 ? 'warning' : 'default'}
+                  onClick={() => navigate('/client/mes-candidatures')}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Section Statistiques détaillées */}
-          <div className="mb-8">
-            <ClientStatsSection
-              offres={offres}
-              visites={visites}
-              candidatures={candidatures}
-              client={client}
-            />
+          {/* Section Statistiques détaillées avec glassmorphism */}
+          <div className="mb-8 animate-fade-in" style={{ animationDelay: '200ms' }}>
+            <Card className="relative overflow-hidden border-border/50 hover:shadow-xl transition-all duration-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-50" />
+              <CardContent className="relative p-0">
+                <ClientStatsSection
+                  offres={offres}
+                  visites={visites}
+                  candidatures={candidatures}
+                  client={client}
+                />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Solvabilité et Candidats */}

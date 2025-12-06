@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download, Calendar, FileCheck, Home, Key } from 'lucide-react';
+import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download, Calendar, FileCheck, Home, Key, Sparkles } from 'lucide-react';
 import { KPICard } from '@/components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -193,7 +193,10 @@ export default function AgentDashboard() {
   if (loading || !agent) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="relative">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border border-primary/30"></div>
+        </div>
       </div>
     );
   }
@@ -254,137 +257,194 @@ export default function AgentDashboard() {
   return (
     <main className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8 space-y-6">
-          {/* Header with personalized welcome */}
-          <div className="flex items-center justify-between page-header">
-            <div>
-              <h1 className="text-3xl font-bold">Tableau de bord</h1>
-              <p className="text-muted-foreground mt-1">Gérez vos clients et vos offres</p>
+          {/* Header avec dégradé animé */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-6 md:p-8 animate-fade-in">
+            {/* Particules flottantes */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <div className="absolute top-4 right-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl animate-float-particle" style={{ animationDelay: '0s' }} />
+              <div className="absolute bottom-4 left-20 w-20 h-20 bg-accent/10 rounded-full blur-2xl animate-float-particle" style={{ animationDelay: '1s' }} />
+              <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-primary/5 rounded-full blur-xl animate-float-particle" style={{ animationDelay: '2s' }} />
             </div>
-            {counts.new_message > 0 && (
-              <Button 
-                variant="outline" 
-                onClick={() => navigate('/agent/messagerie')} 
-                className="relative animate-fade-in hover:scale-105 transition-transform"
-              >
-                <Bell className="w-4 h-4 mr-2" />
-                Messages
-                <Badge variant="destructive" className="ml-2 animate-bounce-soft">{counts.new_message}</Badge>
-              </Button>
-            )}
+            
+            <div className="relative z-10 flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-6 h-6 text-primary animate-pulse-soft" />
+                  <span className="text-sm font-medium text-primary/80 uppercase tracking-wider">Espace Agent</span>
+                </div>
+                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent animate-gradient-text bg-[length:200%_auto]">
+                  Tableau de bord
+                </h1>
+                <p className="text-muted-foreground mt-2">Gérez vos clients et vos offres</p>
+              </div>
+              {counts.new_message > 0 && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/agent/messagerie')} 
+                  className="relative glass-morphism border-primary/20 hover:scale-105 transition-all duration-300"
+                >
+                  <Bell className="w-4 h-4 mr-2" />
+                  Messages
+                  <Badge variant="destructive" className="ml-2 animate-bounce-soft">{counts.new_message}</Badge>
+                </Button>
+              )}
+            </div>
           </div>
 
-          {/* KPIs - Responsive grid with staggered animations */}
+          {/* KPIs avec effets modernes */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4 xl:gap-4 2xl:grid-cols-5">
-            <div className="animate-fade-in" style={{ animationDelay: '0ms' }}>
-              <KPICard 
-                title="Clients actifs" 
-                value={clientsActifs} 
-                icon={Users}
-                onClick={() => navigate('/agent/mes-clients')}
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '0ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Clients actifs" 
+                  value={clientsActifs} 
+                  icon={Users}
+                  onClick={() => navigate('/agent/mes-clients')}
+                />
+              </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '50ms' }}>
-              <KPICard 
-                title="Location" 
-                value={clientsLocation} 
-                icon={Key}
-                onClick={() => navigate('/agent/mes-clients')}
-                subtitle="clients"
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '50ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Location" 
+                  value={clientsLocation} 
+                  icon={Key}
+                  onClick={() => navigate('/agent/mes-clients')}
+                  subtitle="clients"
+                />
+              </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
-              <KPICard 
-                title="Achat" 
-                value={clientsAchat} 
-                icon={Home}
-                onClick={() => navigate('/agent/mes-clients')}
-                variant={clientsAchat > 0 ? 'success' : 'default'}
-                subtitle="clients"
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '100ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-success/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-success/30 via-emerald-400/30 to-success/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Achat" 
+                  value={clientsAchat} 
+                  icon={Home}
+                  onClick={() => navigate('/agent/mes-clients')}
+                  variant={clientsAchat > 0 ? 'success' : 'default'}
+                  subtitle="clients"
+                />
+              </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '150ms' }}>
-              <KPICard 
-                title="Offres envoyées" 
-                value={countUniqueOffres(offres)} 
-                icon={Send}
-                onClick={() => navigate('/agent/offres-envoyees')}
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '150ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Offres envoyées" 
+                  value={countUniqueOffres(offres)} 
+                  icon={Send}
+                  onClick={() => navigate('/agent/offres-envoyees')}
+                />
+              </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
-              <KPICard 
-                title="Candidatures" 
-                value={candidatures.length} 
-                icon={FileCheck}
-                onClick={() => navigate('/agent/candidatures')}
-                variant={candidatures.filter(c => c.statut === 'en_attente').length > 0 ? 'warning' : 'default'}
-                subtitle={`${candidatures.filter(c => c.statut === 'en_attente').length} en attente`}
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '200ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-warning/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-warning/30 via-orange-400/30 to-warning/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Candidatures" 
+                  value={candidatures.length} 
+                  icon={FileCheck}
+                  onClick={() => navigate('/agent/candidatures')}
+                  variant={candidatures.filter(c => c.statut === 'en_attente').length > 0 ? 'warning' : 'default'}
+                  subtitle={`${candidatures.filter(c => c.statut === 'en_attente').length} en attente`}
+                />
+              </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '250ms' }}>
-              <KPICard 
-                title="Messages non lus" 
-                value={counts.new_message} 
-                icon={MessageSquare}
-                onClick={() => navigate('/agent/messagerie')}
-                variant={counts.new_message > 0 ? 'danger' : 'default'}
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '250ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-destructive/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-destructive/30 via-red-400/30 to-destructive/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Messages non lus" 
+                  value={counts.new_message} 
+                  icon={MessageSquare}
+                  onClick={() => navigate('/agent/messagerie')}
+                  variant={counts.new_message > 0 ? 'danger' : 'default'}
+                />
+              </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
-              <KPICard 
-                title="Affaires conclues" 
-                value={transactions.filter(t => t.statut === 'conclue').length} 
-                icon={CheckCircle}
-                variant="success"
-                subtitle="total"
-                onClick={() => navigate('/agent/transactions')}
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '300ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-success/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-success/30 via-emerald-400/30 to-success/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Affaires conclues" 
+                  value={transactions.filter(t => t.statut === 'conclue').length} 
+                  icon={CheckCircle}
+                  variant="success"
+                  subtitle="total"
+                  onClick={() => navigate('/agent/transactions')}
+                />
+              </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '350ms' }}>
-              <KPICard 
-                title="Commission pot." 
-                value={`${totalCommissionPotentielle.toLocaleString()}`} 
-                icon={DollarSign}
-                variant="default"
-                subtitle="CHF (3 mois)"
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '350ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Commission pot." 
+                  value={`${totalCommissionPotentielle.toLocaleString()}`} 
+                  icon={DollarSign}
+                  variant="default"
+                  subtitle="CHF (3 mois)"
+                />
+              </div>
             </div>
-            <div className="animate-fade-in" style={{ animationDelay: '400ms' }}>
-              <KPICard 
-                title="Ce mois" 
-                value={`${commissionsCeMois.toLocaleString()}`} 
-                icon={DollarSign}
-                variant="success"
-                subtitle={`CHF (${transactionsCeMois.length} affaire${transactionsCeMois.length > 1 ? 's' : ''})`}
-                onClick={() => navigate('/agent/transactions')}
-              />
+            <div className="animate-fade-in group" style={{ animationDelay: '400ms' }}>
+              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-success/10 transition-all duration-500">
+                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-success/30 via-emerald-400/30 to-success/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
+                <KPICard 
+                  title="Ce mois" 
+                  value={`${commissionsCeMois.toLocaleString()}`} 
+                  icon={DollarSign}
+                  variant="success"
+                  subtitle={`CHF (${transactionsCeMois.length} affaire${transactionsCeMois.length > 1 ? 's' : ''})`}
+                  onClick={() => navigate('/agent/transactions')}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Section Statistiques détaillées */}
+          {/* Section Statistiques détaillées avec glassmorphism */}
           <div className="animate-fade-in" style={{ animationDelay: '450ms' }}>
-            <AgentStatsSection
-              offres={offres}
-              transactions={transactions}
-              candidatures={candidatures}
-              clients={clients}
-              agentId={agent?.id || ''}
-            />
+            <Card className="relative overflow-hidden border-border/50 hover:shadow-xl transition-all duration-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-50" />
+              <CardContent className="relative p-0">
+                <AgentStatsSection
+                  offres={offres}
+                  transactions={transactions}
+                  candidatures={candidatures}
+                  clients={clients}
+                  agentId={agent?.id || ''}
+                />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Objectifs journaliers par défaut */}
           <div className="animate-fade-in" style={{ animationDelay: '500ms' }}>
-            <DefaultGoalsSection
-              agentId={agent?.id || ''}
-              offres={offres}
-              visites={visites}
-              candidatures={candidatures}
-              clients={clients}
-            />
+            <Card className="relative overflow-hidden border-border/50 hover:shadow-xl transition-all duration-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-primary/5 opacity-50" />
+              <CardContent className="relative p-0">
+                <DefaultGoalsSection
+                  agentId={agent?.id || ''}
+                  offres={offres}
+                  visites={visites}
+                  candidatures={candidatures}
+                  clients={clients}
+                />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Badges et récompenses */}
           <div className="animate-fade-in" style={{ animationDelay: '550ms' }}>
-            <AgentBadges agentId={agent?.id || ''} />
+            <Card className="relative overflow-hidden border-border/50 hover:shadow-xl transition-all duration-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-warning/5 via-transparent to-success/5 opacity-50" />
+              <CardContent className="relative p-0">
+                <AgentBadges agentId={agent?.id || ''} />
+              </CardContent>
+            </Card>
           </div>
 
           {/* Visites déléguées */}
