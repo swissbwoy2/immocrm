@@ -33,10 +33,11 @@ import { MessagingLayout } from "@/components/MessagingLayout";
 import { ChatAvatar } from "@/components/messaging/ChatAvatar";
 import { PremiumMessageBubble } from "@/components/messaging/PremiumMessageBubble";
 import { PremiumConversationItem } from "@/components/messaging/PremiumConversationItem";
-import { ChatInput } from "@/components/messaging/ChatInput";
+import { PremiumChatInput } from "@/components/messaging/PremiumChatInput";
 import { ChatHeader } from "@/components/messaging/ChatHeader";
-import { FloatingParticles, MeshGradientBackground } from "@/components/messaging/FloatingParticles";
+import { FloatingParticles, MeshGradientBackground, ChatPatternBackground } from "@/components/messaging/FloatingParticles";
 import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
+import { PremiumOffreCard } from "@/components/messaging/PremiumOffreCard";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -1132,6 +1133,7 @@ const Messagerie = () => {
 
   const chatView = selectedConv ? (
     <div className="flex-1 flex flex-col min-h-0 chat-background relative overflow-hidden">
+      <ChatPatternBackground />
       <MeshGradientBackground />
       <FloatingParticles count={12} />
       {currentConversation?.is_archived && (
@@ -1241,10 +1243,12 @@ const Messagerie = () => {
             conversationId={selectedConv}
             onAttachmentReady={setPendingAttachment}
           />
-          <ChatInput
+          <PremiumChatInput
             onSendMessage={handleSendMessage}
             disabled={false}
             placeholder="Écrivez un message..."
+            pendingAttachment={pendingAttachment}
+            onRemoveAttachment={() => setPendingAttachment(null)}
           />
         </div>
       )}

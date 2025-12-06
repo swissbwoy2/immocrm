@@ -17,8 +17,9 @@ import { AdminNewConversationDialog } from "@/components/AdminNewConversationDia
 import { ChatAvatar } from "@/components/messaging/ChatAvatar";
 import { PremiumMessageBubble } from "@/components/messaging/PremiumMessageBubble";
 import { PremiumConversationItem } from "@/components/messaging/PremiumConversationItem";
-import { ChatInput } from "@/components/messaging/ChatInput";
+import { PremiumChatInput } from "@/components/messaging/PremiumChatInput";
 import { ChatHeader } from "@/components/messaging/ChatHeader";
+import { ChatPatternBackground } from "@/components/messaging/FloatingParticles";
 import { FloatingParticles, MeshGradientBackground } from "@/components/messaging/FloatingParticles";
 import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
 
@@ -496,6 +497,7 @@ const Messagerie = () => {
 
   const chatView = selectedConv ? (
     <div className="flex-1 flex flex-col min-h-0 chat-background relative overflow-hidden">
+      <ChatPatternBackground />
       <MeshGradientBackground />
       <FloatingParticles count={12} />
       <ScrollArea className="flex-1 p-4 relative z-10">
@@ -527,15 +529,17 @@ const Messagerie = () => {
           </div>
         )}
       </ScrollArea>
-      <div>
+      <div className="relative z-10">
         <MessageAttachmentUploader
           conversationId={selectedConv}
           onAttachmentReady={setPendingAttachment}
         />
-        <ChatInput
+        <PremiumChatInput
           onSendMessage={handleSendMessage}
           disabled={false}
           placeholder="Écrivez un message..."
+          pendingAttachment={pendingAttachment}
+          onRemoveAttachment={() => setPendingAttachment(null)}
         />
       </div>
     </div>

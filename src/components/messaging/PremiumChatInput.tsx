@@ -1,19 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Paperclip, Smile, Mic } from 'lucide-react';
+import { Send, Paperclip, Smile, Mic, X, FileText, Image } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+interface PendingAttachment {
+  url: string;
+  type: string;
+  name: string;
+  size: number;
+}
 
 interface PremiumChatInputProps {
   onSendMessage: (message: string) => void;
   disabled?: boolean;
   placeholder?: string;
+  onAttachmentClick?: () => void;
+  pendingAttachment?: PendingAttachment | null;
+  onRemoveAttachment?: () => void;
 }
 
 export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
   onSendMessage,
   disabled = false,
   placeholder = 'Écrivez un message...',
+  onAttachmentClick,
+  pendingAttachment,
+  onRemoveAttachment,
 }) => {
   const [message, setMessage] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -21,10 +34,9 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim() && !disabled) {
+    if ((message.trim() || pendingAttachment) && !disabled) {
       onSendMessage(message.trim());
       setMessage('');
-      // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
@@ -46,6 +58,8 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
     }
   }, [message]);
 
+  const isImage = pendingAttachment?.type?.startsWith('image/');
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -56,6 +70,33 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
         isFocused && 'shadow-lg shadow-primary/5'
       )}
     >
+      {/* Pending attachment preview */}
+      {pendingAttachment && (
+        <div className="mb-3 p-3 rounded-xl bg-muted/50 border border-border/50 flex items-center gap-3 animate-fade-in">
+          <div className={cn(
+            'h-10 w-10 rounded-lg flex items-center justify-center',
+            isImage ? 'bg-emerald-500/10 text-emerald-500' : 'bg-primary/10 text-primary'
+          )}>
+            {isImage ? <Image className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{pendingAttachment.name}</p>
+            <p className="text-xs text-muted-foreground">
+              {(pendingAttachment.size / 1024).toFixed(1)} KB
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="shrink-0 h-8 w-8 rounded-lg hover:bg-destructive/10 hover:text-destructive"
+            onClick={onRemoveAttachment}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       <div className={cn(
         'flex items-end gap-3 p-2 rounded-2xl',
         'bg-muted/50 backdrop-blur-sm',
@@ -69,10 +110,12 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
           type="button"
           variant="ghost"
           size="icon"
+          onClick={onAttachmentClick}
           className={cn(
             'shrink-0 rounded-xl h-10 w-10',
             'hover:bg-primary/10 hover:text-primary',
-            'transition-all duration-200 hover:scale-110'
+            'transition-all duration-200 hover:scale-110',
+            pendingAttachment && 'text-primary bg-primary/10'
           )}
         >
           <Paperclip className="h-5 w-5" />
@@ -114,11 +157,11 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
         </Button>
 
         {/* Send/Mic button */}
-        {message.trim() ? (
+        {(message.trim() || pendingAttachment) ? (
           <Button
             type="submit"
             size="icon"
-            disabled={disabled || !message.trim()}
+            disabled={disabled || (!message.trim() && !pendingAttachment)}
             className={cn(
               'shrink-0 rounded-xl h-10 w-10',
               'bg-gradient-to-r from-primary to-primary/80',

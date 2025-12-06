@@ -34,8 +34,7 @@ import { MessagingLayout } from "@/components/MessagingLayout";
 import { ChatAvatar } from "@/components/messaging/ChatAvatar";
 import { PremiumMessageBubble } from "@/components/messaging/PremiumMessageBubble";
 import { PremiumConversationItem } from "@/components/messaging/PremiumConversationItem";
-// Force rebuild
-import { ChatInput } from "@/components/messaging/ChatInput";
+import { PremiumChatInput } from "@/components/messaging/PremiumChatInput";
 import { ChatHeader } from "@/components/messaging/ChatHeader";
 import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
 import { FloatingParticles, MeshGradientBackground, ChatPatternBackground } from "@/components/messaging/FloatingParticles";
@@ -1448,15 +1447,17 @@ const Messagerie = () => {
       </ScrollArea>
       
       {/* Input area */}
-      <div className="relative z-10 border-t border-border/30 bg-gradient-to-t from-background to-background/95 backdrop-blur-xl">
+      <div className="relative z-10">
         <MessageAttachmentUploader
           conversationId={selectedConv}
           onAttachmentReady={setPendingAttachment}
         />
-        <ChatInput
+        <PremiumChatInput
           onSendMessage={handleSendMessage}
           disabled={false}
           placeholder="Écrivez un message..."
+          pendingAttachment={pendingAttachment}
+          onRemoveAttachment={() => setPendingAttachment(null)}
         />
       </div>
 
