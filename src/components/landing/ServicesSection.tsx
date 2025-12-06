@@ -42,12 +42,18 @@ const services = [
 
 export function ServicesSection() {
   return (
-    <section className="py-20 bg-background">
-      <div className="container mx-auto px-4">
+    <section className="py-24 bg-background relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 mesh-gradient opacity-30" />
+      
+      <div className="container mx-auto px-4 relative z-10">
         {/* Section header */}
         <div className="text-center mb-16 animate-fade-in">
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-            Nos services
+          <div className="inline-flex items-center gap-2 glass-morphism rounded-full px-4 py-2 mb-4">
+            <span className="text-sm font-medium text-primary">Services complets</span>
+          </div>
+          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
+            Nos <span className="gradient-text-animated">services</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Un accompagnement complet pour votre recherche immobilière
@@ -59,13 +65,17 @@ export function ServicesSection() {
           {services.map((service, index) => (
             <Card 
               key={index}
-              className="card-interactive animate-fade-in group overflow-hidden"
+              className="card-shine card-3d animate-fade-in group overflow-hidden bg-card/80 backdrop-blur-sm border-border/50 hover:border-primary/30 transition-all duration-300"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <CardContent className="p-6">
-                {/* Icon with gradient background */}
-                <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${service.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg`}>
-                  <service.icon className="h-6 w-6 text-white" />
+              <CardContent className="p-6 relative">
+                {/* Icon with gradient background and glow */}
+                <div className="relative mb-5">
+                  <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${service.gradient} flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg`}>
+                    <service.icon className="h-7 w-7 text-white" />
+                  </div>
+                  {/* Glow effect */}
+                  <div className={`absolute inset-0 w-14 h-14 rounded-xl bg-gradient-to-br ${service.gradient} blur-xl opacity-0 group-hover:opacity-40 transition-opacity duration-300`} />
                 </div>
                 
                 {/* Content */}
@@ -75,6 +85,9 @@ export function ServicesSection() {
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   {service.description}
                 </p>
+
+                {/* Bottom gradient line */}
+                <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${service.gradient} transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left`} />
               </CardContent>
             </Card>
           ))}
