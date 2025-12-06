@@ -6,10 +6,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarView, CalendarEvent } from '@/components/calendar/CalendarView';
+import { CalendarEvent } from '@/components/calendar/CalendarView';
+import { PremiumCalendarView } from '@/components/calendar/PremiumCalendarView';
 import { ClientDayEvents } from '@/components/calendar/ClientDayEvents';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Badge } from '@/components/ui/badge';
+import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 
 export default function ClientCalendrier() {
   const navigate = useNavigate();
@@ -274,45 +276,26 @@ export default function ClientCalendrier() {
   return (
     <div className="p-4 md:p-6 space-y-6 overflow-auto h-full">
       {/* Header modernisé */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6">
-        <div className="absolute inset-0 bg-grid-pattern opacity-5" />
-        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl" />
-        <div className="relative">
-          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 animate-pulse-slow">
-              <CalendarIcon className="h-6 w-6 text-primary" />
-            </div>
-            Mon calendrier
-          </h1>
-          <div className="flex items-center gap-2 mt-2">
-            {upcomingVisites.length > 0 ? (
-              <Badge variant="default" className="bg-gradient-to-r from-primary to-primary/80 glow-breathe">
-                <Sparkles className="w-3 h-3 mr-1" />
-                {upcomingVisites.length} visite{upcomingVisites.length > 1 ? 's' : ''} à venir
-              </Badge>
-            ) : (
-              <span className="text-muted-foreground text-sm">Aucune visite planifiée</span>
-            )}
-          </div>
-        </div>
-      </div>
+      <PremiumPageHeader
+        title="Mon calendrier"
+        icon={CalendarIcon}
+        badge={upcomingVisites.length > 0 ? `${upcomingVisites.length} visite${upcomingVisites.length > 1 ? 's' : ''} à venir` : undefined}
+      />
 
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0 w-full">
         {/* Calendar */}
-        <div className="lg:col-span-2 min-w-0 overflow-hidden">
-          <div className="glass-morphism rounded-2xl p-1">
-            <CalendarView
-              events={events}
-              visites={visites}
-              selectedDate={selectedDate}
-              onDateSelect={setSelectedDate}
-            />
-          </div>
+        <div className="lg:col-span-2 min-w-0 overflow-hidden animate-fade-in">
+          <PremiumCalendarView
+            events={events}
+            visites={visites}
+            selectedDate={selectedDate}
+            onDateSelect={setSelectedDate}
+          />
         </div>
 
         {/* Day events */}
-        <div className="min-w-0 h-[600px]">
+        <div className="min-w-0 h-[600px] animate-fade-in" style={{ animationDelay: '100ms' }}>
           <ClientDayEvents
             date={selectedDate}
             events={selectedDayEvents}
