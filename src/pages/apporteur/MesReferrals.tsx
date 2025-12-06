@@ -49,42 +49,42 @@ const getStatusMessage = (statut: string) => {
   switch (statut) {
     case 'soumis':
       return (
-        <div className="flex items-center gap-2 text-orange-600">
+        <div className="flex items-center gap-2 text-warning">
           <Clock className="h-4 w-4" />
           <span>Votre referral est en cours de vérification par notre équipe.</span>
         </div>
       );
     case 'valide':
       return (
-        <div className="flex items-center gap-2 text-blue-600">
+        <div className="flex items-center gap-2 text-primary">
           <CheckCircle className="h-4 w-4" />
           <span>Le client a été validé et pris en charge par un agent.</span>
         </div>
       );
     case 'en_cours':
       return (
-        <div className="flex items-center gap-2 text-blue-600">
+        <div className="flex items-center gap-2 text-primary">
           <Clock className="h-4 w-4" />
           <span>La recherche est en cours pour ce client.</span>
         </div>
       );
     case 'conclu':
       return (
-        <div className="flex items-center gap-2 text-green-600">
+        <div className="flex items-center gap-2 text-success">
           <CheckCircle className="h-4 w-4" />
           <span>L'affaire est conclue ! Votre commission sera versée prochainement.</span>
         </div>
       );
     case 'paye':
       return (
-        <div className="flex items-center gap-2 text-green-600">
+        <div className="flex items-center gap-2 text-success">
           <DollarSign className="h-4 w-4" />
           <span>Votre commission a été versée.</span>
         </div>
       );
     case 'annule':
       return (
-        <div className="flex items-center gap-2 text-red-600">
+        <div className="flex items-center gap-2 text-destructive">
           <XCircle className="h-4 w-4" />
           <span>Ce referral a été annulé.</span>
         </div>
@@ -168,11 +168,11 @@ export default function MesReferrals() {
             placeholder="Rechercher un client..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
+            className="pl-10 transition-all duration-200 focus:ring-2 focus:ring-primary/20"
           />
         </div>
         <Select value={statutFilter} onValueChange={setStatutFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px] transition-all duration-200 hover:border-primary/50">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Filtrer par statut" />
           </SelectTrigger>
@@ -190,7 +190,7 @@ export default function MesReferrals() {
 
       {/* Referrals List */}
       {filteredReferrals.length === 0 ? (
-        <Card>
+        <Card className="card-interactive animate-fade-in">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Users className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium">Aucun referral trouvé</h3>
@@ -200,7 +200,7 @@ export default function MesReferrals() {
                 : 'Vous n\'avez pas encore soumis de clients.'}
             </p>
             {!search && statutFilter === 'all' && (
-              <Button className="mt-4" asChild>
+              <Button className="mt-4 hover:scale-105 transition-transform" asChild>
                 <a href="/apporteur/soumettre-client">Soumettre un client</a>
               </Button>
             )}
@@ -208,12 +208,12 @@ export default function MesReferrals() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {filteredReferrals.map((referral) => (
-            <Card key={referral.id}>
+          {filteredReferrals.map((referral, index) => (
+            <Card key={referral.id} className="group card-interactive animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div>
-                    <CardTitle className="text-lg">
+                    <CardTitle className="text-lg transition-transform duration-300 group-hover:translate-x-1">
                       {referral.client_prenom} {referral.client_nom}
                     </CardTitle>
                     <CardDescription>
@@ -244,19 +244,19 @@ export default function MesReferrals() {
 
                 <div className="grid gap-3 text-sm">
                   {referral.lieu_situation && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
                       <MapPin className="h-4 w-4" />
                       {referral.lieu_situation}
                     </div>
                   )}
                   {referral.client_telephone && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
                       <Phone className="h-4 w-4" />
                       {referral.client_telephone}
                     </div>
                   )}
                   {referral.client_email && (
-                    <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
                       <Mail className="h-4 w-4" />
                       {referral.client_email}
                     </div>

@@ -168,56 +168,64 @@ export default function Commissions() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5">
+        <Card className="group bg-gradient-to-br from-success/10 to-success/5 card-interactive animate-fade-in" style={{ animationDelay: '0ms' }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Payé</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
+            <div className="p-2 rounded-lg bg-success/10 transition-transform duration-300 group-hover:scale-110">
+              <CheckCircle className="h-4 w-4 text-success" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">
+            <div className="text-3xl font-bold text-success transition-transform duration-300 group-hover:scale-105 origin-left">
               <AnimatedCounter value={stats.total_paye} prefix="CHF " decimals={0} />
             </div>
             <p className="text-xs text-muted-foreground mt-1">{stats.nombre_transactions} transactions</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-500/10 to-orange-500/5">
+        <Card className="group bg-gradient-to-br from-warning/10 to-warning/5 card-interactive animate-fade-in" style={{ animationDelay: '50ms' }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">En attente</CardTitle>
-            <Clock className="h-4 w-4 text-orange-500" />
+            <div className="p-2 rounded-lg bg-warning/10 transition-transform duration-300 group-hover:scale-110">
+              <Clock className="h-4 w-4 text-warning" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-orange-600">
+            <div className="text-3xl font-bold text-warning transition-transform duration-300 group-hover:scale-105 origin-left">
               <AnimatedCounter value={stats.total_en_attente} prefix="CHF " decimals={0} />
             </div>
             <p className="text-xs text-muted-foreground mt-1">À recevoir</p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
+        <Card className="group bg-gradient-to-br from-primary/10 to-primary/5 card-interactive animate-fade-in" style={{ animationDelay: '100ms' }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Global</CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
+            <div className="p-2 rounded-lg bg-primary/10 transition-transform duration-300 group-hover:scale-110">
+              <TrendingUp className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
+            <div className="text-3xl font-bold transition-transform duration-300 group-hover:scale-105 origin-left">
               <AnimatedCounter value={stats.total_paye + stats.total_en_attente} prefix="CHF " decimals={0} />
             </div>
             <p className="text-xs text-muted-foreground mt-1">{yearFilter}</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="group card-interactive animate-fade-in" style={{ animationDelay: '150ms' }}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">vs Année précédente</CardTitle>
-            {parseFloat(yearChange) >= 0 ? (
-              <ArrowUpRight className="h-4 w-4 text-green-500" />
-            ) : (
-              <ArrowDownRight className="h-4 w-4 text-red-500" />
-            )}
+            <div className={`p-2 rounded-lg transition-transform duration-300 group-hover:scale-110 ${parseFloat(yearChange) >= 0 ? 'bg-success/10' : 'bg-destructive/10'}`}>
+              {parseFloat(yearChange) >= 0 ? (
+                <ArrowUpRight className="h-4 w-4 text-success" />
+              ) : (
+                <ArrowDownRight className="h-4 w-4 text-destructive" />
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl font-bold ${parseFloat(yearChange) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className={`text-3xl font-bold transition-transform duration-300 group-hover:scale-105 origin-left ${parseFloat(yearChange) >= 0 ? 'text-success' : 'text-destructive'}`}>
               {parseFloat(yearChange) >= 0 ? '+' : ''}{yearChange}%
             </div>
             <p className="text-xs text-muted-foreground mt-1">
@@ -228,9 +236,9 @@ export default function Commissions() {
       </div>
 
       {/* Chart */}
-      <Card>
+      <Card className="group card-interactive animate-fade-in" style={{ animationDelay: '200ms' }}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 transition-transform duration-300 group-hover:translate-x-1">
             <TrendingUp className="h-5 w-5" />
             Évolution mensuelle {yearFilter}
           </CardTitle>
@@ -261,9 +269,9 @@ export default function Commissions() {
       </Card>
 
       {/* Commissions List */}
-      <Card>
+      <Card className="group card-interactive animate-fade-in" style={{ animationDelay: '250ms' }}>
         <CardHeader>
-          <CardTitle>Historique des commissions</CardTitle>
+          <CardTitle className="transition-transform duration-300 group-hover:translate-x-1">Historique des commissions</CardTitle>
           <CardDescription>
             Détail de toutes vos commissions
           </CardDescription>
@@ -277,10 +285,11 @@ export default function Commissions() {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredCommissions.map((commission) => (
+              {filteredCommissions.map((commission, index) => (
                 <div 
                   key={commission.id} 
-                  className="p-4 border rounded-lg hover:shadow-md transition-all duration-300"
+                  className="p-4 border rounded-lg hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-300 animate-fade-in"
+                  style={{ animationDelay: `${300 + index * 50}ms` }}
                 >
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="space-y-2 flex-1">
@@ -315,7 +324,7 @@ export default function Commissions() {
                         CHF {commission.montant_commission?.toFixed(2) || '0.00'}
                       </div>
                       {commission.statut === 'paye' ? (
-                        <Badge className="bg-green-500 gap-1">
+                        <Badge className="bg-success gap-1">
                           <CheckCircle className="h-3 w-3" />
                           Payé
                         </Badge>
