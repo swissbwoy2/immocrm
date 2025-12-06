@@ -2,11 +2,16 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { FileText, Download, Calendar, CheckCircle, AlertTriangle } from 'lucide-react';
+import { FileText, Download, Calendar, CheckCircle, AlertTriangle, AlertCircle, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useNavigate, Link } from 'react-router-dom';
+import SignaturePad from '@/components/mandat/SignaturePad';
 
 interface ContratData {
   contrat_signe: boolean;
@@ -26,12 +31,27 @@ interface ProfileData {
   email: string;
 }
 
+interface ApporteurData {
+  civilite: string | null;
+  adresse: string | null;
+  code_postal: string | null;
+  ville: string | null;
+  iban: string | null;
+  telephone: string | null;
+}
+
 export default function MonContrat() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [contrat, setContrat] = useState<ContratData | null>(null);
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [apporteurData, setApporteurData] = useState<any>(null);
+  const [apporteurData, setApporteurData] = useState<ApporteurData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signing, setSigning] = useState(false);
+  
+  // États pour le formulaire de signature
+  const [acceptConditions, setAcceptConditions] = useState(false);
+  const [signatureData, setSignatureData] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -58,7 +78,14 @@ export default function MonContrat() {
         .single();
 
       if (apporteur) {
-        setApporteurData(apporteur);
+        setApporteurData({
+          civilite: apporteur.civilite,
+          adresse: apporteur.adresse,
+          code_postal: apporteur.code_postal,
+          ville: apporteur.ville,
+          iban: apporteur.iban,
+          telephone: apporteur.telephone,
+        });
         setContrat({
           contrat_signe: apporteur.contrat_signe,
           signature_data: apporteur.signature_data,
@@ -78,6 +105,59 @@ export default function MonContrat() {
     }
   };
 
+  // Vérifier si les informations personnelles sont complètes
+  const isProfileComplete = apporteurData?.civilite && 
+    apporteurData?.adresse && 
+    apporteurData?.code_postal && 
+    apporteurData?.ville && 
+    apporteurData?.iban;
+
+  const canSign = isProfileComplete && acceptConditions && signatureData;
+
+  const handleSignContract = async () => {
+    if (!canSign || !user) return;
+
+    setSigning(true);
+    try {
+      const now = new Date();
+      const expirationDate = new Date(now);
+      expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+
+      const { error } = await supabase
+        .from('apporteurs')
+        .update({
+          contrat_signe: true,
+          signature_data: signatureData,
+          date_signature: now.toISOString(),
+          date_expiration: expirationDate.toISOString(),
+          statut: 'actif',
+        })
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      toast.success('Contrat signé avec succès !', {
+        description: 'Votre contrat est maintenant actif pour une durée d\'un an.',
+      });
+
+      // Recharger les données
+      await loadData();
+      
+      // Rediriger vers le dashboard après un court délai
+      setTimeout(() => {
+        navigate('/apporteur');
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error signing contract:', error);
+      toast.error('Erreur lors de la signature', {
+        description: 'Veuillez réessayer.',
+      });
+    } finally {
+      setSigning(false);
+    }
+  };
+
   const isExpired = contrat?.date_expiration 
     ? new Date(contrat.date_expiration) < new Date() 
     : false;
@@ -94,6 +174,225 @@ export default function MonContrat() {
     );
   }
 
+  // Formulaire de signature si le contrat n'est pas signé
+  if (!contrat?.contrat_signe) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div>
+          <h1 className="text-3xl font-bold">Signer mon contrat</h1>
+          <p className="text-muted-foreground">
+            Veuillez lire et signer votre contrat d'apporteur d'affaires
+          </p>
+        </div>
+
+        {/* Alerte si profil incomplet */}
+        {!isProfileComplete && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Veuillez compléter vos informations personnelles avant de signer le contrat.{' '}
+              <Link to="/apporteur/mon-profil" className="underline font-medium">
+                Compléter mon profil →
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Conditions de rémunération */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Conditions de rémunération</CardTitle>
+            <CardDescription>Article 2 de votre contrat</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="p-4 bg-muted rounded-lg text-center">
+                <div className="text-3xl font-bold text-primary">{contrat?.taux_commission ?? 10}%</div>
+                <div className="text-sm text-muted-foreground">Commission</div>
+                <div className="text-xs text-muted-foreground mt-1">des frais d'agence</div>
+              </div>
+              <div className="p-4 bg-muted rounded-lg text-center">
+                <div className="text-3xl font-bold">CHF {contrat?.minimum_vente ?? 0}</div>
+                <div className="text-sm text-muted-foreground">Minimum vente</div>
+              </div>
+              <div className="p-4 bg-muted rounded-lg text-center">
+                <div className="text-3xl font-bold">CHF {contrat?.minimum_location ?? 0}</div>
+                <div className="text-sm text-muted-foreground">Minimum location</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Texte du contrat */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Contrat d'apporteur d'affaires</CardTitle>
+            <CardDescription>Veuillez lire attentivement avant de signer</CardDescription>
+          </CardHeader>
+          <CardContent className="prose prose-sm max-w-none">
+            <div className="space-y-4 text-sm">
+              <div className="text-center font-bold text-lg mb-6">CONTRAT D'APPORTEUR D'AFFAIRES</div>
+              
+              <p>Entre les soussignés,</p>
+              <p><strong>{apporteurData?.civilite || '[Civilité]'} {profile?.prenom || '[Prénom]'} {profile?.nom || '[Nom]'}</strong></p>
+              <p>Demeurant à : {apporteurData?.adresse || '[Adresse]'}, {apporteurData?.code_postal || '[CP]'} {apporteurData?.ville || '[Ville]'}</p>
+              <p>Désigné ci-après « l'apporteur d'affaires », d'une part et</p>
+              
+              <p className="mt-4"><strong>Immo-Rama Crissier, Ramazani</strong></p>
+              <p>Chemin de l'Esparcette 5, 1023 Crissier</p>
+              <p>Désigné ci-après « la société », d'autre part.</p>
+
+              <div className="mt-6">
+                <h4 className="font-bold">PRÉAMBULE :</h4>
+                <p>
+                  L'apporteur d'affaires, du fait de son travail et ses relations, est à même d'identifier des clients 
+                  qui souhaitent vendre, acheter, louer ou mettre en location un bien immobilier et de communiquer 
+                  les coordonnées à la société. La société est une agence immobilière spécialiste dans la vente, 
+                  la location et la gestion. Les deux Parties conscientes de leur complémentarité ont décidé de 
+                  mettre en place la présente convention pour régir leurs relations.
+                </p>
+              </div>
+
+              <div className="mt-4">
+                <h4 className="font-bold">Article 1 – Objet du contrat</h4>
+                <p>
+                  L'apporteur d'affaires s'engage à présenter à la société des clients potentiels intéressés par 
+                  l'achat, la vente, la location ou la mise en location de biens immobiliers.
+                </p>
+              </div>
+
+              <div className="mt-4">
+                <h4 className="font-bold">Article 2 – Rémunération de l'apporteur d'affaires</h4>
+                <p>
+                  Les commissions dues à l'Apporteur d'affaires lui seront acquises dès la signature de l'acte 
+                  de vente ou du bail à loyer par les clients qu'il aura présenté à la société. La société versera 
+                  à l'apporteur d'affaires une commission d'apport s'élevant à {contrat?.taux_commission ?? 10}% des frais d'agence 
+                  {(contrat?.minimum_vente ?? 0) > 0 && ` avec un minimum de CHF ${contrat?.minimum_vente ?? 0},- pour un bien vendu`}
+                  {(contrat?.minimum_location ?? 0) > 0 && ` et un minimum de CHF ${contrat?.minimum_location ?? 0},- pour un bien loué`}.
+                </p>
+              </div>
+
+              <div className="mt-4">
+                <h4 className="font-bold">Article 3 - Exigibilité de la rémunération</h4>
+                <p>
+                  La rémunération est payable dès la conclusion de la vente ou du bail à loyer. L'apporteur 
+                  d'affaire ne perd pas son droit à rémunération si la vente ou la location intervient après 
+                  l'échéance du contrat, avec un client qui avait été indiqué par l'apporteur d'affaires pendant 
+                  la durée du contrat.
+                </p>
+              </div>
+
+              <div className="mt-4">
+                <h4 className="font-bold">Article 4 – Durée du contrat</h4>
+                <p>
+                  Le présent contrat est conclu pour une durée de 1 an, à compter de sa signature, et se 
+                  renouvellera tacitement pour la même durée, sauf dénonciation par l'une ou l'autre des parties, 
+                  par écrit reçu quinze jours avant l'échéance.
+                </p>
+              </div>
+
+              <div className="mt-4">
+                <h4 className="font-bold">Article 5 – Indépendance des parties</h4>
+                <p>
+                  L'apporteur d'affaires exerce son activité de manière totalement indépendante. Il n'existe 
+                  aucun lien de subordination entre les parties. L'apporteur d'affaires est libre d'organiser 
+                  son temps et ses méthodes de travail.
+                </p>
+              </div>
+
+              <div className="mt-4">
+                <h4 className="font-bold">Article 6 – Confidentialité</h4>
+                <p>
+                  L'apporteur d'affaires s'engage à garder confidentielles toutes les informations relatives 
+                  à la société, ses clients et ses partenaires dont il aurait connaissance dans le cadre 
+                  de l'exécution du présent contrat.
+                </p>
+              </div>
+
+              {contrat?.dispositions_particulieres && (
+                <div className="mt-4">
+                  <h4 className="font-bold">Dispositions particulières :</h4>
+                  <p>{contrat.dispositions_particulieres}</p>
+                </div>
+              )}
+
+              <div className="mt-4">
+                <h4 className="font-bold">Article 10 - Élection de for et élection de droit</h4>
+                <p>a) Pour tout litige qui pourrait résulter du présent contrat, le mandant déclare accepter 
+                expressément la compétence des Tribunaux du lieu du siège de l'entreprise du courtier.</p>
+                <p>b) Le droit suisse est applicable.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Section signature */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Signature du contrat</CardTitle>
+            <CardDescription>
+              Acceptez les conditions et signez ci-dessous
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Checkbox acceptation */}
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id="acceptConditions"
+                checked={acceptConditions}
+                onCheckedChange={(checked) => setAcceptConditions(checked === true)}
+                disabled={!isProfileComplete}
+              />
+              <label
+                htmlFor="acceptConditions"
+                className="text-sm leading-relaxed cursor-pointer"
+              >
+                J'ai lu et j'accepte les conditions du contrat d'apporteur d'affaires. 
+                Je m'engage à respecter les termes de ce contrat.
+              </label>
+            </div>
+
+            {/* Signature pad */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Votre signature :</label>
+              <SignaturePad
+                value={signatureData}
+                onChange={setSignatureData}
+              />
+            </div>
+
+            {/* Bouton de signature */}
+            <Button
+              onClick={handleSignContract}
+              disabled={!canSign || signing}
+              className="w-full"
+              size="lg"
+            >
+              {signing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Signature en cours...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Signer le contrat
+                </>
+              )}
+            </Button>
+
+            {!isProfileComplete && (
+              <p className="text-sm text-muted-foreground text-center">
+                Complétez d'abord votre profil pour pouvoir signer.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Affichage du contrat signé
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
@@ -116,20 +415,16 @@ export default function MonContrat() {
                 Contrat d'apporteur d'affaires
               </CardDescription>
             </div>
-            {contrat?.contrat_signe ? (
-              isExpired ? (
-                <Badge variant="destructive">
-                  <AlertTriangle className="h-3 w-3 mr-1" />
-                  Expiré
-                </Badge>
-              ) : (
-                <Badge variant="default" className="bg-green-500">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Actif
-                </Badge>
-              )
+            {isExpired ? (
+              <Badge variant="destructive">
+                <AlertTriangle className="h-3 w-3 mr-1" />
+                Expiré
+              </Badge>
             ) : (
-              <Badge variant="secondary">En attente</Badge>
+              <Badge variant="default" className="bg-green-500">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Actif
+              </Badge>
             )}
           </div>
         </CardHeader>
@@ -231,8 +526,8 @@ export default function MonContrat() {
                 Les commissions dues à l'Apporteur d'affaires lui seront acquises dès la signature de l'acte 
                 de vente ou du bail à loyer par les clients qu'il aura présenté à la société. La société versera 
                 à l'apporteur d'affaires une commission d'apport s'élevant à {contrat?.taux_commission ?? 10}% des frais d'agence 
-                avec un minimum de CHF {contrat?.minimum_vente ?? 0},- pour un bien vendu et un minimum de CHF {contrat?.minimum_location ?? 0},- 
-                pour un bien loué.
+                {(contrat?.minimum_vente ?? 0) > 0 && ` avec un minimum de CHF ${contrat?.minimum_vente ?? 0},- pour un bien vendu`}
+                {(contrat?.minimum_location ?? 0) > 0 && ` et un minimum de CHF ${contrat?.minimum_location ?? 0},- pour un bien loué`}.
               </p>
             </div>
 
@@ -257,7 +552,7 @@ export default function MonContrat() {
 
             {contrat?.dispositions_particulieres && (
               <div className="mt-4">
-                <h4 className="font-bold">Article 8 - Dispositions particulières :</h4>
+                <h4 className="font-bold">Dispositions particulières :</h4>
                 <p>{contrat.dispositions_particulieres}</p>
               </div>
             )}
