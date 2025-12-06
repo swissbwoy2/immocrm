@@ -594,7 +594,7 @@ export default function EnvoyerEmail() {
         </div>
 
         {!hasEmailConfig ? (
-          <Card>
+          <Card className="card-interactive animate-fade-in">
             <CardContent className="py-12 text-center">
               <AlertCircle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
               <h2 className="text-xl font-semibold mb-2">Configuration email requise</h2>
@@ -610,7 +610,7 @@ export default function EnvoyerEmail() {
           <div className="grid gap-6 md:grid-cols-3">
             {/* Main form */}
             <div className="md:col-span-2 space-y-6">
-              <Card>
+              <Card className="card-interactive animate-fade-in" style={{ animationDelay: '0ms' }}>
                 <CardHeader>
                   <CardTitle>Composer l'email</CardTitle>
                   <CardDescription>Entrez l'adresse email manuellement ou sélectionnez un client</CardDescription>
@@ -858,7 +858,7 @@ export default function EnvoyerEmail() {
 
             {/* Documents sidebar */}
             <div className="space-y-6">
-              <Card>
+              <Card className="card-interactive animate-fade-in" style={{ animationDelay: '100ms' }}>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Paperclip className="h-5 w-5" />

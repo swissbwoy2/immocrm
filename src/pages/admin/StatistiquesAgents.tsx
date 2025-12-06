@@ -203,46 +203,46 @@ export default function StatistiquesAgents() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
+        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '0ms' }}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Users className="h-4 w-4 text-blue-600" />
+              <Users className="h-4 w-4 text-blue-600 group-hover:scale-110 transition-transform" />
               Total Clients
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalClients}</div>
+            <div className="text-2xl font-bold group-hover:scale-105 transition-transform">{totalClients}</div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '50ms' }}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-600" />
+              <TrendingUp className="h-4 w-4 text-green-600 group-hover:scale-110 transition-transform" />
               Total Transactions
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalTransactions}</div>
+            <div className="text-2xl font-bold group-hover:scale-105 transition-transform">{totalTransactions}</div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '100ms' }}>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-emerald-600" />
+              <DollarSign className="h-4 w-4 text-emerald-600 group-hover:scale-110 transition-transform" />
               Total Commissions
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalCommissions.toLocaleString('fr-CH')} CHF</div>
+            <div className="text-2xl font-bold group-hover:scale-105 transition-transform">{totalCommissions.toLocaleString('fr-CH')} CHF</div>
           </CardContent>
         </Card>
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
+        <Card className="card-interactive animate-fade-in" style={{ animationDelay: '150ms' }}>
           <CardHeader>
             <CardTitle>Commissions par Agent</CardTitle>
             <CardDescription>Comparaison des performances</CardDescription>
@@ -262,7 +262,7 @@ export default function StatistiquesAgents() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="card-interactive animate-fade-in" style={{ animationDelay: '200ms' }}>
           <CardHeader>
             <CardTitle>Répartition des Commissions</CardTitle>
             <CardDescription>Part de chaque agent</CardDescription>
@@ -292,7 +292,7 @@ export default function StatistiquesAgents() {
       </div>
 
       {/* Detailed Stats Table */}
-      <Card>
+      <Card className="card-interactive animate-fade-in" style={{ animationDelay: '250ms' }}>
         <CardHeader>
           <CardTitle>Performances Détaillées</CardTitle>
           <CardDescription>Statistiques complètes par agent</CardDescription>

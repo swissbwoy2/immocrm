@@ -393,7 +393,7 @@ const AdminEnvoyerOffre = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Formulaire à gauche */}
           <div className="space-y-6">
-            <Card className="p-6">
+            <Card className="card-interactive p-6 animate-fade-in" style={{ animationDelay: '0ms' }}>
               <h3 className="font-semibold mb-4">Sélectionner un client</h3>
               
               {/* Search input */}
@@ -434,7 +434,7 @@ const AdminEnvoyerOffre = () => {
               )}
             </Card>
 
-            <Card className="p-6 space-y-4">
+            <Card className="card-interactive p-6 space-y-4 animate-fade-in" style={{ animationDelay: '50ms' }}>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>📍 Localisation *</Label>
@@ -525,7 +525,7 @@ const AdminEnvoyerOffre = () => {
               </div>
             </Card>
 
-            <Card className="p-6 space-y-4">
+            <Card className="card-interactive p-6 space-y-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
               <h3 className="font-semibold">Dates de visite proposées</h3>
               {[0, 1, 2].map((index) => (
                 <Input 
@@ -537,7 +537,7 @@ const AdminEnvoyerOffre = () => {
               ))}
             </Card>
 
-            <Card className="p-6">
+            <Card className="card-interactive p-6 animate-fade-in" style={{ animationDelay: '150ms' }}>
               <Label className="flex items-center gap-2">
                 <Link className="h-4 w-4" />
                 Lien de l'annonce
@@ -550,7 +550,7 @@ const AdminEnvoyerOffre = () => {
               />
             </Card>
 
-            <Card className="p-6">
+            <Card className="card-interactive p-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
               <Label className="flex items-center gap-2 mb-4">
                 <Paperclip className="h-4 w-4" />
                 Pièces jointes
@@ -582,7 +582,7 @@ const AdminEnvoyerOffre = () => {
 
           {/* Aperçu de l'email à droite */}
           <div className="lg:sticky lg:top-8 h-fit">
-            <Card className="p-6">
+            <Card className="card-interactive p-6 animate-fade-in" style={{ animationDelay: '250ms' }}>
               <h3 className="font-semibold mb-4">Aperçu de l'email</h3>
               <div className="border rounded-lg p-6 bg-white space-y-4">
                 <div className="flex justify-center mb-6">
