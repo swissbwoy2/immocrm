@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle } from 'lucide-react';
 import { ClientActivityStats } from '@/components/admin/ClientActivityStats';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,7 @@ import { useClientCandidates } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck, hasStableStatus } from '@/hooks/useSolvabilityCheck';
 import { RegionAutocomplete } from '@/components/RegionAutocomplete';
 import { ApporteurInfoCard } from '@/components/ApporteurInfoCard';
+import { AnimatedCounter } from '@/components/AnimatedCounter';
 
 interface Client {
   id: string;
@@ -93,6 +94,114 @@ interface Agent {
   id: string;
   profile: Profile;
 }
+
+// Floating particles component for premium effect
+const FloatingParticles = ({ count = 15 }: { count?: number }) => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    {[...Array(count)].map((_, i) => (
+      <div
+        key={i}
+        className="absolute w-1 h-1 bg-primary/20 rounded-full animate-pulse"
+        style={{
+          left: `${Math.random() * 100}%`,
+          top: `${Math.random() * 100}%`,
+          animationDelay: `${Math.random() * 3}s`,
+          animationDuration: `${2 + Math.random() * 3}s`,
+        }}
+      />
+    ))}
+  </div>
+);
+
+// Premium Card component with glassmorphism
+const PremiumCard = ({ 
+  children, 
+  className = "", 
+  icon: Icon, 
+  title, 
+  glowColor = "primary",
+  delay = 0 
+}: { 
+  children: React.ReactNode; 
+  className?: string; 
+  icon?: React.ElementType; 
+  title?: string;
+  glowColor?: string;
+  delay?: number;
+}) => (
+  <Card 
+    className={`group relative bg-card/80 backdrop-blur-xl border-border/50 rounded-2xl overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.15)] hover:border-primary/30 animate-fade-in ${className}`}
+    style={{ animationDelay: `${delay}ms` }}
+  >
+    {/* Shine effect */}
+    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+      <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+    </div>
+    
+    {title && Icon && (
+      <CardHeader className="pb-4">
+        <CardTitle className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
+            <Icon className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
+          </div>
+          <span className="group-hover:text-primary transition-colors duration-300">{title}</span>
+        </CardTitle>
+      </CardHeader>
+    )}
+    {children}
+  </Card>
+);
+
+// Premium stat mini-card
+const PremiumStatCard = ({ 
+  label, 
+  value, 
+  prefix = "", 
+  animated = false,
+  variant = "default",
+  icon: Icon
+}: { 
+  label: string; 
+  value: number | string; 
+  prefix?: string;
+  animated?: boolean;
+  variant?: "default" | "primary" | "success" | "warning" | "danger";
+  icon?: React.ElementType;
+}) => {
+  const variantStyles = {
+    default: "bg-muted/50 border-border/30",
+    primary: "bg-primary/10 border-primary/30",
+    success: "bg-green-500/10 border-green-500/30",
+    warning: "bg-orange-500/10 border-orange-500/30",
+    danger: "bg-red-500/10 border-red-500/30"
+  };
+  
+  const textStyles = {
+    default: "text-foreground",
+    primary: "text-primary",
+    success: "text-green-600 dark:text-green-400",
+    warning: "text-orange-600 dark:text-orange-400",
+    danger: "text-red-600 dark:text-red-400"
+  };
+
+  return (
+    <div className={`group p-4 rounded-xl border backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${variantStyles[variant]}`}>
+      <div className="flex items-center gap-2 mb-2">
+        {Icon && <Icon className={`w-4 h-4 ${textStyles[variant]} opacity-70`} />}
+        <p className="text-sm text-muted-foreground">{label}</p>
+      </div>
+      <p className={`text-2xl font-bold ${textStyles[variant]}`}>
+        {animated && typeof value === 'number' ? (
+          <>
+            {prefix}<AnimatedCounter value={value} duration={1200} decimals={0} />
+          </>
+        ) : (
+          `${prefix}${typeof value === 'number' ? value.toLocaleString() : value}`
+        )}
+      </p>
+    </div>
+  );
+};
 
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
@@ -549,31 +658,43 @@ export default function ClientDetail() {
     }
   };
 
+  // Premium loading state
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-4">
+      <div className="flex-1 flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="flex flex-col items-center gap-6">
           <div className="relative">
-            <div className="w-16 h-16 border-4 border-primary/20 rounded-full animate-spin border-t-primary" />
-            <div className="absolute inset-0 w-16 h-16 border-4 border-transparent rounded-full animate-spin border-b-primary/40" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+            <div className="w-20 h-20 border-4 border-primary/20 rounded-full animate-spin border-t-primary" />
+            <div className="absolute inset-0 w-20 h-20 border-4 border-transparent rounded-full animate-spin border-b-primary/40" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
+            <div className="absolute inset-2 w-16 h-16 border-4 border-transparent rounded-full animate-spin border-r-primary/30" style={{ animationDuration: '2s' }} />
+            <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-primary animate-pulse" />
           </div>
-          <p className="text-muted-foreground animate-pulse">Chargement du client...</p>
+          <p className="text-muted-foreground animate-pulse text-lg font-medium">Chargement du client...</p>
         </div>
       </div>
     );
   }
 
+  // Premium not found state
   if (!client || !profile) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-screen">
-        <div className="text-center space-y-4">
-          <div className="w-20 h-20 mx-auto bg-muted rounded-full flex items-center justify-center">
-            <User className="w-10 h-10 text-muted-foreground" />
+      <div className="flex-1 flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="text-center space-y-6 animate-fade-in">
+          <div className="relative mx-auto w-24 h-24">
+            <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 rounded-full" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <User className="w-12 h-12 text-muted-foreground" />
+            </div>
           </div>
-          <h2 className="text-2xl font-bold">Client non trouvé</h2>
-          <p className="text-muted-foreground">Ce client n'existe pas ou a été supprimé</p>
-          <Button onClick={() => navigate('/admin/clients')} className="mt-4">
-            <ArrowLeft className="w-4 h-4 mr-2" />
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            Client non trouvé
+          </h2>
+          <p className="text-muted-foreground max-w-md">Ce client n'existe pas ou a été supprimé</p>
+          <Button 
+            onClick={() => navigate('/admin/clients')} 
+            className="mt-4 group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)]"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
             Retour aux clients
           </Button>
         </div>
@@ -599,576 +720,666 @@ export default function ClientDetail() {
   // Check if client has stable status
   const clientHasStableStatus = hasStableStatus(client.type_permis, client.nationalite);
 
-  return (
-    <div className="flex-1 overflow-auto">
-      <div className="p-4 md:p-8 space-y-6">
-        {/* Header - Responsive */}
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <h1 className="text-2xl sm:text-3xl font-bold">
-                {profile.prenom} {profile.nom}
-              </h1>
-              <Badge variant="outline">{client.nationalite || 'N/A'}</Badge>
-              <Badge 
-                variant={clientHasStableStatus ? "secondary" : "destructive"}
-                className={clientHasStableStatus ? "" : "animate-pulse"}
-              >
-                Permis {client.type_permis || 'N/A'}
-                {!clientHasStableStatus && " ⚠️"}
-              </Badge>
-              {solvabilityResult.isSolvable ? (
-                <Badge className="bg-green-600 text-white">✓ Solvable</Badge>
-              ) : (
-                <Badge variant="destructive">✗ Non solvable</Badge>
-              )}
-            </div>
+  const progressColor = daysElapsed < 60 ? 'from-green-500 to-emerald-400' : daysElapsed < 90 ? 'from-orange-500 to-amber-400' : 'from-red-500 to-rose-400';
 
-            {/* Progress bar */}
-            <div className="mt-4 max-w-2xl">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Progression du mandat</p>
-                <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                  daysElapsed < 60 
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-                    : daysElapsed < 90 
-                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' 
-                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                }`}>
-                  {Math.floor(daysRemaining)}j {Math.floor((daysRemaining - Math.floor(daysRemaining)) * 24)}h
+  return (
+    <div className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-primary/5">
+      <div className="p-4 md:p-8 space-y-6">
+        {/* Premium Header */}
+        <div className="relative rounded-3xl bg-gradient-to-br from-card via-card to-primary/5 border border-border/50 p-6 overflow-hidden animate-fade-in">
+          <FloatingParticles count={20} />
+          
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+            <div className="flex-1 min-w-0">
+              {/* Client Avatar & Name */}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="relative">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-2xl font-bold text-primary-foreground shadow-[0_0_25px_rgba(var(--primary),0.3)]">
+                    {profile.prenom[0]}{profile.nom[0]}
+                  </div>
+                  {solvabilityResult.isSolvable && (
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-card">
+                      <CheckCircle2 className="w-4 h-4 text-white" />
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+                    {profile.prenom} {profile.nom}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <Badge variant="outline" className="bg-card/50 backdrop-blur-sm border-border/50">
+                      {client.nationalite || 'N/A'}
+                    </Badge>
+                    <Badge 
+                      variant={clientHasStableStatus ? "secondary" : "destructive"}
+                      className={`${clientHasStableStatus ? "bg-secondary/50" : "animate-pulse"} backdrop-blur-sm`}
+                    >
+                      <Shield className="w-3 h-3 mr-1" />
+                      Permis {client.type_permis || 'N/A'}
+                      {!clientHasStableStatus && " ⚠️"}
+                    </Badge>
+                    {solvabilityResult.isSolvable ? (
+                      <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 backdrop-blur-sm">
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        Solvable
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 backdrop-blur-sm">
+                        <XCircle className="w-3 h-3 mr-1" />
+                        Non solvable
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground text-right mb-2">
-                {Math.floor(daysElapsed)} / 90 jours
-              </p>
-              <Progress 
-                value={progressPercentage} 
-                className="h-3" 
-                indicatorClassName={
-                  daysElapsed < 60 ? 'bg-green-500' :
-                  daysElapsed < 90 ? 'bg-orange-500' :
-                  'bg-red-500'
-                }
-              />
-            </div>
-          </div>
 
-          {/* Boutons d'action - Responsive grid sur mobile */}
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:flex-nowrap w-full sm:w-auto">
-            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSendEmailDialogOpen(true)}>
-              <MailPlus className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Envoyer dossier</span>
-              <span className="sm:hidden">Dossier</span>
-            </Button>
-            <Button variant="outline" className="w-full sm:w-auto" onClick={handleSendMessage}>
-              <MessageSquare className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Message</span>
-              <span className="sm:hidden">Msg</span>
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="w-full sm:w-auto" disabled={deleting}>
-                  <Trash2 className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Supprimer</span>
-                  <span className="sm:hidden">Suppr.</span>
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Êtes-vous sûr de vouloir supprimer ce client ? Cette action est irréversible et supprimera toutes les données associées (documents, candidatures, visites, etc.).
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Annuler</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                    Supprimer définitivement
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-          </AlertDialog>
-            <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="w-full sm:w-auto" onClick={handleEditClick}>
-                  <Edit className="w-4 h-4 sm:mr-2" />
-                  <span>Modifier</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Modifier les informations du client</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-6 py-4">
-                  {/* Informations personnelles */}
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-lg flex items-center gap-2">
-                      <User className="w-5 h-5" />
-                      Informations personnelles
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Prénom *</Label>
-                        <Input
-                          value={editFormData.prenom || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, prenom: e.target.value })}
-                          placeholder="Prénom"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Nom *</Label>
-                        <Input
-                          value={editFormData.nom || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, nom: e.target.value })}
-                          placeholder="Nom"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Email *</Label>
-                        <Input
-                          type="email"
-                          value={editFormData.email || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                          placeholder="email@exemple.com"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Téléphone</Label>
-                        <Input
-                          value={editFormData.telephone || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, telephone: e.target.value })}
-                          placeholder="+41 XX XXX XX XX"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label>Nationalité</Label>
-                        <Input
-                          value={editFormData.nationalite || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, nationalite: e.target.value })}
-                          placeholder="Suisse"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Type de permis</Label>
-                        <Select 
-                          value={editFormData.type_permis || ''} 
-                          onValueChange={(value) => setEditFormData({ ...editFormData, type_permis: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="B">Permis B</SelectItem>
-                            <SelectItem value="C">Permis C</SelectItem>
-                            <SelectItem value="L">Permis L</SelectItem>
-                            <SelectItem value="G">Permis G</SelectItem>
-                            <SelectItem value="Suisse">Suisse</SelectItem>
-                            <SelectItem value="Autre">Autre</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Date de naissance</Label>
-                        <Input
-                          type="date"
-                          value={editFormData.date_naissance || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, date_naissance: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Situation familiale</Label>
-                        <Select 
-                          value={editFormData.situation_familiale || ''} 
-                          onValueChange={(value) => setEditFormData({ ...editFormData, situation_familiale: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Célibataire">Célibataire</SelectItem>
-                            <SelectItem value="Marié(e)">Marié(e)</SelectItem>
-                            <SelectItem value="Divorcé(e)">Divorcé(e)</SelectItem>
-                            <SelectItem value="Veuf(ve)">Veuf(ve)</SelectItem>
-                            <SelectItem value="En couple">En couple</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Nombre d'occupants</Label>
-                        <Input
-                          type="number"
-                          value={editFormData.nombre_occupants || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, nombre_occupants: parseInt(e.target.value) })}
-                          placeholder="1"
-                        />
-                      </div>
-                    </div>
+              {/* Premium Progress bar */}
+              <div className="mt-6 max-w-2xl">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground font-medium">Progression du mandat</p>
                   </div>
-
-                  <Separator />
-
-                  {/* Situation professionnelle */}
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-lg flex items-center gap-2">
-                      <Briefcase className="w-5 h-5" />
-                      Situation professionnelle
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Profession</Label>
-                        <Input
-                          value={editFormData.profession || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, profession: e.target.value })}
-                          placeholder="Ingénieur"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Employeur</Label>
-                        <Input
-                          value={editFormData.employeur || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, employeur: e.target.value })}
-                          placeholder="Nom de l'entreprise"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label>Type de contrat</Label>
-                        <Select 
-                          value={editFormData.type_contrat || ''} 
-                          onValueChange={(value) => setEditFormData({ ...editFormData, type_contrat: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="CDI">CDI</SelectItem>
-                            <SelectItem value="CDD">CDD</SelectItem>
-                            <SelectItem value="Indépendant">Indépendant</SelectItem>
-                            <SelectItem value="Intérim">Intérim</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Date d'engagement</Label>
-                        <Input
-                          type="date"
-                          value={editFormData.date_engagement || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, date_engagement: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Secteur d'activité</Label>
-                        <Input
-                          value={editFormData.secteur_activite || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, secteur_activite: e.target.value })}
-                          placeholder="Technologie"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Situation financière */}
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-lg flex items-center gap-2">
-                      <DollarSign className="w-5 h-5" />
-                      Situation financière
-                    </h3>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label>Revenus mensuels (CHF)</Label>
-                        <Input
-                          type="number"
-                          value={editFormData.revenus_mensuels || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, revenus_mensuels: parseFloat(e.target.value) })}
-                          placeholder="5000"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Charges mensuelles (CHF)</Label>
-                        <Input
-                          type="number"
-                          value={editFormData.charges_mensuelles || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, charges_mensuelles: parseFloat(e.target.value) })}
-                          placeholder="1000"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Apport personnel (CHF)</Label>
-                        <Input
-                          type="number"
-                          value={editFormData.apport_personnel || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, apport_personnel: parseFloat(e.target.value) })}
-                          placeholder="10000"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Source de revenus</Label>
-                        <Input
-                          value={editFormData.source_revenus || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, source_revenus: e.target.value })}
-                          placeholder="Salaire"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Garanties</Label>
-                        <Input
-                          value={editFormData.garanties || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, garanties: e.target.value })}
-                          placeholder="Cautionnement"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="autres_credits"
-                          checked={editFormData.autres_credits || false}
-                          onCheckedChange={(checked) => setEditFormData({ ...editFormData, autres_credits: checked })}
-                        />
-                        <Label htmlFor="autres_credits">Autres crédits</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="poursuites"
-                          checked={editFormData.poursuites || false}
-                          onCheckedChange={(checked) => setEditFormData({ ...editFormData, poursuites: checked })}
-                        />
-                        <Label htmlFor="poursuites">Poursuites</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="curatelle"
-                          checked={editFormData.curatelle || false}
-                          onCheckedChange={(checked) => setEditFormData({ ...editFormData, curatelle: checked })}
-                        />
-                        <Label htmlFor="curatelle">Curatelle</Label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Critères de recherche */}
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-lg flex items-center gap-2">
-                      <Home className="w-5 h-5" />
-                      Critères de recherche
-                    </h3>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label>Budget maximum (CHF)</Label>
-                        <Input
-                          type="number"
-                          value={editFormData.budget_max || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, budget_max: parseFloat(e.target.value) })}
-                          placeholder="2000"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Pièces souhaitées</Label>
-                        <Input
-                          type="number"
-                          step="0.5"
-                          value={editFormData.pieces || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, pieces: parseFloat(e.target.value) })}
-                          placeholder="3.5"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Type de bien</Label>
-                        <Select 
-                          value={editFormData.type_bien || ''} 
-                          onValueChange={(value) => setEditFormData({ ...editFormData, type_bien: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Appartement">Appartement</SelectItem>
-                            <SelectItem value="Maison">Maison</SelectItem>
-                            <SelectItem value="Studio">Studio</SelectItem>
-                            <SelectItem value="Loft">Loft</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Région(s) de recherche</Label>
-                      <RegionAutocomplete
-                        value={editFormData.region_recherche || ''}
-                        onChange={(value) => setEditFormData({ ...editFormData, region_recherche: value })}
-                        placeholder="Tapez une région, commune..."
-                        multiSelect
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Souhaits particuliers</Label>
-                      <Textarea
-                        value={editFormData.souhaits_particuliers || ''}
-                        onChange={(e) => setEditFormData({ ...editFormData, souhaits_particuliers: e.target.value })}
-                        rows={2}
-                        placeholder="Balcon, parking, ascenseur..."
-                      />
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="animaux"
-                          checked={editFormData.animaux || false}
-                          onCheckedChange={(checked) => setEditFormData({ ...editFormData, animaux: checked })}
-                        />
-                        <Label htmlFor="animaux">Animaux</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="vehicules"
-                          checked={editFormData.vehicules || false}
-                          onCheckedChange={(checked) => setEditFormData({ ...editFormData, vehicules: checked })}
-                        />
-                        <Label htmlFor="vehicules">Véhicules</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="instrument_musique"
-                          checked={editFormData.instrument_musique || false}
-                          onCheckedChange={(checked) => setEditFormData({ ...editFormData, instrument_musique: checked })}
-                        />
-                        <Label htmlFor="instrument_musique">Instrument de musique</Label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Notes agent */}
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-lg flex items-center gap-2">
-                      <FileText className="w-5 h-5" />
-                      Notes de l'agent
-                    </h3>
-                    <div className="space-y-2">
-                      <Textarea
-                        value={editFormData.note_agent || ''}
-                        onChange={(e) => setEditFormData({ ...editFormData, note_agent: e.target.value })}
-                        rows={4}
-                        placeholder="Notes internes..."
-                      />
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex justify-end gap-2 pt-4 border-t">
-                    <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-                      Annuler
-                    </Button>
-                    <Button onClick={handleEditSave}>
-                      Enregistrer les modifications
-                    </Button>
+                  <div className={`px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 ${
+                    daysElapsed < 60 
+                      ? 'bg-green-500/20 text-green-600 dark:text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.2)]' 
+                      : daysElapsed < 90 
+                      ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.2)]' 
+                      : 'bg-red-500/20 text-red-600 dark:text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)] animate-pulse'
+                  }`}>
+                    <TrendingUp className="w-4 h-4" />
+                    {Math.floor(daysRemaining)}j {Math.floor((daysRemaining - Math.floor(daysRemaining)) * 24)}h
                   </div>
                 </div>
-              </DialogContent>
-            </Dialog>
-            <Button variant="outline" className="w-full sm:w-auto col-span-2 sm:col-span-1" onClick={() => navigate('/admin/clients')}>
-              <ArrowLeft className="w-4 h-4 sm:mr-2" />
-              <span>Retour</span>
-            </Button>
+                <p className="text-xs text-muted-foreground text-right mb-2">
+                  <AnimatedCounter value={Math.floor(daysElapsed)} duration={800} decimals={0} /> / 90 jours
+                </p>
+                <div className="relative h-4 bg-muted/50 rounded-full overflow-hidden backdrop-blur-sm">
+                  <div 
+                    className={`absolute inset-y-0 left-0 bg-gradient-to-r ${progressColor} rounded-full transition-all duration-1000 ease-out`}
+                    style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent animate-pulse" />
+                  </div>
+                  <div 
+                    className={`absolute inset-y-0 left-0 bg-gradient-to-r ${progressColor} blur-md opacity-50 rounded-full`}
+                    style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Premium Action Buttons */}
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap lg:flex-nowrap w-full sm:w-auto">
+              <Button 
+                variant="outline" 
+                className="w-full sm:w-auto group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.15)] transition-all duration-300" 
+                onClick={() => setSendEmailDialogOpen(true)}
+              >
+                <MailPlus className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline">Envoyer dossier</span>
+                <span className="sm:hidden">Dossier</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full sm:w-auto group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.15)] transition-all duration-300" 
+                onClick={handleSendMessage}
+              >
+                <MessageSquare className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline">Message</span>
+                <span className="sm:hidden">Msg</span>
+              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="destructive" 
+                    className="w-full sm:w-auto group hover:shadow-[0_0_15px_rgba(239,68,68,0.3)] transition-all duration-300" 
+                    disabled={deleting}
+                  >
+                    <Trash2 className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
+                    <span className="hidden sm:inline">Supprimer</span>
+                    <span className="sm:hidden">Suppr.</span>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <div className="p-2 rounded-xl bg-red-500/20">
+                        <Trash2 className="w-5 h-5 text-red-500" />
+                      </div>
+                      Confirmer la suppression
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Êtes-vous sûr de vouloir supprimer ce client ? Cette action est irréversible et supprimera toutes les données associées (documents, candidatures, visites, etc.).
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel className="bg-card/50 backdrop-blur-sm">Annuler</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:shadow-[0_0_15px_rgba(239,68,68,0.3)]">
+                      Supprimer définitivement
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    className="w-full sm:w-auto group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all duration-300" 
+                    onClick={handleEditClick}
+                  >
+                    <Edit className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
+                    <span>Modifier</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card/95 backdrop-blur-xl border-border/50">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl bg-primary/10">
+                        <Edit className="w-5 h-5 text-primary" />
+                      </div>
+                      Modifier les informations du client
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-6 py-4">
+                    {/* Informations personnelles */}
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg flex items-center gap-2">
+                        <User className="w-5 h-5 text-primary" />
+                        Informations personnelles
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Prénom *</Label>
+                          <Input
+                            value={editFormData.prenom || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, prenom: e.target.value })}
+                            placeholder="Prénom"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Nom *</Label>
+                          <Input
+                            value={editFormData.nom || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, nom: e.target.value })}
+                            placeholder="Nom"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Email *</Label>
+                          <Input
+                            type="email"
+                            value={editFormData.email || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                            placeholder="email@exemple.com"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Téléphone</Label>
+                          <Input
+                            value={editFormData.telephone || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, telephone: e.target.value })}
+                            placeholder="+41 XX XXX XX XX"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label>Nationalité</Label>
+                          <Input
+                            value={editFormData.nationalite || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, nationalite: e.target.value })}
+                            placeholder="Suisse"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Type de permis</Label>
+                          <Select 
+                            value={editFormData.type_permis || ''} 
+                            onValueChange={(value) => setEditFormData({ ...editFormData, type_permis: value })}
+                          >
+                            <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
+                              <SelectValue placeholder="Sélectionner" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="B">Permis B</SelectItem>
+                              <SelectItem value="C">Permis C</SelectItem>
+                              <SelectItem value="L">Permis L</SelectItem>
+                              <SelectItem value="G">Permis G</SelectItem>
+                              <SelectItem value="Suisse">Suisse</SelectItem>
+                              <SelectItem value="Autre">Autre</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Date de naissance</Label>
+                          <Input
+                            type="date"
+                            value={editFormData.date_naissance || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, date_naissance: e.target.value })}
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Situation familiale</Label>
+                          <Select 
+                            value={editFormData.situation_familiale || ''} 
+                            onValueChange={(value) => setEditFormData({ ...editFormData, situation_familiale: value })}
+                          >
+                            <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
+                              <SelectValue placeholder="Sélectionner" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Célibataire">Célibataire</SelectItem>
+                              <SelectItem value="Marié(e)">Marié(e)</SelectItem>
+                              <SelectItem value="Divorcé(e)">Divorcé(e)</SelectItem>
+                              <SelectItem value="Veuf(ve)">Veuf(ve)</SelectItem>
+                              <SelectItem value="En couple">En couple</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Nombre d'occupants</Label>
+                          <Input
+                            type="number"
+                            value={editFormData.nombre_occupants || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, nombre_occupants: parseInt(e.target.value) })}
+                            placeholder="1"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
+                    {/* Situation professionnelle */}
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg flex items-center gap-2">
+                        <Briefcase className="w-5 h-5 text-primary" />
+                        Situation professionnelle
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Profession</Label>
+                          <Input
+                            value={editFormData.profession || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, profession: e.target.value })}
+                            placeholder="Ingénieur"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Employeur</Label>
+                          <Input
+                            value={editFormData.employeur || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, employeur: e.target.value })}
+                            placeholder="Nom de l'entreprise"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label>Type de contrat</Label>
+                          <Select 
+                            value={editFormData.type_contrat || ''} 
+                            onValueChange={(value) => setEditFormData({ ...editFormData, type_contrat: value })}
+                          >
+                            <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
+                              <SelectValue placeholder="Sélectionner" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="CDI">CDI</SelectItem>
+                              <SelectItem value="CDD">CDD</SelectItem>
+                              <SelectItem value="Indépendant">Indépendant</SelectItem>
+                              <SelectItem value="Intérim">Intérim</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Date d'engagement</Label>
+                          <Input
+                            type="date"
+                            value={editFormData.date_engagement || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, date_engagement: e.target.value })}
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Secteur d'activité</Label>
+                          <Input
+                            value={editFormData.secteur_activite || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, secteur_activite: e.target.value })}
+                            placeholder="Technologie"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
+                    {/* Situation financière */}
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg flex items-center gap-2">
+                        <DollarSign className="w-5 h-5 text-primary" />
+                        Situation financière
+                      </h3>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label>Revenus mensuels (CHF)</Label>
+                          <Input
+                            type="number"
+                            value={editFormData.revenus_mensuels || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, revenus_mensuels: parseFloat(e.target.value) })}
+                            placeholder="5000"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Charges mensuelles (CHF)</Label>
+                          <Input
+                            type="number"
+                            value={editFormData.charges_mensuelles || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, charges_mensuelles: parseFloat(e.target.value) })}
+                            placeholder="1000"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Apport personnel (CHF)</Label>
+                          <Input
+                            type="number"
+                            value={editFormData.apport_personnel || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, apport_personnel: parseFloat(e.target.value) })}
+                            placeholder="10000"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Source de revenus</Label>
+                          <Input
+                            value={editFormData.source_revenus || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, source_revenus: e.target.value })}
+                            placeholder="Salaire"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Garanties</Label>
+                          <Input
+                            value={editFormData.garanties || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, garanties: e.target.value })}
+                            placeholder="Cautionnement"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="autres_credits"
+                            checked={editFormData.autres_credits || false}
+                            onCheckedChange={(checked) => setEditFormData({ ...editFormData, autres_credits: checked })}
+                          />
+                          <Label htmlFor="autres_credits">Autres crédits</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="poursuites"
+                            checked={editFormData.poursuites || false}
+                            onCheckedChange={(checked) => setEditFormData({ ...editFormData, poursuites: checked })}
+                          />
+                          <Label htmlFor="poursuites">Poursuites</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="curatelle"
+                            checked={editFormData.curatelle || false}
+                            onCheckedChange={(checked) => setEditFormData({ ...editFormData, curatelle: checked })}
+                          />
+                          <Label htmlFor="curatelle">Curatelle</Label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
+                    {/* Critères de recherche */}
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg flex items-center gap-2">
+                        <Home className="w-5 h-5 text-primary" />
+                        Critères de recherche
+                      </h3>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label>Budget maximum (CHF)</Label>
+                          <Input
+                            type="number"
+                            value={editFormData.budget_max || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, budget_max: parseFloat(e.target.value) })}
+                            placeholder="2000"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Pièces souhaitées</Label>
+                          <Input
+                            type="number"
+                            step="0.5"
+                            value={editFormData.pieces || ''}
+                            onChange={(e) => setEditFormData({ ...editFormData, pieces: parseFloat(e.target.value) })}
+                            placeholder="3.5"
+                            className="bg-card/50 backdrop-blur-sm border-border/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Type de bien</Label>
+                          <Select 
+                            value={editFormData.type_bien || ''} 
+                            onValueChange={(value) => setEditFormData({ ...editFormData, type_bien: value })}
+                          >
+                            <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
+                              <SelectValue placeholder="Sélectionner" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Appartement">Appartement</SelectItem>
+                              <SelectItem value="Maison">Maison</SelectItem>
+                              <SelectItem value="Studio">Studio</SelectItem>
+                              <SelectItem value="Loft">Loft</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Région(s) de recherche</Label>
+                        <RegionAutocomplete
+                          value={editFormData.region_recherche || ''}
+                          onChange={(value) => setEditFormData({ ...editFormData, region_recherche: value })}
+                          placeholder="Tapez une région, commune..."
+                          multiSelect
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Souhaits particuliers</Label>
+                        <Textarea
+                          value={editFormData.souhaits_particuliers || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, souhaits_particuliers: e.target.value })}
+                          rows={2}
+                          placeholder="Balcon, parking, ascenseur..."
+                          className="bg-card/50 backdrop-blur-sm border-border/50"
+                        />
+                      </div>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="animaux"
+                            checked={editFormData.animaux || false}
+                            onCheckedChange={(checked) => setEditFormData({ ...editFormData, animaux: checked })}
+                          />
+                          <Label htmlFor="animaux">Animaux</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="vehicules"
+                            checked={editFormData.vehicules || false}
+                            onCheckedChange={(checked) => setEditFormData({ ...editFormData, vehicules: checked })}
+                          />
+                          <Label htmlFor="vehicules">Véhicules</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="instrument_musique"
+                            checked={editFormData.instrument_musique || false}
+                            onCheckedChange={(checked) => setEditFormData({ ...editFormData, instrument_musique: checked })}
+                          />
+                          <Label htmlFor="instrument_musique">Instrument de musique</Label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
+                    {/* Notes agent */}
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-primary" />
+                        Notes de l'agent
+                      </h3>
+                      <div className="space-y-2">
+                        <Textarea
+                          value={editFormData.note_agent || ''}
+                          onChange={(e) => setEditFormData({ ...editFormData, note_agent: e.target.value })}
+                          rows={4}
+                          placeholder="Notes internes..."
+                          className="bg-card/50 backdrop-blur-sm border-border/50"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex justify-end gap-3 pt-4 border-t border-border/50">
+                      <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="bg-card/50 backdrop-blur-sm">
+                        Annuler
+                      </Button>
+                      <Button onClick={handleEditSave} className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70">
+                        Enregistrer les modifications
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <Button 
+                variant="outline" 
+                className="w-full sm:w-auto col-span-2 sm:col-span-1 group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-muted/50 transition-all duration-300" 
+                onClick={() => navigate('/admin/clients')}
+              >
+                <ArrowLeft className="w-4 h-4 sm:mr-2 group-hover:-translate-x-1 transition-transform" />
+                <span>Retour</span>
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Solvability Alert */}
-        <SolvabilityAlert 
-          result={solvabilityResult} 
-          className="mb-6"
-        />
-
-        {/* Client Activity Stats */}
-        <ClientActivityStats 
-          clientId={client.id} 
-          clientUserId={client.user_id}
-        />
-
-        {/* Candidates Manager */}
-        <ClientCandidatesManager
-          clientId={client.id}
-          clientRevenus={client.revenus_mensuels}
-          budgetDemande={client.budget_max}
-          onCandidatesChange={refreshCandidates}
-        />
-
-        {/* Candidate Documents */}
-        {candidates.length > 0 && (
-          <CandidateDocumentsSection 
-            clientId={client.id}
-            clientUserId={client.user_id}
-            candidates={candidates}
-            key={documentsRefreshKey}
+        {/* Solvability Alert - wrapped in premium container */}
+        <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <SolvabilityAlert 
+            result={solvabilityResult} 
+            className="mb-6"
           />
+        </div>
+
+        {/* Client Activity Stats - with animation */}
+        <div className="animate-fade-in" style={{ animationDelay: '150ms' }}>
+          <ClientActivityStats 
+            clientId={client.id} 
+            clientUserId={client.user_id}
+          />
+        </div>
+
+        {/* Candidates Manager - with animation */}
+        <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+          <ClientCandidatesManager
+            clientId={client.id}
+            clientRevenus={client.revenus_mensuels}
+            budgetDemande={client.budget_max}
+            onCandidatesChange={refreshCandidates}
+          />
+        </div>
+
+        {/* Candidate Documents - with animation */}
+        {candidates.length > 0 && (
+          <div className="animate-fade-in" style={{ animationDelay: '250ms' }}>
+            <CandidateDocumentsSection 
+              clientId={client.id}
+              clientUserId={client.user_id}
+              candidates={candidates}
+              key={documentsRefreshKey}
+            />
+          </div>
         )}
 
-        {/* Apporteur Info Card */}
-        <ApporteurInfoCard clientId={client.id} isAdmin={true} />
+        {/* Apporteur Info Card - with animation */}
+        <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
+          <ApporteurInfoCard clientId={client.id} isAdmin={true} />
+        </div>
 
+        {/* Premium Information Cards Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Situation financière */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5" />
-                Situation financière
-              </CardTitle>
-            </CardHeader>
+          <PremiumCard icon={DollarSign} title="Situation financière" delay={350}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
-                <Card className="bg-muted/50">
-                  <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground mb-1">Revenus mensuels</p>
-                    <p className="text-2xl font-bold">
-                      CHF {client.revenus_mensuels?.toLocaleString() || '0'}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground mb-1">Budget maximum</p>
-                    <p className="text-2xl font-bold text-primary">
-                      CHF {client.budget_max?.toLocaleString() || '0'}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-muted/50">
-                  <CardContent className="pt-6">
-                    <p className="text-sm text-muted-foreground mb-1">Budget recommandé</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      CHF {budgetRecommande.toLocaleString()}
-                    </p>
-                  </CardContent>
-                </Card>
+                <PremiumStatCard 
+                  label="Revenus mensuels" 
+                  value={client.revenus_mensuels || 0} 
+                  prefix="CHF "
+                  animated
+                />
+                <PremiumStatCard 
+                  label="Budget maximum" 
+                  value={client.budget_max || 0} 
+                  prefix="CHF "
+                  variant="primary"
+                  animated
+                />
+                <PremiumStatCard 
+                  label="Budget recommandé" 
+                  value={budgetRecommande} 
+                  prefix="CHF "
+                  variant="success"
+                  animated
+                />
               </div>
-              <Separator />
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
               <div className="space-y-2">
                 {client.charges_extraordinaires && (
-                  <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/20 rounded-lg">
-                    <span className="text-sm font-medium">Charges extraordinaires</span>
-                    <span className="text-sm">
+                  <div className="flex items-center justify-between p-3 bg-orange-500/10 border border-orange-500/30 rounded-xl backdrop-blur-sm">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-orange-500 animate-pulse" />
+                      <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Charges extraordinaires</span>
+                    </div>
+                    <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
                       {client.montant_charges_extra ? `CHF ${client.montant_charges_extra.toLocaleString()}` : 'Oui'}
                     </span>
                   </div>
                 )}
                 {(client.poursuites || client.curatelle) && (
-                  <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                    <AlertCircle className="w-4 h-4 text-red-600" />
-                    <div className="flex-1 text-sm font-medium text-red-600">
+                  <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl backdrop-blur-sm">
+                    <AlertCircle className="w-4 h-4 text-red-500 animate-pulse" />
+                    <div className="flex-1 text-sm font-medium text-red-600 dark:text-red-400">
                       {client.poursuites && 'Poursuites en cours'}
                       {client.poursuites && client.curatelle && ' • '}
                       {client.curatelle && 'Sous curatelle'}
@@ -1177,273 +1388,248 @@ export default function ClientDetail() {
                 )}
               </div>
             </CardContent>
-          </Card>
+          </PremiumCard>
 
           {/* Informations personnelles */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5" />
-                Informations personnelles
-              </CardTitle>
-            </CardHeader>
+          <PremiumCard icon={User} title="Informations personnelles" delay={400}>
             <CardContent className="space-y-4">
               <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-muted-foreground" />
-                  <span>{profile.email}</span>
+                <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Mail className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="text-sm">{profile.email}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-muted-foreground" />
-                  <span>{profile.telephone || 'Non renseigné'}</span>
+                <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Phone className="w-4 h-4 text-primary" />
+                  </div>
+                  <span className="text-sm">{profile.telephone || 'Non renseigné'}</span>
                 </div>
                 {client.date_naissance && (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span>{new Date(client.date_naissance).toLocaleDateString('fr-CH')}</span>
+                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Calendar className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-sm">{new Date(client.date_naissance).toLocaleDateString('fr-CH')}</span>
                   </div>
                 )}
                 {client.adresse && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    <span>{client.adresse}</span>
+                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <MapPin className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-sm">{client.adresse}</span>
                   </div>
                 )}
               </div>
-              <Separator />
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">État civil</p>
-                  <p className="font-medium">{client.etat_civil || 'Non renseigné'}</p>
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-1">État civil</p>
+                  <p className="font-medium text-sm">{client.etat_civil || 'Non renseigné'}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Nationalité</p>
-                  <p className="font-medium">{client.nationalite || 'Non renseigné'}</p>
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-1">Nationalité</p>
+                  <p className="font-medium text-sm">{client.nationalite || 'Non renseigné'}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Type de permis</p>
-                  <p className="font-medium">{client.type_permis || 'Non renseigné'}</p>
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm col-span-2">
+                  <p className="text-xs text-muted-foreground mb-1">Type de permis</p>
+                  <p className="font-medium text-sm">{client.type_permis || 'Non renseigné'}</p>
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </PremiumCard>
 
           {/* Situation actuelle */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="w-5 h-5" />
-                Situation actuelle
-              </CardTitle>
-            </CardHeader>
+          <PremiumCard icon={Building2} title="Situation actuelle" delay={450}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Gérance actuelle</p>
-                  <p className="font-medium">{client.gerance_actuelle || 'Non renseigné'}</p>
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-1">Gérance actuelle</p>
+                  <p className="font-medium text-sm">{client.gerance_actuelle || 'Non renseigné'}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Contact gérance</p>
-                  <p className="font-medium">{client.contact_gerance || 'Non renseigné'}</p>
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-1">Contact gérance</p>
+                  <p className="font-medium text-sm">{client.contact_gerance || 'Non renseigné'}</p>
                 </div>
               </div>
-              <Separator />
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Loyer brut actuel</p>
-                  <p className="font-medium text-lg">
-                    {client.loyer_actuel ? `CHF ${client.loyer_actuel.toLocaleString()}` : 'Non renseigné'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Depuis le</p>
+                <PremiumStatCard 
+                  label="Loyer brut actuel"
+                  value={client.loyer_actuel || 0}
+                  prefix="CHF "
+                  animated
+                />
+                <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-sm text-muted-foreground mb-2">Depuis le</p>
                   <p className="font-medium">
                     {client.depuis_le ? new Date(client.depuis_le).toLocaleDateString('fr-CH') : 'Non renseigné'}
                   </p>
                 </div>
               </div>
-              <Separator />
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Pièces actuel</p>
-                  <p className="font-medium">{client.pieces_actuel || 'Non renseigné'}</p>
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-1">Pièces actuel</p>
+                  <p className="font-medium text-sm">{client.pieces_actuel || 'Non renseigné'}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Motif du changement</p>
-                  <p className="font-medium text-sm">{client.motif_changement || 'Non renseigné'}</p>
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-1">Motif du changement</p>
+                  <p className="font-medium text-xs line-clamp-2">{client.motif_changement || 'Non renseigné'}</p>
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </PremiumCard>
 
           {/* Situation professionnelle */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Briefcase className="w-5 h-5" />
-                Situation professionnelle
-              </CardTitle>
-            </CardHeader>
+          <PremiumCard icon={Briefcase} title="Situation professionnelle" delay={500}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Profession</p>
-                  <p className="font-medium">{client.profession || 'Non renseigné'}</p>
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-1">Profession</p>
+                  <p className="font-medium text-sm">{client.profession || 'Non renseigné'}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Employeur</p>
-                  <p className="font-medium">{client.employeur || 'Non renseigné'}</p>
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-1">Employeur</p>
+                  <p className="font-medium text-sm">{client.employeur || 'Non renseigné'}</p>
                 </div>
               </div>
-              <Separator />
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Revenus mensuels nets</p>
-                  <p className="font-medium text-lg">
-                    CHF {client.revenus_mensuels?.toLocaleString() || '0'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Date d'engagement</p>
+                <PremiumStatCard 
+                  label="Revenus mensuels nets"
+                  value={client.revenus_mensuels || 0}
+                  prefix="CHF "
+                  variant="success"
+                  animated
+                />
+                <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-sm text-muted-foreground mb-2">Date d'engagement</p>
                   <p className="font-medium">
                     {client.date_engagement ? new Date(client.date_engagement).toLocaleDateString('fr-CH') : 'Non renseigné'}
                   </p>
                 </div>
               </div>
               {calculateAnciennete(client.date_engagement) && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Ancienneté</p>
-                  <p className="font-medium">{calculateAnciennete(client.date_engagement)}</p>
+                <div className="p-3 rounded-xl bg-primary/10 border border-primary/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-1">Ancienneté</p>
+                  <p className="font-medium text-primary">{calculateAnciennete(client.date_engagement)}</p>
                 </div>
               )}
             </CardContent>
-          </Card>
+          </PremiumCard>
 
           {/* Critères de recherche */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Home className="w-5 h-5" />
-                Critères de recherche
-              </CardTitle>
-            </CardHeader>
+          <PremiumCard icon={Home} title="Critères de recherche" delay={550}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Type de bien</p>
-                  <p className="font-medium">{client.type_bien || 'Non renseigné'}</p>
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-1">Type de bien</p>
+                  <p className="font-medium text-sm">{client.type_bien || 'Non renseigné'}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Nombre de pièces</p>
-                  <p className="font-medium">{client.pieces || 'Non renseigné'}</p>
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-1">Nombre de pièces</p>
+                  <p className="font-medium text-sm">{client.pieces || 'Non renseigné'}</p>
                 </div>
               </div>
-              <Separator />
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Région de recherche</p>
-                <p className="font-medium">{client.region_recherche || 'Non renseigné'}</p>
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+              <div className="p-3 rounded-xl bg-primary/10 border border-primary/30 backdrop-blur-sm">
+                <p className="text-xs text-muted-foreground mb-2">Région de recherche</p>
+                <p className="font-medium text-sm text-primary">{client.region_recherche || 'Non renseigné'}</p>
               </div>
               {client.nombre_occupants && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Nombre d'occupants</p>
-                  <p className="font-medium">{client.nombre_occupants}</p>
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-1">Nombre d'occupants</p>
+                  <p className="font-medium text-sm">{client.nombre_occupants}</p>
                 </div>
               )}
               {client.souhaits_particuliers && (
                 <>
-                  <Separator />
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">Souhaits particuliers</p>
-                    <p className="text-sm bg-muted p-3 rounded-md">{client.souhaits_particuliers}</p>
+                  <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                  <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
+                    <p className="text-xs text-muted-foreground mb-2">Souhaits particuliers</p>
+                    <p className="text-sm">{client.souhaits_particuliers}</p>
                   </div>
                 </>
               )}
             </CardContent>
-          </Card>
+          </PremiumCard>
 
           {/* Autres informations */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                Autres informations
-              </CardTitle>
-            </CardHeader>
+          <PremiumCard icon={FileText} title="Autres informations" delay={600}>
             <CardContent className="space-y-4">
               {client.utilisation_logement && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Utilisation du logement</p>
-                  <p className="font-medium">{client.utilisation_logement}</p>
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-1">Utilisation du logement</p>
+                  <p className="font-medium text-sm">{client.utilisation_logement}</p>
                 </div>
               )}
-              <Separator />
+              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
               <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full ${client.animaux ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <div className={`w-3 h-3 rounded-full ${client.animaux ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-muted-foreground/30'}`} />
                   <span className="text-sm">Animaux</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className={`w-3 h-3 rounded-full ${client.instrument_musique ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <div className={`w-3 h-3 rounded-full ${client.instrument_musique ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-muted-foreground/30'}`} />
                   <span className="text-sm">Instrument de musique</span>
                 </div>
               </div>
               {client.vehicules && (
-                <div>
-                  <p className="text-sm text-muted-foreground">Véhicules</p>
-                  <p className="font-medium">{client.numero_plaques || 'Oui'}</p>
+                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-1">Véhicules</p>
+                  <p className="font-medium text-sm">{client.numero_plaques || 'Oui'}</p>
                 </div>
               )}
               {client.decouverte_agence && (
                 <>
-                  <Separator />
-                  <div>
-                    <p className="text-sm text-muted-foreground">Comment a découvert l'agence</p>
-                    <p className="font-medium">{client.decouverte_agence}</p>
+                  <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                  <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm">
+                    <p className="text-xs text-muted-foreground mb-1">Comment a découvert l'agence</p>
+                    <p className="font-medium text-sm">{client.decouverte_agence}</p>
                   </div>
                 </>
               )}
             </CardContent>
-          </Card>
+          </PremiumCard>
 
           {/* Suivi */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                Suivi
-              </CardTitle>
-            </CardHeader>
+          <PremiumCard icon={Users} title="Suivi" className="lg:col-span-2" delay={650}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {agent ? (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Agent assigné</p>
-                    <p className="font-medium">
+                  <div className="p-4 rounded-xl bg-primary/10 border border-primary/30 backdrop-blur-sm">
+                    <p className="text-xs text-muted-foreground mb-2">Agent assigné</p>
+                    <p className="font-bold text-primary">
                       {agent.profile.prenom} {agent.profile.nom}
                     </p>
-                    <p className="text-sm text-muted-foreground">{agent.profile.email}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{agent.profile.email}</p>
                   </div>
                 ) : (
-                  <div className="text-center py-4">
+                  <div className="text-center p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
                     <p className="text-muted-foreground mb-2">Aucun agent assigné</p>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => navigate('/admin/assignations')}
+                      className="group hover:bg-primary/10 hover:border-primary/30"
                     >
+                      <Users className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
                       Assigner un agent
                     </Button>
                   </div>
                 )}
-                <div>
-                  <p className="text-sm text-muted-foreground">Commission split</p>
-                  <p className="font-medium">{client.commission_split || 50}%</p>
+                <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-2">Commission split</p>
+                  <p className="font-bold text-2xl">{client.commission_split || 50}%</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Date d'ajout</p>
+                <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-xs text-muted-foreground mb-2">Date d'ajout</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span>
+                    <Calendar className="w-4 h-4 text-primary" />
+                    <span className="font-medium">
                       {new Date(client.date_ajout || client.created_at || '').toLocaleDateString('fr-CH')}
                     </span>
                   </div>
@@ -1451,33 +1637,45 @@ export default function ClientDetail() {
               </div>
               {client.note_agent && (
                 <>
-                  <Separator />
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">Notes de l'agent</p>
-                    <p className="text-sm bg-muted p-3 rounded-md">{client.note_agent}</p>
+                  <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+                  <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
+                    <p className="text-xs text-muted-foreground mb-2">Notes de l'agent</p>
+                    <p className="text-sm">{client.note_agent}</p>
                   </div>
                 </>
               )}
             </CardContent>
-          </Card>
+          </PremiumCard>
 
           {/* Documents */}
-          <Card className="lg:col-span-2">
-            <CardHeader>
+          <PremiumCard icon={FileText} title={`Documents (${documents.length})`} className="lg:col-span-2" delay={700}>
+            <CardHeader className="pb-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
-                  Documents ({documents.length})
+                <CardTitle className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    <FileText className="w-5 h-5 text-primary" />
+                  </div>
+                  <span>Documents</span>
+                  <Badge className="ml-2 bg-primary/20 text-primary border-primary/30">
+                    <AnimatedCounter value={documents.length} duration={500} decimals={0} />
+                  </Badge>
                 </CardTitle>
                 <div className="flex gap-2">
                   {documents.length >= 2 && (
-                    <Button variant="outline" onClick={() => setMergeDialogOpen(true)}>
-                      <FilePlus className="w-4 h-4 mr-2" />
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setMergeDialogOpen(true)}
+                      className="group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30"
+                    >
+                      <FilePlus className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
                       Créer dossier complet
                     </Button>
                   )}
-                  <Button onClick={() => setUploadDialogOpen(true)}>
-                    <Upload className="w-4 h-4 mr-2" />
+                  <Button 
+                    onClick={() => setUploadDialogOpen(true)}
+                    className="group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)]"
+                  >
+                    <Upload className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
                     Ajouter un document
                   </Button>
                 </div>
@@ -1486,16 +1684,22 @@ export default function ClientDetail() {
             <CardContent>
               {documents.length > 0 ? (
                 <div className="space-y-3">
-                  {documents.map((doc) => {
+                  {documents.map((doc, index) => {
                     const Icon = getFileIcon(doc.type);
                     return (
-                      <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50">
-                        <div className="flex items-center gap-3">
-                          <Icon className="w-8 h-8 text-primary" />
+                      <div 
+                        key={doc.id} 
+                        className="group flex items-center justify-between p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-border/30 hover:bg-muted/50 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.1)] transition-all duration-300 animate-fade-in"
+                        style={{ animationDelay: `${index * 50}ms` }}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                            <Icon className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" />
+                          </div>
                           <div>
-                            <p className="font-medium text-sm">{doc.nom}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Badge variant="outline" className="text-xs">
+                            <p className="font-medium text-sm group-hover:text-primary transition-colors">{doc.nom}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                              <Badge variant="outline" className="text-xs bg-card/50">
                                 {getDocTypeLabel(doc.type_document)}
                               </Badge>
                               <span>{formatFileSize(doc.taille)}</span>
@@ -1504,24 +1708,44 @@ export default function ClientDetail() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           {(doc.type?.includes('image') || doc.type === 'application/pdf') && (
-                            <Button variant="ghost" size="sm" onClick={() => handlePreviewDocument(doc)}>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handlePreviewDocument(doc)}
+                              className="hover:bg-primary/10 hover:text-primary"
+                            >
                               <Eye className="w-4 h-4" />
                             </Button>
                           )}
-                          <Button variant="ghost" size="sm" onClick={() => {
-                            setDocumentToRename(doc);
-                            setNewDocumentName(doc.nom);
-                            setRenameDialogOpen(true);
-                          }}>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => {
+                              setDocumentToRename(doc);
+                              setNewDocumentName(doc.nom);
+                              setRenameDialogOpen(true);
+                            }}
+                            className="hover:bg-primary/10 hover:text-primary"
+                          >
                             <Pencil className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDownloadDocument(doc)}>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleDownloadDocument(doc)}
+                            className="hover:bg-primary/10 hover:text-primary"
+                          >
                             <Download className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="sm" onClick={() => handleDeleteDocument(doc.id, doc.url)}>
-                            <Trash2 className="w-4 h-4 text-destructive" />
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleDeleteDocument(doc.id, doc.url)}
+                            className="hover:bg-red-500/10 hover:text-red-500"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </div>
@@ -1529,27 +1753,45 @@ export default function ClientDetail() {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Aucun document</p>
+                <div className="text-center py-12 animate-fade-in">
+                  <div className="relative mx-auto w-20 h-20 mb-4">
+                    <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 rounded-full" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <FileText className="w-10 h-10 text-muted-foreground" />
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground">Aucun document</p>
+                  <Button 
+                    onClick={() => setUploadDialogOpen(true)}
+                    className="mt-4 group"
+                    variant="outline"
+                  >
+                    <Upload className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                    Ajouter le premier document
+                  </Button>
                 </div>
               )}
             </CardContent>
-          </Card>
+          </PremiumCard>
         </div>
       </div>
 
       {/* Upload Document Dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
           <DialogHeader>
-            <DialogTitle>Ajouter un document</DialogTitle>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/10">
+                <Upload className="w-5 h-5 text-primary" />
+              </div>
+              Ajouter un document
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>Type de document</Label>
               <Select value={selectedDocType} onValueChange={setSelectedDocType}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
                   <SelectValue placeholder="Sélectionner le type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1573,20 +1815,27 @@ export default function ClientDetail() {
                 ref={fileInputRef}
                 onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                 accept=".pdf,.jpg,.jpeg,.png"
+                className="bg-card/50 backdrop-blur-sm border-border/50"
               />
               <p className="text-xs text-muted-foreground">Formats acceptés: PDF, JPG, PNG (max 1GB)</p>
             </div>
             {selectedFile && (
-              <p className="text-sm text-muted-foreground">
-                Fichier sélectionné: {selectedFile.name}
-              </p>
+              <div className="p-3 rounded-xl bg-primary/10 border border-primary/30">
+                <p className="text-sm text-primary font-medium">
+                  Fichier sélectionné: {selectedFile.name}
+                </p>
+              </div>
             )}
           </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setUploadDialogOpen(false)} className="bg-card/50 backdrop-blur-sm">
               Annuler
             </Button>
-            <Button onClick={handleUploadDocument} disabled={!selectedFile || isUploading}>
+            <Button 
+              onClick={handleUploadDocument} 
+              disabled={!selectedFile || isUploading}
+              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+            >
               {isUploading ? 'Upload en cours...' : 'Ajouter'}
             </Button>
           </div>
@@ -1600,21 +1849,26 @@ export default function ClientDetail() {
           URL.revokeObjectURL(previewUrl);
         }
       }}>
-        <DialogContent className="max-w-5xl max-h-[95vh]">
+        <DialogContent className="max-w-5xl max-h-[95vh] bg-card/95 backdrop-blur-xl border-border/50">
           <DialogHeader>
-            <DialogTitle>{previewDocument?.nom || 'Aperçu du document'}</DialogTitle>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/10">
+                <Eye className="w-5 h-5 text-primary" />
+              </div>
+              {previewDocument?.nom || 'Aperçu du document'}
+            </DialogTitle>
           </DialogHeader>
           <div className="h-[80vh]">
             {previewDocument?.type?.includes('pdf') ? (
               <object
                 data={previewUrl}
                 type="application/pdf"
-                className="w-full h-full rounded-lg"
+                className="w-full h-full rounded-xl"
               >
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                   <p className="mb-4">Impossible d'afficher le PDF dans le navigateur.</p>
-                  <Button onClick={() => handleDownloadDocument(previewDocument)}>
-                    <Download className="w-4 h-4 mr-2" />
+                  <Button onClick={() => handleDownloadDocument(previewDocument)} className="group">
+                    <Download className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
                     Télécharger le PDF
                   </Button>
                 </div>
@@ -1624,7 +1878,7 @@ export default function ClientDetail() {
                 <img 
                   src={previewUrl} 
                   alt={previewDocument?.nom}
-                  className="max-w-full h-auto rounded-lg"
+                  className="max-w-full h-auto rounded-xl"
                 />
               </div>
             ) : (
@@ -1638,9 +1892,14 @@ export default function ClientDetail() {
 
       {/* Rename Document Dialog */}
       <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
           <DialogHeader>
-            <DialogTitle>Renommer le document</DialogTitle>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-primary/10">
+                <Pencil className="w-5 h-5 text-primary" />
+              </div>
+              Renommer le document
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -1649,14 +1908,19 @@ export default function ClientDetail() {
                 value={newDocumentName}
                 onChange={(e) => setNewDocumentName(e.target.value)}
                 placeholder="Nom du document"
+                className="bg-card/50 backdrop-blur-sm border-border/50"
               />
             </div>
           </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setRenameDialogOpen(false)} className="bg-card/50 backdrop-blur-sm">
               Annuler
             </Button>
-            <Button onClick={handleRenameDocument} disabled={!newDocumentName.trim()}>
+            <Button 
+              onClick={handleRenameDocument} 
+              disabled={!newDocumentName.trim()}
+              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+            >
               Renommer
             </Button>
           </div>
