@@ -31,10 +31,12 @@ import { parseMessageWithLinks } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
 import { MessagingLayout } from "@/components/MessagingLayout";
 import { ChatAvatar } from "@/components/messaging/ChatAvatar";
-import { MessageBubble } from "@/components/messaging/MessageBubble";
-import { ConversationItem } from "@/components/messaging/ConversationItem";
+import { PremiumMessageBubble } from "@/components/messaging/PremiumMessageBubble";
+import { PremiumConversationItem } from "@/components/messaging/PremiumConversationItem";
 import { ChatInput } from "@/components/messaging/ChatInput";
 import { ChatHeader } from "@/components/messaging/ChatHeader";
+import { FloatingParticles, MeshGradientBackground } from "@/components/messaging/FloatingParticles";
+import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -74,6 +76,8 @@ const Messagerie = () => {
   const [agentId, setAgentId] = useState<string | null>(null);
   const [contactsMap, setContactsMap] = useState<Record<string, { name: string; type: string; clientId?: string }>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [pendingAttachment, setPendingAttachment] = useState<{
     url: string;
     type: string;
@@ -172,6 +176,7 @@ const Messagerie = () => {
   const loadAgentAndConversations = async () => {
     if (!user) return;
 
+    setIsLoadingConversations(true);
     try {
       const { data: agentData } = await supabase
         .from('agents')
@@ -288,10 +293,13 @@ const Messagerie = () => {
         description: "Impossible de charger les conversations",
         variant: "destructive",
       });
+    } finally {
+      setIsLoadingConversations(false);
     }
   };
 
   const loadMessages = async (convId: string) => {
+    setIsLoadingMessages(true);
     try {
       const { data, error } = await supabase
         .from('messages')
@@ -353,6 +361,8 @@ const Messagerie = () => {
         .neq('sender_type', 'agent');
     } catch (error) {
       console.error('Error loading messages:', error);
+    } finally {
+      setIsLoadingMessages(false);
     }
   };
 
@@ -1090,35 +1100,42 @@ const Messagerie = () => {
         </div>
       </div>
       <ScrollArea className="flex-1">
-        {filteredConversations.map((conv) => {
-          const contactInfo = getContactInfo(conv);
-          const lastMsg = lastMessagesMap.get(conv.id);
-          const lastMessageText = lastMsg?.content || (lastMsg?.attachment_name ? `📎 ${lastMsg.attachment_name}` : conv.subject || null);
-          const convMessages = messages.filter(m => m.conversation_id === conv.id);
-          const unreadCount = convMessages.filter(m => !m.read && m.sender_type !== 'agent').length;
-          
-          return (
-            <ConversationItem
-              key={conv.id}
-              name={contactInfo.name}
-              avatarUrl={null}
-              lastMessage={lastMessageText}
-              lastMessageTime={conv.last_message_at || conv.created_at}
-              unreadCount={unreadCount}
-              isSelected={selectedConv === conv.id}
-              isArchived={conv.is_archived}
-              onClick={() => setSelectedConv(conv.id)}
-            />
-          );
-        })}
+        {isLoadingConversations ? (
+          <ConversationListSkeleton />
+        ) : (
+          filteredConversations.map((conv, index) => {
+            const contactInfo = getContactInfo(conv);
+            const lastMsg = lastMessagesMap.get(conv.id);
+            const lastMessageText = lastMsg?.content || (lastMsg?.attachment_name ? `📎 ${lastMsg.attachment_name}` : conv.subject || null);
+            const convMessages = messages.filter(m => m.conversation_id === conv.id);
+            const unreadCount = convMessages.filter(m => !m.read && m.sender_type !== 'agent').length;
+            
+            return (
+              <PremiumConversationItem
+                key={conv.id}
+                name={contactInfo.name}
+                avatarUrl={null}
+                lastMessage={lastMessageText}
+                lastMessageTime={conv.last_message_at || conv.created_at}
+                unreadCount={unreadCount}
+                isSelected={selectedConv === conv.id}
+                isArchived={conv.is_archived}
+                onClick={() => setSelectedConv(conv.id)}
+                index={index}
+              />
+            );
+          })
+        )}
       </ScrollArea>
     </>
   );
 
   const chatView = selectedConv ? (
-    <div className="flex-1 flex flex-col min-h-0 chat-background">
+    <div className="flex-1 flex flex-col min-h-0 chat-background relative overflow-hidden">
+      <MeshGradientBackground />
+      <FloatingParticles count={12} />
       {currentConversation?.is_archived && (
-        <div className="p-3 bg-warning/10 border-b border-warning/20">
+        <div className="p-3 bg-warning/10 border-b border-warning/20 relative z-10">
           <p className="text-xs text-warning text-center flex items-center justify-center gap-2">
             <Badge variant="outline" className="border-warning text-warning text-xs">
               Archivée
@@ -1127,7 +1144,10 @@ const Messagerie = () => {
           </p>
         </div>
       )}
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 p-4 relative z-10">
+        {isLoadingMessages ? (
+          <MessagesListSkeleton />
+        ) : (
         <div className="space-y-2 max-w-4xl mx-auto">
           {/* Header qui défile avec les messages */}
           {currentConversation && (
@@ -1174,7 +1194,7 @@ const Messagerie = () => {
               
               return (
                 <div key={msg.id}>
-                  <MessageBubble
+                  <PremiumMessageBubble
                     content={cleanContent}
                     isSent={isSent}
                     timestamp={msg.created_at}
@@ -1213,9 +1233,10 @@ const Messagerie = () => {
           })()}
           <div ref={messagesEndRef} />
         </div>
+        )}
       </ScrollArea>
       {!currentConversation?.is_archived && (
-        <div>
+        <div className="relative z-10">
           <MessageAttachmentUploader
             conversationId={selectedConv}
             onAttachmentReady={setPendingAttachment}

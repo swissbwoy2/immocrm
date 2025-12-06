@@ -15,10 +15,12 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { MessagingLayout } from "@/components/MessagingLayout";
 import { AdminNewConversationDialog } from "@/components/AdminNewConversationDialog";
 import { ChatAvatar } from "@/components/messaging/ChatAvatar";
-import { MessageBubble } from "@/components/messaging/MessageBubble";
-import { ConversationItem } from "@/components/messaging/ConversationItem";
+import { PremiumMessageBubble } from "@/components/messaging/PremiumMessageBubble";
+import { PremiumConversationItem } from "@/components/messaging/PremiumConversationItem";
 import { ChatInput } from "@/components/messaging/ChatInput";
 import { ChatHeader } from "@/components/messaging/ChatHeader";
+import { FloatingParticles, MeshGradientBackground } from "@/components/messaging/FloatingParticles";
+import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
 
 // Fonction pour retirer les accents des chaînes pour une recherche plus flexible
 const removeAccents = (str: string) => {
@@ -35,6 +37,8 @@ const Messagerie = () => {
   const [messageText, setMessageText] = useState("");
   const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [pendingAttachment, setPendingAttachment] = useState<{
     url: string;
     type: string;
@@ -118,95 +122,102 @@ const Messagerie = () => {
   }, [selectedConv]);
 
   const loadConversations = async () => {
-    const { data, error } = await supabase
-      .from('conversations')
-      .select('*')
-      .order('last_message_at', { ascending: false });
+    setIsLoadingConversations(true);
+    try {
+      const { data, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .order('last_message_at', { ascending: false });
 
-    if (data) {
-      // Charger les clients et les agents
-      const clientIds = [...new Set(data.map(c => c.client_id).filter(Boolean))] as string[];
-      const agentIds = [...new Set(data.map(c => c.agent_id).filter(Boolean))] as string[];
-      const adminUserIds = [...new Set(data.map(c => c.admin_user_id).filter(Boolean))] as string[];
-      const conversationIds = data.map(c => c.id);
-      
-      // Charger les clients
-      const { data: clientsData } = clientIds.length > 0 
-        ? await supabase.from('clients').select('id, user_id').in('id', clientIds)
-        : { data: [] as { id: string; user_id: string }[] };
-      
-      // Charger les agents
-      const { data: agentsData } = agentIds.length > 0
-        ? await supabase.from('agents').select('id, user_id').in('id', agentIds)
-        : { data: [] as { id: string; user_id: string }[] };
-      
-      // Récupérer tous les user_ids pour charger les profils
-      const allUserIds = [
-        ...(clientsData?.map(c => c.user_id) || []),
-        ...(agentsData?.map(a => a.user_id) || []),
-        ...adminUserIds
-      ];
-      
-      const { data: profilesData } = allUserIds.length > 0
-        ? await supabase.from('profiles').select('id, prenom, nom, email').in('id', allUserIds)
-        : { data: [] as { id: string; prenom: string; nom: string; email: string }[] };
-
-      // Charger les derniers messages de chaque conversation
-      const { data: lastMessagesData } = conversationIds.length > 0
-        ? await supabase
-            .from('messages')
-            .select('conversation_id, content, attachment_name, created_at')
-            .in('conversation_id', conversationIds)
-            .order('created_at', { ascending: false })
-        : { data: [] as { conversation_id: string; content: string | null; attachment_name: string | null; created_at: string }[] };
-
-      // Créer une map du dernier message par conversation
-      const lastMessagesMap = new Map<string, { content: string | null; attachment_name: string | null }>();
-      lastMessagesData?.forEach(msg => {
-        if (!lastMessagesMap.has(msg.conversation_id)) {
-          lastMessagesMap.set(msg.conversation_id, {
-            content: msg.content,
-            attachment_name: msg.attachment_name
-          });
-        }
-      });
-      
-      const clientsMap = new Map<string, string>(clientsData?.map(c => [c.id, c.user_id] as [string, string]) || []);
-      const agentsMap = new Map<string, string>(agentsData?.map(a => [a.id, a.user_id] as [string, string]) || []);
-      const profilesMap = new Map<string, { id: string; prenom: string; nom: string; email: string }>(
-        profilesData?.map(p => [p.id, p] as [string, typeof p]) || []
-      );
-      
-      // Enrichir les conversations
-      const enrichedConvs = data.map(conv => {
-        const clientUserId = clientsMap.get(conv.client_id || '');
-        const clientProfile = clientUserId ? profilesMap.get(clientUserId) : null;
+      if (data) {
+        // Charger les clients et les agents
+        const clientIds = [...new Set(data.map(c => c.client_id).filter(Boolean))] as string[];
+        const agentIds = [...new Set(data.map(c => c.agent_id).filter(Boolean))] as string[];
+        const adminUserIds = [...new Set(data.map(c => c.admin_user_id).filter(Boolean))] as string[];
+        const conversationIds = data.map(c => c.id);
         
-        const agentUserId = agentsMap.get(conv.agent_id);
-        const agentProfile = agentUserId ? profilesMap.get(agentUserId) : null;
-
-        const adminProfile = conv.admin_user_id ? profilesMap.get(conv.admin_user_id) : null;
-
-        const lastMsg = lastMessagesMap.get(conv.id);
-        const lastMessageText = lastMsg?.content || (lastMsg?.attachment_name ? `📎 ${lastMsg.attachment_name}` : null);
+        // Charger les clients
+        const { data: clientsData } = clientIds.length > 0 
+          ? await supabase.from('clients').select('id, user_id').in('id', clientIds)
+          : { data: [] as { id: string; user_id: string }[] };
         
-        return {
-          ...conv,
-          clientName: clientProfile 
-            ? `${clientProfile.prenom} ${clientProfile.nom}` 
-            : null,
-          agentName: agentProfile 
-            ? `${agentProfile.prenom} ${agentProfile.nom}` 
-            : 'Agent inconnu',
-          adminName: adminProfile
-            ? `${adminProfile.prenom} ${adminProfile.nom}`
-            : null,
-          lastMessageText,
-        };
-      });
-      
-      setConversations(enrichedConvs);
-      setProfiles(profilesMap as Map<string, any>);
+        // Charger les agents
+        const { data: agentsData } = agentIds.length > 0
+          ? await supabase.from('agents').select('id, user_id').in('id', agentIds)
+          : { data: [] as { id: string; user_id: string }[] };
+        
+        // Récupérer tous les user_ids pour charger les profils
+        const allUserIds = [
+          ...(clientsData?.map(c => c.user_id) || []),
+          ...(agentsData?.map(a => a.user_id) || []),
+          ...adminUserIds
+        ];
+        
+        const { data: profilesData } = allUserIds.length > 0
+          ? await supabase.from('profiles').select('id, prenom, nom, email').in('id', allUserIds)
+          : { data: [] as { id: string; prenom: string; nom: string; email: string }[] };
+
+        // Charger les derniers messages de chaque conversation
+        const { data: lastMessagesData } = conversationIds.length > 0
+          ? await supabase
+              .from('messages')
+              .select('conversation_id, content, attachment_name, created_at')
+              .in('conversation_id', conversationIds)
+              .order('created_at', { ascending: false })
+          : { data: [] as { conversation_id: string; content: string | null; attachment_name: string | null; created_at: string }[] };
+
+        // Créer une map du dernier message par conversation
+        const lastMessagesMap = new Map<string, { content: string | null; attachment_name: string | null }>();
+        lastMessagesData?.forEach(msg => {
+          if (!lastMessagesMap.has(msg.conversation_id)) {
+            lastMessagesMap.set(msg.conversation_id, {
+              content: msg.content,
+              attachment_name: msg.attachment_name
+            });
+          }
+        });
+        
+        const clientsMap = new Map<string, string>(clientsData?.map(c => [c.id, c.user_id] as [string, string]) || []);
+        const agentsMap = new Map<string, string>(agentsData?.map(a => [a.id, a.user_id] as [string, string]) || []);
+        const profilesMap = new Map<string, { id: string; prenom: string; nom: string; email: string }>(
+          profilesData?.map(p => [p.id, p] as [string, typeof p]) || []
+        );
+        
+        // Enrichir les conversations
+        const enrichedConvs = data.map(conv => {
+          const clientUserId = clientsMap.get(conv.client_id || '');
+          const clientProfile = clientUserId ? profilesMap.get(clientUserId) : null;
+          
+          const agentUserId = agentsMap.get(conv.agent_id);
+          const agentProfile = agentUserId ? profilesMap.get(agentUserId) : null;
+
+          const adminProfile = conv.admin_user_id ? profilesMap.get(conv.admin_user_id) : null;
+
+          const lastMsg = lastMessagesMap.get(conv.id);
+          const lastMessageText = lastMsg?.content || (lastMsg?.attachment_name ? `📎 ${lastMsg.attachment_name}` : null);
+          
+          return {
+            ...conv,
+            clientName: clientProfile 
+              ? `${clientProfile.prenom} ${clientProfile.nom}` 
+              : null,
+            agentName: agentProfile 
+              ? `${agentProfile.prenom} ${agentProfile.nom}` 
+              : 'Agent inconnu',
+            adminName: adminProfile
+              ? `${adminProfile.prenom} ${adminProfile.nom}`
+              : null,
+            lastMessageText,
+          };
+        });
+        
+        setConversations(enrichedConvs);
+        setProfiles(profilesMap as Map<string, any>);
+      }
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    } finally {
+      setIsLoadingConversations(false);
     }
   };
 
@@ -216,37 +227,44 @@ const Messagerie = () => {
   };
 
   const loadMessages = async (convId: string) => {
-    const { data, error } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('conversation_id', convId)
-      .order('created_at', { ascending: true });
-
-    if (data) {
-      // Charger les profils pour les expéditeurs
-      const senderIds = [...new Set(data.map(m => m.sender_id))];
-      const { data: sendersData } = await supabase
-        .from('profiles')
-        .select('id, prenom, nom')
-        .in('id', senderIds);
-      
-      const sendersMap = new Map(sendersData?.map(p => [p.id, p]));
-      
-      const enrichedMessages = data.map(msg => ({
-        ...msg,
-        senderName: sendersMap.get(msg.sender_id) 
-          ? `${sendersMap.get(msg.sender_id).prenom} ${sendersMap.get(msg.sender_id).nom}`
-          : msg.sender_type === 'client' ? 'Client' : msg.sender_type === 'admin' ? 'Admin' : 'Agent'
-      }));
-      
-      setMessages(enrichedMessages);
-      
-      // Marquer les messages comme lus
-      await supabase
+    setIsLoadingMessages(true);
+    try {
+      const { data, error } = await supabase
         .from('messages')
-        .update({ read: true })
+        .select('*')
         .eq('conversation_id', convId)
-        .eq('read', false);
+        .order('created_at', { ascending: true });
+
+      if (data) {
+        // Charger les profils pour les expéditeurs
+        const senderIds = [...new Set(data.map(m => m.sender_id))];
+        const { data: sendersData } = await supabase
+          .from('profiles')
+          .select('id, prenom, nom')
+          .in('id', senderIds);
+        
+        const sendersMap = new Map(sendersData?.map(p => [p.id, p]));
+        
+        const enrichedMessages = data.map(msg => ({
+          ...msg,
+          senderName: sendersMap.get(msg.sender_id) 
+            ? `${sendersMap.get(msg.sender_id).prenom} ${sendersMap.get(msg.sender_id).nom}`
+            : msg.sender_type === 'client' ? 'Client' : msg.sender_type === 'admin' ? 'Admin' : 'Agent'
+        }));
+        
+        setMessages(enrichedMessages);
+        
+        // Marquer les messages comme lus
+        await supabase
+          .from('messages')
+          .update({ read: true })
+          .eq('conversation_id', convId)
+          .eq('read', false);
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    } finally {
+      setIsLoadingMessages(false);
     }
   };
 
@@ -433,18 +451,20 @@ const Messagerie = () => {
         </div>
       </div>
       <ScrollArea className="flex-1">
-        {filteredConversations.length === 0 ? (
+        {isLoadingConversations ? (
+          <ConversationListSkeleton />
+        ) : filteredConversations.length === 0 ? (
           <div className="p-4 text-center text-muted-foreground text-sm">
             Aucune conversation trouvée
           </div>
         ) : (
-          filteredConversations.map((conv) => {
+          filteredConversations.map((conv, index) => {
             const displayName = conv.conversation_type === 'admin-agent' 
               ? conv.agentName 
               : conv.clientName || 'Client';
             
             return (
-              <ConversationItem
+              <PremiumConversationItem
                 key={conv.id}
                 name={displayName}
                 avatarUrl={null}
@@ -453,6 +473,7 @@ const Messagerie = () => {
                 unreadCount={0}
                 isSelected={selectedConv === conv.id}
                 onClick={() => setSelectedConv(conv.id)}
+                index={index}
               />
             );
           })
@@ -474,31 +495,37 @@ const Messagerie = () => {
   );
 
   const chatView = selectedConv ? (
-    <div className="flex-1 flex flex-col min-h-0 chat-background">
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-2 max-w-4xl mx-auto">
-          {selectedMessages.map((msg) => {
-            const isSent = msg.sender_type === 'admin';
-            const senderName = isSent ? undefined : msg.senderName;
-            
-            return (
-              <MessageBubble
-                key={msg.id}
-                content={msg.content || ''}
-                isSent={isSent}
-                timestamp={msg.created_at}
-                read={msg.read}
-                senderName={senderName}
-                attachmentUrl={msg.attachment_url}
-                attachmentName={msg.attachment_name}
-                attachmentType={msg.attachment_type}
-                attachmentSize={msg.attachment_size}
-                payload={msg.payload as any}
-              />
-            );
-          })}
-          <div ref={messagesEndRef} />
-        </div>
+    <div className="flex-1 flex flex-col min-h-0 chat-background relative overflow-hidden">
+      <MeshGradientBackground />
+      <FloatingParticles count={12} />
+      <ScrollArea className="flex-1 p-4 relative z-10">
+        {isLoadingMessages ? (
+          <MessagesListSkeleton />
+        ) : (
+          <div className="space-y-2 max-w-4xl mx-auto">
+            {selectedMessages.map((msg, index) => {
+              const isSent = msg.sender_type === 'admin';
+              const senderName = isSent ? undefined : msg.senderName;
+              
+              return (
+                <PremiumMessageBubble
+                  key={msg.id}
+                  content={msg.content || ''}
+                  isSent={isSent}
+                  timestamp={msg.created_at}
+                  read={msg.read}
+                  senderName={senderName}
+                  attachmentUrl={msg.attachment_url}
+                  attachmentName={msg.attachment_name}
+                  attachmentType={msg.attachment_type}
+                  attachmentSize={msg.attachment_size}
+                  payload={msg.payload as any}
+                />
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+        )}
       </ScrollArea>
       <div>
         <MessageAttachmentUploader
