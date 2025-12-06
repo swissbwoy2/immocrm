@@ -23,6 +23,9 @@ interface ApporteurData {
   date_expiration: string | null;
   statut: string;
   contrat_signe: boolean;
+  taux_commission: number | null;
+  minimum_vente: number | null;
+  minimum_location: number | null;
 }
 
 export default function ApporteurDashboard() {
@@ -242,10 +245,10 @@ export default function ApporteurDashboard() {
             <CardTitle>Rappel des conditions</CardTitle>
             <CardDescription>Article 2 de votre contrat</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>• Commission : <strong>20%</strong> des frais d'agence</p>
-            <p>• Minimum vente : <strong>CHF 500</strong></p>
-            <p>• Minimum location : <strong>CHF 150</strong></p>
+        <CardContent className="space-y-2 text-sm">
+            <p>• Commission : <strong>{apporteur?.taux_commission ?? 10}%</strong> des frais d'agence</p>
+            <p>• Minimum vente : <strong>CHF {apporteur?.minimum_vente ?? 0}</strong></p>
+            <p>• Minimum location : <strong>CHF {apporteur?.minimum_location ?? 0}</strong></p>
             <p className="text-muted-foreground mt-4">
               La commission est payable dès la conclusion de la vente ou du bail.
             </p>

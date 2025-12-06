@@ -179,16 +179,16 @@ export default function MonContrat() {
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
               <div className="p-4 bg-muted rounded-lg text-center">
-                <div className="text-3xl font-bold text-primary">{contrat?.taux_commission || 20}%</div>
+                <div className="text-3xl font-bold text-primary">{contrat?.taux_commission ?? 10}%</div>
                 <div className="text-sm text-muted-foreground">Commission</div>
                 <div className="text-xs text-muted-foreground mt-1">des frais d'agence</div>
               </div>
               <div className="p-4 bg-muted rounded-lg text-center">
-                <div className="text-3xl font-bold">CHF {contrat?.minimum_vente || 500}</div>
+                <div className="text-3xl font-bold">CHF {contrat?.minimum_vente ?? 0}</div>
                 <div className="text-sm text-muted-foreground">Minimum vente</div>
               </div>
               <div className="p-4 bg-muted rounded-lg text-center">
-                <div className="text-3xl font-bold">CHF {contrat?.minimum_location || 150}</div>
+                <div className="text-3xl font-bold">CHF {contrat?.minimum_location ?? 0}</div>
                 <div className="text-sm text-muted-foreground">Minimum location</div>
               </div>
             </div>
@@ -230,8 +230,8 @@ export default function MonContrat() {
               <p>
                 Les commissions dues à l'Apporteur d'affaires lui seront acquises dès la signature de l'acte 
                 de vente ou du bail à loyer par les clients qu'il aura présenté à la société. La société versera 
-                à l'apporteur d'affaires une commission d'apport s'élevant à {contrat?.taux_commission || 20}% des frais d'agence 
-                avec un minimum de CHF {contrat?.minimum_vente || 500},- pour un bien vendu et un minimum de CHF {contrat?.minimum_location || 150},- 
+                à l'apporteur d'affaires une commission d'apport s'élevant à {contrat?.taux_commission ?? 10}% des frais d'agence 
+                avec un minimum de CHF {contrat?.minimum_vente ?? 0},- pour un bien vendu et un minimum de CHF {contrat?.minimum_location ?? 0},- 
                 pour un bien loué.
               </p>
             </div>
