@@ -8,7 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Search, Filter, Users, MapPin, Phone, Mail } from 'lucide-react';
+import { Search, Filter, Users, MapPin, Phone, Mail, Clock, CheckCircle, DollarSign, XCircle } from 'lucide-react';
+import { ReferralTimeline } from '@/components/ReferralTimeline';
 
 interface Referral {
   id: string;
@@ -20,9 +21,12 @@ interface Referral {
   type_affaire: string;
   statut: string;
   montant_commission: number | null;
+  montant_frais_agence: number | null;
   created_at: string;
   date_validation: string | null;
+  date_conclusion: string | null;
   date_paiement: string | null;
+  reference_virement: string | null;
 }
 
 const statutConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -39,6 +43,55 @@ const typeAffaireLabels: Record<string, string> = {
   achat: 'Achat',
   location: 'Location',
   mise_en_location: 'Mise en location',
+};
+
+const getStatusMessage = (statut: string) => {
+  switch (statut) {
+    case 'soumis':
+      return (
+        <div className="flex items-center gap-2 text-orange-600">
+          <Clock className="h-4 w-4" />
+          <span>Votre referral est en cours de vérification par notre équipe.</span>
+        </div>
+      );
+    case 'valide':
+      return (
+        <div className="flex items-center gap-2 text-blue-600">
+          <CheckCircle className="h-4 w-4" />
+          <span>Le client a été validé et pris en charge par un agent.</span>
+        </div>
+      );
+    case 'en_cours':
+      return (
+        <div className="flex items-center gap-2 text-blue-600">
+          <Clock className="h-4 w-4" />
+          <span>La recherche est en cours pour ce client.</span>
+        </div>
+      );
+    case 'conclu':
+      return (
+        <div className="flex items-center gap-2 text-green-600">
+          <CheckCircle className="h-4 w-4" />
+          <span>L'affaire est conclue ! Votre commission sera versée prochainement.</span>
+        </div>
+      );
+    case 'paye':
+      return (
+        <div className="flex items-center gap-2 text-green-600">
+          <DollarSign className="h-4 w-4" />
+          <span>Votre commission a été versée.</span>
+        </div>
+      );
+    case 'annule':
+      return (
+        <div className="flex items-center gap-2 text-red-600">
+          <XCircle className="h-4 w-4" />
+          <span>Ce referral a été annulé.</span>
+        </div>
+      );
+    default:
+      return null;
+  }
 };
 
 export default function MesReferrals() {
@@ -172,7 +225,23 @@ export default function MesReferrals() {
                   </Badge>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                {/* Timeline visuelle du workflow */}
+                <div className="pb-4 border-b">
+                  <ReferralTimeline 
+                    statut={referral.statut}
+                    dateCreation={referral.created_at}
+                    dateValidation={referral.date_validation || undefined}
+                    dateConclusion={referral.date_conclusion || undefined}
+                    datePaiement={referral.date_paiement || undefined}
+                  />
+                </div>
+                
+                {/* Message explicatif selon le statut */}
+                <div className="p-3 rounded-lg bg-muted/50">
+                  {getStatusMessage(referral.statut)}
+                </div>
+
                 <div className="grid gap-3 text-sm">
                   {referral.lieu_situation && (
                     <div className="flex items-center gap-2 text-muted-foreground">
@@ -204,12 +273,36 @@ export default function MesReferrals() {
                         {format(new Date(referral.date_validation), 'dd MMM yyyy', { locale: fr })}
                       </div>
                     )}
-                    {referral.montant_commission && (
-                      <div className="ml-auto font-medium">
-                        Commission: CHF {referral.montant_commission.toFixed(2)}
+                    {referral.date_conclusion && (
+                      <div>
+                        <span className="text-muted-foreground">Conclu le:</span>{' '}
+                        {format(new Date(referral.date_conclusion), 'dd MMM yyyy', { locale: fr })}
+                      </div>
+                    )}
+                    {referral.date_paiement && (
+                      <div>
+                        <span className="text-muted-foreground">Payé le:</span>{' '}
+                        {format(new Date(referral.date_paiement), 'dd MMM yyyy', { locale: fr })}
                       </div>
                     )}
                   </div>
+                  
+                  {/* Commission info */}
+                  {(referral.montant_commission || referral.statut === 'conclu' || referral.statut === 'paye') && (
+                    <div className="mt-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Commission:</span>
+                        <span className="text-lg font-bold text-primary">
+                          CHF {referral.montant_commission?.toFixed(2) || '—'}
+                        </span>
+                      </div>
+                      {referral.reference_virement && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Réf. virement: {referral.reference_virement}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

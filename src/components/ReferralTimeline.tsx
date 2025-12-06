@@ -1,5 +1,7 @@
 import { Check, Clock, Send, CreditCard, Circle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface ReferralTimelineProps {
   statut: string;
@@ -25,6 +27,7 @@ const statusOrder: Record<string, number> = {
   'conclu': 2,
   'paye': 3,
   'rejete': -1,
+  'annule': -1,
 };
 
 export function ReferralTimeline({ 
@@ -36,13 +39,37 @@ export function ReferralTimeline({
   compact = false 
 }: ReferralTimelineProps) {
   const currentStep = statusOrder[statut] ?? 0;
-  const isRejected = statut === 'rejete';
+  const isRejected = statut === 'rejete' || statut === 'annule';
+
+  const getDateForStep = (stepKey: string): string | undefined => {
+    switch (stepKey) {
+      case 'soumis':
+        return dateCreation;
+      case 'valide':
+        return dateValidation;
+      case 'conclu':
+        return dateConclusion;
+      case 'paye':
+        return datePaiement;
+      default:
+        return undefined;
+    }
+  };
+
+  const formatStepDate = (date: string | undefined): string | null => {
+    if (!date) return null;
+    try {
+      return format(new Date(date), 'dd/MM', { locale: fr });
+    } catch {
+      return null;
+    }
+  };
 
   if (isRejected) {
     return (
       <div className="flex items-center gap-2 text-destructive">
         <Circle className="h-4 w-4 fill-destructive" />
-        <span className="text-sm font-medium">Rejeté</span>
+        <span className="text-sm font-medium">{statut === 'annule' ? 'Annulé' : 'Rejeté'}</span>
       </div>
     );
   }
@@ -78,6 +105,8 @@ export function ReferralTimeline({
           const isCompleted = index <= currentStep;
           const isCurrent = index === currentStep;
           const Icon = step.icon;
+          const stepDate = getDateForStep(step.key);
+          const formattedDate = formatStepDate(stepDate);
 
           return (
             <div key={step.key} className="flex flex-col items-center relative z-10">
@@ -101,6 +130,11 @@ export function ReferralTimeline({
               >
                 {step.label}
               </span>
+              {formattedDate && isCompleted && (
+                <span className="text-[10px] text-muted-foreground">
+                  {formattedDate}
+                </span>
+              )}
             </div>
           );
         })}
