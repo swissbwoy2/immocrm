@@ -262,8 +262,8 @@ export default function AdminDocuments() {
                   <Badge variant="secondary">{clientDocs.length}</Badge>
                 </h2>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {clientDocs.map((doc) => (
-                    <Card key={doc.id} className="hover:shadow-lg transition-shadow">
+                  {clientDocs.map((doc, docIndex) => (
+                    <Card key={doc.id} className="card-interactive animate-fade-in" style={{ animationDelay: `${docIndex * 30}ms`, animationFillMode: 'backwards' }}>
                       <CardHeader>
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
@@ -337,7 +337,7 @@ export default function AdminDocuments() {
             ))}
           </div>
         ) : (
-          <Card>
+          <Card className="card-interactive animate-fade-in">
             <CardContent className="py-8 text-center text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>

@@ -378,57 +378,57 @@ export default function DemandesActivation() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <Card className="p-4">
+          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '0ms' }}>
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-orange-100 dark:bg-orange-950">
+              <div className="p-2 rounded-full bg-orange-100 dark:bg-orange-950 group-hover:scale-110 transition-transform">
                 <AlertTriangle className="h-5 w-5 text-orange-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{newDemandes.length}</p>
+                <p className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{newDemandes.length}</p>
                 <p className="text-xs text-muted-foreground">Nouvelles</p>
               </div>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '50ms' }}>
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-950">
+              <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-950 group-hover:scale-110 transition-transform">
                 <Receipt className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{invoicedDemandes.length}</p>
+                <p className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{invoicedDemandes.length}</p>
                 <p className="text-xs text-muted-foreground">Facturées</p>
               </div>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '100ms' }}>
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-green-100 dark:bg-green-950">
+              <div className="p-2 rounded-full bg-green-100 dark:bg-green-950 group-hover:scale-110 transition-transform">
                 <CreditCard className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{paidDemandes.length}</p>
+                <p className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{paidDemandes.length}</p>
                 <p className="text-xs text-muted-foreground">Payées</p>
               </div>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '150ms' }}>
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-emerald-100 dark:bg-emerald-950">
+              <div className="p-2 rounded-full bg-emerald-100 dark:bg-emerald-950 group-hover:scale-110 transition-transform">
                 <CheckCircle className="h-5 w-5 text-emerald-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{activeDemandes.length}</p>
+                <p className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{activeDemandes.length}</p>
                 <p className="text-xs text-muted-foreground">Activées</p>
               </div>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '200ms' }}>
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-full bg-yellow-100 dark:bg-yellow-950">
+              <div className="p-2 rounded-full bg-yellow-100 dark:bg-yellow-950 group-hover:scale-110 transition-transform">
                 <Clock className="h-5 w-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{inactiveProfiles.length}</p>
+                <p className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{inactiveProfiles.length}</p>
                 <p className="text-xs text-muted-foreground">Inactifs</p>
               </div>
             </div>
@@ -446,7 +446,7 @@ export default function DemandesActivation() {
           </TabsList>
 
           <TabsContent value="demandes">
-            <Card className="p-4">
+            <Card className="card-interactive p-4 animate-fade-in" style={{ animationDelay: '250ms' }}>
               <ScrollArea className="h-[500px]">
                 {demandes.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">

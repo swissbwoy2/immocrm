@@ -384,34 +384,34 @@ export default function AdminOffresEnvoyees() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card className="p-4">
+          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '0ms' }}>
             <div className="text-center">
-              <p className="text-2xl font-bold">{totalOffres}</p>
+              <p className="text-2xl font-bold group-hover:scale-110 transition-transform">{totalOffres}</p>
               <p className="text-sm text-muted-foreground">Total</p>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '50ms' }}>
             <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600">{offresEnvoyees}</p>
+              <p className="text-2xl font-bold text-blue-600 group-hover:scale-110 transition-transform">{offresEnvoyees}</p>
               <p className="text-sm text-muted-foreground">En attente</p>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '100ms' }}>
             <div className="text-center">
-              <p className="text-2xl font-bold text-success">{offresAcceptees}</p>
+              <p className="text-2xl font-bold text-success group-hover:scale-110 transition-transform">{offresAcceptees}</p>
               <p className="text-sm text-muted-foreground">Acceptées</p>
             </div>
           </Card>
-          <Card className="p-4">
+          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '150ms' }}>
             <div className="text-center">
-              <p className="text-2xl font-bold text-destructive">{offresRefusees}</p>
+              <p className="text-2xl font-bold text-destructive group-hover:scale-110 transition-transform">{offresRefusees}</p>
               <p className="text-sm text-muted-foreground">Refusées</p>
             </div>
           </Card>
         </div>
 
         {/* Filtres */}
-        <Card className="mb-6">
+        <Card className="card-interactive mb-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Filter className="w-5 h-5" />

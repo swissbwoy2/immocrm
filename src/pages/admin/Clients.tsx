@@ -581,7 +581,7 @@ const Clients = () => {
 
         {/* Grid de clients - responsive */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-          {sortedClients.map((client) => {
+          {sortedClients.map((client, index) => {
             const profile = clientProfiles.get(client.user_id);
             const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
             const progressPercent = (daysElapsed / 90) * 100;
@@ -630,9 +630,10 @@ const Clients = () => {
             return (
               <Card 
                 key={client.id} 
-                className={`p-3 md:p-4 flex flex-col relative cursor-pointer hover:shadow-lg transition-shadow ${
+                className={`card-interactive p-3 md:p-4 flex flex-col relative cursor-pointer animate-fade-in ${
                   !isSolvable ? 'border-red-200 dark:border-red-900' : ''
                 }`}
+                style={{ animationDelay: `${Math.min(index * 30, 300)}ms`, animationFillMode: 'backwards' }}
                 onClick={() => navigate(`/admin/clients/${client.id}`)}
               >
                 {/* Boutons d'actions - plus gros sur mobile */}

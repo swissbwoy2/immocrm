@@ -95,36 +95,36 @@ const Transactions = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
-            <Card className="p-4 md:p-6">
+            <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '0ms' }}>
               <div className="flex items-center gap-3 md:gap-4">
-                <div className="p-2 md:p-3 bg-primary/10 rounded-lg">
+                <div className="p-2 md:p-3 bg-primary/10 rounded-lg group-hover:scale-110 transition-transform">
                   <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-primary" />
                 </div>
                 <div>
                   <p className="text-xs md:text-sm text-muted-foreground">Commissions totales</p>
-                  <p className="text-lg md:text-2xl font-bold">CHF {totalCommissions.toLocaleString()}</p>
+                  <p className="text-lg md:text-2xl font-bold group-hover:scale-105 transition-transform origin-left">CHF {totalCommissions.toLocaleString()}</p>
                 </div>
               </div>
             </Card>
-            <Card className="p-4 md:p-6">
+            <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '50ms' }}>
               <div className="flex items-center gap-3 md:gap-4">
-                <div className="p-2 md:p-3 bg-success/10 rounded-lg">
+                <div className="p-2 md:p-3 bg-success/10 rounded-lg group-hover:scale-110 transition-transform">
                   <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-success" />
                 </div>
                 <div>
                   <p className="text-xs md:text-sm text-muted-foreground">Part agents</p>
-                  <p className="text-lg md:text-2xl font-bold">CHF {totalAgentPart.toLocaleString()}</p>
+                  <p className="text-lg md:text-2xl font-bold group-hover:scale-105 transition-transform origin-left">CHF {totalAgentPart.toLocaleString()}</p>
                 </div>
               </div>
             </Card>
-            <Card className="p-4 md:p-6">
+            <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '100ms' }}>
               <div className="flex items-center gap-3 md:gap-4">
-                <div className="p-2 md:p-3 bg-secondary/10 rounded-lg">
+                <div className="p-2 md:p-3 bg-secondary/10 rounded-lg group-hover:scale-110 transition-transform">
                   <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-secondary-foreground" />
                 </div>
                 <div>
                   <p className="text-xs md:text-sm text-muted-foreground">Part agence</p>
-                  <p className="text-lg md:text-2xl font-bold">CHF {totalAgencyPart.toLocaleString()}</p>
+                  <p className="text-lg md:text-2xl font-bold group-hover:scale-105 transition-transform origin-left">CHF {totalAgencyPart.toLocaleString()}</p>
                 </div>
               </div>
             </Card>
@@ -132,7 +132,7 @@ const Transactions = () => {
 
           <div className="grid gap-4">
             {transactions.length === 0 ? (
-              <Card className="p-12">
+              <Card className="card-interactive p-12 animate-fade-in" style={{ animationDelay: '150ms' }}>
                 <div className="text-center text-muted-foreground">
                   <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p className="font-medium">Aucune transaction enregistrée</p>
@@ -140,9 +140,9 @@ const Transactions = () => {
                 </div>
               </Card>
             ) : (
-              transactions.map((transaction) => {
+              transactions.map((transaction, index) => {
                 return (
-                  <Card key={transaction.id} className="p-6">
+                  <Card key={transaction.id} className="card-interactive p-6 animate-fade-in" style={{ animationDelay: `${150 + index * 40}ms`, animationFillMode: 'backwards' }}>
                     <div className="space-y-4">
                       <div className="flex items-start justify-between">
                         <div>
