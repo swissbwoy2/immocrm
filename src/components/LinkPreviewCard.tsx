@@ -112,7 +112,7 @@ export function LinkPreviewCard({ url, showInline = false, className }: LinkPrev
     if (error || !preview) {
       return (
         <a 
-          href={url} 
+          href={normalizedUrl || url} 
           target="_blank" 
           rel="noopener noreferrer"
           className="flex items-center gap-2 p-3 text-primary hover:underline"
@@ -126,7 +126,7 @@ export function LinkPreviewCard({ url, showInline = false, className }: LinkPrev
 
     return (
       <a 
-        href={url} 
+        href={normalizedUrl || url} 
         target="_blank" 
         rel="noopener noreferrer"
         className="block hover:bg-muted/50 transition-colors rounded-lg overflow-hidden"
@@ -193,7 +193,7 @@ export function LinkPreviewCard({ url, showInline = false, className }: LinkPrev
           className={cn("gap-2", className)}
           onClick={(e) => {
             e.stopPropagation();
-            window.open(url, '_blank', 'noopener,noreferrer');
+            window.open(normalizedUrl || url, '_blank', 'noopener,noreferrer');
           }}
         >
           <ExternalLink className="h-4 w-4" />
