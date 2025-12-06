@@ -168,7 +168,8 @@ const Messagerie = () => {
 
   const loadClientAndConversations = async () => {
     if (!user) return;
-
+    
+    setIsLoadingConversations(true);
     try {
       const { data: clientData } = await supabase
         .from('clients')
@@ -245,10 +246,13 @@ const Messagerie = () => {
         description: "Impossible de charger les conversations",
         variant: "destructive",
       });
+    } finally {
+      setIsLoadingConversations(false);
     }
   };
 
   const loadMessages = async (convId: string) => {
+    setIsLoadingMessages(true);
     try {
       const { data, error } = await supabase
         .from('messages')
@@ -294,6 +298,8 @@ const Messagerie = () => {
         .eq('sender_type', 'agent');
     } catch (error) {
       console.error('Error loading messages:', error);
+    } finally {
+      setIsLoadingMessages(false);
     }
   };
 
