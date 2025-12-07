@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarEvent } from '@/components/calendar/types';
 import { PremiumCalendarView } from '@/components/calendar/PremiumCalendarView';
-import { ClientDayEvents } from '@/components/calendar/ClientDayEvents';
+import { PremiumClientDayEvents } from '@/components/calendar/PremiumClientDayEvents';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Badge } from '@/components/ui/badge';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
@@ -296,7 +296,7 @@ export default function ClientCalendrier() {
 
         {/* Day events */}
         <div className="min-w-0 h-[600px] animate-fade-in" style={{ animationDelay: '100ms' }}>
-          <ClientDayEvents
+          <PremiumClientDayEvents
             date={selectedDate}
             events={selectedDayEvents}
             visites={selectedDayVisites}
