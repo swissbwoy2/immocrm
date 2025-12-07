@@ -29,14 +29,14 @@ export function StatsSection() {
 
         setStats({
           clients: clientsResult.count || 500,
-          transactions: transactionsResult.count || 250,
+          transactions: transactionsResult.count || 490,
           satisfaction: 98,
           avgDays: 45,
         });
       } catch {
         setStats({
           clients: 500,
-          transactions: 250,
+          transactions: 490,
           satisfaction: 98,
           avgDays: 45,
         });
