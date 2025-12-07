@@ -29,6 +29,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
+import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 
 // Skeleton card for loading state
 const OffreSkeletonCard = ({ index }: { index: number }) => (
@@ -1094,41 +1095,29 @@ const OffresRecues = () => {
       </div>
 
       <div className="p-4 md:p-8 relative z-10">
-        {/* Ultra-Premium Header */}
-        <div className="mb-8 animate-fade-in relative">
-          <FloatingParticles />
-          
-          <div className="flex items-center gap-4 mb-4">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary to-primary/50 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
-              <div className="relative p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 backdrop-blur-sm border border-primary/20">
-                <Home className="h-7 w-7 text-primary animate-pulse" />
+        <PremiumPageHeader
+          title="Offres Reçues"
+          subtitle="Découvrez les biens sélectionnés pour vous"
+          icon={Home}
+          badge="Immobilier"
+          action={
+            offres.length > 0 ? (
+              <div className="flex items-center gap-3 flex-wrap">
+                <Badge 
+                  variant="secondary" 
+                  className="px-4 py-2 text-sm bg-gradient-to-r from-primary/20 to-primary/5 border-primary/20 shadow-lg shadow-primary/5"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  <AnimatedValue value={offres.length} /> offre{offres.length > 1 ? 's' : ''} disponible{offres.length > 1 ? 's' : ''}
+                </Badge>
+                <Badge variant="outline" className="px-3 py-1.5 text-xs">
+                  <TrendingUp className="w-3 h-3 mr-1" />
+                  {offres.filter(o => o.statut === 'interesse').length} intéressantes
+                </Badge>
               </div>
-            </div>
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground via-foreground/90 to-foreground/60 bg-clip-text text-transparent">
-                Offres Reçues
-              </h1>
-              <p className="text-muted-foreground mt-1">Découvrez les biens sélectionnés pour vous</p>
-            </div>
-          </div>
-          
-          {offres.length > 0 && (
-            <div className="flex items-center gap-3 flex-wrap">
-              <Badge 
-                variant="secondary" 
-                className="px-4 py-2 text-sm bg-gradient-to-r from-primary/20 to-primary/5 border-primary/20 shadow-lg shadow-primary/5 animate-glow-pulse"
-              >
-                <Sparkles className="w-4 h-4 mr-2 animate-pulse" />
-                <AnimatedValue value={offres.length} /> offre{offres.length > 1 ? 's' : ''} disponible{offres.length > 1 ? 's' : ''}
-              </Badge>
-              <Badge variant="outline" className="px-3 py-1.5 text-xs">
-                <TrendingUp className="w-3 h-3 mr-1" />
-                {offres.filter(o => o.statut === 'interesse').length} intéressantes
-              </Badge>
-            </div>
-          )}
-        </div>
+            ) : null
+          }
+        />
 
         {offres.length === 0 ? (
           /* Premium Empty State */
