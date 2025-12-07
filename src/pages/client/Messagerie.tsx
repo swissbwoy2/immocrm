@@ -1460,11 +1460,11 @@ const Messagerie = () => {
       <ChatPatternBackground />
       
       {/* Messages area */}
-      <ScrollArea className="flex-1 p-4 relative z-10" onScrollCapture={handleScroll}>
+      <ScrollArea className="flex-1 p-2 sm:p-4 relative z-10 overflow-x-hidden" onScrollCapture={handleScroll}>
         {isLoadingMessages ? (
           <MessagesListSkeleton />
         ) : (
-          <div className="space-y-3 max-w-4xl mx-auto">
+          <div className="space-y-3 max-w-4xl mx-auto overflow-x-hidden">
             <div ref={messagesStartRef} />
             {selectedMessages.map((msg, index) => {
               const isSent = msg.sender_type === 'client';

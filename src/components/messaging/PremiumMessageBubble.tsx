@@ -52,8 +52,8 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
       )}
     >
       <div className={cn(
-        "flex flex-col max-w-[75%] md:max-w-[60%]",
-        "group"
+        "flex flex-col max-w-[70%] sm:max-w-[75%] md:max-w-[60%]",
+        "group overflow-hidden"
       )}>
         {!isSent && senderName && (
           <span className="text-xs text-muted-foreground mb-1 ml-3 font-medium">
@@ -125,8 +125,11 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
           {content && (
             <p className={cn(
               "text-sm whitespace-pre-wrap break-words relative z-10",
+              "overflow-hidden overflow-wrap-anywhere",
               isSent ? "text-primary-foreground" : "text-foreground"
-            )}>
+            )}
+            style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+            >
               {content}
             </p>
           )}
