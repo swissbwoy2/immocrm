@@ -1076,4 +1076,46 @@ All colors MUST be HSL.
     stroke-dashoffset: 283;
     animation: circle-progress 2s ease-out forwards;
   }
+
+  /* Mobile optimizations - Lighter animations for better performance */
+  @media (max-width: 768px) {
+    .geo-shape-1,
+    .geo-shape-2 {
+      animation: none !important;
+      opacity: 0.2;
+    }
+
+    .float-particle,
+    .float-particle-delayed {
+      animation: none !important;
+      opacity: 0.15;
+    }
+
+    .mesh-gradient {
+      background-attachment: scroll;
+    }
+
+    .glow-breathe {
+      animation-duration: 4s;
+    }
+
+    /* Reduce blur intensity on mobile for performance */
+    .blur-3xl {
+      filter: blur(40px);
+    }
+
+    /* Simpler transitions on mobile */
+    .card-hover:hover,
+    .card-interactive:hover {
+      transform: none;
+    }
+  }
+
+  /* Touch-friendly spacing */
+  @media (pointer: coarse) {
+    .touch-target-lg {
+      min-height: 48px;
+      min-width: 48px;
+    }
+  }
 }

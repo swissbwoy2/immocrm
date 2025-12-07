@@ -41,49 +41,49 @@ const benefits = [
 
 export function BenefitsSection() {
   return (
-    <section className="py-20 relative overflow-hidden bg-gradient-to-b from-background via-muted/5 to-background">
-      {/* Background effects */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <section className="py-12 md:py-20 relative overflow-hidden bg-gradient-to-b from-background via-muted/5 to-background">
+      {/* Background effects - hidden on mobile for performance */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
         {/* Section header */}
-        <div className="text-center mb-12 animate-fade-in">
+        <div className="text-center mb-8 md:mb-12 animate-fade-in">
           <div className="inline-flex items-center gap-2 bg-primary/10 rounded-full px-4 py-2 mb-4">
-            <span className="text-primary font-medium">✅ Ce que tu obtiens</span>
+            <span className="text-primary font-medium text-sm md:text-base">✅ Ce que tu obtiens</span>
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+          <h2 className="text-2xl md:text-4xl font-bold text-foreground mb-3 md:mb-4">
             Tout ce qu'il te faut pour trouver{' '}
             <span className="gradient-text-animated">ton appartement</span>
           </h2>
         </div>
 
         {/* Benefits grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-6xl mx-auto">
           {benefits.map((benefit, index) => (
             <div
               key={index}
               className="group relative animate-fade-in"
-              style={{ animationDelay: `${index * 100}ms` }}
+              style={{ animationDelay: `${index * 75}ms` }}
             >
-              <div className="relative glass-morphism rounded-2xl p-6 border border-border/30 hover:border-primary/50 transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 h-full">
+              <div className="relative glass-morphism rounded-xl md:rounded-2xl p-5 md:p-6 border border-border/30 hover:border-primary/50 transition-all duration-300 md:hover:shadow-lg md:hover:shadow-primary/10 h-full">
                 {/* Icon */}
-                <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${benefit.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                  <benefit.icon className="h-7 w-7 text-white" />
+                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl bg-gradient-to-br ${benefit.gradient} flex items-center justify-center mb-3 md:mb-4 md:group-hover:scale-110 transition-transform duration-300`}>
+                  <benefit.icon className="h-6 w-6 md:h-7 md:w-7 text-white" />
                 </div>
 
                 {/* Content */}
-                <h3 className="text-xl font-bold text-foreground mb-2">
+                <h3 className="text-lg md:text-xl font-bold text-foreground mb-1 md:mb-2">
                   {benefit.title}
                 </h3>
-                <p className="text-muted-foreground">
+                <p className="text-sm md:text-base text-muted-foreground">
                   {benefit.description}
                 </p>
 
-                {/* Arrow indicator */}
-                <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Arrow indicator - hidden on mobile */}
+                <div className="absolute top-5 right-5 md:top-6 md:right-6 opacity-0 group-hover:opacity-100 transition-opacity hidden md:block">
                   <span className="text-primary text-xl">→</span>
                 </div>
               </div>
