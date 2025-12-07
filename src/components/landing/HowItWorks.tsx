@@ -1,4 +1,4 @@
-import { FileText, UserCheck, Home, CheckCircle } from 'lucide-react';
+import { FileText, UserCheck, Home, CheckCircle, Sparkles, Star, Zap } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 const steps = [
@@ -30,44 +30,69 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section className="py-24 relative overflow-hidden">
-      {/* Subtle mesh gradient background */}
+    <section className="py-24 md:py-32 relative overflow-hidden">
+      {/* Premium mesh gradient background */}
       <div className="absolute inset-0 bg-muted/30" />
       <div className="absolute inset-0 mesh-gradient opacity-50" />
 
       {/* Animated orbs - hidden on mobile */}
       <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-[15%] w-32 h-32 bg-gradient-to-br from-primary/20 to-transparent rounded-full blur-2xl animate-float" />
-        <div className="absolute bottom-20 right-[15%] w-40 h-40 bg-gradient-to-tr from-primary/15 to-transparent rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-        <div className="absolute top-1/2 left-[5%] w-24 h-24 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-2xl animate-float" style={{ animationDelay: '4s' }} />
+        <div className="absolute top-20 left-[15%] w-40 h-40 bg-gradient-to-br from-primary/20 to-transparent rounded-full blur-2xl animate-float" />
+        <div className="absolute bottom-20 right-[15%] w-48 h-48 bg-gradient-to-tr from-purple-500/15 to-transparent rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-1/2 left-[5%] w-32 h-32 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-2xl animate-float" style={{ animationDelay: '4s' }} />
+        <div className="absolute top-1/3 right-[5%] w-36 h-36 bg-gradient-to-l from-green-500/10 to-transparent rounded-full blur-2xl animate-pulse" style={{ animationDuration: '5s' }} />
       </div>
 
-      {/* Sparkle particles - hidden on mobile */}
+      {/* Floating sparkles and stars - hidden on mobile */}
       <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(6)].map((_, i) => (
+        {[...Array(8)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-1 h-1 bg-primary/60 rounded-full animate-pulse"
+            className="absolute"
             style={{
               top: `${20 + Math.random() * 60}%`,
               left: `${10 + Math.random() * 80}%`,
-              animationDelay: `${i * 0.5}s`,
-              animationDuration: `${2 + Math.random() * 2}s`,
             }}
-          />
+          >
+            <Sparkles 
+              className="h-3 w-3 text-primary/40 animate-pulse" 
+              style={{ animationDuration: `${2 + Math.random() * 2}s`, animationDelay: `${i * 0.4}s` }}
+            />
+          </div>
+        ))}
+        {[...Array(4)].map((_, i) => (
+          <div
+            key={`star-${i}`}
+            className="absolute"
+            style={{
+              top: `${25 + Math.random() * 50}%`,
+              left: `${15 + Math.random() * 70}%`,
+            }}
+          >
+            <Star 
+              className="h-2 w-2 text-primary/30 animate-float" 
+              style={{ animationDuration: `${3 + Math.random() * 2}s`, animationDelay: `${i * 0.6}s` }}
+            />
+          </div>
         ))}
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
         {/* Section header */}
-        <div className="text-center mb-16 animate-fade-in">
-          <div className="inline-flex items-center gap-2 glass-morphism rounded-full px-4 py-2 mb-4 relative overflow-hidden group">
-            {/* Shine effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-            <span className="text-sm font-medium text-primary">Simple & Efficace</span>
+        <div className="text-center mb-16 md:mb-20 animate-fade-in">
+          <div className="inline-flex items-center gap-2 relative group mb-4">
+            {/* Glow behind badge */}
+            <div className="absolute -inset-2 bg-primary/20 rounded-full blur-lg opacity-60 animate-pulse" style={{ animationDuration: '3s' }} />
+            <div className="relative glass-morphism rounded-full px-5 py-2.5 overflow-hidden border border-primary/20">
+              {/* Shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              <Zap className="inline-block h-4 w-4 text-primary mr-2" />
+              <span className="text-sm font-semibold text-primary relative z-10">Simple & Efficace</span>
+            </div>
           </div>
-          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
+          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4 relative inline-block">
             Comment ça <span className="gradient-text-animated">marche</span> ?
+            <Sparkles className="absolute -top-2 -right-6 h-5 w-5 text-primary animate-pulse hidden md:block" />
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Un processus simple et efficace pour trouver votre bien immobilier en Suisse romande
@@ -75,12 +100,14 @@ export function HowItWorks() {
         </div>
 
         {/* Steps with timeline */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 relative">
           {/* Timeline connector for desktop - animated gradient */}
-          <div className="hidden lg:block absolute top-24 left-[12.5%] right-[12.5%] h-0.5 overflow-hidden">
+          <div className="hidden lg:block absolute top-28 left-[12.5%] right-[12.5%] h-1 overflow-hidden rounded-full">
             <div className="h-full w-full bg-gradient-to-r from-blue-500 via-purple-500 to-orange-500 animate-gradient-x" />
-            {/* Pulsing dot on timeline */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-primary rounded-full animate-pulse" />
+            {/* Pulsing dots on timeline */}
+            <div className="absolute top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-primary rounded-full animate-pulse shadow-lg shadow-primary/50" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-primary rounded-full animate-pulse shadow-lg shadow-primary/50" style={{ animationDelay: '0.5s' }} />
+            <div className="absolute top-1/2 left-3/4 -translate-x-1/2 -translate-y-1/2 w-3 h-3 bg-primary rounded-full animate-pulse shadow-lg shadow-primary/50" style={{ animationDelay: '1s' }} />
           </div>
 
           {steps.map((step, index) => (
@@ -91,57 +118,71 @@ export function HowItWorks() {
             >
               {/* Animated border gradient on hover */}
               <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/50 via-primary/30 to-primary/50 animate-gradient-x" />
-                <div className="absolute inset-[1px] rounded-lg bg-card" />
+                <div className={`absolute inset-0 rounded-lg bg-gradient-to-r ${step.gradient} animate-gradient-x`} />
+                <div className="absolute inset-[2px] rounded-lg bg-card" />
               </div>
+
+              {/* Glow effect on hover */}
+              <div className={`absolute -inset-2 bg-gradient-to-r ${step.gradient} rounded-xl opacity-0 group-hover:opacity-20 transition-opacity duration-500 blur-xl`} />
 
               {/* Floating particles - hidden on mobile */}
               <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                {[...Array(3)].map((_, i) => (
+                {[...Array(4)].map((_, i) => (
                   <div
                     key={i}
-                    className="absolute w-1 h-1 bg-primary/40 rounded-full animate-float"
+                    className={`absolute w-1.5 h-1.5 bg-gradient-to-r ${step.gradient} rounded-full animate-float`}
                     style={{
-                      top: `${30 + i * 20}%`,
-                      left: `${20 + i * 25}%`,
-                      animationDelay: `${i * 0.3}s`,
+                      top: `${25 + i * 18}%`,
+                      left: `${15 + i * 22}%`,
+                      animationDelay: `${i * 0.25}s`,
                     }}
                   />
                 ))}
               </div>
 
               {/* Shine effect on hover */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
 
               {/* Step number with pulse effect */}
               <div className="absolute top-4 right-4 z-20">
                 <div className="relative">
-                  {/* Pulse ring */}
-                  <div className={`absolute inset-0 w-10 h-10 rounded-full bg-gradient-to-br ${step.gradient} opacity-30 animate-ping`} style={{ animationDuration: '2s' }} />
-                  <div className={`relative w-10 h-10 rounded-full bg-gradient-to-br ${step.gradient} flex items-center justify-center text-white font-bold text-lg shadow-lg group-hover:scale-110 transition-transform`}>
+                  {/* Pulse rings */}
+                  <div className={`absolute inset-0 w-12 h-12 rounded-full bg-gradient-to-br ${step.gradient} opacity-30 animate-ping`} style={{ animationDuration: '2.5s' }} />
+                  <div className={`absolute inset-0 w-12 h-12 rounded-full bg-gradient-to-br ${step.gradient} opacity-20 animate-pulse`} style={{ animationDuration: '2s' }} />
+                  <div className={`relative w-12 h-12 rounded-full bg-gradient-to-br ${step.gradient} flex items-center justify-center text-white font-bold text-lg shadow-lg group-hover:scale-110 transition-transform`}>
                     {index + 1}
                   </div>
                 </div>
               </div>
+
+              {/* Sparkle on hover */}
+              <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Sparkles className="h-4 w-4 text-primary/60 animate-pulse" />
+              </div>
               
-              <CardContent className="pt-6 pb-8 relative z-10">
+              <CardContent className="pt-8 pb-10 relative z-10">
                 {/* Icon with gradient background and glow */}
-                <div className="relative mb-5">
-                  <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${step.gradient} flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg`}>
-                    <step.icon className="h-8 w-8 text-white group-hover:animate-bounce" style={{ animationDuration: '1s', animationIterationCount: '1' }} />
+                <div className="relative mb-6">
+                  <div className={`w-18 h-18 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br ${step.gradient} flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-xl`}>
+                    <step.icon className="h-9 w-9 md:h-10 md:w-10 text-white" />
                   </div>
                   {/* Glow effect */}
-                  <div className={`absolute inset-0 w-16 h-16 rounded-2xl bg-gradient-to-br ${step.gradient} blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-300`} />
+                  <div className={`absolute inset-0 w-18 h-18 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br ${step.gradient} blur-xl opacity-0 group-hover:opacity-60 transition-opacity duration-300`} />
+                  {/* Pulsing ring */}
+                  <div className={`absolute inset-0 w-18 h-18 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br ${step.gradient} opacity-30 group-hover:scale-125 group-hover:opacity-0 transition-all duration-500`} />
                 </div>
                 
                 {/* Content */}
-                <h3 className="text-xl font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
+                <h3 className="text-xl font-semibold text-foreground mb-3 group-hover:text-primary transition-colors">
                   {step.title}
                 </h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   {step.description}
                 </p>
               </CardContent>
+
+              {/* Bottom gradient accent */}
+              <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${step.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
 
               {/* Hover gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
