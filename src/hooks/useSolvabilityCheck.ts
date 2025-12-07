@@ -120,15 +120,17 @@ export function useSolvabilityCheck(
     const candidatesRevenus = stableCumulativeCandidates
       .reduce((sum, c) => sum + (c.revenus_mensuels || 0), 0);
     
-    // If client has stable status, include their revenue; otherwise only count candidates
-    const totalRevenus = clientHasStableStatus 
+    // If client has stable status AND no poursuites, include their revenue; otherwise only count candidates
+    const clientContributesToRevenue = clientHasStableStatus && !client.poursuites;
+    
+    const totalRevenus = clientContributesToRevenue 
       ? clientRevenus + candidatesRevenus 
       : candidatesRevenus;
     
     const budgetPossible = Math.round(totalRevenus / 3);
     
-    // Count contributors (only those with stable status)
-    const contributeurs = (clientHasStableStatus ? 1 : 0) + stableCumulativeCandidates.length;
+    // Count contributors (only those with stable status AND no poursuites)
+    const contributeurs = (clientContributesToRevenue ? 1 : 0) + stableCumulativeCandidates.length;
     
     // Check for valid guarantors
     const garants = candidates.filter(c => c.type === 'garant');
