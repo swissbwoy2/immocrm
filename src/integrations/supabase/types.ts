@@ -2242,6 +2242,10 @@ export type Database = {
         Args: { _agent_id: string; _client_id: string }
         Returns: boolean
       }
+      check_demande_by_email: {
+        Args: { check_email: string }
+        Returns: boolean
+      }
       create_notification: {
         Args: {
           p_link?: string
