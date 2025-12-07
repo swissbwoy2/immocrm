@@ -253,11 +253,11 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
   
   addText('Coordonnees bancaires:', margin, yPosition, 10, helveticaBold);
   yPosition -= lineHeight;
-  addText('Beneficiaire: IMMO-RAMA SA', margin, yPosition, 10);
+  addText('Beneficiaire: Immo-Rama, Chemin de l\'Esparcette 5, 1023 Crissier', margin, yPosition, 10);
   yPosition -= lineHeight;
-  addText('IBAN: CH93 0076 7000 E525 8472 5', margin, yPosition, 10);
+  addText('IBAN: CH87 8080 8004 9815 5643 7', margin, yPosition, 10);
   yPosition -= lineHeight;
-  addText('BIC: BCVLCH2LXXX | Banque Cantonale Vaudoise', margin, yPosition, 10);
+  addText('SWIFT-BIC: RAIFCH22 | BANQUE RAIFFEISEN DU GROS DE VAUD', margin, yPosition, 10);
   yPosition -= 30;
   
   // Dispositions du mandat (résumé)
@@ -410,10 +410,10 @@ const handler = async (req: Request): Promise<Response> => {
                 <strong>Pour activer votre dossier</strong>
                 <p>Veuillez effectuer le virement de l'acompte de <strong>${acompte} CHF</strong>:</p>
                 <ul style="list-style: none; padding: 0; margin: 10px 0;">
-                  <li><strong>Beneficiaire:</strong> IMMO-RAMA SA</li>
-                  <li><strong>IBAN:</strong> CH93 0076 7000 E525 8472 5</li>
-                  <li><strong>BIC:</strong> BCVLCH2LXXX</li>
-                  <li><strong>Banque:</strong> Banque Cantonale Vaudoise</li>
+                  <li><strong>Beneficiaire:</strong> Immo-Rama, Chemin de l'Esparcette 5, 1023 Crissier</li>
+                  <li><strong>IBAN:</strong> CH87 8080 8004 9815 5643 7</li>
+                  <li><strong>SWIFT-BIC:</strong> RAIFCH22</li>
+                  <li><strong>Banque:</strong> BANQUE RAIFFEISEN DU GROS DE VAUD</li>
                 </ul>
               </div>
               

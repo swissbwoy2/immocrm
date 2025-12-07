@@ -109,16 +109,16 @@ serve(async (req) => {
           <strong>Référence :</strong> ${data.prenom} ${data.nom} - Mandat
         </div>
         <div class="bank-info">
-          <strong>Bénéficiaire :</strong> IMMO-RAMA SA
+          <strong>Bénéficiaire :</strong> Immo-Rama, Chemin de l'Esparcette 5, 1023 Crissier
         </div>
         <div class="bank-info">
-          <strong>IBAN :</strong> CH93 0076 7000 E541 3796 7
+          <strong>IBAN :</strong> CH87 8080 8004 9815 5643 7
         </div>
         <div class="bank-info">
-          <strong>BIC :</strong> BCVLCH2LXXX
+          <strong>SWIFT-BIC :</strong> RAIFCH22
         </div>
         <div class="bank-info">
-          <strong>Banque :</strong> Banque Cantonale Vaudoise
+          <strong>Banque :</strong> BANQUE RAIFFEISEN DU GROS DE VAUD
         </div>
       </div>
       
