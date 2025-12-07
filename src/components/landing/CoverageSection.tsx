@@ -60,16 +60,6 @@ export function CoverageSection() {
             </div>
           ))}
         </div>
-
-        {/* Swiss flag decoration with enhanced styling */}
-        <div className="flex justify-center mt-12 animate-fade-in" style={{ animationDelay: '600ms' }}>
-          <div className="glass-morphism rounded-full px-8 py-4 flex items-center gap-4 glow-breathe">
-            <span className="text-3xl">🇨🇭</span>
-            <span className="text-muted-foreground font-medium">
-              Service <span className="text-primary">100% suisse romand</span>
-            </span>
-          </div>
-        </div>
       </div>
     </section>
   );
