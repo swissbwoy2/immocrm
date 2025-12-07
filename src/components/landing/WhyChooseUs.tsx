@@ -1,4 +1,4 @@
-import { Building2, FileCheck, CalendarCheck, MessageCircle, RefreshCw, UserCheck, Award } from 'lucide-react';
+import { Building2, FileCheck, CalendarCheck, MessageCircle, Shield, UserCheck, Award, Coins } from 'lucide-react';
 
 const advantages = [
   {
@@ -26,16 +26,16 @@ const advantages = [
     gradient: 'from-orange-500 to-red-500',
   },
   {
-    icon: RefreshCw,
-    title: 'Acompte 100% remboursé',
-    description: 'Satisfait ou remboursé : récupérez votre acompte intégralement sous 30 jours.',
+    icon: Shield,
+    title: 'Garantie sans risque',
+    description: 'Acompte de 300 CHF remboursé à 100% en cas d\'échec après 3 mois de recherches.',
     gradient: 'from-indigo-500 to-violet-500',
   },
   {
-    icon: UserCheck,
-    title: 'Agent dédié',
-    description: 'Un interlocuteur unique qui connaît votre dossier et vous accompagne jusqu\'au bout.',
-    gradient: 'from-teal-500 to-cyan-500',
+    icon: Coins,
+    title: 'Tarification transparente',
+    description: 'En cas de succès : 1 mois de loyer de commission, moins les 300 CHF d\'acompte déjà versés.',
+    gradient: 'from-amber-500 to-orange-500',
   },
 ];
 
