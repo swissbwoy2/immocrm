@@ -20,3 +20,6 @@ export { PremiumDossierSection } from './PremiumDossierSection';
 export { PremiumInfoGrid, PremiumInfoItem } from './PremiumInfoGrid';
 export { PremiumAgentCard } from './PremiumAgentCard';
 export { PremiumDocumentCard, PremiumDocumentEmptyState } from './PremiumDocumentCard';
+export { PremiumVisiteDelegueSection } from './PremiumVisiteDelegueSection';
+export { PremiumVisiteDelegueCard } from './PremiumVisiteDelegueCard';
+export { PremiumFeedbackCard } from './PremiumFeedbackCard';
