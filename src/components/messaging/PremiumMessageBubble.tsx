@@ -53,7 +53,7 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
     >
       <div className={cn(
         "flex flex-col max-w-[70%] sm:max-w-[75%] md:max-w-[60%]",
-        "group overflow-hidden"
+        "group overflow-hidden min-w-0"
       )}>
         {!isSent && senderName && (
           <span className="text-xs text-muted-foreground mb-1 ml-3 font-medium">

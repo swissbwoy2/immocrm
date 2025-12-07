@@ -185,18 +185,26 @@ const Messagerie = () => {
     }
   }, [selectedConv]);
 
+  // Track previous values for scroll behavior
+  const prevMessagesLengthRef = useRef(0);
+  const prevConvRef = useRef<string | null>(null);
+
   // Auto-scroll to bottom when conversation changes (instant) or new messages (smooth)
   useEffect(() => {
     if (messages.length > 0) {
-      scrollToBottom(true);
+      const isNewConversation = prevConvRef.current !== selectedConv;
+      const isNewMessage = messages.length > prevMessagesLengthRef.current && !isNewConversation;
+      
+      if (isNewConversation) {
+        scrollToBottom(true); // instant for new conversation
+      } else if (isNewMessage) {
+        scrollToBottom(false); // smooth for new messages
+      }
+      
+      prevConvRef.current = selectedConv;
+      prevMessagesLengthRef.current = messages.length;
     }
-  }, [selectedConv, scrollToBottom]);
-
-  useEffect(() => {
-    if (messages.length > 0) {
-      scrollToBottom(false);
-    }
-  }, [messages.length]);
+  }, [selectedConv, messages.length, scrollToBottom]);
 
   useEffect(() => {
     if (!selectedConv) return;
@@ -1210,7 +1218,7 @@ const Messagerie = () => {
           </p>
         </div>
       )}
-      <ScrollArea className="flex-1 p-4 relative z-10" onScrollCapture={handleScroll}>
+      <ScrollArea className="flex-1 p-2 sm:p-4 relative z-10" viewportClassName="overflow-x-hidden" onScroll={handleScroll}>
         {isLoadingMessages ? (
           <MessagesListSkeleton />
         ) : (
