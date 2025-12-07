@@ -390,6 +390,23 @@ export default function Documents() {
     return labels[type] || '📄 Autre';
   };
 
+  const getTypeBadgeStyle = (type: string) => {
+    const styles: Record<string, string> = {
+      'fiche_salaire': 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-700',
+      'extrait_poursuites': 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-700',
+      'piece_identite': 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-700',
+      'attestation_domicile': 'bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-950/50 dark:text-violet-300 dark:border-violet-700',
+      'rc_menage': 'bg-pink-100 text-pink-700 border-pink-300 dark:bg-pink-950/50 dark:text-pink-300 dark:border-pink-700',
+      'contrat_travail': 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-700',
+      'attestation_employeur': 'bg-cyan-100 text-cyan-700 border-cyan-300 dark:bg-cyan-950/50 dark:text-cyan-300 dark:border-cyan-700',
+      'copie_bail': 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-700',
+      'attestation_garantie_loyer': 'bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-950/50 dark:text-teal-300 dark:border-teal-700',
+      'dossier_complet': 'bg-green-100 text-green-700 border-green-300 dark:bg-green-950/50 dark:text-green-300 dark:border-green-700',
+      'autre': 'bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800/50 dark:text-gray-300 dark:border-gray-600'
+    };
+    return styles[type] || styles['autre'];
+  };
+
   const getFileIcon = (type: string) => {
     if (type.includes('pdf')) return FileText;
     if (type.includes('image')) return ImageIcon;
@@ -590,7 +607,10 @@ export default function Documents() {
                   <CardContent className="relative space-y-3">
                     <div className="space-y-2">
                       <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline" className="text-xs bg-primary/5 border-primary/20">
+                        <Badge 
+                          variant="outline" 
+                          className={`text-sm font-medium px-3 py-1 border ${getTypeBadgeStyle(doc.type_document)}`}
+                        >
                           {getTypeLabel(doc.type_document)}
                         </Badge>
                         {doc.offre_id && (
