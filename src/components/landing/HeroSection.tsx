@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Sparkles, CheckCircle, RefreshCw } from 'lucide-react';
+import { ArrowRight, Sparkles, CheckCircle, Shield } from 'lucide-react';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 
 export function HeroSection() {
@@ -47,12 +47,24 @@ export function HeroSection() {
           {/* Guarantee badge - VERY prominent */}
           <div className="animate-fade-in mb-6" style={{ animationDelay: '100ms' }}>
             <div className="inline-flex items-center gap-3 bg-gradient-to-r from-primary/20 via-primary/30 to-primary/20 border-2 border-primary/50 rounded-full px-6 py-3 glow-breathe">
-              <RefreshCw className="h-5 w-5 text-primary animate-spin" style={{ animationDuration: '3s' }} />
+              <Shield className="h-5 w-5 text-primary" />
               <span className="text-lg md:text-xl font-bold text-primary">
-                Acompte remboursé à 100%*
+                Acompte remboursé à 100% en cas d'échec*
               </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">*Sous un délai de 30 jours</p>
+            <p className="text-xs text-muted-foreground mt-2">*Après 3 mois de recherches</p>
+          </div>
+          
+          {/* Commission info */}
+          <div className="flex flex-wrap justify-center gap-4 mb-6 text-sm animate-fade-in" style={{ animationDelay: '150ms' }}>
+            <div className="glass-morphism rounded-full px-4 py-2 border border-border/30">
+              <span className="text-muted-foreground">Acompte : </span>
+              <span className="font-semibold text-foreground">300 CHF</span>
+            </div>
+            <div className="glass-morphism rounded-full px-4 py-2 border border-border/30">
+              <span className="text-muted-foreground">Succès : </span>
+              <span className="font-semibold text-foreground">1 mois de loyer - 300 CHF</span>
+            </div>
           </div>
 
           {/* Tagline with conversion focus */}
