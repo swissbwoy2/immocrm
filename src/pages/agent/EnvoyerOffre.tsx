@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Link, Paperclip, RotateCcw, FolderOpen, Save } from "lucide-react";
-import logoImmoRama from "@/assets/logo-immo-rama.png";
+import logoImmoRama from "@/assets/logo-immo-rama-new.png";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { OfferAttachmentUploader } from "@/components/OfferAttachmentUploader";

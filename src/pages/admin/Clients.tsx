@@ -15,30 +15,7 @@ import { CUMULATIVE_TYPES } from "@/hooks/useClientCandidates";
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 import { cn } from "@/lib/utils";
 
-// Animated counter component
-function AnimatedCounter({ value, suffix = "" }: { value: number; suffix?: string }) {
-  const [displayValue, setDisplayValue] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    const duration = 800;
-    const startTime = Date.now();
-    const startValue = displayValue;
-
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      setDisplayValue(Math.round(startValue + (value - startValue) * easeOut));
-      
-      if (progress < 1) requestAnimationFrame(animate);
-    };
-    
-    requestAnimationFrame(animate);
-  }, [value]);
-
-  return <span ref={ref}>{displayValue}{suffix}</span>;
-}
+import { AnimatedCounter } from "@/components/AnimatedCounter";
 
 interface Client {
   id: string;

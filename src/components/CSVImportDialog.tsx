@@ -10,15 +10,167 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { parseCSV, ParsedCSVData } from '@/utils/csvParser';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+
+// Inline CSV parser
+interface CSVRow {
+  [key: string]: string;
+}
+
+interface ParsedClient {
+  dateInscription?: string;
+  dateNaissance?: string;
+  nationalite?: string;
+  typePermis?: string;
+  adresse?: string;
+  etatCivil?: string;
+  geranceActuelle?: string;
+  contactGerance?: string;
+  loyerActuel?: number;
+  depuisLe?: string;
+  nombrePiecesActuel?: number;
+  motifChangement?: string;
+  profession?: string;
+  employeur?: string;
+  dateEngagement?: string;
+  revenuMensuel?: number;
+  montantCharges?: number;
+  chargesExtraordinaires?: boolean;
+  poursuites?: boolean;
+  curatelle?: boolean;
+  budgetMax?: number;
+  nombrePiecesSouhaite?: string;
+  regions?: string[];
+  typeBien?: string;
+  typeRecherche?: string;
+  souhaitsParticuliers?: string;
+  nombreOccupants?: number;
+  utilisationLogement?: string;
+  animaux?: boolean;
+  instrumentMusique?: boolean;
+  vehicules?: boolean;
+  numeroPlaques?: string;
+  decouverteAgence?: string;
+}
+
+interface ParsedUser {
+  email: string;
+  password: string;
+  prenom: string;
+  nom: string;
+  telephone?: string;
+}
+
+interface ParsedCSVData {
+  clients: ParsedClient[];
+  users: ParsedUser[];
+  errors: string[];
+}
+
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if ((char === ',' || char === ';') && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function parseCSV(csvText: string): ParsedCSVData {
+  const lines = csvText.split('\n').filter(line => line.trim());
+  const clients: ParsedClient[] = [];
+  const users: ParsedUser[] = [];
+  const errors: string[] = [];
+
+  if (lines.length < 2) {
+    errors.push('Le fichier CSV est vide ou ne contient pas de données');
+    return { clients, users, errors };
+  }
+
+  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim());
+
+  for (let i = 1; i < lines.length; i++) {
+    try {
+      const values = parseCSVLine(lines[i]);
+      const row: CSVRow = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index] || '';
+      });
+
+      const email = row['email'] || row['e-mail'] || '';
+      const prenom = row['prenom'] || row['prénom'] || '';
+      const nom = row['nom'] || '';
+      const telephone = row['telephone'] || row['téléphone'] || row['tel'] || '';
+
+      if (!email || !prenom || !nom) {
+        errors.push(`Ligne ${i + 1}: Email, prénom ou nom manquant`);
+        continue;
+      }
+
+      const password = 'immo' + (telephone?.slice(-4) || '0000');
+
+      users.push({ email, password, prenom, nom, telephone });
+      
+      clients.push({
+        dateInscription: row['date_inscription'] || row['dateinscription'] || new Date().toISOString().split('T')[0],
+        dateNaissance: row['date_naissance'] || row['datenaissance'] || undefined,
+        nationalite: row['nationalite'] || row['nationalité'] || undefined,
+        typePermis: row['type_permis'] || row['typepermis'] || row['permis'] || undefined,
+        adresse: row['adresse'] || undefined,
+        etatCivil: row['etat_civil'] || row['etatcivil'] || row['situation_familiale'] || undefined,
+        geranceActuelle: row['gerance_actuelle'] || row['geranceactuelle'] || undefined,
+        contactGerance: row['contact_gerance'] || row['contactgerance'] || undefined,
+        loyerActuel: row['loyer_actuel'] ? parseFloat(row['loyer_actuel']) : undefined,
+        depuisLe: row['depuis_le'] || row['depuisle'] || undefined,
+        nombrePiecesActuel: row['pieces_actuel'] ? parseInt(row['pieces_actuel']) : undefined,
+        motifChangement: row['motif_changement'] || row['motifchangement'] || undefined,
+        profession: row['profession'] || undefined,
+        employeur: row['employeur'] || undefined,
+        dateEngagement: row['date_engagement'] || row['dateengagement'] || undefined,
+        revenuMensuel: row['revenus_mensuels'] ? parseFloat(row['revenus_mensuels']) : undefined,
+        montantCharges: row['charges_mensuelles'] ? parseFloat(row['charges_mensuelles']) : undefined,
+        chargesExtraordinaires: row['charges_extraordinaires'] === 'true' || row['charges_extraordinaires'] === 'oui',
+        poursuites: row['poursuites'] === 'true' || row['poursuites'] === 'oui',
+        curatelle: row['curatelle'] === 'true' || row['curatelle'] === 'oui',
+        budgetMax: row['budget_max'] ? parseFloat(row['budget_max']) : undefined,
+        nombrePiecesSouhaite: row['pieces'] || row['nombre_pieces'] || undefined,
+        regions: row['region_recherche'] ? [row['region_recherche']] : undefined,
+        typeBien: row['type_bien'] || row['typebien'] || undefined,
+        typeRecherche: row['type_recherche'] || row['typerecherche'] || undefined,
+        souhaitsParticuliers: row['souhaits_particuliers'] || undefined,
+        nombreOccupants: row['nombre_occupants'] ? parseInt(row['nombre_occupants']) : undefined,
+        utilisationLogement: row['utilisation_logement'] || undefined,
+        animaux: row['animaux'] === 'true' || row['animaux'] === 'oui',
+        instrumentMusique: row['instrument_musique'] === 'true' || row['instrument_musique'] === 'oui',
+        vehicules: row['vehicules'] === 'true' || row['vehicules'] === 'oui',
+        numeroPlaques: row['numero_plaques'] || undefined,
+        decouverteAgence: row['decouverte_agence'] || undefined,
+      });
+    } catch (e) {
+      errors.push(`Ligne ${i + 1}: Erreur de parsing`);
+    }
+  }
+
+  return { clients, users, errors };
+}
 
 interface CSVImportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImportComplete: () => void;
-  currentAgentId?: string; // ID de l'agent qui importe les clients
+  currentAgentId?: string;
 }
 
 export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentAgentId }: CSVImportDialogProps) {
@@ -60,10 +212,10 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
     }
 
     setFile(selectedFile);
-    parseFile(selectedFile);
+    parseFileContent(selectedFile);
   };
 
-  const parseFile = async (file: File) => {
+  const parseFileContent = async (file: File) => {
     setParsing(true);
     setParseResult(null);
 
@@ -97,16 +249,8 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
       console.log('📊 Import - Starting Supabase import...');
       setParsing(true);
 
-      // Transform parsed data to match edge function format
       const clientsToImport = parseResult.clients.map((client, index) => {
         const user = parseResult.users[index];
-        
-        console.log(`📤 Préparation client ${index + 1}:`, {
-          email: user.email,
-          dateInscription: client.dateInscription,
-          prenom: user.prenom,
-          nom: user.nom
-        });
         
         return {
           user: {
@@ -117,60 +261,46 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
             telephone: user.telephone,
           },
           client: {
-            // Informations personnelles
             date_naissance: client.dateNaissance || null,
             nationalite: client.nationalite || null,
             type_permis: client.typePermis || null,
             adresse: client.adresse || null,
             etat_civil: client.etatCivil || null,
             situation_familiale: client.etatCivil || null,
-            
-            // Logement actuel
             gerance_actuelle: client.geranceActuelle || null,
             contact_gerance: client.contactGerance || null,
             loyer_actuel: client.loyerActuel || null,
             depuis_le: client.depuisLe || null,
             pieces_actuel: client.nombrePiecesActuel || null,
             motif_changement: client.motifChangement || null,
-            
-            // Emploi et revenus
             profession: client.profession || null,
             employeur: client.employeur || null,
             date_engagement: client.dateEngagement || null,
             revenus_mensuels: client.revenuMensuel || 0,
-            
-            // Charges et situation financière
             charges_mensuelles: client.montantCharges || 0,
             charges_extraordinaires: client.chargesExtraordinaires || null,
             montant_charges_extra: client.montantCharges || null,
             poursuites: client.poursuites || false,
             curatelle: client.curatelle || false,
-            
-            // Recherche
             budget_max: client.budgetMax || 0,
-            pieces: parseInt(client.nombrePiecesSouhaite) || null,
+            pieces: client.nombrePiecesSouhaite ? parseInt(client.nombrePiecesSouhaite) : null,
             region_recherche: client.regions?.join(', ') || null,
             type_bien: client.typeBien || null,
             type_contrat: client.typeRecherche || null,
             souhaits_particuliers: client.souhaitsParticuliers || null,
-            
-            // Occupants et conditions
             nombre_occupants: client.nombreOccupants || null,
             utilisation_logement: client.utilisationLogement || null,
             animaux: client.animaux || false,
             instrument_musique: client.instrumentMusique || false,
             vehicules: client.vehicules || false,
             numero_plaques: client.numeroPlaques || null,
-            
-            // Autres
             decouverte_agence: client.decouverteAgence || null,
             date_ajout: client.dateInscription,
           },
-          agentEmail: undefined, // Not supported yet in CSV
+          agentEmail: undefined,
         };
       });
 
-      // Call edge function
       const { data, error } = await supabase.functions.invoke('import-clients-csv', {
         body: { clients: clientsToImport }
       });
@@ -188,7 +318,6 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
         errors: Array<{ email: string; reason: string }> 
       };
 
-      // Build description message
       const parts: string[] = [];
       if (result.created > 0) parts.push(`${result.created} créé(s)`);
       if (result.activated > 0) parts.push(`${result.activated} activé(s)`);
@@ -243,7 +372,6 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Zone de drop */}
           {!file && (
             <div
               className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
@@ -281,7 +409,6 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
             </div>
           )}
 
-          {/* Fichier sélectionné */}
           {file && (
             <div className="flex items-center gap-3 p-4 bg-muted rounded-lg">
               <FileText className="w-8 h-8 text-primary" />
@@ -306,7 +433,6 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
             </div>
           )}
 
-          {/* Parsing en cours */}
           {parsing && (
             <div className="flex items-center justify-center p-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -314,7 +440,6 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
             </div>
           )}
 
-          {/* Résultats */}
           {parseResult && !parsing && (
             <div className="space-y-3">
               {parseResult.clients.length > 0 && (
