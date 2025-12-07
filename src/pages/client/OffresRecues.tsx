@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
+import { PremiumOffreDetailsDialog } from "@/components/premium/PremiumOffreDetailsDialog";
 
 // Skeleton card for loading state
 const OffreSkeletonCard = ({ index }: { index: number }) => (
@@ -1402,198 +1403,20 @@ const OffresRecues = () => {
           </div>
         )}
 
-        {/* Dialog des détails - Ultra Glass Effect */}
-        <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-background/95 backdrop-blur-2xl border-border/50 shadow-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-2xl flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5">
-                  <Building2 className="h-6 w-6 text-primary" />
-                </div>
-                Détails de l'offre
-              </DialogTitle>
-              <DialogDescription>
-                Informations complètes sur le bien proposé
-              </DialogDescription>
-            </DialogHeader>
-            
-            {selectedOffre && (
-              <div className="space-y-6">
-                <div className="border-b border-border/50 pb-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h3 className="text-xl font-semibold">{selectedOffre.adresse}</h3>
-                      <Badge variant={formatStatutOffre(selectedOffre.statut).variant} className="mt-2">
-                        {formatStatutOffre(selectedOffre.statut).label}
-                      </Badge>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">CHF {selectedOffre.prix.toLocaleString()}</p>
-                      <p className="text-sm text-muted-foreground">par mois</p>
-                    </div>
-                  </div>
-                </div>
-
-                {(() => {
-                  const candidature = candidatures.find(c => c.offre_id === selectedOffre.id);
-                  const showWorkflow = ['candidature_deposee', 'en_attente', 'acceptee', 'bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(candidature?.statut || selectedOffre.statut);
-                  
-                  if (!showWorkflow) return null;
-                  
-                  const effectiveStatut = candidature?.statut || selectedOffre.statut;
-                  
-                  return (
-                    <div className="border-b border-border/50 pb-4">
-                      <h4 className="font-semibold mb-3 flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-primary" />
-                        Suivi de votre candidature
-                      </h4>
-                      <CandidatureWorkflowInteractive 
-                        currentStatut={effectiveStatut}
-                        candidature={candidature}
-                        onProgressWorkflow={handleProgressWorkflow}
-                      />
-                    </div>
-                  );
-                })()}
-
-                <div className="p-5 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/20 backdrop-blur-sm border border-border/30">
-                  <h4 className="font-semibold mb-4 flex items-center gap-2">
-                    <Star className="h-4 w-4 text-amber-500" />
-                    Caractéristiques
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {[
-                      { icon: Home, label: 'Pièces', value: selectedOffre.pieces },
-                      { icon: Square, label: 'Surface', value: `${selectedOffre.surface} m²` },
-                      { icon: MapPin, label: 'Étage', value: selectedOffre.etage },
-                      selectedOffre.type_bien && { icon: Building2, label: 'Type', value: selectedOffre.type_bien },
-                      selectedOffre.disponibilite && { icon: Calendar, label: 'Disponibilité', value: selectedOffre.disponibilite }
-                    ].filter(Boolean).map((item: any, i) => (
-                      <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-background/50 border border-border/20">
-                        <div className="p-2 rounded-lg bg-primary/10">
-                          <item.icon className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">{item.label}</p>
-                          <p className="font-medium">{item.value}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {selectedOffre.description && (
-                  <div className="space-y-2">
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4 text-primary" />
-                      Description
-                    </h4>
-                    <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed p-4 rounded-xl bg-muted/20">
-                      {selectedOffre.description}
-                    </p>
-                  </div>
-                )}
-
-                {(selectedOffre.code_immeuble || selectedOffre.concierge_nom || selectedOffre.locataire_nom) && (
-                  <div className="p-5 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/20 backdrop-blur-sm border border-border/30">
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">
-                      <Info className="h-4 w-4 text-primary" />
-                      Informations pratiques
-                    </h4>
-                    <div className="space-y-2">
-                      {selectedOffre.code_immeuble && (
-                        <div className="flex justify-between p-2 rounded-lg hover:bg-background/50 transition-colors">
-                          <span className="text-sm text-muted-foreground">Code immeuble</span>
-                          <span className="text-sm font-medium">{selectedOffre.code_immeuble}</span>
-                        </div>
-                      )}
-                      {selectedOffre.concierge_nom && (
-                        <div className="flex justify-between p-2 rounded-lg hover:bg-background/50 transition-colors">
-                          <span className="text-sm text-muted-foreground">Concierge</span>
-                          <span className="text-sm font-medium">{selectedOffre.concierge_nom} - {selectedOffre.concierge_tel}</span>
-                        </div>
-                      )}
-                      {selectedOffre.locataire_nom && (
-                        <div className="flex justify-between p-2 rounded-lg hover:bg-background/50 transition-colors">
-                          <span className="text-sm text-muted-foreground">Locataire actuel</span>
-                          <span className="text-sm font-medium">{selectedOffre.locataire_nom} - {selectedOffre.locataire_tel}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {selectedOffre.commentaires && (
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-amber-50/80 to-amber-50/30 dark:from-amber-950/30 dark:to-amber-950/10 border border-amber-200/50 dark:border-amber-800/50">
-                    <h4 className="font-semibold mb-2 text-amber-800 dark:text-amber-200 flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      Commentaires de l'agent
-                    </h4>
-                    <p className="text-sm text-amber-700 dark:text-amber-300">{selectedOffre.commentaires}</p>
-                  </div>
-                )}
-
-                {selectedOffre.lien_annonce && (
-                  <div className="pt-4 border-t border-border/50">
-                    <h4 className="font-semibold mb-3">🔗 Annonce originale</h4>
-                    <LinkPreviewCard url={selectedOffre.lien_annonce} />
-                  </div>
-                )}
-
-                {(selectedOffre.statut === 'interesse' || selectedOffre.statut === 'visite_planifiee' || 
-                  selectedOffre.statut === 'visite_effectuee' || selectedOffre.statut === 'candidature_deposee') && (
-                  <div className="pt-4 border-t border-border/50">
-                    <h4 className="font-semibold mb-3 flex items-center gap-2">
-                      <TrendingUp className="h-4 w-4 text-primary" />
-                      Vos chances
-                    </h4>
-                    <ChanceIndicator
-                      {...calculateChances(
-                        selectedOffre,
-                        clientData,
-                        documentsStats[selectedOffre.id] || documentsStats['global'] || {
-                          fiche_salaire: 0,
-                          extrait_poursuites: 0,
-                          piece_identite: 0,
-                          permis_sejour: 0
-                        },
-                        visites
-                      )}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            <DialogFooter className="flex-shrink-0 pt-4 border-t border-border/50">
-              <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>
-                Fermer
-              </Button>
-              {selectedOffre && (selectedOffre.statut === 'envoyee' || selectedOffre.statut === 'vue' || selectedOffre.statut === 'interesse') && (
-                <Button onClick={() => {
-                  setDetailsDialogOpen(false);
-                  handlePlanVisit(selectedOffre);
-                }}>
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Planifier une visite
-                </Button>
-              )}
-              {selectedOffre && selectedOffre.statut === 'visite_effectuee' && (
-                <Button 
-                  className="bg-gradient-to-r from-primary to-primary/80"
-                  onClick={() => {
-                    setDetailsDialogOpen(false);
-                    handlePostulerDirect(selectedOffre);
-                  }}
-                >
-                  <FileCheck className="mr-2 h-4 w-4" />
-                  Déposer ma candidature
-                </Button>
-              )}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Dialog des détails - Premium Component */}
+        <PremiumOffreDetailsDialog
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+          offre={selectedOffre}
+          candidatures={candidatures}
+          clientData={clientData}
+          documentsStats={documentsStats}
+          visites={visites}
+          onProgressWorkflow={handleProgressWorkflow}
+          onPlanVisit={handlePlanVisit}
+          onPostulerDirect={handlePostulerDirect}
+          formatStatutOffre={formatStatutOffre}
+        />
 
         {/* Dialog de visite */}
         <Dialog open={visitDialogOpen} onOpenChange={setVisitDialogOpen}>
