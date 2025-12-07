@@ -88,7 +88,7 @@ export function MessagingLayout({
       </div>
 
       {/* Zone de chat */}
-      <div className="flex-1 flex flex-col min-w-0 h-full relative">
+      <div className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden">
         {/* Indicateur swipe discret sur mobile */}
         {selectedConversation && (
           <div className="lg:hidden absolute left-0 top-1/2 -translate-y-1/2 w-1 h-16 bg-muted-foreground/20 rounded-r-full pointer-events-none z-10" />

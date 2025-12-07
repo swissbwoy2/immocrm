@@ -1462,17 +1462,17 @@ const Messagerie = () => {
   }, [selectedMessages]);
 
   const chatView = selectedConv ? (
-    <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 min-w-0 relative overflow-hidden">
       {/* Premium background */}
       <MeshGradientBackground />
       <ChatPatternBackground />
       
       {/* Messages area */}
-      <ScrollArea className="flex-1 p-2 sm:p-4 relative z-10" viewportClassName="overflow-x-hidden" onScroll={handleScroll}>
+      <ScrollArea className="flex-1 p-2 sm:p-4 relative z-10 min-w-0" viewportClassName="overflow-x-hidden" onScroll={handleScroll}>
         {isLoadingMessages ? (
           <MessagesListSkeleton />
         ) : (
-          <div className="space-y-3 max-w-4xl mx-auto">
+          <div className="space-y-3 max-w-4xl mx-auto min-w-0">
             <div ref={messagesStartRef} />
             {selectedMessages.map((msg, index) => {
               const isSent = msg.sender_type === 'client';

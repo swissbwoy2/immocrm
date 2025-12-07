@@ -45,7 +45,7 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
     <div
       style={{ animationDelay: `${index * 30}ms` }}
       className={cn(
-        'flex w-full mb-2',
+        'flex w-full mb-2 overflow-hidden min-w-0',
         isSent ? 'justify-end' : 'justify-start',
         'animate-fade-in',
         className
