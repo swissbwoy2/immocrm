@@ -480,7 +480,8 @@ export default function ClientDashboard() {
           {profileActif !== false && daysRemaining <= 0 && (
             <div className="mb-6 animate-fade-in" style={{ animationDelay: '50ms' }}>
               <PremiumStatusCard
-                variant="danger"
+                variant="warning"
+                icon={AlertTriangle}
                 title="Votre mandat a expiré"
                 description="Contactez-nous pour renouveler ou demander un remboursement."
                 action={{
@@ -901,10 +902,13 @@ export default function ClientDashboard() {
         </div>
       </div>
       
-      <AccountActivationModal 
-        isOpen={showActivationModal} 
-        onClose={() => setShowActivationModal(false)}
-      />
+      {user && (
+        <AccountActivationModal 
+          isOpen={showActivationModal} 
+          onClose={() => setShowActivationModal(false)}
+          userId={user.id}
+        />
+      )}
     </>
   );
 }
