@@ -44,8 +44,19 @@ export function HeroSection() {
             />
           </div>
 
-          {/* Guarantee badge - VERY prominent */}
-          <div className="animate-fade-in mb-6" style={{ animationDelay: '100ms' }}>
+          {/* Tagline with conversion focus */}
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 animate-fade-in text-foreground" style={{ animationDelay: '100ms' }}>
+            Trouvez votre{' '}
+            <span className="gradient-text-animated">bien immobilier idéal</span>{' '}
+            en Suisse Romande
+          </h1>
+
+          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl animate-fade-in leading-relaxed" style={{ animationDelay: '150ms' }}>
+            Un agent dédié, un réseau d'agences partenaires, un suivi rigoureux de votre dossier
+          </p>
+
+          {/* Guarantee badge - after tagline */}
+          <div className="animate-fade-in mb-6" style={{ animationDelay: '200ms' }}>
             <div className="inline-flex items-center gap-3 bg-gradient-to-r from-primary/20 via-primary/30 to-primary/20 border-2 border-primary/50 rounded-full px-6 py-3 glow-breathe">
               <Shield className="h-5 w-5 text-primary" />
               <span className="text-lg md:text-xl font-bold text-primary">
@@ -56,7 +67,7 @@ export function HeroSection() {
           </div>
           
           {/* Commission info */}
-          <div className="flex flex-wrap justify-center gap-4 mb-6 text-sm animate-fade-in" style={{ animationDelay: '150ms' }}>
+          <div className="flex flex-wrap justify-center gap-4 mb-8 text-sm animate-fade-in" style={{ animationDelay: '250ms' }}>
             <div className="glass-morphism rounded-full px-4 py-2 border border-border/30">
               <span className="text-muted-foreground">Acompte : </span>
               <span className="font-semibold text-foreground">300 CHF</span>
@@ -66,17 +77,6 @@ export function HeroSection() {
               <span className="font-semibold text-foreground">1 mois de loyer - 300 CHF</span>
             </div>
           </div>
-
-          {/* Tagline with conversion focus */}
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 animate-fade-in text-foreground" style={{ animationDelay: '200ms' }}>
-            Trouvez votre{' '}
-            <span className="gradient-text-animated">bien immobilier idéal</span>{' '}
-            en Suisse Romande
-          </h1>
-
-          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl animate-fade-in leading-relaxed" style={{ animationDelay: '250ms' }}>
-            Un agent dédié, un réseau d'agences partenaires, un suivi rigoureux de votre dossier
-          </p>
 
           {/* Key benefits - compact */}
           <div className="flex flex-wrap justify-center gap-3 mb-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
