@@ -28,23 +28,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-// Floating particles component
-const FloatingParticles = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    {[...Array(6)].map((_, i) => (
-      <div
-        key={i}
-        className="absolute w-2 h-2 rounded-full bg-primary/20 animate-float"
-        style={{
-          left: `${15 + i * 15}%`,
-          top: `${20 + (i % 3) * 20}%`,
-          animationDelay: `${i * 0.5}s`,
-          animationDuration: `${3 + i * 0.5}s`
-        }}
-      />
-    ))}
-  </div>
-);
+import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 
 // Skeleton card for loading state
 const OffreSkeletonCard = ({ index }: { index: number }) => (
