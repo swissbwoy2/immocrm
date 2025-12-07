@@ -1233,7 +1233,7 @@ const OffresRecues = () => {
                     </div>
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-3 gap-3 mb-5">
+                    <div className="grid grid-cols-3 gap-2 mb-5">
                       {[
                         { icon: Home, label: 'Pièces', value: offre.pieces, color: 'from-blue-500/20 to-blue-500/5' },
                         { icon: Square, label: 'Surface', value: `${offre.surface} m²`, color: 'from-emerald-500/20 to-emerald-500/5' },
@@ -1242,14 +1242,14 @@ const OffresRecues = () => {
                         <div 
                           key={i}
                           className={cn(
-                            "relative overflow-hidden p-3 rounded-xl",
+                            "relative overflow-hidden p-2 sm:p-3 rounded-xl",
                             "bg-gradient-to-br", stat.color,
                             "border border-border/30",
                             "transition-all duration-300 hover:scale-[1.02] hover:shadow-md"
                           )}
                         >
-                          <div className="flex items-center gap-2.5">
-                            <div className="p-1.5 rounded-lg bg-background/50 backdrop-blur-sm">
+                          <div className="flex flex-col items-center text-center gap-1">
+                            <div className="p-2 rounded-lg bg-background/50 backdrop-blur-sm">
                               <stat.icon className="h-4 w-4 text-muted-foreground" />
                             </div>
                             <div>
