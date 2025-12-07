@@ -32,3 +32,4 @@ export { PremiumDashboardHeader } from './PremiumDashboardHeader';
 export { PremiumCandidatureProgressCard } from './PremiumCandidatureProgressCard';
 export { PremiumPurchaseCapacityCard } from './PremiumPurchaseCapacityCard';
 export { PremiumCandidatesCard } from './PremiumCandidatesCard';
+export { PremiumDossierChecklistCard } from './PremiumDossierChecklistCard';
