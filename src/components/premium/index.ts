@@ -31,3 +31,4 @@ export { PremiumCelebrationCard } from './PremiumCelebrationCard';
 export { PremiumDashboardHeader } from './PremiumDashboardHeader';
 export { PremiumCandidatureProgressCard } from './PremiumCandidatureProgressCard';
 export { PremiumPurchaseCapacityCard } from './PremiumPurchaseCapacityCard';
+export { PremiumCandidatesCard } from './PremiumCandidatesCard';

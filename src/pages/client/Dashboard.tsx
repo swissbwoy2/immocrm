@@ -11,7 +11,8 @@ import {
   PremiumStatusCard,
   PremiumDashboardHeader,
   PremiumCandidatureProgressCard,
-  PremiumPurchaseCapacityCard
+  PremiumPurchaseCapacityCard,
+  PremiumCandidatesCard
 } from '@/components/premium';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +28,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AccountActivationModal } from '@/components/AccountActivationModal';
 import { ClientStatsSection } from '@/components/stats/ClientStatsSection';
 import { MissingDocumentsAlert } from '@/components/MissingDocumentsAlert';
-import { ClientCandidatesManager } from '@/components/ClientCandidatesManager';
+
 import { SolvabilityAlert } from '@/components/SolvabilityAlert';
 import { PurchaseSolvabilityAlert } from '@/components/PurchaseSolvabilityAlert';
 import { DossierChecklistCard } from '@/components/DossierChecklistCard';
@@ -580,22 +581,14 @@ export default function ClientDashboard() {
             </div>
           )}
 
-          {/* Gestion des candidats */}
+          {/* Gestion des candidats - Premium */}
           {profileActif !== false && (
-            <div className="mb-8 animate-fade-in group" style={{ animationDelay: '340ms' }}>
-              <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-1 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                </div>
-                <div className="relative">
-                  <ClientCandidatesManager
-                    clientId={client.id}
-                    clientRevenus={client.revenus_mensuels || 0}
-                    budgetDemande={client.budget_max || 0}
-                  />
-                </div>
-              </div>
+            <div className="mb-8 animate-fade-in" style={{ animationDelay: '340ms' }}>
+              <PremiumCandidatesCard
+                clientId={client.id}
+                clientRevenus={client.revenus_mensuels || 0}
+                budgetDemande={client.budget_max || 0}
+              />
             </div>
           )}
 
