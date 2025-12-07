@@ -24,8 +24,10 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Search, Filter, CheckCircle, DollarSign, Clock, Users, Phone, Mail } from 'lucide-react';
+import { Search, Filter, CheckCircle, DollarSign, Clock, Users, Phone, Mail, Handshake } from 'lucide-react';
 import { toast } from 'sonner';
+import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
 
 interface Referral {
   id: string;
@@ -215,52 +217,43 @@ export default function AdminReferrals() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold">Gestion des Referrals</h1>
-        <p className="text-muted-foreground">
-          Validez et payez les commissions des apporteurs
-        </p>
-      </div>
+    <div className="space-y-6">
+      <PremiumPageHeader
+        title="Gestion des Referrals"
+        subtitle="Validez et payez les commissions des apporteurs"
+        icon={Handshake}
+        badge="Apporteurs"
+      />
 
       {/* Stats */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '0ms' }}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium group-hover:text-primary transition-colors">Total Referrals</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground group-hover:scale-110 group-hover:text-primary transition-all" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{stats.total}</div>
-          </CardContent>
-        </Card>
-        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '50ms' }}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium group-hover:text-orange-500 transition-colors">En attente</CardTitle>
-            <Clock className="h-4 w-4 text-orange-500 group-hover:scale-110 transition-transform" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">{stats.enAttente}</div>
-          </CardContent>
-        </Card>
-        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '100ms' }}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium group-hover:text-orange-500 transition-colors">À payer</CardTitle>
-            <DollarSign className="h-4 w-4 text-orange-500 group-hover:scale-110 transition-transform" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">CHF {stats.aPayer.toFixed(0)}</div>
-          </CardContent>
-        </Card>
-        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '150ms' }}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium group-hover:text-green-500 transition-colors">Total payé</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500 group-hover:scale-110 transition-transform" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold group-hover:scale-105 transition-transform origin-left">CHF {stats.totalPaye.toFixed(0)}</div>
-          </CardContent>
-        </Card>
+        <PremiumKPICard
+          title="Total Referrals"
+          value={stats.total}
+          icon={Users}
+          delay={0}
+        />
+        <PremiumKPICard
+          title="En attente"
+          value={stats.enAttente}
+          icon={Clock}
+          variant="warning"
+          delay={50}
+        />
+        <PremiumKPICard
+          title="À payer"
+          value={`CHF ${stats.aPayer.toFixed(0)}`}
+          icon={DollarSign}
+          variant="warning"
+          delay={100}
+        />
+        <PremiumKPICard
+          title="Total payé"
+          value={`CHF ${stats.totalPaye.toFixed(0)}`}
+          icon={CheckCircle}
+          variant="success"
+          delay={150}
+        />
       </div>
 
       {/* Filters */}

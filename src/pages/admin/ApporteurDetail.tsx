@@ -7,8 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ArrowLeft, User, CreditCard, FileText, Users, DollarSign, Calendar } from 'lucide-react';
+import { ArrowLeft, User, CreditCard, FileText, Users, DollarSign, Calendar, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
+import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
 
 interface Apporteur {
   id: string;
@@ -139,63 +140,65 @@ export default function ApporteurDetail() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/admin/apporteurs')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold">
-            {profile?.prenom} {profile?.nom}
-          </h1>
-          <p className="text-muted-foreground">{profile?.email}</p>
+    <div className="space-y-6">
+      {/* Header premium avec gradient */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-6 md:p-8 animate-fade-in">
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-4 right-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl animate-float" style={{ animationDelay: '0s' }} />
+          <div className="absolute bottom-4 left-20 w-20 h-20 bg-accent/10 rounded-full blur-2xl animate-float" style={{ animationDelay: '1s' }} />
         </div>
-        <Badge variant={statusConfig[apporteur.statut]?.variant || 'secondary'}>
-          {statusConfig[apporteur.statut]?.label || apporteur.statut}
-        </Badge>
+        
+        <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/admin/apporteurs')} className="hover:bg-background/50">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Briefcase className="w-5 h-5 text-primary animate-pulse-soft" />
+                <span className="text-sm font-medium text-primary/80 uppercase tracking-wider">Apporteur</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
+                {profile?.prenom} {profile?.nom}
+              </h1>
+              <p className="text-muted-foreground mt-1">{profile?.email}</p>
+            </div>
+          </div>
+          <Badge variant={statusConfig[apporteur.statut]?.variant || 'secondary'} className="text-sm px-3 py-1">
+            {statusConfig[apporteur.statut]?.label || apporteur.statut}
+          </Badge>
+        </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats avec PremiumKPICard */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Code parrainage</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <code className="text-xl font-bold">{apporteur.code_parrainage}</code>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Clients référés</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{apporteur.nombre_clients_referes}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Commissions totales</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">CHF {apporteur.total_commissions_gagnees?.toFixed(0) || 0}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Expiration contrat</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-lg font-bold">
-              {apporteur.date_expiration 
-                ? format(new Date(apporteur.date_expiration), 'dd/MM/yyyy', { locale: fr })
-                : '-'}
-            </div>
-          </CardContent>
-        </Card>
+        <PremiumKPICard
+          title="Code parrainage"
+          value={apporteur.code_parrainage}
+          icon={Briefcase}
+          delay={0}
+        />
+        <PremiumKPICard
+          title="Clients référés"
+          value={apporteur.nombre_clients_referes}
+          icon={Users}
+          delay={50}
+        />
+        <PremiumKPICard
+          title="Commissions totales"
+          value={`CHF ${apporteur.total_commissions_gagnees?.toFixed(0) || 0}`}
+          icon={DollarSign}
+          variant="success"
+          delay={100}
+        />
+        <PremiumKPICard
+          title="Expiration contrat"
+          value={apporteur.date_expiration 
+            ? format(new Date(apporteur.date_expiration), 'dd/MM/yyyy', { locale: fr })
+            : '-'}
+          icon={Calendar}
+          delay={150}
+        />
       </div>
 
       <Tabs defaultValue="info">
