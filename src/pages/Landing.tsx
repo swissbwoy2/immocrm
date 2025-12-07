@@ -43,8 +43,8 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
       <HeroSection />
-      <BenefitsSection />
       <BudgetCalculatorSection />
+      <BenefitsSection />
       <GuaranteeSection />
       <DifferentiationSection />
       <FAQSection />
