@@ -116,18 +116,13 @@ export function HeroSection() {
                 {/* Shine effect on button */}
                 <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                 <Sparkles className="mr-2 h-5 w-5 md:h-6 md:w-6 relative z-10" />
-                <span className="hidden sm:inline relative z-10">Démarrer ma recherche GRATUITEMENT</span>
-                <span className="sm:hidden relative z-10">Démarrer GRATUITEMENT</span>
+                <span className="relative z-10">Activer ma recherche maintenant</span>
                 <ArrowRight className="ml-2 h-5 w-5 md:h-6 md:w-6 group-hover:translate-x-2 transition-transform relative z-10" />
               </Link>
             </Button>
             
             {/* Micro-copy trust signals */}
             <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 text-xs md:text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                Sans engagement
-              </span>
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
                 300 CHF remboursables
