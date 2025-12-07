@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 import { CalendarEvent } from '@/components/calendar/types';
 import { PremiumCalendarView } from '@/components/calendar/PremiumCalendarView';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
-import { AgentDayEvents } from '@/components/calendar/AgentDayEvents';
+import { PremiumAgentDayEvents } from '@/components/calendar/PremiumAgentDayEvents';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -750,7 +750,7 @@ export default function AgentCalendrier() {
 
         {/* Day events */}
         <div className="min-w-0 h-[600px] animate-fade-in animate-delay-400">
-          <AgentDayEvents
+          <PremiumAgentDayEvents
             date={selectedDate}
             events={selectedDayEvents}
             visites={selectedDayVisites}
