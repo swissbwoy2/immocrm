@@ -20,6 +20,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
 import { SendDossierDialog } from '@/components/SendDossierDialog';
+import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
 
 const WORKFLOW_STATUTS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   'candidature_deposee': { label: 'Candidature reçue', color: 'outline', icon: <FileCheck className="h-4 w-4" /> },
@@ -608,23 +610,21 @@ export default function Candidatures() {
   return (
     <main className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8 space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <FileCheck className="h-8 w-8" />
-            Candidatures déposées
-          </h1>
-          <p className="text-muted-foreground mt-1">Gérez le workflow complet des candidatures - Cliquez sur une carte pour voir les détails</p>
-        </div>
+        <PremiumPageHeader
+          title="Candidatures déposées"
+          subtitle="Gérez le workflow complet des candidatures - Cliquez sur une carte pour voir les détails"
+          icon={FileCheck}
+          badge="Gestion"
+        />
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
-          <Card><CardContent className="p-4"><div className="text-2xl font-bold">{stats.total}</div><div className="text-sm text-muted-foreground">Total</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-2xl font-bold text-blue-600">{stats.candidature_deposee}</div><div className="text-sm text-muted-foreground">À envoyer</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-2xl font-bold text-yellow-600">{stats.en_attente}</div><div className="text-sm text-muted-foreground">Envoyées</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-2xl font-bold text-green-600">{stats.acceptee}</div><div className="text-sm text-muted-foreground">En cours</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-2xl font-bold text-purple-600">{stats.cles_remises}</div><div className="text-sm text-muted-foreground">Clés remises</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-2xl font-bold text-red-600">{stats.refusee}</div><div className="text-sm text-muted-foreground">Refusées</div></CardContent></Card>
+        {/* Stats avec PremiumKPICard */}
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 md:gap-4">
+          <PremiumKPICard title="Total" value={stats.total} icon={FileCheck} delay={0} />
+          <PremiumKPICard title="À envoyer" value={stats.candidature_deposee} icon={Send} delay={50} />
+          <PremiumKPICard title="Envoyées" value={stats.en_attente} icon={Clock} variant="warning" delay={100} />
+          <PremiumKPICard title="En cours" value={stats.acceptee} icon={CheckCircle} variant="success" delay={150} />
+          <PremiumKPICard title="Clés remises" value={stats.cles_remises} icon={Key} variant="success" delay={200} />
+          <PremiumKPICard title="Refusées" value={stats.refusee} icon={XCircle} variant="danger" delay={250} />
         </div>
 
         {/* Filters */}

@@ -25,6 +25,7 @@ import { fr } from "date-fns/locale";
 import { CandidatureWorkflowTimeline } from "@/components/CandidatureWorkflowTimeline";
 import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { useNavigate } from "react-router-dom";
+import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 
 const WORKFLOW_STATUTS = {
   envoyee: { label: 'Offre envoyée', color: 'secondary', step: 1 },
@@ -327,23 +328,12 @@ const MesCandidatures = () => {
   return (
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8">
-        {/* Animated Header */}
-        <div className="mb-8 animate-fade-in">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="relative">
-              <div className="absolute inset-0 bg-primary/20 rounded-xl blur-lg animate-glow-pulse" />
-              <div className="relative p-3 bg-gradient-to-br from-primary/20 to-primary/5 backdrop-blur-sm border border-primary/20 rounded-xl">
-                <FileStack className="h-6 w-6 text-primary" />
-              </div>
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
-                Mes Candidatures
-              </h1>
-              <p className="text-muted-foreground">Suivez l'état de vos offres et candidatures en temps réel</p>
-            </div>
-          </div>
-        </div>
+        <PremiumPageHeader
+          title="Mes Candidatures"
+          subtitle="Suivez l'état de vos offres et candidatures en temps réel"
+          icon={FileStack}
+          badge="Suivi"
+        />
 
         {offres.length > 0 ? (
           <div className="grid gap-6">
