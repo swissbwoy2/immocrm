@@ -1,13 +1,12 @@
-import { MapPin } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { MapPin, CheckCircle } from 'lucide-react';
 
 const cantons = [
-  { name: 'Vaud', cities: ['Lausanne', 'Montreux', 'Nyon', 'Yverdon'], gradient: 'from-green-500 to-emerald-500', bgColor: 'bg-green-500/10', textColor: 'text-green-600', borderColor: 'border-green-500/30' },
-  { name: 'Genève', cities: ['Genève', 'Carouge', 'Vernier', 'Meyrin'], gradient: 'from-yellow-500 to-orange-500', bgColor: 'bg-yellow-500/10', textColor: 'text-yellow-600', borderColor: 'border-yellow-500/30' },
-  { name: 'Valais', cities: ['Sion', 'Sierre', 'Martigny', 'Monthey'], gradient: 'from-red-500 to-rose-500', bgColor: 'bg-red-500/10', textColor: 'text-red-600', borderColor: 'border-red-500/30' },
-  { name: 'Fribourg', cities: ['Fribourg', 'Bulle', 'Villars-sur-Glâne', 'Marly'], gradient: 'from-blue-500 to-cyan-500', bgColor: 'bg-blue-500/10', textColor: 'text-blue-600', borderColor: 'border-blue-500/30' },
-  { name: 'Neuchâtel', cities: ['Neuchâtel', 'La Chaux-de-Fonds', 'Le Locle'], gradient: 'from-purple-500 to-violet-500', bgColor: 'bg-purple-500/10', textColor: 'text-purple-600', borderColor: 'border-purple-500/30' },
-  { name: 'Jura', cities: ['Delémont', 'Porrentruy', 'Saignelégier'], gradient: 'from-orange-500 to-amber-500', bgColor: 'bg-orange-500/10', textColor: 'text-orange-600', borderColor: 'border-orange-500/30' },
+  { name: 'Vaud', gradient: 'from-green-500 to-emerald-500' },
+  { name: 'Genève', gradient: 'from-yellow-500 to-orange-500' },
+  { name: 'Valais', gradient: 'from-red-500 to-rose-500' },
+  { name: 'Fribourg', gradient: 'from-blue-500 to-cyan-500' },
+  { name: 'Neuchâtel', gradient: 'from-purple-500 to-violet-500' },
+  { name: 'Jura', gradient: 'from-orange-500 to-amber-500' },
 ];
 
 export function CoverageSection() {
@@ -32,34 +31,28 @@ export function CoverageSection() {
           </p>
         </div>
 
-        {/* Cantons grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Cantons grid - simplified */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {cantons.map((canton, index) => (
             <div
               key={canton.name}
-              className="glass-morphism rounded-xl p-6 card-shine card-3d animate-fade-in group"
+              className="glass-morphism rounded-xl p-6 card-shine card-3d animate-fade-in group text-center"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              {/* Canton header with gradient icon */}
-              <div className="flex items-center gap-4 mb-5">
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${canton.gradient} flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg`}>
-                  <MapPin className="h-6 w-6 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-foreground group-hover:text-primary transition-colors">{canton.name}</h3>
+              {/* Canton icon with gradient */}
+              <div className={`w-16 h-16 mx-auto rounded-xl bg-gradient-to-br ${canton.gradient} flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg mb-4`}>
+                <MapPin className="h-8 w-8 text-white" />
               </div>
-
-              {/* Cities with animated badges */}
-              <div className="flex flex-wrap gap-2">
-                {canton.cities.map((city, cityIndex) => (
-                  <Badge 
-                    key={city} 
-                    variant="outline" 
-                    className={`${canton.bgColor} ${canton.textColor} ${canton.borderColor} text-xs hover:scale-105 transition-transform cursor-default`}
-                    style={{ animationDelay: `${(index * 100) + (cityIndex * 50)}ms` }}
-                  >
-                    {city}
-                  </Badge>
-                ))}
+              
+              {/* Canton name */}
+              <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors mb-2">
+                {canton.name}
+              </h3>
+              
+              {/* Coverage indicator */}
+              <div className="flex items-center justify-center gap-1.5 text-muted-foreground">
+                <CheckCircle className="h-4 w-4 text-primary" />
+                <span className="text-xs">Tout le canton</span>
               </div>
 
               {/* Hover gradient effect */}

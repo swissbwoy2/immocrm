@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Search, Shield, Users, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles, CheckCircle, RefreshCw } from 'lucide-react';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 
 export function HeroSection() {
@@ -34,77 +34,90 @@ export function HeroSection() {
 
       <div className="container mx-auto px-4 py-20 relative z-10">
         <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
-          {/* Logo with glow effect */}
-          <div className="animate-fade-in mb-8 relative">
+          {/* Logo with glow effect - larger */}
+          <div className="animate-fade-in mb-6 relative">
             <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full scale-150 opacity-50" />
             <img 
               src={logoImmoRama} 
               alt="Immo-Rama" 
-              className="h-20 md:h-28 w-auto drop-shadow-2xl relative z-10"
+              className="h-28 md:h-36 w-auto drop-shadow-2xl relative z-10"
             />
           </div>
 
-          {/* Animated gradient title */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
-            <span className="gradient-text-animated">
-              Logisorama
-            </span>
+          {/* Guarantee badge - VERY prominent */}
+          <div className="animate-fade-in mb-6" style={{ animationDelay: '100ms' }}>
+            <div className="inline-flex items-center gap-3 bg-gradient-to-r from-primary/20 via-primary/30 to-primary/20 border-2 border-primary/50 rounded-full px-6 py-3 glow-breathe">
+              <RefreshCw className="h-5 w-5 text-primary animate-spin" style={{ animationDuration: '3s' }} />
+              <span className="text-lg md:text-xl font-bold text-primary">
+                Acompte remboursé à 100%*
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">*Sous un délai de 30 jours</p>
+          </div>
+
+          {/* Tagline with conversion focus */}
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-6 animate-fade-in text-foreground" style={{ animationDelay: '200ms' }}>
+            Trouvez votre{' '}
+            <span className="gradient-text-animated">bien immobilier idéal</span>{' '}
+            en Suisse Romande
           </h1>
 
-          {/* Tagline with subtle animation */}
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-2xl animate-fade-in leading-relaxed" style={{ animationDelay: '200ms' }}>
-            Votre partenaire pour trouver le{' '}
-            <span className="text-primary font-semibold relative">
-              bien immobilier idéal
-              <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-primary/50 via-primary to-primary/50" />
-            </span>{' '}
-            en Suisse romande
+          <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl animate-fade-in leading-relaxed" style={{ animationDelay: '250ms' }}>
+            Un agent dédié, un réseau d'agences partenaires, un suivi rigoureux de votre dossier
           </p>
 
-          {/* Feature badges with glassmorphism */}
-          <div className="flex flex-wrap justify-center gap-4 mb-10 animate-fade-in" style={{ animationDelay: '300ms' }}>
+          {/* Key benefits - compact */}
+          <div className="flex flex-wrap justify-center gap-3 mb-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
             {[
-              { icon: Search, text: 'Recherche personnalisée' },
-              { icon: Users, text: 'Agent dédié' },
-              { icon: Shield, text: 'Dossier sécurisé' },
-            ].map((feature, index) => (
+              'Agent dédié',
+              'Délégation de visite',
+              'Messagerie directe',
+              'Réseau d\'agences',
+            ].map((benefit, index) => (
               <div 
                 key={index}
-                className="flex items-center gap-2 glass-morphism rounded-full px-5 py-2.5 card-shine group cursor-default"
+                className="flex items-center gap-2 glass-morphism rounded-full px-4 py-2"
               >
-                <feature.icon className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
-                <span className="text-sm text-foreground/80 group-hover:text-foreground transition-colors">{feature.text}</span>
+                <CheckCircle className="h-4 w-4 text-primary" />
+                <span className="text-sm text-foreground/80">{benefit}</span>
               </div>
             ))}
           </div>
 
-          {/* CTAs with enhanced styling */}
-          <div className="flex flex-col sm:flex-row gap-4 animate-fade-in" style={{ animationDelay: '400ms' }}>
+          {/* Primary CTA - VERY prominent */}
+          <div className="flex flex-col items-center gap-3 animate-fade-in" style={{ animationDelay: '400ms' }}>
             <Button 
               asChild 
               size="lg" 
-              className="group text-lg px-8 py-6 shadow-lg hover:shadow-xl transition-all duration-300 glow-breathe relative overflow-hidden"
+              className="group text-xl px-10 py-7 shadow-2xl hover:shadow-primary/30 transition-all duration-300 glow-breathe relative overflow-hidden bg-gradient-to-r from-primary to-primary/90"
             >
               <Link to="/nouveau-mandat">
-                <Sparkles className="mr-2 h-5 w-5" />
+                <Sparkles className="mr-2 h-6 w-6" />
                 Activer ma recherche
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-2 transition-transform" />
               </Link>
             </Button>
+            <span className="text-sm text-muted-foreground">
+              Gratuit et sans engagement • Résultat garanti
+            </span>
+          </div>
+
+          {/* Secondary CTA */}
+          <div className="mt-6 animate-fade-in" style={{ animationDelay: '450ms' }}>
             <Button 
               asChild 
-              variant="outline" 
+              variant="ghost" 
               size="lg" 
-              className="text-lg px-8 py-6 glass-morphism border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all duration-300"
+              className="text-muted-foreground hover:text-foreground"
             >
               <Link to="/login">
-                Se connecter
+                Déjà client ? Se connecter
               </Link>
             </Button>
           </div>
 
-          {/* Trust indicator with animation */}
-          <div className="mt-12 animate-fade-in" style={{ animationDelay: '500ms' }}>
+          {/* Trust indicator */}
+          <div className="mt-10 animate-fade-in" style={{ animationDelay: '500ms' }}>
             <div className="inline-flex items-center gap-3 glass-morphism rounded-full px-6 py-3">
               <span className="text-2xl">🇨🇭</span>
               <span className="text-sm text-muted-foreground">
