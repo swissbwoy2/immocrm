@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { CalendarEvent } from '@/components/calendar/CalendarView';
+import { CalendarEvent } from '@/components/calendar/types';
 import { PremiumCalendarView } from '@/components/calendar/PremiumCalendarView';
 import { PremiumEventFilters } from '@/components/calendar/PremiumEventFilters';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';

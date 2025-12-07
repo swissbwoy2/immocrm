@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarEvent } from '@/components/calendar/CalendarView';
+import { CalendarEvent } from '@/components/calendar/types';
 import { PremiumCalendarView } from '@/components/calendar/PremiumCalendarView';
 import { ClientDayEvents } from '@/components/calendar/ClientDayEvents';
 import { useNotifications } from '@/hooks/useNotifications';

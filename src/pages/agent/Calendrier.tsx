@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import { CalendarEvent } from '@/components/calendar/CalendarView';
+import { CalendarEvent } from '@/components/calendar/types';
 import { PremiumCalendarView } from '@/components/calendar/PremiumCalendarView';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
 import { AgentDayEvents } from '@/components/calendar/AgentDayEvents';
