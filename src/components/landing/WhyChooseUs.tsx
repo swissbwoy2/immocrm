@@ -1,40 +1,40 @@
-import { UserCheck, Shield, BarChart3, MessageCircle, Clock, Award } from 'lucide-react';
+import { Building2, FileCheck, CalendarCheck, MessageCircle, RefreshCw, UserCheck, Award } from 'lucide-react';
 
 const advantages = [
   {
-    icon: UserCheck,
-    title: 'Accompagnement personnalisé',
-    description: 'Un agent dédié à votre recherche, disponible pour répondre à toutes vos questions.',
+    icon: Building2,
+    title: 'Réseau d\'agences partenaires',
+    description: 'Accédez à notre réseau d\'agences immobilières en Suisse Romande pour maximiser vos chances.',
     gradient: 'from-blue-500 to-cyan-500',
   },
   {
-    icon: Shield,
-    title: 'Dossier sécurisé en ligne',
-    description: 'Vos documents sont stockés de manière sécurisée et accessibles à tout moment.',
+    icon: FileCheck,
+    title: 'Suivi rigoureux de dossier',
+    description: 'Votre dossier est suivi de A à Z avec rigueur et transparence. Rien n\'est laissé au hasard.',
     gradient: 'from-green-500 to-emerald-500',
   },
   {
-    icon: BarChart3,
-    title: 'Suivi en temps réel',
-    description: 'Suivez l\'état de vos candidatures et visites depuis votre tableau de bord.',
+    icon: CalendarCheck,
+    title: 'Délégation de visite',
+    description: 'Vous ne pouvez pas visiter ? Pas de panique, votre agent s\'en occupe pour vous !',
     gradient: 'from-purple-500 to-pink-500',
   },
   {
     icon: MessageCircle,
-    title: 'Messagerie intégrée',
-    description: 'Communiquez directement avec votre agent via notre système de messagerie.',
+    title: 'Messagerie directe',
+    description: 'Échangez en temps réel avec votre agent dédié via notre messagerie intégrée.',
     gradient: 'from-orange-500 to-red-500',
   },
   {
-    icon: Clock,
-    title: 'Gain de temps',
-    description: 'Nous recherchons et sélectionnons les biens correspondant à vos critères.',
+    icon: RefreshCw,
+    title: 'Acompte 100% remboursé',
+    description: 'Satisfait ou remboursé : récupérez votre acompte intégralement sous 30 jours.',
     gradient: 'from-indigo-500 to-violet-500',
   },
   {
-    icon: Award,
-    title: 'Expertise locale',
-    description: 'Notre connaissance du marché romand vous garantit les meilleures opportunités.',
+    icon: UserCheck,
+    title: 'Agent dédié',
+    description: 'Un interlocuteur unique qui connaît votre dossier et vous accompagne jusqu\'au bout.',
     gradient: 'from-teal-500 to-cyan-500',
   },
 ];
