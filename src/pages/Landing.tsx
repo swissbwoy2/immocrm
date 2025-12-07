@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { HeroSection } from '@/components/landing/HeroSection';
+import { GuaranteeSection } from '@/components/landing/GuaranteeSection';
 import { HowItWorks } from '@/components/landing/HowItWorks';
 import { ServicesSection } from '@/components/landing/ServicesSection';
 import { CoverageSection } from '@/components/landing/CoverageSection';
@@ -37,6 +38,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background">
       <HeroSection />
+      <GuaranteeSection />
       <HowItWorks />
       <ServicesSection />
       <CoverageSection />

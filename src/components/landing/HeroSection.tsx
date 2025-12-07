@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Sparkles, CheckCircle, Shield } from 'lucide-react';
+import { ArrowRight, Sparkles, CheckCircle } from 'lucide-react';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 
 export function HeroSection() {
@@ -54,29 +54,6 @@ export function HeroSection() {
           <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl animate-fade-in leading-relaxed" style={{ animationDelay: '150ms' }}>
             Un agent dédié, un réseau d'agences partenaires, un suivi rigoureux de votre dossier
           </p>
-
-          {/* Guarantee badge - after tagline */}
-          <div className="animate-fade-in mb-6" style={{ animationDelay: '200ms' }}>
-            <div className="inline-flex items-center gap-3 bg-gradient-to-r from-primary/20 via-primary/30 to-primary/20 border-2 border-primary/50 rounded-full px-6 py-3 glow-breathe">
-              <Shield className="h-5 w-5 text-primary" />
-              <span className="text-lg md:text-xl font-bold text-primary">
-                Acompte remboursé à 100% en cas d'échec*
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">*Après 3 mois de recherches</p>
-          </div>
-          
-          {/* Commission info */}
-          <div className="flex flex-wrap justify-center gap-4 mb-8 text-sm animate-fade-in" style={{ animationDelay: '250ms' }}>
-            <div className="glass-morphism rounded-full px-4 py-2 border border-border/30">
-              <span className="text-muted-foreground">Acompte : </span>
-              <span className="font-semibold text-foreground">300 CHF</span>
-            </div>
-            <div className="glass-morphism rounded-full px-4 py-2 border border-border/30">
-              <span className="text-muted-foreground">Succès : </span>
-              <span className="font-semibold text-foreground">1 mois de loyer - 300 CHF</span>
-            </div>
-          </div>
 
           {/* Key benefits - compact */}
           <div className="flex flex-wrap justify-center gap-3 mb-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
