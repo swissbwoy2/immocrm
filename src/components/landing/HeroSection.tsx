@@ -12,24 +12,26 @@ export function HeroSection() {
       {/* Animated gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-background via-background/95 to-primary/10" />
 
-      {/* Floating geometric shapes */}
+      {/* Floating geometric shapes - hidden on mobile for performance */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full blur-3xl geo-shape-1" />
         <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] bg-gradient-to-tr from-primary/10 to-transparent rounded-full blur-3xl geo-shape-2" />
-        <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-gradient-to-bl from-primary/15 to-transparent rounded-full blur-2xl float-particle" />
+        <div className="absolute top-1/3 right-1/4 w-64 h-64 bg-gradient-to-bl from-primary/15 to-transparent rounded-full blur-2xl float-particle hidden md:block" />
         
-        <div className="absolute top-20 left-[20%] w-4 h-4 bg-primary/30 rounded-full float-particle" style={{ animationDelay: '0s' }} />
-        <div className="absolute top-40 right-[30%] w-3 h-3 bg-primary/40 rounded-full float-particle" style={{ animationDelay: '1s' }} />
-        <div className="absolute bottom-40 left-[35%] w-5 h-5 bg-primary/25 rounded-full float-particle-delayed" />
-        <div className="absolute top-[60%] right-[15%] w-3 h-3 bg-primary/35 rounded-full float-particle" style={{ animationDelay: '2s' }} />
-        <div className="absolute bottom-[30%] left-[15%] w-4 h-4 bg-primary/30 rounded-full float-particle-delayed" style={{ animationDelay: '1s' }} />
+        {/* Small particles - hidden on mobile */}
+        <div className="absolute top-20 left-[20%] w-4 h-4 bg-primary/30 rounded-full float-particle hidden md:block" style={{ animationDelay: '0s' }} />
+        <div className="absolute top-40 right-[30%] w-3 h-3 bg-primary/40 rounded-full float-particle hidden md:block" style={{ animationDelay: '1s' }} />
+        <div className="absolute bottom-40 left-[35%] w-5 h-5 bg-primary/25 rounded-full float-particle-delayed hidden md:block" />
+        <div className="absolute top-[60%] right-[15%] w-3 h-3 bg-primary/35 rounded-full float-particle hidden md:block" style={{ animationDelay: '2s' }} />
+        <div className="absolute bottom-[30%] left-[15%] w-4 h-4 bg-primary/30 rounded-full float-particle-delayed hidden md:block" style={{ animationDelay: '1s' }} />
         
-        <div className="absolute top-[25%] left-[10%] w-20 h-20 border border-primary/20 rounded-xl rotate-45 geo-shape-1" />
-        <div className="absolute bottom-[25%] right-[10%] w-16 h-16 border border-primary/15 rounded-full geo-shape-2" />
-        <div className="absolute top-[15%] right-[20%] w-12 h-12 bg-gradient-to-br from-primary/10 to-transparent rounded-lg rotate-12 float-particle" />
+        {/* Geometric shapes - hidden on mobile */}
+        <div className="absolute top-[25%] left-[10%] w-20 h-20 border border-primary/20 rounded-xl rotate-45 geo-shape-1 hidden lg:block" />
+        <div className="absolute bottom-[25%] right-[10%] w-16 h-16 border border-primary/15 rounded-full geo-shape-2 hidden lg:block" />
+        <div className="absolute top-[15%] right-[20%] w-12 h-12 bg-gradient-to-br from-primary/10 to-transparent rounded-lg rotate-12 float-particle hidden lg:block" />
       </div>
 
-      <div className="container mx-auto px-4 py-20 relative z-10">
+      <div className="container mx-auto px-4 py-12 md:py-20 relative z-10">
         <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
           {/* N°1 Badge */}
           <div className="animate-fade-in mb-4">
@@ -62,11 +64,11 @@ export function HeroSection() {
           </p>
 
           {/* Promise box */}
-          <div className="animate-fade-in mb-8" style={{ animationDelay: '200ms' }}>
-            <div className="glass-morphism rounded-2xl px-8 py-5 border border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
-              <div className="flex items-center justify-center gap-3">
-                <Home className="h-8 w-8 text-primary" />
-                <span className="text-xl md:text-2xl font-bold text-foreground">
+          <div className="animate-fade-in mb-6 md:mb-8" style={{ animationDelay: '200ms' }}>
+            <div className="glass-morphism rounded-xl md:rounded-2xl px-5 md:px-8 py-4 md:py-5 border border-primary/30 bg-gradient-to-r from-primary/5 to-primary/10">
+              <div className="flex items-center justify-center gap-2 md:gap-3">
+                <Home className="h-6 w-6 md:h-8 md:w-8 text-primary flex-shrink-0" />
+                <span className="text-lg md:text-2xl font-bold text-foreground">
                   On te trouve ton appart' en moins de 3 mois !
                 </span>
               </div>
@@ -78,15 +80,16 @@ export function HeroSection() {
             <Button 
               asChild 
               size="lg" 
-              className="group text-xl px-10 py-7 shadow-2xl hover:shadow-primary/30 transition-all duration-300 glow-breathe relative overflow-hidden bg-gradient-to-r from-primary to-primary/90"
+              className="group text-base md:text-xl px-6 md:px-10 py-5 md:py-7 shadow-2xl hover:shadow-primary/30 transition-all duration-300 glow-breathe relative overflow-hidden bg-gradient-to-r from-primary to-primary/90"
             >
               <Link to="/nouveau-mandat">
-                <Sparkles className="mr-2 h-6 w-6" />
-                Démarre ta recherche maintenant
-                <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-2 transition-transform" />
+                <Sparkles className="mr-2 h-5 w-5 md:h-6 md:w-6" />
+                <span className="hidden sm:inline">Démarre ta recherche maintenant</span>
+                <span className="sm:hidden">Démarre ta recherche</span>
+                <ArrowRight className="ml-2 h-5 w-5 md:h-6 md:w-6 group-hover:translate-x-2 transition-transform" />
               </Link>
             </Button>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-xs md:text-sm text-muted-foreground">
               ✨ Le coup de pouce que tout le monde mérite
             </span>
           </div>

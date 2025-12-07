@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { BenefitsSection } from '@/components/landing/BenefitsSection';
+import { BudgetCalculatorSection } from '@/components/landing/BudgetCalculatorSection';
 import { GuaranteeSection } from '@/components/landing/GuaranteeSection';
 import { DifferentiationSection } from '@/components/landing/DifferentiationSection';
+import { FAQSection } from '@/components/landing/FAQSection';
 import { HowItWorks } from '@/components/landing/HowItWorks';
 import { CoverageSection } from '@/components/landing/CoverageSection';
 import { StatsSection } from '@/components/landing/StatsSection';
@@ -41,24 +43,27 @@ export default function Landing() {
     <div className="min-h-screen bg-background">
       <HeroSection />
       <BenefitsSection />
+      <BudgetCalculatorSection />
       <GuaranteeSection />
       <DifferentiationSection />
+      <FAQSection />
       <HowItWorks />
       <CoverageSection />
       <StatsSection />
       <ApporteurSection />
       <LandingFooter />
 
-      {/* Floating CTA */}
-      <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
+      {/* Floating CTA - smaller on mobile */}
+      <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 animate-fade-in">
         <Button 
           asChild 
           size="lg" 
-          className="shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 group"
+          className="shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 group text-sm md:text-base px-4 md:px-6"
         >
           <Link to="/nouveau-mandat">
-            👉 Démarre ta recherche
-            <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+            <span className="hidden sm:inline">👉 Démarre ta recherche</span>
+            <span className="sm:hidden">👉 Démarrer</span>
+            <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5 group-hover:translate-x-1 transition-transform" />
           </Link>
         </Button>
       </div>
