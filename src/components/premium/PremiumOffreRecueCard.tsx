@@ -168,9 +168,9 @@ export function PremiumOffreRecueCard({ offre, index = 0, onClick, className }: 
             </div>
             
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <MapPin className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                <p className="font-semibold text-foreground group-hover:text-primary transition-colors duration-300 truncate">
+              <div className="flex items-start gap-2 mb-1">
+                <MapPin className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                <p className="font-semibold text-foreground group-hover:text-primary transition-colors duration-300 text-sm leading-tight line-clamp-2">
                   {offre.adresse}
                 </p>
               </div>
