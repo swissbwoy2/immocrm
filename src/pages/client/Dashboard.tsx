@@ -1,12 +1,23 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw, Sparkles, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw, Sparkles, ChevronRight, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PremiumKPICard, PremiumVisiteCard, PremiumOffreRecueCard, PremiumEmptyState } from '@/components/premium';
+import { 
+  PremiumKPICard, 
+  PremiumVisiteCard, 
+  PremiumOffreRecueCard, 
+  PremiumEmptyState,
+  PremiumMandatProgress,
+  PremiumAgentCard,
+  PremiumStatusCard,
+  PremiumDashboardHeader,
+  PremiumCandidatureProgressCard,
+  PremiumPurchaseCapacityCard
+} from '@/components/premium';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { Progress } from '@/components/ui/progress';
-import { AlertTriangle, User } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from '@/utils/calculations';
@@ -23,6 +34,7 @@ import { DossierChecklistCard } from '@/components/DossierChecklistCard';
 import { useClientCandidates } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
 import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck';
+import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 
 export default function ClientDashboard() {
   const navigate = useNavigate();
@@ -39,7 +51,7 @@ export default function ClientDashboard() {
   const [showActivationModal, setShowActivationModal] = useState(false);
   const [clientProfile, setClientProfile] = useState<any>(null);
   
-  // Hooks pour les candidats et solvabilité - DOIVENT être au niveau supérieur
+  // Hooks pour les candidats et solvabilité
   const { candidates, refresh: refreshCandidates } = useClientCandidates(client?.id);
   const solvabilityResult = useSolvabilityCheck(client, candidates);
   const purchaseSolvabilityResult = usePurchaseSolvabilityCheck(client, candidates);
@@ -61,7 +73,6 @@ export default function ClientDashboard() {
           table: 'visites',
         },
         () => {
-          // Recharger les données quand une visite est créée/modifiée
           loadData();
         }
       )
@@ -79,16 +90,7 @@ export default function ClientDashboard() {
       return;
     }
 
-    console.log('Loading data for user:', user.id);
-
-    // Vérifier la session
     const { data: { session } } = await supabase.auth.getSession();
-    console.log('Current session:', {
-      hasSession: !!session,
-      userId: session?.user?.id,
-      matchesUser: session?.user?.id === user.id
-    });
-
     if (!session) {
       console.error('No active session found');
       setLoading(false);
@@ -96,7 +98,6 @@ export default function ClientDashboard() {
     }
 
     try {
-      // Check if profile is active
       const { data: profileData } = await supabase
         .from('profiles')
         .select('actif, prenom, nom')
@@ -107,38 +108,24 @@ export default function ClientDashboard() {
       setProfileActif(isActif);
       setClientProfile(profileData);
       
-      // Show activation modal if profile is not active
       if (!isActif) {
         setShowActivationModal(true);
       }
 
-      // Load client avec log détaillé
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      console.log('Client query result:', {
-        found: !!clientData,
-        error: clientError,
-        userId: user.id
-      });
-
-      if (clientError) {
-        console.error('Error loading client:', clientError);
-        throw clientError;
-      }
-      
+      if (clientError) throw clientError;
       if (!clientData) {
-        console.error('No client data found for user:', user.id);
         setLoading(false);
         return;
       }
       
       setClient(clientData);
 
-      // Load agent if assigned
       if (clientData.agent_id) {
         const { data: agentData } = await supabase
           .from('agents')
@@ -167,7 +154,6 @@ export default function ClientDashboard() {
         }
       }
 
-      // Load offres
       const { data: offresData } = await supabase
         .from('offres')
         .select('*')
@@ -175,7 +161,6 @@ export default function ClientDashboard() {
 
       setOffres(offresData || []);
 
-      // Load visites depuis la table visites
       const { data: visitesData } = await supabase
         .from('visites')
         .select('*, offres(*)')
@@ -184,7 +169,6 @@ export default function ClientDashboard() {
 
       setVisites(visitesData || []);
 
-      // Load candidatures
       const { data: candidaturesData } = await supabase
         .from('candidatures')
         .select('*, offres(adresse, prix, pieces, surface)')
@@ -193,7 +177,6 @@ export default function ClientDashboard() {
 
       setCandidatures(candidaturesData || []);
 
-      // Load documents
       const { data: docsData } = await supabase
         .from('documents')
         .select('*')
@@ -214,7 +197,6 @@ export default function ClientDashboard() {
       const oldDate = client.date_ajout || client.created_at;
       const newDate = new Date().toISOString();
       
-      // 1. Créer l'historique du renouvellement
       const { error: historyError } = await supabase
         .from('renouvellements_mandat')
         .insert({
@@ -227,7 +209,6 @@ export default function ClientDashboard() {
       
       if (historyError) throw historyError;
       
-      // 2. Mettre à jour la date du mandat (réinitialise le compteur à 90 jours)
       const { error: updateError } = await supabase
         .from('clients')
         .update({ date_ajout: newDate })
@@ -235,16 +216,14 @@ export default function ClientDashboard() {
       
       if (updateError) throw updateError;
       
-      // 3. Récupérer le profile du client pour le message
-      const { data: clientProfile } = await supabase
+      const { data: clientProfileData } = await supabase
         .from('profiles')
         .select('nom, prenom')
         .eq('id', user.id)
         .maybeSingle();
 
-      const messageContent = `🔄 Le client ${clientProfile?.prenom} ${clientProfile?.nom} a renouvelé son mandat pour 90 jours supplémentaires. Nouvelle date de début : ${new Date().toLocaleDateString('fr-CH')}`;
+      const messageContent = `🔄 Le client ${clientProfileData?.prenom} ${clientProfileData?.nom} a renouvelé son mandat pour 90 jours supplémentaires. Nouvelle date de début : ${new Date().toLocaleDateString('fr-CH')}`;
       
-      // 4. Notifier l'agent
       if (client.agent_id) {
         let conversationId: string | null = null;
         
@@ -283,14 +262,12 @@ export default function ClientDashboard() {
         }
       }
 
-      // 5. Notifier tous les admins
       const { data: adminRoles } = await supabase
         .from('user_roles')
         .select('user_id')
         .eq('role', 'admin');
 
       if (adminRoles && adminRoles.length > 0) {
-        // Récupérer les agents correspondants aux admins (si ils existent)
         for (const adminRole of adminRoles) {
           const { data: adminAgent } = await supabase
             .from('agents')
@@ -299,7 +276,6 @@ export default function ClientDashboard() {
             .maybeSingle();
 
           if (adminAgent) {
-            // Vérifier si une conversation existe déjà
             const { data: existingAdminConv } = await supabase
               .from('conversations')
               .select('id')
@@ -337,9 +313,7 @@ export default function ClientDashboard() {
         }
       }
       
-      // 6. Recharger les données
       await loadData();
-      
       toast.success('✅ Votre mandat a été renouvelé pour 90 jours !');
     } catch (error) {
       console.error('Error renewing mandate:', error);
@@ -362,7 +336,6 @@ export default function ClientDashboard() {
     if (!user) return;
     
     try {
-      // Utiliser upsert pour gérer le cas où le client existe déjà
       const { error } = await supabase
         .from('clients')
         .upsert({
@@ -414,7 +387,6 @@ export default function ClientDashboard() {
 
   const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
   const daysRemaining = calculateDaysRemaining(client.date_ajout || client.created_at);
-  const progressPercent = Math.min((daysElapsed / 90) * 100, 100);
 
   // Calculate stats
   const now = new Date();
@@ -433,94 +405,40 @@ export default function ClientDashboard() {
 
   const clientFullName = clientProfile ? `${clientProfile.prenom} ${clientProfile.nom}` : 'Client';
 
+  // Candidatures en cours de traitement
+  const statusInProgress = ['bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe', 'cles_remises', 'acceptee'];
+  const candidaturesEnCours = candidatures.filter(c => statusInProgress.includes(c.statut));
+
   return (
     <>
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4 md:p-8">
-          {/* Header avec dégradé animé */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-6 md:p-8 mb-8 animate-fade-in">
-            {/* Particules flottantes */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute top-4 right-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl animate-float-particle" style={{ animationDelay: '0s' }} />
-              <div className="absolute bottom-4 left-20 w-20 h-20 bg-accent/10 rounded-full blur-2xl animate-float-particle" style={{ animationDelay: '1s' }} />
-              <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-primary/5 rounded-full blur-xl animate-float-particle" style={{ animationDelay: '2s' }} />
-            </div>
-            
-            <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-6 h-6 text-primary animate-pulse-soft" />
-                  <span className="text-sm font-medium text-primary/80 uppercase tracking-wider">
-                    {isAcheteur ? 'Projet d\'achat' : 'Recherche de logement'}
-                  </span>
-                </div>
-                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent animate-gradient-text bg-[length:200%_auto]">
-                  Bonjour{clientProfile?.prenom ? `, ${clientProfile.prenom}` : ''} 👋
-                </h1>
-                <p className="text-muted-foreground mt-2 max-w-xl">
-                  {isAcheteur 
-                    ? 'Suivez l\'avancement de votre projet d\'achat immobilier' 
-                    : 'Suivez l\'avancement de votre recherche de logement'}
-                </p>
-                {isAcheteur && (
-                  <Badge variant="outline" className="mt-3 text-blue-600 border-blue-300 glass-morphism animate-fade-in">
-                    <Home className="w-3 h-3 mr-1" />
-                    Achat immobilier
-                  </Badge>
-                )}
-              </div>
-              <div className="flex gap-2">
-                {counts.new_message > 0 && (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => navigate('/client/messagerie')} 
-                    className="relative glass-morphism border-primary/20 hover:scale-105 transition-all duration-300"
-                  >
-                    <Bell className="w-4 h-4 mr-2" />
-                    Messages
-                    <Badge variant="destructive" className="ml-2 animate-bounce-soft">{counts.new_message}</Badge>
-                  </Button>
-                )}
-                {counts.new_offer > 0 && (
-                  <Button 
-                    variant="outline" 
-                    onClick={() => navigate('/client/offres-recues')} 
-                    className="relative glass-morphism border-primary/20 hover:scale-105 transition-all duration-300"
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    Offres
-                    <Badge variant="destructive" className="ml-2 animate-bounce-soft">{counts.new_offer}</Badge>
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
+      <div className="flex-1 overflow-y-auto relative">
+        {/* Global floating particles */}
+        <FloatingParticles count={12} className="fixed inset-0 pointer-events-none z-0 opacity-30" />
+        
+        <div className="relative z-10 p-4 md:p-8">
+          {/* Premium Dashboard Header */}
+          <PremiumDashboardHeader
+            userName={clientProfile?.prenom}
+            isAcheteur={isAcheteur}
+            messageCount={counts.new_message}
+            offerCount={counts.new_offer}
+            onMessagesClick={() => navigate('/client/messagerie')}
+            onOffersClick={() => navigate('/client/offres-recues')}
+          />
 
-          {/* Alerte compte non actif avec design moderne */}
+          {/* Alerte compte non actif */}
           {profileActif === false && (
-            <Card className="relative overflow-hidden mb-6 border-orange-500/50 animate-fade-in group hover:shadow-xl transition-all duration-500">
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-transparent to-orange-600/5" />
-              <CardContent className="relative p-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-2 rounded-full bg-orange-500/20 animate-pulse-soft">
-                    <AlertTriangle className="w-5 h-5 text-orange-500" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">
-                      ⏳ Compte en attente d'activation
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Votre profil n'a pas encore été activé par votre agent. Veuillez patienter ou contacter votre agent pour activer votre compte.
-                    </p>
-                    {agent && (
-                      <Button size="sm" variant="outline" className="mt-4 hover:scale-105 transition-transform" onClick={() => navigate('/client/messagerie')}>
-                        Contacter mon agent
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="mb-6 animate-fade-in">
+              <PremiumStatusCard
+                variant="waiting"
+                title="Compte en attente d'activation"
+                description="Votre profil n'a pas encore été activé par votre agent. Veuillez patienter ou contacter votre agent pour activer votre compte."
+                action={agent ? {
+                  label: 'Contacter mon agent',
+                  onClick: () => navigate('/client/messagerie')
+                } : undefined}
+              />
+            </div>
           )}
 
           {/* Alerte documents manquants */}
@@ -534,50 +452,46 @@ export default function ClientDashboard() {
             </div>
           )}
 
-          {/* Alerte mandat */}
+          {/* Alerte mandat expirant */}
           {profileActif !== false && daysRemaining > 0 && daysRemaining <= 30 && (
-            <Card className="card-interactive mb-6 border-warning bg-warning/5 animate-fade-in" style={{ animationDelay: '50ms' }}>
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <AlertTriangle className="w-5 h-5 text-warning mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-medium text-foreground">
-                      Il vous reste {formatTimeRemaining(daysRemaining)} sur votre mandat !
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Souhaitez-vous renouveler ou avez-vous des questions ?
-                    </p>
-                    <div className="flex gap-3 mt-4">
-                      <Button size="sm" variant="default" onClick={handleRenewMandat}>
-                        Renouveler mon mandat
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => navigate('/client/messagerie')}>
-                        Contacter mon agent
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="mb-6 animate-fade-in" style={{ animationDelay: '50ms' }}>
+              <PremiumStatusCard
+                variant="warning"
+                title={`Il vous reste ${formatTimeRemaining(daysRemaining)} sur votre mandat !`}
+                description="Souhaitez-vous renouveler ou avez-vous des questions ?"
+                action={{
+                  label: 'Renouveler mon mandat',
+                  onClick: handleRenewMandat
+                }}
+              >
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => navigate('/client/messagerie')}
+                  className="mt-2"
+                >
+                  Contacter mon agent
+                </Button>
+              </PremiumStatusCard>
+            </div>
           )}
 
+          {/* Alerte mandat expiré */}
           {profileActif !== false && daysRemaining <= 0 && (
-            <Card className="card-interactive mb-6 border-destructive bg-destructive/5 animate-fade-in" style={{ animationDelay: '50ms' }}>
-              <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <AlertTriangle className="w-5 h-5 text-destructive mt-0.5" />
-                  <div>
-                    <p className="font-medium text-foreground">❌ Votre mandat a expiré</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Contactez-nous pour renouveler ou demander un remboursement.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="mb-6 animate-fade-in" style={{ animationDelay: '50ms' }}>
+              <PremiumStatusCard
+                variant="danger"
+                title="Votre mandat a expiré"
+                description="Contactez-nous pour renouveler ou demander un remboursement."
+                action={{
+                  label: 'Contacter mon agent',
+                  onClick: () => navigate('/client/messagerie')
+                }}
+              />
+            </div>
           )}
 
-          {/* KPIs avec effets modernes */}
+          {/* KPIs avec effets premium */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-8">
             <PremiumKPICard
               title="Offres reçues"
@@ -610,10 +524,13 @@ export default function ClientDashboard() {
             />
           </div>
 
-          {/* Section Statistiques détaillées avec glassmorphism */}
+          {/* Section Statistiques détaillées */}
           <div className="mb-8 animate-fade-in" style={{ animationDelay: '200ms' }}>
-            <Card className="relative overflow-hidden border-border/50 hover:shadow-xl transition-all duration-500">
+            <Card className="relative overflow-hidden border-border/50 hover:shadow-xl transition-all duration-500 group">
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-50" />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              </div>
               <CardContent className="relative p-0">
                 <ClientStatsSection
                   offres={offres}
@@ -625,10 +542,9 @@ export default function ClientDashboard() {
             </Card>
           </div>
 
-          {/* Solvabilité et Candidats */}
+          {/* Solvabilité et Checklist */}
           {profileActif !== false && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              {/* Alerte de solvabilité - différente selon Louer ou Acheter */}
               <div className="animate-fade-in group" style={{ animationDelay: '220ms' }}>
                 <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-1 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -645,7 +561,6 @@ export default function ClientDashboard() {
                 </div>
               </div>
               
-              {/* Checklist du dossier */}
               <div className="animate-fade-in group" style={{ animationDelay: '280ms' }}>
                 <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-1 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -683,374 +598,159 @@ export default function ClientDashboard() {
             </div>
           )}
 
-          {/* Candidatures en cours de traitement */}
-          {(() => {
-            const statusInProgress = ['bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe', 'cles_remises', 'acceptee'];
-            const candidaturesEnCours = candidatures.filter(c => statusInProgress.includes(c.statut));
-            
-            const getStatusInfo = (statut: string) => {
-              switch (statut) {
-                case 'en_attente': return { label: '⏳ En attente', step: 1, color: 'bg-gray-100 dark:bg-gray-800', textColor: 'text-gray-600 dark:text-gray-400', progress: 10 };
-                case 'acceptee': return { label: '✅ Acceptée', step: 2, color: 'bg-green-100 dark:bg-green-900/30', textColor: 'text-green-600 dark:text-green-400', progress: 20 };
-                case 'bail_conclu': return { label: '🎉 Prêt à conclure', step: 3, color: 'bg-emerald-100 dark:bg-emerald-900/30', textColor: 'text-emerald-600 dark:text-emerald-400', progress: 30 };
-                case 'attente_bail': return { label: '📄 Attente bail', step: 4, color: 'bg-amber-100 dark:bg-amber-900/30', textColor: 'text-amber-600 dark:text-amber-400', progress: 40 };
-                case 'bail_recu': return { label: '📋 Bail reçu', step: 5, color: 'bg-blue-100 dark:bg-blue-900/30', textColor: 'text-blue-600 dark:text-blue-400', progress: 50 };
-                case 'signature_planifiee': return { label: '📝 Signature planifiée', step: 6, color: 'bg-purple-100 dark:bg-purple-900/30', textColor: 'text-purple-600 dark:text-purple-400', progress: 60 };
-                case 'signature_effectuee': return { label: '🖊️ Signature effectuée', step: 7, color: 'bg-indigo-100 dark:bg-indigo-900/30', textColor: 'text-indigo-600 dark:text-indigo-400', progress: 70 };
-                case 'etat_lieux_fixe': return { label: '🏠 État des lieux fixé', step: 8, color: 'bg-cyan-100 dark:bg-cyan-900/30', textColor: 'text-cyan-600 dark:text-cyan-400', progress: 85 };
-                case 'cles_remises': return { label: '🔑 Clés remises', step: 9, color: 'bg-teal-100 dark:bg-teal-900/30', textColor: 'text-teal-600 dark:text-teal-400', progress: 100 };
-                default: return { label: statut, step: 0, color: 'bg-gray-100', textColor: 'text-gray-600', progress: 0 };
-              }
-            };
-
-            if (candidaturesEnCours.length === 0) return null;
-
-            return (
-              <div className="mb-8 animate-fade-in group">
-                <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border-2 border-primary/30 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/20 transition-all duration-500">
-                  {/* Gradient background */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10" />
-                  
-                  {/* Animated glow */}
-                  <div className="absolute inset-0 opacity-50 group-hover:opacity-100 transition-opacity duration-500">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  </div>
-                  
-                  <div className="relative p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-primary/20 group-hover:bg-primary/30 transition-colors duration-300">
-                          <FileCheck className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-primary">🚀 Vos candidatures en cours</h3>
-                      </div>
-                      <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground text-lg px-3 py-1 shadow-lg shadow-primary/30 animate-pulse-soft">
-                        {candidaturesEnCours.length}
-                      </Badge>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {candidaturesEnCours.slice(0, 3).map((cand, index) => {
-                        const statusInfo = getStatusInfo(cand.statut);
-                        
-                        return (
-                          <div 
-                            key={cand.id}
-                            className={`p-4 rounded-xl border-2 cursor-pointer transition-all hover:scale-[1.01] hover:shadow-lg backdrop-blur-sm ${statusInfo.color} hover:border-primary/30 group/item`}
-                            onClick={() => navigate('/client/mes-candidatures')}
-                            style={{ animationDelay: `${index * 50}ms` }}
-                          >
-                            <div className="flex items-start justify-between gap-3 mb-3">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold truncate group-hover/item:text-primary transition-colors">{cand.offres?.adresse}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {cand.offres?.pieces} pièces • {cand.offres?.prix?.toLocaleString()} CHF/mois
-                                </p>
-                              </div>
-                              <Badge className={`${statusInfo.textColor} border-2 font-bold shadow-sm`} variant="outline">
-                                {statusInfo.label}
-                              </Badge>
-                            </div>
-                            
-                            {/* Barre de progression premium */}
-                            <div className="mt-3">
-                              <div className="flex justify-between text-xs mb-1">
-                                <span className="text-muted-foreground">Progression du dossier</span>
-                                <span className={`font-bold ${statusInfo.textColor}`}>{statusInfo.progress}%</span>
-                              </div>
-                              <div className="relative h-2 rounded-full overflow-hidden bg-background/50">
-                                <Progress 
-                                  value={statusInfo.progress} 
-                                  className="h-2"
-                                  indicatorClassName="bg-gradient-to-r from-primary via-primary/80 to-accent shadow-lg shadow-primary/30"
-                                />
-                              </div>
-                              <p className={`text-xs mt-2 font-medium ${statusInfo.textColor}`}>
-                                Étape {statusInfo.step}/9 : {statusInfo.label}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    
-                    <Button 
-                      size="lg" 
-                      className="w-full mt-4 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] transition-all duration-300"
-                      onClick={() => navigate('/client/mes-candidatures')}
-                    >
-                      <FileCheck className="w-4 h-4 mr-2" />
-                      Voir toutes mes candidatures
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Mon mandat - Premium Card */}
-            <div className="animate-fade-in group" style={{ animationDelay: '100ms' }}>
-              <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-1">
-                {/* Gradient background on hover */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                
-                {/* Shine effect on hover */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+          {/* Candidatures en cours - Premium Section */}
+          {candidaturesEnCours.length > 0 && (
+            <div className="mb-8 animate-fade-in" style={{ animationDelay: '400ms' }}>
+              <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card via-card to-muted/10 backdrop-blur-xl border-2 border-primary/30 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/20 transition-all duration-500 group">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10" />
+                <div className="absolute inset-0 opacity-50 group-hover:opacity-100 transition-opacity duration-500">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                 </div>
                 
                 <div className="relative p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
-                      {isAcheteur ? (
-                        <Home className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
-                      ) : (
-                        <FileText className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
-                      )}
-                    </div>
-                    <h3 className="text-lg font-semibold">
-                      {isAcheteur ? 'Mon projet d\'achat' : 'Mon mandat'}
-                    </h3>
-                  </div>
-                  
-                  {profileActif === false ? (
-                    /* État compte non actif */
-                    <div className="text-center py-4">
-                      <div className="p-4 bg-orange-100 dark:bg-orange-950/30 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4 animate-pulse-soft">
-                        <AlertTriangle className="w-8 h-8 text-orange-500" />
-                      </div>
-                      <p className="font-medium text-foreground mb-2">Compte en attente d'activation</p>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        La progression de votre mandat sera disponible dès que votre profil sera activé par votre agent.
-                      </p>
-                      <div className="grid grid-cols-2 gap-4 mt-4">
-                        <div className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300">
-                          <p className="text-sm text-muted-foreground">Date d'inscription</p>
-                          <p className="font-medium">{new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</p>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 shadow-lg shadow-primary/10">
+                          <FileCheck className="w-6 h-6 text-primary" />
                         </div>
-                        <div className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300">
-                          <p className="text-sm text-muted-foreground">Statut</p>
-                          <span className="inline-block px-2 py-1 rounded text-xs font-medium bg-orange-100 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400">
-                            En attente
-                          </span>
-                        </div>
-                      </div>
-                      <div className="mt-4">
-                        <div className="flex justify-between text-sm mb-2">
-                          <span className="text-muted-foreground">Progression du mandat</span>
-                          <span className="font-medium text-orange-500">En attente</span>
-                        </div>
-                        <div className="relative h-3 rounded-full bg-orange-100 dark:bg-orange-950/30 overflow-hidden">
-                          <Progress 
-                            value={0} 
-                            className="h-3 bg-transparent"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 via-orange-500/20 to-orange-400/20 animate-pulse" />
-                        </div>
-                        <p className="text-xs text-orange-500 mt-2 text-center">
-                          ⏳ Sera activée dès que votre profil sera validé
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    /* État compte actif */
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 border border-transparent hover:border-primary/10">
-                          <p className="text-sm text-muted-foreground">Date de début</p>
-                          <p className="font-medium">{new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 border border-transparent hover:border-primary/10">
-                          <p className="text-sm text-muted-foreground">Temps restant</p>
-                          <p className="font-medium">{formatTimeRemaining(daysRemaining)}</p>
-                        </div>
-                        <div className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 border border-transparent hover:border-primary/10">
-                          <p className="text-sm text-muted-foreground">Statut</p>
-                          <span className={`inline-block px-2 py-1 rounded text-xs font-medium shadow-sm ${
-                            daysRemaining > 30 ? 'bg-success/10 text-success shadow-success/20' :
-                            daysRemaining > 0 ? 'bg-warning/10 text-warning shadow-warning/20' :
-                            'bg-destructive/10 text-destructive shadow-destructive/20'
-                          }`}>
-                            {daysRemaining > 0 ? 'Actif' : 'Expiré'}
-                          </span>
-                        </div>
-                        <div className="p-3 rounded-xl bg-muted/30 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 border border-transparent hover:border-primary/10">
-                          <p className="text-sm text-muted-foreground">
-                            {isAcheteur ? 'Prix d\'achat recherché' : 'Budget recherché'}
-                          </p>
-                          <p className="font-medium">
-                            {client.budget_max?.toLocaleString('fr-CH')} CHF
-                            {!isAcheteur && '/mois'}
-                          </p>
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center shadow-lg animate-bounce-subtle">
+                          {candidaturesEnCours.length}
                         </div>
                       </div>
                       <div>
-                        <div className="flex justify-between text-sm mb-2">
-                          <span className="text-muted-foreground">Progression du mandat (90 jours)</span>
-                          <span className="font-medium">{Math.round(progressPercent)}%</span>
-                        </div>
-                        <div className="relative h-3 rounded-full overflow-hidden bg-muted/50">
-                          <Progress 
-                            value={progressPercent} 
-                            className="h-3"
-                            indicatorClassName={`${
-                              daysRemaining > 30 ? 'bg-gradient-to-r from-success to-emerald-400' :
-                              daysRemaining > 0 ? 'bg-gradient-to-r from-warning to-orange-400' :
-                              'bg-gradient-to-r from-destructive to-red-400'
-                            } shadow-lg ${
-                              daysRemaining > 30 ? 'shadow-success/30' :
-                              daysRemaining > 0 ? 'shadow-warning/30' :
-                              'shadow-destructive/30'
-                            }`}
-                          />
-                        </div>
-                        <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                          <span>Début: {new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</span>
-                          <span>{daysRemaining > 0 ? `${Math.floor(daysRemaining)} jours restants` : 'Expiré'}</span>
-                        </div>
+                        <h3 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                          🚀 Vos candidatures en cours
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Suivez la progression de vos dossiers
+                        </p>
                       </div>
                     </div>
-                  )}
+                    
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className="hidden sm:flex gap-2 hover:bg-primary/10 hover:border-primary/30 transition-all duration-300"
+                      onClick={() => navigate('/client/mes-candidatures')}
+                    >
+                      <FileCheck className="w-4 h-4" />
+                      Tout voir
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {candidaturesEnCours.slice(0, 3).map((cand, index) => (
+                      <PremiumCandidatureProgressCard
+                        key={cand.id}
+                        candidature={cand}
+                        index={index}
+                        onClick={() => navigate('/client/mes-candidatures')}
+                      />
+                    ))}
+                  </div>
+                  
+                  <Button 
+                    size="lg" 
+                    className="w-full mt-4 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.01] transition-all duration-300 group/btn"
+                    onClick={() => navigate('/client/mes-candidatures')}
+                  >
+                    <FileCheck className="w-4 h-4 mr-2" />
+                    Voir toutes mes candidatures
+                    <ChevronRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+                  </Button>
                 </div>
               </div>
             </div>
+          )}
 
-            {/* Mon agent - Premium Card */}
-            <div className="animate-fade-in group" style={{ animationDelay: '150ms' }}>
-              <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500 hover:-translate-y-1">
-                {/* Gradient background on hover */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                
-                {/* Shine effect on hover */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                </div>
-                
-                <div className="relative p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
-                      <User className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
+          {/* Mon mandat & Mon agent - Grid Premium */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Mon mandat - PremiumMandatProgress */}
+            <div className="animate-fade-in" style={{ animationDelay: '450ms' }}>
+              {profileActif === false ? (
+                <PremiumStatusCard
+                  variant="waiting"
+                  title="Compte en attente d'activation"
+                  description="La progression de votre mandat sera disponible dès que votre profil sera activé par votre agent."
+                >
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div className="p-3 rounded-xl bg-muted/30">
+                      <p className="text-sm text-muted-foreground">Date d'inscription</p>
+                      <p className="font-medium">{new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</p>
                     </div>
-                    <h3 className="text-lg font-semibold">Mon agent</h3>
+                    <div className="p-3 rounded-xl bg-muted/30">
+                      <p className="text-sm text-muted-foreground">Statut</p>
+                      <Badge variant="outline" className="text-amber-600 border-amber-300">En attente</Badge>
+                    </div>
                   </div>
+                </PremiumStatusCard>
+              ) : (
+                <PremiumMandatProgress
+                  daysElapsed={daysElapsed}
+                  daysRemaining={daysRemaining}
+                  totalDays={90}
+                  startDate={client.date_ajout || client.created_at}
+                />
+              )}
+            </div>
+
+            {/* Mon agent - PremiumAgentCard */}
+            <div className="animate-fade-in" style={{ animationDelay: '500ms' }}>
+              {agent ? (
+                <PremiumAgentCard
+                  agent={agent}
+                  onMessage={() => navigate('/client/messagerie')}
+                />
+              ) : (
+                <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-6 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500 group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   
-                  {agent ? (
-                    <div className="flex items-start gap-4">
-                      <div className="relative">
-                        <Avatar className="h-14 w-14 border-2 border-primary/20 shadow-lg shadow-primary/10 group-hover:shadow-primary/20 transition-shadow duration-300">
-                          <AvatarImage src={agent.avatar_url || undefined} />
-                          <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-primary font-semibold">
-                            {agent.prenom?.[0]}{agent.nom?.[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-success rounded-full border-2 border-card shadow-sm animate-pulse-soft" />
+                  <div className="relative">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-2 rounded-xl bg-primary/10">
+                        <User className="w-5 h-5 text-primary" />
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-lg">{agent.prenom} {agent.nom}</p>
-                        <p className="text-sm text-muted-foreground mt-1 hover:text-primary transition-colors cursor-pointer">{agent.email}</p>
-                        <p className="text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer">{agent.telephone}</p>
-                        <Button 
-                          size="sm" 
-                          className="mt-4 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-105 transition-all duration-300"
-                          onClick={() => navigate('/client/messagerie')}
-                        >
-                          <MessageSquare className="w-4 h-4 mr-2" />
-                          Message
-                        </Button>
-                      </div>
+                      <h3 className="text-lg font-semibold">Mon agent</h3>
                     </div>
-                  ) : (
+                    
                     <div className="text-center py-6">
                       <div className="relative inline-block">
                         <div className="p-4 bg-gradient-to-br from-muted/50 to-muted/30 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4 shadow-inner">
                           <User className="w-8 h-8 text-muted-foreground" />
                         </div>
-                        <div className="absolute inset-0 rounded-full border-2 border-dashed border-muted-foreground/30 animate-spin-slow" style={{ animationDuration: '10s' }} />
+                        <div className="absolute inset-0 rounded-full border-2 border-dashed border-muted-foreground/30 animate-spin" style={{ animationDuration: '10s' }} />
                       </div>
                       <p className="text-muted-foreground font-medium">Aucun agent assigné</p>
                       <p className="text-sm text-muted-foreground mt-2">
                         Un agent vous sera bientôt attribué pour vous accompagner dans votre recherche.
                       </p>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
-          {/* Section financière spécifique aux acheteurs - Premium Card */}
+          {/* Section financière acheteurs - Premium */}
           {isAcheteur && profileActif !== false && (
-            <div className="mb-8 animate-fade-in group" style={{ animationDelay: '200ms' }}>
-              <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-blue-200/50 dark:border-blue-800/50 hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-500 hover:-translate-y-1">
-                {/* Gradient background */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-cyan-500/5" />
-                
-                {/* Shine effect on hover */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                </div>
-                
-                <div className="relative p-6">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 rounded-xl bg-blue-500/10 group-hover:bg-blue-500/20 transition-colors duration-300">
-                      <Home className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform duration-300" />
-                    </div>
-                    <h3 className="text-lg font-semibold">Capacité d'achat</h3>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border border-blue-200/30 dark:border-blue-800/30 hover:border-blue-400/50 hover:scale-[1.02] transition-all duration-300 group/item">
-                      <p className="text-xs text-muted-foreground mb-1">Prix max finançable</p>
-                      <p className="text-lg font-bold text-blue-600 group-hover/item:text-blue-500 transition-colors">
-                        {purchaseSolvabilityResult.prixAchatMax.toLocaleString('fr-CH')} CHF
-                      </p>
-                    </div>
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border border-blue-200/30 dark:border-blue-800/30 hover:border-blue-400/50 hover:scale-[1.02] transition-all duration-300 group/item">
-                      <p className="text-xs text-muted-foreground mb-1">Apport disponible</p>
-                      <p className={`text-lg font-bold transition-colors ${
-                        purchaseSolvabilityResult.apportManquant === 0 ? 'text-success group-hover/item:text-emerald-500' : 'text-warning group-hover/item:text-orange-500'
-                      }`}>
-                        {(client.apport_personnel || 0).toLocaleString('fr-CH')} CHF
-                      </p>
-                    </div>
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border border-blue-200/30 dark:border-blue-800/30 hover:border-blue-400/50 hover:scale-[1.02] transition-all duration-300 group/item">
-                      <p className="text-xs text-muted-foreground mb-1">Charges mensuelles</p>
-                      <p className="text-lg font-bold group-hover/item:text-foreground transition-colors">
-                        {purchaseSolvabilityResult.chargesMensuelles.toLocaleString('fr-CH')} CHF
-                      </p>
-                    </div>
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-background/80 to-background/60 backdrop-blur-sm border border-blue-200/30 dark:border-blue-800/30 hover:border-blue-400/50 hover:scale-[1.02] transition-all duration-300 group/item">
-                      <p className="text-xs text-muted-foreground mb-1">Taux d'effort</p>
-                      <p className={`text-lg font-bold transition-colors ${
-                        purchaseSolvabilityResult.tauxEffort <= 33 ? 'text-success group-hover/item:text-emerald-500' : 'text-destructive group-hover/item:text-red-500'
-                      }`}>
-                        {purchaseSolvabilityResult.tauxEffort}%
-                      </p>
-                    </div>
-                  </div>
-                  <div className="p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-200/30 dark:border-blue-800/30">
-                    <p className="text-xs text-blue-700 dark:text-blue-400">
-                      📊 <strong>Calcul suisse:</strong> Apport min. 26% (20% achat + 5% notaire + 1% entretien). 
-                      Charges théoriques = 7%/an. Max 33% du revenu brut annuel.
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div className="mb-8 animate-fade-in" style={{ animationDelay: '550ms' }}>
+              <PremiumPurchaseCapacityCard
+                result={purchaseSolvabilityResult}
+                apportPersonnel={client.apport_personnel || 0}
+              />
             </div>
           )}
 
           {/* Prochaines visites - Premium Section */}
-          <div className="mb-8 animate-fade-in" style={{ animationDelay: '250ms' }}>
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card via-card to-muted/10 backdrop-blur-xl border border-border/50">
-              {/* Animated background */}
+          <div className="mb-8 animate-fade-in" style={{ animationDelay: '600ms' }}>
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card via-card to-muted/10 backdrop-blur-xl border border-border/50 group">
               <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-float-particle" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-accent/5 rounded-full blur-3xl animate-float-particle" style={{ animationDelay: '2s' }} />
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-float" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-accent/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
               </div>
               
               <div className="relative p-6">
-                {/* Premium Header */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
                     <div className="relative">
@@ -1086,7 +786,6 @@ export default function ClientDashboard() {
                   )}
                 </div>
                 
-                {/* Visits Grid */}
                 {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length > 0 ? (
                   <div className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -1105,11 +804,11 @@ export default function ClientDashboard() {
                     
                     <Button 
                       variant="ghost" 
-                      className="w-full text-sm text-primary hover:bg-primary/10 hover:scale-[1.01] transition-all duration-300 group"
+                      className="w-full text-sm text-primary hover:bg-primary/10 hover:scale-[1.01] transition-all duration-300 group/btn"
                       onClick={() => navigate('/client/visites')}
                     >
                       <span>Voir toutes les visites</span>
-                      <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform duration-300" />
+                      <ChevronRight className="w-4 h-4 ml-1 group-hover/btn:translate-x-1 transition-transform duration-300" />
                     </Button>
                   </div>
                 ) : (
@@ -1123,17 +822,15 @@ export default function ClientDashboard() {
             </div>
           </div>
 
-          {/* Candidatures récentes - Premium Section */}
-          <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card via-card to-muted/10 backdrop-blur-xl border border-border/50">
-              {/* Animated background */}
+          {/* Mes offres reçues - Premium Section */}
+          <div className="animate-fade-in" style={{ animationDelay: '650ms' }}>
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card via-card to-muted/10 backdrop-blur-xl border border-border/50 group">
               <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-0 left-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl animate-float-particle" style={{ animationDelay: '1s' }} />
-                <div className="absolute bottom-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl animate-float-particle" style={{ animationDelay: '3s' }} />
+                <div className="absolute top-0 left-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }} />
+                <div className="absolute bottom-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '3s' }} />
               </div>
               
               <div className="relative p-6">
-                {/* Premium Header */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center gap-4">
                     <div className="relative">
@@ -1161,7 +858,7 @@ export default function ClientDashboard() {
                       variant="outline"
                       size="sm"
                       className="hidden sm:flex gap-2 hover:bg-primary/10 hover:border-primary/30 transition-all duration-300"
-                      onClick={() => navigate('/client/mes-candidatures')}
+                      onClick={() => navigate('/client/offres-recues')}
                     >
                       <FileText className="w-4 h-4" />
                       Tout voir
@@ -1169,7 +866,6 @@ export default function ClientDashboard() {
                   )}
                 </div>
                 
-                {/* Offers Grid */}
                 {offres.length > 0 ? (
                   <div className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -1178,25 +874,25 @@ export default function ClientDashboard() {
                           key={offre.id}
                           offre={offre}
                           index={index}
-                          onClick={() => navigate('/client/mes-candidatures')}
+                          onClick={() => navigate('/client/offres-recues')}
                         />
                       ))}
                     </div>
                     
                     <Button 
                       variant="ghost" 
-                      className="w-full text-sm text-primary hover:bg-primary/10 hover:scale-[1.01] transition-all duration-300 group"
-                      onClick={() => navigate('/client/mes-candidatures')}
+                      className="w-full text-sm text-primary hover:bg-primary/10 hover:scale-[1.01] transition-all duration-300 group/btn"
+                      onClick={() => navigate('/client/offres-recues')}
                     >
-                      <span>Voir toutes les offres</span>
-                      <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform duration-300" />
+                      <span>Voir toutes mes offres</span>
+                      <ChevronRight className="w-4 h-4 ml-1 group-hover/btn:translate-x-1 transition-transform duration-300" />
                     </Button>
                   </div>
                 ) : (
                   <PremiumEmptyState
                     icon={FileText}
                     title="Aucune offre reçue"
-                    description="Votre agent vous enverra bientôt des offres correspondant à vos critères de recherche."
+                    description="Les offres de logements correspondant à vos critères apparaîtront ici."
                   />
                 )}
               </div>
@@ -1204,12 +900,10 @@ export default function ClientDashboard() {
           </div>
         </div>
       </div>
-
-      {/* Modal d'activation de compte */}
-      <AccountActivationModal
-        isOpen={showActivationModal}
+      
+      <AccountActivationModal 
+        isOpen={showActivationModal} 
         onClose={() => setShowActivationModal(false)}
-        userId={user?.id || ''}
       />
     </>
   );

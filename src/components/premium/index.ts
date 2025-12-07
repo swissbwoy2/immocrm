@@ -28,3 +28,6 @@ export { PremiumCandidatureCard } from './PremiumCandidatureCard';
 export { PremiumWorkflowTimeline } from './PremiumWorkflowTimeline';
 export { PremiumStatusCard } from './PremiumStatusCard';
 export { PremiumCelebrationCard } from './PremiumCelebrationCard';
+export { PremiumDashboardHeader } from './PremiumDashboardHeader';
+export { PremiumCandidatureProgressCard } from './PremiumCandidatureProgressCard';
+export { PremiumPurchaseCapacityCard } from './PremiumPurchaseCapacityCard';
