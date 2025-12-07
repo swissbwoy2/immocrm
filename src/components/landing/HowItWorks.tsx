@@ -4,23 +4,23 @@ import { Card, CardContent } from '@/components/ui/card';
 const steps = [
   {
     icon: FileText,
-    title: 'Remplissez votre mandat',
-    description: 'Créez votre profil et définissez vos critères de recherche en quelques minutes.',
+    title: 'Crée ton profil',
+    description: '5 minutes chrono pour définir tes critères de rêve. C\'est gratuit et sans engagement.',
   },
   {
     icon: UserCheck,
-    title: 'Agent dédié assigné',
-    description: 'Un agent immobilier expérimenté est assigné à votre dossier pour un suivi personnalisé.',
+    title: 'Ton agent te contacte',
+    description: 'Un vrai humain te rappelle sous 24h pour affiner ta recherche. Pas un robot.',
   },
   {
     icon: Home,
-    title: 'Recevez des offres',
-    description: 'Recevez des offres immobilières correspondant parfaitement à vos critères.',
+    title: 'Offres sur mesure',
+    description: 'Reçois uniquement des biens triés sur le volet. Pas de spam, que du pertinent.',
   },
   {
     icon: CheckCircle,
-    title: 'Trouvez votre bien',
-    description: 'Visitez les biens sélectionnés et trouvez le logement idéal avec notre accompagnement.',
+    title: 'Tu emménages !',
+    description: 'Visite (ou on visite pour toi), signe ton bail et célèbre ton nouveau chez-toi.',
   },
 ];
 
@@ -62,14 +62,14 @@ export function HowItWorks() {
           <div className="inline-flex items-center gap-2 relative group mb-4">
             <div className="relative glass-morphism rounded-full px-5 py-2.5 border border-primary/20 bg-card/80">
               <Zap className="inline-block h-4 w-4 text-primary mr-2" />
-              <span className="text-sm font-semibold text-primary">Simple & Efficace</span>
+              <span className="text-sm font-semibold text-primary">Simple comme bonjour</span>
             </div>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
-            Comment ça <span className="text-primary">marche</span> ?
+            4 étapes vers <span className="text-primary">ton nouveau chez-toi</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Un processus simple et efficace pour trouver votre bien immobilier en Suisse romande
+            On a simplifié le parcours au maximum. Toi tu te détends, nous on bosse.
           </p>
         </div>
 

@@ -4,38 +4,38 @@ import { Card, CardContent } from '@/components/ui/card';
 const services = [
   {
     icon: Home,
-    title: 'Recherche à la location',
-    description: 'Appartements et maisons à louer dans toute la Suisse romande, adaptés à votre budget.',
+    title: 'Recherche location',
+    description: 'On prospecte là où tu n\'as pas le temps d\'aller. Appartements et maisons dans toute la Suisse romande.',
     gradient: 'from-blue-500 to-cyan-500',
   },
   {
     icon: Building2,
-    title: "Recherche à l'achat",
-    description: "Biens immobiliers à acheter : appartements, villas, terrains. Analyse de solvabilité incluse.",
+    title: "Recherche achat",
+    description: "Appartements, villas, terrains. Analyse de solvabilité offerte pour connaître exactement ton budget.",
     gradient: 'from-green-500 to-emerald-500',
   },
   {
     icon: MapPin,
-    title: 'Toute la Suisse Romande',
-    description: 'Vaud, Genève, Valais, Fribourg, Neuchâtel, Jura - nous couvrons les 6 cantons romands.',
+    title: '6 cantons, 1 interlocuteur',
+    description: 'Vaud, Genève, Valais, Fribourg, Neuchâtel, Jura. On gère les régies locales pour toi.',
     gradient: 'from-purple-500 to-pink-500',
   },
   {
     icon: FolderOpen,
-    title: 'Gestion de dossier',
-    description: 'Suivi complet de vos candidatures, documents centralisés et statuts en temps réel.',
+    title: 'Dossier qui convainc',
+    description: 'On prépare un dossier béton qui sort du lot. Tes candidatures passent en priorité.',
     gradient: 'from-orange-500 to-red-500',
   },
   {
     icon: Calendar,
-    title: 'Organisation des visites',
-    description: 'Planification et coordination des visites avec les régies, même déléguées si besoin.',
+    title: 'Visites organisées',
+    description: 'Planification complète avec les régies. Pas dispo ? On visite pour toi en vidéo HD.',
     gradient: 'from-indigo-500 to-violet-500',
   },
   {
     icon: MessageSquare,
-    title: 'Messagerie directe',
-    description: 'Communication instantanée avec votre agent pour un suivi réactif de votre recherche.',
+    title: 'Réponse sous 2h',
+    description: 'Un vrai humain te répond en 2h ouvrées max. Pas de bot, pas d\'attente interminable.',
     gradient: 'from-teal-500 to-cyan-500',
   },
 ];
@@ -50,13 +50,13 @@ export function ServicesSection() {
         {/* Section header */}
         <div className="text-center mb-16 animate-fade-in">
           <div className="inline-flex items-center gap-2 glass-morphism rounded-full px-4 py-2 mb-4">
-            <span className="text-sm font-medium text-primary">Services complets</span>
+            <span className="text-sm font-medium text-primary">Tout inclus</span>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
-            Nos <span className="gradient-text-animated">services</span>
+            Un accompagnement <span className="gradient-text-animated">complet</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Un accompagnement complet pour votre recherche immobilière
+            Tout ce qu'il faut pour que tu n'aies plus rien à faire
           </p>
         </div>
 

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Sparkles, Star, Home } from 'lucide-react';
+import { ArrowRight, Sparkles, Star, Home, CheckCircle } from 'lucide-react';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 
@@ -57,7 +57,7 @@ export function HeroSection() {
               {/* Shine effect */}
               <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               <Star className="h-5 w-5 text-amber-500 fill-amber-500 animate-pulse" />
-              <span className="text-sm md:text-base font-semibold text-amber-500 relative z-10">N°1 en Suisse romande du House Hunting</span>
+              <span className="text-sm md:text-base font-semibold text-amber-500 relative z-10">N°1 en Suisse romande depuis 2019</span>
             </div>
           </div>
 
@@ -72,16 +72,21 @@ export function HeroSection() {
             />
           </div>
 
-          {/* Main headline with premium gradient */}
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 animate-fade-in text-foreground" style={{ animationDelay: '100ms' }}>
-            Délègue ta recherche d'appartement à des{' '}
-            <span className="gradient-text-animated bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text">experts dévoués</span>
+          {/* Pain point headline */}
+          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 animate-fade-in text-foreground" style={{ animationDelay: '100ms' }}>
+            Marre de postuler <span className="text-primary">dans le vide</span> ?
           </h1>
+          
+          {/* Solution headline */}
+          <p className="text-xl md:text-2xl font-semibold mb-4 animate-fade-in text-foreground" style={{ animationDelay: '125ms' }}>
+            Délègue ta recherche à des{' '}
+            <span className="gradient-text-animated bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text">experts qui s'acharnent pour toi</span>
+          </p>
 
-          {/* Emotional subheadline */}
-          <p className="text-lg md:text-xl text-muted-foreground mb-6 max-w-2xl animate-fade-in leading-relaxed" style={{ animationDelay: '150ms' }}>
-            Avec Immo-Rama.ch, tu n'es plus seul face à la pénurie de logements. 
-            Nos experts cherchent, sélectionnent et contactent les régies pour toi.
+          {/* Empathic subheadline */}
+          <p className="text-base md:text-lg text-muted-foreground mb-6 max-w-2xl animate-fade-in leading-relaxed" style={{ animationDelay: '150ms' }}>
+            100 dossiers envoyés, 0 réponse ? On connaît. Nos agents contactent les régies, 
+            préparent ton dossier béton et te trouvent <strong className="text-foreground">enfin</strong> ton appartement.
           </p>
 
           {/* Promise box - Premium with animated border */}
@@ -94,7 +99,7 @@ export function HeroSection() {
               <div className="flex items-center justify-center gap-2 md:gap-3 relative z-10">
                 <Home className="h-6 w-6 md:h-8 md:w-8 text-primary flex-shrink-0 animate-pulse" />
                 <span className="text-lg md:text-2xl font-bold text-foreground">
-                  On te trouve ton appart' en moins de 3 mois !
+                  Ton appart' en moins de 3 mois ou 100% remboursé !
                 </span>
               </div>
             </div>
@@ -111,15 +116,27 @@ export function HeroSection() {
                 {/* Shine effect on button */}
                 <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                 <Sparkles className="mr-2 h-5 w-5 md:h-6 md:w-6 relative z-10" />
-                <span className="hidden sm:inline relative z-10">Démarre ta recherche maintenant</span>
-                <span className="sm:hidden relative z-10">Démarre ta recherche</span>
+                <span className="hidden sm:inline relative z-10">Démarrer ma recherche GRATUITEMENT</span>
+                <span className="sm:hidden relative z-10">Démarrer GRATUITEMENT</span>
                 <ArrowRight className="ml-2 h-5 w-5 md:h-6 md:w-6 group-hover:translate-x-2 transition-transform relative z-10" />
               </Link>
             </Button>
-            <span className="text-xs md:text-sm text-muted-foreground flex items-center gap-1">
-              <Sparkles className="h-3 w-3 text-primary" />
-              Le coup de pouce que tout le monde mérite
-            </span>
+            
+            {/* Micro-copy trust signals */}
+            <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 text-xs md:text-sm text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
+                Sans engagement
+              </span>
+              <span className="flex items-center gap-1">
+                <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
+                300 CHF remboursables
+              </span>
+              <span className="flex items-center gap-1">
+                <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
+                1er RDV offert
+              </span>
+            </div>
           </div>
 
           {/* Secondary CTA */}
@@ -142,7 +159,7 @@ export function HeroSection() {
               {/* Glow effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/20 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <span className="text-sm text-muted-foreground relative z-10">
-                <span className="text-primary font-medium">Plus de 500 clients accompagnés</span> en Suisse romande
+                <span className="text-primary font-medium">+500 familles relogées</span> en Suisse romande
               </span>
             </div>
           </div>

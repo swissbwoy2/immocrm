@@ -46,13 +46,16 @@ export function DifferentiationSection() {
           {/* Main message */}
           <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-6">
-              Immo-Rama.ch n'est pas une agence immobilière{' '}
-              <span className="text-primary">comme les autres</span>
+              On n'est <span className="text-primary">PAS</span> une agence immobilière classique
             </h2>
           </div>
 
-          <p className="text-xl md:text-2xl text-muted-foreground mb-12 animate-fade-in" style={{ animationDelay: '200ms' }}>
-            Nous travaillons <span className="text-primary font-semibold">POUR toi</span>, avec les régies et les propriétaires.
+          <p className="text-xl md:text-2xl text-muted-foreground mb-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
+            <span className="text-foreground font-semibold">Les agences vendent des biens.</span>
+          </p>
+          
+          <p className="text-xl md:text-2xl text-primary font-semibold mb-12 animate-fade-in" style={{ animationDelay: '250ms' }}>
+            Nous, on te trouve LE tien.
           </p>
 
           {/* Visual representation */}
@@ -115,8 +118,8 @@ export function DifferentiationSection() {
           <div className="mt-12 md:mt-16 animate-fade-in" style={{ animationDelay: '400ms' }}>
             <div className="inline-block relative group">
               <div className="relative px-8 py-4 glass-morphism rounded-full border border-border/40 group-hover:border-primary/30 transition-all duration-300 bg-card/80">
-                <p className="text-lg md:text-xl text-muted-foreground group-hover:text-foreground transition-colors">
-                  Tu nous délègues ta recherche, on fait le reste.
+                <p className="text-lg md:text-xl font-semibold text-foreground group-hover:text-primary transition-colors">
+                  Tu délègues, on s'acharne, tu emménages. 🏠
                 </p>
               </div>
             </div>

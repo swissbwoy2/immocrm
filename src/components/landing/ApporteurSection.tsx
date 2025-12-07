@@ -5,18 +5,18 @@ import { Handshake, TrendingUp, Eye, CreditCard, ArrowRight, Sparkles } from 'lu
 const benefits = [
   {
     icon: TrendingUp,
-    title: 'Commissions attractives',
-    description: 'Jusqu\'à 10% sur chaque affaire conclue grâce à vos recommandations.',
+    title: 'Jusqu\'à 500 CHF par client',
+    description: 'Touche ta commission pour chaque personne relogée grâce à ta recommandation.',
   },
   {
     icon: Eye,
-    title: 'Suivi transparent',
-    description: 'Suivez en temps réel l\'évolution de vos recommandations et commissions.',
+    title: 'Dashboard dédié',
+    description: 'Suis tes recommandations et tes gains en temps réel depuis ton espace perso.',
   },
   {
     icon: CreditCard,
-    title: 'Paiements rapides',
-    description: 'Recevez vos commissions rapidement après la conclusion des affaires.',
+    title: 'Paiement sous 15 jours',
+    description: 'Virement direct sur ton compte dès la conclusion de l\'affaire. Rapide et sans paperasse.',
   },
 ];
 
@@ -63,12 +63,16 @@ export function ApporteurSection() {
             </div>
 
             <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
-              Devenez <span className="text-primary">apporteur d'affaires</span>
+              Transforme ton réseau en <span className="text-primary">revenus passifs</span>
             </h2>
             
-            <p className="text-lg text-muted-foreground mb-10 leading-relaxed max-w-lg">
-              Vous connaissez des personnes à la recherche d'un logement ? 
-              Recommandez-les et gagnez des commissions sur chaque affaire conclue.
+            <p className="text-lg text-muted-foreground mb-6 leading-relaxed max-w-lg">
+              Tu connais quelqu'un qui galère à trouver un appart' ? 
+              Envoie-le nous et touche ta commission. Simple comme bonjour.
+            </p>
+
+            <p className="text-base text-foreground font-medium mb-10">
+              💡 Parfait pour : agents immobiliers, RH, expatriés, concierges, tout le monde !
             </p>
 
             {/* CTA */}

@@ -3,38 +3,38 @@ import { Building2, FileCheck, CalendarCheck, MessageCircle, Shield, UserCheck, 
 const advantages = [
   {
     icon: Building2,
-    title: 'Réseau d\'agences partenaires',
-    description: 'Accédez à notre réseau d\'agences immobilières en Suisse Romande pour maximiser vos chances.',
+    title: '+50 agences partenaires',
+    description: 'Un réseau exclusif dans 6 cantons romands. Des portes qui s\'ouvrent pour toi.',
     gradient: 'from-blue-500 to-cyan-500',
   },
   {
     icon: FileCheck,
-    title: 'Suivi rigoureux de dossier',
-    description: 'Votre dossier est suivi de A à Z avec rigueur et transparence. Rien n\'est laissé au hasard.',
+    title: 'Rapport hebdomadaire',
+    description: 'Chaque semaine, tu reçois un compte-rendu de toutes les actions menées. Zéro zone d\'ombre.',
     gradient: 'from-green-500 to-emerald-500',
   },
   {
     icon: CalendarCheck,
-    title: 'Délégation de visite',
-    description: 'Vous ne pouvez pas visiter ? Pas de panique, votre agent s\'en occupe pour vous !',
+    title: 'Visite filmée en HD',
+    description: 'Pas dispo ? On visite pour toi avec vidéo HD + compte-rendu détaillé en 24h.',
     gradient: 'from-purple-500 to-pink-500',
   },
   {
     icon: MessageCircle,
-    title: 'Messagerie directe',
-    description: 'Échangez en temps réel avec votre agent dédié via notre messagerie intégrée.',
+    title: 'Réponse sous 2h',
+    description: 'Une question ? Ton agent te répond en 2h ouvrées max. Pas de bot, un vrai humain.',
     gradient: 'from-orange-500 to-red-500',
   },
   {
     icon: Shield,
-    title: 'Garantie sans risque',
-    description: 'Acompte de 300 CHF remboursé à 100% en cas d\'échec après 3 mois de recherches.',
+    title: '100% remboursé si échec',
+    description: '300 CHF remboursés intégralement après 3 mois sans résultat. Promis, signé.',
     gradient: 'from-indigo-500 to-violet-500',
   },
   {
     icon: Coins,
-    title: 'Tarification transparente',
-    description: 'En cas de succès : 1 mois de loyer de commission, moins les 300 CHF d\'acompte déjà versés.',
+    title: 'Pas de frais cachés',
+    description: '1 mois de loyer SEULEMENT en cas de succès. Pas de succès = pas de frais.',
     gradient: 'from-amber-500 to-orange-500',
   },
 ];
@@ -50,13 +50,13 @@ export function WhyChooseUs() {
         <div className="text-center mb-16 animate-fade-in">
           <div className="inline-flex items-center gap-2 glass-morphism rounded-full px-4 py-2 mb-4">
             <Award className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Nos avantages</span>
+            <span className="text-sm font-medium text-primary">Ce qui nous différencie</span>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
-            Pourquoi nous <span className="gradient-text-animated">choisir</span> ?
+            Pourquoi <span className="gradient-text-animated">500+ clients</span> nous font confiance
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Des avantages concrets pour une recherche immobilière sereine
+            Des engagements concrets, pas des promesses en l'air
           </p>
         </div>
 
