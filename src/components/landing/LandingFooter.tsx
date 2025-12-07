@@ -31,8 +31,7 @@ export function LandingFooter() {
               />
             </Link>
             <p className="text-muted-foreground text-sm max-w-md mb-6 leading-relaxed">
-              Logisorama est votre partenaire de confiance pour trouver le bien immobilier idéal en Suisse romande. 
-              Nous vous accompagnons à chaque étape de votre recherche.
+              Logisorama, une application <a href="https://www.immo-rama.ch" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">immo-rama.ch</a> – Votre partenaire de confiance pour trouver le bien immobilier idéal en Suisse romande.
             </p>
             <div className="inline-flex items-center gap-2">
               <div className="relative glass-morphism rounded-full px-4 py-2 text-sm text-muted-foreground border border-border/40 bg-card/80">
@@ -81,7 +80,7 @@ export function LandingFooter() {
               </li>
               <li>
                 <a 
-                  href="mailto:contact@immo-rama.ch" 
+                  href="mailto:info@immo-rama.ch" 
                   className="text-muted-foreground hover:text-primary transition-colors text-sm inline-flex items-center gap-1 group"
                 >
                   <span className="relative">
@@ -102,31 +101,22 @@ export function LandingFooter() {
             <ul className="space-y-4 text-sm text-muted-foreground">
               <li>
                 <a 
-                  href="mailto:contact@immo-rama.ch" 
+                  href="mailto:info@immo-rama.ch" 
                   className="hover:text-primary transition-colors inline-flex items-center gap-3 group"
                 >
                   <span className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-all">📧</span>
                   <span className="relative">
-                    contact@immo-rama.ch
+                    info@immo-rama.ch
                     <span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" />
                   </span>
                 </a>
               </li>
-              <li>
-                <a 
-                  href="tel:+41218020111" 
-                  className="hover:text-primary transition-colors inline-flex items-center gap-3 group"
-                >
-                  <span className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-all">📞</span>
-                  <span className="relative">
-                    +41 21 802 01 11
-                    <span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" />
-                  </span>
-                </a>
-              </li>
-              <li className="flex items-center gap-3">
-                <span className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center">📍</span>
-                <span>Suisse Romande</span>
+              <li className="flex items-start gap-3">
+                <span className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">📍</span>
+                <div className="flex flex-col">
+                  <span>Chemin de L'Esparcette 5</span>
+                  <span>1023 Crissier</span>
+                </div>
               </li>
             </ul>
           </div>
@@ -137,8 +127,10 @@ export function LandingFooter() {
           <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
           
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              © {currentYear} Immo-Rama.ch
+            <p className="text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
+              <span>© {currentYear} Immo-Rama.ch</span>
+              <span className="hidden sm:inline">|</span>
+              <span className="hidden sm:inline text-xs">IDE: CHE-442.303.796</span>
               <span className="hidden sm:inline">-</span>
               <span className="hidden sm:inline">Fait avec</span>
               <Heart className="h-3 w-3 text-primary hidden sm:inline-block" />
