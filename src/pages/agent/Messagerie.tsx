@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,7 @@ import { ChatHeader } from "@/components/messaging/ChatHeader";
 import { FloatingParticles, MeshGradientBackground, ChatPatternBackground } from "@/components/messaging/FloatingParticles";
 import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
 import { PremiumOffreCard } from "@/components/messaging/PremiumOffreCard";
+import { ScrollToTopButton } from "@/components/messaging/ScrollToTopButton";
 import { format, isSameDay, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import DateSeparator from "@/components/messaging/DateSeparator";
@@ -99,17 +100,70 @@ const Messagerie = () => {
   const [etatLieuxHeure, setEtatLieuxHeure] = useState("");
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesStartRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [unreadCountsMap, setUnreadCountsMap] = useState<Map<string, number>>(new Map());
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback((instant: boolean = false) => {
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
-    }, 100);
-  };
+      messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'instant' : 'smooth' });
+    }, 50);
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    messagesStartRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLDivElement;
+    setShowScrollTop(target.scrollTop > 300);
+  }, []);
 
   useEffect(() => {
     loadAgentAndConversations();
     markTypeAsRead('new_message');
   }, [user?.id]);
+
+  // Load unread counts after agent data is loaded
+  useEffect(() => {
+    if (agentId) {
+      loadUnreadCounts();
+    }
+  }, [agentId]);
+
+  const loadUnreadCounts = async () => {
+    if (!agentId) return;
+    try {
+      // Get all conversations for this agent
+      const { data: convs } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('agent_id', agentId);
+
+      if (!convs || convs.length === 0) return;
+
+      const convIds = convs.map(c => c.id);
+
+      // Count unread messages (not from agent)
+      const { data } = await supabase
+        .from('messages')
+        .select('conversation_id')
+        .eq('read', false)
+        .neq('sender_type', 'agent')
+        .in('conversation_id', convIds);
+
+      if (data) {
+        const countsMap = new Map<string, number>();
+        data.forEach(msg => {
+          const count = countsMap.get(msg.conversation_id) || 0;
+          countsMap.set(msg.conversation_id, count + 1);
+        });
+        setUnreadCountsMap(countsMap);
+      }
+    } catch (error) {
+      console.error('Error loading unread counts:', error);
+    }
+  };
 
   // Auto-select conversation from URL parameter
   useEffect(() => {
@@ -131,9 +185,18 @@ const Messagerie = () => {
     }
   }, [selectedConv]);
 
+  // Auto-scroll to bottom when conversation changes (instant) or new messages (smooth)
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, selectedConv]);
+    if (messages.length > 0) {
+      scrollToBottom(true);
+    }
+  }, [selectedConv, scrollToBottom]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      scrollToBottom(false);
+    }
+  }, [messages.length]);
 
   useEffect(() => {
     if (!selectedConv) return;
@@ -1109,8 +1172,8 @@ const Messagerie = () => {
             const contactInfo = getContactInfo(conv);
             const lastMsg = lastMessagesMap.get(conv.id);
             const lastMessageText = lastMsg?.content || (lastMsg?.attachment_name ? `📎 ${lastMsg.attachment_name}` : conv.subject || null);
-            const convMessages = messages.filter(m => m.conversation_id === conv.id);
-            const unreadCount = convMessages.filter(m => !m.read && m.sender_type !== 'agent').length;
+            // Use the preloaded unread counts map
+            const unreadCount = unreadCountsMap.get(conv.id) || 0;
             
             return (
               <PremiumConversationItem
@@ -1147,11 +1210,12 @@ const Messagerie = () => {
           </p>
         </div>
       )}
-      <ScrollArea className="flex-1 p-4 relative z-10">
+      <ScrollArea className="flex-1 p-4 relative z-10" onScrollCapture={handleScroll}>
         {isLoadingMessages ? (
           <MessagesListSkeleton />
         ) : (
         <div className="space-y-2 max-w-4xl mx-auto">
+          <div ref={messagesStartRef} />
           {/* Header qui défile avec les messages */}
           {currentConversation && (
             <div className="mb-4 pb-3 border-b border-border/30">
@@ -1243,6 +1307,7 @@ const Messagerie = () => {
         </div>
         )}
       </ScrollArea>
+      <ScrollToTopButton show={showScrollTop} onClick={scrollToTop} />
       {!currentConversation?.is_archived && (
         <div className="relative z-10">
           <MessageAttachmentUploader

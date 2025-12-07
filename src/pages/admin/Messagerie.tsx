@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Send, Search, Users, UserCog } from "lucide-react";
+import { ScrollToTopButton } from "@/components/messaging/ScrollToTopButton";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -50,18 +51,53 @@ const Messagerie = () => {
   } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesStartRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  const [unreadCountsMap, setUnreadCountsMap] = useState<Map<string, number>>(new Map());
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback((instant: boolean = false) => {
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
+      messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'instant' : 'smooth' });
+    }, 50);
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    messagesStartRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLDivElement;
+    setShowScrollTop(target.scrollTop > 300);
+  }, []);
 
   useEffect(() => {
     loadConversations();
+    loadUnreadCounts();
     // Mark new_message notifications as read when visiting this page
     markTypeAsRead('new_message');
   }, []);
+
+  const loadUnreadCounts = async () => {
+    try {
+      const { data } = await supabase
+        .from('messages')
+        .select('conversation_id')
+        .eq('read', false)
+        .neq('sender_type', 'admin');
+
+      if (data) {
+        const countsMap = new Map<string, number>();
+        data.forEach(msg => {
+          const count = countsMap.get(msg.conversation_id) || 0;
+          countsMap.set(msg.conversation_id, count + 1);
+        });
+        setUnreadCountsMap(countsMap);
+      }
+    } catch (error) {
+      console.error('Error loading unread counts:', error);
+    }
+  };
 
   // Auto-select conversation from URL parameter
   useEffect(() => {
@@ -77,10 +113,18 @@ const Messagerie = () => {
     }
   }, [conversations, searchParams]);
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to bottom when conversation changes (instant) or new messages (smooth)
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, selectedConv]);
+    if (messages.length > 0) {
+      scrollToBottom(true);
+    }
+  }, [selectedConv, scrollToBottom]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      scrollToBottom(false);
+    }
+  }, [messages.length]);
 
   useEffect(() => {
     if (selectedConv) {
@@ -473,7 +517,7 @@ const Messagerie = () => {
                 avatarUrl={null}
                 lastMessage={conv.lastMessageText}
                 lastMessageTime={conv.last_message_at}
-                unreadCount={0}
+                unreadCount={unreadCountsMap.get(conv.id) || 0}
                 isSelected={selectedConv === conv.id}
                 onClick={() => setSelectedConv(conv.id)}
                 index={index}
@@ -502,11 +546,12 @@ const Messagerie = () => {
       <ChatPatternBackground />
       <MeshGradientBackground />
       <FloatingParticles count={12} />
-      <ScrollArea className="flex-1 p-4 relative z-10">
+      <ScrollArea className="flex-1 p-4 relative z-10" onScrollCapture={handleScroll}>
         {isLoadingMessages ? (
           <MessagesListSkeleton />
         ) : (
           <div className="space-y-2 max-w-4xl mx-auto">
+            <div ref={messagesStartRef} />
             {selectedMessages.map((msg, index) => {
               const isSent = msg.sender_type === 'admin';
               const senderName = isSent ? undefined : msg.senderName;
@@ -537,6 +582,7 @@ const Messagerie = () => {
           </div>
         )}
       </ScrollArea>
+      <ScrollToTopButton show={showScrollTop} onClick={scrollToTop} />
       <div className="relative z-10">
         <MessageAttachmentUploader
           conversationId={selectedConv}
