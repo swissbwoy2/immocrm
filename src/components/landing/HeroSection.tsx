@@ -131,9 +131,8 @@ export function HeroSection() {
           {/* Trust indicator */}
           <div className="mt-10 animate-fade-in" style={{ animationDelay: '500ms' }}>
             <div className="inline-flex items-center gap-3 glass-morphism rounded-full px-6 py-3">
-              <span className="text-2xl">🇨🇭</span>
               <span className="text-sm text-muted-foreground">
-                Service 100% suisse • <span className="text-primary font-medium">Plus de 500 clients accompagnés</span>
+                <span className="text-primary font-medium">Plus de 500 clients accompagnés</span>
               </span>
             </div>
           </div>
