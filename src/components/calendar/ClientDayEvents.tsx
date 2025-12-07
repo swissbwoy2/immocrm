@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { CalendarEvent } from './types';
+import { CalendarEvent, eventTypeLabels, eventTypeColors } from './types';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 
 interface ClientDayEventsProps {
@@ -20,20 +20,6 @@ interface ClientDayEventsProps {
   onRefuserOffre: (visite: any) => void;
   onVoirOffre: () => void;
 }
-
-const eventTypeLabels: Record<string, string> = {
-  visite: 'Visite',
-  rappel: 'Rappel',
-  rendez_vous: 'Rendez-vous',
-  autre: 'Autre',
-};
-
-const eventTypeColors: Record<string, string> = {
-  visite: 'bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-400',
-  rappel: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30 dark:text-yellow-400',
-  rendez_vous: 'bg-green-500/10 text-green-700 border-green-500/30 dark:text-green-400',
-  autre: 'bg-gray-500/10 text-gray-700 border-gray-500/30 dark:text-gray-400',
-};
 
 export function ClientDayEvents({ 
   date, events, visites, 

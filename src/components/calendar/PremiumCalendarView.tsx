@@ -4,20 +4,7 @@ import { fr } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Calendar, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-
-export interface CalendarEvent {
-  id: string;
-  title: string;
-  event_date: string;
-  event_type: string;
-  status?: string;
-  priority?: string;
-  agent_id?: string;
-  client_id?: string;
-  description?: string;
-  all_day?: boolean;
-  end_date?: string;
-}
+import { CalendarEvent, eventTypeCalendarColors } from './types';
 
 interface PremiumCalendarViewProps {
   events: CalendarEvent[];
@@ -26,18 +13,6 @@ interface PremiumCalendarViewProps {
   onDateSelect: (date: Date) => void;
   onEventClick?: (event: any, type: 'event' | 'visite') => void;
 }
-
-const eventTypeColors: Record<string, string> = {
-  visite: 'bg-blue-500',
-  visite_deleguee: 'bg-green-600 ring-2 ring-green-300',
-  rappel: 'bg-amber-500',
-  rendez_vous: 'bg-emerald-500',
-  tache: 'bg-orange-500',
-  reunion: 'bg-purple-500',
-  signature: 'bg-emerald-600',
-  etat_lieux: 'bg-cyan-500',
-  autre: 'bg-gray-500',
-};
 
 // Memoized day component for performance
 const PremiumCalendarDay = memo(({ 
@@ -118,7 +93,7 @@ const PremiumCalendarDay = memo(({
             className={cn(
               'text-[9px] px-1.5 py-0.5 rounded-md truncate text-white cursor-pointer',
               'transition-all duration-200 hover:opacity-90 hover:translate-x-0.5',
-              eventTypeColors[item.type] || 'bg-gray-500'
+              eventTypeCalendarColors[item.type] || 'bg-gray-500'
             )}
             title={item.isVisite ? item.event.adresse : item.event.title}
           >
@@ -291,7 +266,7 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
             <div key={type} className="flex items-center gap-1.5 group cursor-default transition-all duration-200 hover:scale-105">
               <div className={cn(
                 'w-3 h-3 rounded-md shadow-sm',
-                eventTypeColors[type],
+                eventTypeCalendarColors[type],
                 ring && 'ring-2 ring-green-300'
               )} />
               <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{label}</span>
