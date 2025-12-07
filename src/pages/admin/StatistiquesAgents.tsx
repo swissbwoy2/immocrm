@@ -4,8 +4,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Users, DollarSign, TrendingUp, Award, Download } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, Award, Download, BarChart3 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
 
 interface AgentStats {
   agent_id: string;
@@ -172,14 +174,13 @@ export default function StatistiquesAgents() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Statistiques des Agents</h1>
-          <p className="text-muted-foreground">Performances et commissions par agent</p>
-        </div>
-        <div className="flex gap-2">
-          <div className="flex gap-2">
+      <PremiumPageHeader
+        title="Statistiques des Agents"
+        subtitle="Performances et commissions par agent"
+        icon={BarChart3}
+        badge="Analytics"
+        action={
+          <div className="flex gap-2 flex-wrap">
             {(['month', 'quarter', 'year', 'all'] as const).map((range) => (
               <Button
                 key={range}
@@ -193,51 +194,36 @@ export default function StatistiquesAgents() {
                 {range === 'all' && 'Total'}
               </Button>
             ))}
+            <Button onClick={exportToCSV} variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Exporter
+            </Button>
           </div>
-          <Button onClick={exportToCSV} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Exporter CSV
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '0ms' }}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Users className="h-4 w-4 text-blue-600 group-hover:scale-110 transition-transform" />
-              Total Clients
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold group-hover:scale-105 transition-transform">{totalClients}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '50ms' }}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-600 group-hover:scale-110 transition-transform" />
-              Total Transactions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold group-hover:scale-105 transition-transform">{totalTransactions}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-interactive animate-fade-in group" style={{ animationDelay: '100ms' }}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-emerald-600 group-hover:scale-110 transition-transform" />
-              Total Commissions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold group-hover:scale-105 transition-transform">{totalCommissions.toLocaleString('fr-CH')} CHF</div>
-          </CardContent>
-        </Card>
+        <PremiumKPICard
+          title="Total Clients"
+          value={totalClients}
+          icon={Users}
+          delay={0}
+        />
+        <PremiumKPICard
+          title="Total Transactions"
+          value={totalTransactions}
+          icon={TrendingUp}
+          variant="success"
+          delay={50}
+        />
+        <PremiumKPICard
+          title="Total Commissions"
+          value={`${totalCommissions.toLocaleString('fr-CH')} CHF`}
+          icon={DollarSign}
+          variant="success"
+          delay={100}
+        />
       </div>
 
       {/* Charts */}
