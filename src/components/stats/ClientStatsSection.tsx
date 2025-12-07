@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
-import { subDays, isWithinInterval, differenceInDays } from 'date-fns';
-import { Home, Calendar, FileCheck, Eye, CheckCircle, Clock, TrendingUp } from 'lucide-react';
+import { isWithinInterval, differenceInDays } from 'date-fns';
+import { Home, Calendar, FileCheck, CheckCircle, Clock, TrendingUp, Mail, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { DateRangeFilter, DateRange, getDefaultDateRange } from './DateRangeFilter';
 import { StatsCard } from './StatsCard';
-import { PerformanceChart } from './PerformanceChart';
+import { PremiumPerformanceChart } from './PremiumPerformanceChart';
 
 interface ClientStatsSectionProps {
   offres: any[];
@@ -173,23 +173,25 @@ export function ClientStatsSection({
         </div>
       </div>
 
-      {/* Charts with staggered animations */}
+      {/* Premium Charts with staggered animations */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="animate-fade-in" style={{ animationDelay: '250ms', animationFillMode: 'both' }}>
-          <PerformanceChart
+          <PremiumPerformanceChart
             title="Offres reçues"
             data={offresChartData}
             dateRange={dateRange}
             valueLabel="offres"
+            icon={Mail}
           />
         </div>
         <div className="animate-fade-in" style={{ animationDelay: '300ms', animationFillMode: 'both' }}>
-          <PerformanceChart
+          <PremiumPerformanceChart
             title="Visites"
             data={visitesChartData}
             dateRange={dateRange}
             color="hsl(142, 76%, 36%)"
             valueLabel="visites"
+            icon={Eye}
           />
         </div>
       </div>
