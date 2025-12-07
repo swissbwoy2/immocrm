@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ExternalLink, Image as ImageIcon } from 'lucide-react';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
@@ -61,6 +61,7 @@ export function LinkPreviewCard({ url, showInline = false, className }: LinkPrev
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   const normalizedUrl = useMemo(() => normalizeUrl(url), [url]);
   const hostname = useMemo(() => getHostname(normalizedUrl), [normalizedUrl]);
@@ -183,14 +184,16 @@ export function LinkPreviewCard({ url, showInline = false, className }: LinkPrev
     );
   }
 
-  // Hover card mode (preview on hover)
+  // Popover mode (preview on hover/click)
   return (
-    <HoverCard openDelay={200}>
-      <HoverCardTrigger asChild>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
         <Button 
           variant="outline" 
           size="sm" 
           className={cn("gap-2", className)}
+          onMouseEnter={() => setIsOpen(true)}
+          onMouseLeave={() => setIsOpen(false)}
           onClick={(e) => {
             e.stopPropagation();
             window.open(normalizedUrl || url, '_blank', 'noopener,noreferrer');
@@ -199,10 +202,15 @@ export function LinkPreviewCard({ url, showInline = false, className }: LinkPrev
           <ExternalLink className="h-4 w-4" />
           Voir l'annonce
         </Button>
-      </HoverCardTrigger>
-      <HoverCardContent className="w-80 p-0" side="top">
+      </PopoverTrigger>
+      <PopoverContent 
+        className="w-80 p-0" 
+        side="top"
+        onMouseEnter={() => setIsOpen(true)}
+        onMouseLeave={() => setIsOpen(false)}
+      >
         <PreviewContent />
-      </HoverCardContent>
-    </HoverCard>
+      </PopoverContent>
+    </Popover>
   );
 }
