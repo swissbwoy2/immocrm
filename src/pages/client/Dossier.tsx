@@ -1,16 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { 
   Mail, Phone, MapPin, Calendar, Users, DollarSign, 
   Home, Building2, Briefcase, Heart, Car, Upload, FileText,
   Download, Trash2, User, MessageSquare, Edit, RefreshCw,
-  Sparkles, Wallet, Search, FolderOpen
+  Sparkles, Wallet, Search, FolderOpen, CheckCircle2, XCircle
 } from 'lucide-react';
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from '@/utils/calculations';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 import { MissingDocumentsAlert } from '@/components/MissingDocumentsAlert';
 import { useClientCandidates, ClientCandidate } from '@/hooks/useClientCandidates';
@@ -43,6 +40,16 @@ import { SolvabilityAlert } from '@/components/SolvabilityAlert';
 import { PurchaseSolvabilityAlert } from '@/components/PurchaseSolvabilityAlert';
 import { ClientCandidatesManager } from '@/components/ClientCandidatesManager';
 import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSection';
+import { 
+  PremiumPageHeader,
+  PremiumMandatProgress,
+  PremiumFinanceCard,
+  PremiumDossierSection,
+  PremiumInfoGrid,
+  PremiumAgentCard,
+  PremiumDocumentCard,
+  PremiumDocumentEmptyState
+} from '@/components/premium';
 
 export default function Dossier() {
   const navigate = useNavigate();
@@ -285,18 +292,6 @@ export default function Dossier() {
     setEditProfileDialogOpen(true);
   };
 
-  const getFileIcon = (type: string) => {
-    if (type.includes('pdf')) return '📄';
-    if (type.includes('image')) return '🖼️';
-    return '📎';
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-  };
-
   const calculateAnciennete = (dateEngagement: string | null, ancienneteMois: number | null) => {
     if (ancienneteMois) {
       const years = Math.floor(ancienneteMois / 12);
@@ -398,574 +393,366 @@ export default function Dossier() {
 
   const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
   const daysRemaining = calculateDaysRemaining(client.date_ajout || client.created_at);
-  const progressPercentage = Math.min((daysElapsed / 90) * 100, 100);
   const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="p-4 md:p-8 space-y-6">
-        {/* Header avec animation */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 md:p-8 border border-border/50 backdrop-blur-sm animate-fade-in">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
-          
-          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2.5 bg-primary/10 rounded-xl backdrop-blur-sm">
-                  <FolderOpen className="w-6 h-6 text-primary" />
-                </div>
-                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-                  Mon dossier
-                </h1>
-              </div>
-              <p className="text-muted-foreground">Toutes vos informations personnelles</p>
-            </div>
+      {/* Floating particles background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        {[...Array(8)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-2 h-2 rounded-full bg-primary/10 animate-float"
+            style={{
+              left: `${10 + i * 12}%`,
+              top: `${15 + (i % 4) * 20}%`,
+              animationDelay: `${i * 0.8}s`,
+              animationDuration: `${5 + i}s`
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="relative z-10 p-4 md:p-8 space-y-6">
+        {/* Premium Header */}
+        <PremiumPageHeader 
+          title="Mon dossier"
+          subtitle="Toutes vos informations personnelles"
+          icon={FolderOpen}
+          action={
             <Button onClick={handleEditProfileClick} className="group relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-white/20 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
               <Edit className="w-4 h-4 mr-2" />
               Modifier mes informations
             </Button>
-          </div>
-        </div>
+          }
+          className="mb-6"
+        />
 
-        {/* Barre de progression du mandat */}
-        <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group animate-fade-in" style={{ animationDelay: '0.1s' }}>
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-          <CardHeader className="relative">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-primary" />
-                  Progression du mandat
-                </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {Math.floor(daysElapsed)} jours écoulés sur 90
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">{formatTimeRemaining(daysRemaining)}</p>
-                <p className="text-sm text-muted-foreground">temps restant</p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="relative">
-            <Progress 
-              value={progressPercentage} 
-              className="h-3"
-              indicatorClassName={
-                daysElapsed < 60 ? 'bg-gradient-to-r from-green-500 to-emerald-400' :
-                daysElapsed < 90 ? 'bg-gradient-to-r from-orange-500 to-amber-400' :
-                'bg-gradient-to-r from-red-500 to-rose-400'
-              }
-            />
-            <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-              <span>Début: {new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</span>
-              <span>Fin: {new Date(new Date(client.date_ajout || client.created_at).getTime() + 90 * 24 * 60 * 60 * 1000).toLocaleDateString('fr-CH')}</span>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Premium Mandat Progress */}
+        <PremiumMandatProgress
+          daysElapsed={daysElapsed}
+          daysRemaining={daysRemaining}
+          startDate={client.date_ajout || client.created_at}
+        />
 
         {/* Alerte documents manquants */}
         <MissingDocumentsAlert documents={documents} />
 
         {/* Situation financière */}
-        <div className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Wallet className="w-5 h-5 text-primary" />
-            </div>
-            <h2 className="text-xl font-semibold">Situation financière</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-              <CardHeader className="pb-3 relative">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-primary/10 rounded-lg">
-                    <DollarSign className="w-4 h-4 text-primary" />
-                  </div>
-                  <CardTitle className="text-sm">Revenu mensuel</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <p className="text-2xl font-bold">{(client.revenus_mensuels || 0).toLocaleString('fr-CH')} CHF</p>
-              </CardContent>
-            </Card>
-
-            <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-              <CardHeader className="pb-3 relative">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-primary/10 rounded-lg">
-                    <DollarSign className="w-4 h-4 text-primary" />
-                  </div>
-                  <CardTitle className="text-sm">
-                    {isAcheteur ? 'Prix d\'achat recherché' : 'Budget maximum'}
-                  </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="relative">
-                <p className="text-2xl font-bold">{(client.budget_max || 0).toLocaleString('fr-CH')} CHF</p>
-              </CardContent>
-            </Card>
-
+        <PremiumDossierSection title="Situation financière" icon={Wallet} delay={100}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <PremiumFinanceCard
+              title="Revenu mensuel"
+              value={client.revenus_mensuels || 0}
+              icon={DollarSign}
+              variant="default"
+              delay={0}
+            />
+            
+            <PremiumFinanceCard
+              title={isAcheteur ? "Prix d'achat recherché" : "Budget maximum"}
+              value={client.budget_max || 0}
+              icon={DollarSign}
+              variant="warning"
+              delay={50}
+            />
+            
             {isAcheteur ? (
-              <Card className="backdrop-blur-xl bg-blue-500/10 border-blue-500/30 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/5 to-blue-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                <CardHeader className="pb-3 relative">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-blue-500/20 rounded-lg">
-                      <DollarSign className="w-4 h-4 text-blue-500" />
-                    </div>
-                    <CardTitle className="text-sm">Prix max finançable</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="relative">
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {purchaseSolvabilityResult.prixAchatMax.toLocaleString('fr-CH')} CHF
-                  </p>
-                  <Badge variant="secondary" className="mt-1 bg-blue-500/20 text-blue-700 dark:text-blue-300">Règle 33% charges</Badge>
-                </CardContent>
-              </Card>
+              <PremiumFinanceCard
+                title="Prix max finançable"
+                value={purchaseSolvabilityResult.prixAchatMax}
+                icon={Home}
+                variant="info"
+                badge="Règle 33% charges"
+                delay={100}
+              />
             ) : (
-              <Card className="backdrop-blur-xl bg-green-500/10 border-green-500/30 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/5 to-green-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                <CardHeader className="pb-3 relative">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 bg-green-500/20 rounded-lg">
-                      <DollarSign className="w-4 h-4 text-green-500" />
-                    </div>
-                    <CardTitle className="text-sm">Budget recommandé</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="relative">
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {budgetRecommande.toLocaleString('fr-CH')} CHF
-                  </p>
-                  <Badge variant="secondary" className="mt-1 bg-green-500/20 text-green-700 dark:text-green-300">Règle du tiers</Badge>
-                </CardContent>
-              </Card>
+              <PremiumFinanceCard
+                title="Budget recommandé"
+                value={budgetRecommande}
+                icon={DollarSign}
+                variant="success"
+                badge="Règle du tiers"
+                delay={100}
+              />
             )}
           </div>
 
           {/* Section Capacité d'achat pour les acheteurs */}
           {isAcheteur && (
-            <Card className="mt-4 backdrop-blur-xl bg-blue-500/5 border-blue-500/20 shadow-lg">
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Home className="w-5 h-5 text-blue-500" />
-                  Capacité d'achat
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="p-3 rounded-lg bg-background/50">
-                    <p className="text-sm text-muted-foreground">Prix max finançable</p>
-                    <p className="font-bold text-lg">{purchaseSolvabilityResult.prixAchatMax.toLocaleString('fr-CH')} CHF</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-background/50">
-                    <p className="text-sm text-muted-foreground">Apport disponible</p>
-                    <p className="font-bold text-lg">{(client.apport_personnel || 0).toLocaleString('fr-CH')} CHF</p>
-                    <p className="text-xs text-muted-foreground">
-                      Requis (26%): {purchaseSolvabilityResult.apportRequis.toLocaleString('fr-CH')} CHF
-                    </p>
-                    {purchaseSolvabilityResult.apportManquant > 0 && (
-                      <p className="text-xs text-red-500">
-                        Manque: {purchaseSolvabilityResult.apportManquant.toLocaleString('fr-CH')} CHF
-                      </p>
-                    )}
-                  </div>
-                  <div className="p-3 rounded-lg bg-background/50">
-                    <p className="text-sm text-muted-foreground">Charges mensuelles estimées</p>
-                    <p className="font-bold text-lg">{purchaseSolvabilityResult.chargesMensuelles.toLocaleString('fr-CH')} CHF</p>
-                    <p className="text-xs text-muted-foreground">Intérêts + amortissement + entretien</p>
-                  </div>
-                  <div className="p-3 rounded-lg bg-background/50">
-                    <p className="text-sm text-muted-foreground">Taux d'effort</p>
-                    <p className={`font-bold text-lg ${purchaseSolvabilityResult.tauxEffort > 33 ? 'text-red-500' : 'text-green-600'}`}>
-                      {purchaseSolvabilityResult.tauxEffort}%
-                    </p>
-                    <p className="text-xs text-muted-foreground">Maximum recommandé: 33%</p>
-                  </div>
+            <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 mb-6">
+              <h4 className="font-medium flex items-center gap-2 mb-4">
+                <Home className="w-5 h-5 text-blue-500" />
+                Capacité d'achat
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-3 rounded-lg bg-background/50 backdrop-blur-sm">
+                  <p className="text-sm text-muted-foreground">Prix max finançable</p>
+                  <p className="font-bold text-lg">{purchaseSolvabilityResult.prixAchatMax.toLocaleString('fr-CH')} CHF</p>
                 </div>
-              </CardContent>
-            </Card>
+                <div className="p-3 rounded-lg bg-background/50 backdrop-blur-sm">
+                  <p className="text-sm text-muted-foreground">Apport disponible</p>
+                  <p className="font-bold text-lg">{(client.apport_personnel || 0).toLocaleString('fr-CH')} CHF</p>
+                  <p className="text-xs text-muted-foreground">
+                    Requis (26%): {purchaseSolvabilityResult.apportRequis.toLocaleString('fr-CH')} CHF
+                  </p>
+                  {purchaseSolvabilityResult.apportManquant > 0 && (
+                    <p className="text-xs text-red-500">
+                      Manque: {purchaseSolvabilityResult.apportManquant.toLocaleString('fr-CH')} CHF
+                    </p>
+                  )}
+                </div>
+                <div className="p-3 rounded-lg bg-background/50 backdrop-blur-sm">
+                  <p className="text-sm text-muted-foreground">Charges mensuelles estimées</p>
+                  <p className="font-bold text-lg">{purchaseSolvabilityResult.chargesMensuelles.toLocaleString('fr-CH')} CHF</p>
+                  <p className="text-xs text-muted-foreground">Intérêts + amortissement + entretien</p>
+                </div>
+                <div className="p-3 rounded-lg bg-background/50 backdrop-blur-sm">
+                  <p className="text-sm text-muted-foreground">Taux d'effort</p>
+                  <p className={`font-bold text-lg ${purchaseSolvabilityResult.tauxEffort > 33 ? 'text-red-500' : 'text-green-600'}`}>
+                    {purchaseSolvabilityResult.tauxEffort}%
+                  </p>
+                  <p className="text-xs text-muted-foreground">Maximum recommandé: 33%</p>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Détails des charges */}
-          <Card className="mt-4 backdrop-blur-xl bg-card/80 border-border/50 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-primary" />
-                Détails des charges
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Loyer actuel</p>
-                  <p className="font-medium">
-                    {client.loyer_actuel ? `${client.loyer_actuel.toLocaleString('fr-CH')} CHF/mois` : '-'}
-                  </p>
-                </div>
-                
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Charges mensuelles</p>
-                  <p className="font-medium">
-                    {client.charges_mensuelles ? `${client.charges_mensuelles.toLocaleString('fr-CH')} CHF/mois` : '-'}
-                  </p>
-                </div>
-                
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Charges extraordinaires</p>
-                  <p className="font-medium">
-                    {client.charges_extraordinaires 
-                      ? `Oui${client.montant_charges_extra ? ` (${client.montant_charges_extra.toLocaleString('fr-CH')} CHF)` : ''}`
-                      : 'Non'}
-                  </p>
-                </div>
-                
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Autres crédits en cours</p>
-                  <p className="font-medium">{client.autres_credits ? 'Oui' : 'Non'}</p>
-                </div>
-                
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Apport personnel disponible</p>
-                  <p className="font-medium">
-                    {client.apport_personnel ? `${client.apport_personnel.toLocaleString('fr-CH')} CHF` : '-'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Solvabilité - Alerte détaillée */}
-          {isAcheteur ? (
-            <PurchaseSolvabilityAlert result={purchaseSolvabilityResult} />
-          ) : (
-            <SolvabilityAlert result={solvabilityResult} />
-          )}
-
-          {/* Gestion des candidats */}
-          <ClientCandidatesManager 
-            clientId={client.id}
-            clientRevenus={client.revenus_mensuels || 0}
-            budgetDemande={client.budget_max || 0}
-            onCandidatesChange={refreshCandidates}
-          />
+          <div className="mb-6">
+            <h4 className="font-medium flex items-center gap-2 mb-4">
+              <DollarSign className="w-5 h-5 text-primary" />
+              Détails des charges
+            </h4>
+            <PremiumInfoGrid
+              columns={2}
+              items={[
+                { 
+                  icon: Home, 
+                  label: 'Loyer actuel', 
+                  value: client.loyer_actuel ? `${client.loyer_actuel.toLocaleString('fr-CH')} CHF/mois` : '-' 
+                },
+                { 
+                  icon: DollarSign, 
+                  label: 'Charges mensuelles', 
+                  value: client.charges_mensuelles ? `${client.charges_mensuelles.toLocaleString('fr-CH')} CHF/mois` : '-' 
+                },
+                { 
+                  icon: DollarSign, 
+                  label: 'Charges extraordinaires', 
+                  value: client.charges_extraordinaires 
+                    ? `Oui${client.montant_charges_extra ? ` (${client.montant_charges_extra.toLocaleString('fr-CH')} CHF)` : ''}`
+                    : 'Non'
+                },
+                { 
+                  icon: DollarSign, 
+                  label: 'Autres crédits en cours', 
+                  value: client.autres_credits ? 'Oui' : 'Non'
+                },
+                { 
+                  icon: DollarSign, 
+                  label: 'Apport personnel disponible', 
+                  value: client.apport_personnel ? `${client.apport_personnel.toLocaleString('fr-CH')} CHF` : '-' 
+                },
+              ]}
+            />
+          </div>
 
           {/* Statuts légaux */}
-          <Card className="mt-4 backdrop-blur-xl bg-card/80 border-border/50 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
-                Statuts légaux
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Poursuites / Actes de défaut</p>
-                  <Badge variant={client.poursuites ? "destructive" : "secondary"} className={client.poursuites ? "" : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"}>
-                    {client.poursuites ? '⚠️ Oui' : '✅ Aucune'}
-                  </Badge>
-                </div>
-                
-                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Sous curatelle</p>
-                  <Badge variant={client.curatelle ? "destructive" : "secondary"} className={client.curatelle ? "" : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"}>
-                    {client.curatelle ? '⚠️ Oui' : '✅ Non'}
-                  </Badge>
-                </div>
+          <div>
+            <h4 className="font-medium flex items-center gap-2 mb-4">
+              <FileText className="w-5 h-5 text-primary" />
+              Statuts légaux
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-border/30">
+                <p className="text-sm text-muted-foreground">Poursuites / Actes de défaut</p>
+                <Badge variant={client.poursuites ? "destructive" : "secondary"} className={client.poursuites ? "" : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"}>
+                  {client.poursuites ? (
+                    <><XCircle className="w-3 h-3 mr-1" /> Oui</>
+                  ) : (
+                    <><CheckCircle2 className="w-3 h-3 mr-1" /> Aucune</>
+                  )}
+                </Badge>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              
+              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-border/30">
+                <p className="text-sm text-muted-foreground">Sous curatelle</p>
+                <Badge variant={client.curatelle ? "destructive" : "secondary"} className={client.curatelle ? "" : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"}>
+                  {client.curatelle ? (
+                    <><XCircle className="w-3 h-3 mr-1" /> Oui</>
+                  ) : (
+                    <><CheckCircle2 className="w-3 h-3 mr-1" /> Non</>
+                  )}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </PremiumDossierSection>
+
+        {/* Solvabilité - Alerte détaillée */}
+        {isAcheteur ? (
+          <PurchaseSolvabilityAlert result={purchaseSolvabilityResult} />
+        ) : (
+          <SolvabilityAlert result={solvabilityResult} />
+        )}
+
+        {/* Gestion des candidats */}
+        <ClientCandidatesManager 
+          clientId={client.id}
+          clientRevenus={client.revenus_mensuels || 0}
+          budgetDemande={client.budget_max || 0}
+          onCandidatesChange={refreshCandidates}
+        />
 
         {/* Informations personnelles */}
-        <div className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <User className="w-5 h-5 text-primary" />
-            </div>
-            <h2 className="text-xl font-semibold">Informations personnelles</h2>
-          </div>
-          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-lg">
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-                <Mail className="w-5 h-5 text-primary mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{profile.email}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-                <Phone className="w-5 h-5 text-primary mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Téléphone</p>
-                  <p className="font-medium">{profile.telephone || 'Non renseigné'}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-                <Users className="w-5 h-5 text-primary mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Situation familiale</p>
-                  <p className="font-medium">{client.situation_familiale || 'Non renseigné'}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
-                <Building2 className="w-5 h-5 text-primary mt-0.5" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Nationalité / Permis</p>
-                  <p className="font-medium">{client.nationalite || 'Non renseigné'} • {client.type_permis || 'Non renseigné'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <PremiumDossierSection title="Informations personnelles" icon={User} delay={200}>
+          <PremiumInfoGrid
+            columns={2}
+            items={[
+              { icon: Mail, label: 'Email', value: profile.email },
+              { icon: Phone, label: 'Téléphone', value: profile.telephone || 'Non renseigné' },
+              { icon: Users, label: 'Situation familiale', value: client.situation_familiale || 'Non renseigné' },
+              { icon: Building2, label: 'Nationalité / Permis', value: `${client.nationalite || 'Non renseigné'} • ${client.type_permis || 'Non renseigné'}` },
+            ]}
+          />
+        </PremiumDossierSection>
 
         {/* Situation professionnelle */}
-        <div className="animate-fade-in" style={{ animationDelay: '0.4s' }}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Briefcase className="w-5 h-5 text-primary" />
-            </div>
-            <h2 className="text-xl font-semibold">Situation professionnelle</h2>
-          </div>
-          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Briefcase className="w-5 h-5 text-primary" />
-                Emploi et revenus
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Profession</p>
-                  <p className="font-medium">{client.profession || '-'}</p>
-                </div>
-
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Employeur</p>
-                  <p className="font-medium">{client.employeur || '-'}</p>
-                </div>
-
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Secteur d'activité</p>
-                  <p className="font-medium">{client.secteur_activite || '-'}</p>
-                </div>
-
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Type de contrat</p>
-                  <p className="font-medium">{client.type_contrat || '-'}</p>
-                </div>
-
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Date d'engagement</p>
-                  <p className="font-medium">
-                    {client.date_engagement 
-                      ? new Date(client.date_engagement).toLocaleDateString('fr-CH')
-                      : '-'}
-                  </p>
-                </div>
-
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Ancienneté</p>
-                  <p className="font-medium">
-                    {calculateAnciennete(client.date_engagement, client.anciennete_mois) || '-'}
-                  </p>
-                </div>
-
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Source des revenus</p>
-                  <p className="font-medium">{client.source_revenus || '-'}</p>
-                </div>
-
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Revenu mensuel net</p>
-                  <p className="font-medium">{(client.revenus_mensuels || 0).toLocaleString('fr-CH')} CHF</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <PremiumDossierSection title="Situation professionnelle" icon={Briefcase} delay={300}>
+          <PremiumInfoGrid
+            columns={2}
+            items={[
+              { icon: Briefcase, label: 'Profession', value: client.profession || '-' },
+              { icon: Building2, label: 'Employeur', value: client.employeur || '-' },
+              { icon: Building2, label: "Secteur d'activité", value: client.secteur_activite || '-' },
+              { icon: FileText, label: 'Type de contrat', value: client.type_contrat || '-' },
+              { icon: Calendar, label: "Date d'engagement", value: client.date_engagement ? new Date(client.date_engagement).toLocaleDateString('fr-CH') : '-' },
+              { icon: Calendar, label: 'Ancienneté', value: calculateAnciennete(client.date_engagement, client.anciennete_mois) || '-' },
+              { icon: DollarSign, label: 'Source des revenus', value: client.source_revenus || '-' },
+              { icon: DollarSign, label: 'Revenu mensuel net', value: `${(client.revenus_mensuels || 0).toLocaleString('fr-CH')} CHF` },
+            ]}
+          />
+        </PremiumDossierSection>
 
         {/* Critères de recherche */}
-        <div className="animate-fade-in" style={{ animationDelay: '0.5s' }}>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Search className="w-5 h-5 text-primary" />
-            </div>
-            <h2 className="text-xl font-semibold">Critères de recherche</h2>
-          </div>
-          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-lg">
-            <CardContent className="space-y-6 pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Type de bien</p>
-                  <p className="font-medium">{client.type_bien || 'Non renseigné'}</p>
-                </div>
+        <PremiumDossierSection title="Critères de recherche" icon={Search} delay={400}>
+          <PremiumInfoGrid
+            columns={2}
+            items={[
+              { icon: Home, label: 'Type de bien', value: client.type_bien || 'Non renseigné' },
+              { icon: Home, label: 'Nombre de pièces souhaité', value: client.pieces ? `${client.pieces} pièces` : 'Non renseigné' },
+              { icon: DollarSign, label: isAcheteur ? "Prix d'achat recherché" : 'Budget maximum', value: `${(client.budget_max || 0).toLocaleString('fr-CH')} CHF` },
+              { icon: MapPin, label: 'Région recherchée', value: client.region_recherche || 'Non renseigné' },
+            ]}
+          />
 
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Nombre de pièces souhaité</p>
-                  <p className="font-medium">{client.pieces || 'Non renseigné'} pièces</p>
+          {/* Souhaits particuliers */}
+          {(client.souhaits_particuliers || client.animaux !== null || client.vehicules !== null || client.instrument_musique !== null) && (
+            <div className="mt-6 pt-6 border-t border-border/30">
+              <h4 className="font-medium flex items-center gap-2 mb-4">
+                <Heart className="w-5 h-5 text-primary" />
+                Souhaits particuliers
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                <div className="p-3 rounded-xl bg-muted/30 flex items-center gap-2">
+                  <span>🐾</span>
+                  <span className="text-sm">Animaux: {client.animaux ? 'Oui' : 'Non'}</span>
                 </div>
-
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">
-                    {isAcheteur ? 'Prix d\'achat recherché' : 'Budget maximum'}
-                  </p>
-                  <p className="font-medium">{(client.budget_max || 0).toLocaleString('fr-CH')} CHF</p>
+                <div className="p-3 rounded-xl bg-muted/30 flex items-center gap-2">
+                  <span>🚗</span>
+                  <span className="text-sm">Véhicules: {client.vehicules ? 'Oui' : 'Non'}</span>
                 </div>
-
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-sm text-muted-foreground">Région recherchée</p>
-                  <p className="font-medium">{client.region_recherche || 'Non renseigné'}</p>
+                <div className="p-3 rounded-xl bg-muted/30 flex items-center gap-2">
+                  <span>🎵</span>
+                  <span className="text-sm">Instrument: {client.instrument_musique ? 'Oui' : 'Non'}</span>
                 </div>
+                {client.numero_plaques && (
+                  <div className="p-3 rounded-xl bg-muted/30 flex items-center gap-2">
+                    <Car className="w-4 h-4 text-primary" />
+                    <span className="text-sm">Plaques: {client.numero_plaques}</span>
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              {client.souhaits_particuliers && (
+                <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
+                  <p className="text-sm text-muted-foreground mb-1">Notes</p>
+                  <p className="text-sm">{client.souhaits_particuliers}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Logement actuel */}
+          <div className="mt-6 pt-6 border-t border-border/30">
+            <h4 className="font-medium flex items-center gap-2 mb-4">
+              <Home className="w-5 h-5 text-primary" />
+              Logement actuel
+            </h4>
+            <PremiumInfoGrid
+              columns={2}
+              items={[
+                { icon: Home, label: 'Loyer actuel', value: client.loyer_actuel ? `${client.loyer_actuel.toLocaleString('fr-CH')} CHF/mois` : '-' },
+                { icon: Home, label: 'Nombre de pièces', value: client.pieces_actuel ? `${client.pieces_actuel} pièces` : '-' },
+                { icon: Calendar, label: 'Depuis le', value: client.depuis_le ? new Date(client.depuis_le).toLocaleDateString('fr-CH') : '-' },
+                { icon: Building2, label: 'Gérance actuelle', value: client.gerance_actuelle || '-' },
+                { icon: Phone, label: 'Contact gérance', value: client.contact_gerance || '-' },
+                { icon: FileText, label: 'Motif de changement', value: client.motif_changement || '-' },
+              ]}
+            />
+          </div>
+        </PremiumDossierSection>
 
         {/* Mon agent */}
         {agent && (
-          <div className="animate-fade-in" style={{ animationDelay: '0.6s' }}>
+          <div className="animate-fade-in" style={{ animationDelay: '500ms' }}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-primary/10 rounded-lg">
+              <div className="relative p-2 bg-primary/10 rounded-xl">
                 <User className="w-5 h-5 text-primary" />
               </div>
               <h2 className="text-xl font-semibold">Mon agent</h2>
             </div>
-            <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <div className="p-4 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full">
-                    <User className="w-8 h-8 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-lg">{agent.prenom} {agent.nom}</p>
-                    <div className="space-y-2 mt-3">
-                      <div className="flex items-center gap-2 text-sm p-2 rounded-lg bg-muted/30">
-                        <Mail className="w-4 h-4 text-primary" />
-                        <a href={`mailto:${agent.email}`} className="text-primary hover:underline">
-                          {agent.email}
-                        </a>
-                      </div>
-                      {agent.telephone && (
-                        <div className="flex items-center gap-2 text-sm p-2 rounded-lg bg-muted/30">
-                          <Phone className="w-4 h-4 text-primary" />
-                          <a href={`tel:${agent.telephone}`} className="text-primary hover:underline">
-                            {agent.telephone}
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      className="mt-4 group"
-                      onClick={() => navigate('/client/messagerie')}
-                    >
-                      <MessageSquare className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                      Envoyer un message
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <PremiumAgentCard
+              agent={agent}
+              onMessage={() => navigate('/client/messagerie')}
+              onCall={() => window.location.href = `tel:${agent.telephone}`}
+            />
           </div>
         )}
 
         {/* Mes documents */}
-        <div className="animate-fade-in" style={{ animationDelay: '0.7s' }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <FileText className="w-5 h-5 text-primary" />
-              </div>
-              <h2 className="text-xl font-semibold">Mes documents</h2>
-            </div>
+        <PremiumDossierSection 
+          title="Mes documents" 
+          icon={FileText} 
+          delay={600}
+          action={
             <Button onClick={() => setUploadDialogOpen(true)} size="sm" className="group relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-white/20 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
               <Upload className="w-4 h-4 mr-2" />
               Ajouter un document
             </Button>
-          </div>
-
+          }
+        >
           {documents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {documents.map((doc, index) => (
-                <Card key={doc.id} className="backdrop-blur-xl bg-card/80 border-border/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden group animate-fade-in" style={{ animationDelay: `${0.1 * index}s` }}>
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                  <CardContent className="p-4 relative">
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <div className="flex items-start gap-2 flex-1 min-w-0">
-                        <span className="text-2xl">{getFileIcon(doc.type)}</span>
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium text-sm truncate" title={doc.nom}>
-                            {doc.nom}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatFileSize(doc.taille)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="text-xs text-muted-foreground mb-3">
-                      Ajouté le {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 group/btn"
-                        onClick={() => handleDownload(doc)}
-                      >
-                        <Download className="w-3 h-3 mr-1 group-hover/btn:scale-110 transition-transform" />
-                        Télécharger
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setSelectedDoc(doc);
-                          setDeleteDialogOpen(true);
-                        }}
-                        className="hover:bg-red-500/10"
-                      >
-                        <Trash2 className="w-3 h-3 text-red-500" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                <PremiumDocumentCard
+                  key={doc.id}
+                  document={doc}
+                  onDownload={handleDownload}
+                  onDelete={(doc) => {
+                    setSelectedDoc(doc);
+                    setDeleteDialogOpen(true);
+                  }}
+                  delay={index * 50}
+                />
               ))}
             </div>
           ) : (
-            <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-lg">
-              <CardContent className="py-12 text-center">
-                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
-                  <FileText className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <p className="text-muted-foreground mb-4">
-                  Aucun document uploadé
-                </p>
-                <Button onClick={() => setUploadDialogOpen(true)} size="sm" className="group relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-white/20 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                  <Upload className="w-4 h-4 mr-2" />
-                  Ajouter un document
-                </Button>
-              </CardContent>
-            </Card>
+            <PremiumDocumentEmptyState onUpload={() => setUploadDialogOpen(true)} />
           )}
-        </div>
+        </PremiumDossierSection>
       </div>
 
       {/* Upload Dialog */}
