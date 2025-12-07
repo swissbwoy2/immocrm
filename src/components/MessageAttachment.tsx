@@ -7,7 +7,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 interface MessageAttachmentProps {
   url: string;
@@ -64,7 +66,10 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
           </div>
         </div>
         <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-          <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden">
+          <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden" aria-describedby={undefined}>
+            <VisuallyHidden>
+              <DialogTitle>Aperçu de l'image: {name}</DialogTitle>
+            </VisuallyHidden>
             <div className="relative">
               <img src={url} alt={name} className="w-full h-auto max-h-[85vh] object-contain" />
               <div className="absolute top-2 right-2 flex gap-2">
@@ -228,7 +233,10 @@ export const MessageAttachment = ({ url, type, name, size }: MessageAttachmentPr
         </Card>
         
         <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-          <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden">
+          <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden" aria-describedby={undefined}>
+            <VisuallyHidden>
+              <DialogTitle>Lecture vidéo: {name}</DialogTitle>
+            </VisuallyHidden>
             <video 
               controls 
               autoPlay
