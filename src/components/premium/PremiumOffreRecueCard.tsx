@@ -150,11 +150,12 @@ export function PremiumOffreRecueCard({ offre, index = 0, onClick, className }: 
       
       {/* Content */}
       <div className="relative p-5">
-        {/* Header with status */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
+        {/* Header with address */}
+        <div className="mb-4">
+          {/* Address - full width */}
+          <div className="flex items-start gap-2 mb-3">
             <div className={cn(
-              "p-2.5 rounded-xl transition-all duration-300 flex-shrink-0",
+              "p-2 rounded-lg transition-all duration-300 flex-shrink-0",
               "bg-gradient-to-br from-background/80 to-background/60",
               "group-hover:shadow-lg",
               isAccepted && "group-hover:shadow-success/20",
@@ -162,54 +163,57 @@ export function PremiumOffreRecueCard({ offre, index = 0, onClick, className }: 
               !isAccepted && !isRefused && "group-hover:shadow-primary/20"
             )}>
               <Home className={cn(
-                "w-5 h-5 transition-all duration-300 group-hover:scale-110",
+                "w-4 h-4 transition-all duration-300 group-hover:scale-110",
                 config.color
               )} />
             </div>
-            
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start gap-2 mb-1">
+            <div className="flex-1">
+              <div className="flex items-start gap-1.5">
                 <MapPin className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                <p className="font-semibold text-foreground group-hover:text-primary transition-colors duration-300 text-sm leading-tight line-clamp-2">
+                <p className="font-semibold text-foreground group-hover:text-primary transition-colors duration-300 text-sm leading-snug">
                   {offre.adresse}
                 </p>
-              </div>
-              
-              {/* Property details */}
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                {offre.pieces && (
-                  <span className="flex items-center gap-1">
-                    <Home className="w-3 h-3" />
-                    {offre.pieces}p
-                  </span>
-                )}
-                {offre.surface && (
-                  <span className="flex items-center gap-1">
-                    <Maximize2 className="w-3 h-3" />
-                    {offre.surface}m²
-                  </span>
-                )}
-                {offre.prix && (
-                  <span className="flex items-center gap-1 font-medium text-foreground">
-                    <Banknote className="w-3 h-3" />
-                    {offre.prix.toLocaleString('fr-CH')} CHF
-                  </span>
-                )}
               </div>
             </div>
           </div>
           
-          {!isNew && (
-            <Badge className={cn(
-              "ml-2 shadow-sm transition-all duration-300 flex-shrink-0",
-              isAccepted && "bg-success/10 text-success border-success/30",
-              isRefused && "bg-destructive/10 text-destructive border-destructive/30",
-              !isAccepted && !isRefused && "bg-muted border-border"
-            )}>
-              <StatusIcon className="w-3 h-3 mr-1" />
-              {config.label}
-            </Badge>
-          )}
+          {/* Status badge and property details */}
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            {/* Property details */}
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              {offre.pieces && (
+                <span className="flex items-center gap-1">
+                  <Home className="w-3 h-3" />
+                  {offre.pieces}p
+                </span>
+              )}
+              {offre.surface && (
+                <span className="flex items-center gap-1">
+                  <Maximize2 className="w-3 h-3" />
+                  {offre.surface}m²
+                </span>
+              )}
+              {offre.prix && (
+                <span className="flex items-center gap-1 font-medium text-foreground">
+                  <Banknote className="w-3 h-3" />
+                  {offre.prix.toLocaleString('fr-CH')} CHF
+                </span>
+              )}
+            </div>
+            
+            {/* Status badge */}
+            {!isNew && (
+              <Badge className={cn(
+                "shadow-sm transition-all duration-300",
+                isAccepted && "bg-success/10 text-success border-success/30",
+                isRefused && "bg-destructive/10 text-destructive border-destructive/30",
+                !isAccepted && !isRefused && "bg-muted border-border"
+              )}>
+                <StatusIcon className="w-3 h-3 mr-1" />
+                {config.label}
+              </Badge>
+            )}
+          </div>
         </div>
         
         {/* Progress timeline */}
