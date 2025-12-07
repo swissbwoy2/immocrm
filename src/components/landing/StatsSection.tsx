@@ -100,7 +100,7 @@ export function StatsSection() {
       icon: Users,
       value: stats.clients,
       suffix: '+',
-      label: 'Clients accompagnés',
+      label: 'Familles relogées avec succès',
       gradient: 'from-blue-500 to-cyan-500',
       glowColor: 'rgba(59, 130, 246, 0.4)',
     },
@@ -108,7 +108,7 @@ export function StatsSection() {
       icon: Home,
       value: stats.transactions,
       suffix: '+',
-      label: 'Biens trouvés',
+      label: 'Baux signés grâce à nous',
       gradient: 'from-green-500 to-emerald-500',
       glowColor: 'rgba(34, 197, 94, 0.4)',
     },
@@ -116,7 +116,7 @@ export function StatsSection() {
       icon: Star,
       value: stats.satisfaction,
       suffix: '%',
-      label: 'Satisfaction client',
+      label: 'Recommanderaient Immo-Rama',
       gradient: 'from-yellow-500 to-orange-500',
       glowColor: 'rgba(245, 158, 11, 0.4)',
     },
@@ -124,7 +124,7 @@ export function StatsSection() {
       icon: Clock,
       value: stats.avgDays,
       suffix: ' jours',
-      label: 'Délai moyen de recherche',
+      label: 'En moyenne pour emménager',
       gradient: 'from-purple-500 to-pink-500',
       glowColor: 'rgba(168, 85, 247, 0.4)',
     },
@@ -166,13 +166,13 @@ export function StatsSection() {
             {/* Shine effect */}
             <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
             <Star className="h-4 w-4 text-primary fill-primary/50" />
-            <span className="text-sm font-medium text-primary relative z-10">Nos résultats</span>
+            <span className="text-sm font-medium text-primary relative z-10">Nos résultats concrets</span>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
-            Nos résultats parlent <span className="gradient-text-animated">d'eux-mêmes</span>
+            Des chiffres qui <span className="gradient-text-animated">parlent d'eux-mêmes</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Des chiffres qui témoignent de notre engagement envers nos clients
+            Pas des promesses, des résultats vérifiables
           </p>
         </div>
 

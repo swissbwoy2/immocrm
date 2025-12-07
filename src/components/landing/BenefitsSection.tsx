@@ -3,33 +3,33 @@ import { User, MessageSquare, Eye, CalendarCheck, FileText, Gift, Sparkles } fro
 const benefits = [
   {
     icon: User,
-    title: 'Un agent dédié',
-    description: 'qui gère tout pour toi',
+    title: 'Un agent dédié rien que pour toi',
+    description: 'Il cherche pendant que tu vis ta vie. Fini les heures perdues à scroller.',
   },
   {
     icon: MessageSquare,
-    title: 'Espace client personnalisé',
-    description: 'avec messagerie directe',
+    title: 'Ton tableau de bord personnel',
+    description: 'Offres, visites, dossier – tout au même endroit, accessible 24h/24.',
   },
   {
     icon: Eye,
-    title: 'Suivi en temps réel',
-    description: 'de tes candidatures',
+    title: 'Suivi transparent en temps réel',
+    description: 'Tu sais exactement où en sont tes candidatures. Plus d\'angoisse.',
   },
   {
     icon: CalendarCheck,
-    title: 'Organisation des visites',
-    description: 'même déléguées si tu n\'es pas dispo !',
+    title: 'Visites gérées pour toi',
+    description: 'Pas dispo ? On visite à ta place et on te fait un compte-rendu détaillé.',
   },
   {
     icon: FileText,
-    title: 'Ton dossier géré',
-    description: 'et envoyé aux régies',
+    title: 'Dossier béton qui convainc',
+    description: 'Préparé par des pros pour maximiser tes chances face aux régies.',
   },
   {
     icon: Gift,
-    title: 'Offres exclusives',
-    description: 'via notre réseau d\'agences partenaires',
+    title: 'Accès à notre réseau privé',
+    description: 'Des biens que tu ne trouveras pas sur les sites classiques. Notre secret.',
   },
 ];
 
@@ -74,11 +74,11 @@ export function BenefitsSection() {
           </div>
           
           <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 md:mb-6">
-            Tout ce qu'il te faut pour trouver{' '}
-            <span className="text-primary">ton appartement</span>
+            Tout pour trouver ton appart'{' '}
+            <span className="text-primary">sans stress</span>
           </h2>
           <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
-            Notre équipe s'occupe de tout pour que tu puisses te concentrer sur l'essentiel
+            Pendant que tu travailles, voyages ou profites de ta vie – on s'occupe de tout.
           </p>
         </div>
 

@@ -21,15 +21,15 @@ export function GuaranteeSection() {
   const pricingItems = [
     {
       icon: Wallet,
-      label: 'Acompte',
+      label: 'Pour démarrer',
       value: '300 CHF',
-      description: '100% sécurisé',
+      description: 'Remboursables à 100%',
       gradient: 'from-blue-500 to-cyan-500',
       glowColor: 'rgba(59, 130, 246, 0.3)',
     },
     {
       icon: CheckCircle,
-      label: 'Succès',
+      label: 'En cas de succès',
       value: '1 mois de loyer',
       description: '- les 300 CHF déjà versés',
       gradient: 'from-green-500 to-emerald-500',
@@ -37,9 +37,9 @@ export function GuaranteeSection() {
     },
     {
       icon: RefreshCcw,
-      label: 'Échec après 3 mois ?',
-      value: 'Remboursement intégral !',
-      description: 'Garanti sans conditions',
+      label: 'Pas trouvé après 3 mois ?',
+      value: '0 CHF',
+      description: 'On te rembourse tout.',
       gradient: 'from-amber-500 to-orange-500',
       glowColor: 'rgba(245, 158, 11, 0.3)',
     },
@@ -84,12 +84,14 @@ export function GuaranteeSection() {
             <div className="inline-flex items-center gap-2 bg-primary/10 rounded-full px-4 py-2 mb-4 relative overflow-hidden group">
               {/* Shine effect */}
               <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-              <span className="text-primary font-medium relative z-10">💰 Tarification transparente</span>
+              <span className="text-primary font-medium relative z-10">💰 Zéro risque financier</span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground">
-              Pas de surprise, tout est{' '}
-              <span className="gradient-text-animated">clair et sécurisé</span>
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+              On prend le risque <span className="gradient-text-animated">à ta place</span>
             </h2>
+            <p className="text-muted-foreground text-lg">
+              Tellement confiant qu'on te rembourse si on échoue
+            </p>
           </div>
 
           {/* Pricing cards - Premium style */}
@@ -146,7 +148,7 @@ export function GuaranteeSection() {
 
           {/* Guarantee badge - Premium celebration style */}
           <div className="text-center animate-fade-in" style={{ animationDelay: '300ms' }}>
-            <div className="relative inline-flex items-center gap-3 bg-gradient-to-r from-primary/20 via-primary/30 to-primary/20 border-2 border-primary/50 rounded-full px-6 py-4 glow-breathe group overflow-hidden">
+            <div className="relative inline-flex flex-col items-center gap-3 bg-gradient-to-r from-primary/20 via-primary/30 to-primary/20 border-2 border-primary/50 rounded-2xl px-6 py-5 glow-breathe group overflow-hidden">
               {/* Animated confetti particles */}
               <div className="absolute inset-0 overflow-hidden">
                 {[...Array(6)].map((_, i) => (
@@ -166,13 +168,17 @@ export function GuaranteeSection() {
               {/* Shine effect */}
               <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               
-              <Shield className="h-6 w-6 text-primary relative z-10 animate-pulse" />
-              <span className="text-lg md:text-xl font-bold text-primary relative z-10">
-                Garantie 100% remboursé en cas d'échec
-              </span>
+              <div className="flex items-center gap-3">
+                <Shield className="h-6 w-6 text-primary relative z-10 animate-pulse" />
+                <span className="text-lg md:text-xl font-bold text-primary relative z-10">
+                  Garantie 100% remboursé en cas d'échec
+                </span>
+                <Sparkles className="h-5 w-5 text-amber-500 relative z-10 animate-pulse" style={{ animationDelay: '0.5s' }} />
+              </div>
               
-              {/* Sparkle decorations */}
-              <Sparkles className="h-5 w-5 text-amber-500 relative z-10 animate-pulse" style={{ animationDelay: '0.5s' }} />
+              <p className="text-sm text-muted-foreground relative z-10">
+                ✓ Aucune condition cachée • ✓ Remboursement sous 7 jours
+              </p>
             </div>
           </div>
         </div>

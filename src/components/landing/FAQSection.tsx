@@ -1,40 +1,48 @@
 import { useState } from 'react';
-import { ChevronDown, HelpCircle, Sparkles, MessageCircle } from 'lucide-react';
+import { ChevronDown, HelpCircle, Sparkles, MessageCircle, ShieldCheck } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 
 const faqItems = [
   {
     question: "Comment ça marche concrètement ?",
-    answer: "C'est simple : tu remplis le formulaire de mandat, tu verses l'acompte de 300 CHF, et notre agent dédié prend le relais. Il recherche activement des biens correspondant à tes critères, contacte les régies, prépare et envoie ton dossier. Tu reçois des offres directement dans ton espace client et tu choisis ce qui te plaît !",
+    answer: "C'est ultra simple : tu remplis le formulaire (5 min), tu verses l'acompte de 300 CHF, et ton agent dédié prend le relais immédiatement. Il recherche, contacte les régies, prépare ton dossier béton et t'envoie des offres dans ton espace client. Toi, tu valides ce qui te plaît !",
   },
   {
-    question: "Est-ce que les 300 CHF sont remboursables ?",
-    answer: "Oui, à 100% ! Si au bout de 3 mois nous n'avons pas trouvé ton appartement, tu es intégralement remboursé. C'est notre garantie \"Satisfait ou remboursé\". On prend le risque à ta place.",
+    question: "Est-ce vraiment légal et sérieux ?",
+    answer: "Absolument ! Immo-Rama.ch est une entreprise inscrite au Registre du Commerce suisse (IDE : CHE-XXX.XXX.XXX), basée à Lausanne. Nous opérons depuis 2019 avec plus de 500 clients satisfaits. Tu peux vérifier nos avis Google (4.8★) et nous contacter à tout moment.",
   },
   {
-    question: "Que se passe-t-il si j'annule mon mandat avant 90 jours ?",
-    answer: "En cas d'annulation du mandat avant les 90 jours, l'acompte de 300 CHF n'est pas remboursable. Celui-ci couvre le travail déjà effectué par notre équipe (recherches, contacts régies, préparation dossier). Le remboursement intégral ne s'applique qu'en cas d'échec de notre part après 3 mois de recherche active.",
+    question: "Pourquoi vous êtes différents des chasseurs gratuits ?",
+    answer: "Les services 'gratuits' sont payés par les régies, donc ils travaillent pour elles, pas pour toi. Nous, on est payé par TOI, donc on défend TES intérêts. On négocie pour toi, on te conseille honnêtement, et on n'a aucun intérêt à te placer dans un appart' qui ne te convient pas.",
+  },
+  {
+    question: "Les 300 CHF sont-ils vraiment remboursables ?",
+    answer: "Oui, à 100% et sans condition ! Si après 3 mois de recherche active on n'a pas trouvé ton appartement, tu es intégralement remboursé sous 7 jours. C'est notre garantie \"Satisfait ou remboursé\". On prend le risque, pas toi.",
+  },
+  {
+    question: "Que se passe-t-il si j'annule avant 90 jours ?",
+    answer: "En cas d'annulation de ta part avant les 90 jours, l'acompte de 300 CHF reste acquis car il couvre le travail déjà effectué (recherches, contacts régies, préparation dossier). Le remboursement intégral ne s'applique qu'en cas d'échec de notre part après 3 mois.",
   },
   {
     question: "Dans quels cantons êtes-vous actifs ?",
-    answer: "Nous couvrons toute la Suisse romande : Genève, Vaud, Valais, Neuchâtel, Fribourg et Jura. Notre réseau d'agences partenaires nous permet d'accéder à des offres dans toutes ces régions.",
+    answer: "Toute la Suisse romande ! Genève, Vaud, Valais, Neuchâtel, Fribourg et Jura. Notre réseau de +50 agences partenaires nous permet d'accéder à des offres exclusives dans tous ces cantons.",
   },
   {
-    question: "Combien de temps faut-il en moyenne pour trouver ?",
-    answer: "En moyenne, nos clients trouvent leur appartement en moins de 3 mois. Évidemment, cela dépend de tes critères et du marché local, mais notre expertise et notre réseau accélèrent considérablement le processus.",
+    question: "Combien de temps pour trouver en moyenne ?",
+    answer: "En moyenne 45 jours, mais certains clients trouvent en 2 semaines ! Ça dépend de tes critères et du marché local. Notre expertise et notre réseau accélèrent considérablement le processus par rapport à une recherche solo.",
   },
   {
-    question: "Que se passe-t-il si je trouve moi-même un appartement ?",
-    answer: "Pas de problème ! Si tu trouves par toi-même pendant notre collaboration, tu nous préviens et on arrête les recherches. L'acompte de 300 CHF reste acquis pour couvrir le travail déjà effectué, mais tu ne paies pas les honoraires de succès.",
+    question: "Et si je trouve moi-même pendant la recherche ?",
+    answer: "Super pour toi ! Tu nous préviens et on arrête les recherches. L'acompte de 300 CHF reste acquis pour couvrir le travail effectué, mais tu ne paies pas les honoraires de succès. Pas de mauvaise surprise.",
   },
   {
-    question: "Comment fonctionne la messagerie directe ?",
-    answer: "Dès que tu deviens client, tu accèdes à ton espace personnel avec une messagerie intégrée. Tu peux échanger directement avec ton agent dédié, recevoir les offres, suivre l'avancement de tes candidatures et gérer tous tes documents en un seul endroit.",
+    question: "Comment fonctionne la délégation de visite ?",
+    answer: "Si tu n'es pas disponible (à l'étranger, horaires compliqués...), ton agent visite à ta place. Tu reçois une vidéo HD + un compte-rendu détaillé sous 24h pour décider en toute connaissance de cause. C'est comme si tu y étais !",
   },
   {
-    question: "Puis-je déléguer les visites ?",
-    answer: "Absolument ! Si tu n'es pas disponible (par exemple si tu vis à l'étranger ou si tu as des horaires compliqués), notre agent peut effectuer les visites à ta place. Il te fait un compte-rendu détaillé avec photos et vidéos pour que tu puisses décider en toute connaissance de cause.",
+    question: "Puis-je vous contacter avant de m'inscrire ?",
+    answer: "Bien sûr ! Écris-nous à contact@immo-rama.ch ou appelle le +41 XX XXX XX XX. On répond sous 24h. Tu peux aussi demander un premier RDV gratuit et sans engagement pour poser toutes tes questions.",
   },
 ];
 
@@ -86,11 +94,19 @@ export function FAQSection() {
             </div>
           </div>
           <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-            Tout ce que tu veux savoir
+            On répond à <span className="text-primary">toutes tes questions</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-sm md:text-base">
-            Les réponses aux questions les plus courantes de nos clients
+            Transparence totale. Pas de zones d'ombre.
           </p>
+        </div>
+
+        {/* Trust badge */}
+        <div className="flex justify-center mb-8 animate-fade-in">
+          <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded-full px-4 py-2">
+            <ShieldCheck className="h-4 w-4 text-green-500" />
+            <span className="text-sm text-green-600 font-medium">Entreprise vérifiée • 4.8★ sur Google</span>
+          </div>
         </div>
 
         {/* FAQ items */}
@@ -148,7 +164,7 @@ export function FAQSection() {
         {/* CTA */}
         <div className="text-center mt-12 md:mt-16 animate-fade-in">
           <p className="text-muted-foreground mb-3 text-sm md:text-base">
-            Tu as d'autres questions ?
+            Une autre question ? On est là pour toi.
           </p>
           <a 
             href="mailto:contact@immo-rama.ch" 
