@@ -14,3 +14,9 @@ export {
 export { PremiumEmptyState } from './PremiumEmptyState';
 export { PremiumVisiteCard } from './PremiumVisiteCard';
 export { PremiumOffreRecueCard } from './PremiumOffreRecueCard';
+export { PremiumMandatProgress } from './PremiumMandatProgress';
+export { PremiumFinanceCard } from './PremiumFinanceCard';
+export { PremiumDossierSection } from './PremiumDossierSection';
+export { PremiumInfoGrid, PremiumInfoItem } from './PremiumInfoGrid';
+export { PremiumAgentCard } from './PremiumAgentCard';
+export { PremiumDocumentCard, PremiumDocumentEmptyState } from './PremiumDocumentCard';
