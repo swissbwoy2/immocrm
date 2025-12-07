@@ -12,3 +12,5 @@ export {
   TableRow 
 } from './PremiumTable';
 export { PremiumEmptyState } from './PremiumEmptyState';
+export { PremiumVisiteCard } from './PremiumVisiteCard';
+export { PremiumOffreRecueCard } from './PremiumOffreRecueCard';
