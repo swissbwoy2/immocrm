@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -104,22 +104,18 @@ const Messagerie = () => {
   const [unreadCountsMap, setUnreadCountsMap] = useState<Map<string, number>>(new Map());
 
   const scrollToBottom = useCallback((instant: boolean = false) => {
-    console.log('[scrollToBottom] called, instant:', instant, 'viewport:', scrollViewportRef.current);
+    // Double RAF pour garantir que le DOM est rendu
     requestAnimationFrame(() => {
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         const viewport = scrollViewportRef.current;
-        console.log('[scrollToBottom] after RAF+timeout, viewport:', viewport);
         if (viewport) {
-          const targetScroll = viewport.scrollHeight;
-          console.log('[scrollToBottom] scrollHeight:', targetScroll, 'current scrollTop:', viewport.scrollTop);
           if (instant) {
-            viewport.scrollTop = targetScroll;
+            viewport.scrollTop = viewport.scrollHeight;
           } else {
-            viewport.scrollTo({ top: targetScroll, behavior: 'smooth' });
+            viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
           }
-          console.log('[scrollToBottom] after scroll, scrollTop:', viewport.scrollTop);
         }
-      }, 150);
+      });
     });
   }, []);
 
@@ -132,7 +128,6 @@ const Messagerie = () => {
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
-    console.log('[handleScroll] scrollTop:', target.scrollTop);
     setShowScrollTop(target.scrollTop > 300);
   }, []);
 
@@ -207,18 +202,13 @@ const Messagerie = () => {
   const prevConvRef = useRef<string | null>(null);
 
   // Auto-scroll to bottom when conversation changes (instant) or new messages (smooth)
-  useEffect(() => {
-    // Wait for messages to finish loading before scrolling
-    if (isLoadingMessages) {
-      console.log('[scroll useEffect] still loading, skipping');
-      return;
-    }
+  // useLayoutEffect ensures scroll happens before paint
+  useLayoutEffect(() => {
+    if (isLoadingMessages) return;
     
     if (messages.length > 0) {
       const isNewConversation = prevConvRef.current !== selectedConv;
       const isNewMessage = messages.length > prevMessagesLengthRef.current && !isNewConversation;
-      
-      console.log('[scroll useEffect] isNewConversation:', isNewConversation, 'isNewMessage:', isNewMessage, 'messages.length:', messages.length);
       
       if (isNewConversation) {
         scrollToBottom(true); // instant for new conversation
@@ -1243,7 +1233,11 @@ const Messagerie = () => {
           </p>
         </div>
       )}
-      <ScrollArea className="flex-1 p-2 sm:p-4 relative z-10 min-w-0" viewportClassName="overflow-x-hidden" onScroll={handleScroll} viewportRef={scrollViewportRef}>
+      <div 
+        ref={scrollViewportRef}
+        onScroll={handleScroll}
+        className="flex-1 p-2 sm:p-4 relative z-10 min-w-0 overflow-y-auto overflow-x-hidden"
+      >
         {isLoadingMessages ? (
           <MessagesListSkeleton />
         ) : (
@@ -1338,7 +1332,7 @@ const Messagerie = () => {
           })()}
         </div>
         )}
-      </ScrollArea>
+      </div>
       <ScrollToTopButton show={showScrollTop} onClick={scrollToTop} />
       {!currentConversation?.is_archived && (
         <div className="relative z-10">
