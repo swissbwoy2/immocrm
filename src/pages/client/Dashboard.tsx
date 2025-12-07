@@ -31,7 +31,7 @@ import { MissingDocumentsAlert } from '@/components/MissingDocumentsAlert';
 
 import { SolvabilityAlert } from '@/components/SolvabilityAlert';
 import { PurchaseSolvabilityAlert } from '@/components/PurchaseSolvabilityAlert';
-import { DossierChecklistCard } from '@/components/DossierChecklistCard';
+import { PremiumDossierChecklistCard } from '@/components/premium';
 import { useClientCandidates } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
 import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck';
@@ -563,20 +563,12 @@ export default function ClientDashboard() {
                 </div>
               </div>
               
-              <div className="animate-fade-in group" style={{ animationDelay: '280ms' }}>
-                <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-1 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  </div>
-                  <div className="relative">
-                    <DossierChecklistCard
-                      clientName={clientFullName}
-                      candidates={candidates}
-                      documents={documents}
-                    />
-                  </div>
-                </div>
+              <div className="animate-fade-in" style={{ animationDelay: '280ms' }}>
+                <PremiumDossierChecklistCard
+                  clientName={clientFullName}
+                  candidates={candidates}
+                  documents={documents}
+                />
               </div>
             </div>
           )}
