@@ -461,7 +461,7 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
             <Calculator className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
             <p>
               <strong className="text-foreground">Règle de calcul:</strong> Budget possible = Revenus totaux ÷ 3. 
-              Les revenus ne sont comptabilisés que pour les personnes avec permis B, C ou nationalité suisse.
+              Les revenus ne sont comptabilisés que pour les personnes sans poursuites ni actes de défaut de bien, avec permis B, C ou nationalité suisse.
             </p>
           </div>
         </div>
