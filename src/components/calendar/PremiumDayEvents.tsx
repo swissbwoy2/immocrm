@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { CalendarEvent } from './CalendarView';
+import { CalendarEvent } from './types';
 import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
 
 interface PremiumDayEventsProps {
