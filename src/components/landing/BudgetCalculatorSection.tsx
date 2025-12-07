@@ -92,8 +92,10 @@ export function BudgetCalculatorSection() {
 
     const budgetPossible = Math.floor(revenusNum / 3);
     const isBudgetOk = budgetNum <= budgetPossible;
+    // Seuls les permis stables (suisse, C, B) sont considérés comme solvables
     const isPermitStable = ['suisse', 'C', 'B'].includes(permit);
-    const isSolvable = isBudgetOk && !hasPoursuites;
+    // Pour être solvable : budget OK, pas de poursuites ET permis stable (ou pas encore sélectionné)
+    const isSolvable = isBudgetOk && !hasPoursuites && (isPermitStable || !permit);
 
     const problems: string[] = [];
     if (!isBudgetOk && budgetNum > 0) {
@@ -103,7 +105,7 @@ export function BudgetCalculatorSection() {
       problems.push('Les poursuites sont un frein majeur pour les régies');
     }
     if (!isPermitStable && permit) {
-      problems.push('Ton type de permis peut compliquer certaines candidatures');
+      problems.push('Ton type de permis rend les candidatures très difficiles - les régies acceptent rarement ce statut');
     }
 
     return {
