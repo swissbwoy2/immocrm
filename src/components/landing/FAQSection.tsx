@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, HelpCircle, Sparkles } from 'lucide-react';
+import { ChevronDown, HelpCircle, Sparkles, Star, MessageCircle } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 
@@ -50,14 +50,17 @@ export function FAQSection() {
   };
 
   return (
-    <section className="py-16 md:py-24 relative overflow-hidden bg-gradient-to-b from-background via-muted/5 to-background">
+    <section className="py-16 md:py-28 relative overflow-hidden bg-gradient-to-b from-background via-muted/5 to-background">
       {/* Premium background effects - hidden on mobile */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
-        <div className="absolute top-1/4 left-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s' }} />
-        <div className="absolute bottom-1/4 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '8s', animationDelay: '2s' }} />
-        
-        {/* Floating sparkles */}
-        {[...Array(6)].map((_, i) => (
+        <div className="absolute top-1/4 left-0 w-[500px] h-[500px] bg-gradient-to-br from-primary/8 via-blue-500/5 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s' }} />
+        <div className="absolute bottom-1/4 right-0 w-[500px] h-[500px] bg-gradient-to-tl from-purple-500/8 via-pink-500/5 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: '8s', animationDelay: '2s' }} />
+        <div className="absolute top-1/2 left-1/4 w-[300px] h-[300px] bg-gradient-to-r from-green-500/5 to-transparent rounded-full blur-3xl animate-float" style={{ animationDelay: '3s' }} />
+      </div>
+      
+      {/* Floating sparkles and stars */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
+        {[...Array(8)].map((_, i) => (
           <div
             key={i}
             className="absolute"
@@ -72,19 +75,40 @@ export function FAQSection() {
             />
           </div>
         ))}
+        {[...Array(4)].map((_, i) => (
+          <div
+            key={`star-${i}`}
+            className="absolute"
+            style={{
+              top: `${20 + Math.random() * 60}%`,
+              left: `${15 + Math.random() * 70}%`,
+            }}
+          >
+            <Star 
+              className="h-2 w-2 text-primary/20 animate-float" 
+              style={{ animationDuration: `${3 + Math.random() * 2}s`, animationDelay: `${i * 0.5}s` }}
+            />
+          </div>
+        ))}
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
         {/* Section header - Premium style */}
-        <div className="text-center mb-10 md:mb-14 animate-fade-in">
-          <div className="inline-flex items-center gap-2 bg-primary/10 rounded-full px-4 py-2 mb-4 relative overflow-hidden group">
-            {/* Shine effect on badge */}
-            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-            <HelpCircle className="h-4 w-4 text-primary" />
-            <span className="text-primary font-medium relative z-10">Questions fréquentes</span>
+        <div className="text-center mb-12 md:mb-16 animate-fade-in">
+          <div className="inline-flex items-center gap-2 relative group mb-4">
+            {/* Glow behind badge */}
+            <div className="absolute -inset-2 bg-primary/20 rounded-full blur-lg opacity-60 animate-pulse" style={{ animationDuration: '3s' }} />
+            <div className="relative bg-primary/10 rounded-full px-5 py-2.5 overflow-hidden border border-primary/20">
+              {/* Shine effect on badge */}
+              <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+              <HelpCircle className="inline-block h-4 w-4 text-primary mr-2" />
+              <span className="text-primary font-semibold relative z-10">Questions fréquentes</span>
+              <Sparkles className="absolute -top-1 -right-1 h-3 w-3 text-primary animate-pulse" />
+            </div>
           </div>
-          <h2 className="text-2xl md:text-4xl font-bold text-foreground mb-3">
+          <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 relative inline-block">
             Tout ce que tu veux savoir
+            <Sparkles className="absolute -top-2 -right-6 h-5 w-5 text-primary/60 animate-pulse hidden md:block" />
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-sm md:text-base">
             Les réponses aux questions les plus courantes de nos clients
@@ -92,64 +116,105 @@ export function FAQSection() {
         </div>
 
         {/* FAQ items - Premium style */}
-        <div className="max-w-3xl mx-auto space-y-3 md:space-y-4">
-          {faqItems.map((item, index) => (
-            <Collapsible
-              key={index}
-              open={openItems.includes(index)}
-              onOpenChange={() => toggleItem(index)}
-              className="animate-fade-in group/faq"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              {/* Animated border gradient */}
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 via-primary/10 to-primary/30 rounded-xl md:rounded-2xl opacity-0 group-hover/faq:opacity-100 transition-opacity duration-500 blur-sm -z-10" />
-              
-              <div className="relative glass-morphism rounded-xl md:rounded-2xl border border-border/30 group-hover/faq:border-primary/40 transition-all duration-300 overflow-hidden bg-background/80 group-hover/faq:shadow-lg group-hover/faq:shadow-primary/10">
-                {/* Shine effect */}
-                <div className="absolute inset-0 opacity-0 group-hover/faq:opacity-100 transition-opacity duration-500">
-                  <div className="absolute inset-0 translate-x-[-100%] group-hover/faq:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                </div>
-                
-                {/* Floating sparkle on hover */}
-                <div className="absolute top-3 right-12 opacity-0 group-hover/faq:opacity-100 transition-opacity duration-300">
-                  <Sparkles className="h-4 w-4 text-primary/40 animate-pulse" />
-                </div>
-                
-                <CollapsibleTrigger className="w-full px-5 py-4 md:px-6 md:py-5 flex items-center justify-between gap-4 text-left touch-target relative z-10">
-                  <span className="font-semibold text-foreground text-sm md:text-base pr-2 group-hover/faq:text-primary transition-colors duration-300">
-                    {item.question}
-                  </span>
-                  <ChevronDown 
-                    className={cn(
-                      "h-5 w-5 text-muted-foreground flex-shrink-0 transition-all duration-300",
-                      openItems.includes(index) ? 'rotate-180 text-primary' : 'group-hover/faq:text-primary'
-                    )}
-                  />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
-                  <div className="px-5 pb-4 md:px-6 md:pb-5 pt-0 relative z-10">
-                    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mb-4" />
-                    <p className="text-muted-foreground text-sm md:text-base leading-relaxed">
-                      {item.answer}
-                    </p>
+        <div className="max-w-3xl mx-auto space-y-4 md:space-y-5">
+          {faqItems.map((item, index) => {
+            const isOpen = openItems.includes(index);
+            
+            return (
+              <Collapsible
+                key={index}
+                open={isOpen}
+                onOpenChange={() => toggleItem(index)}
+                className="animate-fade-in group/faq"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="relative">
+                  {/* Animated border gradient - visible when open or on hover */}
+                  <div className={cn(
+                    "absolute -inset-0.5 bg-gradient-to-r from-primary/40 via-primary/60 to-primary/40 rounded-2xl transition-opacity duration-500 blur-sm animate-gradient-x",
+                    isOpen ? "opacity-100" : "opacity-0 group-hover/faq:opacity-50"
+                  )} />
+                  
+                  {/* Glow effect when open */}
+                  <div className={cn(
+                    "absolute -inset-2 bg-primary/10 rounded-2xl blur-xl transition-opacity duration-500",
+                    isOpen ? "opacity-100" : "opacity-0"
+                  )} />
+                  
+                  <div className={cn(
+                    "relative glass-morphism rounded-2xl border transition-all duration-300 overflow-hidden bg-background/90",
+                    isOpen ? "border-primary/50 shadow-lg shadow-primary/10" : "border-border/30 group-hover/faq:border-primary/30 group-hover/faq:shadow-md"
+                  )}>
+                    {/* Shine effect */}
+                    <div className="absolute inset-0 opacity-0 group-hover/faq:opacity-100 transition-opacity duration-500">
+                      <div className="absolute inset-0 translate-x-[-100%] group-hover/faq:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                    </div>
+                    
+                    {/* Floating sparkle on hover/open */}
+                    <div className={cn(
+                      "absolute top-4 right-14 transition-opacity duration-300",
+                      isOpen ? "opacity-100" : "opacity-0 group-hover/faq:opacity-60"
+                    )}>
+                      <Sparkles className="h-4 w-4 text-primary/50 animate-pulse" />
+                    </div>
+                    
+                    <CollapsibleTrigger className="w-full px-6 py-5 md:px-7 md:py-6 flex items-center justify-between gap-4 text-left touch-target relative z-10">
+                      <span className={cn(
+                        "font-semibold text-sm md:text-base pr-2 transition-colors duration-300",
+                        isOpen ? "text-primary" : "text-foreground group-hover/faq:text-primary"
+                      )}>
+                        {item.question}
+                      </span>
+                      <div className={cn(
+                        "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300",
+                        isOpen ? "bg-primary/20" : "bg-muted group-hover/faq:bg-primary/10"
+                      )}>
+                        <ChevronDown 
+                          className={cn(
+                            "h-5 w-5 transition-all duration-300",
+                            isOpen ? "rotate-180 text-primary" : "text-muted-foreground group-hover/faq:text-primary"
+                          )}
+                        />
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+                      <div className="px-6 pb-6 md:px-7 md:pb-7 pt-0 relative z-10">
+                        <div className="h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent mb-5" />
+                        <p className="text-muted-foreground text-sm md:text-base leading-relaxed">
+                          {item.answer}
+                        </p>
+                      </div>
+                    </CollapsibleContent>
                   </div>
-                </CollapsibleContent>
-              </div>
-            </Collapsible>
-          ))}
+                </div>
+              </Collapsible>
+            );
+          })}
         </div>
 
-        {/* CTA - Premium style */}
-        <div className="text-center mt-10 md:mt-14 animate-fade-in">
-          <p className="text-muted-foreground mb-2 text-sm md:text-base">
+        {/* CTA - Premium style with glow and sparkles */}
+        <div className="text-center mt-12 md:mt-16 animate-fade-in">
+          <p className="text-muted-foreground mb-3 text-sm md:text-base">
             Tu as d'autres questions ?
           </p>
           <a 
             href="mailto:contact@immo-rama.ch" 
-            className="inline-flex items-center gap-2 text-primary font-medium hover:underline group"
+            className="inline-flex items-center gap-3 group relative"
           >
-            <span>Contacte-nous directement</span>
-            <span className="group-hover:translate-x-1 transition-transform">→</span>
+            {/* Glow behind CTA */}
+            <div className="absolute -inset-3 bg-primary/20 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            
+            <div className="relative flex items-center gap-2 px-5 py-2.5 rounded-full glass-morphism border border-border/30 group-hover:border-primary/50 transition-all duration-300">
+              {/* Shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 rounded-full" />
+              
+              <MessageCircle className="h-4 w-4 text-primary" />
+              <span className="text-primary font-medium relative z-10">Contacte-nous directement</span>
+              <span className="group-hover:translate-x-1 transition-transform text-primary">→</span>
+              
+              {/* Sparkle on hover */}
+              <Sparkles className="absolute -top-1 -right-1 h-3 w-3 text-primary opacity-0 group-hover:opacity-100 transition-opacity animate-pulse" />
+            </div>
           </a>
         </div>
       </div>
