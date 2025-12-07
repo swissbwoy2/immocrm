@@ -34,6 +34,7 @@ const getMenuForRole = (role: string) => {
     case 'admin':
       return [
         { name: 'Tableau de bord', icon: LayoutDashboard, path: '/admin', notifKey: null },
+        { name: 'Messagerie', icon: MessageSquare, path: '/admin/messagerie', notifKey: 'new_message' },
         { name: 'Calendrier', icon: Calendar, path: '/admin/calendrier', notifKey: null },
         { name: 'Agents', icon: UserCog, path: '/admin/agents', notifKey: null },
         { name: 'Apporteurs', icon: Handshake, path: '/admin/apporteurs', notifKey: null },
@@ -48,7 +49,6 @@ const getMenuForRole = (role: string) => {
         { name: 'Envoyer une offre', icon: Send, path: '/admin/envoyer-offre', notifKey: null },
         { name: 'Offres envoyées', icon: Mail, path: '/admin/offres-envoyees', notifKey: null },
         { name: 'Assignations', icon: UserCog, path: '/admin/assignations', notifKey: null },
-        { name: 'Messagerie', icon: MessageSquare, path: '/admin/messagerie', notifKey: 'new_message' },
         { name: 'Envoyer Email', icon: MailPlus, path: '/admin/envoyer-email', notifKey: null },
         { name: 'Historique Emails', icon: History, path: '/admin/historique-emails', notifKey: null },
         { name: 'Boîte de réception', icon: Inbox, path: '/admin/boite-reception', notifKey: null },
@@ -60,6 +60,7 @@ const getMenuForRole = (role: string) => {
     case 'agent':
       return [
         { name: 'Tableau de bord', icon: LayoutDashboard, path: '/agent', notifKey: null },
+        { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie', notifKey: 'new_message' },
         { name: 'Calendrier', icon: Calendar, path: '/agent/calendrier', notifKey: 'visit_combined' },
         { name: 'Mes clients', icon: Users, path: '/agent/mes-clients', notifKey: 'client_assigned' },
         { name: 'Visites', icon: CalendarCheck, path: '/agent/visites', notifKey: 'new_visit' },
@@ -68,7 +69,6 @@ const getMenuForRole = (role: string) => {
         { name: 'Transactions', icon: DollarSign, path: '/agent/transactions', notifKey: null },
         { name: 'Envoyer une offre', icon: Send, path: '/agent/envoyer-offre', notifKey: null },
         { name: 'Offres envoyées', icon: Mail, path: '/agent/offres-envoyees', notifKey: null },
-        { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie', notifKey: 'new_message' },
         { name: 'Envoyer Email', icon: MailPlus, path: '/agent/envoyer-email', notifKey: null },
         { name: 'Historique Emails', icon: History, path: '/agent/historique-emails', notifKey: null },
         { name: 'Boîte de réception', icon: Inbox, path: '/agent/boite-reception', notifKey: null },
@@ -79,13 +79,13 @@ const getMenuForRole = (role: string) => {
     case 'client':
       return [
         { name: 'Dashboard', icon: LayoutDashboard, path: '/client', notifKey: null },
+        { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
         { name: 'Mon dossier', icon: User, path: '/client/dossier', notifKey: null },
         { name: 'Offres reçues', icon: Home, path: '/client/offres-recues', notifKey: 'new_offer' },
         { name: 'Mes visites', icon: CalendarCheck, path: '/client/visites', notifKey: 'new_visit' },
         { name: 'Calendrier', icon: Calendar, path: '/client/calendrier', notifKey: 'visit_combined' },
         { name: 'Visites déléguées', icon: HandHeart, path: '/client/visites-deleguees', notifKey: null },
         { name: 'Mes candidatures', icon: Clipboard, path: '/client/mes-candidatures', notifKey: null },
-        { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
         { name: 'Mes documents', icon: FileText, path: '/client/documents', notifKey: null },
         { name: 'Notifications', icon: Bell, path: '/client/notifications', notifKey: 'total' },
         { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
