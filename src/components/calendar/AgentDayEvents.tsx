@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { CalendarEvent } from './types';
+import { CalendarEvent, eventTypeLabels, eventTypeColors, priorityColors } from './types';
 import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
 import {
   AlertDialog,
@@ -35,31 +35,6 @@ interface AgentDayEventsProps {
   onOpenEventDetail?: (event: CalendarEvent) => void;
   onDeleteVisite?: (visiteId: string, cascade?: boolean) => void;
 }
-
-const eventTypeLabels: Record<string, string> = {
-  visite: 'Visite',
-  rappel: 'Rappel',
-  rendez_vous: 'Rendez-vous',
-  tache: 'Tâche',
-  reunion: 'Réunion',
-  autre: 'Autre',
-};
-
-const eventTypeColors: Record<string, string> = {
-  visite: 'bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-400',
-  rappel: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/30 dark:text-yellow-400',
-  rendez_vous: 'bg-green-500/10 text-green-700 border-green-500/30 dark:text-green-400',
-  tache: 'bg-orange-500/10 text-orange-700 border-orange-500/30 dark:text-orange-400',
-  reunion: 'bg-purple-500/10 text-purple-700 border-purple-500/30 dark:text-purple-400',
-  autre: 'bg-gray-500/10 text-gray-700 border-gray-500/30 dark:text-gray-400',
-};
-
-const priorityColors: Record<string, string> = {
-  basse: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-  normale: 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400',
-  haute: 'bg-orange-100 text-orange-600 dark:bg-orange-900 dark:text-orange-400',
-  urgente: 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400',
-};
 
 const statusIcons: Record<string, React.ReactNode> = {
   planifie: <Clock className="h-3 w-3" />,
