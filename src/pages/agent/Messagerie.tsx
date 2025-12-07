@@ -1204,7 +1204,7 @@ const Messagerie = () => {
   );
 
   const chatView = selectedConv ? (
-    <div className="flex-1 flex flex-col min-h-0 chat-background relative overflow-hidden">
+    <div className="flex-1 flex flex-col min-h-0 min-w-0 chat-background relative overflow-hidden">
       <ChatPatternBackground />
       <MeshGradientBackground />
       <FloatingParticles count={12} />
@@ -1218,11 +1218,11 @@ const Messagerie = () => {
           </p>
         </div>
       )}
-      <ScrollArea className="flex-1 p-2 sm:p-4 relative z-10" viewportClassName="overflow-x-hidden" onScroll={handleScroll}>
+      <ScrollArea className="flex-1 p-2 sm:p-4 relative z-10 min-w-0" viewportClassName="overflow-x-hidden" onScroll={handleScroll}>
         {isLoadingMessages ? (
           <MessagesListSkeleton />
         ) : (
-        <div className="space-y-2 max-w-4xl mx-auto">
+        <div className="space-y-2 max-w-4xl mx-auto min-w-0">
           <div ref={messagesStartRef} />
           {/* Header qui défile avec les messages */}
           {currentConversation && (
