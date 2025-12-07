@@ -55,19 +55,27 @@ serve(async (req) => {
     }
 
     const bankAccounts = JSON.parse(bankAccountsText);
-    const bankAccount = bankAccounts.data?.[0];
+    
+    // Find the active/default bank account (Raiffeisen PRO with correct IBAN)
+    const bankAccount = bankAccounts.data?.find((acc: any) => acc.isActive && acc.isDefault) 
+      || bankAccounts.data?.find((acc: any) => acc.isActive)
+      || bankAccounts.data?.[0];
     
     if (!bankAccount) {
       throw new Error('No bank account found in AbaNinja. Please configure a bank account first.');
     }
 
     // Extract IBAN or QR-IBAN from the bank account
-    const iban = bankAccount.qr_iban || bankAccount.iban;
+    const iban = bankAccount.qrBill?.qrIban || bankAccount.iban;
     console.log('Using IBAN:', iban ? `${iban.substring(0, 8)}...` : 'none');
+    console.log('Using bank account:', bankAccount.name);
 
     if (!iban) {
       throw new Error('No IBAN found in bank account. Please configure an IBAN in AbaNinja.');
     }
+    
+    // Handle missing demande_id gracefully
+    const referenceId = demande_id ? demande_id.slice(0, 8).toUpperCase() : Date.now().toString(36).toUpperCase();
 
     // Calculate amount based on search type
     const montant = type_recherche === 'Acheter' ? 2500 : 300;
@@ -92,15 +100,15 @@ serve(async (req) => {
       dueDate: formatDate(dueDate),
       currencyCode: "CHF",
       title: `Mandat de recherche - ${prenom} ${nom}`,
-      reference: `MANDAT-${demande_id.slice(0, 8).toUpperCase()}`,
+      reference: `MANDAT-${referenceId}`,
       // Notes publiques (champ API: publicNotes)
       publicNotes: "Merci pour votre confiance et votre collaboration",
       // Conditions (champ API: terms)
       terms: "Acompte dû pour l'activation de vos recherches.",
       // Pied de page (champ API: footerText)
       footerText: "www.immo-rama.ch",
-      paymentInstructions: bankAccount.qr_iban ? {
-        qrIban: bankAccount.qr_iban
+      paymentInstructions: bankAccount.qrBill?.qrIban ? {
+        qrIban: bankAccount.qrBill.qrIban
       } : {
         iban: bankAccount.iban
       },
