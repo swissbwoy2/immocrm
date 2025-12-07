@@ -90,19 +90,28 @@ const Messagerie = () => {
   const [recommendationEmails, setRecommendationEmails] = useState<string[]>(["", "", "", "", ""]);
   const [selectedSignatureDate, setSelectedSignatureDate] = useState<string>("");
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesStartRef = useRef<HTMLDivElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [unreadCountsMap, setUnreadCountsMap] = useState<Map<string, number>>(new Map());
 
   const scrollToBottom = useCallback((instant: boolean = false) => {
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'instant' : 'smooth' });
-    }, 50);
+      const viewport = scrollViewportRef.current;
+      if (viewport) {
+        if (instant) {
+          viewport.scrollTop = viewport.scrollHeight;
+        } else {
+          viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+        }
+      }
+    }, 100);
   }, []);
 
   const scrollToTop = useCallback(() => {
-    messagesStartRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const viewport = scrollViewportRef.current;
+    if (viewport) {
+      viewport.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }, []);
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
@@ -1468,12 +1477,11 @@ const Messagerie = () => {
       <ChatPatternBackground />
       
       {/* Messages area */}
-      <ScrollArea className="flex-1 p-2 sm:p-4 relative z-10 min-w-0" viewportClassName="overflow-x-hidden" onScroll={handleScroll}>
+      <ScrollArea className="flex-1 p-2 sm:p-4 relative z-10 min-w-0" viewportClassName="overflow-x-hidden" onScroll={handleScroll} viewportRef={scrollViewportRef}>
         {isLoadingMessages ? (
           <MessagesListSkeleton />
         ) : (
           <div className="space-y-3 max-w-4xl mx-auto min-w-0">
-            <div ref={messagesStartRef} />
             {selectedMessages.map((msg, index) => {
               const isSent = msg.sender_type === 'client';
               // Déterminer le nom de l'expéditeur selon le type
@@ -1522,7 +1530,6 @@ const Messagerie = () => {
                 </div>
               );
             })}
-            <div ref={messagesEndRef} />
           </div>
         )}
       </ScrollArea>

@@ -99,19 +99,28 @@ const Messagerie = () => {
   const [etatLieuxDate, setEtatLieuxDate] = useState("");
   const [etatLieuxHeure, setEtatLieuxHeure] = useState("");
   
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messagesStartRef = useRef<HTMLDivElement>(null);
+  const scrollViewportRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [unreadCountsMap, setUnreadCountsMap] = useState<Map<string, number>>(new Map());
 
   const scrollToBottom = useCallback((instant: boolean = false) => {
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: instant ? 'instant' : 'smooth' });
-    }, 50);
+      const viewport = scrollViewportRef.current;
+      if (viewport) {
+        if (instant) {
+          viewport.scrollTop = viewport.scrollHeight;
+        } else {
+          viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+        }
+      }
+    }, 100);
   }, []);
 
   const scrollToTop = useCallback(() => {
-    messagesStartRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const viewport = scrollViewportRef.current;
+    if (viewport) {
+      viewport.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }, []);
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
@@ -1218,12 +1227,12 @@ const Messagerie = () => {
           </p>
         </div>
       )}
-      <ScrollArea className="flex-1 p-2 sm:p-4 relative z-10 min-w-0" viewportClassName="overflow-x-hidden" onScroll={handleScroll}>
+      <ScrollArea className="flex-1 p-2 sm:p-4 relative z-10 min-w-0" viewportClassName="overflow-x-hidden" onScroll={handleScroll} viewportRef={scrollViewportRef}>
         {isLoadingMessages ? (
           <MessagesListSkeleton />
         ) : (
         <div className="space-y-2 max-w-4xl mx-auto min-w-0">
-          <div ref={messagesStartRef} />
+          {/* Header qui défile avec les messages */}
           {/* Header qui défile avec les messages */}
           {currentConversation && (
             <div className="mb-4 pb-3 border-b border-border/30">
@@ -1311,7 +1320,6 @@ const Messagerie = () => {
               );
             });
           })()}
-          <div ref={messagesEndRef} />
         </div>
         )}
       </ScrollArea>
