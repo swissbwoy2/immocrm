@@ -14,6 +14,7 @@ import { CoverageSection } from '@/components/landing/CoverageSection';
 import { StatsSection } from '@/components/landing/StatsSection';
 import { ApporteurSection } from '@/components/landing/ApporteurSection';
 import { LandingFooter } from '@/components/landing/LandingFooter';
+import { CookieConsentBanner } from '@/components/CookieConsentBanner';
 
 export default function Landing() {
   const { user, userRole, loading } = useAuth();
@@ -72,6 +73,9 @@ export default function Landing() {
           </Button>
         </div>
       </div>
+
+      {/* Cookie Consent Banner */}
+      <CookieConsentBanner />
     </div>
   );
 }
