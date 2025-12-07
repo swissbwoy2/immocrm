@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { ArrowLeft, ArrowRight, Send, Loader2, Sparkles, Check } from 'lucide-react';
-import logoImmorama from '@/assets/logo-immorama-2023.png';
+import logoImmorama from '@/assets/logo-immo-rama-new.png';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { MandatFormData, initialFormData } from '@/components/mandat/types';
