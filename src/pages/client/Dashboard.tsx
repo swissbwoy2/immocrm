@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw, Sparkles } from 'lucide-react';
+import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw, Sparkles, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
+import { PremiumKPICard, PremiumVisiteCard, PremiumOffreRecueCard, PremiumEmptyState } from '@/components/premium';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
@@ -1040,190 +1040,165 @@ export default function ClientDashboard() {
             </div>
           )}
 
-          {/* Prochaines visites - Premium Card */}
-          <div className="mb-8 animate-fade-in group" style={{ animationDelay: '250ms' }}>
-            <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500">
-              {/* Gradient background on hover */}
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
-              {/* Shine effect on hover */}
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+          {/* Prochaines visites - Premium Section */}
+          <div className="mb-8 animate-fade-in" style={{ animationDelay: '250ms' }}>
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card via-card to-muted/10 backdrop-blur-xl border border-border/50">
+              {/* Animated background */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-float-particle" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-accent/5 rounded-full blur-3xl animate-float-particle" style={{ animationDelay: '2s' }} />
               </div>
               
               <div className="relative p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
-                    <Calendar className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
+                {/* Premium Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="p-3 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 shadow-lg shadow-primary/10">
+                        <Calendar className="w-6 h-6 text-primary" />
+                      </div>
+                      {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length > 0 && (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center shadow-lg animate-bounce-subtle">
+                          {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                        Prochaines visites
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Vos rendez-vous à venir
+                      </p>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-semibold">Prochaines visites</h3>
+                  
                   {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length > 0 && (
-                    <Badge variant="secondary" className="ml-auto animate-pulse-soft">
-                      {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length}
-                    </Badge>
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className="hidden sm:flex gap-2 hover:bg-primary/10 hover:border-primary/30 transition-all duration-300"
+                      onClick={() => navigate('/client/visites')}
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Tout voir
+                    </Button>
                   )}
                 </div>
                 
-                <div className="space-y-3">
-                  {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length > 0 ? (
-                    <>
+                {/* Visits Grid */}
+                {visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now).length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                       {visites
                         .filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= now)
                         .slice(0, 3)
                         .map((visite, index) => (
-                          <div 
-                            key={visite.id} 
-                            className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 cursor-pointer hover:bg-muted/60 hover:scale-[1.01] hover:shadow-md transition-all duration-300 group/item"
+                          <PremiumVisiteCard
+                            key={visite.id}
+                            visite={visite}
+                            index={index}
                             onClick={() => navigate('/client/visites')}
-                            style={{ animationDelay: `${index * 50}ms` }}
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <p className="font-medium group-hover/item:text-primary transition-colors">{visite.adresse}</p>
-                                {visite.offres && (
-                                  <p className="text-sm text-muted-foreground mt-1">
-                                    {visite.offres.pieces} pièces • {visite.offres.surface}m² • {visite.offres.prix} CHF/mois
-                                  </p>
-                                )}
-                                <div className="flex items-center gap-2 mt-2">
-                                  <Badge variant="outline" className="text-xs bg-primary/5 border-primary/20">
-                                    📅 {new Date(visite.date_visite).toLocaleDateString('fr-CH')} à {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                          />
                         ))}
-                      <Button 
-                        variant="ghost" 
-                        className="w-full text-sm text-primary hover:bg-primary/10 hover:scale-[1.02] transition-all duration-300"
-                        onClick={() => navigate('/client/visites')}
-                      >
-                        Voir toutes les visites →
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="text-center py-8">
-                      <div className="p-4 bg-muted/30 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4">
-                        <Calendar className="w-8 h-8 text-muted-foreground" />
-                      </div>
-                      <p className="text-muted-foreground font-medium">Aucune visite planifiée</p>
-                      <p className="text-sm text-muted-foreground mt-1">Vos prochaines visites apparaîtront ici</p>
                     </div>
-                  )}
-                </div>
+                    
+                    <Button 
+                      variant="ghost" 
+                      className="w-full text-sm text-primary hover:bg-primary/10 hover:scale-[1.01] transition-all duration-300 group"
+                      onClick={() => navigate('/client/visites')}
+                    >
+                      <span>Voir toutes les visites</span>
+                      <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform duration-300" />
+                    </Button>
+                  </div>
+                ) : (
+                  <PremiumEmptyState
+                    icon={Calendar}
+                    title="Aucune visite planifiée"
+                    description="Vos prochaines visites de logements apparaîtront ici dès qu'elles seront programmées."
+                  />
+                )}
               </div>
             </div>
           </div>
 
-          {/* Candidatures récentes - Premium Card */}
-          <div className="animate-fade-in group" style={{ animationDelay: '300ms' }}>
-            <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500">
-              {/* Gradient background on hover */}
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              
-              {/* Shine effect on hover */}
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+          {/* Candidatures récentes - Premium Section */}
+          <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card via-card to-muted/10 backdrop-blur-xl border border-border/50">
+              {/* Animated background */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-0 left-0 w-64 h-64 bg-accent/5 rounded-full blur-3xl animate-float-particle" style={{ animationDelay: '1s' }} />
+                <div className="absolute bottom-0 right-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl animate-float-particle" style={{ animationDelay: '3s' }} />
               </div>
               
               <div className="relative p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
-                      <FileText className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
-                    </div>
-                    <h3 className="text-lg font-semibold">Mes candidatures récentes</h3>
-                    {offres.length > 0 && (
-                      <Badge variant="secondary" className="animate-pulse-soft">
-                        {offres.length}
-                      </Badge>
-                    )}
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    className="hover:bg-primary/10 hover:scale-105 transition-all duration-300"
-                    onClick={() => navigate('/client/mes-candidatures')}
-                  >
-                    Voir tout
-                  </Button>
-                </div>
-                
-                <div className="space-y-3">
-                  {offres.length > 0 ? (
-                    <>
-                      {offres.slice(0, 3).map((offre, index) => {
-                        const getStatutLabel = (statut: string) => {
-                          switch (statut) {
-                            case 'envoyee': return 'Envoyée';
-                            case 'vue': return 'Vue';
-                            case 'interesse': return 'Intéressé';
-                            case 'visite_planifiee': return 'Visite planifiée';
-                            case 'visite_effectuee': return 'Visite effectuée';
-                            case 'candidature_deposee': return 'Candidature déposée';
-                            case 'acceptee': return 'Acceptée ✓';
-                            case 'refusee': return 'Refusée';
-                            default: return statut;
-                          }
-                        };
-
-                        const getStatutBadgeClass = (statut: string) => {
-                          switch (statut) {
-                            case 'envoyee': return 'bg-muted text-muted-foreground';
-                            case 'vue': return 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400';
-                            case 'interesse': return 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400';
-                            case 'visite_planifiee': return 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400';
-                            case 'visite_effectuee': return 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400';
-                            case 'candidature_deposee': return 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400';
-                            case 'acceptee': return 'bg-success/10 text-success shadow-success/20';
-                            case 'refusee': return 'bg-destructive/10 text-destructive';
-                            default: return 'bg-muted text-muted-foreground';
-                          }
-                        };
-
-                        return (
-                          <div 
-                            key={offre.id} 
-                            className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 cursor-pointer hover:bg-muted/60 hover:scale-[1.01] hover:shadow-md transition-all duration-300 group/item"
-                            onClick={() => navigate('/client/mes-candidatures')}
-                            style={{ animationDelay: `${index * 50}ms` }}
-                          >
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex-1">
-                                <p className="font-medium group-hover/item:text-primary transition-colors">{offre.adresse}</p>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {offre.pieces} pièces • {offre.surface}m² • {offre.prix?.toLocaleString('fr-CH')} CHF/mois
-                                </p>
-                              </div>
-                              <Badge className={`ml-2 ${getStatutBadgeClass(offre.statut)} shadow-sm`}>
-                                {getStatutLabel(offre.statut)}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              Envoyée le {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
-                            </p>
-                          </div>
-                        );
-                      })}
-                      <Button 
-                        variant="ghost" 
-                        className="w-full text-sm text-primary hover:bg-primary/10 hover:scale-[1.02] transition-all duration-300"
-                        onClick={() => navigate('/client/mes-candidatures')}
-                      >
-                        Voir toutes les candidatures →
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="text-center py-8">
-                      <div className="p-4 bg-muted/30 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4">
-                        <FileText className="w-8 h-8 text-muted-foreground" />
+                {/* Premium Header */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <div className="p-3 rounded-2xl bg-gradient-to-br from-accent/20 to-primary/20 shadow-lg shadow-accent/10">
+                        <FileText className="w-6 h-6 text-primary" />
                       </div>
-                      <p className="text-muted-foreground font-medium">Aucune candidature déposée</p>
-                      <p className="text-sm text-muted-foreground mt-1">Votre agent vous enverra des offres bientôt</p>
+                      {offres.filter(o => o.statut === 'envoyee').length > 0 && (
+                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center shadow-lg animate-bounce-subtle">
+                          {offres.filter(o => o.statut === 'envoyee').length}
+                        </div>
+                      )}
                     </div>
+                    <div>
+                      <h3 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                        Mes offres reçues
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {offres.length} offre{offres.length > 1 ? 's' : ''} • {offres.filter(o => o.statut === 'envoyee').length} nouvelle{offres.filter(o => o.statut === 'envoyee').length > 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {offres.length > 0 && (
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className="hidden sm:flex gap-2 hover:bg-primary/10 hover:border-primary/30 transition-all duration-300"
+                      onClick={() => navigate('/client/mes-candidatures')}
+                    >
+                      <FileText className="w-4 h-4" />
+                      Tout voir
+                    </Button>
                   )}
                 </div>
+                
+                {/* Offers Grid */}
+                {offres.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {offres.slice(0, 3).map((offre, index) => (
+                        <PremiumOffreRecueCard
+                          key={offre.id}
+                          offre={offre}
+                          index={index}
+                          onClick={() => navigate('/client/mes-candidatures')}
+                        />
+                      ))}
+                    </div>
+                    
+                    <Button 
+                      variant="ghost" 
+                      className="w-full text-sm text-primary hover:bg-primary/10 hover:scale-[1.01] transition-all duration-300 group"
+                      onClick={() => navigate('/client/mes-candidatures')}
+                    >
+                      <span>Voir toutes les offres</span>
+                      <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform duration-300" />
+                    </Button>
+                  </div>
+                ) : (
+                  <PremiumEmptyState
+                    icon={FileText}
+                    title="Aucune offre reçue"
+                    description="Votre agent vous enverra bientôt des offres correspondant à vos critères de recherche."
+                  />
+                )}
               </div>
             </div>
           </div>
