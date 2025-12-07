@@ -204,10 +204,14 @@ export function PremiumOffreRecueCard({ offre, index = 0, onClick, className }: 
             {/* Status badge */}
             {!isNew && (
               <Badge className={cn(
-                "shadow-sm transition-all duration-300",
-                isAccepted && "bg-success/10 text-success border-success/30",
-                isRefused && "bg-destructive/10 text-destructive border-destructive/30",
-                !isAccepted && !isRefused && "bg-muted border-border"
+                "shadow-sm transition-all duration-300 font-medium",
+                isAccepted && "bg-success/15 text-success border-success/40",
+                isRefused && "bg-destructive/15 text-destructive border-destructive/40",
+                offre.statut === 'vue' && "bg-blue-500/15 text-blue-600 border-blue-500/40",
+                offre.statut === 'interesse' && "bg-purple-500/15 text-purple-600 border-purple-500/40",
+                offre.statut === 'visite_planifiee' && "bg-amber-500/15 text-amber-600 border-amber-500/40",
+                offre.statut === 'visite_effectuee' && "bg-indigo-500/15 text-indigo-600 border-indigo-500/40",
+                offre.statut === 'candidature_deposee' && "bg-cyan-500/15 text-cyan-600 border-cyan-500/40"
               )}>
                 <StatusIcon className="w-3 h-3 mr-1" />
                 {config.label}
