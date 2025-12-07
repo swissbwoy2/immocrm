@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw, Sparkles } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { KPICard } from '@/components/KPICard';
+import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
@@ -579,58 +579,35 @@ export default function ClientDashboard() {
 
           {/* KPIs avec effets modernes */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-8">
-            <div className="animate-fade-in group" style={{ animationDelay: '0ms' }}>
-              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
-                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
-                <KPICard
-                  title="Offres reçues"
-                  value={stats.offresRecues}
-                  icon={Home}
-                  subtitle={stats.offresNonVues > 0 ? `${stats.offresNonVues} nouvelles` : undefined}
-                  variant={stats.offresNonVues > 0 ? 'warning' : 'default'}
-                  onClick={() => navigate('/client/offres-recues')}
-                />
-              </div>
-            </div>
-
-            <div className="animate-fade-in group" style={{ animationDelay: '50ms' }}>
-              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-primary/10 transition-all duration-500">
-                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-primary/30 via-accent/30 to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
-                <KPICard
-                  title="Visites à venir"
-                  value={stats.visitesAVenir}
-                  icon={Calendar}
-                  onClick={() => navigate('/client/visites')}
-                />
-              </div>
-            </div>
-
-            <div className="animate-fade-in group" style={{ animationDelay: '100ms' }}>
-              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-success/10 transition-all duration-500">
-                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-success/30 via-emerald-400/30 to-success/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
-                <KPICard
-                  title="Visites effectuées"
-                  value={stats.visitesEffectuees}
-                  icon={Calendar}
-                  variant="success"
-                  onClick={() => navigate('/client/visites')}
-                />
-              </div>
-            </div>
-
-            <div className="animate-fade-in group" style={{ animationDelay: '150ms' }}>
-              <div className="relative overflow-hidden rounded-xl hover:shadow-lg hover:shadow-warning/10 transition-all duration-500">
-                <div className="absolute inset-0 rounded-xl p-[1px] bg-gradient-to-r from-warning/30 via-orange-400/30 to-warning/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-border-gradient bg-[length:200%_100%]" />
-                <KPICard
-                  title="Candidatures"
-                  value={stats.candidaturesDeposees}
-                  icon={FileCheck}
-                  subtitle={stats.candidaturesEnAttente > 0 ? `${stats.candidaturesEnAttente} en attente` : undefined}
-                  variant={stats.candidaturesEnAttente > 0 ? 'warning' : 'default'}
-                  onClick={() => navigate('/client/mes-candidatures')}
-                />
-              </div>
-            </div>
+            <PremiumKPICard
+              title="Offres reçues"
+              value={stats.offresRecues}
+              icon={Home}
+              subtitle={stats.offresNonVues > 0 ? `${stats.offresNonVues} nouvelles` : undefined}
+              variant={stats.offresNonVues > 0 ? 'warning' : 'default'}
+              onClick={() => navigate('/client/offres-recues')}
+            />
+            <PremiumKPICard
+              title="Visites à venir"
+              value={stats.visitesAVenir}
+              icon={Calendar}
+              onClick={() => navigate('/client/visites')}
+            />
+            <PremiumKPICard
+              title="Visites effectuées"
+              value={stats.visitesEffectuees}
+              icon={Calendar}
+              variant="success"
+              onClick={() => navigate('/client/visites')}
+            />
+            <PremiumKPICard
+              title="Candidatures"
+              value={stats.candidaturesDeposees}
+              icon={FileCheck}
+              subtitle={stats.candidaturesEnAttente > 0 ? `${stats.candidaturesEnAttente} en attente` : undefined}
+              variant={stats.candidaturesEnAttente > 0 ? 'warning' : 'default'}
+              onClick={() => navigate('/client/mes-candidatures')}
+            />
           </div>
 
           {/* Section Statistiques détaillées avec glassmorphism */}
