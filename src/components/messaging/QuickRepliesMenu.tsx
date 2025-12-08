@@ -137,7 +137,7 @@ export const QuickRepliesMenu: React.FC<QuickRepliesMenuProps> = ({
       <PopoverContent 
         side="top" 
         align="start" 
-        className="w-80 p-0"
+        className="w-80 p-0 max-h-[400px] overflow-hidden"
         sideOffset={8}
       >
         <div className="p-3 border-b">
@@ -146,7 +146,7 @@ export const QuickRepliesMenu: React.FC<QuickRepliesMenuProps> = ({
             Sélectionnez un message prédéfini
           </p>
         </div>
-        <ScrollArea className="max-h-[300px]">
+        <ScrollArea className="h-[300px]">
           <div className="p-2 space-y-1">
             {QUICK_REPLIES.map((reply) => (
               <button
