@@ -17,6 +17,7 @@ import { LandingFooter } from '@/components/landing/LandingFooter';
 import { CookieConsentBanner } from '@/components/CookieConsentBanner';
 import { ProptechSection } from '@/components/landing/ProptechSection';
 import { EntreprisesRHSection } from '@/components/landing/EntreprisesRHSection';
+import { FloatingNav } from '@/components/landing/FloatingNav';
 
 export default function Landing() {
   const { user, userRole, loading } = useAuth();
@@ -44,6 +45,9 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Floating Navigation */}
+      <FloatingNav />
+      
       {/* Top banner */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-white/10">
         <div className="container mx-auto px-4 py-2 text-center">
