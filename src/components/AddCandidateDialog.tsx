@@ -125,15 +125,20 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
 
     setSaving(true);
     try {
-      // Convertir les strings en nombres pour la base de données
+      // Convertir les strings en nombres et les dates vides en null
       const dataToSave = {
         ...formData,
+        // Champs numériques
         loyer_actuel: parseFloat(formData.loyer_actuel) || 0,
         pieces_actuel: parseFloat(formData.pieces_actuel) || 0,
         anciennete_mois: parseInt(formData.anciennete_mois) || 0,
         revenus_mensuels: parseFloat(formData.revenus_mensuels) || 0,
         charges_mensuelles: parseFloat(formData.charges_mensuelles) || 0,
         montant_charges_extra: parseFloat(formData.montant_charges_extra) || 0,
+        // Champs de date - convertir "" en null pour PostgreSQL
+        date_naissance: formData.date_naissance || null,
+        depuis_le: formData.depuis_le || null,
+        date_engagement: formData.date_engagement || null,
       };
       await onSave(dataToSave as any);
       onOpenChange(false);
