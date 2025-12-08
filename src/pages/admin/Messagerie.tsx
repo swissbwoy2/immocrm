@@ -608,16 +608,20 @@ const Messagerie = () => {
       </div>
       <ScrollToTopButton show={showScrollTop} onClick={scrollToTop} />
       <div className="relative z-10">
-        <MessageAttachmentUploader
-          conversationId={selectedConv}
-          onAttachmentReady={setPendingAttachment}
-        />
         <PremiumChatInput
           onSendMessage={handleSendMessage}
+          message={messageText}
+          onMessageChange={setMessageText}
           disabled={false}
           placeholder="Écrivez un message..."
           pendingAttachment={pendingAttachment}
           onRemoveAttachment={() => setPendingAttachment(null)}
+          attachmentSlot={
+            <MessageAttachmentUploader
+              conversationId={selectedConv}
+              onAttachmentReady={setPendingAttachment}
+            />
+          }
         />
       </div>
     </div>
