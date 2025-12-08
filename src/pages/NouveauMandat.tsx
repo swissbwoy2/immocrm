@@ -229,17 +229,13 @@ export default function NouveauMandat() {
         abaninja_invoice_ref: abaninjaInvoiceRef,
       };
 
-      const { data: insertedData, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('demandes_mandat')
-        .insert(insertData as any)
-        .select('id')
-        .single();
+        .insert(insertData as any);
 
       if (insertError) throw insertError;
 
-      const demandeId = insertedData.id;
-
-      // Créer notification pour les admins
+      // Créer notification pour les admins (utilise l'email au lieu de l'ID)
       try {
         await supabase.rpc('create_notification', {
           p_user_id: '4c2ee841-a48b-4d7d-8ed6-3eac9ea124e8',
@@ -247,7 +243,7 @@ export default function NouveauMandat() {
           p_title: 'Nouvelle demande de mandat',
           p_message: `${formData.prenom} ${formData.nom} a soumis une demande de mandat`,
           p_link: '/admin/demandes-activation',
-          p_metadata: { email: formData.email, demande_id: demandeId }
+          p_metadata: { email: formData.email }
         });
         console.log('Admin notification created');
       } catch (notifError) {
