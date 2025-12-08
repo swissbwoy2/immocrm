@@ -33,17 +33,19 @@ export function LandingFooter() {
                 className="h-12 w-auto group-hover:scale-105 transition-transform"
               />
             </Link>
-            <p className="text-muted-foreground text-sm max-w-md mb-6 leading-relaxed">
-              Logisorama, une application{" "}
+            <p className="text-muted-foreground text-sm max-w-md mb-4 leading-relaxed">
               <a
                 href="https://www.immo-rama.ch"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary hover:underline"
+                className="text-primary hover:underline font-semibold"
               >
-                immo-rama.ch
+                Immo-Rama.ch
               </a>{" "}
-              – Votre partenaire de confiance pour trouver le bien immobilier idéal en Suisse romande.
+              – Agence immobilière - Gestion - Vente - Construction et rénovation
+            </p>
+            <p className="text-muted-foreground text-sm max-w-md mb-6 leading-relaxed">
+              Logisorama, votre partenaire de confiance pour trouver le bien immobilier idéal en Suisse romande.
             </p>
             <div className="inline-flex items-center gap-2">
               <div className="relative glass-morphism rounded-full px-4 py-2 text-sm text-muted-foreground border border-border/40 bg-card/80">
