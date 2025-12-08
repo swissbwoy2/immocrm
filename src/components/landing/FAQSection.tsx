@@ -10,7 +10,7 @@ const faqItems = [
   },
   {
     question: "Est-ce vraiment légal et sérieux ?",
-    answer: "Absolument ! Immo-Rama.ch est une entreprise inscrite au Registre du Commerce suisse (IDE : CHE-XXX.XXX.XXX), basée à Lausanne. Nous opérons depuis 2019 avec plus de 500 clients satisfaits. Tu peux vérifier nos avis Google (4.8★) et nous contacter à tout moment.",
+    answer: "Absolument ! Immo-Rama.ch est une entreprise inscrite au Registre du Commerce suisse (IDE : CHE-442.303.796), basée à Crissier. Adresse : Chemin de l'Esparcette 5, 1023 Crissier, Suisse. Nous opérons depuis 2019 avec plus de 500 clients satisfaits. Tu peux vérifier nos avis Google (4.8★) et nous contacter à tout moment.",
   },
   {
     question: "Pourquoi vous êtes différents des chasseurs gratuits ?",
