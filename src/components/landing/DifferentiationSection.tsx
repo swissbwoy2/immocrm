@@ -260,44 +260,44 @@ export function DifferentiationSection() {
         </div>
 
         {/* Premium CTA section */}
-        <div className="mt-20 md:mt-24 text-center animate-fade-in" style={{ animationDelay: "700ms" }}>
-          <div className="relative inline-block group">
+        <div className="mt-12 sm:mt-20 md:mt-24 text-center animate-fade-in px-2 sm:px-0" style={{ animationDelay: "700ms" }}>
+          <div className="relative group w-full max-w-3xl mx-auto">
             {/* Animated glow */}
-            <div className="absolute -inset-4 bg-gradient-to-r from-primary via-blue-500 to-violet-500 rounded-3xl blur-2xl opacity-40 group-hover:opacity-60 transition-opacity animate-pulse" />
+            <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-r from-primary via-blue-500 to-violet-500 rounded-2xl sm:rounded-3xl blur-xl sm:blur-2xl opacity-40 group-hover:opacity-60 transition-opacity animate-pulse" />
             
-            <div className="relative backdrop-blur-xl rounded-3xl p-10 md:p-12 bg-gradient-to-br from-white/10 to-white/5 border border-white/20 shadow-2xl max-w-3xl mx-auto overflow-hidden">
+            <div className="relative backdrop-blur-xl rounded-2xl sm:rounded-3xl p-6 sm:p-10 md:p-12 bg-gradient-to-br from-white/10 to-white/5 border border-white/20 shadow-2xl overflow-hidden">
               {/* Inner gradient overlay */}
               <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-violet-500/10" />
               
               {/* Sparkle decorations */}
-              <div className="absolute top-4 right-4">
-                <Sparkles className="h-6 w-6 text-yellow-400/60 animate-pulse" />
+              <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
+                <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-400/60 animate-pulse" />
               </div>
-              <div className="absolute bottom-4 left-4">
-                <Sparkles className="h-5 w-5 text-primary/60 animate-pulse" style={{ animationDelay: "0.5s" }} />
+              <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4">
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary/60 animate-pulse" style={{ animationDelay: "0.5s" }} />
               </div>
               
               <div className="relative">
-                <h3 className="text-3xl md:text-4xl font-black text-white mb-4">
+                <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-3 sm:mb-4">
                   Tu vois la différence ?
                 </h3>
-                <p className="text-lg text-slate-300 mb-8 max-w-xl mx-auto leading-relaxed">
+                <p className="text-sm sm:text-base md:text-lg text-slate-300 mb-6 sm:mb-8 max-w-xl mx-auto leading-relaxed">
                   Avec Immo-rama.ch, tu as une équipe entière qui se bat pour ton dossier et qui connaît déjà le marché.
                 </p>
                 
                 <Link to="/nouveau-mandat">
                   <Button 
                     size="lg" 
-                    className="relative group/btn font-bold text-lg px-10 py-7 bg-gradient-to-r from-primary via-blue-500 to-violet-500 hover:from-primary/90 hover:via-blue-500/90 hover:to-violet-500/90 border-0 shadow-2xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-primary/50"
+                    className="relative group/btn font-bold text-sm sm:text-base md:text-lg px-6 sm:px-10 py-5 sm:py-7 bg-gradient-to-r from-primary via-blue-500 to-violet-500 hover:from-primary/90 hover:via-blue-500/90 hover:to-violet-500/90 border-0 shadow-2xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-primary/50 w-full sm:w-auto"
                   >
-                    <span className="relative z-10 flex items-center gap-2">
+                    <span className="relative z-10 flex items-center justify-center gap-2">
                       Activer ma recherche
-                      <ArrowRight className="h-5 w-5 group-hover/btn:translate-x-1 transition-transform" />
+                      <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover/btn:translate-x-1 transition-transform" />
                     </span>
                   </Button>
                 </Link>
                 
-                <p className="mt-6 text-sm text-slate-400">
+                <p className="mt-4 sm:mt-6 text-xs sm:text-sm text-slate-400">
                   90 jours de recherche garantie ou remboursé
                 </p>
               </div>
@@ -305,7 +305,7 @@ export function DifferentiationSection() {
           </div>
           
           {/* Credibility note */}
-          <p className="mt-8 text-sm text-slate-500">
+          <p className="mt-6 sm:mt-8 text-xs sm:text-sm text-slate-500 px-4">
             * Basé sur plus de 500 mandats traités en Suisse romande depuis 2020
           </p>
         </div>
