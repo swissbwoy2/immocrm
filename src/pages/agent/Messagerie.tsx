@@ -34,6 +34,7 @@ import { ChatAvatar } from "@/components/messaging/ChatAvatar";
 import { PremiumMessageBubble } from "@/components/messaging/PremiumMessageBubble";
 import { PremiumConversationItem } from "@/components/messaging/PremiumConversationItem";
 import { PremiumChatInput } from "@/components/messaging/PremiumChatInput";
+import { QuickRepliesMenu } from "@/components/messaging/QuickRepliesMenu";
 import { ChatHeader } from "@/components/messaging/ChatHeader";
 import { FloatingParticles, MeshGradientBackground, ChatPatternBackground } from "@/components/messaging/FloatingParticles";
 import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
@@ -102,6 +103,7 @@ const Messagerie = () => {
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [unreadCountsMap, setUnreadCountsMap] = useState<Map<string, number>>(new Map());
+  const [agentFullName, setAgentFullName] = useState<string>("");
 
   const scrollToBottom = useCallback((instant: boolean = false) => {
     // Double RAF pour garantir que le DOM est rendu
@@ -276,6 +278,17 @@ const Messagerie = () => {
       
       const agentIdStr = agentData.id;
       setAgentId(agentIdStr);
+
+      // Récupérer le nom de l'agent
+      const { data: agentProfile } = await supabase
+        .from('profiles')
+        .select('prenom, nom')
+        .eq('id', user.id)
+        .single();
+      
+      if (agentProfile) {
+        setAgentFullName(`${agentProfile.prenom} ${agentProfile.nom}`.trim());
+      }
 
       // Récupérer les clients actuellement assignés à cet agent via client_agents
       const { data: clientAgentsData } = await supabase
@@ -1346,6 +1359,21 @@ const Messagerie = () => {
             placeholder="Écrivez un message..."
             pendingAttachment={pendingAttachment}
             onRemoveAttachment={() => setPendingAttachment(null)}
+            quickRepliesSlot={
+              currentConversation?.conversation_type === 'client-agent' && (
+                <QuickRepliesMenu
+                  onSelectReply={(template) => handleSendMessage(template)}
+                  clientFirstName={(() => {
+                    const contact = contactsMap[currentConversation?.client_id || ''];
+                    if (contact?.name) {
+                      return contact.name.split(' ')[0];
+                    }
+                    return '';
+                  })()}
+                  agentFullName={agentFullName}
+                />
+              )
+            }
           />
         </div>
       )}

@@ -18,6 +18,9 @@ interface PremiumChatInputProps {
   onAttachmentClick?: () => void;
   pendingAttachment?: PendingAttachment | null;
   onRemoveAttachment?: () => void;
+  quickRepliesSlot?: React.ReactNode;
+  message?: string;
+  onMessageChange?: (message: string) => void;
 }
 
 export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
@@ -27,10 +30,18 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
   onAttachmentClick,
   pendingAttachment,
   onRemoveAttachment,
+  quickRepliesSlot,
+  message: controlledMessage,
+  onMessageChange,
 }) => {
-  const [message, setMessage] = useState('');
+  const [internalMessage, setInternalMessage] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Support both controlled and uncontrolled modes
+  const isControlled = controlledMessage !== undefined && onMessageChange !== undefined;
+  const message = isControlled ? controlledMessage : internalMessage;
+  const setMessage = isControlled ? onMessageChange : setInternalMessage;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,6 +131,9 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
         >
           <Paperclip className="h-5 w-5" />
         </Button>
+
+        {/* Quick replies slot */}
+        {quickRepliesSlot}
 
         {/* Input area */}
         <div className="flex-1 relative">
