@@ -170,11 +170,11 @@ export function HeroSection() {
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                Commission : 1 mois de loyer – 300 CHF
+                Commission : 1 mois de loyer moins les 300 CHF d'acompte
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                100% remboursé si échec
+                Acompte 100% remboursé en d'échec des recherches
               </span>
             </div>
           </div>
