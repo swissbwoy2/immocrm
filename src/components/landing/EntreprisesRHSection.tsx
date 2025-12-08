@@ -45,28 +45,28 @@ export function EntreprisesRHSection() {
                 </div>
               </div>
 
-              <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-6">
+              <h2 className="text-2xl sm:text-3xl md:text-5xl font-bold text-foreground mb-6">
                 Offrez à vos équipes un <span className="text-primary">accompagnement relocation</span> clé en main
               </h2>
 
-              <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
+              <p className="text-base sm:text-lg text-muted-foreground mb-8 leading-relaxed">
                 Vos collaborateurs déménagent en Suisse romande ? On s'occupe de tout : 
                 recherche de logement, visites, dossier, jusqu'à la remise des clés. 
                 Vous vous concentrez sur l'essentiel.
               </p>
 
               {/* Benefits list */}
-              <div className="space-y-4 mb-10">
+              <div className="space-y-3 sm:space-y-4 mb-8 sm:mb-10">
                 {benefits.map((benefit, index) => (
                   <div
                     key={index}
-                    className="flex items-start gap-4 animate-fade-in"
+                    className="flex items-start gap-3 sm:gap-4 animate-fade-in"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
-                    <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-                      <benefit.icon className="h-5 w-5 text-primary" />
+                    <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                      <benefit.icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     </div>
-                    <p className="text-foreground font-medium pt-2">
+                    <p className="text-sm sm:text-base text-foreground font-medium pt-1 sm:pt-2">
                       {benefit.text}
                     </p>
                   </div>
@@ -74,12 +74,12 @@ export function EntreprisesRHSection() {
               </div>
 
               {/* CTA */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button asChild size="lg" className="group shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300">
-                  <a href="mailto:entreprises@immo-rama.ch?subject=Demande de renseignements - Service Relocation Entreprises">
-                    <Sparkles className="mr-2 h-5 w-5" />
-                    <span>Parler relocation pour mes collaborateurs</span>
-                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              <div className="flex flex-col gap-4">
+                <Button asChild size="lg" className="group shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 w-full sm:w-auto">
+                  <a href="mailto:entreprises@immo-rama.ch?subject=Demande de renseignements - Service Relocation Entreprises" className="flex items-center justify-center">
+                    <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                    <span className="text-sm sm:text-base">Parler relocation</span>
+                    <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 group-hover:translate-x-1 transition-transform flex-shrink-0" />
                   </a>
                 </Button>
               </div>
