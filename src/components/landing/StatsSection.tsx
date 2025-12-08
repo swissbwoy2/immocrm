@@ -73,7 +73,7 @@ export function StatsSection() {
 
         setStats({
           clients: clientsResult.count || 500,
-          transactions: transactionsResult.count || 490,
+          transactions: transactionsResult.count || 500,
           satisfaction: 98,
           avgDays: 45,
         });
