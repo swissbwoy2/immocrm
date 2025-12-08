@@ -1,0 +1,70 @@
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { LogIn, Rocket } from 'lucide-react';
+import logo from '@/assets/logo-immo-rama-new.png';
+
+export function FloatingNav() {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsVisible(window.scrollY > 100);
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <div
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isVisible 
+          ? 'translate-y-0 opacity-100' 
+          : '-translate-y-full opacity-0'
+      }`}
+    >
+      <div className="bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-lg shadow-black/5">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <Link to="/" className="flex items-center gap-2">
+              <img 
+                src={logo} 
+                alt="Immo-Rama" 
+                className="h-8 w-auto"
+              />
+            </Link>
+
+            {/* Boutons */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Button 
+                asChild 
+                variant="ghost" 
+                size="sm"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Link to="/login">
+                  <LogIn className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Se connecter</span>
+                </Link>
+              </Button>
+              
+              <Button 
+                asChild 
+                size="sm"
+                className="shadow-md shadow-primary/20"
+              >
+                <Link to="/nouveau-mandat">
+                  <Rocket className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden xs:inline">Activer ma recherche</span>
+                  <span className="xs:hidden">Activer</span>
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
