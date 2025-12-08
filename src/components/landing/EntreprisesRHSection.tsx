@@ -1,23 +1,23 @@
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Building2, Users, BarChart3, Clock, ArrowRight, Sparkles, CheckCircle } from 'lucide-react';
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Building2, Users, BarChart3, Clock, ArrowRight, Sparkles, CheckCircle } from "lucide-react";
 
 const benefits = [
   {
     icon: Users,
-    text: 'Gestion complète du relogement (expats, mobilité interne, nouveaux recrutements)',
+    text: "Gestion complète du relogement (expats, mobilité interne, nouveaux recrutements)",
   },
   {
     icon: BarChart3,
-    text: 'Reporting et visibilité sur l\'avancement des recherches',
+    text: "Reporting et visibilité sur l'avancement des recherches",
   },
   {
     icon: Clock,
-    text: 'Gain de temps pour vos équipes RH et vos collaborateurs',
+    text: "Gain de temps pour vos équipes RH et vos collaborateurs",
   },
   {
     icon: CheckCircle,
-    text: 'Conditions spéciales pour volumes',
+    text: "Conditions spéciales pour volumes",
   },
 ];
 
@@ -30,7 +30,10 @@ export function EntreprisesRHSection() {
       {/* Subtle animated orbs */}
       <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-[10%] w-64 h-64 bg-primary/8 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-20 right-[10%] w-72 h-72 bg-primary/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
+        <div
+          className="absolute bottom-20 right-[10%] w-72 h-72 bg-primary/5 rounded-full blur-3xl animate-float"
+          style={{ animationDelay: "2s" }}
+        />
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
@@ -50,9 +53,8 @@ export function EntreprisesRHSection() {
               </h2>
 
               <p className="text-base sm:text-lg text-muted-foreground mb-8 leading-relaxed">
-                Vos collaborateurs déménagent en Suisse romande ? On s'occupe de tout : 
-                recherche de logement, visites, dossier, jusqu'à la remise des clés. 
-                Vous vous concentrez sur l'essentiel.
+                Vos collaborateurs déménagent en Suisse romande ? On s'occupe de tout : recherche de logement, visites,
+                dossier, jusqu'à la remise des clés. Vous vous concentrez sur l'essentiel.
               </p>
 
               {/* Benefits list */}
@@ -66,17 +68,22 @@ export function EntreprisesRHSection() {
                     <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
                       <benefit.icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     </div>
-                    <p className="text-sm sm:text-base text-foreground font-medium pt-1 sm:pt-2">
-                      {benefit.text}
-                    </p>
+                    <p className="text-sm sm:text-base text-foreground font-medium pt-1 sm:pt-2">{benefit.text}</p>
                   </div>
                 ))}
               </div>
 
               {/* CTA */}
               <div className="flex flex-col gap-4">
-                <Button asChild size="lg" className="group shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 w-full sm:w-auto">
-                  <a href="mailto:entreprises@immo-rama.ch?subject=Demande de renseignements - Service Relocation Entreprises" className="flex items-center justify-center">
+                <Button
+                  asChild
+                  size="lg"
+                  className="group shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 w-full sm:w-auto"
+                >
+                  <a
+                    href="mailto:info@immo-rama.ch?subject=Demande de renseignements - Service Relocation Entreprises"
+                    className="flex items-center justify-center"
+                  >
                     <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                     <span className="text-sm sm:text-base">Parler relocation</span>
                     <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 group-hover:translate-x-1 transition-transform flex-shrink-0" />
@@ -86,7 +93,10 @@ export function EntreprisesRHSection() {
             </div>
 
             {/* Right content - Visual */}
-            <div className="animate-fade-in hidden lg:flex items-center justify-center" style={{ animationDelay: '200ms' }}>
+            <div
+              className="animate-fade-in hidden lg:flex items-center justify-center"
+              style={{ animationDelay: "200ms" }}
+            >
               <div className="relative">
                 {/* Decorative circles */}
                 <div className="absolute -inset-8 bg-primary/5 rounded-full blur-2xl" />
