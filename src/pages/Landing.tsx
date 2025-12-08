@@ -47,9 +47,9 @@ export default function Landing() {
       <HeroSection />
       <BudgetCalculatorSection />
       <HowItWorks />
+      <DifferentiationSection />
       <ProptechSection />
       <BenefitsSection />
-      <DifferentiationSection />
       <GuaranteeSection />
       <FAQSection />
       <CoverageSection />
