@@ -166,11 +166,11 @@ export function HeroSection() {
             <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 text-xs md:text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                300 CHF remboursables
+                Acompte d'activation 300 CHF
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                1er RDV offert
+                100% remboursable en cas d’échec après 3 mois de recherche.
               </span>
             </div>
           </div>
@@ -207,7 +207,7 @@ export function HeroSection() {
             {/* Legal mention */}
             <div className="mt-4 inline-flex items-center gap-2 text-xs text-muted-foreground">
               <ShieldCheck className="h-4 w-4 text-green-500" />
-              <span>Service légalement reconnu, mandat écrit, transparence totale</span>
+              <span>🇨🇭Service légalement reconnu, 📑 mandat écrit, 👍transparence totale</span>
             </div>
           </div>
         </div>
