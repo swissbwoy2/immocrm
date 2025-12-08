@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Sparkles, Star, Home, CheckCircle } from 'lucide-react';
+import { ArrowRight, Sparkles, Star, Home, CheckCircle, ShieldCheck, Users } from 'lucide-react';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 
@@ -78,9 +78,14 @@ export function HeroSection() {
           </h1>
           
           {/* Solution headline */}
-          <p className="text-xl md:text-2xl font-semibold mb-4 animate-fade-in text-foreground" style={{ animationDelay: '125ms' }}>
+          <p className="text-xl md:text-2xl font-semibold mb-3 animate-fade-in text-foreground" style={{ animationDelay: '125ms' }}>
             Délègue ta recherche à des{' '}
             <span className="gradient-text-animated bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text">experts qui s'acharnent pour toi</span>
+          </p>
+
+          {/* AI/Tech subtitle */}
+          <p className="text-base md:text-lg text-primary font-medium mb-4 animate-fade-in" style={{ animationDelay: '140ms' }}>
+            🤖 La recherche de logement boostée par la data et l'IA, avec un agent dédié en Suisse romande.
           </p>
 
           {/* Empathic subheadline */}
@@ -148,14 +153,32 @@ export function HeroSection() {
             </Button>
           </div>
 
-          {/* Trust indicator - Premium with glow */}
+          {/* Trust block - Enhanced with multiple signals */}
           <div className="mt-8 animate-fade-in" style={{ animationDelay: '400ms' }}>
-            <div className="relative inline-flex items-center gap-3 glass-morphism rounded-full px-6 py-3 group overflow-hidden">
-              {/* Glow effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-primary/20 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              <span className="text-sm text-muted-foreground relative z-10">
-                <span className="text-primary font-medium">+500 familles relogées</span> en Suisse romande
-              </span>
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+              {/* Google rating */}
+              <div className="inline-flex items-center gap-2 glass-morphism rounded-full px-4 py-2 border border-amber-500/30">
+                <div className="flex items-center gap-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-4 w-4 text-amber-500 fill-amber-500" />
+                  ))}
+                </div>
+                <span className="text-sm font-medium text-foreground">4.8★ sur Google</span>
+              </div>
+
+              {/* Families count */}
+              <div className="inline-flex items-center gap-2 glass-morphism rounded-full px-4 py-2 border border-border/40">
+                <Users className="h-4 w-4 text-primary" />
+                <span className="text-sm text-muted-foreground">
+                  <span className="text-primary font-medium">+500 familles relogées</span> en Suisse romande
+                </span>
+              </div>
+            </div>
+
+            {/* Legal mention */}
+            <div className="mt-4 inline-flex items-center gap-2 text-xs text-muted-foreground">
+              <ShieldCheck className="h-4 w-4 text-green-500" />
+              <span>Service légalement reconnu, mandat écrit, transparence totale</span>
             </div>
           </div>
         </div>

@@ -1,4 +1,38 @@
-import { Briefcase, ArrowRight, Users, Building2, Sparkles } from 'lucide-react';
+import { CheckCircle, X, Minus, Sparkles, Scale } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+const comparisonData = [
+  {
+    aspect: 'Travaille pour',
+    logisorama: 'Toi, le locataire',
+    agence: 'Le propriétaire',
+    solo: 'Toi seul (sans aide)',
+  },
+  {
+    aspect: 'Veille des annonces',
+    logisorama: 'IA + automatisation 24/7',
+    agence: 'Manuelle, priorité interne',
+    solo: 'Manuelle, épuisante',
+  },
+  {
+    aspect: 'Suivi temps réel',
+    logisorama: 'Dashboard client dédié',
+    agence: 'Aucun pour le locataire',
+    solo: 'Aucun',
+  },
+  {
+    aspect: 'Optimisation dossier',
+    logisorama: 'Dossier béton par des pros',
+    agence: 'Minimal',
+    solo: 'Variable, souvent incomplet',
+  },
+  {
+    aspect: 'Garantie résultat',
+    logisorama: '100% remboursé si échec',
+    agence: 'Aucune',
+    solo: 'Aucune',
+  },
+];
 
 export function DifferentiationSection() {
   return (
@@ -32,96 +66,127 @@ export function DifferentiationSection() {
       </div>
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-4xl mx-auto text-center">
-          {/* Icon */}
-          <div className="animate-fade-in mb-8">
-            <div className="relative inline-flex items-center justify-center">
-              <div className="absolute w-24 h-24 rounded-2xl bg-primary/10 animate-pulse" style={{ animationDuration: '3s' }} />
-              <div className="w-20 h-20 rounded-2xl bg-primary/15 border border-primary/30 shadow-lg shadow-primary/10 flex items-center justify-center relative z-10">
-                <Briefcase className="h-10 w-10 text-primary" />
-              </div>
+        {/* Section header */}
+        <div className="text-center mb-12 md:mb-16 animate-fade-in">
+          <div className="inline-flex items-center gap-2 relative group mb-4">
+            <div className="relative glass-morphism rounded-full px-5 py-2.5 border border-primary/20 bg-card/80">
+              <Scale className="inline-block h-4 w-4 text-primary mr-2" />
+              <span className="text-sm font-semibold text-primary">Comparatif</span>
             </div>
           </div>
-
-          {/* Main message */}
-          <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-6">
-              On n'est <span className="text-primary">PAS</span> une agence immobilière classique
-            </h2>
-          </div>
-
-          <p className="text-xl md:text-2xl text-muted-foreground mb-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
-            <span className="text-foreground font-semibold">Les agences vendent des biens.</span>
+          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
+            Pourquoi c'est <span className="text-primary">différent</span> ?
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Compare et vois la différence par toi-même.
           </p>
-          
-          <p className="text-xl md:text-2xl text-primary font-semibold mb-12 animate-fade-in" style={{ animationDelay: '250ms' }}>
-            Nous, on te trouve LE tien.
-          </p>
+        </div>
 
-          {/* Visual representation */}
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-6 animate-fade-in" style={{ animationDelay: '300ms' }}>
-            {/* You */}
-            <div className="flex flex-col items-center gap-3 group">
-              <div className="relative">
-                <div className="w-18 h-18 md:w-20 md:h-20 rounded-full bg-primary/10 border-2 border-primary/30 flex items-center justify-center group-hover:border-primary/50 group-hover:bg-primary/15 transition-all duration-300">
-                  <Users className="h-8 w-8 md:h-10 md:w-10 text-primary" />
+        {/* Comparison table */}
+        <div className="max-w-5xl mx-auto">
+          {/* Desktop table */}
+          <div className="hidden md:block">
+            <div className="grid grid-cols-4 gap-4 mb-4">
+              {/* Header */}
+              <div className="p-4" />
+              <Card className="bg-primary/10 border-primary/30">
+                <CardHeader className="p-4 text-center">
+                  <CardTitle className="text-lg text-primary font-bold">Logisorama</CardTitle>
+                  <p className="text-xs text-primary/80">Notre service</p>
+                </CardHeader>
+              </Card>
+              <Card className="bg-muted/50 border-border/40">
+                <CardHeader className="p-4 text-center">
+                  <CardTitle className="text-lg text-muted-foreground font-semibold">Agence classique</CardTitle>
+                  <p className="text-xs text-muted-foreground/80">Travaille pour le propriétaire</p>
+                </CardHeader>
+              </Card>
+              <Card className="bg-muted/30 border-border/30">
+                <CardHeader className="p-4 text-center">
+                  <CardTitle className="text-lg text-muted-foreground font-semibold">Candidat solo</CardTitle>
+                  <p className="text-xs text-muted-foreground/80">Sans accompagnement</p>
+                </CardHeader>
+              </Card>
+            </div>
+
+            {/* Rows */}
+            {comparisonData.map((row, index) => (
+              <div 
+                key={index} 
+                className="grid grid-cols-4 gap-4 mb-3 animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="p-4 flex items-center">
+                  <span className="font-medium text-foreground">{row.aspect}</span>
                 </div>
+                <Card className="bg-primary/5 border-primary/20 hover:border-primary/40 transition-colors">
+                  <CardContent className="p-4 flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    <span className="text-sm text-foreground">{row.logisorama}</span>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/30 border-border/30">
+                  <CardContent className="p-4 flex items-center gap-2">
+                    <Minus className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">{row.agence}</span>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/20 border-border/20">
+                  <CardContent className="p-4 flex items-center gap-2">
+                    <X className="h-5 w-5 text-destructive/60 flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">{row.solo}</span>
+                  </CardContent>
+                </Card>
               </div>
-              <span className="font-semibold text-foreground text-lg">Toi</span>
-            </div>
-
-            {/* Arrow 1 */}
-            <div className="hidden md:flex items-center">
-              <div className="flex items-center gap-1">
-                <div className="w-12 h-0.5 bg-gradient-to-r from-primary/30 to-primary/60 rounded-full" />
-                <ArrowRight className="h-6 w-6 text-primary/70" />
-              </div>
-            </div>
-            <div className="md:hidden">
-              <ArrowRight className="h-7 w-7 text-primary/70 rotate-90" />
-            </div>
-
-            {/* Immo-Rama */}
-            <div className="flex flex-col items-center gap-3 group">
-              <div className="relative">
-                <div className="absolute inset-0 w-24 h-24 md:w-28 md:h-28 rounded-full bg-primary/20 animate-pulse" style={{ animationDuration: '3s' }} />
-                <div className="relative w-24 h-24 md:w-28 md:h-28 rounded-full bg-primary/15 border-2 border-primary shadow-lg shadow-primary/20 flex items-center justify-center group-hover:bg-primary/20 transition-all duration-300">
-                  <span className="text-2xl md:text-3xl font-bold text-primary">IR</span>
-                </div>
-              </div>
-              <span className="font-bold text-primary text-lg">Immo-Rama</span>
-            </div>
-
-            {/* Arrow 2 */}
-            <div className="hidden md:flex items-center">
-              <div className="flex items-center gap-1">
-                <div className="w-12 h-0.5 bg-gradient-to-r from-primary/30 to-primary/60 rounded-full" />
-                <ArrowRight className="h-6 w-6 text-primary/70" />
-              </div>
-            </div>
-            <div className="md:hidden">
-              <ArrowRight className="h-7 w-7 text-primary/70 rotate-90" />
-            </div>
-
-            {/* Régies */}
-            <div className="flex flex-col items-center gap-3 group">
-              <div className="relative">
-                <div className="w-18 h-18 md:w-20 md:h-20 rounded-full bg-muted/50 border-2 border-border flex items-center justify-center group-hover:border-primary/30 group-hover:bg-muted transition-all duration-300">
-                  <Building2 className="h-8 w-8 md:h-10 md:w-10 text-muted-foreground group-hover:text-primary transition-colors" />
-                </div>
-              </div>
-              <span className="font-semibold text-foreground text-lg">Régies & Propriétaires</span>
-            </div>
+            ))}
           </div>
 
-          {/* Bottom tagline */}
-          <div className="mt-12 md:mt-16 animate-fade-in" style={{ animationDelay: '400ms' }}>
-            <div className="inline-block relative group">
-              <div className="relative px-8 py-4 glass-morphism rounded-full border border-border/40 group-hover:border-primary/30 transition-all duration-300 bg-card/80">
-                <p className="text-lg md:text-xl font-semibold text-foreground group-hover:text-primary transition-colors">
-                  Tu délègues, on s'acharne, tu emménages. 🏠
-                </p>
-              </div>
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-6">
+            {comparisonData.map((row, index) => (
+              <Card 
+                key={index}
+                className="animate-fade-in bg-card/80 border-border/40"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{row.aspect}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-primary font-medium">Logisorama</p>
+                      <p className="text-sm text-foreground">{row.logisorama}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30">
+                    <Minus className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Agence classique</p>
+                      <p className="text-sm text-muted-foreground">{row.agence}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/20">
+                    <X className="h-5 w-5 text-destructive/60 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Candidat solo</p>
+                      <p className="text-sm text-muted-foreground">{row.solo}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Bottom tagline */}
+        <div className="mt-12 md:mt-16 text-center animate-fade-in" style={{ animationDelay: '400ms' }}>
+          <div className="inline-block relative group">
+            <div className="relative px-8 py-4 glass-morphism rounded-full border border-border/40 group-hover:border-primary/30 transition-all duration-300 bg-card/80">
+              <p className="text-lg md:text-xl font-semibold text-foreground group-hover:text-primary transition-colors">
+                Tu délègues, on s'acharne, tu emménages. 🏠
+              </p>
             </div>
           </div>
         </div>

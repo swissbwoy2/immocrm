@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Lock } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Mail, Lock, ArrowLeft } from 'lucide-react';
 import logoImmorama from '@/assets/logo-immo-rama-new.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -141,6 +141,15 @@ export default function Login() {
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
       </div>
       
+      {/* Back to landing button */}
+      <Link 
+        to="/" 
+        className="absolute top-4 left-4 md:top-6 md:left-6 z-20 flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors glass-morphism rounded-full px-4 py-2 border border-border/40 hover:border-primary/30"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        <span className="text-sm font-medium">Retour à l'accueil</span>
+      </Link>
+
       <Card className="w-full max-w-md login-card-float relative">
         <CardHeader className="text-center space-y-4">
           <div className="flex justify-center">
