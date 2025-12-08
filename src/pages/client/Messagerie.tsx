@@ -60,6 +60,7 @@ const Messagerie = () => {
   const [lastMessagesMap, setLastMessagesMap] = useState<Map<string, { content: string | null; attachment_name: string | null }>>(new Map());
   const [offresMap, setOffresMap] = useState<Record<string, any>>({});
   const [candidaturesMap, setCandidaturesMap] = useState<Record<string, any>>({});
+  const [visitesMap, setVisitesMap] = useState<Record<string, any>>({});
   const [agentsMap, setAgentsMap] = useState<Record<string, string>>({});
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
@@ -377,6 +378,19 @@ const Messagerie = () => {
           candidaturesMapping[c.offre_id] = c;
         });
         setCandidaturesMap(candidaturesMapping);
+
+        // Load visites for these offers
+        const { data: visitesData } = await supabase
+          .from('visites')
+          .select('*')
+          .in('offre_id', offreIds)
+          .eq('client_id', clientId);
+
+        const visitesMapping: Record<string, any> = {};
+        visitesData?.forEach(v => {
+          visitesMapping[v.offre_id] = v;
+        });
+        setVisitesMap(visitesMapping);
       }
 
       // Mark messages as read
@@ -1068,11 +1082,14 @@ const Messagerie = () => {
   );
 
   // Contextual action buttons based on offer/candidature status
-  const OffreActions = ({ offre, onAction }: { offre: any, onAction: (action: string, data?: any) => void }) => {
+  const OffreActions = ({ offre, visite, onAction }: { offre: any, visite?: any, onAction: (action: string, data?: any) => void }) => {
     if (!offre) return null;
 
     const candidature = candidaturesMap[offre.id];
     const statut = candidature?.statut || offre.statut;
+    
+    // Check if visit date has passed
+    const isVisiteDatePassed = visite?.date_visite ? new Date(visite.date_visite) <= new Date() : false;
 
     // Nouvelle offre - tous les boutons disponibles
     if (statut === 'envoyee' || statut === 'vue') {
@@ -1137,16 +1154,29 @@ const Messagerie = () => {
           <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-lg">
             <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-1">
               <Calendar className="h-3 w-3" /> Visite planifiée
+              {visite?.date_visite && (
+                <span className="ml-1">
+                  ({format(new Date(visite.date_visite), 'dd/MM à HH:mm', { locale: fr })})
+                </span>
+              )}
             </p>
           </div>
-          <Button size="sm" onClick={() => onAction('visite_effectuee')} className="w-full">
-            <Check className="h-4 w-4 mr-1" /> Marquer visite effectuée
-          </Button>
+          {isVisiteDatePassed ? (
+            <Button size="sm" onClick={() => onAction('visite_effectuee')} className="w-full">
+              <Check className="h-4 w-4 mr-1" /> Marquer visite effectuée
+            </Button>
+          ) : (
+            <div className="p-2 bg-amber-50 dark:bg-amber-950 rounded-lg">
+              <p className="text-xs text-amber-700 dark:text-amber-300 text-center">
+                ⏳ Actions disponibles après la visite
+              </p>
+            </div>
+          )}
         </div>
       );
     }
 
-    // Visite effectuée - proposer de postuler
+    // Visite effectuée - proposer de postuler (only if date passed)
     if (statut === 'visite_effectuee') {
       return (
         <div className="mt-3 space-y-2">
@@ -1533,6 +1563,7 @@ const Messagerie = () => {
                       <PremiumOffreCard offre={offresMap[msg.offre_id!]} />
                       <OffreActions 
                         offre={offresMap[msg.offre_id!]} 
+                        visite={visitesMap[msg.offre_id!]}
                         onAction={(action, data) => handleOffreAction(msg.offre_id, action, data)}
                       />
                     </div>

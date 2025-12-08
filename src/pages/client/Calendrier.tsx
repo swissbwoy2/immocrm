@@ -109,6 +109,16 @@ export default function ClientCalendrier() {
   };
 
   const marquerVisiteEffectuee = async (visite: any) => {
+    // Security check: only allow if visit date has passed
+    if (new Date(visite.date_visite) > new Date()) {
+      toast({
+        title: 'Action non disponible',
+        description: 'Vous ne pouvez marquer une visite comme effectuée qu\'après sa date prévue',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     try {
       await supabase
         .from('visites')

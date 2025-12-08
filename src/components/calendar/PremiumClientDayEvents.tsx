@@ -233,7 +233,9 @@ export function PremiumClientDayEvents({
                   const statusConfig = getStatusConfig(data);
                   const StatusIcon = statusConfig.icon;
                   const isEffectuee = data.statut === 'effectuee' || data.offres?.statut === 'visite_effectuee';
+                  const isVisiteDatePassed = new Date(data.date_visite) <= new Date();
                   const showPostVisitActions = isEffectuee && 
+                    isVisiteDatePassed &&
                     data.offres?.statut !== 'interesse' && 
                     data.offres?.statut !== 'refusee' && 
                     data.offres?.statut !== 'candidature_deposee';
@@ -387,7 +389,7 @@ export function PremiumClientDayEvents({
 
                         {/* Actions */}
                         <div className="space-y-3 pt-3 border-t border-border/50">
-                          {data.statut === 'planifiee' && data.offres?.statut !== 'visite_effectuee' && (
+                          {data.statut === 'planifiee' && data.offres?.statut !== 'visite_effectuee' && isVisiteDatePassed && (
                             <Button 
                               onClick={() => onMarquerEffectuee(data)}
                               className="w-full relative overflow-hidden group/btn bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 shadow-lg shadow-green-500/20"
@@ -397,6 +399,13 @@ export function PremiumClientDayEvents({
                               <Check className="mr-2 h-4 w-4" />
                               Marquer comme effectuée
                             </Button>
+                          )}
+                          {data.statut === 'planifiee' && !isVisiteDatePassed && (
+                            <div className="p-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
+                              <p className="text-xs text-amber-700 dark:text-amber-300 text-center">
+                                ⏳ Actions disponibles après la visite
+                              </p>
+                            </div>
                           )}
 
                           {showPostVisitActions && (

@@ -540,6 +540,7 @@ export default function AgentVisites() {
   const renderVisiteCard = (visite: any, showUrgency = true, showCheckbox = false) => {
     const urgency = getVisiteUrgency(visite.date_visite);
     const isUrgent = urgency.level === 'critical';
+    const isVisiteDatePassed = new Date(visite.date_visite) <= new Date();
     
     return (
       <Card 
@@ -612,24 +613,32 @@ export default function AgentVisites() {
               💡 {visite.notes}
             </p>
           )}
-          <Button 
-            onClick={(e) => {
-              e.stopPropagation();
-              handleMarquerEffectuee(visite);
-            }}
-            className="w-full touch-target"
-            size="lg"
-            variant={isUrgent ? "destructive" : "default"}
-          >
-            {visite.est_deleguee ? (
-              <>
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Donner mon feedback
-              </>
-            ) : (
-              'Marquer comme effectuée'
-            )}
-          </Button>
+          {isVisiteDatePassed ? (
+            <Button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleMarquerEffectuee(visite);
+              }}
+              className="w-full touch-target"
+              size="lg"
+              variant={isUrgent ? "destructive" : "default"}
+            >
+              {visite.est_deleguee ? (
+                <>
+                  <MessageSquare className="mr-2 h-4 w-4" />
+                  Donner mon feedback
+                </>
+              ) : (
+                'Marquer comme effectuée'
+              )}
+            </Button>
+          ) : (
+            <div className="p-3 bg-amber-50 dark:bg-amber-950 rounded-lg text-center">
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                ⏳ Actions disponibles après la visite
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     );
