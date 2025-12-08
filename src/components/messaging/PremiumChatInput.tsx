@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Paperclip, Smile, Mic, X, FileText, Image } from 'lucide-react';
+import { Send, X, FileText, Image } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PendingAttachment {
@@ -15,10 +15,10 @@ interface PremiumChatInputProps {
   onSendMessage: (message: string) => void;
   disabled?: boolean;
   placeholder?: string;
-  onAttachmentClick?: () => void;
   pendingAttachment?: PendingAttachment | null;
   onRemoveAttachment?: () => void;
   quickRepliesSlot?: React.ReactNode;
+  attachmentSlot?: React.ReactNode;
   message?: string;
   onMessageChange?: (message: string) => void;
 }
@@ -27,10 +27,10 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
   onSendMessage,
   disabled = false,
   placeholder = 'Écrivez un message...',
-  onAttachmentClick,
   pendingAttachment,
   onRemoveAttachment,
   quickRepliesSlot,
+  attachmentSlot,
   message: controlledMessage,
   onMessageChange,
 }) => {
@@ -69,7 +69,7 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
     }
   }, [message]);
 
-  const isImage = pendingAttachment?.type?.startsWith('image/');
+  const isImage = pendingAttachment?.type?.startsWith('image') || pendingAttachment?.type === 'image';
 
   return (
     <form
@@ -116,21 +116,8 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
           ? 'border-primary/50 shadow-lg shadow-primary/10 ring-2 ring-primary/20' 
           : 'border-border/50'
       )}>
-        {/* Attachment button */}
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={onAttachmentClick}
-          className={cn(
-            'shrink-0 rounded-xl h-10 w-10',
-            'hover:bg-primary/10 hover:text-primary',
-            'transition-all duration-200 hover:scale-110',
-            pendingAttachment && 'text-primary bg-primary/10'
-          )}
-        >
-          <Paperclip className="h-5 w-5" />
-        </Button>
+        {/* Attachment slot - renders the MessageAttachmentUploader */}
+        {attachmentSlot}
 
         {/* Quick replies slot */}
         {quickRepliesSlot}
@@ -156,51 +143,22 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
           />
         </div>
 
-        {/* Emoji button */}
+        {/* Send button */}
         <Button
-          type="button"
-          variant="ghost"
+          type="submit"
           size="icon"
+          disabled={disabled || (!message.trim() && !pendingAttachment)}
           className={cn(
             'shrink-0 rounded-xl h-10 w-10',
-            'hover:bg-amber-500/10 hover:text-amber-500',
-            'transition-all duration-200 hover:scale-110 hover:rotate-12'
+            'bg-gradient-to-r from-primary to-primary/80',
+            'hover:from-primary/90 hover:to-primary/70',
+            'shadow-lg shadow-primary/30',
+            'transition-all duration-300 hover:scale-110 hover:shadow-primary/50',
+            'disabled:opacity-50 disabled:hover:scale-100'
           )}
         >
-          <Smile className="h-5 w-5" />
+          <Send className="h-5 w-5" />
         </Button>
-
-        {/* Send/Mic button */}
-        {(message.trim() || pendingAttachment) ? (
-          <Button
-            type="submit"
-            size="icon"
-            disabled={disabled || (!message.trim() && !pendingAttachment)}
-            className={cn(
-              'shrink-0 rounded-xl h-10 w-10',
-              'bg-gradient-to-r from-primary to-primary/80',
-              'hover:from-primary/90 hover:to-primary/70',
-              'shadow-lg shadow-primary/30',
-              'transition-all duration-300 hover:scale-110 hover:shadow-primary/50',
-              'animate-scale-in'
-            )}
-          >
-            <Send className="h-5 w-5" />
-          </Button>
-        ) : (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className={cn(
-              'shrink-0 rounded-xl h-10 w-10',
-              'hover:bg-primary/10 hover:text-primary',
-              'transition-all duration-200 hover:scale-110'
-            )}
-          >
-            <Mic className="h-5 w-5" />
-          </Button>
-        )}
       </div>
 
       {/* Character count indicator */}

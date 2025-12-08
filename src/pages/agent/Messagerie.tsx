@@ -1349,10 +1349,6 @@ const Messagerie = () => {
       <ScrollToTopButton show={showScrollTop} onClick={scrollToTop} />
       {!currentConversation?.is_archived && (
         <div className="relative z-10">
-          <MessageAttachmentUploader
-            conversationId={selectedConv}
-            onAttachmentReady={setPendingAttachment}
-          />
           <PremiumChatInput
             onSendMessage={handleSendMessage}
             message={messageText}
@@ -1361,6 +1357,12 @@ const Messagerie = () => {
             placeholder="Écrivez un message..."
             pendingAttachment={pendingAttachment}
             onRemoveAttachment={() => setPendingAttachment(null)}
+            attachmentSlot={
+              <MessageAttachmentUploader
+                conversationId={selectedConv}
+                onAttachmentReady={setPendingAttachment}
+              />
+            }
             quickRepliesSlot={
               currentConversation?.conversation_type === 'client-agent' && (
                 <QuickRepliesMenu
