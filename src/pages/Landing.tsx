@@ -15,6 +15,8 @@ import { StatsSection } from '@/components/landing/StatsSection';
 import { ApporteurSection } from '@/components/landing/ApporteurSection';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 import { CookieConsentBanner } from '@/components/CookieConsentBanner';
+import { ProptechSection } from '@/components/landing/ProptechSection';
+import { EntreprisesRHSection } from '@/components/landing/EntreprisesRHSection';
 
 export default function Landing() {
   const { user, userRole, loading } = useAuth();
@@ -44,13 +46,15 @@ export default function Landing() {
     <div className="min-h-screen bg-background">
       <HeroSection />
       <BudgetCalculatorSection />
-      <BenefitsSection />
-      <GuaranteeSection />
-      <DifferentiationSection />
-      <FAQSection />
       <HowItWorks />
+      <ProptechSection />
+      <BenefitsSection />
+      <DifferentiationSection />
+      <GuaranteeSection />
+      <FAQSection />
       <CoverageSection />
       <StatsSection />
+      <EntreprisesRHSection />
       <ApporteurSection />
       <LandingFooter />
 

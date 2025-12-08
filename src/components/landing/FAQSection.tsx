@@ -5,24 +5,16 @@ import { cn } from '@/lib/utils';
 
 const faqItems = [
   {
-    question: "Comment ça marche concrètement ?",
-    answer: "C'est ultra simple : tu remplis le formulaire (5 min), tu verses l'acompte de 300 CHF, et ton agent dédié prend le relais immédiatement. Il recherche, contacte les régies, prépare ton dossier béton et t'envoie des offres dans ton espace client. Toi, tu valides ce qui te plaît !",
-  },
-  {
     question: "Est-ce vraiment légal et sérieux ?",
     answer: "Absolument ! Immo-Rama.ch est une entreprise inscrite au Registre du Commerce suisse (IDE : CHE-442.303.796), basée à Crissier. Adresse : Chemin de l'Esparcette 5, 1023 Crissier, Suisse. Nous opérons depuis 2019 avec plus de 500 clients satisfaits. Tu peux vérifier nos avis Google (4.8★) et nous contacter à tout moment.",
   },
   {
-    question: "Pourquoi vous êtes différents des chasseurs gratuits ?",
-    answer: "Les services 'gratuits' sont payés par les régies, donc ils travaillent pour elles, pas pour toi. Nous, on est payé par TOI, donc on défend TES intérêts. On négocie pour toi, on te conseille honnêtement, et on n'a aucun intérêt à te placer dans un appart' qui ne te convient pas.",
+    question: "Comment fonctionne la garantie 100% remboursé ?",
+    answer: "C'est simple : si après 3 mois de recherche active on n'a pas trouvé ton appartement, tu es intégralement remboursé sous 7 jours. C'est notre garantie \"Satisfait ou remboursé\". On prend le risque, pas toi. L'acompte de 300 CHF est 100% remboursable en cas d'échec de notre part.",
   },
   {
-    question: "Les 300 CHF sont-ils vraiment remboursables ?",
-    answer: "Oui, à 100% et sans condition ! Si après 3 mois de recherche active on n'a pas trouvé ton appartement, tu es intégralement remboursé sous 7 jours. C'est notre garantie \"Satisfait ou remboursé\". On prend le risque, pas toi.",
-  },
-  {
-    question: "Que se passe-t-il si j'annule avant 90 jours ?",
-    answer: "En cas d'annulation de ta part avant les 90 jours, l'acompte de 300 CHF reste acquis car il couvre le travail déjà effectué (recherches, contacts régies, préparation dossier). Le remboursement intégral ne s'applique qu'en cas d'échec de notre part après 3 mois.",
+    question: "Que se passe-t-il si je trouve moi-même ?",
+    answer: "Super pour toi ! Tu nous préviens et on arrête les recherches. L'acompte de 300 CHF reste acquis pour couvrir le travail effectué (recherches, contacts régies, préparation dossier), mais tu ne paies pas les honoraires de succès. Pas de mauvaise surprise.",
   },
   {
     question: "Dans quels cantons êtes-vous actifs ?",
@@ -33,16 +25,16 @@ const faqItems = [
     answer: "En moyenne 45 jours, mais certains clients trouvent en 2 semaines ! Ça dépend de tes critères et du marché local. Notre expertise et notre réseau accélèrent considérablement le processus par rapport à une recherche solo.",
   },
   {
-    question: "Et si je trouve moi-même pendant la recherche ?",
-    answer: "Super pour toi ! Tu nous préviens et on arrête les recherches. L'acompte de 300 CHF reste acquis pour couvrir le travail effectué, mais tu ne paies pas les honoraires de succès. Pas de mauvaise surprise.",
+    question: "Comment ça marche concrètement ?",
+    answer: "C'est ultra simple : tu remplis le formulaire (5 min), tu verses l'acompte de 300 CHF, et ton agent dédié prend le relais immédiatement. Il recherche, contacte les régies, prépare ton dossier béton et t'envoie des offres dans ton espace client. Toi, tu valides ce qui te plaît !",
+  },
+  {
+    question: "Pourquoi vous êtes différents des chasseurs gratuits ?",
+    answer: "Les services 'gratuits' sont payés par les régies, donc ils travaillent pour elles, pas pour toi. Nous, on est payé par TOI, donc on défend TES intérêts. On négocie pour toi, on te conseille honnêtement, et on n'a aucun intérêt à te placer dans un appart' qui ne te convient pas.",
   },
   {
     question: "Comment fonctionne la délégation de visite ?",
     answer: "Si tu n'es pas disponible (à l'étranger, horaires compliqués...), ton agent visite à ta place. Tu reçois une vidéo HD + un compte-rendu détaillé sous 24h pour décider en toute connaissance de cause. C'est comme si tu y étais !",
-  },
-  {
-    question: "Comment puis-je vous contacter ?",
-    answer: "Bien sûr ! Par email : info@immo-rama.ch ou support@immo-rama.ch. Par téléphone : +41 76 483 91 99. Par courrier : Immo-Rama.ch, Chemin de l'Esparcette 5, 1023 Crissier, Suisse 🇨🇭. On répond sous 24h !",
   },
 ];
 
@@ -105,7 +97,7 @@ export function FAQSection() {
         <div className="flex justify-center mb-8 animate-fade-in">
           <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded-full px-4 py-2">
             <ShieldCheck className="h-4 w-4 text-green-500" />
-            <span className="text-sm text-green-600 font-medium">Entreprise vérifiée • 4.8★ sur Google</span>
+            <span className="text-sm text-green-600 font-medium">Entreprise vérifiée • CHE-442.303.796 • 4.8★ sur Google</span>
           </div>
         </div>
 

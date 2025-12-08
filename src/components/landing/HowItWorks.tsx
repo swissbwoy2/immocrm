@@ -1,26 +1,26 @@
-import { FileText, UserCheck, Home, CheckCircle, Sparkles, Zap } from 'lucide-react';
+import { UserCheck, Radar, Users, Key, Sparkles, Zap } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 const steps = [
   {
-    icon: FileText,
-    title: 'Crée ton profil',
-    description: '5 minutes chrono pour définir tes critères de rêve. C\'est gratuit et sans engagement.',
-  },
-  {
     icon: UserCheck,
-    title: 'Ton agent te contacte',
-    description: 'Un vrai humain te rappelle sous 24h pour affiner ta recherche. Pas un robot.',
+    title: 'Analyse de ton profil',
+    description: 'On étudie tes critères : revenus, budget, permis, zone souhaitée. 5 minutes chrono, c\'est gratuit.',
   },
   {
-    icon: Home,
-    title: 'Offres sur mesure',
-    description: 'Reçois uniquement des biens triés sur le volet. Pas de spam, que du pertinent.',
+    icon: Radar,
+    title: 'Matching automatique',
+    description: 'Notre IA surveille tous les portails + notre réseau off-market. Dès qu\'un bien match, on te le propose.',
   },
   {
-    icon: CheckCircle,
+    icon: Users,
+    title: 'Agent dédié à tes côtés',
+    description: 'Un vrai humain filtre les offres, planifie les visites et optimise ton dossier pour les régies.',
+  },
+  {
+    icon: Key,
     title: 'Tu emménages !',
-    description: 'Visite (ou on visite pour toi), signe ton bail et célèbre ton nouveau chez-toi.',
+    description: 'Signature du bail et suivi jusqu\'à la remise des clés. Célèbre ton nouveau chez-toi.',
   },
 ];
 
@@ -66,10 +66,10 @@ export function HowItWorks() {
             </div>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
-            4 étapes vers <span className="text-primary">ton nouveau chez-toi</span>
+            Comment on trouve <span className="text-primary">ton appart'</span>, concrètement ?
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            On a simplifié le parcours au maximum. Toi tu te détends, nous on bosse.
+            Agent humain + Technologie + Réseau = Efficacité maximale
           </p>
         </div>
 

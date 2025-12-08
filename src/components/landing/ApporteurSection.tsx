@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Handshake, TrendingUp, Eye, CreditCard, ArrowRight, Sparkles } from 'lucide-react';
+import { Handshake, TrendingUp, Eye, CreditCard, ArrowRight, Sparkles, Users, Building2, Briefcase } from 'lucide-react';
 
 const benefits = [
   {
@@ -10,14 +10,21 @@ const benefits = [
   },
   {
     icon: Eye,
-    title: 'Dashboard dédié',
-    description: 'Suis tes recommandations et tes gains en temps réel depuis ton espace perso.',
+    title: 'Dashboard partenaire dédié',
+    description: 'Suis tes leads, leurs statuts et tes paiements en temps réel depuis ton espace perso.',
   },
   {
     icon: CreditCard,
     title: 'Paiement sous 15 jours',
-    description: 'Virement direct sur ton compte dès la conclusion de l\'affaire. Rapide et sans paperasse.',
+    description: 'Virement direct sur ton compte dès la signature du bail. Rapide et sans paperasse.',
   },
+];
+
+const targetProfiles = [
+  { icon: Building2, label: 'Agents immobiliers' },
+  { icon: Users, label: 'RH & Entreprises' },
+  { icon: Briefcase, label: 'Courtiers & Conciergeries' },
+  { icon: Handshake, label: 'Coachs emploi & Influenceurs' },
 ];
 
 export function ApporteurSection() {
@@ -71,9 +78,21 @@ export function ApporteurSection() {
               Envoie-le nous et touche ta commission. Simple comme bonjour.
             </p>
 
-            <p className="text-base text-foreground font-medium mb-10">
-              💡 Parfait pour : agents immobiliers, RH, expatriés, concierges, tout le monde !
-            </p>
+            {/* Target profiles */}
+            <div className="mb-8">
+              <p className="text-sm font-medium text-foreground mb-3">💡 Parfait pour :</p>
+              <div className="flex flex-wrap gap-2">
+                {targetProfiles.map((profile, index) => (
+                  <div 
+                    key={index}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border/40 text-sm text-muted-foreground"
+                  >
+                    <profile.icon className="h-4 w-4" />
+                    <span>{profile.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
             {/* CTA */}
             <div className="relative inline-block group">
