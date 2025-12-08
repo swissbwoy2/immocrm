@@ -118,7 +118,7 @@ export function HeroSection() {
             className="text-base md:text-lg text-primary font-medium mb-4 animate-fade-in"
             style={{ animationDelay: "140ms" }}
           >
-            🤖 Boost ta recherche de logement avec un agent dédié en Suisse romande.
+            🤖 Booste ta recherche de logement avec un agent dédié en Suisse romande.
           </p>
 
           {/* Empathic subheadline */}
