@@ -7,22 +7,22 @@ const faqItems = [
   {
     question: "Combien ça coûte exactement ?",
     answer:
-      "C'est simple et transparent : tu paies 300 CHF pour activer ta recherche. Si on te trouve un appartement et que tu signes le bail, la commission s'élève à 1 mois de loyer, moins les 300 CHF déjà versés. Si on ne trouve rien après 3 mois de recherche active, tu es remboursé intégralement. Tu ne prends donc aucun risque financier.",
+      "C'est transparent : une caution de 300 CHF est versée pour activer ton dossier de recherche. En cas de signature d'un bail, la commission s'élève à 1 mois de loyer brut (loyer + charges), avec un minimum de 500 CHF HT (logements subventionnés). Les 300 CHF de caution sont déduits de cette commission. Tu signes un mandat de recherche officiel encadré par le droit suisse.",
   },
   {
     question: "Est-ce vraiment légal et sérieux ?",
     answer:
-      "Absolument ! Immo-Rama.ch est une entreprise inscrite au Registre du Commerce suisse (IDE : CHE-442.303.796), basée à Crissier. Adresse : Chemin de l'Esparcette 5, 1023 Crissier, Suisse. Nous opérons depuis 2019 avec plus de 500 clients satisfaits. Tu peux vérifier nos avis Google (4.8★) et nous contacter à tout moment.",
+      "Absolument ! Tu signes un mandat de recherche officiel conforme au Code des Obligations suisse (CO). La juridiction compétente est Berne (Suisse). Ce cadre juridique protège tes droits et garantit un processus professionnel et encadré.",
   },
   {
     question: "Comment fonctionne la garantie 100% remboursé ?",
     answer:
-      "C'est simple : si après 3 mois de recherche active on n'a pas trouvé ton appartement, tu es intégralement remboursé sous 7 jours. C'est notre garantie \"Satisfait ou remboursé\". On prend le risque, pas toi. L'acompte de 300 CHF est 100% remboursable en cas d'échec de notre part.",
+      "Le mandat de recherche est valable 3 mois. Passé ce délai, tu peux choisir de le renouveler ou d'y mettre fin. En cas de non-renouvellement (résiliation par lettre recommandée au moins 30 jours avant l'échéance), ta caution de 300 CHF t'est restituée sous 30 jours. En revanche, si tu résilies le mandat avant son terme, la caution reste acquise.",
   },
   {
     question: "Que se passe-t-il si je trouve moi-même ?",
     answer:
-      "Super pour toi ! Tu nous préviens et on arrête les recherches. L'acompte de 300 CHF reste acquis pour couvrir le travail effectué (recherches, contacts régies, préparation dossier), mais tu ne paies pas les honoraires de succès. Pas de mauvaise surprise.",
+      "Bonne nouvelle ! Si tu trouves par toi-même un logement qui n'a aucun lien avec nos recherches, aucune commission n'est due. On te demande simplement de nous prévenir rapidement pour qu'on arrête les démarches de notre côté.",
   },
   {
     question: "Dans quels cantons êtes-vous actifs ?",
@@ -32,22 +32,22 @@ const faqItems = [
   {
     question: "Combien de temps pour trouver en moyenne ?",
     answer:
-      "En moyenne 45 jours, mais certains clients trouvent en 2 semaines ! Ça dépend de tes critères et du marché local. Notre expertise et notre réseau accélèrent considérablement le processus par rapport à une recherche solo.",
+      "En moyenne 45 jours, mais certains clients trouvent en 2 semaines ! Ton mandat de recherche est valable 3 mois, renouvelable par tacite reconduction. Notre expertise et notre réseau accélèrent considérablement le processus.",
   },
   {
     question: "Comment ça marche concrètement ?",
     answer:
-      "C'est ultra simple : tu remplis le formulaire (5 min), tu verses l'acompte de 300 CHF, et ton agent dédié prend le relais immédiatement. Il recherche, contacte les régies, prépare ton dossier béton et t'envoie des offres dans ton espace client. Toi, tu valides ce qui te plaît !",
+      "Tu remplis le formulaire et signes un mandat de recherche officiel. Tu verses la caution de 300 CHF et ton dossier est activé dès réception du paiement. Immo-Rama te transmet des offres correspondant à tes critères, ou contacte directement les propriétaires pour toi. On peut te demander des justificatifs ou références pour renforcer ton dossier.",
   },
   {
-    question: "Pourquoi vous êtes différents des chasseurs gratuits ?",
+    question: "Comment travaillez-vous pour moi ?",
     answer:
-      "Les services 'gratuits' sont payés par les régies, donc ils travaillent pour elles, pas pour toi. Nous, on est payé par TOI, donc on défend TES intérêts. On négocie pour toi, on te conseille honnêtement, et on n'a aucun intérêt à te placer dans un appart' qui ne te convient pas.",
+      "On travaille exclusivement pour TOI avec un mandat de recherche officiel. On te transmet les informations, on contacte les offreurs en ton nom, et on peut t'assister lors de la signature du bail. On défend tes intérêts, pas ceux des propriétaires.",
   },
   {
     question: "Comment fonctionne la délégation de visite ?",
     answer:
-      "Si tu n'es pas disponible (à l'étranger, horaires compliqués...), ton agent visite à ta place. Tu reçois une vidéo HD + un compte-rendu détaillé sous 24h pour décider en toute connaissance de cause. C'est comme si tu y étais !",
+      "Si tu n'es pas disponible, ton agent visite à ta place. Tu reçois une vidéo HD + un compte-rendu détaillé sous 24h. Si tu confirmes par écrit que ton dossier peut être transmis à la gérance et que le logement t'est attribué, la commission d'un mois de loyer s'applique selon le mandat signé.",
   },
 ];
 
