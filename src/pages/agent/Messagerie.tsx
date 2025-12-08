@@ -1355,6 +1355,8 @@ const Messagerie = () => {
           />
           <PremiumChatInput
             onSendMessage={handleSendMessage}
+            message={messageText}
+            onMessageChange={setMessageText}
             disabled={false}
             placeholder="Écrivez un message..."
             pendingAttachment={pendingAttachment}
@@ -1362,7 +1364,7 @@ const Messagerie = () => {
             quickRepliesSlot={
               currentConversation?.conversation_type === 'client-agent' && (
                 <QuickRepliesMenu
-                  onSelectReply={(template) => handleSendMessage(template)}
+                  onSelectReply={(template) => setMessageText(template)}
                   clientFirstName={(() => {
                     const contact = contactsMap[currentConversation?.client_id || ''];
                     if (contact?.name) {
