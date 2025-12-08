@@ -1,36 +1,36 @@
-import { CheckCircle, X, Minus, Sparkles, Scale } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CheckCircle, X, Minus, Sparkles, Scale } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const comparisonData = [
   {
-    aspect: 'Travaille pour',
-    logisorama: 'Toi, le locataire',
-    agence: 'Le propriétaire',
-    solo: 'Toi seul (sans aide)',
+    aspect: "Travaille pour",
+    logisorama: "Toi, le locataire",
+    agence: "Ne vont pas chercher pour toi",
+    solo: "Toi seul (sans aide)",
   },
   {
-    aspect: 'Veille des annonces',
-    logisorama: 'IA + automatisation 24/7',
-    agence: 'Manuelle, priorité interne',
-    solo: 'Manuelle, épuisante',
+    aspect: "Veille des annonces",
+    logisorama: "IA + automatisation 24/7",
+    agence: "Manuelle, priorité interne",
+    solo: "Manuelle, épuisante",
   },
   {
-    aspect: 'Suivi temps réel',
-    logisorama: 'Dashboard client dédié',
-    agence: 'Aucun pour le locataire',
-    solo: 'Aucun',
+    aspect: "Suivi temps réel",
+    logisorama: "Dashboard client/candidat dédié",
+    agence: "Uniquement pour les locataires",
+    solo: "Aucun",
   },
   {
-    aspect: 'Optimisation dossier',
-    logisorama: 'Dossier béton par des pros',
-    agence: 'Minimal',
-    solo: 'Variable, souvent incomplet',
+    aspect: "Optimisation dossier",
+    logisorama: "Dossier analysé par des pros",
+    agence: "Minimal",
+    solo: "Variable, souvent incomplet",
   },
   {
-    aspect: 'Garantie résultat',
-    logisorama: '100% remboursé si échec',
-    agence: 'Aucune',
-    solo: 'Aucune',
+    aspect: "Garantie résultat",
+    logisorama: "100% remboursé si échec",
+    agence: "Aucune",
+    solo: "Aucune",
   },
 ];
 
@@ -39,11 +39,14 @@ export function DifferentiationSection() {
     <section className="py-20 md:py-28 relative overflow-hidden">
       {/* Subtle gradient background */}
       <div className="absolute inset-0 bg-gradient-to-b from-muted/10 via-primary/[0.03] to-muted/10" />
-      
+
       {/* Subtle animated orbs - hidden on mobile */}
       <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-10 left-[10%] w-48 h-48 bg-primary/5 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-10 right-[10%] w-56 h-56 bg-primary/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '3s' }} />
+        <div
+          className="absolute bottom-10 right-[10%] w-56 h-56 bg-primary/5 rounded-full blur-3xl animate-float"
+          style={{ animationDelay: "3s" }}
+        />
       </div>
 
       {/* Subtle sparkles - hidden on mobile */}
@@ -57,8 +60,8 @@ export function DifferentiationSection() {
               left: `${20 + i * 30}%`,
             }}
           >
-            <Sparkles 
-              className="h-3 w-3 text-primary/20 animate-pulse" 
+            <Sparkles
+              className="h-3 w-3 text-primary/20 animate-pulse"
               style={{ animationDuration: `${3 + i}s`, animationDelay: `${i * 0.5}s` }}
             />
           </div>
@@ -77,9 +80,7 @@ export function DifferentiationSection() {
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
             Pourquoi c'est <span className="text-primary">différent</span> ?
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Compare et vois la différence par toi-même.
-          </p>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">Compare et vois la différence par toi-même.</p>
         </div>
 
         {/* Comparison table */}
@@ -111,8 +112,8 @@ export function DifferentiationSection() {
 
             {/* Rows */}
             {comparisonData.map((row, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="grid grid-cols-4 gap-4 mb-3 animate-fade-in"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
@@ -144,7 +145,7 @@ export function DifferentiationSection() {
           {/* Mobile cards */}
           <div className="md:hidden space-y-6">
             {comparisonData.map((row, index) => (
-              <Card 
+              <Card
                 key={index}
                 className="animate-fade-in bg-card/80 border-border/40"
                 style={{ animationDelay: `${index * 50}ms` }}
@@ -181,7 +182,7 @@ export function DifferentiationSection() {
         </div>
 
         {/* Bottom tagline */}
-        <div className="mt-12 md:mt-16 text-center animate-fade-in" style={{ animationDelay: '400ms' }}>
+        <div className="mt-12 md:mt-16 text-center animate-fade-in" style={{ animationDelay: "400ms" }}>
           <div className="inline-block relative group">
             <div className="relative px-8 py-4 glass-morphism rounded-full border border-border/40 group-hover:border-primary/30 transition-all duration-300 bg-card/80">
               <p className="text-lg md:text-xl font-semibold text-foreground group-hover:text-primary transition-colors">
