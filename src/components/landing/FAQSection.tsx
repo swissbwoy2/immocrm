@@ -41,8 +41,8 @@ const faqItems = [
     answer: "Si tu n'es pas disponible (à l'étranger, horaires compliqués...), ton agent visite à ta place. Tu reçois une vidéo HD + un compte-rendu détaillé sous 24h pour décider en toute connaissance de cause. C'est comme si tu y étais !",
   },
   {
-    question: "Puis-je vous contacter avant de m'inscrire ?",
-    answer: "Bien sûr ! Écris-nous à contact@immo-rama.ch ou appelle le +41 XX XXX XX XX. On répond sous 24h. Tu peux aussi demander un premier RDV gratuit et sans engagement pour poser toutes tes questions.",
+    question: "Comment puis-je vous contacter ?",
+    answer: "Bien sûr ! Par email : info@immo-rama.ch ou support@immo-rama.ch. Par téléphone : +41 76 483 91 99. Par courrier : Immo-Rama.ch, Chemin de l'Esparcette 5, 1023 Crissier, Suisse 🇨🇭. On répond sous 24h !",
   },
 ];
 
