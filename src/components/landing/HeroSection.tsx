@@ -163,14 +163,18 @@ export function HeroSection() {
             </Button>
 
             {/* Micro-copy trust signals */}
-            <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 text-xs md:text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 text-xs md:text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                Acompte d'activation 300 CHF
+                Acompte 300 CHF
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                100% remboursable en cas d’échec après 3 mois de recherche.
+                Commission : 1 mois de loyer – 300 CHF
+              </span>
+              <span className="flex items-center gap-1">
+                <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
+                100% remboursé si échec
               </span>
             </div>
           </div>
