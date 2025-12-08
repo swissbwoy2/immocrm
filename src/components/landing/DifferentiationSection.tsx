@@ -112,7 +112,7 @@ export function DifferentiationSection() {
             <div className="p-4 bg-muted/50 rounded-t-xl border border-border border-b-0">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-muted-foreground" />
-                <span className="font-bold text-muted-foreground">Toi, seul</span>
+                <span className="font-bold text-muted-foreground">Recherche autonome - Sans accompagnement</span>
               </div>
             </div>
           </div>
@@ -177,7 +177,7 @@ export function DifferentiationSection() {
                   <div className="p-4 bg-muted/50 rounded-xl border border-border">
                     <div className="flex items-center gap-2 mb-2">
                       <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Toi, seul</span>
+                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Recherche autonome</span>
                     </div>
                     <p className="text-sm text-muted-foreground leading-relaxed">{item.solo}</p>
                   </div>
