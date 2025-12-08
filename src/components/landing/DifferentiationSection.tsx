@@ -1,209 +1,191 @@
-import { 
-  Search, 
-  Users, 
-  Filter, 
-  Calendar, 
-  FileText, 
-  MessageCircle, 
-  Brain, 
-  Eye, 
-  Shield, 
-  CheckCircle, 
-  AlertTriangle, 
-  ArrowRight,
-  LucideIcon
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { CheckCircle, X, Minus, Scale, Shield, Clock, TrendingUp } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-interface ComparisonItem {
-  aspect: string;
-  icon: LucideIcon;
-  immorama: string;
-  solo: string;
-}
-
-const comparisonData: ComparisonItem[] = [
+const comparisonData = [
   {
-    aspect: "Recherche de biens",
-    icon: Search,
-    immorama: "Un agent dédié + nos outils surveillent en continu les annonces et opportunités en Suisse romande.",
-    solo: "Tu scrutes les sites un par un, dès que tu as du temps, en espérant ne rien rater.",
-  },
-  {
-    aspect: "Accès au réseau",
-    icon: Users,
-    immorama: "On connaît des propriétaires et avons de bonnes relations avec de nombreuses régies, ce qui peut ouvrir des portes et crédibiliser ton dossier.",
-    solo: "Tu arrives comme un dossier parmi des dizaines d'autres, sans relation préalable ni quelqu'un pour te présenter.",
-  },
-  {
-    aspect: "Tri et sélection",
-    icon: Filter,
-    immorama: "On filtre les annonces pour ne garder que celles réalistes pour ton budget, ton profil et tes délais.",
-    solo: "Tu candidatures à tout ce qui « semble possible », sans savoir si ton dossier a vraiment une chance.",
-  },
-  {
-    aspect: "Organisation des visites",
-    icon: Calendar,
-    immorama: "On demande les visites, on regroupe les créneaux et on sait comment parler aux régies pour optimiser tes chances.",
-    solo: "Tu contactes chaque régie séparément, souvent trop tard, et tu dois te débrouiller seul pour obtenir un créneau.",
-  },
-  {
-    aspect: "Dossier locatif",
-    icon: FileText,
-    immorama: "On t'aide à constituer un dossier complet et pro, aligné avec les attentes des régies et des propriétaires de la région.",
-    solo: "Tu improvises ton dossier, tu ne sais pas toujours ce qui manque ou ce qui pose problème.",
-  },
-  {
-    aspect: "Suivi avec les régies",
-    icon: MessageCircle,
-    immorama: "On relance, on clarifie et on utilise notre relationnel pour obtenir des réponses quand c'est possible.",
-    solo: "Tu envoies ton dossier et tu attends… parfois sans jamais avoir de feedback.",
-  },
-  {
-    aspect: "Temps & charge mentale",
-    icon: Brain,
-    immorama: "Tu délègues la chasse à une équipe qui connaît déjà le marché et les interlocuteurs.",
-    solo: "Tu passes ton temps à chercher, relancer et stresser, sans savoir si tu t'y prends « comme il faut ».",
-  },
-  {
-    aspect: "Visibilité sur l'avancement",
-    icon: Eye,
-    immorama: "Tu as un mandat clair de 90 jours, un agent référent et un suivi structuré.",
-    solo: "Tu avances au feeling, sans cadre ni échéance.",
-  },
-  {
-    aspect: "Garantie",
+    aspect: "Représentation",
+    logisorama: "Exclusivement le locataire",
+    agence: "Le propriétaire (mandat de gérance)",
+    solo: "Vous-même, sans soutien",
     icon: Shield,
-    immorama: "Si aucun bail n'est signé en 90 jours, la garantie de remboursement prévue au mandat s'applique.",
-    solo: "Aucun filet de sécurité : tout le risque repose sur toi.",
+  },
+  {
+    aspect: "Veille du marché",
+    logisorama: "Surveillance automatisée 24h/24 via IA",
+    agence: "Consultation manuelle, priorité aux mandats internes",
+    solo: "Recherche manuelle chronophage",
+    icon: Clock,
+  },
+  {
+    aspect: "Suivi des candidatures",
+    logisorama: "Dashboard temps réel avec historique complet",
+    agence: "Communication ponctuelle sur demande",
+    solo: "Aucun outil de suivi structuré",
+    icon: TrendingUp,
+  },
+  {
+    aspect: "Préparation du dossier",
+    logisorama: "Analyse et optimisation par des experts",
+    agence: "Vérification minimale des pièces",
+    solo: "Qualité variable, souvent incomplet",
+    icon: CheckCircle,
+  },
+  {
+    aspect: "Temps investi",
+    logisorama: "Délégation complète, vous restez informé",
+    agence: "Démarches à effectuer vous-même",
+    solo: "Investissement personnel important",
+    icon: Clock,
+  },
+  {
+    aspect: "Engagement de résultat",
+    logisorama: "Garantie 100% remboursé sous 90 jours",
+    agence: "Aucune garantie contractuelle",
+    solo: "Aucune garantie",
+    icon: Shield,
   },
 ];
 
 export function DifferentiationSection() {
-  const navigate = useNavigate();
-
   return (
-    <section className="py-16 md:py-24 bg-gradient-to-b from-background to-muted/30">
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="text-center mb-12 md:mb-16 max-w-4xl mx-auto">
-          <h2 className="text-2xl md:text-4xl font-bold text-foreground mb-6 leading-tight">
-            Avec Logisorama, tu ne te présentes pas seul face aux régies et propriétaires
-          </h2>
-          <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-            Chercher un appart en Suisse romande peut se faire de deux façons : avec une équipe qui connaît le terrain, les régies et les propriétaires… ou en solo, au milieu de centaines de candidatures anonymes.
-          </p>
-        </div>
+    <section className="py-20 md:py-28 relative overflow-hidden bg-gradient-to-b from-background via-muted/5 to-background">
+      {/* Subtle professional gradient overlay */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/[0.02] via-transparent to-transparent" />
 
-        {/* Desktop Table */}
-        <div className="hidden lg:block max-w-6xl mx-auto">
-          {/* Table Header */}
-          <div className="grid grid-cols-[1fr_1.5fr_1.5fr] gap-4 mb-4">
-            <div className="p-4">
-              <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Critère</span>
-            </div>
-            <div className="p-4 bg-primary/10 rounded-t-xl border border-primary/20 border-b-0">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-primary" />
-                <span className="font-bold text-foreground">Avec Immo-rama.ch</span>
-              </div>
-            </div>
-            <div className="p-4 bg-muted/50 rounded-t-xl border border-border border-b-0">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-muted-foreground" />
-                <span className="font-bold text-muted-foreground">Recherche autonome - Sans accompagnement</span>
-              </div>
+      <div className="container mx-auto px-4 relative z-10">
+        {/* Section header - more professional */}
+        <div className="text-center mb-12 md:mb-16 animate-fade-in">
+          <div className="inline-flex items-center gap-2 relative group mb-4">
+            <div className="relative glass-morphism rounded-full px-5 py-2.5 border border-primary/20 bg-card/80">
+              <Scale className="inline-block h-4 w-4 text-primary mr-2" />
+              <span className="text-sm font-semibold text-primary">Analyse comparative</span>
             </div>
           </div>
-
-          {/* Table Body */}
-          {comparisonData.map((item, index) => {
-            const Icon = item.icon;
-            const isLast = index === comparisonData.length - 1;
-            
-            return (
-              <div 
-                key={item.aspect} 
-                className="grid grid-cols-[1fr_1.5fr_1.5fr] gap-4"
-              >
-                {/* Critère */}
-                <div className={`p-4 flex items-start gap-3 ${index !== 0 ? 'border-t border-border/50' : ''}`}>
-                  <Icon className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                  <span className="font-medium text-foreground text-sm">{item.aspect}</span>
-                </div>
-                
-                {/* Immo-rama */}
-                <div className={`p-4 bg-primary/10 border-x border-primary/20 ${isLast ? 'rounded-b-xl border-b' : ''}`}>
-                  <p className="text-sm text-foreground leading-relaxed">{item.immorama}</p>
-                </div>
-                
-                {/* Solo */}
-                <div className={`p-4 bg-muted/50 border-x border-border ${isLast ? 'rounded-b-xl border-b' : ''}`}>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{item.solo}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Mobile Cards */}
-        <div className="lg:hidden space-y-6">
-          {comparisonData.map((item) => {
-            const Icon = item.icon;
-            
-            return (
-              <div key={item.aspect} className="space-y-3">
-                {/* Critère Title */}
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <h3 className="font-semibold text-foreground">{item.aspect}</h3>
-                </div>
-                
-                {/* Cards */}
-                <div className="grid gap-3">
-                  {/* Immo-rama Card */}
-                  <div className="p-4 bg-primary/10 rounded-xl border border-primary/20">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="h-4 w-4 text-primary" />
-                      <span className="text-xs font-semibold text-primary uppercase tracking-wide">Avec Immo-rama.ch</span>
-                    </div>
-                    <p className="text-sm text-foreground leading-relaxed">{item.immorama}</p>
-                  </div>
-                  
-                  {/* Solo Card */}
-                  <div className="p-4 bg-muted/50 rounded-xl border border-border">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Recherche autonome</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{item.solo}</p>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* CTA Final */}
-        <div className="text-center mt-12 md:mt-16 pt-8 border-t border-border/50">
-          <h3 className="text-xl md:text-2xl font-bold text-foreground mb-4">
-            Tu vois la différence ?
-          </h3>
-          <p className="text-muted-foreground mb-8 max-w-2xl mx-auto leading-relaxed">
-            Avec Immo-rama.ch, tu as une équipe entière qui se bat pour ton dossier et qui connaît déjà le marché.
-            Clique sur « Activer ma recherche » pour lancer tes 90 jours de recherche garantie.
+          <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
+            Logisorama vs <span className="text-primary">les alternatives</span>
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Un comparatif objectif pour vous aider à choisir la solution adaptée à votre recherche.
           </p>
-          <Button 
-            onClick={() => navigate("/nouveau-mandat")} 
-            size="lg"
-            className="text-base px-8"
-          >
-            Activer ma recherche
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+        </div>
+
+        {/* Comparison table */}
+        <div className="max-w-5xl mx-auto">
+          {/* Desktop table */}
+          <div className="hidden md:block">
+            <div className="grid grid-cols-4 gap-4 mb-4">
+              {/* Header */}
+              <div className="p-4" />
+              <Card className="bg-primary/10 border-primary/30 shadow-lg shadow-primary/5">
+                <CardHeader className="p-4 text-center">
+                  <CardTitle className="text-lg text-primary font-bold">Logisorama</CardTitle>
+                  <p className="text-xs text-primary/80 font-medium">Mandat de recherche locative</p>
+                </CardHeader>
+              </Card>
+              <Card className="bg-muted/50 border-border/40">
+                <CardHeader className="p-4 text-center">
+                  <CardTitle className="text-lg text-muted-foreground font-semibold">Agence immobilière</CardTitle>
+                  <p className="text-xs text-muted-foreground/80">Mandat de gérance</p>
+                </CardHeader>
+              </Card>
+              <Card className="bg-muted/30 border-border/30">
+                <CardHeader className="p-4 text-center">
+                  <CardTitle className="text-lg text-muted-foreground font-semibold">Recherche autonome</CardTitle>
+                  <p className="text-xs text-muted-foreground/80">Sans accompagnement</p>
+                </CardHeader>
+              </Card>
+            </div>
+
+            {/* Rows */}
+            {comparisonData.map((row, index) => (
+              <div
+                key={index}
+                className="grid grid-cols-4 gap-4 mb-3 animate-fade-in"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <div className="p-4 flex items-center gap-3">
+                  <row.icon className="h-4 w-4 text-primary/60" />
+                  <span className="font-medium text-foreground">{row.aspect}</span>
+                </div>
+                <Card className="bg-primary/5 border-primary/20 hover:border-primary/40 transition-colors">
+                  <CardContent className="p-4 flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    <span className="text-sm text-foreground">{row.logisorama}</span>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/30 border-border/30">
+                  <CardContent className="p-4 flex items-center gap-2">
+                    <Minus className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">{row.agence}</span>
+                  </CardContent>
+                </Card>
+                <Card className="bg-muted/20 border-border/20">
+                  <CardContent className="p-4 flex items-center gap-2">
+                    <X className="h-5 w-5 text-destructive/60 flex-shrink-0" />
+                    <span className="text-sm text-muted-foreground">{row.solo}</span>
+                  </CardContent>
+                </Card>
+              </div>
+            ))}
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-6">
+            {comparisonData.map((row, index) => (
+              <Card
+                key={index}
+                className="animate-fade-in bg-card/80 border-border/40"
+                style={{ animationDelay: `${index * 50}ms` }}
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <row.icon className="h-4 w-4 text-primary" />
+                    <CardTitle className="text-base">{row.aspect}</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
+                    <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-primary font-medium">Logisorama</p>
+                      <p className="text-sm text-foreground">{row.logisorama}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30">
+                    <Minus className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Agence immobilière</p>
+                      <p className="text-sm text-muted-foreground">{row.agence}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/20">
+                    <X className="h-5 w-5 text-destructive/60 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground font-medium">Recherche autonome</p>
+                      <p className="text-sm text-muted-foreground">{row.solo}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Professional bottom section */}
+        <div className="mt-12 md:mt-16 text-center space-y-4 animate-fade-in" style={{ animationDelay: "400ms" }}>
+          {/* Professional tagline */}
+          <div className="inline-block relative group">
+            <div className="relative px-8 py-4 glass-morphism rounded-2xl border border-primary/20 group-hover:border-primary/40 transition-all duration-300 bg-card/80 shadow-lg shadow-primary/5">
+              <p className="text-lg md:text-xl font-semibold text-foreground">
+                Délégation totale, transparence complète, <span className="text-primary">résultat garanti</span>.
+              </p>
+            </div>
+          </div>
+          
+          {/* Credibility note */}
+          <p className="text-sm text-muted-foreground">
+            * Basé sur plus de 500 mandats traités en Suisse romande depuis 2020
+          </p>
         </div>
       </div>
     </section>
