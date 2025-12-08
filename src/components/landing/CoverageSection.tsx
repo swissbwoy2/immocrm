@@ -1,12 +1,12 @@
-import { MapPin, CheckCircle, Sparkles, Globe } from 'lucide-react';
+import { MapPin, CheckCircle, Sparkles, Globe } from "lucide-react";
 
 const cantons = [
-  { name: 'Vaud' },
-  { name: 'Genève' },
-  { name: 'Valais' },
-  { name: 'Fribourg' },
-  { name: 'Neuchâtel' },
-  { name: 'Jura' },
+  { name: "Vaud" },
+  { name: "Genève" },
+  { name: "Valais" },
+  { name: "Fribourg" },
+  { name: "Neuchâtel" },
+  { name: "Jura" },
 ];
 
 export function CoverageSection() {
@@ -19,7 +19,10 @@ export function CoverageSection() {
       {/* Subtle animated orbs - hidden on mobile */}
       <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 right-[10%] w-48 h-48 bg-primary/5 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-20 left-[10%] w-56 h-56 bg-primary/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
+        <div
+          className="absolute bottom-20 left-[10%] w-56 h-56 bg-primary/5 rounded-full blur-3xl animate-float"
+          style={{ animationDelay: "2s" }}
+        />
       </div>
 
       {/* Subtle sparkles - hidden on mobile */}
@@ -33,8 +36,8 @@ export function CoverageSection() {
               left: `${20 + i * 30}%`,
             }}
           >
-            <Sparkles 
-              className="h-3 w-3 text-primary/20 animate-pulse" 
+            <Sparkles
+              className="h-3 w-3 text-primary/20 animate-pulse"
               style={{ animationDuration: `${3 + i}s`, animationDelay: `${i * 0.5}s` }}
             />
           </div>
@@ -76,16 +79,16 @@ export function CoverageSection() {
                     <MapPin className="h-9 w-9 md:h-10 md:w-10 text-primary" />
                   </div>
                 </div>
-                
+
                 {/* Canton name */}
                 <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors mb-3">
                   {canton.name}
                 </h3>
-                
+
                 {/* Coverage indicator */}
                 <div className="flex items-center justify-center gap-2 text-muted-foreground">
                   <CheckCircle className="h-5 w-5 text-primary" />
-                  <span className="text-sm font-medium">Tout le canton</span>
+                  <span className="text-sm font-medium"></span>
                 </div>
               </div>
 
