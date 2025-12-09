@@ -170,7 +170,7 @@ export function HeroSection() {
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                Acompte 100% en d'échec des recherches
+                Acompte 100% remboursé en cas d'échec des recherches
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
