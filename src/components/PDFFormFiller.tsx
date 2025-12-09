@@ -430,6 +430,35 @@ export default function PDFFormFiller() {
     setSymbolAnnotations(prev => prev.filter(a => a.id !== id));
   };
 
+  // Convert base64 data URL to proper PNG bytes
+  const dataUrlToPngBytes = async (dataUrl: string): Promise<Uint8Array> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Could not get canvas context'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0);
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error('Could not create blob'));
+            return;
+          }
+          blob.arrayBuffer().then(buffer => {
+            resolve(new Uint8Array(buffer));
+          }).catch(reject);
+        }, 'image/png');
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = dataUrl;
+    });
+  };
+
   // Generate filled PDF
   const generateFilledPdf = async (): Promise<Uint8Array | null> => {
     if (!pdfBytes) return null;
@@ -497,17 +526,23 @@ export default function PDFFormFiller() {
         if (signature) {
           const page = pages[sigPos.pageIndex];
           if (page) {
-            const { height } = page.getSize();
-            const base64Data = signature.data.split(',')[1];
-            const signatureBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-            const signatureImage = await pdfDoc.embedPng(signatureBytes);
-            
-            page.drawImage(signatureImage, {
-              x: sigPos.x,
-              y: height - sigPos.y - sigPos.height,
-              width: sigPos.width,
-              height: sigPos.height
-            });
+            try {
+              const { height } = page.getSize();
+              
+              // Convert signature to proper PNG bytes
+              const signatureBytes = await dataUrlToPngBytes(signature.data);
+              const signatureImage = await pdfDoc.embedPng(signatureBytes);
+              
+              page.drawImage(signatureImage, {
+                x: sigPos.x,
+                y: height - sigPos.y - sigPos.height,
+                width: sigPos.width,
+                height: sigPos.height
+              });
+            } catch (sigError) {
+              console.error('Error embedding signature:', sigError);
+              // Continue without this signature but don't fail the whole PDF
+            }
           }
         }
       }
