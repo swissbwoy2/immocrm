@@ -1,8 +1,28 @@
+import { useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MandatFormData, NATIONALITES, TYPES_PERMIS, ETATS_CIVILS } from './types';
 import { User, Mail, Phone, MapPin, Calendar, Globe, Shield, Heart } from 'lucide-react';
+
+// Constantes pour les sélecteurs de date
+const MONTHS = [
+  { value: '01', label: 'Janvier' },
+  { value: '02', label: 'Février' },
+  { value: '03', label: 'Mars' },
+  { value: '04', label: 'Avril' },
+  { value: '05', label: 'Mai' },
+  { value: '06', label: 'Juin' },
+  { value: '07', label: 'Juillet' },
+  { value: '08', label: 'Août' },
+  { value: '09', label: 'Septembre' },
+  { value: '10', label: 'Octobre' },
+  { value: '11', label: 'Novembre' },
+  { value: '12', label: 'Décembre' },
+];
+
+// Années de 2010 à 1920 (ordre décroissant)
+const YEARS = Array.from({ length: 91 }, (_, i) => String(2010 - i));
 
 interface Props {
   data: MandatFormData;
@@ -10,6 +30,53 @@ interface Props {
 }
 
 export default function MandatFormStep1({ data, onChange }: Props) {
+  // Parser la date existante
+  const dateParts = useMemo(() => {
+    if (data.date_naissance && data.date_naissance.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = data.date_naissance.split('-');
+      return { day, month, year };
+    }
+    return { day: '', month: '', year: '' };
+  }, [data.date_naissance]);
+
+  // Calculer les jours disponibles selon le mois/année
+  const getDaysInMonth = (month: string, year: string) => {
+    if (!month) return 31;
+    const m = parseInt(month, 10);
+    const y = year ? parseInt(year, 10) : 2000;
+    if ([4, 6, 9, 11].includes(m)) return 30;
+    if (m === 2) {
+      const isLeapYear = (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+      return isLeapYear ? 29 : 28;
+    }
+    return 31;
+  };
+
+  const daysInMonth = getDaysInMonth(dateParts.month, dateParts.year);
+  const DAYS = Array.from({ length: daysInMonth }, (_, i) => String(i + 1).padStart(2, '0'));
+
+  const handleDatePartChange = (part: 'day' | 'month' | 'year', value: string) => {
+    let newDay = part === 'day' ? value : dateParts.day;
+    const newMonth = part === 'month' ? value : dateParts.month;
+    const newYear = part === 'year' ? value : dateParts.year;
+
+    // Ajuster le jour si nécessaire
+    if (newDay && newMonth) {
+      const maxDays = getDaysInMonth(newMonth, newYear);
+      if (parseInt(newDay, 10) > maxDays) {
+        newDay = String(maxDays).padStart(2, '0');
+      }
+    }
+
+    // Construire la date si toutes les parties sont remplies
+    if (newDay && newMonth && newYear) {
+      onChange({ date_naissance: `${newYear}-${newMonth}-${newDay}` });
+    } else {
+      // Stocker partiellement pour garder la sélection
+      const partialDate = `${newYear || '0000'}-${newMonth || '00'}-${newDay || '00'}`;
+      onChange({ date_naissance: partialDate });
+    }
+  };
   return (
     <div className="space-y-6">
       {/* Premium Header */}
@@ -107,20 +174,49 @@ export default function MandatFormStep1({ data, onChange }: Props) {
           />
         </div>
 
-        {/* Date de naissance */}
-        <div className="space-y-2 group">
-          <Label htmlFor="date_naissance" className="flex items-center gap-2 text-sm font-medium">
+        {/* Date de naissance - 3 sélecteurs */}
+        <div className="space-y-2 group md:col-span-2">
+          <Label className="flex items-center gap-2 text-sm font-medium">
             <Calendar className="h-4 w-4 text-primary/70" />
             Date de naissance <span className="text-destructive">*</span>
           </Label>
-          <Input
-            id="date_naissance"
-            type="date"
-            value={data.date_naissance}
-            onChange={(e) => onChange({ date_naissance: e.target.value })}
-            required
-            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm"
-          />
+          <div className="grid grid-cols-3 gap-2">
+            {/* Jour */}
+            <Select value={dateParts.day} onValueChange={(v) => handleDatePartChange('day', v)}>
+              <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm">
+                <SelectValue placeholder="Jour" />
+              </SelectTrigger>
+              <SelectContent className="backdrop-blur-xl bg-popover/95 max-h-[200px]">
+                {DAYS.map((d) => (
+                  <SelectItem key={d} value={d} className="cursor-pointer hover:bg-primary/10">{parseInt(d, 10)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Mois */}
+            <Select value={dateParts.month} onValueChange={(v) => handleDatePartChange('month', v)}>
+              <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm">
+                <SelectValue placeholder="Mois" />
+              </SelectTrigger>
+              <SelectContent className="backdrop-blur-xl bg-popover/95 max-h-[200px]">
+                {MONTHS.map((m) => (
+                  <SelectItem key={m.value} value={m.value} className="cursor-pointer hover:bg-primary/10">{m.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Année */}
+            <Select value={dateParts.year} onValueChange={(v) => handleDatePartChange('year', v)}>
+              <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm">
+                <SelectValue placeholder="Année" />
+              </SelectTrigger>
+              <SelectContent className="backdrop-blur-xl bg-popover/95 max-h-[200px]">
+                {YEARS.map((y) => (
+                  <SelectItem key={y} value={y} className="cursor-pointer hover:bg-primary/10">{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {/* Nationalité */}
