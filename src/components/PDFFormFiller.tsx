@@ -101,6 +101,8 @@ export default function PDFFormFiller() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [renderScale, setRenderScale] = useState(1);
 
   // Load PDF and render
   const loadPdf = useCallback(async (arrayBuffer: ArrayBuffer) => {
@@ -126,7 +128,16 @@ export default function PDFFormFiller() {
     const context = canvas.getContext('2d');
     if (!context) return;
 
-    const viewport = page.getViewport({ scale: zoom * 1.5 });
+    // Calculate scale to fit container width
+    const containerWidth = containerRef.current?.clientWidth ?? 800;
+    const availableWidth = containerWidth - 48; // padding
+    const originalViewport = page.getViewport({ scale: 1 });
+    const fitScale = Math.min(availableWidth / originalViewport.width, 1.5);
+    const finalScale = fitScale * zoom;
+    
+    setRenderScale(finalScale);
+    
+    const viewport = page.getViewport({ scale: finalScale });
     canvas.width = viewport.width;
     canvas.height = viewport.height;
 
@@ -136,15 +147,15 @@ export default function PDFFormFiller() {
     }).promise;
 
     // Draw annotations for current page
-    drawAnnotations(context, viewport, pageIndex);
+    drawAnnotations(context, viewport, pageIndex, finalScale);
   };
 
   const drawAnnotations = (
     context: CanvasRenderingContext2D, 
     viewport: pdfjsLib.PageViewport,
-    pageIndex: number
+    pageIndex: number,
+    scale: number
   ) => {
-    const scale = zoom * 1.5;
 
     // Draw text annotations
     const pageTextAnnotations = textAnnotations.filter(a => a.pageIndex === pageIndex);
@@ -246,8 +257,8 @@ export default function PDFFormFiller() {
     if (!canvasRef.current || mode === 'select') return;
 
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / (zoom * 1.5);
-    const y = (e.clientY - rect.top) / (zoom * 1.5);
+    const x = (e.clientX - rect.left) / renderScale;
+    const y = (e.clientY - rect.top) / renderScale;
 
     if (mode === 'text') {
       setNewTextPosition({ x, y });
@@ -743,7 +754,7 @@ export default function PDFFormFiller() {
         </div>
 
         {/* PDF Canvas */}
-        <ScrollArea className="flex-1">
+        <div className="flex-1 overflow-auto" ref={containerRef}>
           <div className="flex items-center justify-center p-6 min-h-full">
             {!pdfFile ? (
               <div
@@ -776,7 +787,7 @@ export default function PDFFormFiller() {
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Text input modal */}
         {isAddingText && (
