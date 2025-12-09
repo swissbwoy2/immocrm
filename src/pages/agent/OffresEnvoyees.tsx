@@ -28,6 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ResendOfferDialog } from '@/components/ResendOfferDialog';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
+import { AgentOffreDetailsDialog } from '@/components/AgentOffreDetailsDialog';
 
 const getStatutBadgeVariant = (statut: string) => {
   switch (statut) {
@@ -86,6 +87,8 @@ export default function OffresEnvoyees() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedOffers, setSelectedOffers] = useState<Set<string>>(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [offreToView, setOffreToView] = useState<any>(null);
 
   useEffect(() => {
     loadData();
@@ -497,21 +500,24 @@ export default function OffresEnvoyees() {
                       size="sm"
                       className="flex-1 h-8 text-xs"
                       onClick={() => {
+                        setOffreToView(offre);
+                        setDetailsDialogOpen(true);
+                      }}
+                    >
+                      <Eye className="h-3.5 w-3.5 mr-1.5" />
+                      Détails
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 h-8 text-xs"
+                      onClick={() => {
                         setSelectedOffer(offre);
                         setResendDialogOpen(true);
                       }}
                     >
                       <Send className="h-3.5 w-3.5 mr-1.5" />
                       Renvoyer
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 h-8 text-xs"
-                      onClick={() => navigate(`/agent/clients/${offre.client_id}`)}
-                    >
-                      <Eye className="h-3.5 w-3.5 mr-1.5" />
-                      Client
                     </Button>
                     <Button
                       variant="outline"
@@ -612,6 +618,13 @@ export default function OffresEnvoyees() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Offer Details Dialog */}
+      <AgentOffreDetailsDialog
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        offre={offreToView}
+      />
     </main>
   );
 }
