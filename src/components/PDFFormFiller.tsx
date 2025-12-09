@@ -654,11 +654,20 @@ export default function PDFFormFiller() {
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
-                    <img 
-                      src={sig.data} 
-                      alt={sig.name} 
-                      className="max-h-12 w-full object-contain bg-white rounded"
-                    />
+                    <div 
+                      className="max-h-12 w-full rounded p-1"
+                      style={{ 
+                        backgroundImage: 'linear-gradient(45deg, #e5e5e5 25%, transparent 25%), linear-gradient(-45deg, #e5e5e5 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e5e5 75%), linear-gradient(-45deg, transparent 75%, #e5e5e5 75%)', 
+                        backgroundSize: '8px 8px', 
+                        backgroundPosition: '0 0, 0 4px, 4px -4px, -4px 0px' 
+                      }}
+                    >
+                      <img 
+                        src={sig.data} 
+                        alt={sig.name} 
+                        className="max-h-10 w-full object-contain"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -666,7 +675,7 @@ export default function PDFFormFiller() {
               {/* Signature pad */}
               {showSignaturePad ? (
                 <div className="space-y-2">
-                  <div className="border rounded-lg overflow-hidden bg-white">
+                  <div className="border rounded-lg overflow-hidden" style={{ backgroundImage: 'linear-gradient(45deg, #e5e5e5 25%, transparent 25%), linear-gradient(-45deg, #e5e5e5 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #e5e5e5 75%), linear-gradient(-45deg, transparent 75%, #e5e5e5 75%)', backgroundSize: '10px 10px', backgroundPosition: '0 0, 0 5px, 5px -5px, -5px 0px' }}>
                     <SignaturePad
                       value={currentSignatureData}
                       onChange={setCurrentSignatureData}

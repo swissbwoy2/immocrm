@@ -28,7 +28,7 @@ export default function SignaturePad({ value, onChange }: Props) {
       }
 
       signaturePadRef.current = new SignaturePadLib(canvas, {
-        backgroundColor: 'rgb(255, 255, 255)',
+        backgroundColor: 'rgba(255, 255, 255, 0)',
         penColor: 'rgb(0, 0, 0)',
         minWidth: 1,
         maxWidth: 3,
@@ -63,6 +63,14 @@ export default function SignaturePad({ value, onChange }: Props) {
   const handleClear = () => {
     if (signaturePadRef.current) {
       signaturePadRef.current.clear();
+      // Clear with transparent background
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
       setIsEmpty(true);
       onChange('');
     }
@@ -86,8 +94,8 @@ export default function SignaturePad({ value, onChange }: Props) {
         
         <canvas
           ref={canvasRef}
-          className="w-full h-44 touch-none bg-white rounded-xl"
-          style={{ touchAction: 'none' }}
+          className="w-full h-44 touch-none rounded-xl"
+          style={{ touchAction: 'none', backgroundColor: 'transparent', backgroundImage: 'linear-gradient(45deg, #f0f0f0 25%, transparent 25%), linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f0f0f0 75%), linear-gradient(-45deg, transparent 75%, #f0f0f0 75%)', backgroundSize: '10px 10px', backgroundPosition: '0 0, 0 5px, 5px -5px, -5px 0px' }}
         />
         
         {isEmpty && (
