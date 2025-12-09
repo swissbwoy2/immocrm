@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen, MessageSquare, Sparkles, Building2, Star, TrendingUp, Zap, ArrowRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateChances } from "@/utils/chanceCalculator";
@@ -96,6 +96,7 @@ const OffresRecues = () => {
   const { user } = useAuth();
   const { markTypeAsRead } = useNotifications();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [offres, setOffres] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOffre, setSelectedOffre] = useState<any | null>(null);
@@ -134,6 +135,20 @@ const OffresRecues = () => {
     loadCandidatures();
     markTypeAsRead('new_offer');
   }, [user?.id]);
+
+  // Auto-open offer details from query param
+  useEffect(() => {
+    const offreId = searchParams.get('offre');
+    if (offreId && offres.length > 0 && !loading) {
+      const offre = offres.find(o => o.id === offreId);
+      if (offre) {
+        setSelectedOffre(offre);
+        setDetailsDialogOpen(true);
+        // Clean the query param after opening
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [offres, loading, searchParams]);
 
   const loadExistingDocuments = async () => {
     if (!user) return;

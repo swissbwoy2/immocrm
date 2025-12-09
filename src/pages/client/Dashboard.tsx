@@ -860,7 +860,7 @@ export default function ClientDashboard() {
                           key={offre.id}
                           offre={offre}
                           index={index}
-                          onClick={() => navigate('/client/offres-recues')}
+                          onClick={() => navigate(`/client/offres-recues?offre=${offre.id}`)}
                         />
                       ))}
                     </div>
