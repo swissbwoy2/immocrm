@@ -20,7 +20,8 @@ import {
   Circle,
   Square,
   Minus,
-  Plus
+  Plus,
+  Move
 } from 'lucide-react';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -67,7 +68,7 @@ interface SignaturePosition {
   signatureId: string;
 }
 
-type AnnotationMode = 'select' | 'text' | 'cross' | 'check' | 'dot' | 'rectangle' | 'line' | 'signature';
+type AnnotationMode = 'select' | 'move' | 'text' | 'cross' | 'check' | 'dot' | 'rectangle' | 'line' | 'signature';
 
 const COLORS = {
   black: '#000000',
@@ -97,6 +98,11 @@ export default function PDFFormFiller() {
   const [fontSize, setFontSize] = useState(12);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
+  
+  // Drag state for move tool
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragTarget, setDragTarget] = useState<{ type: 'text' | 'symbol' | 'signature'; id: string } | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -254,7 +260,7 @@ export default function PDFFormFiller() {
 
   // Handle canvas click
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current || mode === 'select') return;
+    if (!canvasRef.current || mode === 'select' || mode === 'move') return;
 
     const rect = canvasRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / renderScale;
@@ -283,6 +289,88 @@ export default function PDFFormFiller() {
         pageIndex: currentPage,
         color: selectedColor
       }]);
+    }
+  };
+
+  // Find annotation at position for move tool
+  const findAnnotationAt = (x: number, y: number) => {
+    // Check signatures first (larger hit area)
+    for (const sig of signaturePositions.filter(s => s.pageIndex === currentPage)) {
+      if (x >= sig.x && x <= sig.x + sig.width && y >= sig.y && y <= sig.y + sig.height) {
+        return { type: 'signature' as const, id: sig.signatureId, item: sig };
+      }
+    }
+    
+    // Check text annotations (approximate hit area based on text)
+    for (const text of textAnnotations.filter(t => t.pageIndex === currentPage)) {
+      const hitSize = text.fontSize * 2;
+      if (x >= text.x - 5 && x <= text.x + hitSize * 5 && y >= text.y - hitSize && y <= text.y + 5) {
+        return { type: 'text' as const, id: text.id, item: text };
+      }
+    }
+    
+    // Check symbol annotations
+    for (const sym of symbolAnnotations.filter(s => s.pageIndex === currentPage)) {
+      const hitSize = 20;
+      if (x >= sym.x - hitSize && x <= sym.x + hitSize && y >= sym.y - hitSize && y <= sym.y + hitSize) {
+        return { type: 'symbol' as const, id: sym.id, item: sym };
+      }
+    }
+    
+    return null;
+  };
+
+  // Handle mouse down for move tool
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (mode !== 'move' || !canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / renderScale;
+    const y = (e.clientY - rect.top) / renderScale;
+
+    const found = findAnnotationAt(x, y);
+    if (found) {
+      setIsDragging(true);
+      setDragTarget({ type: found.type, id: found.id });
+      if (found.type === 'text') {
+        setDragOffset({ x: x - (found.item as TextAnnotation).x, y: y - (found.item as TextAnnotation).y });
+      } else if (found.type === 'symbol') {
+        setDragOffset({ x: x - (found.item as SymbolAnnotation).x, y: y - (found.item as SymbolAnnotation).y });
+      } else {
+        setDragOffset({ x: x - (found.item as SignaturePosition).x, y: y - (found.item as SignaturePosition).y });
+      }
+      e.preventDefault();
+    }
+  };
+
+  // Handle mouse move for dragging
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDragging || !dragTarget || !canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / renderScale - dragOffset.x;
+    const y = (e.clientY - rect.top) / renderScale - dragOffset.y;
+
+    if (dragTarget.type === 'text') {
+      setTextAnnotations(prev => prev.map(a => 
+        a.id === dragTarget.id ? { ...a, x, y } : a
+      ));
+    } else if (dragTarget.type === 'symbol') {
+      setSymbolAnnotations(prev => prev.map(a => 
+        a.id === dragTarget.id ? { ...a, x, y } : a
+      ));
+    } else if (dragTarget.type === 'signature') {
+      setSignaturePositions(prev => prev.map(s => 
+        s.signatureId === dragTarget.id && s.pageIndex === currentPage ? { ...s, x, y } : s
+      ));
+    }
+  };
+
+  // Handle mouse up to end dragging
+  const handleCanvasMouseUp = () => {
+    if (isDragging) {
+      setIsDragging(false);
+      setDragTarget(null);
     }
   };
 
@@ -469,6 +557,7 @@ export default function PDFFormFiller() {
   ];
 
   const toolButtons: { mode: AnnotationMode; icon: React.ReactNode; label: string }[] = [
+    { mode: 'move', icon: <Move className="h-4 w-4" />, label: 'Déplacer' },
     { mode: 'text', icon: <Type className="h-4 w-4" />, label: 'Texte' },
     { mode: 'cross', icon: <X className="h-4 w-4" />, label: 'Croix' },
     { mode: 'check', icon: <Check className="h-4 w-4" />, label: 'Coche' },
@@ -774,14 +863,25 @@ export default function PDFFormFiller() {
                 <canvas
                   ref={canvasRef}
                   onClick={handleCanvasClick}
+                  onMouseDown={handleCanvasMouseDown}
+                  onMouseMove={handleCanvasMouseMove}
+                  onMouseUp={handleCanvasMouseUp}
+                  onMouseLeave={handleCanvasMouseUp}
                   className="border shadow-lg rounded"
-                  style={{ cursor: mode === 'select' ? 'default' : 'crosshair' }}
+                  style={{ 
+                    cursor: mode === 'select' ? 'default' : mode === 'move' ? (isDragging ? 'grabbing' : 'grab') : 'crosshair' 
+                  }}
                 />
-                {mode !== 'select' && (
+                {mode !== 'select' && mode !== 'move' && (
                   <div className="absolute top-2 left-2 bg-primary text-primary-foreground px-2 py-1 rounded text-xs">
                     {mode === 'text' && 'Cliquez pour ajouter du texte'}
                     {mode === 'signature' && (selectedSignatureId ? 'Cliquez pour positionner la signature' : 'Sélectionnez d\'abord une signature')}
                     {['cross', 'check', 'dot', 'rectangle', 'line'].includes(mode) && `Cliquez pour ajouter un(e) ${mode}`}
+                  </div>
+                )}
+                {mode === 'move' && (
+                  <div className="absolute top-2 left-2 bg-primary text-primary-foreground px-2 py-1 rounded text-xs">
+                    Cliquez et glissez pour déplacer
                   </div>
                 )}
               </div>
