@@ -35,6 +35,7 @@ import { ClientNotesManager } from '@/components/ClientNotesManager';
 import { SwissRomandeMap } from '@/components/SwissRomandeMap';
 import { RegionAutocomplete } from '@/components/RegionAutocomplete';
 import { ApporteurInfoCard } from '@/components/ApporteurInfoCard';
+import { RentalApplicationFormDialog } from '@/components/RentalApplicationFormDialog';
 
 interface Client {
   id: string;
@@ -137,6 +138,7 @@ export default function ClientDetail() {
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [agentId, setAgentId] = useState<string | null>(null);
   const [assignedAgents, setAssignedAgents] = useState<any[]>([]);
+  const [rentalFormDialogOpen, setRentalFormDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -674,6 +676,11 @@ export default function ClientDetail() {
 
           {/* Boutons d'action - Responsive grid sur mobile */}
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:flex-nowrap w-full sm:w-auto">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setRentalFormDialogOpen(true)}>
+              <FileText className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Demande location</span>
+              <span className="sm:hidden">Formulaire</span>
+            </Button>
             <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSendDossierDialogOpen(true)}>
               <MailPlus className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Envoyer dossier</span>
@@ -2046,6 +2053,14 @@ export default function ClientDetail() {
         clientName={`${profile.prenom} ${profile.nom}`}
         candidates={candidates}
         onSuccess={loadClientData}
+      />
+      
+      <RentalApplicationFormDialog
+        open={rentalFormDialogOpen}
+        onOpenChange={setRentalFormDialogOpen}
+        client={client}
+        profile={profile}
+        candidates={candidates}
       />
     </main>
   );
