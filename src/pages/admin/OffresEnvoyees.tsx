@@ -7,13 +7,22 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Send, MapPin, Home, Calendar, User, Filter, Eye, ExternalLink, Phone, Building, Forward } from "lucide-react";
+import { Send, MapPin, Home, Calendar, User, Filter, Eye, ExternalLink, Phone, Building, Forward, Clock, CheckCircle, XCircle } from "lucide-react";
 import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
+
+interface Visite {
+  id: string;
+  offre_id: string;
+  date_visite: string;
+  statut: string | null;
+  notes: string | null;
+  feedback_agent: string | null;
+}
 
 interface Offre {
   id: string;
@@ -76,6 +85,9 @@ export default function AdminOffresEnvoyees() {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [selectedTargetClient, setSelectedTargetClient] = useState<string>("");
   const [transferring, setTransferring] = useState(false);
+  
+  // Visites state
+  const [visitesMap, setVisitesMap] = useState<Map<string, Visite[]>>(new Map());
 
   useEffect(() => {
     if (!user || userRole !== 'admin') {
@@ -96,6 +108,25 @@ export default function AdminOffresEnvoyees() {
       
       if (offresError) throw offresError;
       setOffres(offresData || []);
+
+      // Charger les visites associées aux offres
+      const offreIds = offresData?.map(o => o.id) || [];
+      if (offreIds.length > 0) {
+        const { data: visitesData, error: visitesError } = await supabase
+          .from('visites')
+          .select('id, offre_id, date_visite, statut, notes, feedback_agent')
+          .in('offre_id', offreIds)
+          .order('date_visite', { ascending: true });
+        
+        if (!visitesError && visitesData) {
+          const newVisitesMap = new Map<string, Visite[]>();
+          visitesData.forEach(v => {
+            if (!newVisitesMap.has(v.offre_id)) newVisitesMap.set(v.offre_id, []);
+            newVisitesMap.get(v.offre_id)!.push(v);
+          });
+          setVisitesMap(newVisitesMap);
+        }
+      }
 
       // Charger les agents
       const { data: agentsData, error: agentsError } = await supabase
@@ -701,6 +732,70 @@ export default function AdminOffresEnvoyees() {
                   )}
                 </div>
               )}
+
+              {/* Section Visites */}
+              {(() => {
+                const visites = visitesMap.get(selectedOffre.id) || [];
+                const now = new Date();
+                
+                const getVisiteStatus = (visite: Visite) => {
+                  if (visite.statut === 'effectuee') return { label: 'Effectuée', variant: 'default' as const, icon: CheckCircle };
+                  if (visite.statut === 'annulee') return { label: 'Annulée', variant: 'destructive' as const, icon: XCircle };
+                  const visiteDate = new Date(visite.date_visite);
+                  if (visiteDate < now) return { label: 'Passée', variant: 'secondary' as const, icon: Clock };
+                  return { label: 'À venir', variant: 'outline' as const, icon: Calendar };
+                };
+
+                return (
+                  <div className="space-y-3 pt-4 border-t">
+                    <Label className="text-muted-foreground flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Visites ({visites.length})
+                    </Label>
+                    
+                    {visites.length === 0 ? (
+                      <div className="p-4 bg-muted/50 rounded-lg text-center text-muted-foreground text-sm">
+                        {selectedOffre.statut === 'visite_programmee' 
+                          ? "Visite programmée mais aucune date enregistrée"
+                          : "Aucune visite pour cette offre"
+                        }
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {visites.map(visite => {
+                          const status = getVisiteStatus(visite);
+                          const StatusIcon = status.icon;
+                          return (
+                            <div key={visite.id} className="p-3 border rounded-lg space-y-2">
+                              <div className="flex items-center justify-between flex-wrap gap-2">
+                                <div className="flex items-center gap-2">
+                                  <StatusIcon className="h-4 w-4 text-primary" />
+                                  <span className="font-medium">
+                                    {format(new Date(visite.date_visite), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })}
+                                  </span>
+                                </div>
+                                <Badge variant={status.variant}>
+                                  {status.label}
+                                </Badge>
+                              </div>
+                              {visite.notes && (
+                                <p className="text-sm text-muted-foreground">
+                                  <span className="font-medium">Notes:</span> {visite.notes}
+                                </p>
+                              )}
+                              {visite.feedback_agent && (
+                                <div className="text-sm bg-muted p-2 rounded">
+                                  <span className="font-medium">Feedback agent:</span> {visite.feedback_agent}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Agent et Client */}
               <div className="grid grid-cols-2 gap-4 pt-4 border-t">
