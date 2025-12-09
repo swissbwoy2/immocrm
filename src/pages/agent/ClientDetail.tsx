@@ -36,7 +36,6 @@ import { SwissRomandeMap } from '@/components/SwissRomandeMap';
 import { RegionAutocomplete } from '@/components/RegionAutocomplete';
 import { ApporteurInfoCard } from '@/components/ApporteurInfoCard';
 import { RentalApplicationFormDialog } from '@/components/RentalApplicationFormDialog';
-import PDFFormFillerDialog from '@/components/PDFFormFillerDialog';
 
 interface Client {
   id: string;
@@ -140,7 +139,6 @@ export default function ClientDetail() {
   const [agentId, setAgentId] = useState<string | null>(null);
   const [assignedAgents, setAssignedAgents] = useState<any[]>([]);
   const [rentalFormDialogOpen, setRentalFormDialogOpen] = useState(false);
-  const [pdfFillerDialogOpen, setPdfFillerDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -678,10 +676,10 @@ export default function ClientDetail() {
 
           {/* Boutons d'action - Responsive grid sur mobile */}
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:flex-nowrap w-full sm:w-auto">
-            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setPdfFillerDialogOpen(true)}>
-              <FileText className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Remplir PDF</span>
-              <span className="sm:hidden">PDF</span>
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSendDossierDialogOpen(true)}>
+              <MailPlus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Envoyer dossier</span>
+              <span className="sm:hidden">Dossier</span>
             </Button>
             <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSendDossierDialogOpen(true)}>
               <MailPlus className="w-4 h-4 sm:mr-2" />
@@ -2063,13 +2061,6 @@ export default function ClientDetail() {
         client={client}
         profile={profile}
         candidates={candidates}
-      />
-      
-      <PDFFormFillerDialog
-        open={pdfFillerDialogOpen}
-        onOpenChange={setPdfFillerDialogOpen}
-        clientId={client?.id}
-        clientName={profile ? `${profile.prenom} ${profile.nom}` : undefined}
       />
     </main>
   );
