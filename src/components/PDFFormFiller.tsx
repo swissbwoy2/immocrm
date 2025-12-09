@@ -24,15 +24,13 @@ import {
 } from 'lucide-react';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import SignaturePad from '@/components/mandat/SignaturePad';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 // Set worker path for Vite compatibility
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).toString();
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 interface TextAnnotation {
   id: string;
