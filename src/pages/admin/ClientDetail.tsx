@@ -27,6 +27,7 @@ import { useSolvabilityCheck, hasStableStatus } from '@/hooks/useSolvabilityChec
 import { RegionAutocomplete } from '@/components/RegionAutocomplete';
 import { ApporteurInfoCard } from '@/components/ApporteurInfoCard';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
+import { SwissRomandeMap } from '@/components/SwissRomandeMap';
 
 interface Client {
   id: string;
@@ -1558,6 +1559,9 @@ export default function ClientDetail() {
               )}
             </CardContent>
           </PremiumCard>
+
+          {/* Carte de localisation */}
+          <SwissRomandeMap client={client} />
 
           {/* Autres informations */}
           <PremiumCard icon={FileText} title="Autres informations" delay={600}>
