@@ -78,7 +78,7 @@ const COLORS = {
 
 export default function PDFFormFiller() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [pdfBytes, setPdfBytes] = useState<ArrayBuffer | null>(null);
+  const [pdfBytes, setPdfBytes] = useState<Uint8Array | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [zoom, setZoom] = useState(1);
@@ -113,7 +113,9 @@ export default function PDFFormFiller() {
   // Load PDF and render
   const loadPdf = useCallback(async (arrayBuffer: ArrayBuffer) => {
     try {
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      // Create a copy for pdfjs because it detaches the original buffer
+      const copy = new Uint8Array(arrayBuffer).slice();
+      const loadingTask = pdfjsLib.getDocument({ data: copy });
       const pdf = await loadingTask.promise;
       pdfDocRef.current = pdf;
       setTotalPages(pdf.numPages);
@@ -248,8 +250,11 @@ export default function PDFFormFiller() {
     if (file && file.type === 'application/pdf') {
       setPdfFile(file);
       const arrayBuffer = await file.arrayBuffer();
-      setPdfBytes(arrayBuffer);
-      loadPdf(arrayBuffer);
+      // Create a copy as Uint8Array to avoid detachment issues
+      const bytesCopy = new Uint8Array(arrayBuffer);
+      setPdfBytes(bytesCopy);
+      // Pass a separate copy to loadPdf
+      await loadPdf(bytesCopy.slice().buffer);
       setTextAnnotations([]);
       setSymbolAnnotations([]);
       setSignaturePositions([]);
