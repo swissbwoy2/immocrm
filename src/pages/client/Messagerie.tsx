@@ -96,19 +96,17 @@ const Messagerie = () => {
   const [unreadCountsMap, setUnreadCountsMap] = useState<Map<string, number>>(new Map());
 
   const scrollToBottom = useCallback((instant: boolean = false) => {
-    // Double RAF pour garantir que le DOM est rendu
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const viewport = scrollViewportRef.current;
-        if (viewport) {
-          if (instant) {
-            viewport.scrollTop = viewport.scrollHeight;
-          } else {
-            viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
-          }
+    // Utiliser setTimeout pour s'assurer que le DOM est rendu après le chargement
+    setTimeout(() => {
+      const viewport = scrollViewportRef.current;
+      if (viewport) {
+        if (instant) {
+          viewport.scrollTop = viewport.scrollHeight;
+        } else {
+          viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
         }
-      });
-    });
+      }
+    }, 50);
   }, []);
 
   const scrollToTop = useCallback(() => {
@@ -1513,10 +1511,11 @@ const Messagerie = () => {
       <ChatPatternBackground />
       
       {/* Messages area */}
-      <div 
-        ref={scrollViewportRef}
+      <ScrollArea 
+        className="flex-1 relative z-10 min-w-0"
+        viewportRef={scrollViewportRef}
+        viewportClassName="p-2 sm:p-4"
         onScroll={handleScroll}
-        className="flex-1 p-2 sm:p-4 relative z-10 min-w-0 overflow-y-auto overflow-x-hidden"
       >
         {isLoadingMessages ? (
           <MessagesListSkeleton />
@@ -1573,7 +1572,7 @@ const Messagerie = () => {
             })}
           </div>
         )}
-      </div>
+      </ScrollArea>
       <ScrollToTopButton show={showScrollTop} onClick={scrollToTop} />
       
       {/* Input area */}
