@@ -71,3 +71,6 @@ cron = "0 */12 * * *"
 
 [functions.get-mapbox-token]
 verify_jwt = false
+
+[functions.notify-new-lead]
+verify_jwt = false

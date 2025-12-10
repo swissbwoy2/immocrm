@@ -44,6 +44,11 @@ export function QuickLeadForm() {
 
       if (error) throw error;
 
+      // Send email notification (fire and forget)
+      supabase.functions.invoke('notify-new-lead', {
+        body: { email, localite: localite || null, budget: budget || null }
+      }).catch((err) => console.error('Email notification error:', err));
+
       setIsSubmitted(true);
       toast.success('Merci ! Nous vous contacterons très bientôt.');
     } catch (error) {
