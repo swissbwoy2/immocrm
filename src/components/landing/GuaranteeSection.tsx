@@ -1,6 +1,6 @@
-import { Shield, Wallet, CheckCircle, RefreshCcw, Sparkles, Star, Crown } from 'lucide-react';
+import { Shield, Wallet, CheckCircle, RefreshCcw, Sparkles, Star, Crown, ArrowRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
-
+import { Button } from '@/components/ui/button';
 // Animated number component
 function AnimatedValue({ value, suffix = '' }: { value: string; suffix?: string }) {
   const [isVisible, setIsVisible] = useState(false);
@@ -147,8 +147,43 @@ export function GuaranteeSection() {
             ))}
           </div>
 
-          {/* Guarantee badge - Premium celebration style */}
-          <div className="text-center animate-fade-in" style={{ animationDelay: '300ms' }}>
+          {/* Guarantee Sérénité Box */}
+          <div className="mb-8 animate-fade-in" style={{ animationDelay: '300ms' }}>
+            <div className="relative group max-w-xl mx-auto">
+              {/* Glow effect */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary/30 via-primary/50 to-primary/30 rounded-2xl blur-lg opacity-60 group-hover:opacity-100 transition-opacity" />
+              
+              <div className="relative glass-morphism rounded-2xl p-6 border-2 border-primary/40 bg-gradient-to-br from-primary/10 to-primary/5 overflow-hidden">
+                {/* Shine effect */}
+                <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+                
+                <div className="flex items-start gap-4 relative z-10">
+                  <div className="flex-shrink-0 p-3 rounded-xl bg-primary/20 border border-primary/30">
+                    <Shield className="h-8 w-8 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-foreground mb-2 flex items-center gap-2">
+                      🛡️ GARANTIE SÉRÉNITÉ
+                    </h3>
+                    <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
+                      Après ta shortlist personnalisée, tu peux nous confier ta recherche pendant <strong className="text-foreground">90 jours</strong>.
+                      <br />
+                      Pas de bail signé ? <strong className="text-foreground">Remboursement intégral. Sans condition.</strong>
+                    </p>
+                    <Button asChild variant="outline" size="sm" className="border-primary/30 hover:bg-primary/10 group/btn">
+                      <a href="/nouveau-mandat">
+                        Découvrir le mandat 90 jours
+                        <ArrowRight className="ml-2 h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Guarantee badge */}
+          <div className="text-center animate-fade-in" style={{ animationDelay: '400ms' }}>
             <div className="relative inline-flex flex-col items-center gap-3 bg-gradient-to-r from-primary/20 via-primary/30 to-primary/20 border-2 border-primary/50 rounded-2xl px-6 py-5 glow-breathe group overflow-hidden">
               {/* Animated confetti particles */}
               <div className="absolute inset-0 overflow-hidden">
