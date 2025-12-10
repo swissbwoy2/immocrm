@@ -114,7 +114,7 @@ export function HeroSection() {
           >
             Notre{" "}
             <span className="gradient-text-animated bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text">
-              Réseau vous ouvre les portes des biens inacessuble.
+              Réseau vous ouvre les portes des biens inaccessible.
             </span>
           </p>
 
