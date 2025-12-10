@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { isWithinInterval, differenceInDays } from 'date-fns';
-import { Home, Calendar, FileCheck, CheckCircle, Clock, TrendingUp, Mail, Eye } from 'lucide-react';
+import { Home, Calendar, FileCheck, CheckCircle, Clock, TrendingUp, Mail, Eye, Target, Sparkles, Trophy } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { DateRangeFilter, DateRange, getDefaultDateRange } from './DateRangeFilter';
 import { StatsCard } from './StatsCard';
 import { PremiumPerformanceChart } from './PremiumPerformanceChart';
+import { cn } from '@/lib/utils';
 
 interface ClientStatsSectionProps {
   offres: any[];
@@ -90,50 +91,124 @@ export function ClientStatsSection({
 
   // Search progress (fun visualization)
   const searchPhases = [
-    { name: 'Offres reçues', value: offres.length, target: 10 },
-    { name: 'Visites effectuées', value: visites.filter(v => v.statut === 'effectuee').length, target: 5 },
-    { name: 'Candidatures', value: candidatures.length, target: 3 },
-    { name: 'Acceptées', value: candidatures.filter(c => c.statut === 'acceptee').length, target: 1 },
+    { name: 'Offres reçues', value: offres.length, target: 10, icon: Home, color: 'primary' },
+    { name: 'Visites effectuées', value: visites.filter(v => v.statut === 'effectuee').length, target: 5, icon: Eye, color: 'blue' },
+    { name: 'Candidatures', value: candidatures.length, target: 3, icon: FileCheck, color: 'amber' },
+    { name: 'Acceptées', value: candidatures.filter(c => c.statut === 'acceptee').length, target: 1, icon: Trophy, color: 'emerald' },
   ];
 
+  const totalProgress = searchPhases.reduce((acc, phase) => {
+    return acc + Math.min((phase.value / phase.target) * 100, 100);
+  }, 0) / searchPhases.length;
+
   return (
-    <div className="space-y-6">
-      {/* Header with date filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Ma recherche en chiffres
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {client?.type_recherche === 'Acheter' 
-              ? 'Suivez l\'avancement de votre projet d\'achat immobilier'
-              : 'Suivez l\'avancement de votre recherche d\'appartement'}
-          </p>
+    <div className="space-y-6 p-6">
+      {/* Premium Header with date filter */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/20 p-6">
+        {/* Floating particles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1.5 h-1.5 rounded-full bg-primary/20 animate-pulse"
+              style={{
+                left: `${10 + i * 12}%`,
+                top: `${20 + (i % 4) * 20}%`,
+                animationDelay: `${i * 0.2}s`,
+                animationDuration: `${2 + i * 0.3}s`
+              }}
+            />
+          ))}
         </div>
-        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+
+        {/* Glow effect */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-transparent to-primary/20 rounded-2xl blur-xl opacity-50" />
+
+        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 shadow-lg shadow-primary/10">
+              <TrendingUp className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                Ma recherche en chiffres
+              </h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {client?.type_recherche === 'Acheter' 
+                  ? 'Suivez l\'avancement de votre projet d\'achat immobilier'
+                  : 'Suivez l\'avancement de votre recherche d\'appartement'}
+              </p>
+            </div>
+          </div>
+          <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        </div>
+
+        {/* Shine effect */}
+        <div className="absolute inset-0 -translate-x-full hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
       </div>
 
-      {/* Mandate Progress */}
+      {/* Premium Mandate Progress Card */}
       <div className="animate-fade-in" style={{ animationDelay: '0ms', animationFillMode: 'both' }}>
-        <Card className={`group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${daysRemaining <= 30 ? 'border-warning/50 bg-warning/5' : 'border-primary/10 hover:border-primary/30'}`}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="h-5 w-5 transition-transform duration-300 group-hover:scale-110" />
-              <span className="transition-transform duration-300 group-hover:scale-[1.02] origin-left">Durée du mandat</span>
-            </CardTitle>
+        <Card className={cn(
+          "group relative overflow-hidden transition-all duration-500 hover:shadow-xl hover:-translate-y-1",
+          daysRemaining <= 30 
+            ? 'border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-transparent to-amber-500/5' 
+            : 'border-primary/20 hover:border-primary/40 bg-gradient-to-br from-primary/5 via-transparent to-primary/10'
+        )}>
+          {/* Glassmorphism effects */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          
+          {/* Glow effect */}
+          <div className={cn(
+            "absolute -inset-1 rounded-xl blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-500",
+            daysRemaining <= 30 ? 'bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-amber-500/20' : 'bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20'
+          )} />
+
+          <CardHeader className="relative pb-2">
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "p-2 rounded-lg transition-colors duration-300",
+                daysRemaining <= 30 ? 'bg-amber-500/10 group-hover:bg-amber-500/20' : 'bg-primary/10 group-hover:bg-primary/20'
+              )}>
+                <Clock className={cn(
+                  "h-5 w-5 transition-transform duration-300 group-hover:scale-110",
+                  daysRemaining <= 30 ? 'text-amber-500' : 'text-primary'
+                )} />
+              </div>
+              <CardTitle className="text-base font-semibold transition-transform duration-300 group-hover:scale-[1.02] origin-left">
+                Durée du mandat
+              </CardTitle>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative">
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span>Jour {daysElapsed} / 90</span>
-                <span className={daysRemaining <= 30 ? 'text-warning font-medium' : ''}>
+                <span className="font-medium">Jour {daysElapsed} / 90</span>
+                <span className={cn(
+                  "font-medium",
+                  daysRemaining <= 30 ? 'text-amber-500' : 'text-muted-foreground'
+                )}>
                   {daysRemaining > 0 ? `${daysRemaining} jours restants` : 'Mandat expiré'}
                 </span>
               </div>
-              <Progress value={mandatProgress} className="h-3" />
+              <div className="relative">
+                <Progress 
+                  value={mandatProgress} 
+                  className={cn(
+                    "h-3 rounded-full",
+                    daysRemaining <= 30 && "[&>div]:bg-amber-500"
+                  )} 
+                />
+                <div 
+                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-background border-2 border-primary shadow-lg"
+                  style={{ left: `calc(${mandatProgress}% - 8px)` }}
+                />
+              </div>
             </div>
           </CardContent>
+
+          {/* Shine effect */}
+          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
         </Card>
       </div>
 
@@ -196,47 +271,171 @@ export function ClientStatsSection({
         </div>
       </div>
 
-      {/* Search Progress Funnel */}
+      {/* Premium Search Progress Funnel */}
       <div className="animate-fade-in" style={{ animationDelay: '350ms', animationFillMode: 'both' }}>
-        <Card className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-primary/10 hover:border-primary/30">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3" />
-              <span className="transition-transform duration-300 group-hover:scale-[1.02] origin-left">Progression de votre recherche</span>
-            </CardTitle>
+        <Card className="group relative overflow-hidden border-primary/20 hover:border-primary/40 transition-all duration-500 hover:shadow-xl hover:-translate-y-1 bg-gradient-to-br from-primary/5 via-transparent to-primary/10">
+          {/* Glassmorphism effects */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          
+          {/* Floating particles */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-1 h-1 rounded-full bg-primary/20 animate-pulse"
+                style={{
+                  left: `${15 + i * 15}%`,
+                  top: `${25 + (i % 3) * 25}%`,
+                  animationDelay: `${i * 0.3}s`,
+                  animationDuration: `${2 + i * 0.5}s`
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Glow effect */}
+          <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 rounded-xl blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-500" />
+
+          <CardHeader className="relative pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
+                  <Target className="h-5 w-5 text-primary transition-transform duration-300 group-hover:scale-110" />
+                </div>
+                <div>
+                  <CardTitle className="text-base font-semibold transition-transform duration-300 group-hover:scale-[1.02] origin-left flex items-center gap-2">
+                    Progression de votre recherche
+                    <Sparkles className="h-4 w-4 text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">Étapes vers votre nouveau logement</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-primary">{Math.round(totalProgress)}%</p>
+                <p className="text-xs text-muted-foreground">Complété</p>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="relative">
+            <div className="space-y-5">
               {searchPhases.map((phase, index) => {
                 const progress = Math.min((phase.value / phase.target) * 100, 100);
                 const isComplete = phase.value >= phase.target;
+                const PhaseIcon = phase.icon;
+                
+                const colorClasses = {
+                  primary: {
+                    bg: 'bg-primary/10',
+                    text: 'text-primary',
+                    progress: '',
+                    border: 'border-primary/30'
+                  },
+                  blue: {
+                    bg: 'bg-blue-500/10',
+                    text: 'text-blue-500',
+                    progress: '[&>div]:bg-blue-500',
+                    border: 'border-blue-500/30'
+                  },
+                  amber: {
+                    bg: 'bg-amber-500/10',
+                    text: 'text-amber-500',
+                    progress: '[&>div]:bg-amber-500',
+                    border: 'border-amber-500/30'
+                  },
+                  emerald: {
+                    bg: 'bg-emerald-500/10',
+                    text: 'text-emerald-500',
+                    progress: '[&>div]:bg-emerald-500',
+                    border: 'border-emerald-500/30'
+                  }
+                };
+                
+                const colors = colorClasses[phase.color as keyof typeof colorClasses];
                 
                 return (
                   <div 
                     key={phase.name} 
-                    className="space-y-2 animate-fade-in" 
+                    className={cn(
+                      "relative p-4 rounded-xl border transition-all duration-300 hover:shadow-md",
+                      isComplete ? 'bg-emerald-500/5 border-emerald-500/30' : `bg-muted/20 ${colors.border}`
+                    )}
                     style={{ animationDelay: `${400 + index * 50}ms`, animationFillMode: 'both' }}
                   >
-                    <div className="flex justify-between text-sm">
-                      <span className="flex items-center gap-2">
-                        {isComplete && <CheckCircle className="h-4 w-4 text-success" />}
-                        <span className={isComplete ? 'text-success font-medium' : ''}>
-                          {index + 1}. {phase.name}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "p-2 rounded-lg transition-colors duration-300",
+                          isComplete ? 'bg-emerald-500/20' : colors.bg
+                        )}>
+                          {isComplete ? (
+                            <CheckCircle className="h-4 w-4 text-emerald-500" />
+                          ) : (
+                            <PhaseIcon className={cn("h-4 w-4", colors.text)} />
+                          )}
+                        </div>
+                        <div>
+                          <span className={cn(
+                            "font-medium text-sm",
+                            isComplete && 'text-emerald-600 dark:text-emerald-400'
+                          )}>
+                            {phase.name}
+                          </span>
+                          <p className="text-xs text-muted-foreground">
+                            Étape {index + 1} sur {searchPhases.length}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={cn(
+                          "text-lg font-bold",
+                          isComplete ? 'text-emerald-500' : colors.text
+                        )}>
+                          {phase.value}
                         </span>
-                      </span>
-                      <span className="text-muted-foreground">
-                        {phase.value} / {phase.target}
-                      </span>
+                        <span className="text-sm text-muted-foreground"> / {phase.target}</span>
+                      </div>
                     </div>
-                    <Progress 
-                      value={progress} 
-                      className={`h-2 ${isComplete ? '[&>div]:bg-success' : ''}`}
-                    />
+                    <div className="relative">
+                      <Progress 
+                        value={progress} 
+                        className={cn(
+                          "h-2 rounded-full",
+                          isComplete ? '[&>div]:bg-emerald-500' : colors.progress
+                        )}
+                      />
+                      {isComplete && (
+                        <div className="absolute -right-1 -top-1">
+                          <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center animate-bounce-subtle">
+                            <CheckCircle className="w-3 h-3 text-white" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
+
+            {/* Overall progress indicator */}
+            <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/20">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Progression globale</span>
+                <span className="text-sm font-bold text-primary">{Math.round(totalProgress)}%</span>
+              </div>
+              <div className="relative">
+                <Progress value={totalProgress} className="h-3" />
+                <div 
+                  className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-primary shadow-lg shadow-primary/30 flex items-center justify-center"
+                  style={{ left: `calc(${totalProgress}% - 10px)` }}
+                >
+                  <Sparkles className="w-3 h-3 text-primary-foreground" />
+                </div>
+              </div>
+            </div>
           </CardContent>
+
+          {/* Shine effect */}
+          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
         </Card>
       </div>
     </div>
