@@ -76,7 +76,7 @@ export function HeroSection() {
               <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               <Crown className="h-5 w-5 text-amber-500 animate-pulse" />
               <span className="text-sm md:text-base font-semibold text-amber-500 relative z-10">
-                Réseau Privilégié N°1 en Suisse romande
+                Agence de relocation N°1 en Suisse romande
               </span>
             </div>
           </div>
@@ -96,9 +96,7 @@ export function HeroSection() {
 
           {/* Slogan - L'immobilier accessible */}
           <div className="animate-fade-in mb-6" style={{ animationDelay: "75ms" }}>
-            <span className="text-lg md:text-xl font-semibold text-primary tracking-wide">
-              L'immobilier accessible
-            </span>
+            <span className="text-lg md:text-xl font-semibold text-primary tracking-wide">L'immobilier accessible</span>
           </div>
 
           {/* Pain point headline - Professional & Confident */}
@@ -116,7 +114,7 @@ export function HeroSection() {
           >
             Notre{" "}
             <span className="gradient-text-animated bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text">
-              Réseau Privilégié vous ouvre les portes des biens hors marché.
+              Réseau vous ouvre les portes des biens inacessuble.
             </span>
           </p>
 
@@ -125,7 +123,8 @@ export function HeroSection() {
             className="text-base md:text-lg text-primary font-medium mb-4 animate-fade-in"
             style={{ animationDelay: "140ms" }}
           >
-            Nous accédons aux opportunités exclusives grâce à notre réseau de régies partenaires et propriétaires en Suisse romande.
+            Nous accédons aux opportunités grâce à notre réseau de régies partenaires et propriétaires en Suisse
+            romande.
           </p>
 
           {/* Empathic subheadline - Professional + Mission */}
@@ -133,9 +132,9 @@ export function HeroSection() {
             className="text-base md:text-lg text-muted-foreground mb-6 max-w-2xl animate-fade-in leading-relaxed"
             style={{ animationDelay: "150ms" }}
           >
-            Parce que trouver un logement ne devrait pas être un parcours du combattant. 
-            Notre mission : <strong className="text-foreground">faciliter votre accès au logement</strong> en Suisse romande 
-            grâce à notre réseau privilégié et nos conseillers dédiés.
+            Parce que trouver un logement ne devrait pas être un parcours du combattant. Notre mission :{" "}
+            <strong className="text-foreground">faciliter votre accès au logement</strong> en Suisse romande grâce à
+            notre réseau et nos agents dédiés.
           </p>
 
           {/* Promise box - Premium with animated border */}
@@ -165,7 +164,7 @@ export function HeroSection() {
                 {/* Shine effect on button */}
                 <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                 <Sparkles className="mr-2 h-5 w-5 md:h-6 md:w-6 relative z-10" />
-                <span className="relative z-10">Activer ma recherche privilégiée</span>
+                <span className="relative z-10">Activer ma recherche </span>
                 <ArrowRight className="ml-2 h-5 w-5 md:h-6 md:w-6 group-hover:translate-x-2 transition-transform relative z-10" />
               </Link>
             </Button>
@@ -219,7 +218,7 @@ export function HeroSection() {
             {/* Legal mention */}
             <div className="mt-4 inline-flex items-center gap-2 text-xs text-muted-foreground">
               <ShieldCheck className="h-4 w-4 text-green-500" />
-              <span>🇨🇭 Service professionnel reconnu • Mandat écrit • Transparence totale</span>
+              <span>🇨🇭 Service premium • Mandat de 90 jours • Transparence totale</span>
             </div>
           </div>
         </div>
