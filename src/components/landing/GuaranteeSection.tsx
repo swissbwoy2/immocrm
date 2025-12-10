@@ -21,15 +21,15 @@ export function GuaranteeSection() {
   const pricingItems = [
     {
       icon: Wallet,
-      label: 'Pour démarrer',
+      label: 'Acompte',
       value: '300 CHF',
-      description: 'Remboursables intégralement',
+      description: '100% sécurisé',
       gradient: 'from-blue-500 to-cyan-500',
       glowColor: 'rgba(59, 130, 246, 0.3)',
     },
     {
       icon: CheckCircle,
-      label: 'Ça a marché ?',
+      label: 'Succès',
       value: '1 mois de loyer',
       description: 'Moins les 300 CHF déjà versés',
       gradient: 'from-green-500 to-emerald-500',
@@ -37,9 +37,9 @@ export function GuaranteeSection() {
     },
     {
       icon: RefreshCcw,
-      label: 'Pas de résultat en 90 jours ?',
-      value: '0 CHF',
-      description: 'On te rembourse tout. Point.',
+      label: 'Échec après 3 mois ?',
+      value: 'Remboursement',
+      description: 'Intégral. Sans condition.',
       gradient: 'from-amber-500 to-orange-500',
       glowColor: 'rgba(245, 158, 11, 0.3)',
     },
@@ -85,13 +85,13 @@ export function GuaranteeSection() {
               {/* Shine effect */}
               <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               <Shield className="h-4 w-4 text-primary" />
-              <span className="text-primary font-medium relative z-10">On prend le risque à ta place</span>
+              <span className="text-primary font-medium relative z-10">💰 Tarification transparente</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
               Tellement confiant qu'on te <span className="gradient-text-animated">rembourse</span>
             </h2>
             <p className="text-muted-foreground text-lg">
-              Pas de résultat en 90 jours ? Tu récupères tout. Sans condition. 💪
+              Échec après 3 mois ? Remboursement intégral ! 💪
             </p>
           </div>
 

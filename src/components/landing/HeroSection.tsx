@@ -64,7 +64,7 @@ export function HeroSection() {
               <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               <Crown className="h-5 w-5 text-amber-500 animate-pulse" />
               <span className="text-sm md:text-base font-semibold text-amber-500 relative z-10">
-                Agence de relocation N°1 en Suisse romande
+                ⭐ N°1 en Suisse romande du House Hunting
               </span>
             </div>
           </div>
@@ -94,7 +94,7 @@ export function HeroSection() {
           <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 animate-fade-in text-foreground" style={{
           animationDelay: "100ms"
         }}>
-            Marre de postuler <span className="text-primary">dans le vide ?</span>
+            Tu n'es plus seul face à la <span className="text-primary">pénurie de logements !</span>
           </h1>
 
           {/* Solution headline - Dynamic */}
@@ -103,22 +103,21 @@ export function HeroSection() {
         }}>
             Délègue ta recherche à{" "}
             <span className="gradient-text-animated bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text">
-              des experts qui s'acharnent pour toi
+              des experts dévoués qui connaissent parfaitement ta région
             </span>
           </p>
 
           {/* AI/Tech subtitle - Catchy with emoji */}
           <p className="text-base md:text-lg text-primary font-medium mb-4 animate-fade-in" style={{
           animationDelay: "140ms"
-        }}>🚀 Booste ta recherche avec notre réseau de régies partenaires !</p>
+        }}>🏠 On te trouve ton appart' aujourd'hui !</p>
 
           {/* Empathic subheadline - Tutoiement + Mission */}
           <p className="text-base md:text-lg text-muted-foreground mb-6 max-w-2xl animate-fade-in leading-relaxed" style={{
           animationDelay: "150ms"
         }}>
-            Parce que trouver un logement ne devrait pas être un parcours du combattant. Notre mission :{" "}
-            <strong className="text-foreground">faciliter ton accès au logement</strong> en Suisse romande grâce à
-            notre Réseau Privilégié.
+            Nos experts cherchent, sélectionnent et contactent les régies pour toi, afin de{" "}
+            <strong className="text-foreground">maximiser tes chances de trouver plus vite et mieux</strong>.
           </p>
 
           {/* Promise box - Premium with animated border */}
