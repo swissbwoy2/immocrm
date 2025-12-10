@@ -82,7 +82,7 @@ export function HeroSection() {
           </div>
 
           {/* Logo with enhanced glow */}
-          <div className="animate-fade-in mb-6 relative" style={{ animationDelay: "50ms" }}>
+          <div className="animate-fade-in mb-4 relative" style={{ animationDelay: "50ms" }}>
             <div
               className="absolute inset-0 bg-primary/30 blur-3xl rounded-full scale-150 opacity-60 animate-pulse"
               style={{ animationDuration: "3s" }}
@@ -92,6 +92,13 @@ export function HeroSection() {
               style={{ animationDuration: "4s", animationDelay: "0.5s" }}
             />
             <img src={logoImmoRama} alt="Immo-Rama" className="h-24 md:h-32 w-auto drop-shadow-2xl relative z-10" />
+          </div>
+
+          {/* Slogan - L'immobilier accessible */}
+          <div className="animate-fade-in mb-6" style={{ animationDelay: "75ms" }}>
+            <span className="text-lg md:text-xl font-semibold text-primary tracking-wide">
+              L'immobilier accessible
+            </span>
           </div>
 
           {/* Pain point headline - Professional & Confident */}
@@ -121,13 +128,14 @@ export function HeroSection() {
             Nous accédons aux opportunités exclusives grâce à notre réseau de régies partenaires et propriétaires en Suisse romande.
           </p>
 
-          {/* Empathic subheadline - Professional */}
+          {/* Empathic subheadline - Professional + Mission */}
           <p
             className="text-base md:text-lg text-muted-foreground mb-6 max-w-2xl animate-fade-in leading-relaxed"
             style={{ animationDelay: "150ms" }}
           >
-            Nos conseillers dédiés contactent directement les régies, préparent votre dossier aux standards professionnels 
-            et vous trouvent <strong className="text-foreground">enfin</strong> le bien qui vous correspond.
+            Parce que trouver un logement ne devrait pas être un parcours du combattant. 
+            Notre mission : <strong className="text-foreground">faciliter votre accès au logement</strong> en Suisse romande 
+            grâce à notre réseau privilégié et nos conseillers dédiés.
           </p>
 
           {/* Promise box - Premium with animated border */}

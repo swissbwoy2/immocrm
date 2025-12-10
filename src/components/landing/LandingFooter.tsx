@@ -26,13 +26,15 @@ export function LandingFooter() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-10 mb-12 md:mb-16">
           {/* Logo & Description */}
           <div className="md:col-span-2">
-            <Link to="/" className="inline-block mb-5 group relative">
+            <Link to="/" className="inline-block mb-2 group relative">
               <img
                 src={logoImmoRama}
                 alt="Immo-Rama"
                 className="h-12 w-auto group-hover:scale-105 transition-transform"
               />
             </Link>
+            {/* Slogan */}
+            <p className="text-primary font-semibold text-sm mb-4">L'immobilier accessible</p>
             <p className="text-muted-foreground text-sm max-w-md mb-4 leading-relaxed">
               <a
                 href="https://www.immo-rama.ch"
@@ -45,7 +47,7 @@ export function LandingFooter() {
               – Agence immobilière - Gestion - Vente - Construction et rénovation
             </p>
             <p className="text-muted-foreground text-sm max-w-md mb-6 leading-relaxed">
-              Logisorama, votre partenaire de confiance pour trouver le bien immobilier idéal en Suisse romande.
+              Logisorama, votre partenaire de confiance pour <strong className="text-foreground">faciliter l'accès au logement</strong> en Suisse romande. Notre mission : rendre l'immobilier accessible à tous.
             </p>
             <div className="inline-flex items-center gap-2">
               <div className="relative glass-morphism rounded-full px-4 py-2 text-sm text-muted-foreground border border-border/40 bg-card/80">
