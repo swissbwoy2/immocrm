@@ -27,7 +27,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("New lead notification for:", email, localite, budget);
 
     // Admin notification email
-    const adminEmail = "contact@immo-rama.ch";
+    const adminEmail = "info@immo-rama.ch";
     
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
