@@ -4,23 +4,23 @@ import { Card, CardContent } from '@/components/ui/card';
 const features = [
   {
     icon: Radar,
-    title: 'Veille stratégique continue',
-    description: 'Surveillance en temps réel des nouvelles opportunités sur tous les portails et notre Réseau Privilégié hors marché.',
+    title: 'Veille 24h/24',
+    description: 'Nos robots surveillent tous les portails + notre réseau privé. Dès qu\'un bien sort, tu le sais.',
   },
   {
     icon: BarChart3,
     title: 'Matching intelligent',
-    description: 'Priorisation des biens les plus pertinents selon votre budget, votre permis et votre situation personnelle.',
+    description: 'On te propose que les biens qui matchent vraiment avec ton budget et ta situation.',
   },
   {
     icon: FileCheck,
-    title: 'Dossier aux standards professionnels',
-    description: 'Génération automatique de dossiers complets et irréprochables pour convaincre les régies.',
+    title: 'Dossier pro généré auto',
+    description: 'Un dossier aux standards des régies, prêt à envoyer. Zéro prise de tête.',
   },
   {
     icon: LayoutDashboard,
-    title: 'Tableau de bord en temps réel',
-    description: 'Suivez chaque étape de votre recherche en direct depuis votre espace client personnel.',
+    title: 'Ton tableau de bord perso',
+    description: 'Suis chaque étape de ta recherche en direct depuis ton espace client.',
   },
 ];
 
@@ -48,14 +48,14 @@ export function ProptechSection() {
           <div className="inline-flex items-center gap-2 relative group mb-4">
             <div className="relative glass-morphism rounded-full px-5 py-2.5 border border-primary/20 bg-card/80">
               <Cpu className="inline-block h-4 w-4 text-primary mr-2" />
-              <span className="text-sm font-semibold text-primary">Technologie & Innovation</span>
+              <span className="text-sm font-semibold text-primary">🤖 Tech & Innovation</span>
             </div>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
-            Notre technologie <span className="text-primary">au service de votre succès</span>
+            Ce que font nos outils <span className="text-primary">pour toi</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Des outils performants qui multiplient vos chances de trouver le bien idéal.
+            La tech au service de ta recherche, 24h/24. Pendant que tu dors, on bosse.
           </p>
         </div>
 
@@ -98,7 +98,7 @@ export function ProptechSection() {
         <div className="text-center mt-12 md:mt-16 animate-fade-in" style={{ animationDelay: '400ms' }}>
           <div className="inline-flex items-center gap-3 glass-morphism rounded-full px-6 py-3 border border-border/40 bg-card/80">
             <Crown className="h-5 w-5 text-amber-500" />
-            <span className="text-foreground font-medium">Une alliance unique : expertise humaine, technologie de pointe et Réseau Privilégié</span>
+            <span className="text-foreground font-medium">L'alliance parfaite : humains + robots + réseau privé 🚀</span>
           </div>
         </div>
       </div>

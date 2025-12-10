@@ -4,23 +4,23 @@ import { Card, CardContent } from '@/components/ui/card';
 const steps = [
   {
     icon: UserCheck,
-    title: 'Analyse de votre profil',
-    description: 'Nous étudions vos critères : revenus, budget, permis, zone souhaitée. Une consultation de 5 minutes, sans engagement.',
+    title: 'On analyse ton profil',
+    description: 'Tes critères : revenus, budget, permis, zone souhaitée. 5 minutes de discussion, sans engagement.',
   },
   {
     icon: Radar,
-    title: 'Veille stratégique continue',
-    description: 'Notre technologie surveille tous les portails et notre Réseau Privilégié. Dès qu\'une opportunité correspond, nous vous la présentons.',
+    title: 'On surveille tout pour toi',
+    description: 'Notre techno scanne tous les portails + notre réseau privé. Dès qu\'un bien correspond, on te le présente.',
   },
   {
     icon: Users,
-    title: 'Conseiller dédié à vos côtés',
-    description: 'Un expert filtre les offres, organise les visites et optimise votre dossier selon les standards des régies.',
+    title: 'Ton conseiller gère tout',
+    description: 'Il filtre les offres, organise les visites et optimise ton dossier. Toi, tu te reposes.',
   },
   {
     icon: Key,
-    title: 'Vous emménagez',
-    description: 'Signature du bail et accompagnement jusqu\'à la remise des clés. Bienvenue dans votre nouveau chez-vous.',
+    title: 'Tu emménages 🎉',
+    description: 'Signature du bail et accompagnement jusqu\'aux clés. Bienvenue chez toi !',
   },
 ];
 
@@ -62,14 +62,14 @@ export function HowItWorks() {
           <div className="inline-flex items-center gap-2 relative group mb-4">
             <div className="relative glass-morphism rounded-full px-5 py-2.5 border border-primary/20 bg-card/80">
               <Crown className="inline-block h-4 w-4 text-amber-500 mr-2" />
-              <span className="text-sm font-semibold text-primary">Notre méthodologie éprouvée</span>
+              <span className="text-sm font-semibold text-primary">Simple comme bonjour</span>
             </div>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
-            Comment nous trouvons <span className="text-primary">votre bien idéal</span>
+            Comment on trouve <span className="text-primary">ton appart'</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Expertise humaine + Technologie de pointe + Réseau Privilégié = Efficacité maximale
+            Humains + Robots + Réseau privé = Efficacité maximale 🚀
           </p>
         </div>
 
