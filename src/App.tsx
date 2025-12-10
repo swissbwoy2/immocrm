@@ -47,6 +47,7 @@ const AdminDemandesActivation = lazy(() => import("./pages/admin/DemandesActivat
 const AdminFacturesAbaNinja = lazy(() => import("./pages/admin/FacturesAbaNinja"));
 const AdminStatistiquesAgents = lazy(() => import("./pages/admin/StatistiquesAgents"));
 const AdminRemplirPDF = lazy(() => import("./pages/admin/RemplirPDF"));
+const AdminLeads = lazy(() => import("./pages/admin/Leads"));
 
 // Agent pages
 const AgentDashboard = lazy(() => import("./pages/agent/Dashboard"));
@@ -156,6 +157,7 @@ const App = () => (
               <Route path="/admin/factures-abaninja" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminFacturesAbaNinja /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/statistiques-agents" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminStatistiquesAgents /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/remplir-pdf" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRemplirPDF /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/leads" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminLeads /></AppLayout></ProtectedRoute>} />
 
               {/* Agent Routes */}
               <Route path="/agent" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDashboard /></AppLayout></ProtectedRoute>} />
