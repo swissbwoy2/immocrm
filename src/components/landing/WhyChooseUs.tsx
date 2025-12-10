@@ -1,4 +1,4 @@
-import { Building2, FileCheck, CalendarCheck, MessageCircle, Shield, UserCheck, Award, Coins } from 'lucide-react';
+import { Building2, FileCheck, CalendarCheck, MessageCircle, Shield, Coins, Heart } from 'lucide-react';
 
 const advantages = [
   {
@@ -49,14 +49,14 @@ export function WhyChooseUs() {
         {/* Section header */}
         <div className="text-center mb-16 animate-fade-in">
           <div className="inline-flex items-center gap-2 glass-morphism rounded-full px-4 py-2 mb-4">
-            <Award className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-primary">Ce qui nous différencie</span>
+            <Heart className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-primary">Notre mission : L'immobilier accessible</span>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
             Pourquoi <span className="gradient-text-animated">500+ clients</span> nous font confiance
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Des engagements concrets, pas des promesses en l'air
+            Nous croyons que l'accès au logement est un droit fondamental. C'est pourquoi nous avons créé un service qui le rend enfin accessible.
           </p>
         </div>
 
