@@ -48,6 +48,7 @@ const AdminFacturesAbaNinja = lazy(() => import("./pages/admin/FacturesAbaNinja"
 const AdminStatistiquesAgents = lazy(() => import("./pages/admin/StatistiquesAgents"));
 const AdminRemplirPDF = lazy(() => import("./pages/admin/RemplirPDF"));
 const AdminLeads = lazy(() => import("./pages/admin/Leads"));
+const AdminContacts = lazy(() => import("./pages/admin/Contacts"));
 
 // Agent pages
 const AgentDashboard = lazy(() => import("./pages/agent/Dashboard"));
@@ -69,6 +70,7 @@ const AgentBoiteReception = lazy(() => import("./pages/agent/BoiteReception"));
 const AgentCandidatures = lazy(() => import("./pages/agent/Candidatures"));
 const AgentDeposerCandidature = lazy(() => import("./pages/agent/DeposerCandidature"));
 const AgentRemplirPDF = lazy(() => import("./pages/agent/RemplirPDF"));
+const AgentContacts = lazy(() => import("./pages/agent/Contacts"));
 
 // Client pages
 const ClientDashboard = lazy(() => import("./pages/client/Dashboard"));
@@ -158,6 +160,7 @@ const App = () => (
               <Route path="/admin/statistiques-agents" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminStatistiquesAgents /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/remplir-pdf" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRemplirPDF /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/leads" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminLeads /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/contacts" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminContacts /></AppLayout></ProtectedRoute>} />
 
               {/* Agent Routes */}
               <Route path="/agent" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDashboard /></AppLayout></ProtectedRoute>} />
@@ -179,6 +182,7 @@ const App = () => (
               <Route path="/agent/candidatures" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentCandidatures /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/deposer-candidature" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDeposerCandidature /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/remplir-pdf" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentRemplirPDF /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/contacts" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentContacts /></AppLayout></ProtectedRoute>} />
 
               {/* Client Routes */}
               <Route path="/client" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDashboard /></AppLayout></ProtectedRoute>} />
