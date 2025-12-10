@@ -496,7 +496,8 @@ const OffresRecues = () => {
       'interesse': { label: '💚 Intéressé', variant: 'default' },
       'visite_planifiee': { label: '📅 Visite planifiée', variant: 'default' },
       'visite_effectuee': { label: '✅ Visite effectuée', variant: 'default' },
-      'candidature_deposee': { label: '📝 Candidature déposée', variant: 'default' },
+      'demande_postulation': { label: '📝 Demande en attente', variant: 'outline' },
+      'candidature_deposee': { label: '📋 Candidature déposée', variant: 'default' },
       'acceptee': { label: '🎉 Acceptée', variant: 'default' },
       'refusee': { label: '❌ Refusée', variant: 'destructive' },
     };
