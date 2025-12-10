@@ -470,27 +470,29 @@ export function SendDossierDialog({
       if (error) throw error;
       if (!data.success) throw new Error(data.error);
 
-      // Update or create candidature record
-      if (existingCandidatureId) {
-        // Update existing candidature
+      // Check if a candidature exists (could be a demande_postulation from client)
+      const { data: existingCandidature } = await supabase
+        .from('candidatures')
+        .select('id')
+        .eq('offre_id', selectedOffreId)
+        .eq('client_id', clientId)
+        .maybeSingle();
+
+      if (existingCandidature || existingCandidatureId) {
+        // Update existing candidature (including demande_postulation)
         const { error: candidatureError } = await supabase
           .from('candidatures')
           .update({
             statut: 'en_attente',
             dossier_complet: totalAttachments > 0,
             message_client: email.body_html,
+            date_depot: new Date().toISOString(),
           })
-          .eq('id', existingCandidatureId);
+          .eq('id', existingCandidatureId || existingCandidature?.id);
 
         if (candidatureError) {
           console.error('Error updating candidature:', candidatureError);
         }
-
-        // Update offre status
-        await supabase
-          .from('offres')
-          .update({ statut: 'candidature_deposee' })
-          .eq('id', selectedOffreId);
       } else {
         // Create new candidature
         const { error: candidatureError } = await supabase
@@ -508,6 +510,12 @@ export function SendDossierDialog({
           console.error('Error creating candidature:', candidatureError);
         }
       }
+
+      // Update offre status to candidature_deposee (only when agent actually sends dossier)
+      await supabase
+        .from('offres')
+        .update({ statut: 'candidature_deposee' })
+        .eq('id', selectedOffreId);
 
       // Send message to client via messaging
       try {

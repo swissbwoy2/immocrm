@@ -534,17 +534,17 @@ export default function DeposerCandidature() {
       // Create or update candidature for each selected client
       let successCount = 0;
       for (const clientId of selectedClientIds) {
-        // Check if a candidature already exists (e.g., created by client request)
+        // Check if a candidature already exists (e.g., demande_postulation from client)
         const { data: existingCandidature } = await supabase
           .from('candidatures')
-          .select('id')
+          .select('id, statut')
           .eq('offre_id', selectedOffreId)
           .eq('client_id', clientId)
           .maybeSingle();
 
         let candidatureError;
         if (existingCandidature) {
-          // Update existing candidature
+          // Update existing candidature (including demande_postulation)
           const { error } = await supabase
             .from('candidatures')
             .update({
@@ -573,7 +573,7 @@ export default function DeposerCandidature() {
         if (!candidatureError) {
           successCount++;
           
-          // Mettre à jour le statut de l'offre à "candidature_deposee"
+          // Mettre à jour le statut de l'offre à "candidature_deposee" (seulement quand agent envoie)
           await supabase
             .from('offres')
             .update({ statut: 'candidature_deposee' })

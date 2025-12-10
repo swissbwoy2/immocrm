@@ -70,6 +70,9 @@ interface Client {
   agent_id: string | null;
 }
 
+// Statuts protégés qui ne peuvent être atteints que par des actions spécifiques
+const PROTECTED_STATUTS = ['candidature_deposee'];
+
 // Configuration complète des statuts avec toutes les étapes du workflow
 const STATUS_CONFIG: Record<string, { 
   label: string; 
