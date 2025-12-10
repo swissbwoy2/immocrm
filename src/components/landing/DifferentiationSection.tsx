@@ -1,100 +1,63 @@
-import {
-  CheckCircle,
-  X,
-  Scale,
-  Shield,
-  Search,
-  Users,
-  Filter,
-  Calendar,
-  FileText,
-  MessageSquare,
-  Brain,
-  Eye,
-  Sparkles,
-  ArrowRight,
-  Zap,
-  Crown,
-} from "lucide-react";
+import { CheckCircle, X, Scale, Shield, Search, Users, Filter, Calendar, FileText, MessageSquare, Brain, Eye, Sparkles, ArrowRight, Zap, Crown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-
-const comparisonData = [
-  {
-    aspect: "Accès aux biens",
-    logisorama:
-      "Commencer maintenant pour profiter de notre Réseau Privilégié de régies partenaires et propriétaires en Suisse romande.",
-    solo: "Vous consultez uniquement les annonces publiques, déjà vues par des centaines de candidats.",
-    icon: Search,
-  },
-  {
-    aspect: "Réseau Privilégié",
-    logisorama:
-      "Votre dossier bénéficie d'une recommandation directe auprès de nos contacts établis depuis 2019. Nous ouvrons des portes inaccessibles autrement.",
-    solo: "Votre candidature arrive anonyme, parmi des dizaines d'autres, sans introduction ni relation préalable.",
-    icon: Users,
-  },
-  {
-    aspect: "Sélection stratégique",
-    logisorama:
-      "Nous identifions les opportunités réalistes selon votre profil, votre budget et vos délais. Chaque proposition est ciblée.",
-    solo: "Vous postulez sans visibilité sur vos chances réelles, perdant temps et énergie sur des biens inaccessibles.",
-    icon: Filter,
-  },
-  {
-    aspect: "Coordination des visites",
-    logisorama:
-      "Nous organisons les visites, optimisons les créneaux et savons comment présenter votre profil aux régies pour maximiser l'impact.",
-    solo: "Vous contactez chaque régie séparément, souvent trop tard, sans méthode ni stratégie.",
-    icon: Calendar,
-  },
-  {
-    aspect: "Dossier professionnel",
-    logisorama:
-      "Nous constituons un dossier complet et irréprochable, aligné avec les standards des régies et propriétaires de la région.",
-    solo: "Vous improvisez votre dossier sans connaître les attentes réelles des décideurs.",
-    icon: FileText,
-  },
-  {
-    aspect: "Suivi personnalisé",
-    logisorama:
-      "Nous assurons un suivi proactif auprès des régies et utilisons notre relationnel pour obtenir des réponses et accélérer les décisions.",
-    solo: "Vous envoyez votre dossier et attendez, souvent sans aucun retour ni feedback.",
-    icon: MessageSquare,
-  },
-  {
-    aspect: "Efficacité & sérénité",
-    logisorama: "Vous déléguez à une équipe expérimentée qui maîtrise le marché et les interlocuteurs clés.",
-    solo: "Vous gérez seul la recherche, les relances et le stress, sans certitude de bien faire.",
-    icon: Brain,
-  },
-  {
-    aspect: "Suivi structuré",
-    logisorama: "Mandat clair de 90 jours, conseiller dédié et reporting régulier sur l'avancement de votre recherche.",
-    solo: "Aucun cadre ni échéance. Vous avancez à l'aveugle sans visibilité sur les résultats.",
-    icon: Eye,
-  },
-  {
-    aspect: "Engagement de résultat",
-    logisorama: "Si aucun bail n'est signé en 90 jours, nous appliquons notre garantie de remboursement intégral.",
-    solo: "Aucun filet de sécurité. Tout le risque et l'investissement reposent sur vous.",
-    icon: Shield,
-  },
-];
-
+const comparisonData = [{
+  aspect: "Accès aux biens",
+  logisorama: "Commencer maintenant pour profiter de notre Réseau Privilégié de régies partenaires et propriétaires en Suisse romande.",
+  solo: "Vous consultez uniquement les annonces publiques, déjà vues par des centaines de candidats.",
+  icon: Search
+}, {
+  aspect: "Réseau Privilégié",
+  logisorama: "Votre dossier bénéficie d'une recommandation directe auprès de nos contacts établis depuis 2019. Nous ouvrons des portes inaccessibles autrement.",
+  solo: "Votre candidature arrive anonyme, parmi des dizaines d'autres, sans introduction ni relation préalable.",
+  icon: Users
+}, {
+  aspect: "Sélection stratégique",
+  logisorama: "Nous identifions les opportunités réalistes selon votre profil, votre budget et vos délais. Chaque proposition est ciblée.",
+  solo: "Vous postulez sans visibilité sur vos chances réelles, perdant temps et énergie sur des biens inaccessibles.",
+  icon: Filter
+}, {
+  aspect: "Coordination des visites",
+  logisorama: "Nous organisons les visites, optimisons les créneaux et savons comment présenter votre profil aux régies pour maximiser l'impact.",
+  solo: "Vous contactez chaque régie séparément, souvent trop tard, sans méthode ni stratégie.",
+  icon: Calendar
+}, {
+  aspect: "Dossier professionnel",
+  logisorama: "Nous constituons un dossier complet et irréprochable, aligné avec les standards des régies et propriétaires de la région.",
+  solo: "Vous improvisez votre dossier sans connaître les attentes réelles des décideurs.",
+  icon: FileText
+}, {
+  aspect: "Suivi personnalisé",
+  logisorama: "Nous assurons un suivi proactif auprès des régies et utilisons notre relationnel pour obtenir des réponses et accélérer les décisions.",
+  solo: "Vous envoyez votre dossier et attendez, souvent sans aucun retour ni feedback.",
+  icon: MessageSquare
+}, {
+  aspect: "Efficacité & sérénité",
+  logisorama: "Vous déléguez à une équipe expérimentée qui maîtrise le marché et les interlocuteurs clés.",
+  solo: "Vous gérez seul la recherche, les relances et le stress, sans certitude de bien faire.",
+  icon: Brain
+}, {
+  aspect: "Suivi structuré",
+  logisorama: "Mandat clair de 90 jours, conseiller dédié et reporting régulier sur l'avancement de votre recherche.",
+  solo: "Aucun cadre ni échéance. Vous avancez à l'aveugle sans visibilité sur les résultats.",
+  icon: Eye
+}, {
+  aspect: "Engagement de résultat",
+  logisorama: "Si aucun bail n'est signé en 90 jours, nous appliquons notre garantie de remboursement intégral.",
+  solo: "Aucun filet de sécurité. Tout le risque et l'investissement reposent sur vous.",
+  icon: Shield
+}];
 export function DifferentiationSection() {
-  return (
-    <section className="py-24 md:py-32 relative overflow-hidden">
+  return <section className="py-24 md:py-32 relative overflow-hidden">
       {/* Premium animated background */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
 
       {/* Animated gradient orbs */}
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
-      <div
-        className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-500/15 rounded-full blur-[100px] animate-pulse"
-        style={{ animationDelay: "1s" }}
-      />
+      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-500/15 rounded-full blur-[100px] animate-pulse" style={{
+      animationDelay: "1s"
+    }} />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-violet-500/10 rounded-full blur-[150px]" />
 
       {/* Grid pattern overlay */}
@@ -130,19 +93,8 @@ export function DifferentiationSection() {
               <span className="bg-gradient-to-r from-primary via-blue-400 to-violet-400 bg-clip-text text-transparent">
                 accès facilité au logement en Suisse romande
               </span>
-              <svg
-                className="absolute -bottom-2 left-0 w-full"
-                height="8"
-                viewBox="0 0 200 8"
-                preserveAspectRatio="none"
-              >
-                <path
-                  d="M0,5 Q50,0 100,5 T200,5"
-                  stroke="url(#gradient)"
-                  strokeWidth="3"
-                  fill="none"
-                  className="animate-pulse"
-                />
+              <svg className="absolute -bottom-2 left-0 w-full" height="8" viewBox="0 0 200 8" preserveAspectRatio="none">
+                <path d="M0,5 Q50,0 100,5 T200,5" stroke="url(#gradient)" strokeWidth="3" fill="none" className="animate-pulse" />
                 <defs>
                   <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor="hsl(var(--primary))" />
@@ -179,7 +131,7 @@ export function DifferentiationSection() {
                     </div>
                     <h3 className="text-xl font-black text-white">Avec Immo-rama.ch</h3>
                   </div>
-                  <p className="text-sm text-slate-300 text-center font-medium">Accès au Réseau Privilégié</p>
+                  <p className="text-sm text-slate-300 text-center font-medium">Rend l'immobilier accèssible.</p>
                   <div className="mt-3 flex justify-center">
                     <span className="px-4 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-500/30">
                       EXCLUSIF
@@ -202,12 +154,9 @@ export function DifferentiationSection() {
 
             {/* Comparison rows */}
             <div className="space-y-4">
-              {comparisonData.map((row, index) => (
-                <div
-                  key={index}
-                  className="grid grid-cols-[1fr_1.5fr_1.5fr] gap-6 animate-fade-in group"
-                  style={{ animationDelay: `${index * 80}ms` }}
-                >
+              {comparisonData.map((row, index) => <div key={index} className="grid grid-cols-[1fr_1.5fr_1.5fr] gap-6 animate-fade-in group" style={{
+              animationDelay: `${index * 80}ms`
+            }}>
                   {/* Aspect label */}
                   <div className="flex items-center gap-4 p-4">
                     <div className="relative">
@@ -243,15 +192,15 @@ export function DifferentiationSection() {
                       <span className="text-sm text-slate-500 leading-relaxed">{row.solo}</span>
                     </div>
                   </div>
-                </div>
-              ))}
+                </div>)}
             </div>
           </div>
 
           {/* Mobile cards - Premium */}
           <div className="md:hidden space-y-6">
-            {comparisonData.map((row, index) => (
-              <div key={index} className="relative animate-fade-in group" style={{ animationDelay: `${index * 80}ms` }}>
+            {comparisonData.map((row, index) => <div key={index} className="relative animate-fade-in group" style={{
+            animationDelay: `${index * 80}ms`
+          }}>
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 via-blue-500/30 to-violet-500/30 rounded-2xl blur-lg opacity-50 group-hover:opacity-100 transition-opacity" />
                 <Card className="relative backdrop-blur-xl bg-slate-900/90 border-white/10 overflow-hidden">
                   <CardHeader className="pb-3 border-b border-white/5">
@@ -289,16 +238,14 @@ export function DifferentiationSection() {
                     </div>
                   </CardContent>
                 </Card>
-              </div>
-            ))}
+              </div>)}
           </div>
         </div>
 
         {/* Premium CTA section */}
-        <div
-          className="mt-12 sm:mt-20 md:mt-24 text-center animate-fade-in px-2 sm:px-0"
-          style={{ animationDelay: "700ms" }}
-        >
+        <div className="mt-12 sm:mt-20 md:mt-24 text-center animate-fade-in px-2 sm:px-0" style={{
+        animationDelay: "700ms"
+      }}>
           <div className="relative group w-full max-w-3xl mx-auto">
             {/* Animated glow */}
             <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-r from-primary via-blue-500 to-violet-500 rounded-2xl sm:rounded-3xl blur-xl sm:blur-2xl opacity-40 group-hover:opacity-60 transition-opacity animate-pulse" />
@@ -312,10 +259,9 @@ export function DifferentiationSection() {
                 <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-400/60 animate-pulse" />
               </div>
               <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4">
-                <Sparkles
-                  className="h-4 w-4 sm:h-5 sm:w-5 text-primary/60 animate-pulse"
-                  style={{ animationDelay: "0.5s" }}
-                />
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary/60 animate-pulse" style={{
+                animationDelay: "0.5s"
+              }} />
               </div>
 
               <div className="relative">
@@ -327,10 +273,7 @@ export function DifferentiationSection() {
                 </p>
 
                 <Link to="/nouveau-mandat">
-                  <Button
-                    size="lg"
-                    className="relative group/btn font-bold text-sm sm:text-base md:text-lg px-6 sm:px-10 py-5 sm:py-7 bg-gradient-to-r from-primary via-blue-500 to-violet-500 hover:from-primary/90 hover:via-blue-500/90 hover:to-violet-500/90 border-0 shadow-2xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-primary/50 w-full sm:w-auto"
-                  >
+                  <Button size="lg" className="relative group/btn font-bold text-sm sm:text-base md:text-lg px-6 sm:px-10 py-5 sm:py-7 bg-gradient-to-r from-primary via-blue-500 to-violet-500 hover:from-primary/90 hover:via-blue-500/90 hover:to-violet-500/90 border-0 shadow-2xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-primary/50 w-full sm:w-auto">
                     <span className="relative z-10 flex items-center justify-center gap-2">
                       Demarrer ma recherche
                       <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover/btn:translate-x-1 transition-transform" />
@@ -351,6 +294,5 @@ export function DifferentiationSection() {
           </p>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 }
