@@ -109,7 +109,7 @@ export function HeroSection() {
           >
             Délègue ta recherche à des{" "}
             <span className="gradient-text-animated bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text">
-              experts qui s'acharnent pour toi
+              experts qui s'acharnent pour toi.
             </span>
           </p>
 
