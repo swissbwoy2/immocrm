@@ -1404,34 +1404,58 @@ export type Database = {
       }
       leads: {
         Row: {
+          a_garant: boolean | null
           budget: string | null
           contacted: boolean | null
           created_at: string | null
           email: string
           id: string
+          is_qualified: boolean | null
           localite: string | null
+          nom: string | null
           notes: string | null
+          permis_nationalite: string | null
+          poursuites: boolean | null
+          prenom: string | null
           source: string | null
+          statut_emploi: string | null
+          telephone: string | null
         }
         Insert: {
+          a_garant?: boolean | null
           budget?: string | null
           contacted?: boolean | null
           created_at?: string | null
           email: string
           id?: string
+          is_qualified?: boolean | null
           localite?: string | null
+          nom?: string | null
           notes?: string | null
+          permis_nationalite?: string | null
+          poursuites?: boolean | null
+          prenom?: string | null
           source?: string | null
+          statut_emploi?: string | null
+          telephone?: string | null
         }
         Update: {
+          a_garant?: boolean | null
           budget?: string | null
           contacted?: boolean | null
           created_at?: string | null
           email?: string
           id?: string
+          is_qualified?: boolean | null
           localite?: string | null
+          nom?: string | null
           notes?: string | null
+          permis_nationalite?: string | null
+          poursuites?: boolean | null
+          prenom?: string | null
           source?: string | null
+          statut_emploi?: string | null
+          telephone?: string | null
         }
         Relationships: []
       }
