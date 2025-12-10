@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { GoogleTranslateWidget } from '@/components/GoogleTranslateWidget';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -149,6 +150,11 @@ export default function Login() {
         <ArrowLeft className="h-4 w-4" />
         <span className="text-sm font-medium">Retour à l'accueil</span>
       </Link>
+
+      {/* Google Translate Widget */}
+      <div className="absolute top-4 right-4 md:top-6 md:right-6 z-20">
+        <GoogleTranslateWidget />
+      </div>
 
       <Card className="w-full max-w-md login-card-float relative">
         <CardHeader className="text-center space-y-4">

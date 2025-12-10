@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { LogIn, Rocket } from 'lucide-react';
 import logo from '@/assets/logo-immo-rama-new.png';
+import { GoogleTranslateWidget } from '@/components/GoogleTranslateWidget';
 
 export function FloatingNav() {
   const [isVisible, setIsVisible] = useState(false);
@@ -38,6 +39,8 @@ export function FloatingNav() {
 
             {/* Boutons */}
             <div className="flex items-center gap-2 sm:gap-3">
+              <GoogleTranslateWidget className="hidden sm:block" />
+              
               <Button 
                 asChild 
                 variant="ghost" 
