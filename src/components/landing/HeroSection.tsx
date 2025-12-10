@@ -126,8 +126,8 @@ export function HeroSection() {
             className="text-base md:text-lg text-muted-foreground mb-6 max-w-2xl animate-fade-in leading-relaxed"
             style={{ animationDelay: "150ms" }}
           >
-            100 dossiers envoyés, 0 réponse ? On connaît. Nos agents contactent les régies, préparent ton dossier béton
-            et te trouvent <strong className="text-foreground">enfin</strong> ton appartement.
+            Nos agents contactent les régies, préparent ton dossier béton et te trouvent{" "}
+            <strong className="text-foreground">enfin</strong> ton appartement.
           </p>
 
           {/* Promise box - Premium with animated border */}
