@@ -7,12 +7,12 @@ const faqItems = [
   {
     question: "Combien ça coûte exactement ?",
     answer:
-      "C'est transparent : une caution de 300 CHF est versée pour activer ton dossier de recherche. En cas de signature d'un bail, la commission s'élève à 1 mois de loyer brut (loyer + charges), avec un minimum de 500 CHF HT (logements subventionnés). Les 300 CHF de caution sont déduits de cette commission. Tu signes un mandat de recherche officiel encadré par le droit suisse.",
+      "C'est transparent : une caution de 300 CHF est versée pour activer ton dossier de recherche. En cas de signature d'un bail, la commission s'élève à 1 mois de loyer brut (loyer + charges), avec un minimum de 500 CHF HT (logements subventionnés). Les 300 CHF de caution sont déduits de cette commission.",
   },
   {
-    question: "Est-ce vraiment légal et sérieux ?",
+    question: "Dois-je signer un contrat ?",
     answer:
-      "Absolument ! Tu signes un mandat de recherche officiel conforme au Code des Obligations suisse (CO). La juridiction compétente est Berne (Suisse). Ce cadre juridique protège tes droits et garantit un processus professionnel et encadré.",
+      "Oui ! Tu signes un mandat de recherche. Ce cadre juridique protège tes droits et garantit un processus professionnel et encadré.",
   },
   {
     question: "Comment fonctionne la garantie 100% remboursé ?",
@@ -42,7 +42,7 @@ const faqItems = [
   {
     question: "Comment travaillez-vous pour moi ?",
     answer:
-      "On travaille exclusivement pour TOI avec un mandat de recherche officiel. On te transmet les informations, on contacte les offreurs en ton nom, et on peut t'assister lors de la signature du bail. On défend tes intérêts, pas ceux des propriétaires.",
+      "On travaille exclusivement pour TOI avec un mandat de recherche officiel. On te transmet les informations, on contacte les offreurs en ton nom, et on peut t'assister lors de la signature du bail. On défend tes intérêts !",
   },
   {
     question: "Comment fonctionne la délégation de visite ?",
