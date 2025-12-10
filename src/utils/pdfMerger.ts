@@ -219,11 +219,11 @@ export async function createCoverPage(
   
   persons.forEach((person, index) => {
     const typeLabels: Record<string, string> = {
-      'client': '👤 Client principal',
-      'garant': '🛡️ Garant',
-      'colocataire': '👥 Colocataire',
-      'co_debiteur': '🤝 Co-débiteur',
-      'signataire_solidaire': '✍️ Signataire solidaire',
+      'client': '- Client principal',
+      'garant': '- Garant',
+      'colocataire': '- Colocataire',
+      'co_debiteur': '- Co-debiteur',
+      'signataire_solidaire': '- Signataire solidaire',
     };
     
     const typeLabel = typeLabels[person.type] || person.type;
