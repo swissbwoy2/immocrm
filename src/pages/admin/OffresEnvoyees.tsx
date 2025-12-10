@@ -70,9 +70,6 @@ interface Client {
   agent_id: string | null;
 }
 
-// Statuts protégés qui ne peuvent être atteints que par des actions spécifiques
-const PROTECTED_STATUTS = ['candidature_deposee'];
-
 // Configuration complète des statuts avec toutes les étapes du workflow
 const STATUS_CONFIG: Record<string, { 
   label: string; 
@@ -83,7 +80,7 @@ const STATUS_CONFIG: Record<string, {
   emoji: string;
   step: number;
 }> = {
-  envoyee: { 
+  envoyee: {
     label: 'Envoyée', 
     color: 'text-blue-600', 
     bgColor: 'bg-blue-50 dark:bg-blue-950/30',
@@ -128,7 +125,16 @@ const STATUS_CONFIG: Record<string, {
     emoji: '✅',
     step: 5 
   },
-  candidature_deposee: { 
+  demande_postulation: { 
+    label: 'Demande en attente', 
+    color: 'text-orange-600', 
+    bgColor: 'bg-orange-50 dark:bg-orange-950/30',
+    borderColor: 'border-orange-200 dark:border-orange-800',
+    icon: Clock, 
+    emoji: '📝',
+    step: 5.5 
+  },
+  candidature_deposee: {
     label: 'Candidature déposée', 
     color: 'text-indigo-600', 
     bgColor: 'bg-indigo-50 dark:bg-indigo-950/30',

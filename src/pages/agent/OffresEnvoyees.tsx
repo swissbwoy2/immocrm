@@ -141,7 +141,15 @@ const STATUS_CONFIG: Record<string, {
     icon: CheckCircle,
     step: 5
   },
-  candidature_deposee: { 
+  demande_postulation: { 
+    label: 'Demande en attente', 
+    color: 'text-orange-600 dark:text-orange-400', 
+    bgColor: 'bg-orange-500/10', 
+    borderColor: 'border-orange-500/30',
+    icon: Clock,
+    step: 5.5
+  },
+  candidature_deposee: {
     label: 'Candidature déposée', 
     color: 'text-indigo-600 dark:text-indigo-400', 
     bgColor: 'bg-indigo-500/10', 
