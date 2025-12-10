@@ -1,4 +1,4 @@
-import { Shield, Wallet, CheckCircle, RefreshCcw, Sparkles, Star } from 'lucide-react';
+import { Shield, Wallet, CheckCircle, RefreshCcw, Sparkles, Star, Crown } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Animated number component
@@ -23,7 +23,7 @@ export function GuaranteeSection() {
       icon: Wallet,
       label: 'Pour démarrer',
       value: '300 CHF',
-      description: 'Remboursables à 100%',
+      description: 'Remboursables intégralement',
       gradient: 'from-blue-500 to-cyan-500',
       glowColor: 'rgba(59, 130, 246, 0.3)',
     },
@@ -31,15 +31,15 @@ export function GuaranteeSection() {
       icon: CheckCircle,
       label: 'En cas de succès',
       value: '1 mois de loyer',
-      description: '- les 300 CHF déjà versés',
+      description: 'Moins les 300 CHF déjà versés',
       gradient: 'from-green-500 to-emerald-500',
       glowColor: 'rgba(34, 197, 94, 0.3)',
     },
     {
       icon: RefreshCcw,
-      label: 'Pas trouvé après 3 mois ?',
+      label: 'Aucun résultat après 90 jours ?',
       value: '0 CHF',
-      description: 'On te rembourse tout.',
+      description: 'Remboursement intégral garanti',
       gradient: 'from-amber-500 to-orange-500',
       glowColor: 'rgba(245, 158, 11, 0.3)',
     },
@@ -84,13 +84,14 @@ export function GuaranteeSection() {
             <div className="inline-flex items-center gap-2 bg-primary/10 rounded-full px-4 py-2 mb-4 relative overflow-hidden group">
               {/* Shine effect */}
               <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-              <span className="text-primary font-medium relative z-10">💰 Zéro risque financier</span>
+              <Shield className="h-4 w-4 text-primary" />
+              <span className="text-primary font-medium relative z-10">Notre engagement : zéro risque pour vous</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              On prend le risque <span className="gradient-text-animated">à ta place</span>
+              Nous garantissons <span className="gradient-text-animated">notre performance</span>
             </h2>
             <p className="text-muted-foreground text-lg">
-              Tellement confiant qu'on te rembourse si on échoue
+              En cas d'échec de la recherche, remboursement intégral. Sans condition.
             </p>
           </div>
 
@@ -169,15 +170,15 @@ export function GuaranteeSection() {
               <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               
               <div className="flex items-center gap-3">
-                <Shield className="h-6 w-6 text-primary relative z-10 animate-pulse" />
+                <Crown className="h-6 w-6 text-amber-500 relative z-10 animate-pulse" />
                 <span className="text-lg md:text-xl font-bold text-primary relative z-10">
-                  Garantie 100% remboursé en cas d'échec
+                  Garantie de remboursement intégral
                 </span>
                 <Sparkles className="h-5 w-5 text-amber-500 relative z-10 animate-pulse" style={{ animationDelay: '0.5s' }} />
               </div>
               
               <p className="text-sm text-muted-foreground relative z-10">
-                ✓ Aucune condition cachée • ✓ Remboursement sous 7 jours
+                ✓ Sans condition cachée • ✓ Remboursement sous 7 jours ouvrés
               </p>
             </div>
           </div>

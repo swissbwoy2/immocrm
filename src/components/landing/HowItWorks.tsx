@@ -1,26 +1,26 @@
-import { UserCheck, Radar, Users, Key, Sparkles, Zap } from 'lucide-react';
+import { UserCheck, Radar, Users, Key, Sparkles, Zap, Crown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 const steps = [
   {
     icon: UserCheck,
-    title: 'Analyse de ton profil',
-    description: 'On étudie tes critères : revenus, budget, permis, zone souhaitée. 5 minutes chrono, c\'est gratuit.',
+    title: 'Analyse de votre profil',
+    description: 'Nous étudions vos critères : revenus, budget, permis, zone souhaitée. Une consultation de 5 minutes, sans engagement.',
   },
   {
     icon: Radar,
-    title: 'Matching automatique',
-    description: 'Notre IA surveille tous les portails + notre réseau off-market. Dès qu\'un bien match, on te le propose.',
+    title: 'Veille stratégique continue',
+    description: 'Notre technologie surveille tous les portails et notre Réseau Privilégié. Dès qu\'une opportunité correspond, nous vous la présentons.',
   },
   {
     icon: Users,
-    title: 'Agent dédié à tes côtés',
-    description: 'Un vrai humain filtre les offres, planifie les visites et optimise ton dossier pour les régies.',
+    title: 'Conseiller dédié à vos côtés',
+    description: 'Un expert filtre les offres, organise les visites et optimise votre dossier selon les standards des régies.',
   },
   {
     icon: Key,
-    title: 'Tu emménages !',
-    description: 'Signature du bail et suivi jusqu\'à la remise des clés. Célèbre ton nouveau chez-toi.',
+    title: 'Vous emménagez',
+    description: 'Signature du bail et accompagnement jusqu\'à la remise des clés. Bienvenue dans votre nouveau chez-vous.',
   },
 ];
 
@@ -61,15 +61,15 @@ export function HowItWorks() {
         <div className="text-center mb-16 md:mb-20 animate-fade-in">
           <div className="inline-flex items-center gap-2 relative group mb-4">
             <div className="relative glass-morphism rounded-full px-5 py-2.5 border border-primary/20 bg-card/80">
-              <Zap className="inline-block h-4 w-4 text-primary mr-2" />
-              <span className="text-sm font-semibold text-primary">Simple comme bonjour</span>
+              <Crown className="inline-block h-4 w-4 text-amber-500 mr-2" />
+              <span className="text-sm font-semibold text-primary">Notre méthodologie éprouvée</span>
             </div>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
-            Comment on trouve <span className="text-primary">ton appart'</span>, concrètement ?
+            Comment nous trouvons <span className="text-primary">votre bien idéal</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Agent humain + Technologie + Réseau = Efficacité maximale
+            Expertise humaine + Technologie de pointe + Réseau Privilégié = Efficacité maximale
           </p>
         </div>
 

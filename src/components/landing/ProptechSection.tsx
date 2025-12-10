@@ -1,26 +1,26 @@
-import { Sparkles, Radar, BarChart3, FileCheck, LayoutDashboard, Cpu } from 'lucide-react';
+import { Sparkles, Radar, BarChart3, FileCheck, LayoutDashboard, Cpu, Crown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 const features = [
   {
     icon: Radar,
-    title: 'Veille automatique 24/7',
-    description: 'Surveillance en temps réel des nouvelles annonces sur tous les portails + notre réseau off-market.',
+    title: 'Veille stratégique continue',
+    description: 'Surveillance en temps réel des nouvelles opportunités sur tous les portails et notre Réseau Privilégié hors marché.',
   },
   {
     icon: BarChart3,
     title: 'Matching intelligent',
-    description: 'Priorisation des biens les plus réalistes selon ton budget, ton permis et ta situation.',
+    description: 'Priorisation des biens les plus pertinents selon votre budget, votre permis et votre situation personnelle.',
   },
   {
     icon: FileCheck,
-    title: 'Dossier béton généré',
-    description: 'Génération automatique de dossiers standardisés et complets pour rassurer les régies.',
+    title: 'Dossier aux standards professionnels',
+    description: 'Génération automatique de dossiers complets et irréprochables pour convaincre les régies.',
   },
   {
     icon: LayoutDashboard,
-    title: 'Dashboard temps réel',
-    description: 'Suis chaque étape de ta recherche en direct depuis ton espace client personnel.',
+    title: 'Tableau de bord en temps réel',
+    description: 'Suivez chaque étape de votre recherche en direct depuis votre espace client personnel.',
   },
 ];
 
@@ -48,14 +48,14 @@ export function ProptechSection() {
           <div className="inline-flex items-center gap-2 relative group mb-4">
             <div className="relative glass-morphism rounded-full px-5 py-2.5 border border-primary/20 bg-card/80">
               <Cpu className="inline-block h-4 w-4 text-primary mr-2" />
-              <span className="text-sm font-semibold text-primary">Proptech & IA</span>
+              <span className="text-sm font-semibold text-primary">Technologie & Innovation</span>
             </div>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
-            Ce que font <span className="text-primary">nos outils</span> pour toi
+            Notre technologie <span className="text-primary">au service de votre succès</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            La technologie au service de ta recherche. Pas du buzz, du concret.
+            Des outils performants qui multiplient vos chances de trouver le bien idéal.
           </p>
         </div>
 
@@ -97,8 +97,8 @@ export function ProptechSection() {
         {/* Bottom message */}
         <div className="text-center mt-12 md:mt-16 animate-fade-in" style={{ animationDelay: '400ms' }}>
           <div className="inline-flex items-center gap-3 glass-morphism rounded-full px-6 py-3 border border-border/40 bg-card/80">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <span className="text-foreground font-medium">Agent humain + Technologie + Réseau = Efficacité maximale</span>
+            <Crown className="h-5 w-5 text-amber-500" />
+            <span className="text-foreground font-medium">Une alliance unique : expertise humaine, technologie de pointe et Réseau Privilégié</span>
           </div>
         </div>
       </div>
