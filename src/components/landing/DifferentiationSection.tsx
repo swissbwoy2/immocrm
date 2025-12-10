@@ -23,7 +23,8 @@ import { Link } from "react-router-dom";
 const comparisonData = [
   {
     aspect: "Accès aux biens",
-    logisorama: "Nous accédons aux biens hors marché grâce à notre Réseau Privilégié de régies partenaires et propriétaires en Suisse romande.",
+    logisorama:
+      "Nous accédons aux biens hors marché grâce à notre Réseau Privilégié de régies partenaires et propriétaires en Suisse romande.",
     solo: "Vous consultez uniquement les annonces publiques, déjà vues par des centaines de candidats.",
     icon: Search,
   },
@@ -36,7 +37,8 @@ const comparisonData = [
   },
   {
     aspect: "Sélection stratégique",
-    logisorama: "Nous identifions les opportunités réalistes selon votre profil, votre budget et vos délais. Chaque proposition est ciblée.",
+    logisorama:
+      "Nous identifions les opportunités réalistes selon votre profil, votre budget et vos délais. Chaque proposition est ciblée.",
     solo: "Vous postulez sans visibilité sur vos chances réelles, perdant temps et énergie sur des biens inaccessibles.",
     icon: Filter,
   },
@@ -126,7 +128,7 @@ export function DifferentiationSection() {
             <br />
             <span className="relative">
               <span className="bg-gradient-to-r from-primary via-blue-400 to-violet-400 bg-clip-text text-transparent">
-                Réseau Privilégié en Suisse romande
+                accès facilité au logement en Suisse romande
               </span>
               <svg
                 className="absolute -bottom-2 left-0 w-full"
@@ -153,8 +155,8 @@ export function DifferentiationSection() {
           </h2>
 
           <p className="text-lg md:text-xl text-slate-300 max-w-4xl mx-auto leading-relaxed">
-            Grâce à nos partenariats établis depuis 2019, nous accédons aux biens 
-            <span className="text-white font-semibold"> avant leur publication </span> 
+            Grâce à nos partenariats établis depuis 2016, nous accédons aux biens
+            <span className="text-white font-semibold"> avant leur publication </span>
             et recommandons directement votre dossier aux décideurs.
           </p>
         </div>
@@ -321,8 +323,7 @@ export function DifferentiationSection() {
                   La différence est claire
                 </h3>
                 <p className="text-sm sm:text-base md:text-lg text-slate-300 mb-6 sm:mb-8 max-w-xl mx-auto leading-relaxed">
-                  Avec Immo-rama.ch, vous bénéficiez d'un accès privilégié au marché locatif suisse romand 
-                  et d'une équipe expérimentée qui défend votre dossier.
+                  Avec Immo-rama.ch, l'immobilier devient accessible et une équipe expérimentée défend votre intrêt.
                 </p>
 
                 <Link to="/nouveau-mandat">
@@ -331,7 +332,7 @@ export function DifferentiationSection() {
                     className="relative group/btn font-bold text-sm sm:text-base md:text-lg px-6 sm:px-10 py-5 sm:py-7 bg-gradient-to-r from-primary via-blue-500 to-violet-500 hover:from-primary/90 hover:via-blue-500/90 hover:to-violet-500/90 border-0 shadow-2xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-primary/50 w-full sm:w-auto"
                   >
                     <span className="relative z-10 flex items-center justify-center gap-2">
-                      Accéder au Réseau Privilégié
+                      Demarrer ma recherche
                       <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover/btn:translate-x-1 transition-transform" />
                     </span>
                   </Button>
@@ -346,7 +347,7 @@ export function DifferentiationSection() {
 
           {/* Credibility note */}
           <p className="mt-6 sm:mt-8 text-xs sm:text-sm text-slate-500 px-4">
-            * Plus de 500 mandats confiés avec succès en Suisse romande depuis 2019
+            * Plus de 500 mandats confiés avec succès en Suisse romande depuis 2016
           </p>
         </div>
       </div>
