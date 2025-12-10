@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send } from 'lucide-react';
 import { ClientActivityStats } from '@/components/admin/ClientActivityStats';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -89,6 +89,7 @@ interface Profile {
   prenom: string;
   email: string;
   telephone?: string;
+  actif?: boolean;
 }
 
 interface Agent {
@@ -163,6 +164,7 @@ export default function ClientDetail() {
   const [editFormData, setEditFormData] = useState<any>({});
   const [deleting, setDeleting] = useState(false);
   const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
+  const [inviting, setInviting] = useState(false);
   
   // Hook pour les candidats supplémentaires et solvabilité
   const { candidates, refresh: refreshCandidates } = useClientCandidates(id);
@@ -548,6 +550,34 @@ export default function ClientDetail() {
     }
   };
 
+  const handleInvite = async () => {
+    if (!profile?.email || !client?.id) return;
+
+    try {
+      setInviting(true);
+
+      const { error } = await supabase.functions.invoke('invite-client', {
+        body: { email: profile.email, clientId: client.id },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Invitation envoyée',
+        description: `Une invitation a été envoyée à ${profile.email}`,
+      });
+    } catch (error) {
+      console.error('Error inviting client:', error);
+      toast({
+        title: 'Erreur',
+        description: "Impossible d'envoyer l'invitation",
+        variant: 'destructive',
+      });
+    } finally {
+      setInviting(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!client) return;
     
@@ -696,10 +726,16 @@ export default function ClientDetail() {
                     {profile.prenom} {profile.nom}
                   </h1>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
+                    {!profile.actif && (
+                      <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30 backdrop-blur-sm animate-pulse-soft">
+                        <Mail className="w-3 h-3 mr-1" />
+                        Non activé
+                      </Badge>
+                    )}
                     <Badge variant="outline" className="bg-card/50 backdrop-blur-sm border-border/50">
                       {client.nationalite || 'N/A'}
                     </Badge>
-                    <Badge 
+                    <Badge
                       variant={clientHasStableStatus ? "secondary" : "destructive"}
                       className={`${clientHasStableStatus ? "bg-secondary/50" : "animate-pulse"} backdrop-blur-sm`}
                     >
@@ -760,6 +796,24 @@ export default function ClientDetail() {
 
             {/* Premium Action Buttons */}
             <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap lg:flex-nowrap w-full sm:w-auto">
+              <Button 
+                variant="outline" 
+                className={`w-full sm:w-auto group backdrop-blur-sm border-border/50 transition-all duration-300 ${
+                  !profile.actif 
+                    ? "bg-blue-500/10 border-blue-500/30 text-blue-600 hover:bg-blue-500/20 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] animate-pulse-soft" 
+                    : "bg-card/50 hover:bg-primary/10 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.15)]"
+                }`}
+                onClick={handleInvite}
+                disabled={inviting}
+              >
+                {inviting ? (
+                  <div className="h-4 w-4 sm:mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
+                )}
+                <span className="hidden sm:inline">{!profile.actif ? 'Envoyer invitation' : 'Renvoyer invitation'}</span>
+                <span className="sm:hidden">Inviter</span>
+              </Button>
               <Button 
                 variant="outline" 
                 className="w-full sm:w-auto group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.15)] transition-all duration-300" 

@@ -88,6 +88,111 @@ function parseCSVLine(line: string): string[] {
   return result;
 }
 
+// Normalize column name: removes accents, special chars, lowercase
+function normalizeHeader(header: string): string {
+  return header
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-') // Normalize different hyphens to regular hyphen
+    .replace(/[''`]/g, "'") // Normalize quotes
+    .replace(/\s+/g, '_') // Spaces to underscores
+    .replace(/[^a-z0-9_-]/g, '') // Remove other special chars
+    .trim();
+}
+
+// Parse Swiss currency format: "3'674,70" or "900.-" or "1650"
+function parseSwissCurrency(value: string): number | undefined {
+  if (!value || value === '-' || value === '') return undefined;
+  const cleaned = value
+    .replace(/['\s]/g, '') // Remove apostrophes and spaces (Swiss thousand separator)
+    .replace(/\.-$/, '') // Remove ".-" suffix
+    .replace(',', '.'); // Convert comma decimal to dot
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? undefined : num;
+}
+
+// Parse boolean values in French
+function parseFrenchBoolean(value: string): boolean {
+  const v = value?.toLowerCase().trim();
+  return v === 'oui' || v === 'true' || v === '1' || v === 'yes';
+}
+
+// Map French CSV headers to internal field names
+function mapHeaderToField(header: string): string {
+  const normalized = normalizeHeader(header);
+  
+  const mappings: Record<string, string> = {
+    // Email variations
+    'e-mail': 'email',
+    'email': 'email',
+    
+    // Name variations
+    'prenom': 'prenom',
+    'nom': 'nom',
+    'nom_de_famille': 'nom',
+    
+    // Phone
+    'telephone': 'telephone',
+    
+    // Date and address
+    'date_et_heure_de_lenvoi': 'date_inscription',
+    'adresse': 'adresse',
+    'date_de_naissance': 'date_naissance',
+    
+    // Identity
+    'nationalite': 'nationalite',
+    'type_de_permis_de_sejour': 'type_permis',
+    'etat_civile': 'etat_civil',
+    
+    // Current housing
+    'gerance_ou_proprietaire_actuelle': 'gerance_actuelle',
+    'contact_gerance': 'contact_gerance',
+    'loyer_brut_actuel': 'loyer_actuel',
+    'depuis_le': 'depuis_le',
+    'nombre_de_pieces_actuel': 'pieces_actuel',
+    
+    // Charges and debts
+    'avez-vous_des_charges_extraordinaires_leasing_credit_pension_alimentaire_etc': 'charges_extraordinaires',
+    'si_oui_montant__echeance': 'montant_charges_extra',
+    'avez-vous_des_poursuites_ou_actes_de_defaut_de_biens_': 'poursuites',
+    'etes-vous_sous_curatelle_': 'curatelle',
+    
+    // Reason for moving
+    'motif_du_changement_de_domicile_': 'motif_changement',
+    
+    // Employment
+    'profession': 'profession',
+    'employeur': 'employeur',
+    'revenu_mensuel_net': 'revenus_mensuels',
+    'date_dengagement_au_poste': 'date_engagement',
+    
+    // Housing usage
+    'utilisation_du_logement_a_titre': 'utilisation_logement',
+    'avez-vous_des_animaux_': 'animaux',
+    'jouez-vous_dun_instrument_de_musique_': 'instrument_musique',
+    'avez-vous_un_ou_plusieurs_vehicules_': 'vehicules',
+    'si_oui_veuillez_indiquer_le_numero_de_plaques_': 'numero_plaques',
+    
+    // Discovery
+    'comment_avez-vous_decouvert_notre_agence_': 'decouverte_agence',
+    
+    // Search criteria
+    'selectionnez_ce_qui_correspond': 'type_recherche',
+    'combien_de_personnes_occuperaient_lappartement_': 'nombre_occupants',
+    'type_dobjet': 'type_bien',
+    'nb_de_pcs': 'pieces',
+    'region': 'region_recherche',
+    'budget_maximum_le_loyer_brut_ne_devant_pas_depasser_le_tiers_du_salaire': 'budget_max',
+    'souhait_particulier_concernant_letage_le_quartier_la_vue_': 'souhaits_particuliers',
+    
+    // Promo code
+    'code_promo': 'code_promo',
+  };
+  
+  return mappings[normalized] || normalized;
+}
+
 function parseCSV(csvText: string): ParsedCSVData {
   const lines = csvText.split('\n').filter(line => line.trim());
   const clients: ParsedClient[] = [];
@@ -99,66 +204,74 @@ function parseCSV(csvText: string): ParsedCSVData {
     return { clients, users, errors };
   }
 
-  const headers = parseCSVLine(lines[0]).map(h => h.toLowerCase().trim());
+  // Parse and map headers
+  const rawHeaders = parseCSVLine(lines[0]);
+  const mappedHeaders = rawHeaders.map(h => mapHeaderToField(h));
+  
+  console.log('CSV Headers detected:', rawHeaders);
+  console.log('CSV Headers mapped:', mappedHeaders);
 
   for (let i = 1; i < lines.length; i++) {
     try {
       const values = parseCSVLine(lines[i]);
       const row: CSVRow = {};
-      headers.forEach((header, index) => {
+      mappedHeaders.forEach((header, index) => {
         row[header] = values[index] || '';
       });
 
-      const email = row['email'] || row['e-mail'] || '';
-      const prenom = row['prenom'] || row['prénom'] || '';
+      // Get email, name, phone with fallbacks
+      const email = row['email'] || '';
+      const prenom = row['prenom'] || '';
       const nom = row['nom'] || '';
-      const telephone = row['telephone'] || row['téléphone'] || row['tel'] || '';
+      const telephone = row['telephone'] || '';
 
       if (!email || !prenom || !nom) {
+        console.log(`Row ${i + 1} missing fields:`, { email, prenom, nom, row });
         errors.push(`Ligne ${i + 1}: Email, prénom ou nom manquant`);
         continue;
       }
 
-      const password = 'immo' + (telephone?.slice(-4) || '0000');
+      const password = 'immo' + (telephone?.replace(/\D/g, '').slice(-4) || '0000');
 
       users.push({ email, password, prenom, nom, telephone });
       
       clients.push({
-        dateInscription: row['date_inscription'] || row['dateinscription'] || new Date().toISOString().split('T')[0],
-        dateNaissance: row['date_naissance'] || row['datenaissance'] || undefined,
-        nationalite: row['nationalite'] || row['nationalité'] || undefined,
-        typePermis: row['type_permis'] || row['typepermis'] || row['permis'] || undefined,
+        dateInscription: row['date_inscription'] || new Date().toISOString().split('T')[0],
+        dateNaissance: row['date_naissance'] || undefined,
+        nationalite: row['nationalite'] || undefined,
+        typePermis: row['type_permis'] || undefined,
         adresse: row['adresse'] || undefined,
-        etatCivil: row['etat_civil'] || row['etatcivil'] || row['situation_familiale'] || undefined,
-        geranceActuelle: row['gerance_actuelle'] || row['geranceactuelle'] || undefined,
-        contactGerance: row['contact_gerance'] || row['contactgerance'] || undefined,
-        loyerActuel: row['loyer_actuel'] ? parseFloat(row['loyer_actuel']) : undefined,
-        depuisLe: row['depuis_le'] || row['depuisle'] || undefined,
+        etatCivil: row['etat_civil'] || undefined,
+        geranceActuelle: row['gerance_actuelle'] || undefined,
+        contactGerance: row['contact_gerance'] || undefined,
+        loyerActuel: parseSwissCurrency(row['loyer_actuel']),
+        depuisLe: row['depuis_le'] || undefined,
         nombrePiecesActuel: row['pieces_actuel'] ? parseInt(row['pieces_actuel']) : undefined,
-        motifChangement: row['motif_changement'] || row['motifchangement'] || undefined,
+        motifChangement: row['motif_changement'] || undefined,
         profession: row['profession'] || undefined,
         employeur: row['employeur'] || undefined,
-        dateEngagement: row['date_engagement'] || row['dateengagement'] || undefined,
-        revenuMensuel: row['revenus_mensuels'] ? parseFloat(row['revenus_mensuels']) : undefined,
-        montantCharges: row['charges_mensuelles'] ? parseFloat(row['charges_mensuelles']) : undefined,
-        chargesExtraordinaires: row['charges_extraordinaires'] === 'true' || row['charges_extraordinaires'] === 'oui',
-        poursuites: row['poursuites'] === 'true' || row['poursuites'] === 'oui',
-        curatelle: row['curatelle'] === 'true' || row['curatelle'] === 'oui',
-        budgetMax: row['budget_max'] ? parseFloat(row['budget_max']) : undefined,
-        nombrePiecesSouhaite: row['pieces'] || row['nombre_pieces'] || undefined,
-        regions: row['region_recherche'] ? [row['region_recherche']] : undefined,
-        typeBien: row['type_bien'] || row['typebien'] || undefined,
-        typeRecherche: row['type_recherche'] || row['typerecherche'] || undefined,
+        dateEngagement: row['date_engagement'] || undefined,
+        revenuMensuel: parseSwissCurrency(row['revenus_mensuels']),
+        montantCharges: parseSwissCurrency(row['montant_charges_extra']),
+        chargesExtraordinaires: parseFrenchBoolean(row['charges_extraordinaires']),
+        poursuites: parseFrenchBoolean(row['poursuites']),
+        curatelle: parseFrenchBoolean(row['curatelle']),
+        budgetMax: parseSwissCurrency(row['budget_max']),
+        nombrePiecesSouhaite: row['pieces'] || undefined,
+        regions: row['region_recherche'] ? [row['region_recherche'].replace('Autre: ', '')] : undefined,
+        typeBien: row['type_bien'] || undefined,
+        typeRecherche: row['type_recherche'] || undefined,
         souhaitsParticuliers: row['souhaits_particuliers'] || undefined,
         nombreOccupants: row['nombre_occupants'] ? parseInt(row['nombre_occupants']) : undefined,
         utilisationLogement: row['utilisation_logement'] || undefined,
-        animaux: row['animaux'] === 'true' || row['animaux'] === 'oui',
-        instrumentMusique: row['instrument_musique'] === 'true' || row['instrument_musique'] === 'oui',
-        vehicules: row['vehicules'] === 'true' || row['vehicules'] === 'oui',
+        animaux: parseFrenchBoolean(row['animaux']),
+        instrumentMusique: parseFrenchBoolean(row['instrument_musique']),
+        vehicules: parseFrenchBoolean(row['vehicules']),
         numeroPlaques: row['numero_plaques'] || undefined,
         decouverteAgence: row['decouverte_agence'] || undefined,
       });
     } catch (e) {
+      console.error(`Row ${i + 1} parsing error:`, e);
       errors.push(`Ligne ${i + 1}: Erreur de parsing`);
     }
   }
