@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { subDays, isWithinInterval } from 'date-fns';
-import { Send, CheckCircle, DollarSign, Users, Target, TrendingUp, Calendar, FileCheck, Sparkles, Activity } from 'lucide-react';
+import { Send, CheckCircle, DollarSign, Users, Target, TrendingUp, Calendar, FileCheck, Sparkles, Activity, Home } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateRangeFilter, DateRange, getDefaultDateRange } from './DateRangeFilter';
 import { StatsCard } from './StatsCard';
@@ -63,21 +63,26 @@ export function AgentStatsSection({
     });
   };
 
-  // Current period data - deduplicated
+  // Current period data - raw and deduplicated
   const currentOffresRaw = filterByDateRange(offres, 'date_envoi', dateRange);
-  const currentOffres = getUniqueOffres(currentOffresRaw);
+  const currentOffresUniques = getUniqueOffres(currentOffresRaw);
   const currentTransactions = filterByDateRange(transactions, 'date_transaction', dateRange);
   const currentCandidatures = filterByDateRange(candidatures, 'created_at', dateRange);
 
-  // Previous period data for comparison - deduplicated
+  // Previous period data for comparison - raw and deduplicated
   const previousOffresRaw = filterByDateRange(offres, 'date_envoi', previousPeriod);
-  const previousOffres = getUniqueOffres(previousOffresRaw);
+  const previousOffresUniques = getUniqueOffres(previousOffresRaw);
   const previousTransactions = filterByDateRange(transactions, 'date_transaction', previousPeriod);
 
   // Calculate stats
   const stats = useMemo(() => {
-    const offresEnvoyees = currentOffres.length;
-    const previousOffresEnvoyees = previousOffres.length;
+    // Total offers (raw count)
+    const offresEnvoyeesTotal = currentOffresRaw.length;
+    const previousOffresTotal = previousOffresRaw.length;
+    
+    // Unique offers (deduplicated by date + address)
+    const offresUniques = currentOffresUniques.length;
+    const previousOffresUniques = previousOffresRaw.length;
 
     const affairesConclues = currentTransactions.filter(t => t.statut === 'conclue').length;
     const previousAffairesConclues = previousTransactions.filter(t => t.statut === 'conclue').length;
@@ -89,8 +94,8 @@ export function AgentStatsSection({
       .filter(t => t.statut === 'conclue')
       .reduce((sum, t) => sum + (t.part_agent || 0), 0);
 
-    const tauxConversion = offresEnvoyees > 0 
-      ? Math.round((affairesConclues / offresEnvoyees) * 100) 
+    const tauxConversion = offresUniques > 0 
+      ? Math.round((affairesConclues / offresUniques) * 100) 
       : 0;
 
     const candidaturesAcceptees = currentCandidatures.filter(c => c.statut === 'acceptee').length;
@@ -99,8 +104,10 @@ export function AgentStatsSection({
     ).length;
 
     return {
-      offresEnvoyees,
-      previousOffresEnvoyees,
+      offresEnvoyeesTotal,
+      previousOffresTotal,
+      offresUniques,
+      previousOffresUniques,
       affairesConclues,
       previousAffairesConclues,
       commissionsGagnees,
@@ -110,15 +117,15 @@ export function AgentStatsSection({
       candidaturesEnCours,
       clientsActifs: clients.length,
     };
-  }, [currentOffres, previousOffres, currentTransactions, previousTransactions, currentCandidatures, clients]);
+  }, [currentOffresRaw, currentOffresUniques, previousOffresRaw, currentTransactions, previousTransactions, currentCandidatures, clients]);
 
-  // Chart data - offres over time
+  // Chart data - offres over time (use raw for timeline)
   const offresChartData = useMemo(() => {
-    return currentOffres.map((o) => ({
+    return currentOffresRaw.map((o) => ({
       date: new Date(o.date_envoi),
       value: 1,
     }));
-  }, [currentOffres]);
+  }, [currentOffresRaw]);
 
   // Chart data - transactions over time
   const transactionsChartData = useMemo(() => {
@@ -140,13 +147,13 @@ export function AgentStatsSection({
       }));
   }, [currentTransactions]);
 
-  // Multi-series chart for activity comparison
+  // Multi-series chart for activity comparison (use raw for timeline)
   const activitySeries = useMemo(() => [
     {
       key: 'offres',
       label: 'Offres envoyées',
       color: 'hsl(var(--primary))',
-      data: currentOffres.map(o => ({ date: new Date(o.date_envoi), value: 1 })),
+      data: currentOffresRaw.map(o => ({ date: new Date(o.date_envoi), value: 1 })),
     },
     {
       key: 'candidatures',
@@ -160,7 +167,7 @@ export function AgentStatsSection({
       color: 'hsl(45, 93%, 47%)',
       data: currentTransactions.filter(t => t.statut === 'conclue').map(t => ({ date: new Date(t.date_transaction), value: 1 })),
     },
-  ], [currentOffres, currentCandidatures, currentTransactions]);
+  ], [currentOffresRaw, currentCandidatures, currentTransactions]);
 
   // Fallback monthly goals if no personalized goals
   const currentMonth = new Date();
@@ -329,15 +336,23 @@ export function AgentStatsSection({
       </div>
 
       {/* Stats Cards with staggered animations */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'both' }}>
           <StatsCard
             title="Offres envoyées"
-            value={stats.offresEnvoyees}
-            previousValue={stats.previousOffresEnvoyees}
-            currentValue={stats.offresEnvoyees}
+            value={stats.offresEnvoyeesTotal}
+            previousValue={stats.previousOffresTotal}
+            currentValue={stats.offresEnvoyeesTotal}
             icon={Send}
             description={`${dateRange.label}`}
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '225ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Biens proposés"
+            value={stats.offresUniques}
+            icon={Home}
+            description="Offres uniques"
           />
         </div>
         <div className="animate-fade-in" style={{ animationDelay: '250ms', animationFillMode: 'both' }}>

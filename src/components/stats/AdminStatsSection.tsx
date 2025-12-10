@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
 import { subDays, isWithinInterval } from 'date-fns';
-import { Send, CheckCircle, DollarSign, Users, UserCog, TrendingUp, Target, Building } from 'lucide-react';
+import { Send, CheckCircle, DollarSign, Users, UserCog, TrendingUp, Target, Building, Home } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateRangeFilter, DateRange, getDefaultDateRange } from './DateRangeFilter';
 import { StatsCard } from './StatsCard';
 import { PerformanceChart, MultiSeriesChart } from './PerformanceChart';
 import { Leaderboard } from './Leaderboard';
+import { getUniqueOffres } from '@/utils/visitesCalculator';
 
 interface AdminStatsSectionProps {
   agents: any[];
@@ -49,9 +50,18 @@ export function AdminStatsSection({
   const previousTransactions = filterByDateRange(transactions, 'date_transaction', previousPeriod);
   const previousClients = filterByDateRange(clients, 'date_ajout', previousPeriod);
 
+  // Deduplicated offers
+  const currentOffresUniques = getUniqueOffres(currentOffres);
+  const previousOffresUniques = getUniqueOffres(previousOffres);
+
   const stats = useMemo(() => {
-    const offresEnvoyees = currentOffres.length;
-    const previousOffresEnvoyees = previousOffres.length;
+    // Total offers (raw count)
+    const offresEnvoyeesTotal = currentOffres.length;
+    const previousOffresTotal = previousOffres.length;
+    
+    // Unique offers (deduplicated)
+    const offresUniques = currentOffresUniques.length;
+    const previousOffresUniquesCount = previousOffresUniques.length;
 
     const transactionsConclues = currentTransactions.filter(t => t.statut === 'conclue');
     const previousTransactionsConclues = previousTransactions.filter(t => t.statut === 'conclue');
@@ -65,8 +75,10 @@ export function AdminStatsSection({
     const previousNouveauxClients = previousClients.length;
 
     return {
-      offresEnvoyees,
-      previousOffresEnvoyees,
+      offresEnvoyeesTotal,
+      previousOffresTotal,
+      offresUniques,
+      previousOffresUniquesCount,
       affairesConclues: transactionsConclues.length,
       previousAffaires: previousTransactionsConclues.length,
       revenusAgence,
@@ -77,7 +89,7 @@ export function AdminStatsSection({
       totalAgents: agents.length,
       agentsActifs: agents.filter(a => a.actif).length,
     };
-  }, [currentOffres, previousOffres, currentTransactions, previousTransactions, currentClients, previousClients, agents]);
+  }, [currentOffres, previousOffres, currentOffresUniques, previousOffresUniques, currentTransactions, previousTransactions, currentClients, previousClients, agents]);
 
   // Agent leaderboard
   const agentLeaderboard = useMemo(() => {
@@ -155,7 +167,7 @@ export function AdminStatsSection({
       </div>
 
       {/* Stats Cards with staggered animations */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         <div className="animate-fade-in" style={{ animationDelay: '0ms', animationFillMode: 'both' }}>
           <StatsCard
             title="Revenus agence"
@@ -186,10 +198,18 @@ export function AdminStatsSection({
         <div className="animate-fade-in" style={{ animationDelay: '150ms', animationFillMode: 'both' }}>
           <StatsCard
             title="Offres envoyées"
-            value={stats.offresEnvoyees}
-            previousValue={stats.previousOffresEnvoyees}
-            currentValue={stats.offresEnvoyees}
+            value={stats.offresEnvoyeesTotal}
+            previousValue={stats.previousOffresTotal}
+            currentValue={stats.offresEnvoyeesTotal}
             icon={Send}
+          />
+        </div>
+        <div className="animate-fade-in" style={{ animationDelay: '175ms', animationFillMode: 'both' }}>
+          <StatsCard
+            title="Biens proposés"
+            value={stats.offresUniques}
+            icon={Home}
+            description="Offres uniques"
           />
         </div>
         <div className="animate-fade-in" style={{ animationDelay: '200ms', animationFillMode: 'both' }}>
