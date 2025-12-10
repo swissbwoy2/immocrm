@@ -190,42 +190,91 @@ export function AgentStatsSection({
 
   return (
     <div className="space-y-6">
-      {/* Header with date filter */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Mes performances
-          </h2>
-          <p className="text-sm text-muted-foreground">Suivez vos statistiques et atteignez vos objectifs</p>
+      {/* Premium Header with date filter */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border border-primary/20 p-6">
+        {/* Floating particles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1.5 h-1.5 rounded-full bg-primary/20 animate-pulse"
+              style={{
+                left: `${10 + i * 12}%`,
+                top: `${20 + (i % 4) * 20}%`,
+                animationDelay: `${i * 0.2}s`,
+                animationDuration: `${2 + i * 0.3}s`
+              }}
+            />
+          ))}
         </div>
-        <DateRangeFilter value={dateRange} onChange={setDateRange} />
+
+        {/* Glow effect */}
+        <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-transparent to-primary/20 rounded-2xl blur-xl opacity-50" />
+
+        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-primary/10 border border-primary/20 shadow-lg shadow-primary/10">
+              <TrendingUp className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                Mes performances
+              </h2>
+              <p className="text-sm text-muted-foreground mt-0.5">Suivez vos statistiques et atteignez vos objectifs</p>
+            </div>
+          </div>
+          <DateRangeFilter value={dateRange} onChange={setDateRange} />
+        </div>
+
+        {/* Shine effect */}
+        <div className="absolute inset-0 -translate-x-full hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
       </div>
 
-      {/* Personalized Goals or Default Goals */}
+      {/* Premium Goals Card */}
       <div className="animate-fade-in" style={{ animationDelay: '0ms', animationFillMode: 'both' }}>
-        <Card className="group bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20 transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              {hasPersonalizedGoals ? (
-                <>
+        <Card className="group relative overflow-hidden border-primary/20 hover:border-primary/40 transition-all duration-500 hover:shadow-xl hover:-translate-y-1 bg-gradient-to-br from-primary/5 via-transparent to-primary/10">
+          {/* Glassmorphism effects */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          
+          {/* Floating particles */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className="absolute w-1 h-1 rounded-full bg-primary/20 animate-pulse"
+                style={{
+                  left: `${15 + i * 15}%`,
+                  top: `${25 + (i % 3) * 25}%`,
+                  animationDelay: `${i * 0.3}s`,
+                  animationDuration: `${2 + i * 0.5}s`
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Glow effect */}
+          <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 rounded-xl blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-500" />
+
+          <CardHeader className="relative pb-2">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
+                {hasPersonalizedGoals ? (
                   <Sparkles className="h-5 w-5 text-primary transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
-                  <span className="transition-transform duration-300 group-hover:scale-[1.02] origin-left">Mes objectifs personnalisés</span>
-                </>
-              ) : (
-                <>
+                ) : (
                   <Target className="h-5 w-5 text-primary transition-transform duration-300 group-hover:scale-110" />
-                  <span className="transition-transform duration-300 group-hover:scale-[1.02] origin-left">Objectifs du mois</span>
-                </>
-              )}
-            </CardTitle>
+                )}
+              </div>
+              <CardTitle className="text-base font-semibold transition-transform duration-300 group-hover:scale-[1.02] origin-left">
+                {hasPersonalizedGoals ? 'Mes objectifs personnalisés' : 'Objectifs du mois'}
+              </CardTitle>
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative">
             {goalsLoading ? (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <Skeleton className="h-32" />
-                <Skeleton className="h-32" />
-                <Skeleton className="h-32" />
+                <Skeleton className="h-32 rounded-xl" />
+                <Skeleton className="h-32 rounded-xl" />
+                <Skeleton className="h-32 rounded-xl" />
               </div>
             ) : hasPersonalizedGoals ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -273,6 +322,9 @@ export function AgentStatsSection({
               </div>
             )}
           </CardContent>
+
+          {/* Shine effect */}
+          <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
         </Card>
       </div>
 
