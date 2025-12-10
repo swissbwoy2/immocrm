@@ -3,9 +3,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, Home, Briefcase, HardHat, UserCheck, Contact as ContactIcon } from "lucide-react";
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
-import { ContactCard } from "@/components/contacts/ContactCard";
+import { PremiumKPICard } from "@/components/premium/PremiumKPICard";
+import { PremiumEmptyState } from "@/components/premium/PremiumEmptyState";
+import { PremiumContactCard } from "@/components/contacts/PremiumContactCard";
 import { ContactFormDialog } from "@/components/contacts/ContactFormDialog";
 import { ContactFilters, SortOption } from "@/components/contacts/ContactFilters";
 import { Contact, ContactType } from "@/components/contacts/contactTypes";
@@ -19,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AgentContacts() {
   const { user } = useAuth();
@@ -76,11 +79,21 @@ export default function AgentContacts() {
     if (agentId) fetchContacts();
   }, [agentId]);
 
+  // KPI stats
+  const stats = useMemo(() => {
+    return {
+      total: contacts.length,
+      proprietaires: contacts.filter((c) => c.contact_type === "proprietaire").length,
+      gerants: contacts.filter((c) => c.contact_type === "gerant_regie").length,
+      concierges: contacts.filter((c) => c.contact_type === "concierge").length,
+      clients: contacts.filter((c) => c.contact_type === "client_potentiel").length,
+    };
+  }, [contacts]);
+
   // Filtered and sorted contacts
   const filteredContacts = useMemo(() => {
     let result = [...contacts];
 
-    // Filter by search
     if (search) {
       const searchLower = search.toLowerCase();
       result = result.filter(
@@ -93,17 +106,14 @@ export default function AgentContacts() {
       );
     }
 
-    // Filter by type
     if (typeFilter !== "all") {
       result = result.filter((c) => c.contact_type === typeFilter);
     }
 
-    // Filter favorites
     if (showFavoritesOnly) {
       result = result.filter((c) => c.is_favorite);
     }
 
-    // Sort
     result.sort((a, b) => {
       switch (sortBy) {
         case "nom_asc":
@@ -233,14 +243,52 @@ export default function AgentContacts() {
         subtitle="Gérez votre carnet d'adresses professionnel"
         icon={Users}
         action={
-          <Button onClick={() => setFormOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={() => setFormOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
             Nouveau contact
           </Button>
         }
       />
 
-      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
+      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-6">
+        {/* KPIs */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <PremiumKPICard
+            title="Total"
+            value={stats.total}
+            icon={Users}
+            delay={0}
+          />
+          <PremiumKPICard
+            title="Propriétaires"
+            value={stats.proprietaires}
+            icon={Home}
+            variant="success"
+            delay={50}
+          />
+          <PremiumKPICard
+            title="Gérants"
+            value={stats.gerants}
+            icon={Briefcase}
+            delay={100}
+          />
+          <PremiumKPICard
+            title="Concierges"
+            value={stats.concierges}
+            icon={HardHat}
+            variant="warning"
+            delay={150}
+          />
+          <PremiumKPICard
+            title="Clients potentiels"
+            value={stats.clients}
+            icon={UserCheck}
+            variant="danger"
+            delay={200}
+          />
+        </div>
+
+        {/* Filters */}
         <ContactFilters
           search={search}
           onSearchChange={setSearch}
@@ -252,29 +300,41 @@ export default function AgentContacts() {
           onShowFavoritesOnlyChange={setShowFavoritesOnly}
         />
 
+        {/* Content */}
         {loading ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Chargement...
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-48 rounded-xl" />
+            ))}
           </div>
         ) : filteredContacts.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium">Aucun contact trouvé</p>
-            <p className="text-sm">
-              {search || typeFilter !== "all"
-                ? "Essayez de modifier vos filtres"
-                : "Commencez par ajouter un nouveau contact"}
-            </p>
-          </div>
+          <PremiumEmptyState
+            icon={ContactIcon}
+            title="Aucun contact trouvé"
+            description={
+              search || typeFilter !== "all" || showFavoritesOnly
+                ? "Essayez de modifier vos filtres de recherche"
+                : "Commencez par ajouter votre premier contact professionnel"
+            }
+            action={
+              !search && typeFilter === "all" && !showFavoritesOnly && (
+                <Button onClick={() => setFormOpen(true)} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Ajouter un contact
+                </Button>
+              )
+            }
+          />
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredContacts.map((contact) => (
-              <ContactCard
+            {filteredContacts.map((contact, index) => (
+              <PremiumContactCard
                 key={contact.id}
                 contact={contact}
                 onEdit={handleEdit}
                 onDelete={setDeleteContact}
                 onToggleFavorite={handleToggleFavorite}
+                delay={index * 50}
               />
             ))}
           </div>
