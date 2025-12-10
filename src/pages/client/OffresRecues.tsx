@@ -717,18 +717,18 @@ const OffresRecues = () => {
         return;
       }
 
+      // Créer une demande de postulation (pas une candidature déposée)
+      // Le statut de l'offre reste inchangé jusqu'à ce que l'agent envoie le dossier
       await supabase.from('candidatures').insert({
         offre_id: offre.id,
         client_id: clientData.id,
-        statut: 'candidature_deposee',
+        statut: 'demande_postulation',
         message_client: 'Le client demande l\'aide de l\'agent pour postuler à ce bien.',
         dossier_complet: false
       });
 
-      await supabase
-        .from('offres')
-        .update({ statut: 'candidature_deposee' })
-        .eq('id', offre.id);
+      // NE PAS modifier le statut de l'offre ici !
+      // L'offre reste à son statut actuel jusqu'à ce que l'agent envoie réellement le dossier
 
       if (clientData.agent_id) {
         let { data: conv } = await supabase
