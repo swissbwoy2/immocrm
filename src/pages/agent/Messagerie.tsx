@@ -482,7 +482,12 @@ const Messagerie = () => {
 
   const handleSendMessage = async (textOverride?: string) => {
     const content = textOverride ?? messageText;
-    if ((!content.trim() && !pendingAttachment) || !selectedConv || !user || !agentId) return;
+    if ((!content.trim() && !pendingAttachment) || !selectedConv || !user || !agentId) {
+      console.log('[Messagerie Agent] Message vide ou conversation non sélectionnée');
+      return;
+    }
+
+    console.log('[Messagerie Agent] Envoi du message...', { conversationId: selectedConv, agentId });
 
     try {
       // Vérifier si c'est une conversation client et si l'agent est toujours assigné
@@ -505,7 +510,7 @@ const Messagerie = () => {
         }
       }
 
-      const { error } = await supabase
+      const { data: insertedMsg, error } = await supabase
         .from('messages')
         .insert({
           conversation_id: selectedConv,
@@ -516,14 +521,26 @@ const Messagerie = () => {
           attachment_type: pendingAttachment?.type || null,
           attachment_name: pendingAttachment?.name || null,
           attachment_size: pendingAttachment?.size || null,
-        });
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[Messagerie Agent] Erreur insertion message:', error);
+        throw error;
+      }
 
-      await supabase
+      console.log('[Messagerie Agent] Message envoyé avec succès:', insertedMsg?.id);
+
+      // Mettre à jour la conversation
+      const { error: convError } = await supabase
         .from('conversations')
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', selectedConv);
+
+      if (convError) {
+        console.error('[Messagerie Agent] Erreur mise à jour conversation:', convError);
+      }
 
       const { data: agentProfile } = await supabase
         .from('profiles')
@@ -537,32 +554,36 @@ const Messagerie = () => {
 
       const conversation = conversations.find(c => c.id === selectedConv);
       if (conversation) {
-        if (conversation.conversation_type === 'admin-agent' && conversation.admin_user_id) {
-          await supabase.rpc('create_notification', {
-            p_user_id: conversation.admin_user_id,
-            p_type: 'new_message',
-            p_title: 'Nouveau message agent',
-            p_message: `${agentName} vous a envoyé un message`,
-            p_link: `/admin/messagerie?conversationId=${selectedConv}`,
-            p_metadata: { conversation_id: selectedConv }
-          });
-        } else if (conversation.client_id) {
-          const { data: clientData } = await supabase
-            .from('clients')
-            .select('user_id')
-            .eq('id', conversation.client_id)
-            .single();
-
-          if (clientData) {
+        try {
+          if (conversation.conversation_type === 'admin-agent' && conversation.admin_user_id) {
             await supabase.rpc('create_notification', {
-              p_user_id: clientData.user_id,
+              p_user_id: conversation.admin_user_id,
               p_type: 'new_message',
-              p_title: 'Nouveau message',
+              p_title: 'Nouveau message agent',
               p_message: `${agentName} vous a envoyé un message`,
-              p_link: `/client/messagerie?conversationId=${selectedConv}`,
+              p_link: `/admin/messagerie?conversationId=${selectedConv}`,
               p_metadata: { conversation_id: selectedConv }
             });
+          } else if (conversation.client_id) {
+            const { data: clientData } = await supabase
+              .from('clients')
+              .select('user_id')
+              .eq('id', conversation.client_id)
+              .single();
+
+            if (clientData) {
+              await supabase.rpc('create_notification', {
+                p_user_id: clientData.user_id,
+                p_type: 'new_message',
+                p_title: 'Nouveau message',
+                p_message: `${agentName} vous a envoyé un message`,
+                p_link: `/client/messagerie?conversationId=${selectedConv}`,
+                p_metadata: { conversation_id: selectedConv }
+              });
+            }
           }
+        } catch (notifError) {
+          console.warn('[Messagerie Agent] Erreur création notification:', notifError);
         }
       }
 
@@ -576,13 +597,23 @@ const Messagerie = () => {
         return newMap;
       });
 
+      // Ajouter le message à la liste locale si le realtime ne l'a pas déjà fait
+      if (insertedMsg && !messages.some(m => m.id === insertedMsg.id)) {
+        setMessages(prev => [...prev, insertedMsg]);
+      }
+
       setMessageText("");
       setPendingAttachment(null);
-    } catch (error) {
-      console.error('Error sending message:', error);
+      
       toast({
-        title: "Erreur",
-        description: "Impossible d'envoyer le message",
+        title: "Message envoyé",
+        description: "Votre message a bien été envoyé",
+      });
+    } catch (error: any) {
+      console.error('[Messagerie Agent] Erreur envoi message:', error);
+      toast({
+        title: "Erreur d'envoi",
+        description: error?.message || "Impossible d'envoyer le message. Veuillez réessayer.",
         variant: "destructive",
       });
     }

@@ -421,10 +421,15 @@ const Messagerie = () => {
 
   const handleSendMessage = async (textOverride?: string) => {
     const content = textOverride ?? messageText;
-    if ((!content.trim() && !pendingAttachment) || !selectedConv || !user) return;
+    if ((!content.trim() && !pendingAttachment) || !selectedConv || !user) {
+      console.log('[Messagerie Client] Message vide ou conversation non sélectionnée');
+      return;
+    }
+
+    console.log('[Messagerie Client] Envoi du message...', { conversationId: selectedConv, userId: user.id });
 
     try {
-      const { error } = await supabase
+      const { data: insertedMsg, error } = await supabase
         .from('messages')
         .insert({
           conversation_id: selectedConv,
@@ -435,14 +440,26 @@ const Messagerie = () => {
           attachment_type: pendingAttachment?.type || null,
           attachment_name: pendingAttachment?.name || null,
           attachment_size: pendingAttachment?.size || null,
-        });
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[Messagerie Client] Erreur insertion message:', error);
+        throw error;
+      }
 
-      await supabase
+      console.log('[Messagerie Client] Message envoyé avec succès:', insertedMsg?.id);
+
+      // Mettre à jour la conversation
+      const { error: convError } = await supabase
         .from('conversations')
         .update({ last_message_at: new Date().toISOString() })
         .eq('id', selectedConv);
+
+      if (convError) {
+        console.error('[Messagerie Client] Erreur mise à jour conversation:', convError);
+      }
 
       const conversation = conversations.find(c => c.id === selectedConv);
       if (conversation) {
@@ -463,24 +480,34 @@ const Messagerie = () => {
             ? `${clientProfile.prenom} ${clientProfile.nom}`.trim() 
             : 'Un client';
 
-          await supabase.rpc('create_notification', {
-            p_user_id: agentData.user_id,
-            p_type: 'new_message',
-            p_title: 'Nouveau message',
-            p_message: `${clientName} vous a envoyé un message`,
-            p_link: `/agent/messagerie?conversationId=${selectedConv}`,
-            p_metadata: { conversation_id: selectedConv }
-          });
+          // Créer notification (ignore les erreurs silencieusement)
+          try {
+            await supabase.rpc('create_notification', {
+              p_user_id: agentData.user_id,
+              p_type: 'new_message',
+              p_title: 'Nouveau message',
+              p_message: `${clientName} vous a envoyé un message`,
+              p_link: `/agent/messagerie?conversationId=${selectedConv}`,
+              p_metadata: { conversation_id: selectedConv }
+            });
+          } catch (notifError) {
+            console.warn('[Messagerie Client] Erreur création notification:', notifError);
+          }
 
-          await supabase.functions.invoke('send-notification-email', {
-            body: {
-              user_id: agentData.user_id,
-              notification_type: 'new_message',
-              title: 'Nouveau message',
-              message: `${clientName} vous a envoyé un message`,
-              link: `/agent/messagerie?conversationId=${selectedConv}`
-            }
-          });
+          // Envoyer email (ignore les erreurs silencieusement)
+          try {
+            await supabase.functions.invoke('send-notification-email', {
+              body: {
+                user_id: agentData.user_id,
+                notification_type: 'new_message',
+                title: 'Nouveau message',
+                message: `${clientName} vous a envoyé un message`,
+                link: `/agent/messagerie?conversationId=${selectedConv}`
+              }
+            });
+          } catch (emailError) {
+            console.warn('[Messagerie Client] Erreur envoi email notification:', emailError);
+          }
         }
       }
 
@@ -494,13 +521,23 @@ const Messagerie = () => {
         return newMap;
       });
 
+      // Ajouter le message à la liste locale si le realtime ne l'a pas déjà fait
+      if (insertedMsg && !messages.some(m => m.id === insertedMsg.id)) {
+        setMessages(prev => [...prev, insertedMsg]);
+      }
+
       setMessageText("");
       setPendingAttachment(null);
-    } catch (error) {
-      console.error('Error sending message:', error);
+      
       toast({
-        title: "Erreur",
-        description: "Impossible d'envoyer le message",
+        title: "Message envoyé",
+        description: "Votre message a bien été envoyé",
+      });
+    } catch (error: any) {
+      console.error('[Messagerie Client] Erreur envoi message:', error);
+      toast({
+        title: "Erreur d'envoi",
+        description: error?.message || "Impossible d'envoyer le message. Veuillez réessayer.",
         variant: "destructive",
       });
     }
