@@ -1,7 +1,6 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Globe } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { GoogleTranslateWidget } from '@/components/GoogleTranslateWidget';
 import { Button } from '@/components/ui/button';
 import {
   Sidebar,
@@ -275,28 +274,7 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer with Translate + Logout */}
-      <SidebarFooter className="border-t border-sidebar-border space-y-2">
-        {/* Google Translate */}
-        <div className={`px-2 py-2 ${collapsed ? 'flex justify-center' : ''}`}>
-          {collapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex items-center justify-center">
-                  <Globe className="w-5 h-5 text-sidebar-foreground/70" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                <GoogleTranslateWidget className="sidebar-translate-widget" />
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-sidebar-foreground/70 flex-shrink-0" />
-              <GoogleTranslateWidget className="sidebar-translate-widget flex-1" />
-            </div>
-          )}
-        </div>
+      <SidebarFooter className="border-t border-sidebar-border">
         
         <Button
           variant="ghost"
