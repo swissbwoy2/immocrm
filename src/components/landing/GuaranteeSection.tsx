@@ -29,7 +29,7 @@ export function GuaranteeSection() {
     },
     {
       icon: CheckCircle,
-      label: 'En cas de succès',
+      label: 'Ça a marché ?',
       value: '1 mois de loyer',
       description: 'Moins les 300 CHF déjà versés',
       gradient: 'from-green-500 to-emerald-500',
@@ -37,9 +37,9 @@ export function GuaranteeSection() {
     },
     {
       icon: RefreshCcw,
-      label: 'Aucun résultat après 90 jours ?',
+      label: 'Pas de résultat en 90 jours ?',
       value: '0 CHF',
-      description: 'Remboursement intégral garanti',
+      description: 'On te rembourse tout. Point.',
       gradient: 'from-amber-500 to-orange-500',
       glowColor: 'rgba(245, 158, 11, 0.3)',
     },
@@ -85,13 +85,13 @@ export function GuaranteeSection() {
               {/* Shine effect */}
               <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               <Shield className="h-4 w-4 text-primary" />
-              <span className="text-primary font-medium relative z-10">Notre engagement : zéro risque pour vous</span>
+              <span className="text-primary font-medium relative z-10">On prend le risque à ta place</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              Nous garantissons <span className="gradient-text-animated">notre performance</span>
+              Tellement confiant qu'on te <span className="gradient-text-animated">rembourse</span>
             </h2>
             <p className="text-muted-foreground text-lg">
-              En cas d'échec de la recherche, remboursement intégral. Sans condition.
+              Pas de résultat en 90 jours ? Tu récupères tout. Sans condition. 💪
             </p>
           </div>
 
@@ -172,13 +172,13 @@ export function GuaranteeSection() {
               <div className="flex items-center gap-3">
                 <Crown className="h-6 w-6 text-amber-500 relative z-10 animate-pulse" />
                 <span className="text-lg md:text-xl font-bold text-primary relative z-10">
-                  Garantie de remboursement intégral
+                  Garantie 100% remboursé 🎯
                 </span>
                 <Sparkles className="h-5 w-5 text-amber-500 relative z-10 animate-pulse" style={{ animationDelay: '0.5s' }} />
               </div>
               
               <p className="text-sm text-muted-foreground relative z-10">
-                ✓ Sans condition cachée • ✓ Remboursement sous 7 jours ouvrés
+                ✓ Zéro condition cachée • ✓ Remboursement sous 7 jours
               </p>
             </div>
           </div>

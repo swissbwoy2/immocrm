@@ -3,32 +3,32 @@ import { User, MessageSquare, Eye, CalendarCheck, FileText, Gift, Sparkles, Crow
 const benefits = [
   {
     icon: User,
-    title: 'Un conseiller dédié à votre service',
-    description: 'Votre expert recherche activement pendant que vous poursuivez votre quotidien. Gagnez un temps précieux.',
+    title: 'Un agent dédié rien que pour toi',
+    description: 'Ton expert cherche activement pendant que toi tu vis ta vie. Gagne un temps précieux.',
   },
   {
     icon: MessageSquare,
-    title: 'Votre espace client personnel',
-    description: 'Offres, visites, dossier – tout centralisé et accessible 24h/24 depuis votre tableau de bord.',
+    title: 'Ton espace client perso',
+    description: 'Offres, visites, dossier – tout centralisé et accessible 24h/24 depuis ton tableau de bord.',
   },
   {
     icon: Eye,
-    title: 'Suivi transparent en temps réel',
-    description: 'Vous savez exactement où en sont vos candidatures. Une visibilité totale sur chaque étape.',
+    title: 'Tu sais exactement où tu en es',
+    description: 'Suivi transparent en temps réel. Tu vois l\'avancement de chaque candidature.',
   },
   {
     icon: CalendarCheck,
-    title: 'Visites organisées pour vous',
-    description: 'Indisponible ? Nous visitons à votre place et vous fournissons un compte-rendu détaillé.',
+    title: 'On visite à ta place',
+    description: 'Pas dispo ? On se déplace et on te fait un compte-rendu détaillé. Simple.',
   },
   {
     icon: FileText,
-    title: 'Dossier professionnel et convaincant',
-    description: 'Préparé selon les standards des régies pour maximiser vos chances de sélection.',
+    title: 'Un dossier béton qui claque',
+    description: 'Préparé selon les standards des régies pour maximiser tes chances de décrocher le bail.',
   },
   {
     icon: Crown,
-    title: 'Accès exclusif au Réseau Privilégié',
+    title: 'Accès à notre réseau privé',
     description: 'Des biens hors marché accessibles uniquement via nos partenaires régies et propriétaires.',
   },
 ];
@@ -69,16 +69,16 @@ export function BenefitsSection() {
         <div className="text-center mb-10 md:mb-16 animate-fade-in">
           <div className="inline-flex items-center gap-2 relative group mb-4">
             <div className="relative bg-primary/10 rounded-full px-5 py-2.5 border border-primary/20">
-              <span className="text-primary font-semibold text-sm md:text-base">✓ Nos engagements</span>
+              <span className="text-primary font-semibold text-sm md:text-base">✓ Ce qu'on fait pour toi</span>
             </div>
           </div>
           
           <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 md:mb-6">
-            Un accompagnement d'excellence{' '}
-            <span className="text-primary">pour votre recherche</span>
+            Tout pour trouver ton appart'{' '}
+            <span className="text-primary">sans stress</span>
           </h2>
           <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
-            Pendant que vous poursuivez vos activités, notre équipe s'occupe de tout.
+            Pendant que toi tu vis ta vie, nous on s'acharne. 💪
           </p>
         </div>
 
