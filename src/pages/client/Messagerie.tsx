@@ -218,14 +218,26 @@ const Messagerie = () => {
     prevMessagesLengthRef.current = messages.length;
   }, [selectedConv, messages.length, isLoadingMessages, scrollToBottom]);
 
-  // Force scroll to bottom when messages are first loaded
+  // Force scroll to bottom when messages are first loaded - avec délai plus long et retry
   useEffect(() => {
     if (!isLoadingMessages && messages.length > 0 && selectedConv) {
-      const timer = setTimeout(() => {
-        scrollToBottom(true);
-      }, 150);
+      // Premier scroll immédiat
+      scrollToBottom(true);
       
-      return () => clearTimeout(timer);
+      // Second scroll après un court délai pour s'assurer que le DOM est prêt
+      const timer1 = setTimeout(() => {
+        scrollToBottom(true);
+      }, 100);
+      
+      // Troisième scroll de sécurité après rendu complet
+      const timer2 = setTimeout(() => {
+        scrollToBottom(true);
+      }, 300);
+      
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+      };
     }
   }, [isLoadingMessages, selectedConv, scrollToBottom]);
 

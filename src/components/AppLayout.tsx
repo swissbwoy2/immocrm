@@ -50,8 +50,8 @@ function AppLayoutContent({ children }: AppLayoutProps) {
           </button>
         </header>
         
-        {/* Main Content - zone de scroll */}
-        <main className="flex-1 min-h-0 overflow-auto">
+        {/* Main Content - zone sans scroll pour permettre aux enfants de gérer leur propre scroll */}
+        <main className="flex-1 min-h-0 overflow-hidden">
           {children}
         </main>
       </div>

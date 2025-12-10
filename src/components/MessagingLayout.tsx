@@ -59,7 +59,7 @@ export function MessagingLayout({
   };
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row overflow-hidden h-full relative">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-3.5rem)] lg:h-screen overflow-hidden relative">
       {/* Overlay pour mobile */}
       <div
         className={cn(
@@ -69,16 +69,16 @@ export function MessagingLayout({
         onClick={() => setShowConversations(false)}
       />
 
-      {/* Panneau des conversations - Style WhatsApp */}
+      {/* Panneau des conversations - Style WhatsApp - Zone de scroll indépendante */}
       <div
         className={cn(
-          "bg-card border-r border-border/50 flex flex-col overflow-hidden",
-          // Desktop: toujours visible
-          "lg:relative lg:w-[360px] lg:translate-x-0 lg:h-full",
+          "bg-card border-r border-border/50 flex flex-col overflow-y-auto overflow-x-hidden",
+          // Desktop: toujours visible avec hauteur fixe
+          "lg:relative lg:w-[360px] lg:translate-x-0 lg:h-full lg:shrink-0",
           // Tablet: largeur intermédiaire
           "md:w-[320px]",
-          // Mobile: panneau coulissant avec transition
-          "fixed lg:static inset-y-0 left-0 z-50 w-[85%] max-w-[360px]",
+          // Mobile: panneau coulissant avec transition et hauteur pleine
+          "fixed lg:static inset-y-0 left-0 z-50 w-[85%] max-w-[360px] h-full",
           "transition-transform duration-300 ease-out",
           // Cacher sur mobile quand showConversations est false
           !showConversations ? "-translate-x-full lg:translate-x-0" : "translate-x-0"
@@ -87,7 +87,7 @@ export function MessagingLayout({
         {conversationsList}
       </div>
 
-      {/* Zone de chat */}
+      {/* Zone de chat - Zone de scroll indépendante */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden">
         {/* Indicateur swipe discret sur mobile */}
         {selectedConversation && (
