@@ -99,12 +99,12 @@ export function DifferentiationSection() {
           </div>
 
           <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-4 leading-tight tracking-tight">
-            Pourquoi ça marche mieux
-            <span className="bg-gradient-to-r from-primary via-blue-400 to-violet-400 bg-clip-text text-transparent"> avec nous</span> 💪
+            Pas une agence comme les autres
+            <span className="bg-gradient-to-r from-primary via-blue-400 to-violet-400 bg-clip-text text-transparent"> 💼</span>
           </h2>
 
           <p className="text-base md:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            4 différences clés qui changent tout
+            Nous travaillons <strong className="text-white">POUR toi</strong>, en collaboration avec les régies et les propriétaires.
           </p>
         </div>
 

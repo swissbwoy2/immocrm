@@ -47,7 +47,7 @@ export function LandingFooter() {
               – Agence immobilière - Gestion - Vente - Construction et rénovation
             </p>
             <p className="text-muted-foreground text-sm max-w-md mb-6 leading-relaxed">
-              Logisorama, votre partenaire de confiance pour <strong className="text-foreground">faciliter l'accès au logement</strong> en Suisse romande. Notre mission : rendre l'immobilier accessible à tous.
+              ✨ Le coup de pouce que tout le monde mérite dans sa recherche d'appartement. <strong className="text-foreground">Démarre ta recherche maintenant !</strong>
             </p>
             <div className="inline-flex items-center gap-2">
               <div className="relative glass-morphism rounded-full px-4 py-2 text-sm text-muted-foreground border border-border/40 bg-card/80">

@@ -50,14 +50,14 @@ export function CoverageSection() {
           <div className="inline-flex items-center gap-2 relative group mb-4">
             <div className="relative glass-morphism rounded-full px-5 py-2.5 border border-primary/20 bg-card/80">
               <Globe className="inline-block h-4 w-4 text-primary mr-2" />
-              <span className="text-sm font-semibold text-primary">Zones couvertes</span>
+              <span className="text-sm font-semibold text-primary">📍 Couverture</span>
             </div>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4">
             Toute la <span className="text-primary">Suisse Romande</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Notre réseau couvre les 6 cantons francophones de Suisse
+            Vaud • Genève • Valais • Fribourg • Neuchâtel • Jura
           </p>
         </div>
 

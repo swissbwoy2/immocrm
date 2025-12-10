@@ -9,13 +9,13 @@ const steps = [
   },
   {
     icon: Radar,
-    title: 'On surveille tout pour toi',
-    description: 'Notre techno scanne tous les portails + notre réseau privé. Dès qu\'un bien correspond, on te le présente.',
+    title: 'On active notre réseau',
+    description: 'Nos experts contactent les régies partenaires et surveillent tous les portails pour toi.',
   },
   {
     icon: Users,
-    title: 'Ton conseiller gère tout',
-    description: 'Il filtre les offres, organise les visites et optimise ton dossier. Toi, tu te reposes.',
+    title: 'Ton agent gère tout',
+    description: 'Il filtre les offres, organise les visites (même déléguées !), et envoie ton dossier aux régies.',
   },
   {
     icon: Key,
