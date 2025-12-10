@@ -15,20 +15,46 @@ interface PersonDocuments {
   documents: Document[];
 }
 
+// Classe d'erreur personnalisée pour identifier les documents problématiques
+export class DocumentProcessingError extends Error {
+  constructor(public documentName: string, public originalError: Error | unknown) {
+    super(`Erreur lors du traitement de "${documentName}": ${originalError instanceof Error ? originalError.message : String(originalError)}`);
+    this.name = 'DocumentProcessingError';
+  }
+}
+
 export async function downloadFileAsBlob(doc: Document): Promise<Blob | null> {
   try {
     // Si l'URL est une data URL (base64)
     if (doc.url.startsWith('data:')) {
+      // Vérifier la taille du base64 (éviter les fichiers trop volumineux qui peuvent crasher)
       const base64Data = doc.url.split(',')[1];
-      const binaryString = atob(base64Data);
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-      
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+      if (!base64Data) {
+        console.warn(`Document "${doc.nom}": URL base64 invalide`);
+        return null;
       }
       
-      return new Blob([bytes], { type: doc.type });
+      // Limite de 50MB pour les base64 (environ 67MB encodé)
+      const maxBase64Length = 67 * 1024 * 1024;
+      if (base64Data.length > maxBase64Length) {
+        console.warn(`Document "${doc.nom}": fichier base64 trop volumineux (${(base64Data.length / 1024 / 1024).toFixed(1)} MB encodé)`);
+        return null;
+      }
+      
+      try {
+        const binaryString = atob(base64Data);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        
+        for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        return new Blob([bytes], { type: doc.type });
+      } catch (decodeError) {
+        console.error(`Document "${doc.nom}": Erreur de décodage base64:`, decodeError);
+        return null;
+      }
     }
 
     // Sinon télécharger depuis le storage
@@ -36,7 +62,10 @@ export async function downloadFileAsBlob(doc: Document): Promise<Blob | null> {
       .from('client-documents')
       .download(doc.url);
 
-    if (error) throw error;
+    if (error) {
+      console.error(`Document "${doc.nom}": Erreur de téléchargement depuis le storage:`, error);
+      return null;
+    }
     return data;
   } catch (error) {
     console.error(`Error downloading file ${doc.nom}:`, error);
@@ -238,12 +267,20 @@ export async function createCoverPage(
   return await pdfDoc.save();
 }
 
+export interface MergeResult {
+  blob: Blob;
+  skippedDocuments: { name: string; reason: string }[];
+  successCount: number;
+}
+
 export async function mergeDocuments(
   documents: Document[],
   onProgress?: (current: number, total: number, status: string) => void
-): Promise<Blob> {
+): Promise<MergeResult> {
   const mergedPdf = await PDFDocument.create();
   const total = documents.length;
+  const skippedDocuments: { name: string; reason: string }[] = [];
+  let successCount = 0;
   
   for (let i = 0; i < documents.length; i++) {
     const doc = documents[i];
@@ -251,19 +288,20 @@ export async function mergeDocuments(
     onProgress?.(i + 1, total, `Traitement de ${doc.nom}...`);
     
     if (!isSupported(doc)) {
+      skippedDocuments.push({ name: doc.nom, reason: 'Format non supporté' });
       console.warn(`Skipping unsupported document: ${doc.nom}`);
       continue;
     }
     
     const blob = await downloadFileAsBlob(doc);
     if (!blob) {
+      skippedDocuments.push({ name: doc.nom, reason: 'Impossible de télécharger le fichier' });
       console.warn(`Failed to download: ${doc.nom}`);
       continue;
     }
     
-    const arrayBuffer = await blob.arrayBuffer();
-    
     try {
+      const arrayBuffer = await blob.arrayBuffer();
       let pdfBytes: ArrayBuffer | Uint8Array;
       
       if (doc.type.includes('pdf')) {
@@ -271,24 +309,36 @@ export async function mergeDocuments(
       } else if (doc.type.includes('image')) {
         pdfBytes = await imageToPdfPage(blob);
       } else {
+        skippedDocuments.push({ name: doc.nom, reason: 'Type de fichier non géré' });
         continue;
       }
       
-      const pdfToMerge = await PDFDocument.load(pdfBytes);
+      const pdfToMerge = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
       const copiedPages = await mergedPdf.copyPages(pdfToMerge, pdfToMerge.getPageIndices());
       
       copiedPages.forEach((page) => {
         mergedPdf.addPage(page);
       });
+      successCount++;
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+      skippedDocuments.push({ name: doc.nom, reason: `PDF corrompu ou protégé: ${errorMessage.substring(0, 50)}` });
       console.error(`Error processing ${doc.nom}:`, error);
     }
+  }
+  
+  if (successCount === 0) {
+    throw new DocumentProcessingError('Aucun document', new Error('Aucun document n\'a pu être traité. Vérifiez que les fichiers ne sont pas corrompus.'));
   }
   
   onProgress?.(total, total, 'Finalisation du document...');
   
   const mergedPdfBytes = await mergedPdf.save();
-  return new Blob([new Uint8Array(mergedPdfBytes)], { type: 'application/pdf' });
+  return {
+    blob: new Blob([new Uint8Array(mergedPdfBytes)], { type: 'application/pdf' }),
+    skippedDocuments,
+    successCount,
+  };
 }
 
 // Nouvelle fonction pour fusionner avec séparateurs par personne
@@ -300,10 +350,12 @@ export async function mergeDocumentsWithSeparators(
     mainTitle?: string;
   } = {},
   onProgress?: (current: number, total: number, status: string) => void
-): Promise<Blob> {
+): Promise<MergeResult> {
   const { addSeparators = true, addCoverPage = true, mainTitle = 'Dossier complet' } = options;
   
   const mergedPdf = await PDFDocument.create();
+  const skippedDocuments: { name: string; reason: string }[] = [];
+  let successCount = 0;
   
   // Calculer le total de documents
   const totalDocs = personsDocuments.reduce((sum, p) => sum + p.documents.length, 0);
@@ -359,19 +411,20 @@ export async function mergeDocumentsWithSeparators(
       onProgress?.(currentDoc, totalDocs, `Traitement de ${doc.nom}...`);
       
       if (!isSupported(doc)) {
+        skippedDocuments.push({ name: doc.nom, reason: 'Format non supporté' });
         console.warn(`Skipping unsupported document: ${doc.nom}`);
         continue;
       }
       
       const blob = await downloadFileAsBlob(doc);
       if (!blob) {
+        skippedDocuments.push({ name: doc.nom, reason: 'Impossible de télécharger le fichier' });
         console.warn(`Failed to download: ${doc.nom}`);
         continue;
       }
       
-      const arrayBuffer = await blob.arrayBuffer();
-      
       try {
+        const arrayBuffer = await blob.arrayBuffer();
         let pdfBytes: ArrayBuffer | Uint8Array;
         
         if (doc.type.includes('pdf')) {
@@ -379,23 +432,35 @@ export async function mergeDocumentsWithSeparators(
         } else if (doc.type.includes('image')) {
           pdfBytes = await imageToPdfPage(blob);
         } else {
+          skippedDocuments.push({ name: doc.nom, reason: 'Type de fichier non géré' });
           continue;
         }
         
-        const pdfToMerge = await PDFDocument.load(pdfBytes);
+        const pdfToMerge = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
         const copiedPages = await mergedPdf.copyPages(pdfToMerge, pdfToMerge.getPageIndices());
         
         copiedPages.forEach((page) => {
           mergedPdf.addPage(page);
         });
+        successCount++;
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+        skippedDocuments.push({ name: doc.nom, reason: `PDF corrompu ou protégé: ${errorMessage.substring(0, 50)}` });
         console.error(`Error processing ${doc.nom}:`, error);
       }
     }
   }
   
+  if (successCount === 0) {
+    throw new DocumentProcessingError('Aucun document', new Error('Aucun document n\'a pu être traité. Vérifiez que les fichiers ne sont pas corrompus.'));
+  }
+  
   onProgress?.(totalDocs, totalDocs, 'Finalisation du document...');
   
   const mergedPdfBytes = await mergedPdf.save();
-  return new Blob([new Uint8Array(mergedPdfBytes)], { type: 'application/pdf' });
+  return {
+    blob: new Blob([new Uint8Array(mergedPdfBytes)], { type: 'application/pdf' }),
+    skippedDocuments,
+    successCount,
+  };
 }

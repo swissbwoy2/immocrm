@@ -157,7 +157,7 @@ export function MergeDocumentsDialog({
       
       setIsProcessing(true);
       try {
-        const mergedBlob = await mergeDocumentsWithSeparators(
+        const result = await mergeDocumentsWithSeparators(
           personsDocuments,
           { addSeparators, addCoverPage, mainTitle: `Dossier de ${clientName}` },
           (current, total, status) => {
@@ -165,12 +165,25 @@ export function MergeDocumentsDialog({
           }
         );
         
-        await saveMergedDocument(mergedBlob);
+        await saveMergedDocument(result.blob);
+        
+        // Afficher un avertissement si certains documents ont été ignorés
+        if (result.skippedDocuments.length > 0) {
+          const skippedNames = result.skippedDocuments.map(d => `• ${d.name}: ${d.reason}`).join('\n');
+          toast({
+            title: `${result.skippedDocuments.length} document(s) ignoré(s)`,
+            description: `Certains fichiers n'ont pas pu être inclus:\n${skippedNames.substring(0, 200)}${skippedNames.length > 200 ? '...' : ''}`,
+            variant: 'default',
+          });
+        }
       } catch (error) {
         console.error('Error merging documents:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
         toast({
-          title: 'Erreur',
-          description: 'Impossible de créer le dossier complet',
+          title: 'Erreur de création du dossier',
+          description: errorMessage.includes('Aucun document') 
+            ? 'Aucun document valide n\'a pu être traité. Vérifiez que les fichiers ne sont pas corrompus ou protégés.'
+            : `Impossible de créer le dossier: ${errorMessage.substring(0, 100)}`,
           variant: 'destructive',
         });
       } finally {
@@ -189,16 +202,29 @@ export function MergeDocumentsDialog({
 
       setIsProcessing(true);
       try {
-        const mergedBlob = await mergeDocuments(selectedDocs, (current, total, status) => {
+        const result = await mergeDocuments(selectedDocs, (current, total, status) => {
           setProgress({ current, total, status });
         });
 
-        await saveMergedDocument(mergedBlob);
+        await saveMergedDocument(result.blob);
+        
+        // Afficher un avertissement si certains documents ont été ignorés
+        if (result.skippedDocuments.length > 0) {
+          const skippedNames = result.skippedDocuments.map(d => `• ${d.name}: ${d.reason}`).join('\n');
+          toast({
+            title: `${result.skippedDocuments.length} document(s) ignoré(s)`,
+            description: `Certains fichiers n'ont pas pu être inclus:\n${skippedNames.substring(0, 200)}${skippedNames.length > 200 ? '...' : ''}`,
+            variant: 'default',
+          });
+        }
       } catch (error) {
         console.error('Error merging documents:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
         toast({
-          title: 'Erreur',
-          description: 'Impossible de créer le dossier complet',
+          title: 'Erreur de création du dossier',
+          description: errorMessage.includes('Aucun document') 
+            ? 'Aucun document valide n\'a pu être traité. Vérifiez que les fichiers ne sont pas corrompus ou protégés.'
+            : `Impossible de créer le dossier: ${errorMessage.substring(0, 100)}`,
           variant: 'destructive',
         });
       } finally {
