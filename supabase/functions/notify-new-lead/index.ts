@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "onboarding@resend.dev";
+const SENDER_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "onboarding@resend.dev";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,8 +10,16 @@ const corsHeaders = {
 
 interface LeadNotificationRequest {
   email: string;
-  localite: string | null;
-  budget: string | null;
+  prenom?: string;
+  nom?: string;
+  telephone?: string;
+  localite?: string;
+  budget?: string;
+  statut_emploi?: string;
+  permis_nationalite?: string;
+  poursuites?: boolean;
+  a_garant?: boolean;
+  is_qualified?: boolean;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -23,12 +31,26 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { email, localite, budget }: LeadNotificationRequest = await req.json();
-    console.log("New lead notification for:", email, localite, budget);
+    const leadData: LeadNotificationRequest = await req.json();
+    console.log("New lead notification:", leadData);
 
-    // Admin notification email
     const adminEmail = "info@immo-rama.ch";
     
+    const qualificationStatus = leadData.is_qualified 
+      ? "✅ QUALIFIÉ" 
+      : "❌ NON QUALIFIÉ";
+    
+    const qualificationReasons: string[] = [];
+    if (leadData.statut_emploi !== 'salarie') {
+      qualificationReasons.push("Non salarié");
+    }
+    if (!['B', 'C', 'Suisse'].includes(leadData.permis_nationalite || '')) {
+      qualificationReasons.push("Permis non éligible");
+    }
+    if (leadData.poursuites && !leadData.a_garant) {
+      qualificationReasons.push("Poursuites sans garant");
+    }
+
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -36,36 +58,64 @@ const handler = async (req: Request): Promise<Response> => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: `Immo-Rama <${fromEmail}>`,
+        from: `Immo-Rama <${SENDER_EMAIL}>`,
         to: [adminEmail],
-        subject: "🎯 Nouveau lead shortlist !",
+        subject: `${qualificationStatus} - Nouveau lead shortlist: ${leadData.prenom || ''} ${leadData.nom || ''}`,
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h1 style="color: #1a1a2e; border-bottom: 2px solid #e94560; padding-bottom: 10px;">
-              Nouveau lead shortlist
-            </h1>
-            
-            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 8px 0;"><strong>📧 Email :</strong> ${email}</p>
-              <p style="margin: 8px 0;"><strong>📍 Localité :</strong> ${localite || "Non spécifiée"}</p>
-              <p style="margin: 8px 0;"><strong>💰 Budget :</strong> ${budget || "Non spécifié"}</p>
-            </div>
-            
-            <p style="color: #666; font-size: 14px;">
-              Ce lead a été soumis via le formulaire shortlist de la landing page.
-            </p>
-            
-            <a href="https://app.immo-rama.ch/admin/leads" 
-               style="display: inline-block; background: #e94560; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px;">
-              Voir tous les leads
-            </a>
+          <h2>Nouveau lead via le formulaire shortlist</h2>
+          
+          <div style="background-color: ${leadData.is_qualified ? '#d4edda' : '#f8d7da'}; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <strong style="font-size: 18px;">${qualificationStatus}</strong>
+            ${!leadData.is_qualified && qualificationReasons.length > 0 ? `
+              <p style="margin: 10px 0 0 0; color: #721c24;">
+                Raisons: ${qualificationReasons.join(', ')}
+              </p>
+            ` : ''}
           </div>
+          
+          <h3>👤 Informations personnelles</h3>
+          <ul>
+            <li><strong>Prénom:</strong> ${leadData.prenom || 'Non renseigné'}</li>
+            <li><strong>Nom:</strong> ${leadData.nom || 'Non renseigné'}</li>
+            <li><strong>Email:</strong> ${leadData.email}</li>
+            <li><strong>Téléphone:</strong> ${leadData.telephone || 'Non renseigné'}</li>
+          </ul>
+          
+          <h3>🏠 Critères de recherche</h3>
+          <ul>
+            <li><strong>Localité:</strong> ${leadData.localite || 'Non renseignée'}</li>
+            <li><strong>Budget:</strong> ${leadData.budget || 'Non renseigné'}</li>
+          </ul>
+          
+          <h3>📋 Qualification</h3>
+          <ul>
+            <li><strong>Statut emploi:</strong> ${leadData.statut_emploi === 'salarie' ? 'Salarié(e)' : 'Autre'}</li>
+            <li><strong>Permis/Nationalité:</strong> ${leadData.permis_nationalite || 'Non renseigné'}</li>
+            <li><strong>Poursuites:</strong> ${leadData.poursuites ? 'Oui' : 'Non'}</li>
+            ${leadData.poursuites ? `<li><strong>A un garant:</strong> ${leadData.a_garant ? 'Oui' : 'Non'}</li>` : ''}
+          </ul>
+          
+          <hr style="margin: 20px 0;" />
+          <p style="color: #666; font-size: 12px;">
+            Lead reçu le ${new Date().toLocaleDateString('fr-CH', { 
+              day: '2-digit', 
+              month: '2-digit', 
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
+          </p>
+          
+          <a href="https://app.immo-rama.ch/admin/leads" 
+             style="display: inline-block; background: #e94560; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px;">
+            Voir tous les leads
+          </a>
         `,
       }),
     });
 
     const data = await res.json();
-    console.log("Email sent successfully:", data);
+    console.log("Email sent result:", data);
 
     if (!res.ok) {
       console.error("Resend API error:", data);

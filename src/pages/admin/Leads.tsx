@@ -16,7 +16,6 @@ import {
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   Select,
@@ -39,14 +38,26 @@ import {
   Download,
   Mail,
   MapPin,
-  Wallet
+  Wallet,
+  Phone,
+  User,
+  ShieldCheck,
+  ShieldX
 } from "lucide-react";
 
 type Lead = {
   id: string;
   email: string;
+  prenom: string | null;
+  nom: string | null;
+  telephone: string | null;
   localite: string | null;
   budget: string | null;
+  statut_emploi: string | null;
+  permis_nationalite: string | null;
+  poursuites: boolean | null;
+  a_garant: boolean | null;
+  is_qualified: boolean | null;
   source: string | null;
   created_at: string | null;
   contacted: boolean | null;
@@ -55,7 +66,7 @@ type Lead = {
 
 export default function Leads() {
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<"all" | "contacted" | "not_contacted">("all");
+  const [filter, setFilter] = useState<"all" | "contacted" | "not_contacted" | "qualified" | "not_qualified">("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState("");
 
@@ -71,6 +82,10 @@ export default function Leads() {
         query = query.eq("contacted", true);
       } else if (filter === "not_contacted") {
         query = query.or("contacted.is.null,contacted.eq.false");
+      } else if (filter === "qualified") {
+        query = query.eq("is_qualified", true);
+      } else if (filter === "not_qualified") {
+        query = query.eq("is_qualified", false);
       }
 
       const { data, error } = await query;
@@ -120,11 +135,19 @@ export default function Leads() {
   });
 
   const exportCSV = () => {
-    const headers = ["Email", "Localité", "Budget", "Date", "Contacté", "Notes"];
+    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Localité", "Budget", "Statut Emploi", "Permis", "Poursuites", "Garant", "Qualifié", "Date", "Contacté", "Notes"];
     const rows = leads.map((lead) => [
+      lead.prenom || "",
+      lead.nom || "",
       lead.email,
+      lead.telephone || "",
       lead.localite || "",
       lead.budget || "",
+      lead.statut_emploi || "",
+      lead.permis_nationalite || "",
+      lead.poursuites ? "Oui" : "Non",
+      lead.a_garant ? "Oui" : "Non",
+      lead.is_qualified ? "Oui" : "Non",
       lead.created_at ? format(new Date(lead.created_at), "dd/MM/yyyy HH:mm") : "",
       lead.contacted ? "Oui" : "Non",
       lead.notes || "",
@@ -142,21 +165,24 @@ export default function Leads() {
   };
 
   const notContactedCount = leads.filter((l) => !l.contacted).length;
+  const qualifiedCount = leads.filter((l) => l.is_qualified).length;
 
   return (
     <div className="space-y-6">
       <PremiumPageHeader
         title="Leads Shortlist"
-        subtitle={`${leads.length} leads • ${notContactedCount} non contactés`}
+        subtitle={`${leads.length} leads • ${qualifiedCount} qualifiés • ${notContactedCount} non contactés`}
       />
 
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-[220px]">
             <SelectValue placeholder="Filtrer par statut" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les leads</SelectItem>
+            <SelectItem value="qualified">Qualifiés uniquement</SelectItem>
+            <SelectItem value="not_qualified">Non qualifiés</SelectItem>
             <SelectItem value="not_contacted">Non contactés</SelectItem>
             <SelectItem value="contacted">Contactés</SelectItem>
           </SelectContent>
@@ -171,9 +197,9 @@ export default function Leads() {
       <PremiumTable>
         <PremiumTableHeader>
           <TableRow>
-            <TableHead>Email</TableHead>
-            <TableHead>Localité</TableHead>
-            <TableHead>Budget</TableHead>
+            <TableHead>Contact</TableHead>
+            <TableHead>Recherche</TableHead>
+            <TableHead>Qualification</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Statut</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -196,26 +222,70 @@ export default function Leads() {
             leads.map((lead) => (
               <PremiumTableRow key={lead.id}>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{lead.email}</span>
+                  <div className="space-y-1">
+                    {(lead.prenom || lead.nom) && (
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">{lead.prenom} {lead.nom}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{lead.email}</span>
+                    </div>
+                    {lead.telephone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{lead.telephone}</span>
+                      </div>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
-                  {lead.localite && (
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      {lead.localite}
-                    </div>
-                  )}
+                  <div className="space-y-1">
+                    {lead.localite && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{lead.localite}</span>
+                      </div>
+                    )}
+                    {lead.budget && (
+                      <div className="flex items-center gap-2">
+                        <Wallet className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{lead.budget}</span>
+                      </div>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
-                  {lead.budget && (
-                    <div className="flex items-center gap-2">
-                      <Wallet className="h-4 w-4 text-muted-foreground" />
-                      {lead.budget}
+                  <div className="space-y-2">
+                    {lead.is_qualified ? (
+                      <Badge className="bg-green-500/20 text-green-600 border-green-500/30 gap-1">
+                        <ShieldCheck className="h-3 w-3" />
+                        Qualifié
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="gap-1">
+                        <ShieldX className="h-3 w-3" />
+                        Non qualifié
+                      </Badge>
+                    )}
+                    <div className="text-xs text-muted-foreground space-y-0.5">
+                      {lead.statut_emploi && (
+                        <div>{lead.statut_emploi === 'salarie' ? '✓ Salarié' : '✗ Non salarié'}</div>
+                      )}
+                      {lead.permis_nationalite && (
+                        <div>{['B', 'C', 'Suisse'].includes(lead.permis_nationalite) ? '✓' : '✗'} Permis {lead.permis_nationalite}</div>
+                      )}
+                      {lead.poursuites !== null && (
+                        <div>
+                          {lead.poursuites ? (
+                            lead.a_garant ? '✓ Poursuites + Garant' : '✗ Poursuites sans garant'
+                          ) : '✓ Pas de poursuites'}
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   {lead.created_at && (
@@ -281,7 +351,7 @@ export default function Leads() {
       <Dialog open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Notes pour {selectedLead?.email}</DialogTitle>
+            <DialogTitle>Notes pour {selectedLead?.prenom} {selectedLead?.nom || selectedLead?.email}</DialogTitle>
           </DialogHeader>
           <Textarea
             value={notes}
