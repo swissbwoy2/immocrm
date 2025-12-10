@@ -851,6 +851,80 @@ export type Database = {
           },
         ]
       }
+      contacts: {
+        Row: {
+          adresse: string | null
+          agent_id: string
+          civilite: string | null
+          code_postal: string | null
+          contact_type: Database["public"]["Enums"]["contact_type"]
+          created_at: string | null
+          email: string | null
+          entreprise: string | null
+          fonction: string | null
+          id: string
+          is_favorite: boolean | null
+          nom: string
+          notes: string | null
+          prenom: string | null
+          tags: string[] | null
+          telephone: string | null
+          telephone_secondaire: string | null
+          updated_at: string | null
+          ville: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          agent_id: string
+          civilite?: string | null
+          code_postal?: string | null
+          contact_type: Database["public"]["Enums"]["contact_type"]
+          created_at?: string | null
+          email?: string | null
+          entreprise?: string | null
+          fonction?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          nom: string
+          notes?: string | null
+          prenom?: string | null
+          tags?: string[] | null
+          telephone?: string | null
+          telephone_secondaire?: string | null
+          updated_at?: string | null
+          ville?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          agent_id?: string
+          civilite?: string | null
+          code_postal?: string | null
+          contact_type?: Database["public"]["Enums"]["contact_type"]
+          created_at?: string | null
+          email?: string | null
+          entreprise?: string | null
+          fonction?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          nom?: string
+          notes?: string | null
+          prenom?: string | null
+          tags?: string[] | null
+          telephone?: string | null
+          telephone_secondaire?: string | null
+          updated_at?: string | null
+          ville?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_agents: {
         Row: {
           agent_id: string
@@ -2350,6 +2424,15 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "agent" | "client" | "apporteur"
+      contact_type:
+        | "proprietaire"
+        | "gerant_regie"
+        | "concierge"
+        | "locataire"
+        | "client_potentiel"
+        | "regie"
+        | "notaire"
+        | "autre"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2478,6 +2561,16 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "agent", "client", "apporteur"],
+      contact_type: [
+        "proprietaire",
+        "gerant_regie",
+        "concierge",
+        "locataire",
+        "client_potentiel",
+        "regie",
+        "notaire",
+        "autre",
+      ],
     },
   },
 } as const
