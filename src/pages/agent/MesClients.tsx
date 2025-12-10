@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Upload, Shield, CheckCircle, FileWarning, Home, Key, Bell, ChevronRight, Wallet, TrendingUp } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, Building2, Car, DollarSign, AlertTriangle, Edit, Upload, Shield, CheckCircle, FileWarning, Home, Key, Bell, ChevronRight, Wallet, TrendingUp, Sparkles, Filter } from "lucide-react";
+import { PremiumClientCard } from "@/components/premium/PremiumClientCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { calculateDaysElapsed } from "@/utils/calculations";
@@ -407,408 +408,156 @@ const MesClients = () => {
             badge="Portfolio"
           />
 
-          {/* Barre de recherche */}
-          <div className="mb-4 animate-fade-in">
-            <Input
-              placeholder="Rechercher un client par nom ou prénom..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md input-focus-glow transition-all duration-200"
-            />
-          </div>
+          {/* Filtres Section - Premium */}
+          <div className="mb-6 p-4 rounded-2xl bg-gradient-to-br from-card via-card/95 to-muted/30 border border-border/50 space-y-4">
+            {/* Barre de recherche */}
+            <div className="animate-fade-in">
+              <Input
+                placeholder="Rechercher un client par nom ou prénom..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-md bg-background/50 border-border/50 focus:border-primary/50 transition-all duration-200"
+              />
+            </div>
 
-          {/* Filtres Régions */}
-          <div className="mb-4 animate-fade-in" style={{ animationDelay: '50ms' }}>
-            <p className="text-sm font-medium mb-2">Régions</p>
-            <div className="flex flex-wrap gap-2">
-              {regions.map((region, index) => (
+            {/* Filtres Régions */}
+            <div className="animate-fade-in" style={{ animationDelay: '50ms' }}>
+              <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                <Filter className="h-4 w-4 text-primary" />
+                Régions
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {regions.map((region, index) => (
+                  <Button
+                    key={region}
+                    variant={selectedRegions.includes(region) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => toggleRegion(region)}
+                    className={cn(
+                      "text-xs transition-all duration-200 hover:scale-105",
+                      selectedRegions.includes(region) && "shadow-lg shadow-primary/20"
+                    )}
+                  >
+                    {region}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Filtres Nombre de pièces */}
+            <div className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+              <p className="text-sm font-medium mb-2">Nombre de pièces</p>
+              <div className="flex flex-wrap gap-2">
+                {nombrePieces.map((pieces) => (
+                  <Button
+                    key={pieces}
+                    variant={selectedPieces.includes(pieces) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => togglePieces(pieces)}
+                    className={cn(
+                      "text-xs transition-all duration-200 hover:scale-105",
+                      selectedPieces.includes(pieces) && "shadow-lg shadow-primary/20"
+                    )}
+                  >
+                    {pieces}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Filtre par type de recherche */}
+            <div className="animate-fade-in" style={{ animationDelay: '150ms' }}>
+              <p className="text-sm font-medium mb-2">Type de recherche</p>
+              <div className="flex flex-wrap gap-2">
                 <Button
-                  key={region}
-                  variant={selectedRegions.includes(region) ? "default" : "outline"}
+                  variant={selectedTypeRecherche === 'all' ? "default" : "outline"}
                   size="sm"
-                  onClick={() => toggleRegion(region)}
+                  onClick={() => setSelectedTypeRecherche('all')}
                   className="text-xs transition-all duration-200 hover:scale-105"
-                  style={{ animationDelay: `${index * 20}ms` }}
                 >
-                  {region}
+                  Tous ({allClients.length})
                 </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* Filtres Nombre de pièces */}
-          <div className="mb-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
-            <p className="text-sm font-medium mb-2">Nombre de pièces</p>
-            <div className="flex flex-wrap gap-2">
-              {nombrePieces.map((pieces, index) => (
                 <Button
-                  key={pieces}
-                  variant={selectedPieces.includes(pieces) ? "default" : "outline"}
+                  variant={selectedTypeRecherche === 'Louer' ? "default" : "outline"}
                   size="sm"
-                  onClick={() => togglePieces(pieces)}
-                  className="text-xs transition-all duration-200 hover:scale-105"
+                  onClick={() => setSelectedTypeRecherche('Louer')}
+                  className={cn(
+                    "text-xs transition-all duration-200 hover:scale-105",
+                    selectedTypeRecherche === 'Louer' && "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20"
+                  )}
                 >
-                  {pieces}
+                  <Key className="w-3 h-3 mr-1" />
+                  Location ({clientsLocation})
                 </Button>
-              ))}
+                <Button
+                  variant={selectedTypeRecherche === 'Acheter' ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedTypeRecherche('Acheter')}
+                  className={cn(
+                    "text-xs transition-all duration-200 hover:scale-105",
+                    selectedTypeRecherche === 'Acheter' && "bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20"
+                  )}
+                >
+                  <Home className="w-3 h-3 mr-1" />
+                  Achat ({clientsAchat})
+                </Button>
+              </div>
             </div>
-          </div>
 
-          {/* Filtre par type de recherche */}
-          <div className="mb-4 animate-fade-in" style={{ animationDelay: '150ms' }}>
-            <p className="text-sm font-medium mb-2">Type de recherche</p>
-            <div className="flex flex-wrap gap-2">
+            {/* Tri par date */}
+            <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+              <p className="text-sm font-medium">Trier par :</p>
               <Button
-                variant={selectedTypeRecherche === 'all' ? "default" : "outline"}
+                variant={sortOrder === 'recent' ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedTypeRecherche('all')}
-                className="text-xs transition-all duration-200 hover:scale-105"
+                onClick={() => setSortOrder('recent')}
+                className="text-xs"
               >
-                Tous ({allClients.length})
+                Plus récent
               </Button>
               <Button
-                variant={selectedTypeRecherche === 'Louer' ? "default" : "outline"}
+                variant={sortOrder === 'ancien' ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedTypeRecherche('Louer')}
-                className="text-xs bg-blue-600 hover:bg-blue-700 transition-all duration-200 hover:scale-105"
+                onClick={() => setSortOrder('ancien')}
+                className="text-xs"
               >
-                <Key className="w-3 h-3 mr-1" />
-                Location ({clientsLocation})
-              </Button>
-              <Button
-                variant={selectedTypeRecherche === 'Acheter' ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedTypeRecherche('Acheter')}
-                className="text-xs bg-emerald-600 hover:bg-emerald-700"
-              >
-                <Home className="w-3 h-3 mr-1" />
-                Achat ({clientsAchat})
+                Plus ancien
               </Button>
             </div>
-          </div>
-
-          {/* Tri par date de création */}
-          <div className="mb-6 flex items-center gap-2">
-            <p className="text-sm font-medium">Trier par :</p>
-            <Button
-              variant={sortOrder === 'recent' ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSortOrder('recent')}
-              className="text-xs"
-            >
-              Plus récent
-            </Button>
-            <Button
-              variant={sortOrder === 'ancien' ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSortOrder('ancien')}
-              className="text-xs"
-            >
-              Plus ancien
-            </Button>
           </div>
 
           {/* Grid de clients - Premium */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {sortedClients.map((client, index) => {
-              const isAcheteur = client.typeRecherche === 'Acheter';
               const daysElapsed = calculateDaysElapsed(client.dateInscription);
-              const daysRemaining = 90 - daysElapsed;
-              const progressPercent = (daysElapsed / 90) * 100;
-              const isCritical = daysElapsed >= 60;
+              const reminderCount = clientReminders.get(client.id) || 0;
 
               return (
-                <div 
-                  key={client.id} 
-                  className={cn(
-                    "group relative overflow-hidden rounded-xl border border-border/50 bg-card p-4",
-                    "cursor-pointer transition-all duration-300",
-                    "hover:shadow-xl hover:border-primary/30 hover:-translate-y-1",
-                    "animate-fade-in flex flex-col",
-                    !client.isSolvable && "border-destructive/30"
-                  )}
-                  style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
-                  onClick={() => navigate(`/agent/clients/${client.id}`)}
-                >
-                  {/* Actions en haut à droite */}
-                  <div className="absolute top-3 right-3">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/agent/clients/${client.id}`);
-                      }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                   {/* Indicateur de solvabilité */}
-                  <div className="absolute top-3 left-3 flex gap-2">
-                    {client.isSolvable ? (
-                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Solvable
-                        {client.solvabilitySource === 'garant' && ' (via garant)'}
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-0">
-                        <AlertTriangle className="h-3 w-3 mr-1" />
-                        Non solvable
-                      </Badge>
-                    )}
-                    {clientReminders.get(client.id) && clientReminders.get(client.id)! > 0 && (
-                      <Badge variant="default" className="animate-pulse">
-                        <Bell className="h-3 w-3 mr-1" />
-                        {clientReminders.get(client.id)}
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Nom et nationalité */}
-                  <div className="mb-3 mt-14">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold text-primary">
-                        {client.prenom} {client.nom}
-                      </h3>
-                      <ClientTypeBadge typeRecherche={client.typeRecherche} size="sm" />
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      <span>{client.nationalite || 'Non renseigné'}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm mt-1">
-                      {client.clientHasStableStatus ? (
-                        <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-0 text-xs">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Permis {client.typePermis || 'stable'}
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 border-0 text-xs">
-                          <FileWarning className="h-3 w-3 mr-1" />
-                          Permis {client.typePermis || 'non stable'}
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    {/* Raisons de non-solvabilité */}
-                    {!client.isSolvable && client.solvabilityIssues && client.solvabilityIssues.length > 0 && (
-                      <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-md border border-red-200 dark:border-red-800">
-                        <p className="text-xs font-medium text-red-700 dark:text-red-400 mb-1">Problèmes détectés:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {client.solvabilityIssues.map((issue: string, idx: number) => (
-                            <Badge key={idx} variant="outline" className="text-xs border-red-300 text-red-600 dark:border-red-700 dark:text-red-400">
-                              {issue}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Alerte garant non stable */}
-                    {client.unstableGarants && client.unstableGarants.length > 0 && (
-                      <div className="mt-2 p-2 bg-orange-50 dark:bg-orange-900/20 rounded-md border border-orange-200 dark:border-orange-800">
-                        <p className="text-xs font-medium text-orange-700 dark:text-orange-400">
-                          ⚠️ Garant{client.unstableGarants.length > 1 ? 's' : ''} avec permis non stable:
-                        </p>
-                        {client.unstableGarants.map((g: any, idx: number) => (
-                          <p key={idx} className="text-xs text-orange-600 dark:text-orange-500">
-                            {g.prenom} {g.nom} - Permis {g.type_permis || 'non renseigné'}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Détail des candidats par type */}
-                    {client.candidatesCount > 0 && (
-                      <div className="flex flex-wrap items-center gap-1 mt-2">
-                        {client.garantsCount > 0 && (
-                          <Badge variant="outline" className="text-xs">
-                            🛡️ {client.garantsCount} garant{client.garantsCount > 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                        {client.colocatairesCount > 0 && (
-                          <Badge variant="outline" className="text-xs">
-                            👥 {client.colocatairesCount} colocataire{client.colocatairesCount > 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                        {client.coDebiteursCount > 0 && (
-                          <Badge variant="outline" className="text-xs">
-                            🤝 {client.coDebiteursCount} co-débiteur{client.coDebiteursCount > 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                        {client.signatairesCount > 0 && (
-                          <Badge variant="outline" className="text-xs">
-                            ✍️ {client.signatairesCount} signataire{client.signatairesCount > 1 ? 's' : ''} solidaire{client.signatairesCount > 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                        {client.unstableCandidatesCount > 0 && (
-                          <Badge variant="outline" className="text-xs border-orange-300 text-orange-600">
-                            ⚠️ {client.unstableCandidatesCount} non comptabilisé{client.unstableCandidatesCount > 1 ? 's' : ''}
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Finances */}
-                  <div className="space-y-2 mb-3">
-                    <div className="flex items-start gap-2 bg-muted/30 p-2 rounded">
-                      <DollarSign className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Revenu total (dossier)</p>
-                        <p className="text-sm font-semibold">CHF {client.totalRevenus?.toLocaleString() || 0}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2 bg-primary/10 p-2 rounded">
-                      <DollarSign className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">
-                          {isAcheteur ? 'Prix recherché' : 'Budget demandé'}
-                        </p>
-                        <p className={`text-sm font-semibold ${client.budgetPossible >= (client.budgetMax || 0) ? 'text-green-600' : 'text-primary'}`}>
-                          CHF {client.budgetMax?.toLocaleString() || 0}{!isAcheteur && '/mois'}
-                        </p>
-                      </div>
-                    </div>
-                    {isAcheteur && client.apportPersonnel > 0 && (
-                      <div className="flex items-start gap-2 bg-emerald-500/10 p-2 rounded">
-                        <DollarSign className="h-4 w-4 mt-0.5 text-emerald-600 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-muted-foreground">Apport disponible</p>
-                          <p className="text-sm font-semibold text-emerald-600">
-                            CHF {client.apportPersonnel?.toLocaleString() || 0}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {!isAcheteur && (
-                      <div className="flex items-start gap-2 bg-blue-500/10 p-2 rounded">
-                        <DollarSign className="h-4 w-4 mt-0.5 text-blue-600 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-muted-foreground">Budget possible (33%)</p>
-                          <p className={`text-sm font-semibold ${client.budgetPossible >= (client.budgetMax || 0) ? 'text-green-600' : 'text-blue-600'}`}>
-                            CHF {client.budgetPossible?.toLocaleString() || 0}/mois
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                    {client.garant && (
-                      <div className="flex items-start gap-2 bg-green-500/10 p-2 rounded">
-                        <Shield className="h-4 w-4 mt-0.5 text-green-600 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-muted-foreground">Garant valide</p>
-                          <p className="text-sm font-semibold text-green-600">
-                            {client.garant.prenom} {client.garant.nom}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            CHF {Number(client.garant.revenus)?.toLocaleString() || 0}/mois
-                            {client.garant.permis && ` • Permis ${client.garant.permis}`}
-                          </p>
-                        </div>
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                      </div>
-                    )}
-                    {client.solvabilitySource === 'garant' && client.garant && (
-                      <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                        ✓ Solvabilité basée sur le garant
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Contact */}
-                  <div className="space-y-1 mb-3 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Phone className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{client.telephone}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Mail className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{client.email}</span>
-                    </div>
-                  </div>
-
-                  {/* Critères de recherche */}
-                  <div className="mb-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Critères de recherche</span>
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <Badge variant="secondary" className="text-xs">
-                        {client.typeBien || 'Location'}, {client.nombrePiecesSouhaite}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Régions souhaitées */}
-                  <div className="mb-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-xs font-medium">Régions souhaitées:</span>
-                    </div>
-                    <div className="pl-6 text-xs text-muted-foreground">
-                      {client.regions?.join(', ') || 'Autre'}
-                    </div>
-                  </div>
-
-                  {/* Date et barre de progression */}
-                  <div className="mt-auto pt-3 border-t">
-                    <div className="flex items-center justify-between mb-2 text-xs">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        <span>{new Date(client.dateInscription).toLocaleDateString('fr-CH')}</span>
-                      </div>
-                    </div>
-                    
-                    {/* Temps écoulé avec icône */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
-                        daysElapsed < 60 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                        daysElapsed < 90 ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                      }`}>
-                        <Calendar className="h-3 w-3" />
-                        <span>{formatTimeElapsed(daysElapsed)}</span>
-                      </div>
-                    </div>
-
-                    {/* Barre de progression */}
-                    <div className="w-full bg-muted rounded-full h-2 mb-2">
-                      <div
-                        className={`h-2 rounded-full transition-all ${getProgressColor(daysElapsed)}`}
-                        style={{ width: `${Math.min(progressPercent, 100)}%` }}
-                      />
-                    </div>
-
-                    {/* Alertes */}
-                    {isCritical && (
-                      <div className="flex items-start gap-2 p-2 bg-red-50 dark:bg-red-900/20 rounded text-xs mt-2">
-                        <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                        <span className="text-red-700 dark:text-red-400 font-medium">
-                          Attention - {daysElapsed} jours écoulés
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Hover arrow indicator */}
-                  <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <ChevronRight className="h-5 w-5 text-primary" />
-                  </div>
-                  
-                  {/* Hover glow effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                </div>
+                <PremiumClientCard
+                  key={client.id}
+                  client={client}
+                  index={index}
+                  daysElapsed={daysElapsed}
+                  hasReminders={reminderCount}
+                  onEdit={(id) => navigate(`/agent/clients/${id}`)}
+                  onClick={(id) => navigate(`/agent/clients/${id}`)}
+                />
               );
             })}
           </div>
 
           {filteredClients.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Aucun client ne correspond aux filtres sélectionnés</p>
+            <div className="relative text-center py-16">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+              </div>
+              <div className="relative">
+                <div className="inline-flex p-6 rounded-2xl bg-muted/30 border border-border/50 mb-6">
+                  <Users className="h-12 w-12 text-muted-foreground/50" />
+                </div>
+                <p className="text-xl font-medium text-muted-foreground mb-2">Aucun client trouvé</p>
+                <p className="text-sm text-muted-foreground/60">Essayez de modifier vos filtres de recherche</p>
+              </div>
             </div>
           )}
         </div>
