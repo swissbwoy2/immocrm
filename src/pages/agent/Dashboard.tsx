@@ -13,6 +13,7 @@ import { AgentStatsSection } from '@/components/stats/AgentStatsSection';
 import { DefaultGoalsSection } from '@/components/stats/DefaultGoalsSection';
 import { AgentBadges } from '@/components/stats/AgentBadges';
 import { PremiumCandidaturesTraitementSection } from '@/components/premium/PremiumCandidaturesTraitementSection';
+import { PremiumProjectionFinanciereSection } from '@/components/premium/PremiumProjectionFinanciereSection';
 import { countUniqueOffres } from '@/utils/visitesCalculator';
 
 export default function AgentDashboard() {
@@ -227,8 +228,11 @@ export default function AgentDashboard() {
     const commissionBrute = client.budget_max || 0;
     const splitAgent = client.commission_split || 50;
     const partAgent = Math.round(commissionBrute * (splitAgent / 100));
+    const profile = profiles.get(client.user_id);
+    const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client';
     return {
       clientId: client.id,
+      clientName,
       budgetMax: commissionBrute,
       splitAgent,
       partAgent,
@@ -508,46 +512,10 @@ export default function AgentDashboard() {
           {/* Projection financière & Deadlines */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Projection financière */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg font-semibold">💰 Projection financière (3 derniers mois)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
-                  {projectionFinanciere.map(proj => {
-                    const client = clients.find(c => c.id === proj.clientId);
-                    const profile = client ? profiles.get(client.user_id) : null;
-                    const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client';
-                    
-                    return (
-                      <div key={proj.clientId} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{clientName}</p>
-                          <p className="text-xs text-muted-foreground">Budget: {proj.budgetMax.toLocaleString()} CHF</p>
-                        </div>
-                        <div className="text-right ml-3">
-                          <p className="font-bold text-success">{proj.partAgent.toLocaleString()} CHF</p>
-                          <p className="text-xs text-muted-foreground">{proj.splitAgent}%</p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {projectionFinanciere.length === 0 && (
-                    <div className="text-center py-6 text-muted-foreground text-sm">
-                      Aucune projection disponible
-                    </div>
-                  )}
-                </div>
-                {projectionFinanciere.length > 0 && (
-                  <div className="pt-3 border-t">
-                    <div className="flex items-center justify-between">
-                      <p className="font-semibold">Total potentiel</p>
-                      <p className="text-xl font-bold text-success">{totalCommissionPotentielle.toLocaleString()} CHF</p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <PremiumProjectionFinanciereSection
+              projections={projectionFinanciere}
+              totalCommissionPotentielle={totalCommissionPotentielle}
+            />
 
             {/* Deadlines critiques */}
             <Card>
