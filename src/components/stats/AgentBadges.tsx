@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Award, Star, Trophy, Medal, Crown, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 
 interface AgentBadge {
   id: string;
@@ -35,13 +36,23 @@ const badgeIcons: Record<string, React.ReactNode> = {
 };
 
 const badgeColors: Record<string, string> = {
-  bronze: 'bg-amber-700/20 text-amber-700 border-amber-700/30',
-  silver: 'bg-slate-400/20 text-slate-500 border-slate-400/30',
-  gold: 'bg-yellow-500/20 text-yellow-600 border-yellow-500/30',
-  star: 'bg-blue-500/20 text-blue-600 border-blue-500/30',
-  trophy: 'bg-purple-500/20 text-purple-600 border-purple-500/30',
-  champion: 'bg-red-500/20 text-red-600 border-red-500/30',
-  legend: 'bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-600 border-purple-500/30 animate-pulse',
+  bronze: 'from-amber-700/30 to-amber-600/20 text-amber-600 border-amber-500/40',
+  silver: 'from-slate-400/30 to-slate-300/20 text-slate-400 border-slate-400/40',
+  gold: 'from-yellow-500/30 to-yellow-400/20 text-yellow-500 border-yellow-500/40',
+  star: 'from-blue-500/30 to-blue-400/20 text-blue-400 border-blue-500/40',
+  trophy: 'from-purple-500/30 to-purple-400/20 text-purple-400 border-purple-500/40',
+  champion: 'from-red-500/30 to-red-400/20 text-red-400 border-red-500/40',
+  legend: 'from-purple-500/30 via-pink-500/30 to-purple-500/30 text-purple-400 border-purple-500/40',
+};
+
+const badgeGlowColors: Record<string, string> = {
+  bronze: 'hover:shadow-[0_0_20px_rgba(180,83,9,0.4)]',
+  silver: 'hover:shadow-[0_0_20px_rgba(148,163,184,0.4)]',
+  gold: 'hover:shadow-[0_0_20px_rgba(234,179,8,0.5)]',
+  star: 'hover:shadow-[0_0_20px_rgba(59,130,246,0.5)]',
+  trophy: 'hover:shadow-[0_0_20px_rgba(168,85,247,0.5)]',
+  champion: 'hover:shadow-[0_0_20px_rgba(239,68,68,0.5)]',
+  legend: 'hover:shadow-[0_0_30px_rgba(168,85,247,0.6)]',
 };
 
 const categoryEmojis: Record<string, string> = {
@@ -73,9 +84,14 @@ export function AgentBadges({ agentId, compact = false }: AgentBadgesProps) {
 
   if (isLoading) {
     return compact ? null : (
-      <Card>
-        <CardContent className="py-6 text-center text-muted-foreground">
-          Chargement des badges...
+      <Card className="relative overflow-hidden bg-gradient-to-br from-card/80 via-card/60 to-card/40 backdrop-blur-xl border-border/50">
+        <CardContent className="py-8 text-center text-muted-foreground">
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          </div>
+          <p className="mt-3 text-sm">Chargement des badges...</p>
         </CardContent>
       </Card>
     );
@@ -83,17 +99,32 @@ export function AgentBadges({ agentId, compact = false }: AgentBadgesProps) {
 
   if (badges.length === 0) {
     return compact ? null : (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Award className="h-5 w-5 text-primary" />
-            Mes badges
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="py-6 text-center text-muted-foreground">
-          <Award className="h-12 w-12 mx-auto mb-2 opacity-20" />
-          <p>Aucun badge pour l'instant</p>
-          <p className="text-sm">Continuez vos efforts pour débloquer des récompenses !</p>
+      <Card className="relative overflow-hidden bg-gradient-to-br from-card/80 via-card/60 to-card/40 backdrop-blur-xl border-border/50">
+        <FloatingParticles count={6} />
+        
+        {/* Header premium */}
+        <div className="relative p-6 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 rounded-xl blur-lg" />
+              <div className="relative p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20">
+                <Award className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">Mes badges</h3>
+              <p className="text-sm text-muted-foreground">Récompenses et accomplissements</p>
+            </div>
+          </div>
+        </div>
+        
+        <CardContent className="py-8 text-center">
+          <div className="relative inline-block mb-4">
+            <div className="absolute inset-0 bg-muted/20 rounded-full blur-xl" />
+            <Award className="relative h-16 w-16 text-muted-foreground/30" />
+          </div>
+          <p className="font-medium text-muted-foreground">Aucun badge pour l'instant</p>
+          <p className="text-sm text-muted-foreground/70 mt-1">Continuez vos efforts pour débloquer des récompenses !</p>
         </CardContent>
       </Card>
     );
@@ -102,25 +133,33 @@ export function AgentBadges({ agentId, compact = false }: AgentBadgesProps) {
   if (compact) {
     return (
       <TooltipProvider>
-        <div className="flex flex-wrap gap-1">
-          {badges.slice(0, 5).map((badge) => (
+        <div className="flex flex-wrap gap-2">
+          {badges.slice(0, 5).map((badge, index) => (
             <Tooltip key={badge.id}>
               <TooltipTrigger>
-                <div className={cn(
-                  "p-1.5 rounded-full border",
-                  badgeColors[badge.badge_type]
-                )}>
+                <div 
+                  className={cn(
+                    "relative p-2 rounded-full border bg-gradient-to-br transition-all duration-300",
+                    badgeColors[badge.badge_type],
+                    badgeGlowColors[badge.badge_type],
+                    badge.badge_type === 'legend' && 'animate-pulse'
+                  )}
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
                   {badgeIcons[badge.badge_type]}
+                  {badge.badge_type === 'legend' && (
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 animate-spin" style={{ animationDuration: '3s' }} />
+                  )}
                 </div>
               </TooltipTrigger>
-              <TooltipContent>
+              <TooltipContent className="bg-card/95 backdrop-blur-xl border-border/50">
                 <p className="font-semibold">{badge.title}</p>
-                <p className="text-xs">{badge.description}</p>
+                <p className="text-xs text-muted-foreground">{badge.description}</p>
               </TooltipContent>
             </Tooltip>
           ))}
           {badges.length > 5 && (
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-xs bg-secondary/50 backdrop-blur-sm">
               +{badges.length - 5}
             </Badge>
           )}
@@ -130,44 +169,105 @@ export function AgentBadges({ agentId, compact = false }: AgentBadgesProps) {
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Award className="h-5 w-5 text-primary" />
-          Mes badges ({badges.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {badges.map((badge) => (
+    <Card className="relative overflow-hidden bg-gradient-to-br from-card/80 via-card/60 to-card/40 backdrop-blur-xl border-border/50">
+      <FloatingParticles count={10} />
+      
+      {/* Glow effects */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/5 rounded-full blur-3xl" />
+      
+      {/* Header premium */}
+      <div className="relative p-6 pb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-primary/20 rounded-xl blur-lg group-hover:blur-xl transition-all duration-300" />
+              <div className="relative p-3 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 border border-primary/20 group-hover:border-primary/40 transition-all duration-300">
+                <Award className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">Mes badges</h3>
+              <p className="text-sm text-muted-foreground">Récompenses et accomplissements</p>
+            </div>
+          </div>
+          <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/20">
+            {badges.length} badge{badges.length > 1 ? 's' : ''}
+          </Badge>
+        </div>
+      </div>
+      
+      <CardContent className="relative">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          {badges.map((badge, index) => (
             <TooltipProvider key={badge.id}>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className={cn(
-                    "p-3 rounded-lg border flex flex-col items-center gap-2 cursor-pointer transition-transform hover:scale-105",
-                    badgeColors[badge.badge_type]
-                  )}>
-                    <div className="text-2xl">
+                  <div 
+                    className={cn(
+                      "relative group p-4 rounded-xl border bg-gradient-to-br flex flex-col items-center gap-3 cursor-pointer transition-all duration-300 hover:scale-105",
+                      badgeColors[badge.badge_type],
+                      badgeGlowColors[badge.badge_type],
+                      badge.badge_type === 'legend' && 'animate-pulse'
+                    )}
+                    style={{ 
+                      animationDelay: `${index * 50}ms`,
+                      animation: 'fade-in 0.5s ease-out forwards',
+                      opacity: 0
+                    }}
+                  >
+                    {/* Shine effect */}
+                    <div className="absolute inset-0 rounded-xl overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                    </div>
+                    
+                    {/* Legend special ring */}
+                    {badge.badge_type === 'legend' && (
+                      <div className="absolute inset-0 rounded-xl">
+                        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/30 via-pink-500/30 to-purple-500/30 animate-spin" style={{ animationDuration: '4s' }} />
+                      </div>
+                    )}
+                    
+                    {/* Category emoji */}
+                    <div className="relative text-3xl filter drop-shadow-lg">
                       {categoryEmojis[badge.badge_category]}
                     </div>
-                    {badgeIcons[badge.badge_type]}
-                    <span className="text-xs font-medium text-center line-clamp-2">
+                    
+                    {/* Badge icon */}
+                    <div className="relative p-2 rounded-lg bg-background/30 backdrop-blur-sm border border-white/10">
+                      {badgeIcons[badge.badge_type]}
+                    </div>
+                    
+                    {/* Title */}
+                    <span className="relative text-xs font-medium text-center line-clamp-2">
                       {badge.title}
                     </span>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="bottom" className="max-w-xs">
-                  <p className="font-semibold">{badge.title}</p>
-                  <p className="text-sm">{badge.description}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Obtenu le {format(new Date(badge.earned_at), 'd MMMM yyyy', { locale: fr })}
-                  </p>
+                <TooltipContent 
+                  side="bottom" 
+                  className="max-w-xs bg-card/95 backdrop-blur-xl border-border/50 shadow-xl"
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="text-2xl">{categoryEmojis[badge.badge_category]}</span>
+                    <div>
+                      <p className="font-semibold">{badge.title}</p>
+                      <p className="text-sm text-muted-foreground">{badge.description}</p>
+                      <p className="text-xs text-muted-foreground/70 mt-2 flex items-center gap-1">
+                        <Sparkles className="h-3 w-3" />
+                        Obtenu le {format(new Date(badge.earned_at), 'd MMMM yyyy', { locale: fr })}
+                      </p>
+                    </div>
+                  </div>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           ))}
         </div>
       </CardContent>
+      
+      {/* Bottom shine */}
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
     </Card>
   );
 }
