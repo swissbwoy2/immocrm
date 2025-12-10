@@ -65,9 +65,9 @@ export default function Landing() {
         </div>
       </div>
       <HeroSection />
+      <DifferentiationSection />
       <BudgetCalculatorSection />
       <HowItWorks />
-      <DifferentiationSection />
       <ProptechSection />
       <BenefitsSection />
       <GuaranteeSection />
