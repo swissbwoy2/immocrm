@@ -1,8 +1,8 @@
 import { Calendar, MapPin, Home, Maximize2, Banknote, Clock, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { differenceInDays, differenceInHours, format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { differenceInDays, differenceInHours } from 'date-fns';
+import { toSwissTime, formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
 
 interface PremiumVisiteCardProps {
   visite: {
@@ -22,7 +22,7 @@ interface PremiumVisiteCardProps {
 
 export function PremiumVisiteCard({ visite, index = 0, onClick, className }: PremiumVisiteCardProps) {
   const now = new Date();
-  const visiteDate = new Date(visite.date_visite);
+  const visiteDate = toSwissTime(visite.date_visite);
   const daysUntil = differenceInDays(visiteDate, now);
   const hoursUntil = differenceInHours(visiteDate, now);
   
@@ -129,7 +129,7 @@ export function PremiumVisiteCard({ visite, index = 0, onClick, className }: Pre
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="w-4 h-4" />
             <span className="font-medium">
-              {format(visiteDate, "EEE dd MMM", { locale: fr })} à {format(visiteDate, "HH:mm")}
+              {formatSwissDate(visiteDate, "EEE dd MMM")} à {formatSwissTime(visiteDate)}
             </span>
           </div>
           

@@ -1,10 +1,10 @@
 import { useState, useMemo, memo } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { CalendarEvent, eventTypeCalendarColors } from './types';
+import { toSwissTime, formatSwissDate, formatSwissTime, getSwissDateString } from '@/lib/dateUtils';
 
 interface PremiumCalendarViewProps {
   events: CalendarEvent[];
@@ -45,9 +45,8 @@ const PremiumCalendarDay = memo(({
   const getEventTime = (item: { event: any; isVisite: boolean }) => {
     const dateStr = item.isVisite ? item.event.date_visite : item.event.event_date;
     if (!dateStr) return '';
-    const date = new Date(dateStr);
     if (!item.isVisite && item.event.all_day) return '';
-    return format(date, 'HH:mm');
+    return formatSwissTime(dateStr);
   };
 
   const getEventLabel = (item: { event: any; isVisite: boolean }) => {
@@ -80,7 +79,7 @@ const PremiumCalendarDay = memo(({
         isSelected && 'text-primary',
         isWeekend && !isTodayDate && !isSelected && 'text-muted-foreground'
       )}>
-        {format(day, 'd')}
+        {formatSwissDate(day, 'd')}
         {isTodayDate && (
           <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
         )}
@@ -132,14 +131,14 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
     
     // Add calendar events
     events.forEach((event) => {
-      const dateKey = format(new Date(event.event_date), 'yyyy-MM-dd');
+      const dateKey = getSwissDateString(event.event_date);
       if (!map.has(dateKey)) map.set(dateKey, []);
       map.get(dateKey)!.push({ type: event.event_type, event, isVisite: false });
     });
 
     // Group visites by address + time
     visites.forEach((visite) => {
-      const dateKey = format(new Date(visite.date_visite), 'yyyy-MM-dd');
+      const dateKey = getSwissDateString(visite.date_visite);
       if (!map.has(dateKey)) map.set(dateKey, []);
       
       const existing = map.get(dateKey)!;
@@ -162,7 +161,7 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
   }, [events, visites]);
 
   const getEventsForDay = (date: Date) => {
-    const dateKey = format(date, 'yyyy-MM-dd');
+    const dateKey = getSwissDateString(date);
     return eventsMap.get(dateKey) || [];
   };
 
@@ -182,7 +181,7 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
             </div>
             <div>
               <h2 className="text-xl font-bold capitalize bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                {format(currentMonth, 'MMMM yyyy', { locale: fr })}
+                {formatSwissDate(currentMonth, 'MMMM yyyy')}
               </h2>
             </div>
           </div>

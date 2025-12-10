@@ -1,8 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Check, CheckCheck } from 'lucide-react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { formatSwissTime } from '@/lib/dateUtils';
 import { MessageAttachment } from '@/components/MessageAttachment';
 
 interface MessagePayload {
@@ -39,7 +38,7 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
   className,
   index = 0,
 }) => {
-  const formattedTime = format(new Date(timestamp), 'HH:mm', { locale: fr });
+  const formattedTime = formatSwissTime(timestamp);
 
   return (
     <div

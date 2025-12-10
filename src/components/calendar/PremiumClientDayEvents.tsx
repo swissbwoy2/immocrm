@@ -1,5 +1,5 @@
-import { format, differenceInDays, differenceInHours, isToday, isTomorrow } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { differenceInDays, differenceInHours, isToday, isTomorrow } from 'date-fns';
+import { toSwissTime, formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
 import { 
   Calendar, Clock, MapPin, Home, Maximize, User, Phone, KeyRound, 
   Check, X, FileCheck, ThumbsUp, ThumbsDown, Minus, Sparkles, Eye,
@@ -82,22 +82,23 @@ export function PremiumClientDayEvents({
 
   const getTimeRemaining = (eventDate: Date) => {
     const now = new Date();
+    const swissDate = toSwissTime(eventDate);
     
-    if (eventDate < now) {
+    if (swissDate < now) {
       return { text: 'Passé', color: 'text-muted-foreground' };
     }
     
-    if (isToday(eventDate)) {
-      const hours = differenceInHours(eventDate, now);
+    if (isToday(swissDate)) {
+      const hours = differenceInHours(swissDate, now);
       if (hours <= 0) return { text: 'Maintenant', color: 'text-green-500' };
       return { text: `Dans ${hours}h`, color: 'text-orange-500' };
     }
     
-    if (isTomorrow(eventDate)) {
+    if (isTomorrow(swissDate)) {
       return { text: 'Demain', color: 'text-blue-500' };
     }
     
-    const days = differenceInDays(eventDate, now);
+    const days = differenceInDays(swissDate, now);
     if (days <= 7) {
       return { text: `Dans ${days} jour${days > 1 ? 's' : ''}`, color: 'text-primary' };
     }
@@ -189,10 +190,10 @@ export function PremiumClientDayEvents({
             </div>
             <div>
               <h3 className="font-bold text-lg capitalize">
-                {format(date, 'EEEE d MMMM', { locale: fr })}
+                {formatSwissDate(date, 'EEEE d MMMM')}
               </h3>
               <p className="text-sm text-muted-foreground">
-                {format(date, 'yyyy', { locale: fr })}
+                {formatSwissDate(date, 'yyyy')}
               </p>
             </div>
           </div>
@@ -225,7 +226,7 @@ export function PremiumClientDayEvents({
               {allItems.map((item, idx) => {
                 const isEvent = item.type === 'event';
                 const data = item.data;
-                const eventDate = new Date(isEvent ? data.event_date : data.date_visite);
+                const eventDate = toSwissTime(isEvent ? data.event_date : data.date_visite);
                 const timeRemaining = getTimeRemaining(eventDate);
 
                 if (!isEvent) {
@@ -289,11 +290,11 @@ export function PremiumClientDayEvents({
                               </div>
                               <div>
                                 <p className="font-semibold text-sm">
-                                  {format(eventDate, "EEEE d MMMM", { locale: fr })}
+                                  {formatSwissDate(eventDate, "EEEE d MMMM")}
                                 </p>
                                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
-                                  {format(eventDate, 'HH:mm')}
+                                  {formatSwissTime(eventDate)}
                                 </p>
                               </div>
                             </div>
@@ -484,7 +485,7 @@ export function PremiumClientDayEvents({
                     {!data.all_day && (
                       <p className="text-sm flex items-center gap-1 mt-1 text-muted-foreground">
                         <Clock className="h-3 w-3" />
-                        {format(eventDate, 'HH:mm')}
+                        {formatSwissTime(eventDate)}
                       </p>
                     )}
                     {data.description && (
