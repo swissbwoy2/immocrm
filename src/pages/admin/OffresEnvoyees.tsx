@@ -7,13 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Send, MapPin, Home, Calendar, User, Filter, Eye, ExternalLink, Phone, Building, Forward, Clock, CheckCircle, XCircle } from "lucide-react";
+import { 
+  Send, MapPin, Home, Calendar, User, Filter, Eye, ExternalLink, Phone, Building, Forward, Clock, 
+  CheckCircle, XCircle, Star, FileText, Key, Sparkles
+} from "lucide-react";
 import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { toast } from "sonner";
+import { PremiumKPICard } from "@/components/premium/PremiumKPICard";
+import { cn } from "@/lib/utils";
 
 interface Visite {
   id: string;
@@ -63,6 +68,152 @@ interface Client {
   id: string;
   user_id: string;
   agent_id: string | null;
+}
+
+// Configuration complète des statuts avec toutes les étapes du workflow
+const STATUS_CONFIG: Record<string, { 
+  label: string; 
+  color: string; 
+  bgColor: string;
+  borderColor: string;
+  icon: typeof Send; 
+  emoji: string;
+  step: number;
+}> = {
+  envoyee: { 
+    label: 'Envoyée', 
+    color: 'text-blue-600', 
+    bgColor: 'bg-blue-50 dark:bg-blue-950/30',
+    borderColor: 'border-blue-200 dark:border-blue-800',
+    icon: Send, 
+    emoji: '📤',
+    step: 1 
+  },
+  vue: { 
+    label: 'Vue', 
+    color: 'text-purple-600', 
+    bgColor: 'bg-purple-50 dark:bg-purple-950/30',
+    borderColor: 'border-purple-200 dark:border-purple-800',
+    icon: Eye, 
+    emoji: '👁️',
+    step: 2 
+  },
+  interesse: { 
+    label: 'Intéressé', 
+    color: 'text-amber-600', 
+    bgColor: 'bg-amber-50 dark:bg-amber-950/30',
+    borderColor: 'border-amber-200 dark:border-amber-800',
+    icon: Star, 
+    emoji: '⭐',
+    step: 3 
+  },
+  visite_planifiee: { 
+    label: 'Visite planifiée', 
+    color: 'text-cyan-600', 
+    bgColor: 'bg-cyan-50 dark:bg-cyan-950/30',
+    borderColor: 'border-cyan-200 dark:border-cyan-800',
+    icon: Calendar, 
+    emoji: '📅',
+    step: 4 
+  },
+  visite_effectuee: { 
+    label: 'Visite effectuée', 
+    color: 'text-teal-600', 
+    bgColor: 'bg-teal-50 dark:bg-teal-950/30',
+    borderColor: 'border-teal-200 dark:border-teal-800',
+    icon: CheckCircle, 
+    emoji: '✅',
+    step: 5 
+  },
+  candidature_deposee: { 
+    label: 'Candidature déposée', 
+    color: 'text-indigo-600', 
+    bgColor: 'bg-indigo-50 dark:bg-indigo-950/30',
+    borderColor: 'border-indigo-200 dark:border-indigo-800',
+    icon: FileText, 
+    emoji: '📋',
+    step: 6 
+  },
+  acceptee: { 
+    label: 'Acceptée', 
+    color: 'text-success', 
+    bgColor: 'bg-success/10',
+    borderColor: 'border-success/30',
+    icon: Key, 
+    emoji: '🎉',
+    step: 7 
+  },
+  refusee: { 
+    label: 'Refusée', 
+    color: 'text-destructive', 
+    bgColor: 'bg-destructive/10',
+    borderColor: 'border-destructive/30',
+    icon: XCircle, 
+    emoji: '❌',
+    step: -1 
+  },
+};
+
+// Étapes de la timeline
+const TIMELINE_STEPS = [
+  { key: 'envoyee', label: 'Envoyée', emoji: '📤' },
+  { key: 'vue', label: 'Vue', emoji: '👁️' },
+  { key: 'interesse', label: 'Intéressé', emoji: '⭐' },
+  { key: 'visite_planifiee', label: 'Visite', emoji: '📅' },
+  { key: 'visite_effectuee', label: 'Visitée', emoji: '✅' },
+  { key: 'candidature_deposee', label: 'Candidature', emoji: '📋' },
+  { key: 'acceptee', label: 'Acceptée', emoji: '🎉' },
+];
+
+// Composant Timeline Premium
+function OfferTimeline({ currentStatut }: { currentStatut: string | null }) {
+  const statusConfig = STATUS_CONFIG[currentStatut || 'envoyee'];
+  const currentStep = statusConfig?.step || 1;
+  const isRefused = currentStatut === 'refusee';
+
+  if (isRefused) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-destructive/10 rounded-full border border-destructive/20">
+        <XCircle className="h-3.5 w-3.5 text-destructive" />
+        <span className="text-xs font-medium text-destructive">Refusée</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-0.5 overflow-x-auto pb-1">
+      {TIMELINE_STEPS.map((step, index) => {
+        const stepNumber = index + 1;
+        const isPast = stepNumber < currentStep;
+        const isCurrent = stepNumber === currentStep;
+        const isFuture = stepNumber > currentStep;
+
+        return (
+          <div key={step.key} className="flex items-center">
+            <div
+              className={cn(
+                "flex items-center justify-center w-6 h-6 rounded-full text-[10px] font-bold transition-all",
+                isPast && "bg-primary text-primary-foreground",
+                isCurrent && "bg-primary text-primary-foreground ring-2 ring-primary/30 ring-offset-1 ring-offset-background",
+                isFuture && "bg-muted text-muted-foreground"
+              )}
+              title={step.label}
+            >
+              {isPast ? '✓' : step.emoji}
+            </div>
+            {index < TIMELINE_STEPS.length - 1 && (
+              <div
+                className={cn(
+                  "w-3 h-0.5 transition-all",
+                  stepNumber < currentStep ? "bg-primary" : "bg-muted"
+                )}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function AdminOffresEnvoyees() {
@@ -183,22 +334,25 @@ export default function AdminOffresEnvoyees() {
     return profile ? `${profile.prenom} ${profile.nom}` : "Client inconnu";
   };
 
-  const getStatusBadge = (statut: string | null, clickable: boolean = false) => {
-    const baseClass = clickable ? "cursor-pointer hover:opacity-80 transition-opacity" : "";
-    switch (statut) {
-      case 'envoyee':
-        return <Badge variant="secondary" className={baseClass}>Envoyée</Badge>;
-      case 'vue':
-        return <Badge variant="outline" className={baseClass}>Vue</Badge>;
-      case 'acceptee':
-        return <Badge className={`bg-success text-success-foreground ${baseClass}`}>Acceptée</Badge>;
-      case 'refusee':
-        return <Badge variant="destructive" className={baseClass}>Refusée</Badge>;
-      case 'visite_programmee':
-        return <Badge className={`bg-primary text-primary-foreground ${baseClass}`}>Visite programmée</Badge>;
-      default:
-        return <Badge variant="outline" className={baseClass}>{statut || "Inconnue"}</Badge>;
-    }
+  const getStatusBadge = (statut: string | null) => {
+    const config = STATUS_CONFIG[statut || 'envoyee'] || STATUS_CONFIG.envoyee;
+    const Icon = config.icon;
+    
+    return (
+      <Badge 
+        variant="outline" 
+        className={cn(
+          "gap-1.5 font-medium border",
+          config.bgColor,
+          config.color,
+          config.borderColor
+        )}
+      >
+        <Icon className="h-3 w-3" />
+        <span>{config.emoji}</span>
+        {config.label}
+      </Badge>
+    );
   };
 
   const handleOpenOffreDetail = (offre: Offre) => {
@@ -250,7 +404,7 @@ export default function AdminOffresEnvoyees() {
           concierge_tel: selectedOffre.concierge_tel,
           locataire_nom: selectedOffre.locataire_nom,
           locataire_tel: selectedOffre.locataire_tel,
-          agent_id: targetClient.agent_id, // Utiliser l'agent assigné au client
+          agent_id: targetClient.agent_id,
           client_id: selectedTargetClient,
           statut: 'envoyee',
           date_envoi: new Date().toISOString()
@@ -393,14 +547,18 @@ export default function AdminOffresEnvoyees() {
 
   // Stats
   const totalOffres = offres.length;
-  const offresEnvoyees = offres.filter(o => o.statut === 'envoyee').length;
+  const offresEnvoyees = offres.filter(o => o.statut === 'envoyee' || o.statut === 'vue').length;
+  const offresInteresse = offres.filter(o => ['interesse', 'visite_planifiee', 'visite_effectuee'].includes(o.statut || '')).length;
+  const candidatures = offres.filter(o => o.statut === 'candidature_deposee').length;
   const offresAcceptees = offres.filter(o => o.statut === 'acceptee').length;
-  const offresRefusees = offres.filter(o => o.statut === 'refusee').length;
 
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="relative">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <Sparkles className="absolute inset-0 m-auto h-5 w-5 text-primary animate-pulse" />
+        </div>
       </div>
     );
   }
@@ -408,44 +566,67 @@ export default function AdminOffresEnvoyees() {
   return (
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8">
+        {/* Header premium */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Offres envoyées</h1>
-          <p className="text-muted-foreground">Toutes les offres envoyées par les agents</p>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 rounded-xl bg-primary/10">
+              <Send className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Offres envoyées</h1>
+              <p className="text-muted-foreground text-sm">Suivi de toutes les offres envoyées par les agents</p>
+            </div>
+          </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '0ms' }}>
-            <div className="text-center">
-              <p className="text-2xl font-bold group-hover:scale-110 transition-transform">{totalOffres}</p>
-              <p className="text-sm text-muted-foreground">Total</p>
-            </div>
-          </Card>
-          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '50ms' }}>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-blue-600 group-hover:scale-110 transition-transform">{offresEnvoyees}</p>
-              <p className="text-sm text-muted-foreground">En attente</p>
-            </div>
-          </Card>
-          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '100ms' }}>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-success group-hover:scale-110 transition-transform">{offresAcceptees}</p>
-              <p className="text-sm text-muted-foreground">Acceptées</p>
-            </div>
-          </Card>
-          <Card className="card-interactive p-4 animate-fade-in group" style={{ animationDelay: '150ms' }}>
-            <div className="text-center">
-              <p className="text-2xl font-bold text-destructive group-hover:scale-110 transition-transform">{offresRefusees}</p>
-              <p className="text-sm text-muted-foreground">Refusées</p>
-            </div>
-          </Card>
+        {/* Stats Premium KPI */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-8">
+          <PremiumKPICard
+            title="Total"
+            value={totalOffres}
+            icon={Send}
+            variant="default"
+            delay={0}
+          />
+          <PremiumKPICard
+            title="En attente"
+            value={offresEnvoyees}
+            icon={Eye}
+            variant="default"
+            subtitle="Envoyées & vues"
+            delay={50}
+          />
+          <PremiumKPICard
+            title="Intéressés"
+            value={offresInteresse}
+            icon={Star}
+            variant="warning"
+            subtitle="Visites en cours"
+            delay={100}
+          />
+          <PremiumKPICard
+            title="Candidatures"
+            value={candidatures}
+            icon={FileText}
+            variant="default"
+            subtitle="Dossiers déposés"
+            delay={150}
+          />
+          <PremiumKPICard
+            title="Acceptées"
+            value={offresAcceptees}
+            icon={Key}
+            variant="success"
+            subtitle="🎉 Réussies"
+            delay={200}
+          />
         </div>
 
-        {/* Filtres */}
-        <Card className="card-interactive mb-6 animate-fade-in" style={{ animationDelay: '200ms' }}>
-          <CardHeader>
+        {/* Filtres Premium */}
+        <Card className="mb-6 overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm">
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Filter className="w-5 h-5" />
+              <Filter className="w-5 h-5 text-primary" />
               Filtres
             </CardTitle>
           </CardHeader>
@@ -455,22 +636,26 @@ export default function AdminOffresEnvoyees() {
                 placeholder="Rechercher (adresse, client, agent...)"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                className="bg-background/50"
               />
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background/50">
                   <SelectValue placeholder="Statut" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Tous les statuts</SelectItem>
-                  <SelectItem value="envoyee">Envoyée</SelectItem>
-                  <SelectItem value="vue">Vue</SelectItem>
-                  <SelectItem value="acceptee">Acceptée</SelectItem>
-                  <SelectItem value="refusee">Refusée</SelectItem>
-                  <SelectItem value="visite_programmee">Visite programmée</SelectItem>
+                  <SelectItem value="envoyee">📤 Envoyée</SelectItem>
+                  <SelectItem value="vue">👁️ Vue</SelectItem>
+                  <SelectItem value="interesse">⭐ Intéressé</SelectItem>
+                  <SelectItem value="visite_planifiee">📅 Visite planifiée</SelectItem>
+                  <SelectItem value="visite_effectuee">✅ Visite effectuée</SelectItem>
+                  <SelectItem value="candidature_deposee">📋 Candidature déposée</SelectItem>
+                  <SelectItem value="acceptee">🎉 Acceptée</SelectItem>
+                  <SelectItem value="refusee">❌ Refusée</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={agentFilter} onValueChange={setAgentFilter}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background/50">
                   <SelectValue placeholder="Agent" />
                 </SelectTrigger>
                 <SelectContent>
@@ -486,106 +671,127 @@ export default function AdminOffresEnvoyees() {
           </CardContent>
         </Card>
 
-        {/* Liste des offres */}
+        {/* Liste des offres Premium */}
         <div className="grid gap-4">
           {filteredOffres.length === 0 ? (
-            <Card className="p-12">
+            <Card className="p-12 border-dashed">
               <div className="text-center text-muted-foreground">
-                <Send className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                  <Send className="w-8 h-8 opacity-50" />
+                </div>
                 <p className="font-medium">Aucune offre trouvée</p>
                 <p className="text-sm mt-1">Modifiez vos filtres ou attendez que les agents envoient des offres</p>
               </div>
             </Card>
           ) : (
-            filteredOffres.map((offre) => (
-              <Card 
-                key={offre.id} 
-                className="p-6 hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => handleOpenOffreDetail(offre)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && handleOpenOffreDetail(offre)}
-              >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-lg font-semibold">
-                        {offre.titre || offre.adresse}
-                      </h3>
-                      <span className="pointer-events-none">
-                        {getStatusBadge(offre.statut)}
-                      </span>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        {offre.adresse}
-                      </span>
-                      {offre.type_bien && (
-                        <span className="flex items-center gap-1">
-                          <Home className="w-4 h-4" />
-                          {offre.type_bien}
-                        </span>
-                      )}
-                      {offre.pieces && (
-                        <span>{offre.pieces} pièces</span>
-                      )}
-                      {offre.surface && (
-                        <span>{offre.surface} m²</span>
-                      )}
-                    </div>
+            filteredOffres.map((offre, index) => {
+              const statusConfig = STATUS_CONFIG[offre.statut || 'envoyee'] || STATUS_CONFIG.envoyee;
+              
+              return (
+                <Card 
+                  key={offre.id} 
+                  className={cn(
+                    "group relative overflow-hidden transition-all duration-300 cursor-pointer",
+                    "hover:shadow-lg hover:-translate-y-0.5",
+                    "border-l-4",
+                    statusConfig.borderColor
+                  )}
+                  onClick={() => handleOpenOffreDetail(offre)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && handleOpenOffreDetail(offre)}
+                  style={{ animationDelay: `${index * 30}ms` }}
+                >
+                  {/* Shine effect on hover */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                  </div>
 
-                    <div className="flex flex-wrap gap-4 text-sm">
-                      <span className="font-medium text-primary">
-                        CHF {offre.prix.toLocaleString()}/mois
-                      </span>
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <User className="w-4 h-4" />
-                        Agent: {getAgentName(offre.agent_id)}
-                      </span>
-                      <span className="flex items-center gap-1 text-muted-foreground">
-                        <User className="w-4 h-4" />
-                        Client: {getClientName(offre.client_id)}
-                      </span>
-                    </div>
-
-                    {offre.date_envoi && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Calendar className="w-3 h-3" />
-                        Envoyée le {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
+                  <div className="relative p-4 md:p-6">
+                    <div className="flex flex-col gap-4">
+                      {/* Header avec statut et timeline */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <h3 className="text-lg font-semibold group-hover:text-primary transition-colors">
+                            {offre.titre || offre.adresse}
+                          </h3>
+                          {getStatusBadge(offre.statut)}
+                        </div>
+                        <OfferTimeline currentStatut={offre.statut} />
                       </div>
-                    )}
-                  </div>
+                      
+                      {/* Infos principales */}
+                      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <MapPin className="w-4 h-4 text-primary/70" />
+                          {offre.adresse}
+                        </span>
+                        {offre.type_bien && (
+                          <span className="flex items-center gap-1.5">
+                            <Home className="w-4 h-4" />
+                            {offre.type_bien}
+                          </span>
+                        )}
+                        {offre.pieces && (
+                          <span>{offre.pieces} pièces</span>
+                        )}
+                        {offre.surface && (
+                          <span>{offre.surface} m²</span>
+                        )}
+                      </div>
 
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={(e) => handleOpenTransferDialog(offre, e)}
-                      className="relative z-10"
-                    >
-                      <Forward className="w-4 h-4 mr-1" />
-                      Envoyer à un client
-                    </Button>
-                    {offre.client_id && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/admin/clients/${offre.client_id}`);
-                        }}
-                        className="relative z-10"
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        Voir client
-                      </Button>
-                    )}
+                      {/* Prix, Agent, Client */}
+                      <div className="flex flex-wrap items-center gap-4 text-sm">
+                        <span className="font-bold text-primary text-base">
+                          CHF {offre.prix.toLocaleString()}/mois
+                        </span>
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <User className="w-4 h-4" />
+                          {getAgentName(offre.agent_id)}
+                        </span>
+                        <span className="flex items-center gap-1.5 text-muted-foreground">
+                          <User className="w-4 h-4" />
+                          {getClientName(offre.client_id)}
+                        </span>
+                        {offre.date_envoi && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
+                            <Calendar className="w-3 h-3" />
+                            {format(new Date(offre.date_envoi), 'dd/MM/yyyy', { locale: fr })}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex gap-2 pt-2 border-t border-border/50">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={(e) => handleOpenTransferDialog(offre, e)}
+                          className="relative z-10 hover:bg-primary/5"
+                        >
+                          <Forward className="w-4 h-4 mr-1.5" />
+                          Envoyer à un client
+                        </Button>
+                        {offre.client_id && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/admin/clients/${offre.client_id}`);
+                            }}
+                            className="relative z-10 hover:bg-primary/5"
+                          >
+                            <Eye className="w-4 h-4 mr-1.5" />
+                            Voir client
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))
+                </Card>
+              );
+            })
           )}
         </div>
       </div>
@@ -602,8 +808,14 @@ export default function AdminOffresEnvoyees() {
 
           {selectedOffre && (
             <div className="space-y-6">
+              {/* Timeline dans le dialogue */}
+              <div className="p-4 bg-muted/30 rounded-xl border">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-3 block">Progression</Label>
+                <OfferTimeline currentStatut={selectedOffre.statut} />
+              </div>
+
               {/* En-tête avec adresse */}
-              <div className="p-4 bg-muted rounded-lg">
+              <div className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20">
                 <h4 className="font-semibold text-lg">{selectedOffre.titre || selectedOffre.adresse}</h4>
                 <div className="flex items-center gap-2 mt-1 text-muted-foreground">
                   <MapPin className="h-4 w-4" />
@@ -755,7 +967,7 @@ export default function AdminOffresEnvoyees() {
                     
                     {visites.length === 0 ? (
                       <div className="p-4 bg-muted/50 rounded-lg text-center text-muted-foreground text-sm">
-                        {selectedOffre.statut === 'visite_programmee' 
+                        {selectedOffre.statut === 'visite_planifiee' 
                           ? "Visite programmée mais aucune date enregistrée"
                           : "Aucune visite pour cette offre"
                         }
@@ -850,43 +1062,41 @@ export default function AdminOffresEnvoyees() {
           <DialogHeader>
             <DialogTitle>Envoyer l'offre à un autre client</DialogTitle>
             <DialogDescription>
-              Cette offre sera dupliquée et envoyée au client sélectionné.
+              Sélectionnez le client à qui envoyer cette offre. L'offre sera dupliquée et envoyée au client sélectionné via son agent assigné.
             </DialogDescription>
           </DialogHeader>
 
           {selectedOffre && (
             <div className="space-y-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <h4 className="font-medium">{selectedOffre.titre || selectedOffre.adresse}</h4>
-                <p className="text-sm text-muted-foreground mt-1">
-                  CHF {selectedOffre.prix.toLocaleString()}/mois
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Envoyée par: {getAgentName(selectedOffre.agent_id)}
-                </p>
-                {selectedOffre.client_id && (
-                  <p className="text-sm text-muted-foreground">
-                    Client actuel: {getClientName(selectedOffre.client_id)}
-                  </p>
-                )}
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="font-medium">{selectedOffre.titre || selectedOffre.adresse}</p>
+                <p className="text-sm text-muted-foreground">CHF {selectedOffre.prix.toLocaleString()}/mois</p>
               </div>
 
               <div className="space-y-2">
-                <Label>Sélectionner le client destinataire</Label>
+                <Label>Sélectionner un client</Label>
                 <Select value={selectedTargetClient} onValueChange={setSelectedTargetClient}>
                   <SelectTrigger>
                     <SelectValue placeholder="Choisir un client..." />
                   </SelectTrigger>
                   <SelectContent>
                     {clients
-                      .filter(client => client.id !== selectedOffre.client_id)
+                      .filter(c => c.id !== selectedOffre.client_id && c.agent_id)
                       .map(client => (
                         <SelectItem key={client.id} value={client.id}>
-                          {getClientName(client.id)}
+                          {getClientName(client.id)} 
+                          <span className="text-muted-foreground ml-2">
+                            (Agent: {getAgentName(client.agent_id)})
+                          </span>
                         </SelectItem>
                       ))}
                   </SelectContent>
                 </Select>
+                {clients.filter(c => c.id !== selectedOffre.client_id && c.agent_id).length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Aucun autre client avec un agent assigné disponible.
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -906,8 +1116,8 @@ export default function AdminOffresEnvoyees() {
                 </>
               ) : (
                 <>
-                  <Forward className="w-4 h-4 mr-2" />
-                  Envoyer
+                  <Send className="w-4 h-4 mr-2" />
+                  Envoyer l'offre
                 </>
               )}
             </Button>
