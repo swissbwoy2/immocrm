@@ -1,14 +1,15 @@
 import { useState, useMemo } from 'react';
 import { subDays, isWithinInterval } from 'date-fns';
-import { Send, CheckCircle, DollarSign, Users, Target, TrendingUp, Calendar, FileCheck, Sparkles } from 'lucide-react';
+import { Send, CheckCircle, DollarSign, Users, Target, TrendingUp, Calendar, FileCheck, Sparkles, Activity } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateRangeFilter, DateRange, getDefaultDateRange } from './DateRangeFilter';
 import { StatsCard } from './StatsCard';
-import { PerformanceChart, MultiSeriesChart } from './PerformanceChart';
 import { GoalProgress } from './GoalProgress';
 import { useAgentGoals } from '@/hooks/useAgentGoals';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getUniqueOffres, getUniqueVisites } from '@/utils/visitesCalculator';
+import { PremiumMultiSeriesChart } from './PremiumMultiSeriesChart';
+import { PremiumCommissionsChart } from './PremiumCommissionsChart';
 
 interface AgentStatsSectionProps {
   offres: any[];
@@ -317,22 +318,24 @@ export function AgentStatsSection({
         </div>
       </div>
 
-      {/* Charts with staggered animations */}
+      {/* Premium Charts with staggered animations */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="animate-fade-in" style={{ animationDelay: '400ms', animationFillMode: 'both' }}>
-          <MultiSeriesChart
+          <PremiumMultiSeriesChart
             title="Activité"
             series={activitySeries}
             dateRange={dateRange}
+            icon={Activity}
           />
         </div>
         <div className="animate-fade-in" style={{ animationDelay: '450ms', animationFillMode: 'both' }}>
-          <PerformanceChart
+          <PremiumCommissionsChart
             title="Commissions gagnées"
             data={commissionsChartData}
             dateRange={dateRange}
             color="hsl(142, 76%, 36%)"
             valueLabel="CHF"
+            icon={DollarSign}
           />
         </div>
       </div>

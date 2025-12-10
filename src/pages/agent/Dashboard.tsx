@@ -1018,12 +1018,41 @@ export default function AgentDashboard() {
             </CardContent>
           </Card>
 
-          {/* Renouvellements récents */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold">🔄 Renouvellements récents</CardTitle>
+          {/* Renouvellements récents - Premium Design */}
+          <Card className="group relative overflow-hidden border-emerald-500/10 hover:border-emerald-500/30 transition-all duration-500 hover:shadow-xl hover:-translate-y-1 bg-gradient-to-br from-emerald-500/5 via-transparent to-emerald-500/10">
+            {/* Glassmorphism effects */}
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+            
+            {/* Floating particles */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className="absolute w-1.5 h-1.5 rounded-full bg-emerald-500/20 animate-pulse"
+                  style={{
+                    left: `${15 + i * 18}%`,
+                    top: `${20 + (i % 3) * 25}%`,
+                    animationDelay: `${i * 0.3}s`,
+                    animationDuration: `${2 + i * 0.5}s`
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Glow effect */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 via-emerald-400/10 to-emerald-500/20 rounded-xl blur-xl opacity-0 group-hover:opacity-50 transition-opacity duration-500" />
+
+            <CardHeader className="relative pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors duration-300">
+                  <span className="text-lg">🔄</span>
+                </div>
+                <CardTitle className="text-lg font-semibold transition-transform duration-300 group-hover:scale-[1.02] origin-left">
+                  Renouvellements récents
+                </CardTitle>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="relative space-y-3">
               {(() => {
                 const recentRenewals = clients
                   .map(client => {
@@ -1038,34 +1067,47 @@ export default function AgentDashboard() {
                   .slice(0, 5);
 
                 return recentRenewals.length > 0 ? (
-                  recentRenewals.map(renewal => (
+                  recentRenewals.map((renewal, index) => (
                     <div 
                       key={renewal.id}
-                      className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg"
+                      className="p-4 bg-gradient-to-r from-emerald-500/5 to-emerald-500/10 border border-emerald-500/20 rounded-xl hover:border-emerald-500/40 transition-all duration-300 hover:shadow-lg animate-fade-in group/item"
+                      style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'both' }}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
-                          <p className="font-medium text-sm">Client renouvelé</p>
-                          <p className="text-xs text-muted-foreground mt-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <p className="font-medium text-sm group-hover/item:text-emerald-600 dark:group-hover/item:text-emerald-400 transition-colors">
+                              Client renouvelé
+                            </p>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1.5 ml-4">
                             {renewal.daysSince === 0 ? "Aujourd'hui" : `Il y a ${renewal.daysSince} jour${renewal.daysSince > 1 ? 's' : ''}`}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground ml-4">
                             Agent: {getAgentName(renewal.client.agent_id)}
                           </p>
                         </div>
-                        <Badge variant="outline" className="bg-green-100 dark:bg-green-900">
+                        <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30 transition-colors">
                           +90 jours
                         </Badge>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p className="text-sm">Aucun renouvellement récent</p>
+                  <div className="text-center py-10 text-muted-foreground">
+                    <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-emerald-500/10 mb-4">
+                      <span className="text-2xl">🔄</span>
+                    </div>
+                    <p className="text-sm font-medium">Aucun renouvellement récent</p>
+                    <p className="text-xs text-muted-foreground mt-1">Les renouvellements des 30 derniers jours apparaîtront ici</p>
                   </div>
                 );
               })()}
             </CardContent>
+
+            {/* Shine effect */}
+            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
           </Card>
       </div>
     </main>
