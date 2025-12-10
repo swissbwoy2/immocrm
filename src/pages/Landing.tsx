@@ -73,10 +73,10 @@ export default function Landing() {
       <div id="quickform">
         <QuickLeadForm />
       </div>
+      <BudgetCalculatorSection />
       <DifferentiationSection />
       <HowItWorks />
       <GuaranteeSection />
-      <BudgetCalculatorSection />
       <BenefitsSection />
       <FAQSection />
       <CoverageSection />
