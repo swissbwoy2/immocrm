@@ -54,6 +54,7 @@ interface Profile {
   prenom: string;
   email: string;
   telephone?: string;
+  actif?: boolean;
 }
 
 interface Agent {
@@ -718,16 +719,25 @@ const Clients = () => {
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl" />
                 {/* Boutons d'actions - plus gros sur mobile */}
                 <div className="absolute top-2 right-2 flex gap-0.5 md:gap-1">
-                  {/* Bouton Renvoyer invitation */}
+                  {/* Bouton Envoyer/Renvoyer invitation */}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 md:h-8 md:w-8 text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
+                    className={cn(
+                      "h-7 w-7 md:h-8 md:w-8 transition-all",
+                      !profile.actif 
+                        ? "text-blue-600 hover:text-blue-700 hover:bg-blue-100 animate-pulse-soft" 
+                        : "text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
+                    )}
                     onClick={(e) => handleInviteClient(profile.email, client.id, e)}
                     disabled={invitingClientId === client.id}
-                    title="Renvoyer l'invitation"
+                    title={!profile.actif ? "Envoyer l'invitation (compte non activé)" : "Renvoyer l'invitation"}
                   >
-                    <Send className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    {invitingClientId === client.id ? (
+                      <div className="h-3.5 w-3.5 md:h-4 md:w-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    )}
                   </Button>
 
                   {/* Bouton Modifier */}
@@ -794,6 +804,12 @@ const Clients = () => {
                         {profile.prenom} {profile.nom}
                       </h3>
                       <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                       {!profile.actif && (
+                          <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30 text-[10px] animate-pulse-soft">
+                            <Mail className="w-2.5 h-2.5 mr-0.5" />
+                            Non activé
+                          </Badge>
+                        )}
                         {!client.agent_id && (
                           <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30 text-[10px] animate-pulse-soft">
                             Sans agent
