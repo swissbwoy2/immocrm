@@ -24,7 +24,7 @@ const comparisonData = [
   {
     aspect: "Accès aux biens",
     logisorama:
-      "Nous accédons aux biens hors marché grâce à notre Réseau Privilégié de régies partenaires et propriétaires en Suisse romande.",
+      "Commencer maintenant pour profiter de notre Réseau Privilégié de régies partenaires et propriétaires en Suisse romande.",
     solo: "Vous consultez uniquement les annonces publiques, déjà vues par des centaines de candidats.",
     icon: Search,
   },
