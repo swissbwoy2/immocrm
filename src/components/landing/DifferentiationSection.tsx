@@ -14,6 +14,7 @@ import {
   Sparkles,
   ArrowRight,
   Zap,
+  Crown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,61 +22,61 @@ import { Link } from "react-router-dom";
 
 const comparisonData = [
   {
-    aspect: "Recherche de biens",
-    logisorama: "Un agent dédié + nos outils surveillent en continu les annonces et opportunités en Suisse romande.",
-    solo: "Tu scrutes les sites un par un, dès que tu as du temps, en espérant ne rien rater.",
+    aspect: "Accès aux biens",
+    logisorama: "Nous accédons aux biens hors marché grâce à notre Réseau Privilégié de régies partenaires et propriétaires en Suisse romande.",
+    solo: "Vous consultez uniquement les annonces publiques, déjà vues par des centaines de candidats.",
     icon: Search,
   },
   {
-    aspect: "Accès au réseau",
+    aspect: "Réseau Privilégié",
     logisorama:
-      "On connaît des propriétaires et avons de bonnes relations avec de nombreuses régies, ce qui peut ouvrir des portes et crédibiliser ton dossier.",
-    solo: "Tu arrives comme un dossier parmi des dizaines d'autres, sans relation préalable ni quelqu'un pour te présenter.",
+      "Votre dossier bénéficie d'une recommandation directe auprès de nos contacts établis depuis 2019. Nous ouvrons des portes inaccessibles autrement.",
+    solo: "Votre candidature arrive anonyme, parmi des dizaines d'autres, sans introduction ni relation préalable.",
     icon: Users,
   },
   {
-    aspect: "Tri et sélection",
-    logisorama: "On filtre les annonces pour ne garder que celles réalistes pour ton budget, ton profil et tes délais.",
-    solo: "Tu candidatures à tout ce qui 'semble possible', sans savoir si ton dossier a vraiment une chance.",
+    aspect: "Sélection stratégique",
+    logisorama: "Nous identifions les opportunités réalistes selon votre profil, votre budget et vos délais. Chaque proposition est ciblée.",
+    solo: "Vous postulez sans visibilité sur vos chances réelles, perdant temps et énergie sur des biens inaccessibles.",
     icon: Filter,
   },
   {
-    aspect: "Organisation des visites",
+    aspect: "Coordination des visites",
     logisorama:
-      "On demande les visites, on regroupe les créneaux et on sait comment parler aux régies pour optimiser tes chances.",
-    solo: "Tu contactes chaque régie séparément, souvent trop tard, et tu dois te débrouiller seul pour obtenir un créneau.",
+      "Nous organisons les visites, optimisons les créneaux et savons comment présenter votre profil aux régies pour maximiser l'impact.",
+    solo: "Vous contactez chaque régie séparément, souvent trop tard, sans méthode ni stratégie.",
     icon: Calendar,
   },
   {
-    aspect: "Dossier locatif",
+    aspect: "Dossier professionnel",
     logisorama:
-      "On t'aide à constituer un dossier complet et pro, aligné avec les attentes des régies et des propriétaires de la région.",
-    solo: "Tu improvises ton dossier, tu ne sais pas toujours ce qui manque ou ce qui pose problème.",
+      "Nous constituons un dossier complet et irréprochable, aligné avec les standards des régies et propriétaires de la région.",
+    solo: "Vous improvisez votre dossier sans connaître les attentes réelles des décideurs.",
     icon: FileText,
   },
   {
-    aspect: "Suivi avec les régies",
+    aspect: "Suivi personnalisé",
     logisorama:
-      "On relance, on clarifie et on utilise notre relationnel pour obtenir des réponses quand c'est possible.",
-    solo: "Tu envoies ton dossier et tu attends… parfois sans jamais avoir de feedback.",
+      "Nous assurons un suivi proactif auprès des régies et utilisons notre relationnel pour obtenir des réponses et accélérer les décisions.",
+    solo: "Vous envoyez votre dossier et attendez, souvent sans aucun retour ni feedback.",
     icon: MessageSquare,
   },
   {
-    aspect: "Temps & charge mentale",
-    logisorama: "Tu délègues la chasse à une équipe qui connaît déjà le marché et les interlocuteurs.",
-    solo: "Tu passes ton temps à chercher, relancer et stresser, sans savoir si tu t'y prends 'comme il faut'.",
+    aspect: "Efficacité & sérénité",
+    logisorama: "Vous déléguez à une équipe expérimentée qui maîtrise le marché et les interlocuteurs clés.",
+    solo: "Vous gérez seul la recherche, les relances et le stress, sans certitude de bien faire.",
     icon: Brain,
   },
   {
-    aspect: "Visibilité sur l'avancement",
-    logisorama: "Tu as un mandat clair de 90 jours, un agent référent et un suivi structuré.",
-    solo: "Tu avances au feeling, sans cadre ni échéance.",
+    aspect: "Suivi structuré",
+    logisorama: "Mandat clair de 90 jours, conseiller dédié et reporting régulier sur l'avancement de votre recherche.",
+    solo: "Aucun cadre ni échéance. Vous avancez à l'aveugle sans visibilité sur les résultats.",
     icon: Eye,
   },
   {
-    aspect: "Garantie",
-    logisorama: "Si aucun bail n'est signé en 90 jours, la garantie de remboursement prévue au mandat s'applique.",
-    solo: "Aucun filet de sécurité : tout le risque repose sur toi.",
+    aspect: "Engagement de résultat",
+    logisorama: "Si aucun bail n'est signé en 90 jours, nous appliquons notre garantie de remboursement intégral.",
+    solo: "Aucun filet de sécurité. Tout le risque et l'investissement reposent sur vous.",
     icon: Shield,
   },
 ];
@@ -109,23 +110,23 @@ export function DifferentiationSection() {
             <div className="relative backdrop-blur-xl rounded-full px-6 py-3 border border-white/20 bg-white/5 shadow-2xl">
               <div className="flex items-center gap-2">
                 <div className="relative">
-                  <Scale className="h-5 w-5 text-primary" />
-                  <div className="absolute inset-0 bg-primary/50 blur-md" />
+                  <Crown className="h-5 w-5 text-amber-400" />
+                  <div className="absolute inset-0 bg-amber-400/50 blur-md" />
                 </div>
-                <span className="text-sm font-bold bg-gradient-to-r from-primary via-blue-400 to-violet-400 bg-clip-text text-transparent uppercase tracking-wider">
-                  Analyse comparative
+                <span className="text-sm font-bold bg-gradient-to-r from-amber-300 via-amber-400 to-amber-300 bg-clip-text text-transparent uppercase tracking-wider">
+                  Accès Privilégié
                 </span>
-                <Sparkles className="h-4 w-4 text-yellow-400 animate-pulse" />
+                <Sparkles className="h-4 w-4 text-amber-400 animate-pulse" />
               </div>
             </div>
           </div>
 
           <h2 className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight tracking-tight">
-            Avec Immo-rama.ch, tu ne te présentes
+            Avec nous, vous bénéficiez d'un
             <br />
             <span className="relative">
               <span className="bg-gradient-to-r from-primary via-blue-400 to-violet-400 bg-clip-text text-transparent">
-                pas seul face aux régies
+                Réseau Privilégié en Suisse romande
               </span>
               <svg
                 className="absolute -bottom-2 left-0 w-full"
@@ -152,9 +153,9 @@ export function DifferentiationSection() {
           </h2>
 
           <p className="text-lg md:text-xl text-slate-300 max-w-4xl mx-auto leading-relaxed">
-            Chercher un appart en Suisse romande peut se faire de deux façons : avec une équipe qui connaît
-            <span className="text-white font-semibold"> le terrain, les régies et les propriétaires</span>… ou en solo,
-            au milieu de centaines de candidatures anonymes.
+            Grâce à nos partenariats établis depuis 2019, nous accédons aux biens 
+            <span className="text-white font-semibold"> avant leur publication </span> 
+            et recommandons directement votre dossier aux décideurs.
           </p>
         </div>
 
@@ -172,14 +173,14 @@ export function DifferentiationSection() {
                 <div className="relative backdrop-blur-xl rounded-2xl p-6 bg-gradient-to-br from-primary/20 via-blue-500/10 to-violet-500/10 border border-white/20 shadow-2xl">
                   <div className="flex items-center justify-center gap-3 mb-2">
                     <div className="p-2 rounded-xl bg-white/10 backdrop-blur-sm">
-                      <Zap className="h-6 w-6 text-primary" />
+                      <Crown className="h-6 w-6 text-amber-400" />
                     </div>
                     <h3 className="text-xl font-black text-white">Avec Immo-rama.ch</h3>
                   </div>
-                  <p className="text-sm text-slate-300 text-center font-medium">Mandat de recherche locative</p>
+                  <p className="text-sm text-slate-300 text-center font-medium">Accès au Réseau Privilégié</p>
                   <div className="mt-3 flex justify-center">
-                    <span className="px-4 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/30">
-                      RECOMMANDÉ
+                    <span className="px-4 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-500/30">
+                      EXCLUSIF
                     </span>
                   </div>
                 </div>
@@ -191,9 +192,9 @@ export function DifferentiationSection() {
                   <div className="p-2 rounded-xl bg-white/5">
                     <X className="h-6 w-6 text-slate-500" />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-400">Toi, seul</h3>
+                  <h3 className="text-xl font-bold text-slate-400">Recherche autonome</h3>
                 </div>
-                <p className="text-sm text-slate-500 text-center">Recherche autonome - Sans accompagnement</p>
+                <p className="text-sm text-slate-500 text-center">Sans accompagnement professionnel</p>
               </div>
             </div>
 
@@ -280,7 +281,7 @@ export function DifferentiationSection() {
                         <X className="h-4 w-4 text-red-400" />
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-slate-500 mb-1">Toi, seul</p>
+                        <p className="text-xs font-medium text-slate-500 mb-1">Recherche autonome</p>
                         <p className="text-sm text-slate-500">{row.solo}</p>
                       </div>
                     </div>
@@ -317,10 +318,11 @@ export function DifferentiationSection() {
 
               <div className="relative">
                 <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-3 sm:mb-4">
-                  Tu vois la différence ?
+                  La différence est claire
                 </h3>
                 <p className="text-sm sm:text-base md:text-lg text-slate-300 mb-6 sm:mb-8 max-w-xl mx-auto leading-relaxed">
-                  Avec Immo-rama.ch, tu as une équipe entière qui se bat pour ton dossier et qui connaît déjà le marché.
+                  Avec Immo-rama.ch, vous bénéficiez d'un accès privilégié au marché locatif suisse romand 
+                  et d'une équipe expérimentée qui défend votre dossier.
                 </p>
 
                 <Link to="/nouveau-mandat">
@@ -329,14 +331,14 @@ export function DifferentiationSection() {
                     className="relative group/btn font-bold text-sm sm:text-base md:text-lg px-6 sm:px-10 py-5 sm:py-7 bg-gradient-to-r from-primary via-blue-500 to-violet-500 hover:from-primary/90 hover:via-blue-500/90 hover:to-violet-500/90 border-0 shadow-2xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-primary/50 w-full sm:w-auto"
                   >
                     <span className="relative z-10 flex items-center justify-center gap-2">
-                      Activer ma recherche
+                      Accéder au Réseau Privilégié
                       <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover/btn:translate-x-1 transition-transform" />
                     </span>
                   </Button>
                 </Link>
 
                 <p className="mt-4 sm:mt-6 text-xs sm:text-sm text-slate-400">
-                  90 jours de recherche garantie ou remboursé
+                  Engagement de 90 jours • Remboursement intégral garanti
                 </p>
               </div>
             </div>
@@ -344,7 +346,7 @@ export function DifferentiationSection() {
 
           {/* Credibility note */}
           <p className="mt-6 sm:mt-8 text-xs sm:text-sm text-slate-500 px-4">
-            * Basé sur plus de 500 mandats traités en Suisse romande depuis 2020
+            * Plus de 500 mandats confiés avec succès en Suisse romande depuis 2019
           </p>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Star, Home, CheckCircle, ShieldCheck, Users } from "lucide-react";
+import { ArrowRight, Sparkles, Star, Home, CheckCircle, ShieldCheck, Users, Crown } from "lucide-react";
 import logoImmoRama from "@/assets/logo-immo-rama-new.png";
 import { FloatingParticles } from "@/components/messaging/FloatingParticles";
 
@@ -74,9 +74,9 @@ export function HeroSection() {
             <div className="relative inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/50 rounded-full px-5 py-2.5 overflow-hidden group">
               {/* Shine effect */}
               <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-              <Star className="h-5 w-5 text-amber-500 fill-amber-500 animate-pulse" />
+              <Crown className="h-5 w-5 text-amber-500 animate-pulse" />
               <span className="text-sm md:text-base font-semibold text-amber-500 relative z-10">
-                N°1 en Suisse romande depuis 2019
+                Réseau Privilégié N°1 en Suisse romande
               </span>
             </div>
           </div>
@@ -94,40 +94,40 @@ export function HeroSection() {
             <img src={logoImmoRama} alt="Immo-Rama" className="h-24 md:h-32 w-auto drop-shadow-2xl relative z-10" />
           </div>
 
-          {/* Pain point headline */}
+          {/* Pain point headline - Professional & Confident */}
           <h1
             className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 animate-fade-in text-foreground"
             style={{ animationDelay: "100ms" }}
           >
-            Marre de postuler <span className="text-primary">dans le vide</span> ?
+            Accédez à un marché locatif <span className="text-primary">que les autres ne voient pas</span>
           </h1>
 
-          {/* Solution headline */}
+          {/* Solution headline - Exclusive Network */}
           <p
             className="text-xl md:text-2xl font-semibold mb-3 animate-fade-in text-foreground"
             style={{ animationDelay: "125ms" }}
           >
-            Délègue ta recherche à des{" "}
+            Notre{" "}
             <span className="gradient-text-animated bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text">
-              experts qui s'acharnent pour toi.
+              Réseau Privilégié vous ouvre les portes des biens hors marché.
             </span>
           </p>
 
-          {/* AI/Tech subtitle */}
+          {/* AI/Tech subtitle - Professional */}
           <p
             className="text-base md:text-lg text-primary font-medium mb-4 animate-fade-in"
             style={{ animationDelay: "140ms" }}
           >
-            🤖 Booste ta recherche de logement avec un agent dédié en Suisse romande.
+            Nous accédons aux opportunités exclusives grâce à notre réseau de régies partenaires et propriétaires en Suisse romande.
           </p>
 
-          {/* Empathic subheadline */}
+          {/* Empathic subheadline - Professional */}
           <p
             className="text-base md:text-lg text-muted-foreground mb-6 max-w-2xl animate-fade-in leading-relaxed"
             style={{ animationDelay: "150ms" }}
           >
-            Nos agents contactent les régies, préparent ton dossier béton et te trouvent{" "}
-            <strong className="text-foreground">enfin</strong> ton appartement.
+            Nos conseillers dédiés contactent directement les régies, préparent votre dossier aux standards professionnels 
+            et vous trouvent <strong className="text-foreground">enfin</strong> le bien qui vous correspond.
           </p>
 
           {/* Promise box - Premium with animated border */}
@@ -140,7 +140,7 @@ export function HeroSection() {
               <div className="flex items-center justify-center gap-2 md:gap-3 relative z-10">
                 <Home className="h-6 w-6 md:h-8 md:w-8 text-primary flex-shrink-0 animate-pulse" />
                 <span className="text-lg md:text-2xl font-bold text-foreground">
-                  Ton appart' en moins de 3 mois ou 100% remboursé !
+                  Votre bien en moins de 90 jours ou remboursement intégral
                 </span>
               </div>
             </div>
@@ -157,7 +157,7 @@ export function HeroSection() {
                 {/* Shine effect on button */}
                 <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                 <Sparkles className="mr-2 h-5 w-5 md:h-6 md:w-6 relative z-10" />
-                <span className="relative z-10">Activer ma recherche maintenant</span>
+                <span className="relative z-10">Activer ma recherche privilégiée</span>
                 <ArrowRight className="ml-2 h-5 w-5 md:h-6 md:w-6 group-hover:translate-x-2 transition-transform relative z-10" />
               </Link>
             </Button>
@@ -170,11 +170,11 @@ export function HeroSection() {
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                Acompte 100% remboursé en cas d'échec des recherches
+                Garantie remboursement intégral
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                Commission : 1 mois de loyer moins les 300 CHF d'acompte
+                Commission : 1 mois de loyer moins l'acompte
               </span>
             </div>
           </div>
@@ -182,7 +182,7 @@ export function HeroSection() {
           {/* Secondary CTA */}
           <div className="mt-6 animate-fade-in" style={{ animationDelay: "350ms" }}>
             <Button asChild variant="ghost" size="lg" className="text-muted-foreground hover:text-foreground">
-              <Link to="/login">Déjà client ? Se connecter</Link>
+              <Link to="/login">Déjà client ? Accéder à mon espace</Link>
             </Button>
           </div>
 
@@ -203,7 +203,7 @@ export function HeroSection() {
               <div className="inline-flex items-center gap-2 glass-morphism rounded-full px-4 py-2 border border-border/40">
                 <Users className="h-4 w-4 text-primary" />
                 <span className="text-sm text-muted-foreground">
-                  <span className="text-primary font-medium">+500 familles relogées</span> en Suisse romande
+                  <span className="text-primary font-medium">+500 familles accompagnées</span> avec succès
                 </span>
               </div>
             </div>
@@ -211,7 +211,7 @@ export function HeroSection() {
             {/* Legal mention */}
             <div className="mt-4 inline-flex items-center gap-2 text-xs text-muted-foreground">
               <ShieldCheck className="h-4 w-4 text-green-500" />
-              <span>🇨🇭Service légalement reconnu, 📑 mandat écrit, 👍transparence totale</span>
+              <span>🇨🇭 Service professionnel reconnu • Mandat écrit • Transparence totale</span>
             </div>
           </div>
         </div>

@@ -1,35 +1,35 @@
-import { User, MessageSquare, Eye, CalendarCheck, FileText, Gift, Sparkles } from 'lucide-react';
+import { User, MessageSquare, Eye, CalendarCheck, FileText, Gift, Sparkles, Crown } from 'lucide-react';
 
 const benefits = [
   {
     icon: User,
-    title: 'Un agent dédié rien que pour toi',
-    description: 'Il cherche pendant que tu vis ta vie. Fini les heures perdues à scroller.',
+    title: 'Un conseiller dédié à votre service',
+    description: 'Votre expert recherche activement pendant que vous poursuivez votre quotidien. Gagnez un temps précieux.',
   },
   {
     icon: MessageSquare,
-    title: 'Ton tableau de bord personnel',
-    description: 'Offres, visites, dossier – tout au même endroit, accessible 24h/24.',
+    title: 'Votre espace client personnel',
+    description: 'Offres, visites, dossier – tout centralisé et accessible 24h/24 depuis votre tableau de bord.',
   },
   {
     icon: Eye,
     title: 'Suivi transparent en temps réel',
-    description: 'Tu sais exactement où en sont tes candidatures. Plus d\'angoisse.',
+    description: 'Vous savez exactement où en sont vos candidatures. Une visibilité totale sur chaque étape.',
   },
   {
     icon: CalendarCheck,
-    title: 'Visites gérées pour toi',
-    description: 'Pas dispo ? On visite à ta place et on te fait un compte-rendu détaillé.',
+    title: 'Visites organisées pour vous',
+    description: 'Indisponible ? Nous visitons à votre place et vous fournissons un compte-rendu détaillé.',
   },
   {
     icon: FileText,
-    title: 'Dossier béton qui convainc',
-    description: 'Préparé par des pros pour maximiser tes chances face aux régies.',
+    title: 'Dossier professionnel et convaincant',
+    description: 'Préparé selon les standards des régies pour maximiser vos chances de sélection.',
   },
   {
-    icon: Gift,
-    title: 'Accès à notre réseau privé',
-    description: 'Des biens que tu ne trouveras pas sur les sites classiques. Notre secret.',
+    icon: Crown,
+    title: 'Accès exclusif au Réseau Privilégié',
+    description: 'Des biens hors marché accessibles uniquement via nos partenaires régies et propriétaires.',
   },
 ];
 
@@ -69,16 +69,16 @@ export function BenefitsSection() {
         <div className="text-center mb-10 md:mb-16 animate-fade-in">
           <div className="inline-flex items-center gap-2 relative group mb-4">
             <div className="relative bg-primary/10 rounded-full px-5 py-2.5 border border-primary/20">
-              <span className="text-primary font-semibold text-sm md:text-base">✅ Ce que tu obtiens</span>
+              <span className="text-primary font-semibold text-sm md:text-base">✓ Nos engagements</span>
             </div>
           </div>
           
           <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 md:mb-6">
-            Tout pour trouver ton appart'{' '}
-            <span className="text-primary">sans stress</span>
+            Un accompagnement d'excellence{' '}
+            <span className="text-primary">pour votre recherche</span>
           </h2>
           <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
-            Pendant que tu travailles, voyages ou profites de ta vie – on s'occupe de tout.
+            Pendant que vous poursuivez vos activités, notre équipe s'occupe de tout.
           </p>
         </div>
 
