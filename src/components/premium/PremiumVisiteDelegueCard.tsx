@@ -1,8 +1,8 @@
 import { Calendar, MapPin, Home, Square, Clock, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, differenceInDays, differenceInHours } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { differenceInDays, differenceInHours } from 'date-fns';
+import { toSwissTime, formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
 
 type CardVariant = 'pending' | 'confirmed' | 'refused';
 
@@ -64,7 +64,7 @@ export function PremiumVisiteDelegueCard({
   const getCountdown = () => {
     if (variant !== 'confirmed' || !visite.date_visite) return null;
     
-    const visitDate = new Date(visite.date_visite);
+    const visitDate = toSwissTime(visite.date_visite);
     const now = new Date();
     const daysLeft = differenceInDays(visitDate, now);
     const hoursLeft = differenceInHours(visitDate, now);
@@ -122,18 +122,18 @@ export function PremiumVisiteDelegueCard({
             
             {/* Date info */}
             <div className="flex items-center gap-3 mt-2 flex-wrap text-sm text-muted-foreground">
-              {variant === 'confirmed' && visite.date_visite ? (
+            {variant === 'confirmed' && visite.date_visite ? (
                 <>
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5" />
                     <span>
-                      {format(new Date(visite.date_visite), 'EEEE d MMMM', { locale: fr })}
+                      {formatSwissDate(visite.date_visite, 'EEEE d MMMM')}
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5" />
                     <span>
-                      {format(new Date(visite.date_visite), 'HH:mm', { locale: fr })}
+                      {formatSwissTime(visite.date_visite)}
                     </span>
                   </div>
                 </>
@@ -141,7 +141,7 @@ export function PremiumVisiteDelegueCard({
                 <div className="flex items-center gap-1.5">
                   <Calendar className="w-3.5 h-3.5" />
                   <span>
-                    Demandée le {format(new Date(visite.created_at), 'd MMM yyyy', { locale: fr })}
+                    Demandée le {formatSwissDate(visite.created_at, 'd MMM yyyy')}
                   </span>
                 </div>
               )}

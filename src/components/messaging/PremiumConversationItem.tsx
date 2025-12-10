@@ -1,8 +1,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { ChatAvatar } from './ChatAvatar';
-import { format, isToday, isYesterday } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { formatSwissMessageTime } from '@/lib/dateUtils';
 import { Archive, Sparkles } from 'lucide-react';
 
 interface PremiumConversationItemProps {
@@ -16,22 +15,6 @@ interface PremiumConversationItemProps {
   onClick?: () => void;
   index?: number;
 }
-
-const formatMessageTime = (dateString: string | null): string => {
-  if (!dateString) return '';
-  
-  const date = new Date(dateString);
-  
-  if (isToday(date)) {
-    return format(date, 'HH:mm', { locale: fr });
-  }
-  
-  if (isYesterday(date)) {
-    return 'Hier';
-  }
-  
-  return format(date, 'dd/MM/yyyy', { locale: fr });
-};
 
 export const PremiumConversationItem: React.FC<PremiumConversationItemProps> = ({
   name,
@@ -113,7 +96,7 @@ export const PremiumConversationItem: React.FC<PremiumConversationItemProps> = (
               "text-[10px] ml-2 shrink-0 transition-colors duration-200",
               unreadCount > 0 ? "text-primary font-bold" : "text-muted-foreground"
             )}>
-              {formatMessageTime(lastMessageTime)}
+              {formatSwissMessageTime(lastMessageTime)}
             </span>
           )}
         </div>

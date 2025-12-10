@@ -1,5 +1,5 @@
-import { format, differenceInDays, differenceInHours, isToday, isTomorrow } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { differenceInDays, differenceInHours, isToday, isTomorrow } from 'date-fns';
+import { toSwissTime, formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
 import { 
   Calendar, Clock, User, MapPin, CheckCircle, XCircle, Trash2,
   MessageSquare, AlertTriangle, ThumbsUp, ThumbsDown, Minus, Eye, Pencil,
@@ -94,7 +94,7 @@ export function PremiumAgentDayEvents({
 
   const getTimeRemaining = (dateVisite: string) => {
     const now = new Date();
-    const visiteDate = new Date(dateVisite);
+    const visiteDate = toSwissTime(dateVisite);
     const timeDiff = visiteDate.getTime() - now.getTime();
     
     if (timeDiff <= 0) {
@@ -121,7 +121,7 @@ export function PremiumAgentDayEvents({
     const groups = new Map<string, any[]>();
     
     visites.forEach(visite => {
-      const visiteDate = new Date(visite.date_visite);
+      const visiteDate = toSwissTime(visite.date_visite);
       const timeKey = `${visiteDate.getHours()}:${visiteDate.getMinutes()}`;
       const key = `${visite.adresse}-${timeKey}`;
       
@@ -188,7 +188,7 @@ export function PremiumAgentDayEvents({
             </div>
             <div>
               <h3 className="font-bold text-lg capitalize">
-                {format(date, 'EEEE d MMMM', { locale: fr })}
+                {formatSwissDate(date, 'EEEE d MMMM')}
               </h3>
               <p className="text-sm text-muted-foreground flex items-center gap-1.5">
                 {allItems.length === 0 ? (
@@ -233,7 +233,7 @@ export function PremiumAgentDayEvents({
                 if (item.type === 'visite-group') {
                   const group = item.data as any[];
                   const firstVisite = group[0];
-                  const eventDate = new Date(firstVisite.date_visite);
+                  const eventDate = toSwissTime(firstVisite.date_visite);
                   const timeInfo = getTimeRemaining(firstVisite.date_visite);
                   const allEffectuees = group.every(v => v.statut === 'effectuee');
                   const isPast = allEffectuees || new Date(firstVisite.date_visite) < new Date();
@@ -305,10 +305,10 @@ export function PremiumAgentDayEvents({
                             </div>
                             <div>
                               <p className="font-semibold text-sm">
-                                {format(eventDate, 'HH:mm')}
+                                {formatSwissTime(eventDate)}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {format(eventDate, "EEEE d MMMM", { locale: fr })}
+                                {formatSwissDate(eventDate, "EEEE d MMMM")}
                               </p>
                             </div>
                           </div>
@@ -551,7 +551,7 @@ export function PremiumAgentDayEvents({
                           {!data.all_day && (
                             <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                               <Clock className="h-4 w-4" />
-                              <span>{format(eventDate, 'HH:mm')}</span>
+                              <span>{formatSwissTime(eventDate)}</span>
                             </div>
                           )}
                           {data.description && (
