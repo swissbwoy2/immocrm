@@ -1,56 +1,66 @@
-import { CheckCircle, X, Scale, Shield, Search, Users, Filter, Calendar, FileText, MessageSquare, Brain, Eye, Sparkles, ArrowRight, Zap, Crown } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle, X, Shield, Search, Users, Filter, Calendar, FileText, MessageSquare, Brain, Eye, Sparkles, ArrowRight, Crown, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
-const comparisonData = [{
-  aspect: "Accès aux biens",
-  logisorama: "Profite de notre Réseau Privilégié : régies partenaires + proprios privés. Des biens que tu ne verras nulle part ailleurs.",
-  solo: "Tu vois que les annonces publiques, déjà consultées par des centaines de candidats.",
-  icon: Search
-}, {
-  aspect: "Réseau Privilégié",
-  logisorama: "Ton dossier est recommandé directement à nos contacts. On ouvre des portes que tu ne pourrais pas ouvrir seul.",
-  solo: "Ta candidature arrive anonyme, parmi des dizaines d'autres, sans introduction.",
-  icon: Users
-}, {
-  aspect: "Sélection stratégique",
-  logisorama: "On identifie les opportunités réalistes selon ton profil. Chaque proposition est ciblée pour maximiser tes chances.",
-  solo: "Tu postules sans savoir si tu as une chance, tu perds du temps sur des biens inaccessibles.",
+// Short comparison data - 4 key points
+const shortComparisonData = [{
+  aspect: "Tu visites moins, mais mieux",
+  logisorama: "On identifie les opportunités réalistes selon ton profil. Chaque proposition est ciblée.",
+  solo: "Tu postules sans savoir si tu as une chance.",
   icon: Filter
 }, {
-  aspect: "Coordination des visites",
-  logisorama: "On organise tout : créneaux optimisés, préparation du dossier, présentation de ton profil aux régies.",
-  solo: "Tu contactes chaque régie séparément, souvent trop tard, sans stratégie.",
-  icon: Calendar
+  aspect: "Ton dossier passe devant",
+  logisorama: "Ton dossier est recommandé directement à nos contacts régies.",
+  solo: "Ta candidature arrive anonyme parmi des dizaines.",
+  icon: Users
 }, {
-  aspect: "Dossier professionnel",
-  logisorama: "Un dossier complet et irréprochable, aligné avec les standards des régies. Tu te démarques.",
-  solo: "Tu improvises ton dossier sans connaître les attentes réelles des décideurs.",
-  icon: FileText
-}, {
-  aspect: "Suivi personnalisé",
-  logisorama: "On relance les régies, on utilise notre relationnel pour obtenir des réponses et accélérer les décisions.",
-  solo: "Tu envoies ton dossier et tu attends... souvent sans aucun retour.",
-  icon: MessageSquare
-}, {
-  aspect: "Efficacité & sérénité",
-  logisorama: "Tu délègues à une équipe qui connaît le marché et les interlocuteurs clés. Toi, tu respires.",
-  solo: "Tu gères seul la recherche, les relances et le stress. Épuisant.",
-  icon: Brain
-}, {
-  aspect: "Suivi structuré",
-  logisorama: "Mandat de 90 jours, conseiller dédié et reporting régulier. Tu sais toujours où tu en es.",
-  solo: "Aucun cadre ni échéance. Tu avances à l'aveugle.",
+  aspect: "Tu sais où tu en es",
+  logisorama: "Conseiller dédié et reporting régulier chaque semaine.",
+  solo: "Tu envoies et tu attends... souvent sans retour.",
   icon: Eye
 }, {
-  aspect: "Engagement de résultat",
-  logisorama: "Pas de bail signé en 90 jours ? On te rembourse intégralement. Zéro risque.",
-  solo: "Aucun filet de sécurité. Tout le risque repose sur toi.",
+  aspect: "Zéro risque",
+  logisorama: "Pas de bail en 90 jours ? Remboursement intégral.",
+  solo: "Tout le risque repose sur toi.",
   icon: Shield
 }];
 
+// Full comparison data for expanded view
+const fullComparisonData = [{
+  aspect: "Accès aux biens",
+  logisorama: "Profite de notre Réseau Privilégié : régies partenaires + proprios privés.",
+  solo: "Tu vois que les annonces publiques, déjà consultées par des centaines.",
+  icon: Search
+}, {
+  aspect: "Coordination des visites",
+  logisorama: "On organise tout : créneaux optimisés, préparation du dossier.",
+  solo: "Tu contactes chaque régie séparément, souvent trop tard.",
+  icon: Calendar
+}, {
+  aspect: "Dossier professionnel",
+  logisorama: "Un dossier complet, aligné avec les standards des régies.",
+  solo: "Tu improvises sans connaître les attentes des décideurs.",
+  icon: FileText
+}, {
+  aspect: "Suivi personnalisé",
+  logisorama: "On relance les régies pour obtenir des réponses rapides.",
+  solo: "Tu envoies et tu attends... souvent sans aucun retour.",
+  icon: MessageSquare
+}, {
+  aspect: "Efficacité & sérénité",
+  logisorama: "Tu délègues à une équipe expérimentée. Toi, tu respires.",
+  solo: "Tu gères seul la recherche et le stress. Épuisant.",
+  icon: Brain
+}];
+
 export function DifferentiationSection() {
+  const [showMore, setShowMore] = useState(false);
+  
+  // Display short data, optionally add full data when expanded
+  const displayData = showMore ? [...shortComparisonData, ...fullComparisonData] : shortComparisonData;
+  
   return <section className="py-24 md:py-32 relative overflow-hidden">
       {/* Premium animated background */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
@@ -70,7 +80,7 @@ export function DifferentiationSection() {
 
       <div className="container mx-auto px-4 relative z-10">
         {/* Section header */}
-        <div className="text-center mb-16 md:mb-20 animate-fade-in">
+        <div className="text-center mb-12 md:mb-16 animate-fade-in">
           {/* Premium badge */}
           <div className="inline-flex items-center gap-2 relative group mb-6">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/50 via-blue-500/50 to-violet-500/50 rounded-full blur-xl opacity-60 group-hover:opacity-100 transition-opacity" />
@@ -88,108 +98,82 @@ export function DifferentiationSection() {
             </div>
           </div>
 
-          <h2 className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight tracking-tight">
-            Avec nous, tu ne te présentes pas
-            <br />
-            <span className="relative">
-              <span className="bg-gradient-to-r from-primary via-blue-400 to-violet-400 bg-clip-text text-transparent">
-                seul face aux régies 💪
-              </span>
-              <svg className="absolute -bottom-2 left-0 w-full" height="8" viewBox="0 0 200 8" preserveAspectRatio="none">
-                <path d="M0,5 Q50,0 100,5 T200,5" stroke="url(#gradient)" strokeWidth="3" fill="none" className="animate-pulse" />
-                <defs>
-                  <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="hsl(var(--primary))" />
-                    <stop offset="50%" stopColor="#60a5fa" />
-                    <stop offset="100%" stopColor="#a78bfa" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </span>
+          <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-4 leading-tight tracking-tight">
+            Pourquoi ça marche mieux
+            <span className="bg-gradient-to-r from-primary via-blue-400 to-violet-400 bg-clip-text text-transparent"> avec nous</span> 💪
           </h2>
 
-          <p className="text-lg md:text-xl text-slate-300 max-w-4xl mx-auto leading-relaxed">
-            Grâce à notre réseau, on accède aux biens
-            <span className="text-white font-semibold"> avant tout le monde </span>
-            et on recommande ton dossier directement aux décideurs.
+          <p className="text-base md:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
+            4 différences clés qui changent tout
           </p>
         </div>
 
-        {/* Premium comparison table */}
+        {/* Comparison table */}
         <div className="max-w-5xl mx-auto">
           {/* Desktop table */}
           <div className="hidden md:block">
             {/* Headers */}
-            <div className="grid grid-cols-[1fr_1.5fr_1.5fr] gap-6 mb-8">
+            <div className="grid grid-cols-[1fr_1.5fr_1.5fr] gap-6 mb-6">
               <div className="p-4" />
 
               {/* Immo-rama header - Premium style */}
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-primary via-blue-500 to-violet-500 rounded-2xl blur-lg opacity-75 group-hover:opacity-100 transition-opacity" />
-                <div className="relative backdrop-blur-xl rounded-2xl p-6 bg-gradient-to-br from-primary/20 via-blue-500/10 to-violet-500/10 border border-white/20 shadow-2xl">
-                  <div className="flex items-center justify-center gap-3 mb-2">
+                <div className="relative backdrop-blur-xl rounded-2xl p-5 bg-gradient-to-br from-primary/20 via-blue-500/10 to-violet-500/10 border border-white/20 shadow-2xl">
+                  <div className="flex items-center justify-center gap-3">
                     <div className="p-2 rounded-xl bg-white/10 backdrop-blur-sm">
-                      <Crown className="h-6 w-6 text-amber-400" />
+                      <Crown className="h-5 w-5 text-amber-400" />
                     </div>
-                    <h3 className="text-xl font-black text-white">Avec Immo-rama.ch</h3>
-                  </div>
-                  <p className="text-sm text-slate-300 text-center font-medium">On te rend l'immobilier accessible</p>
-                  <div className="mt-3 flex justify-center">
-                    <span className="px-4 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-500/30">
-                      EXCLUSIF
-                    </span>
+                    <h3 className="text-lg font-black text-white">Avec Immo-rama.ch</h3>
                   </div>
                 </div>
               </div>
 
               {/* Solo header - Muted style */}
-              <div className="relative backdrop-blur-xl rounded-2xl p-6 bg-white/5 border border-white/10">
-                <div className="flex items-center justify-center gap-3 mb-2">
+              <div className="relative backdrop-blur-xl rounded-2xl p-5 bg-white/5 border border-white/10">
+                <div className="flex items-center justify-center gap-3">
                   <div className="p-2 rounded-xl bg-white/5">
-                    <X className="h-6 w-6 text-slate-500" />
+                    <X className="h-5 w-5 text-slate-500" />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-400">Recherche solo</h3>
+                  <h3 className="text-lg font-bold text-slate-400">Recherche solo</h3>
                 </div>
-                <p className="text-sm text-slate-500 text-center">Sans accompagnement</p>
               </div>
             </div>
 
             {/* Comparison rows */}
-            <div className="space-y-4">
-              {comparisonData.map((row, index) => <div key={index} className="grid grid-cols-[1fr_1.5fr_1.5fr] gap-6 animate-fade-in group" style={{
-              animationDelay: `${index * 80}ms`
+            <div className="space-y-3">
+              {displayData.map((row, index) => <div key={index} className="grid grid-cols-[1fr_1.5fr_1.5fr] gap-6 animate-fade-in group" style={{
+              animationDelay: `${index * 50}ms`
             }}>
                   {/* Aspect label */}
-                  <div className="flex items-center gap-4 p-4">
+                  <div className="flex items-center gap-3 p-3">
                     <div className="relative">
-                      <div className="absolute inset-0 bg-primary/30 rounded-xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity" />
-                      <div className="relative p-3 rounded-xl bg-gradient-to-br from-primary/20 to-blue-500/10 border border-white/10 backdrop-blur-sm group-hover:border-primary/30 transition-all">
-                        <row.icon className="h-5 w-5 text-primary" />
+                      <div className="relative p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-blue-500/10 border border-white/10 backdrop-blur-sm group-hover:border-primary/30 transition-all">
+                        <row.icon className="h-4 w-4 text-primary" />
                       </div>
                     </div>
-                    <span className="font-bold text-white group-hover:text-primary transition-colors">
+                    <span className="font-bold text-white group-hover:text-primary transition-colors text-sm">
                       {row.aspect}
                     </span>
                   </div>
 
-                  {/* Logisorama value - Premium */}
+                  {/* Logisorama value */}
                   <div className="relative group/card">
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/50 to-blue-500/50 rounded-xl opacity-0 group-hover/card:opacity-100 blur transition-opacity" />
-                    <div className="relative h-full backdrop-blur-xl rounded-xl p-5 bg-gradient-to-br from-primary/10 to-blue-500/5 border border-primary/20 group-hover/card:border-primary/40 transition-all shadow-lg shadow-primary/5">
-                      <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 p-1.5 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 shadow-lg shadow-green-500/30">
-                          <CheckCircle className="h-4 w-4 text-white" />
+                    <div className="relative h-full backdrop-blur-xl rounded-xl p-4 bg-gradient-to-br from-primary/10 to-blue-500/5 border border-primary/20 group-hover/card:border-primary/40 transition-all">
+                      <div className="flex items-start gap-2">
+                        <div className="flex-shrink-0 p-1 rounded-full bg-gradient-to-br from-green-500 to-emerald-500">
+                          <CheckCircle className="h-3.5 w-3.5 text-white" />
                         </div>
                         <span className="text-sm text-slate-200 leading-relaxed">{row.logisorama}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Solo value - Muted */}
-                  <div className="relative backdrop-blur-xl rounded-xl p-5 bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 p-1.5 rounded-full bg-red-500/20 border border-red-500/30">
-                        <X className="h-4 w-4 text-red-400" />
+                  {/* Solo value */}
+                  <div className="relative backdrop-blur-xl rounded-xl p-4 bg-white/[0.02] border border-white/5">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-shrink-0 p-1 rounded-full bg-red-500/20 border border-red-500/30">
+                        <X className="h-3.5 w-3.5 text-red-400" />
                       </div>
                       <span className="text-sm text-slate-500 leading-relaxed">{row.solo}</span>
                     </div>
@@ -198,49 +182,60 @@ export function DifferentiationSection() {
             </div>
           </div>
 
-          {/* Mobile cards - Premium */}
-          <div className="md:hidden space-y-6">
-            {comparisonData.map((row, index) => <div key={index} className="relative animate-fade-in group" style={{
-            animationDelay: `${index * 80}ms`
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-4">
+            {displayData.map((row, index) => <div key={index} className="relative animate-fade-in group" style={{
+            animationDelay: `${index * 50}ms`
           }}>
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/30 via-blue-500/30 to-violet-500/30 rounded-2xl blur-lg opacity-50 group-hover:opacity-100 transition-opacity" />
                 <Card className="relative backdrop-blur-xl bg-slate-900/90 border-white/10 overflow-hidden">
-                  <CardHeader className="pb-3 border-b border-white/5">
+                  <CardHeader className="pb-2 border-b border-white/5">
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-blue-500/10 border border-white/10">
-                        <row.icon className="h-5 w-5 text-primary" />
+                      <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-blue-500/10 border border-white/10">
+                        <row.icon className="h-4 w-4 text-primary" />
                       </div>
-                      <CardTitle className="text-lg text-white">{row.aspect}</CardTitle>
+                      <CardTitle className="text-base text-white">{row.aspect}</CardTitle>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-4 space-y-4">
+                  <CardContent className="pt-3 space-y-3">
                     {/* Premium option */}
-                    <div className="relative">
-                      <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-blue-500 rounded-xl blur-sm opacity-30" />
-                      <div className="relative flex items-start gap-3 p-4 rounded-xl bg-gradient-to-br from-primary/15 to-blue-500/10 border border-primary/30">
-                        <div className="flex-shrink-0 p-1.5 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 shadow-lg shadow-green-500/30">
-                          <CheckCircle className="h-4 w-4 text-white" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-primary mb-1">Avec Immo-rama.ch</p>
-                          <p className="text-sm text-slate-200">{row.logisorama}</p>
-                        </div>
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-gradient-to-br from-primary/15 to-blue-500/10 border border-primary/30">
+                      <div className="flex-shrink-0 p-1 rounded-full bg-gradient-to-br from-green-500 to-emerald-500">
+                        <CheckCircle className="h-3.5 w-3.5 text-white" />
                       </div>
+                      <p className="text-sm text-slate-200">{row.logisorama}</p>
                     </div>
 
                     {/* Solo option */}
-                    <div className="flex items-start gap-3 p-4 rounded-xl bg-white/[0.02] border border-white/5">
-                      <div className="flex-shrink-0 p-1.5 rounded-full bg-red-500/20 border border-red-500/30">
-                        <X className="h-4 w-4 text-red-400" />
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                      <div className="flex-shrink-0 p-1 rounded-full bg-red-500/20 border border-red-500/30">
+                        <X className="h-3.5 w-3.5 text-red-400" />
                       </div>
-                      <div>
-                        <p className="text-xs font-medium text-slate-500 mb-1">Recherche solo</p>
-                        <p className="text-sm text-slate-500">{row.solo}</p>
-                      </div>
+                      <p className="text-sm text-slate-500">{row.solo}</p>
                     </div>
                   </CardContent>
                 </Card>
               </div>)}
+          </div>
+          
+          {/* Toggle button */}
+          <div className="flex justify-center mt-8">
+            <Button
+              variant="ghost"
+              onClick={() => setShowMore(!showMore)}
+              className="text-slate-300 hover:text-white hover:bg-white/10 gap-2"
+            >
+              {showMore ? (
+                <>
+                  Voir moins
+                  <ChevronUp className="h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  Voir le comparatif complet
+                  <ChevronDown className="h-4 w-4" />
+                </>
+              )}
+            </Button>
           </div>
         </div>
 

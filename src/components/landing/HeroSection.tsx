@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Star, Home, CheckCircle, ShieldCheck, Users, Crown, DollarSign } from "lucide-react";
+import { ArrowRight, Sparkles, Star, Home, CheckCircle, ShieldCheck, Users, Crown } from "lucide-react";
 import logoImmoRama from "@/assets/logo-immo-rama-new.png";
 import { FloatingParticles } from "@/components/messaging/FloatingParticles";
 export function HeroSection() {
@@ -139,43 +139,49 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* Primary CTA - Premium with glow */}
+          {/* Primary CTA - Lower friction */}
           <div className="flex flex-col items-center gap-3 animate-fade-in" style={{
           animationDelay: "300ms"
         }}>
             <Button asChild size="lg" className="group text-base md:text-xl px-6 md:px-10 py-5 md:py-7 shadow-2xl hover:shadow-primary/40 transition-all duration-300 glow-breathe relative overflow-hidden bg-gradient-to-r from-primary to-primary/90">
-              <Link to="/nouveau-mandat">
+              <a href="#quickform">
                 {/* Shine effect on button */}
                 <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                 <Sparkles className="mr-2 h-5 w-5 md:h-6 md:w-6 relative z-10" />
-                <span className="relative z-10">Activer ma recherche </span>
+                <span className="relative z-10">Voir si on peut t'aider</span>
                 <ArrowRight className="ml-2 h-5 w-5 md:h-6 md:w-6 group-hover:translate-x-2 transition-transform relative z-10" />
-              </Link>
+              </a>
             </Button>
 
-            {/* Micro-copy trust signals */}
+            {/* Micro-copy trust signals - Lower friction */}
             <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 text-xs md:text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                Acompte d'activation 300 CHF
+                Sans engagement
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                Garantie remboursement intégral
+                Réponse sous 24h
               </span>
               <span className="flex items-center gap-1">
-                <DollarSign className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                Commission : 1 mois de loyer moins l'acompte
+                <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
+                Shortlist gratuite
               </span>
             </div>
           </div>
 
-          {/* Secondary CTA */}
-          <div className="mt-6 animate-fade-in" style={{
+          {/* Secondary CTA - Full commitment */}
+          <div className="mt-4 flex flex-col sm:flex-row items-center gap-3 animate-fade-in" style={{
           animationDelay: "350ms"
         }}>
-            <Button asChild variant="ghost" size="lg" className="text-muted-foreground hover:text-foreground">
-              <Link to="/login">Déjà client ? Accéder à mon espace</Link>
+            <Button asChild variant="outline" size="lg" className="border-primary/30 hover:bg-primary/10">
+              <Link to="/nouveau-mandat">
+                <span>Activer ma recherche (300 CHF)</span>
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
+              <Link to="/login">Déjà client ?</Link>
             </Button>
           </div>
 

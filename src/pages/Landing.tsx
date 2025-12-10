@@ -4,6 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { HeroSection } from '@/components/landing/HeroSection';
+import { SocialProofBar } from '@/components/landing/SocialProofBar';
+import { QuickLeadForm } from '@/components/landing/QuickLeadForm';
 import { BenefitsSection } from '@/components/landing/BenefitsSection';
 import { BudgetCalculatorSection } from '@/components/landing/BudgetCalculatorSection';
 import { GuaranteeSection } from '@/components/landing/GuaranteeSection';
@@ -64,16 +66,22 @@ export default function Landing() {
           </p>
         </div>
       </div>
+      
+      {/* OPTIMIZED SECTION ORDER */}
       <HeroSection />
+      <SocialProofBar />
+      <div id="quickform">
+        <QuickLeadForm />
+      </div>
       <DifferentiationSection />
-      <BudgetCalculatorSection />
       <HowItWorks />
-      <ProptechSection />
-      <BenefitsSection />
       <GuaranteeSection />
+      <BudgetCalculatorSection />
+      <BenefitsSection />
       <FAQSection />
       <CoverageSection />
       <StatsSection />
+      <ProptechSection />
       <EntreprisesRHSection />
       <ApporteurSection />
       <LandingFooter />

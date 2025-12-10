@@ -1402,6 +1402,39 @@ export type Database = {
         }
         Relationships: []
       }
+      leads: {
+        Row: {
+          budget: string | null
+          contacted: boolean | null
+          created_at: string | null
+          email: string
+          id: string
+          localite: string | null
+          notes: string | null
+          source: string | null
+        }
+        Insert: {
+          budget?: string | null
+          contacted?: boolean | null
+          created_at?: string | null
+          email: string
+          id?: string
+          localite?: string | null
+          notes?: string | null
+          source?: string | null
+        }
+        Update: {
+          budget?: string | null
+          contacted?: boolean | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          localite?: string | null
+          notes?: string | null
+          source?: string | null
+        }
+        Relationships: []
+      }
       link_previews: {
         Row: {
           created_at: string | null
