@@ -106,17 +106,18 @@ const Messagerie = () => {
   const [agentFullName, setAgentFullName] = useState<string>("");
 
   const scrollToBottom = useCallback((instant: boolean = false) => {
-    // Utiliser setTimeout pour s'assurer que le DOM est rendu après le chargement
-    setTimeout(() => {
-      const viewport = scrollViewportRef.current;
-      if (viewport) {
-        if (instant) {
-          viewport.scrollTop = viewport.scrollHeight;
-        } else {
-          viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
-        }
+    const viewport = scrollViewportRef.current;
+    if (viewport) {
+      const scrollHeight = viewport.scrollHeight;
+      const clientHeight = viewport.clientHeight;
+      const maxScroll = scrollHeight - clientHeight;
+      
+      if (instant) {
+        viewport.scrollTop = maxScroll;
+      } else {
+        viewport.scrollTo({ top: maxScroll, behavior: 'smooth' });
       }
-    }, 50);
+    }
   }, []);
 
   const scrollToTop = useCallback(() => {
@@ -204,22 +205,36 @@ const Messagerie = () => {
   // Auto-scroll to bottom when conversation changes (instant) or new messages (smooth)
   // useLayoutEffect ensures scroll happens before paint
   useLayoutEffect(() => {
-    if (isLoadingMessages) return;
+    if (isLoadingMessages || messages.length === 0) return;
     
-    if (messages.length > 0) {
-      const isNewConversation = prevConvRef.current !== selectedConv;
-      const isNewMessage = messages.length > prevMessagesLengthRef.current && !isNewConversation;
-      
-      if (isNewConversation) {
-        scrollToBottom(true); // instant for new conversation
-      } else if (isNewMessage) {
-        scrollToBottom(false); // smooth for new messages
-      }
-      
-      prevConvRef.current = selectedConv;
-      prevMessagesLengthRef.current = messages.length;
-    }
+    const isNewConversation = prevConvRef.current !== selectedConv;
+    const isNewMessage = messages.length > prevMessagesLengthRef.current && !isNewConversation;
+    
+    // Double requestAnimationFrame pour attendre le rendu complet
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (isNewConversation) {
+          scrollToBottom(true); // instant pour nouvelle conversation
+        } else if (isNewMessage) {
+          scrollToBottom(false); // smooth pour nouveaux messages
+        }
+      });
+    });
+    
+    prevConvRef.current = selectedConv;
+    prevMessagesLengthRef.current = messages.length;
   }, [selectedConv, messages.length, isLoadingMessages, scrollToBottom]);
+
+  // Force scroll to bottom when messages are first loaded
+  useEffect(() => {
+    if (!isLoadingMessages && messages.length > 0 && selectedConv) {
+      const timer = setTimeout(() => {
+        scrollToBottom(true);
+      }, 150);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isLoadingMessages, selectedConv, scrollToBottom]);
 
   useEffect(() => {
     if (!selectedConv) return;
@@ -1490,12 +1505,14 @@ const Messagerie = () => {
   );
 
   return (
-    <MessagingLayout
-      conversationsList={conversationsList}
-      chatView={chatView}
-      selectedConversation={selectedConv}
-      onSelectConversation={setSelectedConv}
-    />
+    <div className="h-[calc(100vh-56px)] lg:h-screen flex flex-col overflow-hidden">
+      <MessagingLayout
+        conversationsList={conversationsList}
+        chatView={chatView}
+        selectedConversation={selectedConv}
+        onSelectConversation={setSelectedConv}
+      />
+    </div>
   );
 };
 
