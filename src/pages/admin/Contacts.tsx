@@ -2,9 +2,11 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, Home, Briefcase, HardHat, UserCheck, Contact as ContactIcon, UserCog } from "lucide-react";
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
-import { ContactCard } from "@/components/contacts/ContactCard";
+import { PremiumKPICard } from "@/components/premium/PremiumKPICard";
+import { PremiumEmptyState } from "@/components/premium/PremiumEmptyState";
+import { PremiumContactCard } from "@/components/contacts/PremiumContactCard";
 import { ContactFormDialog } from "@/components/contacts/ContactFormDialog";
 import { ContactFilters, SortOption } from "@/components/contacts/ContactFilters";
 import { Contact, ContactType } from "@/components/contacts/contactTypes";
@@ -25,6 +27,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 interface Agent {
   id: string;
@@ -46,6 +58,7 @@ export default function AdminContacts() {
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [selectedAgentForCreate, setSelectedAgentForCreate] = useState<string>("");
+  const [agentSelectDialogOpen, setAgentSelectDialogOpen] = useState(false);
 
   // Delete state
   const [deleteContact, setDeleteContact] = useState<Contact | null>(null);
@@ -110,16 +123,26 @@ export default function AdminContacts() {
     return "Agent inconnu";
   };
 
+  // KPI stats
+  const stats = useMemo(() => {
+    return {
+      total: contacts.length,
+      proprietaires: contacts.filter((c) => c.contact_type === "proprietaire").length,
+      gerants: contacts.filter((c) => c.contact_type === "gerant_regie").length,
+      concierges: contacts.filter((c) => c.contact_type === "concierge").length,
+      clients: contacts.filter((c) => c.contact_type === "client_potentiel").length,
+      agentsCount: new Set(contacts.map((c) => c.agent_id)).size,
+    };
+  }, [contacts]);
+
   // Filtered and sorted contacts
   const filteredContacts = useMemo(() => {
     let result = [...contacts];
 
-    // Filter by agent
     if (agentFilter !== "all") {
       result = result.filter((c) => c.agent_id === agentFilter);
     }
 
-    // Filter by search
     if (search) {
       const searchLower = search.toLowerCase();
       result = result.filter(
@@ -132,17 +155,14 @@ export default function AdminContacts() {
       );
     }
 
-    // Filter by type
     if (typeFilter !== "all") {
       result = result.filter((c) => c.contact_type === typeFilter);
     }
 
-    // Filter favorites
     if (showFavoritesOnly) {
       result = result.filter((c) => c.is_favorite);
     }
 
-    // Sort
     result.sort((a, b) => {
       switch (sortBy) {
         case "nom_asc":
@@ -274,47 +294,108 @@ export default function AdminContacts() {
   const handleNewContact = () => {
     setEditingContact(null);
     setSelectedAgentForCreate("");
-    setFormOpen(true);
+    setAgentSelectDialogOpen(true);
   };
 
-  // Stats
-  const totalContacts = contacts.length;
-  const contactsByAgent = agents.map((agent) => ({
-    agent,
-    count: contacts.filter((c) => c.agent_id === agent.id).length,
-  }));
+  const handleAgentSelected = () => {
+    if (selectedAgentForCreate) {
+      setAgentSelectDialogOpen(false);
+      setFormOpen(true);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full">
       <PremiumPageHeader
         title="Tous les Contacts"
-        subtitle={`${totalContacts} contact${totalContacts > 1 ? "s" : ""} au total`}
+        subtitle="Vue globale des contacts de tous les agents"
         icon={Users}
         action={
-          <Button onClick={handleNewContact}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={handleNewContact} className="gap-2">
+            <Plus className="h-4 w-4" />
             Nouveau contact
           </Button>
         }
       />
 
-      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
-          <Select value={agentFilter} onValueChange={setAgentFilter}>
-            <SelectTrigger className="w-[220px]">
-              <SelectValue placeholder="Filtrer par agent" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les agents</SelectItem>
-              {agents.map((agent) => (
-                <SelectItem key={agent.id} value={agent.id}>
-                  {agent.profile
-                    ? `${agent.profile.prenom} ${agent.profile.nom}`
-                    : agent.id}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-6">
+        {/* KPIs */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <PremiumKPICard
+            title="Total"
+            value={stats.total}
+            icon={Users}
+            delay={0}
+          />
+          <PremiumKPICard
+            title="Agents actifs"
+            value={stats.agentsCount}
+            icon={UserCog}
+            delay={50}
+          />
+          <PremiumKPICard
+            title="Propriétaires"
+            value={stats.proprietaires}
+            icon={Home}
+            variant="success"
+            delay={100}
+          />
+          <PremiumKPICard
+            title="Gérants"
+            value={stats.gerants}
+            icon={Briefcase}
+            delay={150}
+          />
+          <PremiumKPICard
+            title="Concierges"
+            value={stats.concierges}
+            icon={HardHat}
+            variant="warning"
+            delay={200}
+          />
+          <PremiumKPICard
+            title="Clients potentiels"
+            value={stats.clients}
+            icon={UserCheck}
+            variant="danger"
+            delay={250}
+          />
+        </div>
+
+        {/* Agent filter + Filters */}
+        <div className="space-y-3">
+          <div className="relative overflow-hidden rounded-xl bg-card/60 backdrop-blur-xl border border-border/50 p-4 animate-fade-in">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+            <div className="relative flex items-center gap-3">
+              <UserCog className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Agent :</span>
+              <Select value={agentFilter} onValueChange={setAgentFilter}>
+                <SelectTrigger className="w-[220px] bg-background/50 border-border/50 hover:border-primary/50 transition-colors">
+                  <SelectValue placeholder="Filtrer par agent" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les agents</SelectItem>
+                  {agents.map((agent) => (
+                    <SelectItem key={agent.id} value={agent.id}>
+                      {agent.profile
+                        ? `${agent.profile.prenom} ${agent.profile.nom}`
+                        : agent.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {agentFilter !== "all" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAgentFilter("all")}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Réinitialiser
+                </Button>
+              )}
+            </div>
+          </div>
 
           <ContactFilters
             search={search}
@@ -328,38 +409,100 @@ export default function AdminContacts() {
           />
         </div>
 
+        {/* Content */}
         {loading ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Chargement...
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <Skeleton key={i} className="h-48 rounded-xl" />
+            ))}
           </div>
         ) : filteredContacts.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-lg font-medium">Aucun contact trouvé</p>
-            <p className="text-sm">
-              {search || typeFilter !== "all" || agentFilter !== "all"
-                ? "Essayez de modifier vos filtres"
-                : "Aucun contact n'a encore été créé"}
-            </p>
-          </div>
+          <PremiumEmptyState
+            icon={ContactIcon}
+            title="Aucun contact trouvé"
+            description={
+              search || typeFilter !== "all" || agentFilter !== "all" || showFavoritesOnly
+                ? "Essayez de modifier vos filtres de recherche"
+                : "Aucun contact n'a encore été créé par les agents"
+            }
+            action={
+              !search && typeFilter === "all" && agentFilter === "all" && !showFavoritesOnly && (
+                <Button onClick={handleNewContact} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Ajouter un contact
+                </Button>
+              )
+            }
+          />
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredContacts.map((contact) => (
-              <ContactCard
-                key={contact.id}
-                contact={contact}
-                onEdit={handleEdit}
-                onDelete={setDeleteContact}
-                onToggleFavorite={handleToggleFavorite}
-                showAgent
-                agentName={getAgentName(contact.agent_id)}
-              />
+            {filteredContacts.map((contact, index) => (
+              <div key={contact.id} className="relative">
+                <PremiumContactCard
+                  contact={contact}
+                  onEdit={handleEdit}
+                  onDelete={setDeleteContact}
+                  onToggleFavorite={handleToggleFavorite}
+                  delay={index * 30}
+                />
+                {/* Agent badge overlay */}
+                <div className="absolute top-2 right-12 px-2 py-0.5 text-[10px] font-medium rounded-full bg-muted/80 text-muted-foreground backdrop-blur-sm">
+                  {getAgentName(contact.agent_id)}
+                </div>
+              </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Dialog with agent selection for admin */}
+      {/* Agent selection dialog */}
+      <Dialog open={agentSelectDialogOpen} onOpenChange={setAgentSelectDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sélectionner l'agent</DialogTitle>
+            <DialogDescription>
+              Choisissez l'agent auquel ce contact sera associé
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Select
+              value={selectedAgentForCreate}
+              onValueChange={setSelectedAgentForCreate}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Choisir un agent" />
+              </SelectTrigger>
+              <SelectContent>
+                {agents.map((agent) => (
+                  <SelectItem key={agent.id} value={agent.id}>
+                    {agent.profile
+                      ? `${agent.profile.prenom} ${agent.profile.nom}`
+                      : agent.id}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setAgentSelectDialogOpen(false);
+                setSelectedAgentForCreate("");
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              disabled={!selectedAgentForCreate}
+              onClick={handleAgentSelected}
+            >
+              Continuer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <ContactFormDialog
         open={formOpen}
         onOpenChange={(open) => {
@@ -373,52 +516,6 @@ export default function AdminContacts() {
         contact={editingContact}
         isLoading={submitting}
       />
-
-      {/* Agent selection dialog for new contact */}
-      {formOpen && !editingContact && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-          <div className="bg-background p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Sélectionner l'agent</h3>
-            <Select
-              value={selectedAgentForCreate}
-              onValueChange={setSelectedAgentForCreate}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choisir un agent" />
-              </SelectTrigger>
-              <SelectContent>
-                {agents.map((agent) => (
-                  <SelectItem key={agent.id} value={agent.id}>
-                    {agent.profile
-                      ? `${agent.profile.prenom} ${agent.profile.nom}`
-                      : agent.id}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setFormOpen(false);
-                  setSelectedAgentForCreate("");
-                }}
-              >
-                Annuler
-              </Button>
-              <Button
-                disabled={!selectedAgentForCreate}
-                onClick={() => {
-                  // Keep the form open but close the agent selection
-                  // The form will use selectedAgentForCreate
-                }}
-              >
-                Continuer
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       <AlertDialog
         open={!!deleteContact}
