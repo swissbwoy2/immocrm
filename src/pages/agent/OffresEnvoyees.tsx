@@ -201,6 +201,7 @@ export default function OffresEnvoyees() {
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [offreToView, setOffreToView] = useState<any>(null);
+  const [pendingPostulations, setPendingPostulations] = useState<any[]>([]);
 
   useEffect(() => {
     loadData();
@@ -243,6 +244,24 @@ export default function OffresEnvoyees() {
         : { data: [] };
       
       setClients(clientsData || []);
+
+      // Charger les candidatures en demande de postulation pour cet agent
+      const { data: pendingCandidatures } = await supabase
+        .from('candidatures')
+        .select(`
+          id, 
+          statut, 
+          created_at, 
+          offre_id,
+          client_id,
+          offres!inner(id, adresse, prix, type_bien, agent_id),
+          clients!inner(id, user_id, profiles!clients_user_id_fkey(nom, prenom))
+        `)
+        .eq('statut', 'demande_postulation')
+        .eq('offres.agent_id', agentData.id)
+        .order('created_at', { ascending: false });
+
+      setPendingPostulations(pendingCandidatures || []);
     } catch (error) {
       console.error('Error loading offers:', error);
     } finally {
@@ -324,7 +343,8 @@ export default function OffresEnvoyees() {
 
   const stats = {
     total: offres.length,
-    enCours: offres.filter(o => ['interesse', 'visite_planifiee', 'visite_effectuee', 'candidature_deposee'].includes(o.statut)).length,
+    demandesEnAttente: pendingPostulations.length,
+    enCours: offres.filter(o => ['interesse', 'visite_planifiee', 'visite_effectuee', 'candidature_deposee', 'demande_postulation'].includes(o.statut)).length,
     acceptees: offres.filter(o => o.statut === 'acceptee').length,
     refusees: offres.filter(o => o.statut === 'refusee').length,
   };
@@ -504,6 +524,67 @@ export default function OffresEnvoyees() {
             </Card>
           ))}
         </div>
+
+        {/* Section Demandes de postulation en attente */}
+        {pendingPostulations.length > 0 && (
+          <Card className="border-orange-500/30 bg-gradient-to-br from-orange-50 to-amber-50/50 dark:from-orange-950/30 dark:to-amber-950/20">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="p-2 rounded-lg bg-orange-500/20">
+                  <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-orange-800 dark:text-orange-200">
+                    Demandes de postulation en attente
+                  </h3>
+                  <p className="text-xs text-orange-600/80 dark:text-orange-400/80">
+                    {pendingPostulations.length} client(s) souhaitent que vous déposiez leur dossier
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {pendingPostulations.map((candidature) => (
+                  <div 
+                    key={candidature.id} 
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-card/80 backdrop-blur-sm rounded-xl border border-orange-200/50 dark:border-orange-800/30 hover:shadow-md transition-all duration-200"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">
+                          {candidature.clients?.profiles?.prenom} {candidature.clients?.profiles?.nom}
+                        </p>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <MapPin className="h-3 w-3" />
+                          {candidature.offres?.adresse}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Demandé le {new Date(candidature.created_at).toLocaleDateString('fr-CH', { 
+                            day: 'numeric', 
+                            month: 'long', 
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      onClick={() => navigate(`/agent/deposer-candidature?offre_id=${candidature.offre_id}&client_id=${candidature.client_id}`)}
+                      className="gap-2 shadow-md hover:shadow-lg transition-all"
+                    >
+                      <Send className="h-4 w-4" />
+                      Déposer le dossier
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Filters */}
         <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
