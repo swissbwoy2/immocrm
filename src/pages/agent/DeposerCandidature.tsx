@@ -573,6 +573,12 @@ export default function DeposerCandidature() {
         if (!candidatureError) {
           successCount++;
           
+          // Mettre à jour le statut de l'offre à "candidature_deposee"
+          await supabase
+            .from('offres')
+            .update({ statut: 'candidature_deposee' })
+            .eq('id', selectedOffreId);
+          
           const client = clients.find(c => c.id === clientId);
           if (client) {
             await supabase.from('notifications').insert({

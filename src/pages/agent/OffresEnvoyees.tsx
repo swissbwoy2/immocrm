@@ -242,7 +242,16 @@ export default function OffresEnvoyees() {
     }
   };
 
+  // Statuts que l'agent ne peut pas définir manuellement (uniquement via workflow)
+  const PROTECTED_STATUTS = ['candidature_deposee'];
+
   const handleStatutChange = async (offreId: string, newStatut: string) => {
+    // Empêcher le changement manuel vers les statuts protégés
+    if (PROTECTED_STATUTS.includes(newStatut)) {
+      toast.error('Ce statut ne peut être atteint qu\'en déposant le dossier via "Déposer une candidature"');
+      return;
+    }
+    
     try {
       const { error } = await supabase
         .from('offres')
@@ -692,8 +701,13 @@ export default function OffresEnvoyees() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                            <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                          {Object.entries(STATUS_CONFIG)
+                            .filter(([key]) => !PROTECTED_STATUTS.includes(key) || offre.statut === key)
+                            .map(([key, config]) => (
+                              <SelectItem key={key} value={key} disabled={PROTECTED_STATUTS.includes(key)}>
+                                {config.label}
+                                {PROTECTED_STATUTS.includes(key) && ' (via dépôt dossier)'}
+                              </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
