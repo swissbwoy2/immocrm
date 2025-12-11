@@ -622,6 +622,7 @@ const OffresRecues = () => {
         date_visite: delegateDate,
         statut: 'planifiee',
         est_deleguee: true,
+        source: 'deleguee',
         notes: 'Visite déléguée à l\'agent par le client'
       });
 
@@ -1017,6 +1018,7 @@ const OffresRecues = () => {
           date_visite: selectedDate,
           adresse: selectedOffre.adresse,
           statut: 'planifiee',
+          source: 'planifiee_client',
           notes: 'Visite demandée par le client',
         });
 
