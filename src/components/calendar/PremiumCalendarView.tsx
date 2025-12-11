@@ -127,7 +127,7 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
 
   // Memoize events map for O(1) lookup
   const eventsMap = useMemo(() => {
-    const map = new Map<string, { type: string; event: any; isVisite: boolean; isDelegated?: boolean }[]>();
+    const map = new Map<string, { type: string; event: any; isVisite: boolean; isDelegated?: boolean; source?: string }[]>();
     
     // Add calendar events
     events.forEach((event) => {
@@ -145,12 +145,22 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
       const key = `${visite.adresse}-${visite.date_visite}`;
       const existingVisite = existing.find(e => e.isVisite && `${e.event.adresse}-${e.event.date_visite}` === key);
       
+      // Déterminer le type de visite selon la source
+      let visiteType = 'visite';
+      if (visite.est_deleguee || visite.source === 'deleguee') {
+        visiteType = 'visite_deleguee';
+      } else if (visite.source === 'proposee_agent') {
+        visiteType = 'visite_proposee';
+      }
+      // planifiee_client garde le type 'visite' (confirmée)
+      
       if (!existingVisite) {
         existing.push({ 
-          type: visite.est_deleguee ? 'visite_deleguee' : 'visite', 
+          type: visiteType, 
           event: { ...visite, groupedClients: [visite] },
           isVisite: true,
-          isDelegated: visite.est_deleguee 
+          isDelegated: visite.est_deleguee,
+          source: visite.source
         });
       } else {
         existingVisite.event.groupedClients.push(visite);
@@ -253,8 +263,9 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
         {/* Legend */}
         <div className="flex flex-wrap gap-3 md:gap-4 mt-6 pt-4 border-t border-border/50">
           {[
-            { type: 'visite', label: 'Visite', ring: false },
-            { type: 'visite_deleguee', label: 'Visite déléguée', ring: true },
+            { type: 'visite_proposee', label: 'Créneau proposé', ring: false },
+            { type: 'visite', label: 'Visite confirmée', ring: false },
+            { type: 'visite_deleguee', label: 'Déléguée (urgent)', ring: true },
             { type: 'signature', label: 'Signature', ring: false },
             { type: 'etat_lieux', label: 'État des lieux', ring: false },
             { type: 'rappel', label: 'Rappel', ring: false },
@@ -266,7 +277,7 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
               <div className={cn(
                 'w-3 h-3 rounded-md shadow-sm',
                 eventTypeCalendarColors[type],
-                ring && 'ring-2 ring-green-300'
+                ring && 'ring-2 ring-orange-300'
               )} />
               <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{label}</span>
             </div>

@@ -2305,6 +2305,7 @@ export type Database = {
           notes: string | null
           offre_id: string | null
           recommandation_agent: string | null
+          source: string | null
           statut: string | null
           updated_at: string | null
         }
@@ -2321,6 +2322,7 @@ export type Database = {
           notes?: string | null
           offre_id?: string | null
           recommandation_agent?: string | null
+          source?: string | null
           statut?: string | null
           updated_at?: string | null
         }
@@ -2337,6 +2339,7 @@ export type Database = {
           notes?: string | null
           offre_id?: string | null
           recommandation_agent?: string | null
+          source?: string | null
           statut?: string | null
           updated_at?: string | null
         }

@@ -238,10 +238,21 @@ export function PremiumDayEvents({
                     <div className="relative p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="outline" className="text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30">
-                              {eventTypeLabels.visite}
-                            </Badge>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {/* Badge de type de visite selon la source */}
+                            {firstVisite.est_deleguee || firstVisite.source === 'deleguee' ? (
+                              <Badge variant="outline" className="text-xs font-medium bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30 animate-pulse">
+                                🔥 DÉLÉGUÉE
+                              </Badge>
+                            ) : firstVisite.source === 'proposee_agent' ? (
+                              <Badge variant="outline" className="text-xs font-medium bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/30">
+                                ⏳ Créneau proposé
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30">
+                                ✅ Visite confirmée
+                              </Badge>
+                            )}
                             {group.length > 1 && (
                               <Badge variant="secondary" className="text-xs">
                                 <Users className="h-3 w-3 mr-1" />

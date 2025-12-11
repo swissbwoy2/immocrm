@@ -850,7 +850,8 @@ const Messagerie = () => {
         adresse: selectedOffre.adresse,
         date_visite: visitDate,
         statut: 'planifiee',
-        est_deleguee: false
+        est_deleguee: false,
+        source: 'planifiee_client'
       }).select().single();
 
       await supabase

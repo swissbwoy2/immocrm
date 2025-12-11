@@ -36,8 +36,9 @@ export const eventTypeColors: Record<string, string> = {
 
 // Couleurs pour le calendrier mensuel (badges compacts)
 export const eventTypeCalendarColors: Record<string, string> = {
-  visite: 'bg-blue-500',
-  visite_deleguee: 'bg-green-600 ring-2 ring-green-300',
+  visite: 'bg-blue-500',                               // Visite confirmée par client
+  visite_proposee: 'bg-gray-400',                      // Créneau proposé par agent (non confirmé)
+  visite_deleguee: 'bg-orange-500 ring-2 ring-orange-300', // Visite déléguée (URGENT)
   rappel: 'bg-amber-500',
   rendez_vous: 'bg-emerald-500',
   tache: 'bg-orange-500',
@@ -45,6 +46,13 @@ export const eventTypeCalendarColors: Record<string, string> = {
   signature: 'bg-emerald-600',
   etat_lieux: 'bg-cyan-500',
   autre: 'bg-gray-500',
+};
+
+// Labels pour les types de visites
+export const visiteSourceLabels: Record<string, string> = {
+  proposee_agent: '⏳ Créneau proposé',
+  planifiee_client: '✅ Confirmée',
+  deleguee: '🔥 Déléguée',
 };
 
 export const priorityColors: Record<string, string> = {
