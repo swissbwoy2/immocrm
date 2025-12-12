@@ -198,70 +198,62 @@ export function AgentBadges({ agentId, compact = false }: AgentBadgesProps) {
       </div>
       
       <CardContent className="relative">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {badges.map((badge, index) => (
-            <TooltipProvider key={badge.id}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div 
-                    className={cn(
-                      "relative group p-4 rounded-xl border bg-gradient-to-br flex flex-col items-center gap-3 cursor-pointer transition-all duration-300 hover:scale-105",
-                      badgeColors[badge.badge_type],
-                      badgeGlowColors[badge.badge_type],
-                      badge.badge_type === 'legend' && 'animate-pulse'
-                    )}
-                    style={{ 
-                      animationDelay: `${index * 50}ms`,
-                      animation: 'fade-in 0.5s ease-out forwards',
-                      opacity: 0
-                    }}
-                  >
-                    {/* Shine effect */}
-                    <div className="absolute inset-0 rounded-xl overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                    </div>
-                    
-                    {/* Legend special ring */}
-                    {badge.badge_type === 'legend' && (
-                      <div className="absolute inset-0 rounded-xl">
-                        <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/30 via-pink-500/30 to-purple-500/30 animate-spin" style={{ animationDuration: '4s' }} />
-                      </div>
-                    )}
-                    
-                    {/* Category emoji */}
-                    <div className="relative text-3xl filter drop-shadow-lg">
-                      {categoryEmojis[badge.badge_category]}
-                    </div>
-                    
-                    {/* Badge icon */}
-                    <div className="relative p-2 rounded-lg bg-background/30 backdrop-blur-sm border border-white/10">
-                      {badgeIcons[badge.badge_type]}
-                    </div>
-                    
-                    {/* Title */}
-                    <span className="relative text-xs font-medium text-center line-clamp-2">
-                      {badge.title}
-                    </span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent 
-                  side="bottom" 
-                  className="max-w-xs bg-card/95 backdrop-blur-xl border-border/50 shadow-xl"
-                >
-                  <div className="flex items-start gap-2">
-                    <span className="text-2xl">{categoryEmojis[badge.badge_category]}</span>
-                    <div>
-                      <p className="font-semibold">{badge.title}</p>
-                      <p className="text-sm text-muted-foreground">{badge.description}</p>
-                      <p className="text-xs text-muted-foreground/70 mt-2 flex items-center gap-1">
-                        <Sparkles className="h-3 w-3" />
-                        Obtenu le {format(new Date(badge.earned_at), 'd MMMM yyyy', { locale: fr })}
-                      </p>
-                    </div>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <div 
+              key={badge.id}
+              className={cn(
+                "relative group p-4 rounded-xl border bg-gradient-to-br flex flex-col items-center gap-3 transition-all duration-300 hover:scale-[1.02]",
+                badgeColors[badge.badge_type],
+                badgeGlowColors[badge.badge_type],
+                badge.badge_type === 'legend' && 'animate-pulse'
+              )}
+              style={{ 
+                animationDelay: `${index * 50}ms`,
+                animation: 'fade-in 0.5s ease-out forwards',
+                opacity: 0
+              }}
+            >
+              {/* Shine effect */}
+              <div className="absolute inset-0 rounded-xl overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+              </div>
+              
+              {/* Legend special ring */}
+              {badge.badge_type === 'legend' && (
+                <div className="absolute inset-0 rounded-xl">
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-purple-500/30 via-pink-500/30 to-purple-500/30 animate-spin" style={{ animationDuration: '4s' }} />
+                </div>
+              )}
+              
+              <div className="flex items-center gap-3 w-full">
+                {/* Category emoji */}
+                <div className="relative text-2xl filter drop-shadow-lg shrink-0">
+                  {categoryEmojis[badge.badge_category]}
+                </div>
+                
+                {/* Badge icon */}
+                <div className="relative p-2 rounded-lg bg-background/30 backdrop-blur-sm border border-white/10 shrink-0">
+                  {badgeIcons[badge.badge_type]}
+                </div>
+                
+                {/* Title */}
+                <span className="relative text-sm font-semibold flex-1">
+                  {badge.title}
+                </span>
+              </div>
+              
+              {/* Description */}
+              <p className="relative text-xs text-center opacity-80 leading-relaxed">
+                {badge.description}
+              </p>
+              
+              {/* Date */}
+              <p className="relative text-xs opacity-60 flex items-center gap-1 mt-auto">
+                <Sparkles className="h-3 w-3" />
+                {format(new Date(badge.earned_at), 'd MMM yyyy', { locale: fr })}
+              </p>
+            </div>
           ))}
         </div>
       </CardContent>
