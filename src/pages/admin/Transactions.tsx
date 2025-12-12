@@ -2,9 +2,22 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingUp, Calendar } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DollarSign, TrendingUp, Calendar, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const Transactions = () => {
   const navigate = useNavigate();
@@ -24,7 +37,6 @@ const Transactions = () => {
 
   const loadTransactions = async () => {
     try {
-      // Récupérer toutes les transactions avec les relations via foreign keys explicites
       const { data: transactionsData, error: transError } = await supabase
         .from('transactions')
         .select('*, clients!fk_transactions_client(user_id), agents!fk_transactions_agent(user_id)')
@@ -36,7 +48,6 @@ const Transactions = () => {
       
       setTransactions(transactionsData || []);
 
-      // Récupérer tous les profils nécessaires
       if (transactionsData && transactionsData.length > 0) {
         const userIds = new Set<string>();
         transactionsData.forEach((t: any) => {
@@ -60,6 +71,23 @@ const Transactions = () => {
       console.error('Erreur chargement transactions:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteTransaction = async (transactionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', transactionId);
+      
+      if (error) throw error;
+      
+      toast.success('Transaction supprimée avec succès');
+      loadTransactions();
+    } catch (error) {
+      console.error('Erreur suppression:', error);
+      toast.error('Erreur lors de la suppression');
     }
   };
 
@@ -150,16 +178,48 @@ const Transactions = () => {
                           <p className="text-sm text-muted-foreground">
                             Agent: {getAgentName(transaction)}
                           </p>
+                          {transaction.adresse && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {transaction.adresse}
+                            </p>
+                          )}
                         </div>
-                        <Badge variant={
-                          transaction.statut === 'conclue' ? 'default' : 
-                          transaction.statut === 'en_cours' ? 'secondary' : 
-                          'destructive'
-                        }>
-                          {transaction.statut === 'conclue' ? 'Conclue' : 
-                           transaction.statut === 'en_cours' ? 'En cours' : 
-                           'Annulée'}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={
+                            transaction.statut === 'conclue' ? 'default' : 
+                            transaction.statut === 'en_cours' ? 'secondary' : 
+                            'destructive'
+                          }>
+                            {transaction.statut === 'conclue' ? 'Conclue' : 
+                             transaction.statut === 'en_cours' ? 'En cours' : 
+                             'Annulée'}
+                          </Badge>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Supprimer cette transaction ?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Cette action est irréversible. La transaction de <strong>{getClientName(transaction)}</strong> 
+                                  {transaction.adresse && <> ({transaction.adresse})</>} pour un montant de <strong>CHF {transaction.commission_totale?.toLocaleString()}</strong> sera définitivement supprimée.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteTransaction(transaction.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Supprimer
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 md:gap-4 pt-4 border-t">
