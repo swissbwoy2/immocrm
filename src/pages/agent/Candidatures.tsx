@@ -11,7 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { 
   FileCheck, User, MapPin, Calendar, Search, Eye, CheckCircle, XCircle, Clock,
   Filter, Building2, FileSignature, CalendarCheck, Key, Send, AlertTriangle,
-  ChevronDown, ChevronUp, FastForward, Phone, Trash2
+  ChevronDown, ChevronUp, FastForward, Phone, Trash2, Home, Sparkles
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,6 +22,8 @@ import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTim
 import { SendDossierDialog } from '@/components/SendDossierDialog';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
+import { PremiumCandidatureDetails } from '@/components/premium/PremiumCandidatureDetails';
+import { cn } from '@/lib/utils';
 
 const WORKFLOW_STATUTS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   'candidature_deposee': { label: 'Candidature reçue', color: 'outline', icon: <FileCheck className="h-4 w-4" /> },
@@ -403,207 +405,66 @@ export default function Candidatures() {
     );
   }
 
+  const getStatutStyles = (statut: string) => {
+    const styles: Record<string, { border: string; glow: string; badge: string }> = {
+      cles_remises: {
+        border: 'border-emerald-500/50',
+        glow: 'shadow-emerald-500/20 shadow-lg',
+        badge: 'bg-gradient-to-r from-emerald-500/20 to-green-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+      },
+      acceptee: {
+        border: 'border-blue-500/50',
+        glow: 'shadow-blue-500/10',
+        badge: 'bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30',
+      },
+      refusee: {
+        border: 'border-destructive/50',
+        glow: 'shadow-destructive/10',
+        badge: 'bg-gradient-to-r from-red-500/20 to-rose-500/20 text-red-700 dark:text-red-300 border-red-500/30',
+      },
+      bail_recu: {
+        border: 'border-violet-500/50',
+        glow: 'shadow-violet-500/10',
+        badge: 'bg-gradient-to-r from-violet-500/20 to-purple-500/20 text-violet-700 dark:text-violet-300 border-violet-500/30',
+      },
+    };
+    return styles[statut] || { border: 'border-border/50', glow: '', badge: '' };
+  };
+
   const renderExpandedActions = (candidature: Candidature, profile: Profile | null) => {
     return (
-      <div className="space-y-4 pt-4 border-t">
-        {/* Timeline */}
-        <CandidatureWorkflowTimeline currentStatut={candidature.statut} />
-
-        {/* Detailed info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div className="space-y-2">
-            <h4 className="font-semibold">Informations client</h4>
-            <p><span className="text-muted-foreground">Email:</span> {profile?.email || 'N/A'}</p>
-            {profile?.telephone && (
-              <p className="flex items-center gap-2">
-                <span className="text-muted-foreground">Tél:</span> 
-                <a href={`tel:${profile.telephone}`} className="text-primary hover:underline flex items-center gap-1">
-                  <Phone className="h-3 w-3" />{profile.telephone}
-                </a>
-              </p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <h4 className="font-semibold">Dates importantes</h4>
-            <p><span className="text-muted-foreground">Dépôt:</span> {format(new Date(candidature.date_depot || candidature.created_at), 'dd/MM/yyyy', { locale: fr })}</p>
-            {candidature.client_accepte_conclure_at && (
-              <p><span className="text-muted-foreground">Confirmation client:</span> {format(new Date(candidature.client_accepte_conclure_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
-            )}
-            {candidature.date_signature_choisie && (
-              <p><span className="text-muted-foreground">Signature prévue:</span> {format(new Date(candidature.date_signature_choisie), 'dd/MM/yyyy HH:mm', { locale: fr })}</p>
-            )}
-            {candidature.date_etat_lieux && (
-              <p><span className="text-muted-foreground">État des lieux:</span> {format(new Date(candidature.date_etat_lieux), 'dd/MM/yyyy', { locale: fr })} {candidature.heure_etat_lieux}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Actions section */}
-        <div className="space-y-3">
-          <h4 className="font-semibold">Actions disponibles</h4>
-          
-          <div className="flex flex-wrap gap-2">
-            {/* Candidature reçue - Agent doit envoyer le dossier */}
-            {candidature.statut === 'candidature_deposee' && (
-              <>
-                <div className="w-full flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-md text-sm border border-blue-200 dark:border-blue-800 mb-2">
-                  <FileCheck className="h-4 w-4 shrink-0" />
-                  <span>Le client souhaite postuler à ce bien. Vérifiez son dossier et envoyez-le à la régie.</span>
-                </div>
-                <Button 
-                  size="sm" 
-                  className="bg-primary hover:bg-primary/90" 
-                  onClick={async () => {
-                    // Load offre for this candidature
-                    if (candidature.offres) {
-                      setClientOffres([{
-                        id: candidature.offre_id,
-                        adresse: candidature.offres.adresse,
-                        prix: candidature.offres.prix,
-                        pieces: candidature.offres.pieces,
-                      }]);
-                    }
-                    setSelectedCandidatureForSend(candidature);
-                    setShowSendDossierDialog(true);
-                  }}
-                >
-                  <Send className="h-4 w-4 mr-1" />Envoyer le dossier à la régie
-                </Button>
-                <Button size="sm" variant="destructive" onClick={() => handleStatutChange(candidature.id, 'refusee')}>
-                  <XCircle className="h-4 w-4 mr-1" />Refuser
-                </Button>
-              </>
-            )}
-
-            {/* En attente (dossier envoyé) */}
-            {candidature.statut === 'en_attente' && (
-              <>
-                <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleStatutChange(candidature.id, 'acceptee')}>
-                  <CheckCircle className="h-4 w-4 mr-1" />Accepter
-                </Button>
-                <Button size="sm" variant="destructive" onClick={() => handleStatutChange(candidature.id, 'refusee')}>
-                  <XCircle className="h-4 w-4 mr-1" />Refuser
-                </Button>
-              </>
-            )}
-
-            {/* Acceptée - waiting for client */}
-            {candidature.statut === 'acceptee' && (
-              <>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300 rounded-md text-sm border border-amber-200 dark:border-amber-800">
-                  <Clock className="h-4 w-4" />
-                  <span>En attente du client (Conclure le bail)</span>
-                </div>
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="border-orange-500 text-orange-600 hover:bg-orange-50"
-                  onClick={() => handleForceProgression(candidature, 'bail_conclu', 'Conclure pour le client')}
-                >
-                  <FastForward className="h-4 w-4 mr-1" />Forcer progression
-                </Button>
-              </>
-            )}
-
-            {/* Bail conclu */}
-            {candidature.statut === 'bail_conclu' && (
-              <Button size="sm" onClick={() => handleStatutChange(candidature.id, 'attente_bail', { agent_valide_regie: true, agent_valide_regie_at: new Date().toISOString() })}>
-                <Building2 className="h-4 w-4 mr-1" />Valider auprès de la régie
-              </Button>
-            )}
-
-            {/* Attente bail */}
-            {candidature.statut === 'attente_bail' && (
-              <Button size="sm" onClick={() => { setSelectedCandidature(candidature); setShowDatesDialog(true); }}>
-                <FileCheck className="h-4 w-4 mr-1" />Bail reçu - Proposer dates
-              </Button>
-            )}
-
-            {/* Bail reçu - waiting for client */}
-            {candidature.statut === 'bail_recu' && (
-              <>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-md text-sm border border-blue-200 dark:border-blue-800">
-                  <Clock className="h-4 w-4" />
-                  <span>En attente du client (Choix date signature)</span>
-                </div>
-                {candidature.dates_signature_proposees && (
-                  <div className="w-full text-sm text-muted-foreground">
-                    <p className="font-medium mb-1">Dates proposées:</p>
-                    <ul className="list-disc list-inside">
-                      {(candidature.dates_signature_proposees as any[]).map((d: any, i: number) => (
-                        <li key={i}>{format(new Date(d.date), 'EEEE dd MMMM yyyy HH:mm', { locale: fr })}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <Button 
-                  size="sm" 
-                  variant="outline" 
-                  className="border-orange-500 text-orange-600 hover:bg-orange-50"
-                  onClick={() => handleForceProgression(candidature, 'signature_planifiee', 'Confirmer date pour le client')}
-                >
-                  <FastForward className="h-4 w-4 mr-1" />Forcer progression
-                </Button>
-              </>
-            )}
-
-            {/* Signature planifiée */}
-            {candidature.statut === 'signature_planifiee' && (
-              <Button size="sm" onClick={() => handleStatutChange(candidature.id, 'signature_effectuee', { signature_effectuee: true, signature_effectuee_at: new Date().toISOString() })}>
-                <FileSignature className="h-4 w-4 mr-1" />Marquer bail signé
-              </Button>
-            )}
-
-            {/* Signature effectuée */}
-            {candidature.statut === 'signature_effectuee' && (
-              <Button size="sm" onClick={() => { setSelectedCandidature(candidature); setShowEtatLieuxDialog(true); }}>
-                <Calendar className="h-4 w-4 mr-1" />Fixer état des lieux
-              </Button>
-            )}
-
-            {/* État des lieux fixé */}
-            {candidature.statut === 'etat_lieux_fixe' && (
-              <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={() => handleClesRemises(candidature.id)}>
-                <Key className="h-4 w-4 mr-1" />Clés remises
-              </Button>
-            )}
-
-            {/* Clés remises */}
-            {candidature.statut === 'cles_remises' && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 rounded-md text-sm border border-green-200 dark:border-green-800">
-                <CheckCircle className="h-4 w-4" />
-                <span>✅ Terminé - Dossier complet</span>
-              </div>
-            )}
-
-            {/* Refusée */}
-            {candidature.statut === 'refusee' && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 rounded-md text-sm border border-red-200 dark:border-red-800">
-                <XCircle className="h-4 w-4" />
-                <span>Candidature refusée</span>
-              </div>
-            )}
-
-            {/* View client button always visible */}
-            <Button size="sm" variant="outline" onClick={() => navigate(`/agent/clients/${candidature.client_id}`)}>
-              <Eye className="h-4 w-4 mr-1" />Voir fiche client
-            </Button>
-
-            {/* Delete button */}
-            <Button 
-              size="sm" 
-              variant="destructive" 
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                setSelectedCandidature(candidature); 
-                setShowDeleteDialog(true); 
-              }}
-            >
-              <Trash2 className="h-4 w-4 mr-1" />Supprimer
-            </Button>
-          </div>
-        </div>
-      </div>
+      <PremiumCandidatureDetails
+        candidature={candidature}
+        profile={profile}
+        onNavigateToClient={() => navigate(`/agent/clients/${candidature.client_id}`)}
+        onDelete={() => {
+          setSelectedCandidature(candidature);
+          setShowDeleteDialog(true);
+        }}
+        onStatutChange={handleStatutChange}
+        onSendDossier={() => {
+          if (candidature.offres) {
+            setClientOffres([{
+              id: candidature.offre_id,
+              adresse: candidature.offres.adresse,
+              prix: candidature.offres.prix,
+              pieces: candidature.offres.pieces,
+            }]);
+          }
+          setSelectedCandidatureForSend(candidature);
+          setShowSendDossierDialog(true);
+        }}
+        onProposeDates={() => {
+          setSelectedCandidature(candidature);
+          setShowDatesDialog(true);
+        }}
+        onSetEtatLieux={() => {
+          setSelectedCandidature(candidature);
+          setShowEtatLieuxDialog(true);
+        }}
+        onForceProgression={(targetStatut, label) => handleForceProgression(candidature, targetStatut, label)}
+        workflowTimeline={<CandidatureWorkflowTimeline currentStatut={candidature.statut} />}
+      />
     );
   };
 
@@ -627,105 +488,158 @@ export default function Candidatures() {
           <PremiumKPICard title="Refusées" value={stats.refusee} icon={XCircle} variant="danger" delay={250} />
         </div>
 
-        {/* Filters */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
-                </div>
-              </div>
-              <div className="w-full sm:w-56">
-                <Select value={filterStatut} onValueChange={setFilterStatut}>
-                  <SelectTrigger><Filter className="h-4 w-4 mr-2" /><SelectValue placeholder="Filtrer" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous les statuts</SelectItem>
-                    {Object.entries(WORKFLOW_STATUTS).map(([key, val]) => (
-                      <SelectItem key={key} value={key}>{val.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+        {/* Premium Filters */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-card/95 to-card/80 backdrop-blur-sm border border-border/50 p-4 md:p-5">
+          {/* Shine effect */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/3 to-transparent" />
+          
+          <div className="relative flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                <Input 
+                  placeholder="Rechercher par nom ou adresse..." 
+                  value={searchTerm} 
+                  onChange={(e) => setSearchTerm(e.target.value)} 
+                  className="pl-11 h-12 rounded-xl bg-background/50 border-border/50 focus:border-primary/50 transition-all" 
+                />
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="w-full sm:w-64">
+              <Select value={filterStatut} onValueChange={setFilterStatut}>
+                <SelectTrigger className="h-12 rounded-xl bg-background/50 border-border/50">
+                  <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <SelectValue placeholder="Filtrer par statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les statuts</SelectItem>
+                  {Object.entries(WORKFLOW_STATUTS).map(([key, val]) => (
+                    <SelectItem key={key} value={key}>{val.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
 
         {/* Candidatures list */}
         {filteredCandidatures.length > 0 ? (
           <div className="space-y-4">
-            {filteredCandidatures.map(candidature => {
+            {filteredCandidatures.map((candidature, index) => {
               const profile = candidature.clients?.user_id ? profiles.get(candidature.clients.user_id) : null;
               const clientName = profile ? `${profile.prenom} ${profile.nom}` : 'Client inconnu';
               const isExpanded = expandedCards.has(candidature.id);
+              const styles = getStatutStyles(candidature.statut);
+              const isSpecialStatus = ['cles_remises', 'acceptee'].includes(candidature.statut);
 
               return (
                 <Collapsible key={candidature.id} open={isExpanded} onOpenChange={() => toggleCard(candidature.id)}>
-                  <Card className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <CollapsibleTrigger className="w-full text-left">
-                        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2 flex-wrap">
-                              <User className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-semibold">{clientName}</span>
-                              <Badge variant={getStatutBadgeVariant(candidature.statut)} className="flex items-center gap-1">
-                                {getStatutIcon(candidature.statut)}
-                                {getStatutLabel(candidature.statut)}
-                              </Badge>
-                              {/* Waiting indicator */}
-                              {(candidature.statut === 'acceptee' || candidature.statut === 'bail_recu') && (
-                                <Badge variant="outline" className="text-amber-600 border-amber-300">
-                                  <Clock className="h-3 w-3 mr-1" />Attente client
-                                </Badge>
-                              )}
+                  <div 
+                    className={cn(
+                      "group relative overflow-hidden rounded-2xl",
+                      "bg-gradient-to-br from-card/95 to-card/80",
+                      "backdrop-blur-sm border-2 transition-all duration-300",
+                      "hover:shadow-xl hover:border-primary/30",
+                      styles.border,
+                      styles.glow,
+                      "animate-fade-in"
+                    )}
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    {/* Gradient glow for special statuses */}
+                    {isSpecialStatus && (
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-primary/5 to-transparent opacity-50" />
+                    )}
+
+                    {/* Shine effect on hover */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                    </div>
+
+                    <CollapsibleTrigger className="w-full text-left p-5 md:p-6 relative z-10 cursor-pointer hover:bg-muted/10 transition-colors">
+                      <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-3 flex-wrap">
+                            <div className="flex items-center gap-2">
+                              <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                                <User className="h-4 w-4" />
+                              </div>
+                              <span className="font-bold text-lg">{clientName}</span>
                             </div>
-                            
-                            {candidature.offres && (
-                              <div className="flex items-start gap-2 text-sm text-muted-foreground mb-2">
-                                <MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />
-                                <div>
-                                  <p className="font-medium text-foreground">{candidature.offres.adresse}</p>
-                                  <p>{candidature.offres.prix?.toLocaleString()} CHF {candidature.offres.pieces && `• ${candidature.offres.pieces} pièces`}</p>
+                            <Badge 
+                              variant={getStatutBadgeVariant(candidature.statut)} 
+                              className={cn("flex items-center gap-1.5 px-3 py-1", styles.badge)}
+                            >
+                              {getStatutIcon(candidature.statut)}
+                              {getStatutLabel(candidature.statut)}
+                            </Badge>
+                            {(candidature.statut === 'acceptee' || candidature.statut === 'bail_recu') && (
+                              <Badge variant="outline" className="text-amber-600 border-amber-400/50 bg-amber-500/10 animate-pulse">
+                                <Clock className="h-3 w-3 mr-1" />Attente client
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {candidature.offres && (
+                            <div className="flex items-start gap-3 mb-3">
+                              <MapPin className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                              <div>
+                                <p className="font-semibold text-foreground">{candidature.offres.adresse}</p>
+                                <div className="flex flex-wrap gap-3 mt-1.5">
+                                  <span className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-lg bg-muted/30">
+                                    <span className="font-bold text-primary">{candidature.offres.prix?.toLocaleString()}</span> CHF
+                                  </span>
+                                  {candidature.offres.pieces && (
+                                    <span className="flex items-center gap-1.5 text-sm px-2.5 py-1 rounded-lg bg-muted/30">
+                                      <Home className="h-3.5 w-3.5 text-muted-foreground" />
+                                      {candidature.offres.pieces} pièces
+                                    </span>
+                                  )}
                                 </div>
                               </div>
-                            )}
-
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                Déposée le {new Date(candidature.date_depot || candidature.created_at).toLocaleDateString('fr-CH')}
-                              </span>
-                              {candidature.date_signature_choisie && (
-                                <span className="flex items-center gap-1 text-blue-600">
-                                  <CalendarCheck className="h-3 w-3" />
-                                  Signature: {format(new Date(candidature.date_signature_choisie), 'dd/MM/yyyy HH:mm', { locale: fr })}
-                                </span>
-                              )}
-                              {candidature.date_etat_lieux && (
-                                <span className="flex items-center gap-1 text-green-600">
-                                  <Key className="h-3 w-3" />
-                                  EDL: {format(new Date(candidature.date_etat_lieux), 'dd/MM/yyyy', { locale: fr })} {candidature.heure_etat_lieux}
-                                </span>
-                              )}
                             </div>
-                          </div>
+                          )}
 
-                          {/* Expand indicator */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">{isExpanded ? 'Réduire' : 'Détails'}</span>
-                            {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/20">
+                              <Calendar className="h-3.5 w-3.5" />
+                              Déposée le {format(new Date(candidature.date_depot || candidature.created_at), 'dd.MM.yyyy', { locale: fr })}
+                            </span>
+                            {candidature.date_signature_choisie && (
+                              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                <CalendarCheck className="h-3.5 w-3.5" />
+                                Signature: {format(new Date(candidature.date_signature_choisie), 'dd/MM/yyyy', { locale: fr })}
+                              </span>
+                            )}
+                            {candidature.date_etat_lieux && (
+                              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                <Key className="h-3.5 w-3.5" />
+                                EDL: {format(new Date(candidature.date_etat_lieux), 'dd/MM/yyyy', { locale: fr })}
+                              </span>
+                            )}
                           </div>
                         </div>
-                      </CollapsibleTrigger>
 
-                      <CollapsibleContent>
+                        {/* Expand indicator */}
+                        <div className={cn(
+                          "flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300",
+                          isExpanded ? "bg-primary/10 text-primary" : "bg-muted/30 text-muted-foreground"
+                        )}>
+                          <span className="text-sm font-medium">{isExpanded ? 'Réduire' : 'Détails'}</span>
+                          <div className={cn("transition-transform duration-300", isExpanded && "rotate-180")}>
+                            <ChevronDown className="h-5 w-5" />
+                          </div>
+                        </div>
+                      </div>
+                    </CollapsibleTrigger>
+
+                    <CollapsibleContent>
+                      <div className="px-5 md:px-6 pb-5 md:pb-6 relative z-10 border-t border-border/30">
                         {renderExpandedActions(candidature, profile || null)}
-                      </CollapsibleContent>
-                    </CardContent>
-                  </Card>
+                      </div>
+                    </CollapsibleContent>
+                  </div>
                 </Collapsible>
               );
             })}
