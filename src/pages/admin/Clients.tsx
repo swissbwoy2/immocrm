@@ -85,6 +85,7 @@ const Clients = () => {
   const [deleting, setDeleting] = useState(false);
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const [invitingClientId, setInvitingClientId] = useState<string | null>(null);
+  const [offresToday, setOffresToday] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     loadData();
@@ -168,6 +169,23 @@ const Clients = () => {
         })) || [];
 
       setAgents(transformedAgents);
+
+      // Load today's offers count per client
+      const today = new Date().toISOString().split('T')[0];
+      const { data: offresData } = await supabase
+        .from('offres')
+        .select('client_id')
+        .gte('date_envoi', `${today}T00:00:00`)
+        .lt('date_envoi', `${today}T23:59:59`);
+
+      const offresMap = new Map<string, number>();
+      offresData?.forEach(offre => {
+        if (offre.client_id) {
+          const count = offresMap.get(offre.client_id) || 0;
+          offresMap.set(offre.client_id, count + 1);
+        }
+      });
+      setOffresToday(offresMap);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -927,6 +945,35 @@ const Clients = () => {
                   <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                     <Users className="h-3 w-3 md:h-3.5 md:w-3.5" />
                     <span className="truncate">Agent: <span className="font-medium text-foreground">{getAgentName(client.agent_id)}</span></span>
+                  </div>
+                </div>
+
+                {/* Offres reçues aujourd'hui - Premium */}
+                <div className="relative z-10 text-xs text-muted-foreground mb-3 md:mb-4 pb-3 md:pb-4 border-b border-border/30">
+                  <div className={cn(
+                    "flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors",
+                    (offresToday.get(client.id) || 0) > 0 
+                      ? "bg-primary/10 hover:bg-primary/20" 
+                      : "bg-muted/30 hover:bg-muted/50"
+                  )}>
+                    <Send className={cn(
+                      "h-3 w-3 md:h-3.5 md:w-3.5",
+                      (offresToday.get(client.id) || 0) > 0 ? "text-primary" : ""
+                    )} />
+                    <span className="truncate">
+                      Offres aujourd'hui: 
+                      <span className={cn(
+                        "font-bold ml-1",
+                        (offresToday.get(client.id) || 0) > 0 ? "text-primary" : "text-muted-foreground"
+                      )}>
+                        {offresToday.get(client.id) || 0}
+                      </span>
+                    </span>
+                    {(offresToday.get(client.id) || 0) > 0 && (
+                      <Badge className="ml-auto bg-primary/20 text-primary border-0 text-[10px]">
+                        Actif
+                      </Badge>
+                    )}
                   </div>
                 </div>
 
