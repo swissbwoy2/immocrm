@@ -32,6 +32,7 @@ const MesClients = () => {
   const [loading, setLoading] = useState(true);
   const [agentId, setAgentId] = useState<string | null>(null);
   const [clientReminders, setClientReminders] = useState<Map<string, number>>(new Map());
+  const [offresToday, setOffresToday] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     loadAgentAndClients();
@@ -159,6 +160,24 @@ const MesClients = () => {
         }
       });
       setClientReminders(remindersMap);
+
+      // Load today's offers count per client
+      const today = new Date().toISOString().split('T')[0];
+      const { data: offresData } = await supabase
+        .from('offres')
+        .select('client_id')
+        .eq('agent_id', currentAgentId)
+        .gte('date_envoi', `${today}T00:00:00`)
+        .lt('date_envoi', `${today}T23:59:59`);
+
+      const offresMap = new Map<string, number>();
+      offresData?.forEach(offre => {
+        if (offre.client_id) {
+          const count = offresMap.get(offre.client_id) || 0;
+          offresMap.set(offre.client_id, count + 1);
+        }
+      });
+      setOffresToday(offresMap);
 
       // Transform data to match expected format
       const transformedClients = clientsData?.map(client => {
@@ -539,6 +558,7 @@ const MesClients = () => {
                   index={index}
                   daysElapsed={daysElapsed}
                   hasReminders={reminderCount}
+                  offresToday={offresToday.get(client.id) || 0}
                   onEdit={(id) => navigate(`/agent/clients/${id}`)}
                   onClick={(id) => navigate(`/agent/clients/${id}`)}
                 />

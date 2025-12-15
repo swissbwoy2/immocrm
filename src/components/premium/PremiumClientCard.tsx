@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
   Mail, Phone, MapPin, Calendar, Users, DollarSign, AlertTriangle, 
-  Edit, Shield, CheckCircle, FileWarning, Bell, ChevronRight, Sparkles
+  Edit, Shield, CheckCircle, FileWarning, Bell, ChevronRight, Sparkles, Send
 } from 'lucide-react';
 import { ClientTypeBadge } from '@/components/ClientTypeBadge';
 import { cn } from '@/lib/utils';
@@ -44,6 +44,7 @@ interface PremiumClientCardProps {
   index: number;
   daysElapsed: number;
   hasReminders: number;
+  offresToday?: number;
   onEdit: (id: string) => void;
   onClick: (id: string) => void;
 }
@@ -71,6 +72,7 @@ export function PremiumClientCard({
   index, 
   daysElapsed, 
   hasReminders,
+  offresToday = 0,
   onEdit, 
   onClick 
 }: PremiumClientCardProps) {
@@ -285,6 +287,27 @@ export function PremiumClientCard({
             <Mail className="h-4 w-4 flex-shrink-0" />
             <span className="truncate">{client.email || '-'}</span>
           </div>
+        </div>
+
+        {/* Offres reçues aujourd'hui */}
+        <div className={cn(
+          "flex items-center gap-2 p-2 rounded-xl border mb-4 transition-colors",
+          offresToday > 0 
+            ? "bg-primary/10 border-primary/30" 
+            : "bg-muted/30 border-border/50"
+        )}>
+          <Send className={cn("h-4 w-4", offresToday > 0 ? "text-primary" : "text-muted-foreground")} />
+          <span className="text-sm">
+            Offres aujourd'hui: 
+            <span className={cn("font-bold ml-1", offresToday > 0 ? "text-primary" : "text-muted-foreground")}>
+              {offresToday}
+            </span>
+          </span>
+          {offresToday > 0 && (
+            <Badge className="ml-auto bg-primary/20 text-primary border-0 text-xs">
+              Actif
+            </Badge>
+          )}
         </div>
 
         {/* Search criteria */}
