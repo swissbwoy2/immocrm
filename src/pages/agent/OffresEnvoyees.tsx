@@ -25,7 +25,7 @@ import {
 import { 
   Mail, MapPin, Calendar, Eye, Send, Trash2, Search, Filter, 
   TrendingUp, CheckCircle, XCircle, ExternalLink, Home, Sparkles,
-  Building2, User, ArrowRight, Clock
+  Building2, User, ArrowRight, Clock, Pencil
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -33,6 +33,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { ResendOfferDialog } from '@/components/ResendOfferDialog';
 import { PremiumAgentOffreDetailsDialog } from '@/components/PremiumAgentOffreDetailsDialog';
+import { EditOffreDialog } from '@/components/EditOffreDialog';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { cn } from '@/lib/utils';
 
@@ -202,6 +203,8 @@ export default function OffresEnvoyees() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [offreToView, setOffreToView] = useState<any>(null);
   const [pendingPostulations, setPendingPostulations] = useState<any[]>([]);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [offreToEdit, setOffreToEdit] = useState<any>(null);
 
   useEffect(() => {
     loadData();
@@ -819,6 +822,18 @@ export default function OffresEnvoyees() {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="h-9 w-9 p-0 bg-background/50 hover:bg-amber-500 hover:text-white transition-all duration-300"
+                        onClick={() => {
+                          setOffreToEdit(offre);
+                          setEditDialogOpen(true);
+                        }}
+                        title="Modifier l'offre"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="flex-1 h-9 text-xs bg-background/50 hover:bg-primary hover:text-primary-foreground transition-all duration-300"
                         onClick={() => {
                           setSelectedOffer(offre);
@@ -945,6 +960,16 @@ export default function OffresEnvoyees() {
           setSelectedOffer(offreToView);
           setDetailsDialogOpen(false);
           setResendDialogOpen(true);
+        }}
+      />
+
+      {/* Edit Offer Dialog */}
+      <EditOffreDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        offre={offreToEdit}
+        onSuccess={(updatedOffre) => {
+          setOffres(offres.map(o => o.id === updatedOffre.id ? { ...o, ...updatedOffre } : o));
         }}
       />
     </main>
