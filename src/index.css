@@ -1118,6 +1118,131 @@ All colors MUST be HSL.
       min-width: 48px;
     }
   }
+
+  /* Mobile touch target - Apple HIG minimum 44x44 */
+  .touch-target-mobile {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Improved momentum scrolling for iOS */
+  .scroll-touch {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Hide scrollbar on touch devices */
+  .scrollbar-hide-touch {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide-touch::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Safe area padding utilities */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .px-safe {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Native-like active states */
+  .tap-highlight-none {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Bottom sheet animation */
+  @keyframes slide-up-sheet {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-down-sheet {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+  }
+
+  .animate-sheet-up {
+    animation: slide-up-sheet 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .animate-sheet-down {
+    animation: slide-down-sheet 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* Pull to refresh indicator */
+  @keyframes ptr-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .ptr-spinner {
+    animation: ptr-spin 0.8s linear infinite;
+  }
+
+  /* Rubber band effect for iOS-style overscroll */
+  .rubber-band {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Faster page transitions for mobile */
+  @media (max-width: 768px) {
+    .page-transition {
+      transition-duration: 200ms !important;
+    }
+  }
+
+  /* Touch-optimized inputs */
+  @media (pointer: coarse) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="search"],
+    textarea,
+    select {
+      font-size: 16px; /* Prevents iOS zoom on focus */
+      min-height: 44px;
+    }
+  }
+
+  /* Reduce motion for users who prefer it */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in,
+    .animate-fade-in-scale,
+    .animate-fade-in-up,
+    .animate-slide-in-from-bottom,
+    .animate-slide-in-from-left,
+    .animate-slide-in-from-right,
+    .animate-sheet-up,
+    .animate-sheet-down {
+      animation: none !important;
+    }
+    
+    .page-transition {
+      transition: none !important;
+    }
+  }
 }
 
 /* ===== Google Translate Widget Customization ===== */
