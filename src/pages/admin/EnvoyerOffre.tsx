@@ -64,6 +64,7 @@ const AdminEnvoyerOffre = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [attachments, setAttachments] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Lire le clientId depuis les query params de l'URL
   const searchParams = new URLSearchParams(location.search);
@@ -158,6 +159,8 @@ const AdminEnvoyerOffre = () => {
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return; // Protection double-clic
+    
     if (!formData.clientId || !formData.localisation || !formData.prix || !formData.surface || !formData.nombrePieces) {
       toast({ title: "Erreur", description: "Veuillez remplir tous les champs obligatoires", variant: "destructive" });
       return;
@@ -171,6 +174,7 @@ const AdminEnvoyerOffre = () => {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       // Check for duplicate offers (100% similar: same address, price, floor, surface)
       const { data: existingOffers } = await supabase
@@ -360,6 +364,8 @@ const AdminEnvoyerOffre = () => {
     } catch (error) {
       console.error('Error sending offer:', error);
       toast({ title: "Erreur", description: "Impossible d'envoyer l'offre", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -574,8 +580,8 @@ const AdminEnvoyerOffre = () => {
                 <RotateCcw className="h-4 w-4" />
                 Réinitialiser
               </Button>
-              <Button onClick={handleSubmit} className="flex-1" size="lg">
-                Envoyer
+              <Button onClick={handleSubmit} className="flex-1" size="lg" disabled={isSubmitting || !formData.clientId}>
+                {isSubmitting ? 'Envoi en cours...' : 'Envoyer'}
               </Button>
             </div>
           </div>
