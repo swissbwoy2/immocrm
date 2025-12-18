@@ -44,7 +44,7 @@ export default function AgentDashboard() {
     loadAgentData();
   }, [user?.id, userRole, location.key]);
 
-  const loadAgentData = async () => {
+  const loadAgentData = useCallback(async () => {
     if (!user) return;
     
     try {
@@ -184,7 +184,7 @@ export default function AgentDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   const getAgentName = (agentId?: string) => {
     if (!agentId) return "Non assigné";
@@ -260,12 +260,9 @@ export default function AgentDashboard() {
     return calculateDaysElapsed(dateB) - calculateDaysElapsed(dateA);
   });
 
-  const handleRefresh = useCallback(async () => {
-    await loadAgentData();
-  }, []);
 
   return (
-    <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-y-auto">
+    <PullToRefresh onRefresh={loadAgentData} className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8 space-y-6">
           {/* Header avec dégradé animé */}
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-6 md:p-8 animate-fade-in">
