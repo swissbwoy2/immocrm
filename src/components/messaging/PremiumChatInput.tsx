@@ -80,6 +80,7 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
         'transition-all duration-300',
         isFocused && 'shadow-lg shadow-primary/5'
       )}
+      style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
     >
       {/* Pending attachment preview */}
       {pendingAttachment && (
