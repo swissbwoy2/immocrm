@@ -38,7 +38,7 @@ export default function AdminDashboard() {
     loadData();
   }, []);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -120,7 +120,7 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const toggleAgentStatus = async (agentUserId: string, currentStatus: boolean) => {
     try {
@@ -188,12 +188,9 @@ export default function AdminDashboard() {
 
   const clientsSansAgent = clients.filter(c => !c.agentId).length;
 
-  const handleRefresh = useCallback(async () => {
-    await loadData();
-  }, []);
 
   return (
-    <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-y-auto">
+    <PullToRefresh onRefresh={loadData} className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8">
         {/* Header avec dégradé animé */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-6 md:p-8 mb-8 animate-fade-in">
