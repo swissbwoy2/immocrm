@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +68,7 @@ type SortOrder = 'asc' | 'desc';
 
 const Clients = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
   const [clientProfiles, setClientProfiles] = useState<Map<string, Profile>>(new Map());
@@ -86,10 +88,29 @@ const Clients = () => {
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const [invitingClientId, setInvitingClientId] = useState<string | null>(null);
   const [offresToday, setOffresToday] = useState<Map<string, number>>(new Map());
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Handle URL params for deep linking
+  useEffect(() => {
+    const clientId = searchParams.get('clientId');
+    if (clientId && clients.length > 0 && !loading) {
+      setTimeout(() => {
+        cardRefs.current[clientId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Highlight effect
+        const card = cardRefs.current[clientId];
+        if (card) {
+          card.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+          setTimeout(() => {
+            card.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+          }, 3000);
+        }
+      }, 100);
+    }
+  }, [searchParams, clients, loading]);
 
   const loadData = async () => {
     try {

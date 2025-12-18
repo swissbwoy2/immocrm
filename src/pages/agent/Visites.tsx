@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -88,6 +89,7 @@ const VisiteSkeletonCard = ({ index }: { index: number }) => (
 export default function AgentVisites() {
   const { user } = useAuth();
   const { markTypeAsRead } = useNotifications();
+  const [searchParams] = useSearchParams();
   const [visites, setVisites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
@@ -103,6 +105,24 @@ export default function AgentVisites() {
   // Media upload states
   const [feedbackMedias, setFeedbackMedias] = useState<{url: string, type: string, name: string, size: number}[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  
+  // Refs for scrolling
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Handle URL params for deep linking
+  useEffect(() => {
+    const visiteId = searchParams.get('visiteId');
+    if (visiteId && visites.length > 0 && !loading) {
+      const visite = visites.find(v => v.id === visiteId);
+      if (visite) {
+        setSelectedVisite(visite);
+        setDetailDialogOpen(true);
+        setTimeout(() => {
+          cardRefs.current[visiteId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      }
+    }
+  }, [searchParams, visites, loading]);
 
   const handleOpenDetail = (visite: any) => {
     setSelectedVisite(visite);

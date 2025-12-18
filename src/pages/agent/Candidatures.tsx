@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -92,6 +92,7 @@ interface Profile {
 
 export default function Candidatures() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, userRole } = useAuth();
   const { toast } = useToast();
   
@@ -101,6 +102,7 @@ export default function Candidatures() {
   const [filterStatut, setFilterStatut] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Dialogs
   const [showDatesDialog, setShowDatesDialog] = useState(false);
@@ -127,6 +129,17 @@ export default function Candidatures() {
     }
     loadCandidatures();
   }, [user?.id, userRole]);
+
+  // Handle URL params for deep linking
+  useEffect(() => {
+    const candidatureId = searchParams.get('candidatureId');
+    if (candidatureId && candidatures.length > 0 && !loading) {
+      setExpandedCards(prev => new Set([...prev, candidatureId]));
+      setTimeout(() => {
+        cardRefs.current[candidatureId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  }, [searchParams, candidatures, loading]);
 
   const toggleCard = (id: string) => {
     setExpandedCards(prev => {

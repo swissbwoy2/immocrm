@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Users, AlertCircle, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,8 +17,11 @@ import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 export default function VisitesDeleguees() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [visites, setVisites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedVisiteId, setExpandedVisiteId] = useState<string | null>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     loadVisites();
@@ -69,6 +73,17 @@ export default function VisitesDeleguees() {
       setLoading(false);
     }
   };
+
+  // Handle URL params for deep linking
+  useEffect(() => {
+    const visiteId = searchParams.get('visiteId');
+    if (visiteId && visites.length > 0 && !loading) {
+      setExpandedVisiteId(visiteId);
+      setTimeout(() => {
+        cardRefs.current[visiteId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  }, [searchParams, visites, loading]);
 
   if (loading) {
     return (
