@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { LayoutDashboard, FileText, Home, Calendar, FileCheck, MessageSquare, File, Bell, Send, RefreshCw, Sparkles, ChevronRight, User } from 'lucide-react';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
   PremiumKPICard, 
@@ -410,9 +411,14 @@ export default function ClientDashboard() {
   const statusInProgress = ['bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe', 'cles_remises', 'acceptee'];
   const candidaturesEnCours = candidatures.filter(c => statusInProgress.includes(c.statut));
 
+  const handleRefresh = useCallback(async () => {
+    await loadData();
+    refreshCandidates();
+  }, [refreshCandidates]);
+
   return (
     <>
-      <div className="flex-1 overflow-y-auto relative">
+      <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-y-auto relative">
         {/* Global floating particles */}
         <FloatingParticles count={12} className="fixed inset-0 pointer-events-none z-0 opacity-30" />
         
@@ -885,7 +891,7 @@ export default function ClientDashboard() {
             </div>
           </div>
         </div>
-      </div>
+      </PullToRefresh>
       
       {user && (
         <AccountActivationModal 
