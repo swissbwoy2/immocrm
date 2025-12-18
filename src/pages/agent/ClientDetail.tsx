@@ -145,11 +145,19 @@ export default function ClientDetail() {
       navigate('/login');
       return;
     }
-    loadClientData();
+    if (id) {
+      loadClientData();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, user?.id]);
 
   const loadClientData = async () => {
+    if (!id) {
+      console.warn('loadClientData called without id');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
