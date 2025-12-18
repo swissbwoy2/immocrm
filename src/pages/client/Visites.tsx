@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,12 +15,33 @@ import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 
 export default function Visites() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { toast } = useToast();
   const { markTypeAsRead } = useNotifications();
   const [visites, setVisites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Handle URL parameter for auto-expanding visite
+  useEffect(() => {
+    const visiteId = searchParams.get('visiteId');
+    if (visiteId && visites.length > 0) {
+      const visite = visites.find(v => v.id === visiteId);
+      if (visite) {
+        // Auto-expand this card
+        setExpandedCards(prev => new Set([...prev, visiteId]));
+        // Scroll to the card
+        setTimeout(() => {
+          const cardElement = cardRefs.current.get(visiteId);
+          if (cardElement) {
+            cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+      }
+    }
+  }, [searchParams, visites]);
 
   useEffect(() => {
     loadVisites();
@@ -333,7 +354,10 @@ export default function Visites() {
 
     return (
       <Card 
-        key={visite.id} 
+        key={visite.id}
+        ref={(el) => {
+          if (el) cardRefs.current.set(visite.id, el);
+        }}
         className={`group relative overflow-hidden border-0 shadow-xl hover:shadow-2xl transition-all duration-500 ${
           isPast 
             ? 'bg-gradient-to-br from-card via-card to-muted/30 opacity-90' 
