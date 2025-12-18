@@ -55,10 +55,12 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Envoyer seulement avec Ctrl+Enter (Windows/Linux) ou Cmd+Enter (Mac)
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSubmit(e);
     }
+    // Sinon, Enter seul = retour à la ligne (comportement natif du textarea)
   };
 
   // Auto-resize textarea
