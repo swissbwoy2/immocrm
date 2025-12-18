@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
@@ -21,7 +21,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { LinkPreviewCard } from "@/components/LinkPreviewCard";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { PremiumPageHeader, PremiumEmptyState } from "@/components/premium";
 import { PremiumCandidatureKPIs } from "@/components/premium/PremiumCandidatureKPIs";
 import { PremiumCandidatureCard } from "@/components/premium/PremiumCandidatureCard";
@@ -67,6 +67,7 @@ const MesCandidatures = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [offres, setOffres] = useState<any[]>([]);
   const [candidatures, setCandidatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,6 +78,27 @@ const MesCandidatures = () => {
   const [currentCandidatureId, setCurrentCandidatureId] = useState<string | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [showThankYouDialog, setShowThankYouDialog] = useState(false);
+  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Handle URL parameter for auto-expanding candidature
+  useEffect(() => {
+    const candidatureId = searchParams.get('candidatureId');
+    if (candidatureId && candidatures.length > 0) {
+      // Find the offre linked to this candidature
+      const candidature = candidatures.find(c => c.id === candidatureId);
+      if (candidature) {
+        // Auto-expand this card
+        setExpandedCards(prev => new Set([...prev, candidature.offre_id]));
+        // Scroll to the card
+        setTimeout(() => {
+          const cardElement = cardRefs.current.get(candidature.offre_id);
+          if (cardElement) {
+            cardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+      }
+    }
+  }, [searchParams, candidatures]);
 
   const toggleCard = (offreId: string) => {
     setExpandedCards(prev => {
@@ -365,16 +387,21 @@ const MesCandidatures = () => {
               const isExpanded = expandedCards.has(offre.id);
 
               return (
-                <PremiumCandidatureCard
+                <div 
                   key={offre.id}
-                  offre={offre}
-                  statut={statut}
-                  statutLabel={getStatutLabel(statut)}
-                  statutVariant={getStatutBadgeVariant(statut)}
-                  isExpanded={isExpanded}
-                  onToggle={() => toggleCard(offre.id)}
-                  index={index}
+                  ref={(el) => {
+                    if (el) cardRefs.current.set(offre.id, el);
+                  }}
                 >
+                  <PremiumCandidatureCard
+                    offre={offre}
+                    statut={statut}
+                    statutLabel={getStatutLabel(statut)}
+                    statutVariant={getStatutBadgeVariant(statut)}
+                    isExpanded={isExpanded}
+                    onToggle={() => toggleCard(offre.id)}
+                    index={index}
+                  >
                   <div className="pt-4 space-y-6">
                     {/* Premium Workflow Timeline */}
                     {candidature && (
@@ -701,6 +728,7 @@ const MesCandidatures = () => {
                     )}
                   </div>
                 </PremiumCandidatureCard>
+              </div>
               );
             })}
           </div>

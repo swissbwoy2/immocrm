@@ -62,7 +62,33 @@ export default function AgentNotifications() {
       markAsRead(notification.id);
     }
     if (notification.link) {
-      navigate(notification.link);
+      let url = notification.link;
+      
+      // Fallback: add query params from metadata if not already in URL
+      if (notification.metadata) {
+        const urlHasParams = url.includes('?');
+        const params = new URLSearchParams();
+        
+        if (notification.metadata.conversation_id && !url.includes('conversationId=')) {
+          params.set('conversationId', notification.metadata.conversation_id as string);
+        }
+        if (notification.metadata.offre_id && !url.includes('offreId=')) {
+          params.set('offreId', notification.metadata.offre_id as string);
+        }
+        if (notification.metadata.visite_id && !url.includes('visiteId=')) {
+          params.set('visiteId', notification.metadata.visite_id as string);
+        }
+        if (notification.metadata.candidature_id && !url.includes('candidatureId=')) {
+          params.set('candidatureId', notification.metadata.candidature_id as string);
+        }
+        
+        const paramsStr = params.toString();
+        if (paramsStr) {
+          url += (urlHasParams ? '&' : '?') + paramsStr;
+        }
+      }
+      
+      navigate(url);
     }
   };
 
