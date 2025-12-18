@@ -100,6 +100,20 @@ export default function AdminDocuments() {
     }
   };
 
+  // Extrait le chemin relatif depuis une URL complète ou retourne le chemin tel quel
+  const getStoragePath = (url: string): string => {
+    if (!url) return '';
+    if (url.startsWith('data:')) return url;
+    
+    // Si l'URL contient le domaine Supabase, extraire le chemin après le bucket
+    const bucketMatch = url.match(/client-documents\/(.+)$/);
+    if (bucketMatch) {
+      return bucketMatch[1];
+    }
+    
+    return url;
+  };
+
   const handlePreview = async (document: any) => {
     setSelectedDocument(document);
     
@@ -130,10 +144,11 @@ export default function AdminDocuments() {
         return;
       }
 
-      // Créer une signed URL pour les fichiers dans Storage
+      // Extraire le chemin relatif et créer une signed URL
+      const filePath = getStoragePath(document.url);
       const { data } = await supabase.storage
         .from('client-documents')
-        .createSignedUrl(document.url, 3600);
+        .createSignedUrl(filePath, 3600);
 
       if (data?.signedUrl) {
         setPreviewUrl(data.signedUrl);
@@ -157,10 +172,11 @@ export default function AdminDocuments() {
         return;
       }
 
-      // Créer une signed URL pour les fichiers dans Storage
+      // Extraire le chemin relatif et créer une signed URL
+      const filePath = getStoragePath(document.url);
       const { data } = await supabase.storage
         .from('client-documents')
-        .createSignedUrl(document.url, 60);
+        .createSignedUrl(filePath, 60);
 
       if (data?.signedUrl) {
         const link = window.document.createElement('a');
