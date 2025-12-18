@@ -1,6 +1,8 @@
 import { useEffect, useState, useRef } from "react";
-import { Users, Home, Star, Clock, Sparkles } from "lucide-react";
+import { Users, Home, Star, Clock, Sparkles, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 // Premium animated number component
 function AnimatedNumber({
@@ -253,6 +255,26 @@ export function StatsSection() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* CTA Section */}
+        <div className="text-center mt-12 animate-fade-in">
+          <p className="text-lg text-muted-foreground mb-4">
+            Prêt à rejoindre les familles qui ont trouvé ?
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button asChild size="lg" className="shadow-lg shadow-primary/20">
+              <Link to="/nouveau-mandat">
+                Démarre ta recherche
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg">
+              <a href="#quickform">
+                Tester ma solvabilité
+              </a>
+            </Button>
+          </div>
         </div>
       </div>
     </section>
