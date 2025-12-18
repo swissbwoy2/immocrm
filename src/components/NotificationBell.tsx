@@ -8,11 +8,12 @@ import {
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNotifications, Notification } from '@/hooks/useNotifications';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { NotificationBadge } from './NotificationBadge';
+import { getCorrectNotificationLink, detectRoleFromPath } from '@/lib/notificationLinks';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -50,6 +51,7 @@ const getNotificationIcon = (type: string) => {
 export function NotificationBell() {
   const { notifications, counts, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isAnimating, setIsAnimating] = React.useState(false);
   const prevCount = React.useRef(counts.total);
 
@@ -67,39 +69,19 @@ export function NotificationBell() {
     if (!notification.read) {
       markAsRead(notification.id);
     }
-    if (notification.link) {
-      let url = notification.link;
-      
-      // Fallback: add query params from metadata if not already in URL
-      if (notification.metadata) {
-        const urlHasParams = url.includes('?');
-        const params = new URLSearchParams();
-        
-        // Add conversationId if available and not in URL
-        if (notification.metadata.conversation_id && !url.includes('conversationId=')) {
-          params.set('conversationId', notification.metadata.conversation_id as string);
-        }
-        // Add offreId if available and not in URL
-        if (notification.metadata.offre_id && !url.includes('offreId=')) {
-          params.set('offreId', notification.metadata.offre_id as string);
-        }
-        // Add visiteId if available and not in URL
-        if (notification.metadata.visite_id && !url.includes('visiteId=')) {
-          params.set('visiteId', notification.metadata.visite_id as string);
-        }
-        // Add candidatureId if available and not in URL
-        if (notification.metadata.candidature_id && !url.includes('candidatureId=')) {
-          params.set('candidatureId', notification.metadata.candidature_id as string);
-        }
-        
-        const paramsStr = params.toString();
-        if (paramsStr) {
-          url += (urlHasParams ? '&' : '?') + paramsStr;
-        }
-      }
-      
-      navigate(url);
-    }
+    
+    // Detect current user role from URL
+    const role = detectRoleFromPath(location.pathname);
+    
+    // Get the correct link using centralized logic
+    const url = getCorrectNotificationLink(
+      notification.type,
+      notification.link,
+      role,
+      notification.metadata as Record<string, string> | null
+    );
+    
+    navigate(url);
   };
 
   const recentNotifications = notifications.slice(0, 10);

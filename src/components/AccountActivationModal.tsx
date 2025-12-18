@@ -90,7 +90,7 @@ export function AccountActivationModal({ isOpen, onClose, userId, userName }: Ac
           p_type: 'activation_request',
           p_title: '🆕 Demande d\'activation de compte',
           p_message: `${clientName} (${clientEmail}) a tenté d'accéder à son dashboard. Veuillez importer son fichier CSV dans clients pour lier le compte et l'activer. Merci de bien vérifier que l'acompte a bien été comptabilisé.`,
-          p_link: '/admin/clients',
+          p_link: '/admin/demandes-activation',
           p_metadata: JSON.stringify({ client_user_id: userId, client_email: clientEmail })
         });
       }

@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { getCorrectNotificationLink } from '@/lib/notificationLinks';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -93,27 +94,16 @@ export default function AdminNotifications() {
     if (!notification.read) {
       markAsRead(notification.id);
     }
-    if (notification.link) {
-      let targetLink = notification.link;
-      
-      // Build query params from metadata if link doesn't have them
-      if (!targetLink.includes('?') && notification.metadata) {
-        const params = new URLSearchParams();
-        const meta = notification.metadata as Record<string, string>;
-        
-        if (meta.conversation_id) params.set('conversationId', meta.conversation_id);
-        if (meta.offre_id) params.set('offreId', meta.offre_id);
-        if (meta.visite_id) params.set('visiteId', meta.visite_id);
-        if (meta.candidature_id) params.set('candidatureId', meta.candidature_id);
-        if (meta.client_id) params.set('clientId', meta.client_id);
-        
-        if (params.toString()) {
-          targetLink = `${targetLink}?${params.toString()}`;
-        }
-      }
-      
-      navigate(targetLink);
-    }
+    
+    // Get the correct link using centralized logic
+    const url = getCorrectNotificationLink(
+      notification.type,
+      notification.link,
+      'admin',
+      notification.metadata as Record<string, string> | null
+    );
+    
+    navigate(url);
   };
 
   if (loading) {

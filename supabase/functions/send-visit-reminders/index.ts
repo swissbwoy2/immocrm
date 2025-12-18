@@ -334,7 +334,7 @@ function getRecipientLink(role: 'agent' | 'client' | 'admin'): string {
     case 'client':
       return '/client/visites';
     case 'admin':
-      return '/admin/clients';
+      return '/admin/calendrier';
     default:
       return '/';
   }

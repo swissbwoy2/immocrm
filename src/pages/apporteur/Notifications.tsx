@@ -8,6 +8,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Bell, Check, CheckCheck, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { getCorrectNotificationLink } from '@/lib/notificationLinks';
 
 interface Notification {
   id: string;
@@ -17,10 +19,12 @@ interface Notification {
   link: string | null;
   read: boolean;
   created_at: string;
+  metadata?: Record<string, unknown> | null;
 }
 
 export default function ApporteurNotifications() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +43,7 @@ export default function ApporteurNotifications() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setNotifications(data || []);
+      setNotifications((data || []) as Notification[]);
     } catch (error) {
       console.error('Error loading notifications:', error);
     } finally {
@@ -90,6 +94,21 @@ export default function ApporteurNotifications() {
       console.error('Error deleting:', error);
     }
   };
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.read) {
+      markAsRead(notification.id);
+    }
+    
+    // Get the correct link using centralized logic
+    const url = getCorrectNotificationLink(
+      notification.type,
+      notification.link,
+      'apporteur',
+      notification.metadata as Record<string, string> | null
+    );
+    
+    navigate(url);
+  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -133,7 +152,8 @@ export default function ApporteurNotifications() {
           {notifications.map((notification) => (
             <Card 
               key={notification.id}
-              className={notification.read ? 'opacity-70' : 'border-primary/50'}
+              className={`cursor-pointer transition-colors hover:bg-muted/50 ${notification.read ? 'opacity-70' : 'border-primary/50'}`}
+              onClick={() => handleNotificationClick(notification)}
             >
               <CardContent className="flex items-start justify-between p-4">
                 <div className="flex-1">
