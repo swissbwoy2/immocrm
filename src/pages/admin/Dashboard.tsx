@@ -34,10 +34,6 @@ export default function AdminDashboard() {
   const [offres, setOffres] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -121,6 +117,10 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const toggleAgentStatus = async (agentUserId: string, currentStatus: boolean) => {
     try {
