@@ -339,6 +339,20 @@ export default function Documents() {
     }
   };
 
+  // Extrait le chemin relatif depuis une URL complète ou retourne le chemin tel quel
+  const getStoragePath = (url: string): string => {
+    if (!url) return '';
+    if (url.startsWith('data:')) return url;
+    
+    // Si l'URL contient le domaine Supabase, extraire le chemin après le bucket
+    const bucketMatch = url.match(/client-documents\/(.+)$/);
+    if (bucketMatch) {
+      return bucketMatch[1];
+    }
+    
+    return url;
+  };
+
   const handlePreview = async (document: any) => {
     try {
       let blobUrl: string;
@@ -356,9 +370,10 @@ export default function Documents() {
         const blob = new Blob([bytes], { type: document.type });
         blobUrl = URL.createObjectURL(blob);
       } else {
+        const filePath = getStoragePath(document.url);
         const { data, error } = await supabase.storage
           .from('client-documents')
-          .download(document.url);
+          .download(filePath);
 
         if (error) throw error;
         blobUrl = URL.createObjectURL(data);
@@ -417,9 +432,10 @@ export default function Documents() {
     }
 
     try {
+      const filePath = getStoragePath(doc.url);
       const { data, error } = await supabase.storage
         .from('client-documents')
-        .download(doc.url);
+        .download(filePath);
 
       if (error) throw error;
 
