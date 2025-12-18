@@ -35,15 +35,6 @@ export default function AgentDashboard() {
   const [candidatures, setCandidatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user || userRole !== 'agent') {
-      navigate('/login');
-      return;
-    }
-    
-    loadAgentData();
-  }, [user?.id, userRole, location.key]);
-
   const loadAgentData = useCallback(async () => {
     if (!user) return;
     
@@ -185,6 +176,15 @@ export default function AgentDashboard() {
       setLoading(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!user || userRole !== 'agent') {
+      navigate('/login');
+      return;
+    }
+    
+    loadAgentData();
+  }, [user?.id, userRole, location.key, navigate, loadAgentData]);
 
   const getAgentName = (agentId?: string) => {
     if (!agentId) return "Non assigné";
