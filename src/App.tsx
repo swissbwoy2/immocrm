@@ -75,6 +75,7 @@ const AgentContacts = lazy(() => import("./pages/agent/Contacts"));
 // Client pages
 const ClientDashboard = lazy(() => import("./pages/client/Dashboard"));
 const ClientDossier = lazy(() => import("./pages/client/Dossier"));
+const ClientMonContrat = lazy(() => import("./pages/client/MonContrat"));
 const ClientOffresRecues = lazy(() => import("./pages/client/OffresRecues"));
 const ClientVisites = lazy(() => import("./pages/client/Visites"));
 const ClientCalendrier = lazy(() => import("./pages/client/Calendrier"));
@@ -187,6 +188,7 @@ const App = () => (
               {/* Client Routes */}
               <Route path="/client" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDashboard /></AppLayout></ProtectedRoute>} />
               <Route path="/client/dossier" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDossier /></AppLayout></ProtectedRoute>} />
+              <Route path="/client/mon-contrat" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientMonContrat /></AppLayout></ProtectedRoute>} />
               <Route path="/client/offres-recues" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientOffresRecues /></AppLayout></ProtectedRoute>} />
               <Route path="/client/visites" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientVisites /></AppLayout></ProtectedRoute>} />
               <Route path="/client/calendrier" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientCalendrier /></AppLayout></ProtectedRoute>} />

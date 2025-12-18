@@ -684,6 +684,7 @@ export type Database = {
           date_engagement: string | null
           date_naissance: string | null
           decouverte_agence: string | null
+          demande_mandat_id: string | null
           depuis_le: string | null
           employeur: string | null
           etat_avancement: string | null
@@ -693,6 +694,9 @@ export type Database = {
           id: string
           instrument_musique: boolean | null
           loyer_actuel: number | null
+          mandat_date_signature: string | null
+          mandat_pdf_url: string | null
+          mandat_signature_data: string | null
           montant_charges_extra: number | null
           motif_changement: string | null
           nationalite: string | null
@@ -740,6 +744,7 @@ export type Database = {
           date_engagement?: string | null
           date_naissance?: string | null
           decouverte_agence?: string | null
+          demande_mandat_id?: string | null
           depuis_le?: string | null
           employeur?: string | null
           etat_avancement?: string | null
@@ -749,6 +754,9 @@ export type Database = {
           id?: string
           instrument_musique?: boolean | null
           loyer_actuel?: number | null
+          mandat_date_signature?: string | null
+          mandat_pdf_url?: string | null
+          mandat_signature_data?: string | null
           montant_charges_extra?: number | null
           motif_changement?: string | null
           nationalite?: string | null
@@ -796,6 +804,7 @@ export type Database = {
           date_engagement?: string | null
           date_naissance?: string | null
           decouverte_agence?: string | null
+          demande_mandat_id?: string | null
           depuis_le?: string | null
           employeur?: string | null
           etat_avancement?: string | null
@@ -805,6 +814,9 @@ export type Database = {
           id?: string
           instrument_musique?: boolean | null
           loyer_actuel?: number | null
+          mandat_date_signature?: string | null
+          mandat_pdf_url?: string | null
+          mandat_signature_data?: string | null
           montant_charges_extra?: number | null
           motif_changement?: string | null
           nationalite?: string | null
@@ -840,6 +852,13 @@ export type Database = {
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_demande_mandat_id_fkey"
+            columns: ["demande_mandat_id"]
+            isOneToOne: false
+            referencedRelation: "demandes_mandat"
             referencedColumns: ["id"]
           },
           {

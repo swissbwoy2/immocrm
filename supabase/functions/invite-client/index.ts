@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 interface DemandeMandat {
+  id?: string;
   adresse?: string;
   date_naissance?: string;
   nationalite?: string;
@@ -42,6 +43,9 @@ interface DemandeMandat {
   souhaits_particuliers?: string;
   candidats?: any[];
   documents_uploades?: any[];
+  // Contract signature data
+  signature_data?: string;
+  cgv_acceptees_at?: string;
 }
 
 interface InviteClientRequest {
@@ -243,6 +247,10 @@ serve(async (req) => {
           apport_personnel: demandeMandat.apport_personnel,
           souhaits_particuliers: demandeMandat.souhaits_particuliers,
           nombre_occupants: demandeMandat.nombre_occupants,
+          // Contract signature data
+          demande_mandat_id: demandeMandat.id || null,
+          mandat_signature_data: demandeMandat.signature_data || null,
+          mandat_date_signature: demandeMandat.cgv_acceptees_at || new Date().toISOString(),
         });
 
         // Set residence based on type_permis
@@ -308,6 +316,10 @@ serve(async (req) => {
           souhaits_particuliers: demandeMandat.souhaits_particuliers,
           nombre_occupants: demandeMandat.nombre_occupants,
           statut: 'actif',
+          // Contract signature data
+          demande_mandat_id: demandeMandat.id || null,
+          mandat_signature_data: demandeMandat.signature_data || null,
+          mandat_date_signature: demandeMandat.cgv_acceptees_at || new Date().toISOString(),
         };
 
         if (demandeMandat.type_permis) {
