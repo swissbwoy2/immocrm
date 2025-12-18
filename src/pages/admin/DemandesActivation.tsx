@@ -259,7 +259,7 @@ export default function DemandesActivation() {
       };
 
       // Créer le client avec TOUTES les données du mandat
-      const { error: inviteError } = await supabase.functions.invoke('invite-client', {
+      const { data: inviteData, error: inviteError } = await supabase.functions.invoke('invite-client', {
         body: {
           email: demande.email,
           prenom: demande.prenom,
@@ -271,13 +271,60 @@ export default function DemandesActivation() {
 
       if (inviteError) throw inviteError;
 
+      // Récupérer l'ID du client créé
+      const clientId = inviteData?.clientId;
+
+      // Générer le PDF du contrat avec signature si on a l'ID du client
+      if (clientId) {
+        console.log('Generating contract PDF for client:', clientId);
+        const { data: pdfData, error: pdfError } = await supabase.functions.invoke('generate-mandat-contract', {
+          body: {
+            clientId: clientId,
+            demandeId: demande.id,
+            prenom: demande.prenom,
+            nom: demande.nom,
+            email: demande.email,
+            telephone: demande.telephone,
+            adresse: demande.adresse,
+            date_naissance: demande.date_naissance,
+            nationalite: demande.nationalite,
+            type_permis: demande.type_permis,
+            etat_civil: demande.etat_civil,
+            profession: demande.profession,
+            employeur: demande.employeur,
+            revenus_mensuels: demande.revenus_mensuels,
+            type_recherche: demande.type_recherche,
+            type_bien: demande.type_bien,
+            pieces_recherche: demande.pieces_recherche,
+            region_recherche: demande.region_recherche,
+            budget_max: demande.budget_max,
+            signature_data: demande.signature_data,
+            cgv_acceptees_at: demande.cgv_acceptees_at,
+            candidats: demande.candidats,
+            gerance_actuelle: demande.gerance_actuelle,
+            loyer_actuel: demande.loyer_actuel,
+            depuis_le: demande.depuis_le,
+            motif_changement: demande.motif_changement,
+            nombre_occupants: demande.nombre_occupants,
+            souhaits_particuliers: demande.souhaits_particuliers
+          }
+        });
+
+        if (pdfError) {
+          console.error('Error generating contract PDF:', pdfError);
+          // Don't throw, just log - the account is still created
+        } else if (pdfData?.success) {
+          console.log('Contract PDF generated successfully:', pdfData.pdfUrl);
+        }
+      }
+
       // Mettre à jour le statut
       await supabase
         .from('demandes_mandat')
         .update({ statut: 'active' })
         .eq('id', demande.id);
 
-      toast.success('Compte activé avec toutes les données ! Invitation envoyée.');
+      toast.success('Compte activé avec toutes les données ! Contrat PDF généré.');
       await loadData();
     } catch (error: any) {
       console.error('Error:', error);
