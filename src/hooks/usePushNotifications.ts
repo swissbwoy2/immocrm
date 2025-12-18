@@ -33,27 +33,21 @@ export function usePushNotifications() {
           ? "android" 
           : "web";
 
-      // Use direct REST API to bypass type restrictions for new table
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      
-      const response = await fetch(`${supabaseUrl}/rest/v1/device_tokens`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": supabaseKey,
-          "Authorization": `Bearer ${supabaseKey}`,
-          "Prefer": "resolution=merge-duplicates",
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          token: pushToken,
-          platform,
-        }),
-      });
+      // Use Supabase client for upsert
+      const { error } = await supabase
+        .from("device_tokens")
+        .upsert(
+          {
+            user_id: userId,
+            token: pushToken,
+            platform,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,token" }
+        );
 
-      if (!response.ok) {
-        console.error("Error registering push token:", await response.text());
+      if (error) {
+        console.error("Error registering push token:", error);
       } else {
         console.log("Push token registered successfully");
         setToken(pushToken);
@@ -144,18 +138,17 @@ export function usePushNotifications() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      
-      await fetch(`${supabaseUrl}/rest/v1/device_tokens?user_id=eq.${user.id}&token=eq.${token}`, {
-        method: "DELETE",
-        headers: {
-          "apikey": supabaseKey,
-          "Authorization": `Bearer ${supabaseKey}`,
-        },
-      });
+      const { error } = await supabase
+        .from("device_tokens")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("token", token);
 
-      setToken(null);
+      if (error) {
+        console.error("Failed to unregister token:", error);
+      } else {
+        setToken(null);
+      }
     } catch (error) {
       console.error("Failed to unregister token:", error);
     }

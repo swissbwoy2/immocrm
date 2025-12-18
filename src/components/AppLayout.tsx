@@ -6,6 +6,7 @@ import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PageTransition } from '@/components/PageTransition';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -13,6 +14,9 @@ interface AppLayoutProps {
 
 function AppLayoutContent({ children }: AppLayoutProps) {
   const { setOpenMobile, isMobile, openMobile } = useSidebar();
+  
+  // Initialize push notifications for mobile apps
+  usePushNotifications();
 
   // Swipe gestures for mobile sidebar
   useSwipeGesture({
