@@ -1,12 +1,34 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.f4e29d862c224626ac70fd341e0305cf',
-  appName: 'immocrm',
+  appId: 'ch.logisorama.app',
+  appName: 'Logisorama (By immo-rama.ch)',
   webDir: 'dist',
-  server: {
-    url: 'https://f4e29d86-2c22-4626-ac70-fd341e0305cf.lovableproject.com?forceHideBadge=true',
-    cleartext: true
+  ios: {
+    contentInset: 'automatic',
+    preferredContentMode: 'mobile',
+    backgroundColor: '#ffffff'
+  },
+  android: {
+    backgroundColor: '#ffffff'
+  },
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 2000,
+      backgroundColor: '#ffffff',
+      showSpinner: false,
+      androidScaleType: 'CENTER_CROP',
+      splashFullScreen: true,
+      splashImmersive: true
+    },
+    StatusBar: {
+      style: 'dark',
+      backgroundColor: '#A8C9A5'
+    },
+    Keyboard: {
+      resize: 'body',
+      resizeOnFullScreen: true
+    }
   }
 };
 
