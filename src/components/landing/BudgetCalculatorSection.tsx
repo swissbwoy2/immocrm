@@ -371,39 +371,6 @@ export function BudgetCalculatorSection() {
                         </div>
                       )}
 
-                      {/* Premium CTA */}
-                      <div className="relative group/cta">
-                        {/* Glow */}
-                        <div className="absolute -inset-1 bg-gradient-to-r from-primary/40 to-primary/20 rounded-xl blur-md opacity-50 group-hover/cta:opacity-100 transition-opacity" />
-                        <Button asChild className="relative w-full h-12 text-base font-semibold overflow-hidden group-hover/cta:scale-[1.02] transition-transform">
-                          <Link to="/nouveau-mandat">
-                            {/* Shine */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/cta:translate-x-full transition-transform duration-700" />
-                            {result.isSolvable ? 'Démarre ta recherche' : 'Parle à un expert'}
-                            <ArrowRight className="ml-2 h-5 w-5 group-hover/cta:translate-x-1 transition-transform" />
-                          </Link>
-                        </Button>
-                      </div>
-
-                      {/* Lead Capture après résultat */}
-                      <div className="mt-4 p-4 rounded-xl bg-primary/5 border border-primary/20">
-                        <p className="text-sm text-center text-muted-foreground mb-3">
-                          📋 <strong className="text-foreground">Reçois ta shortlist personnalisée</strong> en 24h
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <input
-                            type="tel"
-                            placeholder="Ton numéro"
-                            className="flex-1 h-10 px-3 rounded-lg border border-border/50 bg-background/80 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                          />
-                          <Button size="sm" className="h-10 whitespace-nowrap">
-                            M'appeler
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground text-center mt-2">
-                          Gratuit • Sans engagement
-                        </p>
-                      </div>
                     </div>
                   ) : null}
                 </div>
