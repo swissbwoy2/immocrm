@@ -193,10 +193,18 @@ export default function ClientDetail() {
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
 
   useEffect(() => {
-    loadClientData();
+    if (id) {
+      loadClientData();
+    }
   }, [id]);
 
   const loadClientData = async () => {
+    if (!id) {
+      console.warn('loadClientData called without id');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
 
