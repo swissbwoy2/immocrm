@@ -61,31 +61,8 @@ export default function ClientDashboard() {
   // Détecter si le client est un acheteur
   const isAcheteur = client?.type_recherche === 'Acheter';
 
-  useEffect(() => {
-    loadData();
-    
-    // Écouter les changements en temps réel sur les visites
-    const channel = supabase
-      .channel('client-visites-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'visites',
-        },
-        () => {
-          loadData();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user?.id]);
-
-  const loadData = async () => {
+  // Définir loadData comme useCallback AVANT les returns conditionnels
+  const loadData = useCallback(async () => {
     if (!user) {
       console.error('LoadData called but user is null');
       setLoading(false);
@@ -190,7 +167,38 @@ export default function ClientDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  // Définir handleRefresh AVANT les returns conditionnels
+  const handleRefresh = useCallback(async () => {
+    await loadData();
+    refreshCandidates();
+  }, [loadData, refreshCandidates]);
+
+  useEffect(() => {
+    loadData();
+    
+    // Écouter les changements en temps réel sur les visites
+    const channel = supabase
+      .channel('client-visites-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'visites',
+        },
+        () => {
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadData]);
+
 
   const handleRenewMandat = async () => {
     if (!client || !user) return;
@@ -411,10 +419,6 @@ export default function ClientDashboard() {
   const statusInProgress = ['bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe', 'cles_remises', 'acceptee'];
   const candidaturesEnCours = candidatures.filter(c => statusInProgress.includes(c.statut));
 
-  const handleRefresh = useCallback(async () => {
-    await loadData();
-    refreshCandidates();
-  }, [refreshCandidates]);
 
   return (
     <>
