@@ -86,6 +86,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Dashboard', icon: LayoutDashboard, path: '/client', notifKey: null },
         { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
         { name: 'Mon dossier', icon: User, path: '/client/dossier', notifKey: null },
+        { name: 'Mon contrat', icon: FileText, path: '/client/mon-contrat', notifKey: null },
         { name: 'Offres reçues', icon: Home, path: '/client/offres-recues', notifKey: 'new_offer' },
         { name: 'Mes visites', icon: CalendarCheck, path: '/client/visites', notifKey: 'new_visit' },
         { name: 'Calendrier', icon: Calendar, path: '/client/calendrier', notifKey: 'visit_combined' },

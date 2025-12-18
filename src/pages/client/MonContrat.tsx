@@ -1,0 +1,460 @@
+import { useEffect, useState } from 'react';
+import { FileText, Download, Calendar, Clock, CheckCircle2, User, MapPin, DollarSign, Home, Sparkles, AlertCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+
+interface ClientData {
+  id: string;
+  user_id: string;
+  mandat_pdf_url: string | null;
+  mandat_signature_data: string | null;
+  mandat_date_signature: string | null;
+  demande_mandat_id: string | null;
+  date_ajout: string | null;
+  budget_max: number | null;
+  type_recherche: string | null;
+  type_bien: string | null;
+  pieces: number | null;
+  region_recherche: string | null;
+  created_at: string | null;
+}
+
+interface ProfileData {
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone: string | null;
+}
+
+interface DemandeMandat {
+  id: string;
+  signature_data: string | null;
+  cgv_acceptees_at: string | null;
+  created_at: string | null;
+}
+
+export default function MonContrat() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [client, setClient] = useState<ClientData | null>(null);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [demandeMandat, setDemandeMandat] = useState<DemandeMandat | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user?.id]);
+
+  const loadData = async () => {
+    if (!user) return;
+
+    try {
+      setLoading(true);
+
+      // Load client data
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (clientError) throw clientError;
+      setClient(clientData);
+
+      // Load profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('nom, prenom, email, telephone')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) throw profileError;
+      setProfile(profileData);
+
+      // If client has demande_mandat_id, load the original demande
+      if (clientData?.demande_mandat_id) {
+        const { data: demandeData, error: demandeError } = await supabase
+          .from('demandes_mandat')
+          .select('id, signature_data, cgv_acceptees_at, created_at')
+          .eq('id', clientData.demande_mandat_id)
+          .single();
+
+        if (!demandeError && demandeData) {
+          setDemandeMandat(demandeData);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading contract data:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de charger les données du contrat',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!client?.mandat_pdf_url) {
+      toast({
+        title: 'PDF non disponible',
+        description: 'Le contrat PDF n\'est pas encore disponible',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setDownloading(true);
+    try {
+      const { data, error } = await supabase.storage
+        .from('mandat-contracts')
+        .download(client.mandat_pdf_url);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `contrat-mandat-${profile?.nom || 'client'}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Téléchargement réussi',
+        description: 'Votre contrat a été téléchargé',
+      });
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de télécharger le contrat',
+        variant: 'destructive',
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  // Calculate mandate dates
+  const getMandatDates = () => {
+    const startDate = client?.date_ajout || client?.created_at;
+    if (!startDate) return { start: null, end: null, daysRemaining: 0 };
+
+    const start = new Date(startDate);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 90);
+
+    const now = new Date();
+    const daysRemaining = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+
+    return { start, end, daysRemaining };
+  };
+
+  const { start: mandatStart, end: mandatEnd, daysRemaining } = getMandatDates();
+  const signatureDate = client?.mandat_date_signature || demandeMandat?.cgv_acceptees_at || demandeMandat?.created_at;
+  const signatureData = client?.mandat_signature_data || demandeMandat?.signature_data;
+  const hasPdf = !!client?.mandat_pdf_url;
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <div className="relative">
+            <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-primary animate-pulse" />
+            </div>
+          </div>
+          <p className="text-muted-foreground animate-pulse">Chargement du contrat...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!client) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-4">
+        <Card className="max-w-md backdrop-blur-xl bg-card/80 border-border/50 shadow-2xl">
+          <CardContent className="pt-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <AlertCircle className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Contrat non disponible</h2>
+            <p className="text-muted-foreground">
+              Votre contrat de mandat n'est pas encore disponible. Veuillez contacter votre agent.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto">
+      {/* Floating particles background */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        {[...Array(8)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-2 h-2 rounded-full bg-primary/10 animate-float"
+            style={{
+              left: `${10 + i * 12}%`,
+              top: `${15 + (i % 4) * 20}%`,
+              animationDelay: `${i * 0.8}s`,
+              animationDuration: `${5 + i}s`
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="relative z-10 p-4 md:p-8 space-y-6">
+        {/* Header */}
+        <PremiumPageHeader
+          title="Mon contrat de mandat"
+          subtitle="Votre mandat de recherche exclusif"
+          icon={FileText}
+          className="mb-6"
+        />
+
+        {/* Status Card */}
+        <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl overflow-hidden">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <CardTitle className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-primary/10">
+                  <FileText className="w-5 h-5 text-primary" />
+                </div>
+                Contrat de mandat exclusif
+              </CardTitle>
+              <Badge 
+                className={`${
+                  daysRemaining > 30 
+                    ? 'bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30' 
+                    : daysRemaining > 0 
+                    ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/30' 
+                    : 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30'
+                } backdrop-blur-sm`}
+              >
+                {daysRemaining > 0 ? (
+                  <>
+                    <Clock className="w-3 h-3 mr-1" />
+                    {daysRemaining} jours restants
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    Mandat expiré
+                  </>
+                )}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Dates */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-muted/50 border border-border/30">
+                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <Calendar className="w-4 h-4" />
+                  <span className="text-sm">Date de début</span>
+                </div>
+                <p className="font-semibold text-lg">
+                  {mandatStart ? format(mandatStart, 'd MMMM yyyy', { locale: fr }) : 'Non définie'}
+                </p>
+              </div>
+              <div className="p-4 rounded-xl bg-muted/50 border border-border/30">
+                <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                  <Calendar className="w-4 h-4" />
+                  <span className="text-sm">Date de fin</span>
+                </div>
+                <p className="font-semibold text-lg">
+                  {mandatEnd ? format(mandatEnd, 'd MMMM yyyy', { locale: fr }) : 'Non définie'}
+                </p>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Progression du mandat</span>
+                <span className="font-medium">{Math.round((90 - daysRemaining) / 90 * 100)}%</span>
+              </div>
+              <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    daysRemaining > 30 
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-400' 
+                      : daysRemaining > 0 
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-400' 
+                      : 'bg-gradient-to-r from-red-500 to-rose-400'
+                  }`}
+                  style={{ width: `${Math.min(100, Math.round((90 - daysRemaining) / 90 * 100))}%` }}
+                />
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Download Button */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              {hasPdf ? (
+                <Button 
+                  onClick={handleDownloadPDF} 
+                  disabled={downloading}
+                  className="flex-1 group relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-white/20 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                  {downloading ? (
+                    <div className="h-4 w-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4 mr-2" />
+                  )}
+                  Télécharger le contrat PDF
+                </Button>
+              ) : (
+                <div className="flex-1 p-4 rounded-xl bg-orange-500/10 border border-orange-500/30 text-center">
+                  <AlertCircle className="w-5 h-5 text-orange-500 mx-auto mb-2" />
+                  <p className="text-sm text-orange-600 dark:text-orange-400">
+                    Le PDF du contrat sera disponible prochainement
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Contract Details */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Search Criteria */}
+          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-blue-500/10">
+                  <Home className="w-5 h-5 text-blue-500" />
+                </div>
+                Critères de recherche
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
+                  <p className="text-xs text-muted-foreground mb-1">Type de recherche</p>
+                  <p className="font-medium">{client.type_recherche || 'Non défini'}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
+                  <p className="text-xs text-muted-foreground mb-1">Type de bien</p>
+                  <p className="font-medium">{client.type_bien || 'Non défini'}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
+                  <p className="text-xs text-muted-foreground mb-1">Nombre de pièces</p>
+                  <p className="font-medium">{client.pieces ? `${client.pieces} pièces` : 'Non défini'}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
+                  <p className="text-xs text-muted-foreground mb-1">Budget maximum</p>
+                  <p className="font-medium">
+                    {client.budget_max ? `${client.budget_max.toLocaleString('fr-CH')} CHF` : 'Non défini'}
+                  </p>
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
+                <p className="text-xs text-muted-foreground mb-1">Région de recherche</p>
+                <p className="font-medium flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  {client.region_recherche || 'Non définie'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Signature */}
+          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-green-500/10">
+                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                </div>
+                Signature électronique
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {signatureData ? (
+                <>
+                  <div className="p-4 bg-white rounded-xl border-2 border-dashed border-border/50 flex items-center justify-center">
+                    <img 
+                      src={signatureData} 
+                      alt="Signature" 
+                      className="max-h-24 object-contain"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span className="text-sm font-medium">Contrat signé électroniquement</span>
+                  </div>
+                  {signatureDate && (
+                    <p className="text-sm text-muted-foreground">
+                      Signé le {format(new Date(signatureDate), 'd MMMM yyyy à HH:mm', { locale: fr })}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <div className="p-6 text-center">
+                  <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                    <AlertCircle className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground">
+                    Aucune signature enregistrée
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Client Info */}
+        {profile && (
+          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-purple-500/10">
+                  <User className="w-5 h-5 text-purple-500" />
+                </div>
+                Titulaire du contrat
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
+                  <p className="text-xs text-muted-foreground mb-1">Nom complet</p>
+                  <p className="font-medium">{profile.prenom} {profile.nom}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
+                  <p className="text-xs text-muted-foreground mb-1">Email</p>
+                  <p className="font-medium truncate">{profile.email}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
+                  <p className="text-xs text-muted-foreground mb-1">Téléphone</p>
+                  <p className="font-medium">{profile.telephone || 'Non renseigné'}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
+                  <p className="text-xs text-muted-foreground mb-1">N° de client</p>
+                  <p className="font-medium text-xs font-mono">{client.id.slice(0, 8).toUpperCase()}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}

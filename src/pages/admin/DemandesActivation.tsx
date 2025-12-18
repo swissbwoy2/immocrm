@@ -217,6 +217,7 @@ export default function DemandesActivation() {
 
       // Préparer les données complètes du mandat pour le transfert
       const demandeMandat = {
+        id: demande.id, // Include demande ID for contract reference
         adresse: demande.adresse,
         date_naissance: demande.date_naissance,
         nationalite: demande.nationalite,
@@ -251,7 +252,10 @@ export default function DemandesActivation() {
         apport_personnel: demande.apport_personnel,
         souhaits_particuliers: demande.souhaits_particuliers,
         candidats: demande.candidats || [],
-        documents_uploades: demande.documents_uploades || []
+        documents_uploades: demande.documents_uploades || [],
+        // Contract signature data
+        signature_data: demande.signature_data,
+        cgv_acceptees_at: demande.cgv_acceptees_at
       };
 
       // Créer le client avec TOUTES les données du mandat

@@ -82,6 +82,11 @@ interface Client {
   vehicules?: boolean;
   numero_plaques?: string;
   decouverte_agence?: string;
+  // Contract fields
+  mandat_pdf_url?: string | null;
+  mandat_signature_data?: string | null;
+  mandat_date_signature?: string | null;
+  demande_mandat_id?: string | null;
 }
 
 interface Profile {
@@ -1703,6 +1708,82 @@ export default function ClientDetail() {
                     <p className="text-sm">{client.note_agent}</p>
                   </div>
                 </>
+              )}
+            </CardContent>
+          </PremiumCard>
+
+          {/* Contrat de mandat */}
+          <PremiumCard icon={FileText} title="Contrat de mandat" delay={680}>
+            <CardContent className="space-y-4">
+              {client.mandat_pdf_url || client.mandat_signature_data || client.demande_mandat_id ? (
+                <>
+                  {/* Status */}
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/30">
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    <div>
+                      <p className="font-medium text-green-600 dark:text-green-400">Contrat signé</p>
+                      {client.mandat_date_signature && (
+                        <p className="text-sm text-muted-foreground">
+                          Signé le {new Date(client.mandat_date_signature).toLocaleDateString('fr-CH')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Signature preview */}
+                  {client.mandat_signature_data && (
+                    <div className="p-4 bg-white rounded-xl border-2 border-dashed border-border/50">
+                      <p className="text-xs text-muted-foreground mb-2">Signature électronique</p>
+                      <img 
+                        src={client.mandat_signature_data} 
+                        alt="Signature" 
+                        className="max-h-16 object-contain"
+                      />
+                    </div>
+                  )}
+
+                  {/* Download button */}
+                  {client.mandat_pdf_url && (
+                    <Button 
+                      variant="outline"
+                      className="w-full group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30"
+                      onClick={async () => {
+                        try {
+                          const { data, error } = await supabase.storage
+                            .from('mandat-contracts')
+                            .download(client.mandat_pdf_url);
+                          if (error) throw error;
+                          const url = URL.createObjectURL(data);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = `contrat-mandat-${profile?.nom || 'client'}.pdf`;
+                          link.click();
+                          URL.revokeObjectURL(url);
+                        } catch (error) {
+                          console.error('Error downloading contract:', error);
+                          toast({
+                            title: 'Erreur',
+                            description: 'Impossible de télécharger le contrat',
+                            variant: 'destructive',
+                          });
+                        }
+                      }}
+                    >
+                      <Download className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                      Télécharger le contrat PDF
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
+                    <FileText className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground mb-2">Aucun contrat enregistré</p>
+                  <p className="text-xs text-muted-foreground">
+                    Le contrat sera généré lors de l'activation du mandat
+                  </p>
+                </div>
               )}
             </CardContent>
           </PremiumCard>
