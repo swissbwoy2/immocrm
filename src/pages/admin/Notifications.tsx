@@ -12,39 +12,71 @@ import { cn } from '@/lib/utils';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
-    case 'new_client_activated':
-      return '👤';
-    case 'client_assigned':
-      return '🤝';
-    case 'new_message':
-      return '💬';
-    case 'new_offer':
-      return '🏠';
-    case 'new_visit':
-      return '📅';
-    case 'visit_reminder':
-      return '⏰';
-    default:
-      return '🔔';
+    case 'new_client_activated': return '👤';
+    case 'client_assigned': return '🤝';
+    case 'client_removed': return '👋';
+    case 'new_message': return '💬';
+    case 'new_offer': case 'new_offer_admin': return '🏠';
+    case 'new_visit': case 'new_visit_admin': return '📅';
+    case 'visit_reminder': return '⏰';
+    case 'visit_confirmed': case 'visit_confirmed_admin': return '✅';
+    case 'visit_refused': case 'visit_refused_admin': return '❌';
+    case 'visit_delegated': return '🔄';
+    case 'activation_request': return '🆕';
+    case 'nouvelle_demande_mandat': return '📋';
+    case 'document_request': return '📄';
+    case 'dossier_complete': return '✅';
+    case 'badge_earned': return '🏆';
+    case 'coagent_added': case 'coagent_assignment': return '👥';
+    case 'new_candidature': case 'candidature_deposee': return '📝';
+    case 'candidature_acceptee': case 'candidature_acceptee_admin': return '🎉';
+    case 'candidature_refusee': case 'candidature_refusee_admin': return '❌';
+    case 'candidature_bail_conclu': case 'candidature_bail_conclu_admin': return '✍️';
+    case 'candidature_attente_bail': case 'candidature_attente_bail_admin': return '⏳';
+    case 'candidature_bail_recu': case 'candidature_bail_recu_admin': return '📨';
+    case 'candidature_signature_planifiee': case 'candidature_signature_planifiee_admin': return '📅';
+    case 'candidature_signature_effectuee': case 'candidature_signature_effectuee_admin': return '✅';
+    case 'candidature_etat_lieux_fixe': case 'candidature_etat_lieux_fixe_admin': return '🏠';
+    case 'candidature_cles_remises': case 'candidature_cles_remises_admin': return '🔑';
+    case 'signature_reminder': return '🔔';
+    case 'bail_conclu': return '📋';
+    case 'date_signature_choisie': return '📅';
+    default: return '🔔';
   }
 };
 
 const getNotificationTypeName = (type: string) => {
   switch (type) {
-    case 'new_client_activated':
-      return 'Nouveau client';
-    case 'client_assigned':
-      return 'Client assigné';
-    case 'new_message':
-      return 'Message';
-    case 'new_offer':
-      return 'Offre';
-    case 'new_visit':
-      return 'Visite';
-    case 'visit_reminder':
-      return 'Rappel visite';
-    default:
-      return 'Autre';
+    case 'new_client_activated': return 'Nouveau client';
+    case 'client_assigned': return 'Client assigné';
+    case 'client_removed': return 'Client retiré';
+    case 'new_message': return 'Message';
+    case 'new_offer': case 'new_offer_admin': return 'Offre';
+    case 'new_visit': case 'new_visit_admin': return 'Visite';
+    case 'visit_reminder': return 'Rappel visite';
+    case 'visit_confirmed': case 'visit_confirmed_admin': return 'Visite confirmée';
+    case 'visit_refused': case 'visit_refused_admin': return 'Visite refusée';
+    case 'visit_delegated': return 'Visite déléguée';
+    case 'activation_request': return 'Demande activation';
+    case 'nouvelle_demande_mandat': return 'Demande mandat';
+    case 'document_request': return 'Demande document';
+    case 'dossier_complete': return 'Dossier complet';
+    case 'badge_earned': return 'Badge';
+    case 'coagent_added': case 'coagent_assignment': return 'Co-agent';
+    case 'new_candidature': case 'candidature_deposee': return 'Candidature';
+    case 'candidature_acceptee': case 'candidature_acceptee_admin': return 'Candidature acceptée';
+    case 'candidature_refusee': case 'candidature_refusee_admin': return 'Candidature refusée';
+    case 'candidature_bail_conclu': case 'candidature_bail_conclu_admin': return 'Bail conclu';
+    case 'candidature_attente_bail': case 'candidature_attente_bail_admin': return 'Attente bail';
+    case 'candidature_bail_recu': case 'candidature_bail_recu_admin': return 'Bail reçu';
+    case 'candidature_signature_planifiee': case 'candidature_signature_planifiee_admin': return 'Signature planifiée';
+    case 'candidature_signature_effectuee': case 'candidature_signature_effectuee_admin': return 'Bail signé';
+    case 'candidature_etat_lieux_fixe': case 'candidature_etat_lieux_fixe_admin': return 'État des lieux';
+    case 'candidature_cles_remises': case 'candidature_cles_remises_admin': return 'Clés remises';
+    case 'signature_reminder': return 'Rappel signature';
+    case 'bail_conclu': return 'Bail conclu';
+    case 'date_signature_choisie': return 'Date signature';
+    default: return 'Autre';
   }
 };
 
@@ -62,7 +94,25 @@ export default function AdminNotifications() {
       markAsRead(notification.id);
     }
     if (notification.link) {
-      navigate(notification.link);
+      let targetLink = notification.link;
+      
+      // Build query params from metadata if link doesn't have them
+      if (!targetLink.includes('?') && notification.metadata) {
+        const params = new URLSearchParams();
+        const meta = notification.metadata as Record<string, string>;
+        
+        if (meta.conversation_id) params.set('conversationId', meta.conversation_id);
+        if (meta.offre_id) params.set('offreId', meta.offre_id);
+        if (meta.visite_id) params.set('visiteId', meta.visite_id);
+        if (meta.candidature_id) params.set('candidatureId', meta.candidature_id);
+        if (meta.client_id) params.set('clientId', meta.client_id);
+        
+        if (params.toString()) {
+          targetLink = `${targetLink}?${params.toString()}`;
+        }
+      }
+      
+      navigate(targetLink);
     }
   };
 

@@ -12,39 +12,63 @@ import { cn } from '@/lib/utils';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
-    case 'new_client_activated':
-      return '👤';
-    case 'client_assigned':
-      return '🤝';
-    case 'new_message':
-      return '💬';
-    case 'new_offer':
-      return '🏠';
-    case 'new_visit':
-      return '📅';
-    case 'visit_reminder':
-      return '⏰';
-    default:
-      return '🔔';
+    case 'new_client_activated': return '👤';
+    case 'client_assigned': return '🤝';
+    case 'client_removed': return '👋';
+    case 'new_message': return '💬';
+    case 'new_offer': case 'new_offer_admin': return '🏠';
+    case 'new_visit': case 'new_visit_admin': return '📅';
+    case 'visit_reminder': return '⏰';
+    case 'visit_confirmed': case 'visit_confirmed_admin': return '✅';
+    case 'visit_refused': case 'visit_refused_admin': return '❌';
+    case 'visit_delegated': return '🔄';
+    case 'activation_request': return '🆕';
+    case 'nouvelle_demande_mandat': return '📋';
+    case 'document_request': return '📄';
+    case 'dossier_complete': return '✅';
+    case 'badge_earned': return '🏆';
+    case 'coagent_added': case 'coagent_assignment': return '👥';
+    case 'new_candidature': case 'candidature_deposee': return '📝';
+    case 'candidature_acceptee': return '🎉';
+    case 'candidature_refusee': return '❌';
+    case 'candidature_bail_conclu': case 'bail_conclu': return '✍️';
+    case 'candidature_attente_bail': return '⏳';
+    case 'candidature_bail_recu': return '📨';
+    case 'candidature_signature_planifiee': case 'date_signature_choisie': return '📅';
+    case 'candidature_signature_effectuee': return '✅';
+    case 'candidature_etat_lieux_fixe': return '🏠';
+    case 'candidature_cles_remises': return '🔑';
+    case 'signature_reminder': return '🔔';
+    default: return '🔔';
   }
 };
 
 const getNotificationTypeName = (type: string) => {
   switch (type) {
-    case 'new_client_activated':
-      return 'Nouveau client';
-    case 'client_assigned':
-      return 'Client assigné';
-    case 'new_message':
-      return 'Message';
-    case 'new_offer':
-      return 'Offre';
-    case 'new_visit':
-      return 'Visite';
-    case 'visit_reminder':
-      return 'Rappel visite';
-    default:
-      return 'Autre';
+    case 'new_client_activated': return 'Nouveau client';
+    case 'client_assigned': return 'Client assigné';
+    case 'client_removed': return 'Client retiré';
+    case 'new_message': return 'Message';
+    case 'new_offer': return 'Offre';
+    case 'new_visit': return 'Visite';
+    case 'visit_reminder': return 'Rappel visite';
+    case 'visit_confirmed': return 'Visite confirmée';
+    case 'visit_refused': return 'Visite refusée';
+    case 'visit_delegated': return 'Visite déléguée';
+    case 'badge_earned': return 'Badge';
+    case 'coagent_added': case 'coagent_assignment': return 'Co-agent';
+    case 'new_candidature': case 'candidature_deposee': return 'Candidature';
+    case 'candidature_acceptee': return 'Candidature acceptée';
+    case 'candidature_refusee': return 'Candidature refusée';
+    case 'candidature_bail_conclu': case 'bail_conclu': return 'Bail conclu';
+    case 'candidature_attente_bail': return 'Attente bail';
+    case 'candidature_bail_recu': return 'Bail reçu';
+    case 'candidature_signature_planifiee': case 'date_signature_choisie': return 'Date signature';
+    case 'candidature_signature_effectuee': return 'Bail signé';
+    case 'candidature_etat_lieux_fixe': return 'État des lieux';
+    case 'candidature_cles_remises': return 'Clés remises';
+    case 'signature_reminder': return 'Rappel signature';
+    default: return 'Autre';
   }
 };
 

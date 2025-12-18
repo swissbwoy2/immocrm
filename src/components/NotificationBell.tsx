@@ -16,20 +16,34 @@ import { NotificationBadge } from './NotificationBadge';
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
-    case 'new_client_activated':
-      return '👤';
-    case 'client_assigned':
-      return '🤝';
-    case 'new_message':
-      return '💬';
-    case 'new_offer':
-      return '🏠';
-    case 'new_visit':
-      return '📅';
-    case 'visit_reminder':
-      return '⏰';
-    default:
-      return '🔔';
+    case 'new_client_activated': return '👤';
+    case 'client_assigned': return '🤝';
+    case 'client_removed': return '👋';
+    case 'new_message': return '💬';
+    case 'new_offer': case 'new_offer_admin': return '🏠';
+    case 'new_visit': case 'new_visit_admin': return '📅';
+    case 'visit_reminder': return '⏰';
+    case 'visit_confirmed': case 'visit_confirmed_admin': return '✅';
+    case 'visit_refused': case 'visit_refused_admin': return '❌';
+    case 'visit_delegated': return '🔄';
+    case 'activation_request': return '🆕';
+    case 'nouvelle_demande_mandat': return '📋';
+    case 'document_request': return '📄';
+    case 'dossier_complete': return '✅';
+    case 'badge_earned': return '🏆';
+    case 'coagent_added': case 'coagent_assignment': return '👥';
+    case 'new_candidature': case 'candidature_deposee': return '📝';
+    case 'candidature_acceptee': case 'candidature_acceptee_admin': return '🎉';
+    case 'candidature_refusee': case 'candidature_refusee_admin': return '❌';
+    case 'candidature_bail_conclu': case 'candidature_bail_conclu_admin': case 'bail_conclu': return '✍️';
+    case 'candidature_attente_bail': case 'candidature_attente_bail_admin': return '⏳';
+    case 'candidature_bail_recu': case 'candidature_bail_recu_admin': return '📨';
+    case 'candidature_signature_planifiee': case 'candidature_signature_planifiee_admin': case 'date_signature_choisie': return '📅';
+    case 'candidature_signature_effectuee': case 'candidature_signature_effectuee_admin': return '✅';
+    case 'candidature_etat_lieux_fixe': case 'candidature_etat_lieux_fixe_admin': return '🏠';
+    case 'candidature_cles_remises': case 'candidature_cles_remises_admin': return '🔑';
+    case 'signature_reminder': return '🔔';
+    default: return '🔔';
   }
 };
 
