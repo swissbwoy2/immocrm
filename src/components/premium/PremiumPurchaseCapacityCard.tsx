@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 import { Home, Wallet, CreditCard, TrendingUp, Info } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface PurchaseSolvabilityResult {
   prixAchatMax: number;
@@ -16,15 +16,24 @@ interface PremiumPurchaseCapacityCardProps {
 }
 
 function AnimatedValue({ value, suffix = '', prefix = '' }: { value: number; suffix?: string; prefix?: string }) {
-  const [displayValue, setDisplayValue] = useState(0);
+  const [displayValue, setDisplayValue] = useState(value);
+  const frameRef = useRef<number | null>(null);
+  const hasAnimated = useRef(false);
   
   useEffect(() => {
-    const duration = 1000;
-    const startTime = Date.now();
-    const startValue = displayValue;
+    // Only animate once on mount
+    if (hasAnimated.current) {
+      setDisplayValue(value);
+      return;
+    }
     
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
+    hasAnimated.current = true;
+    const duration = 800;
+    const startTime = performance.now();
+    const startValue = 0;
+    
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
       // Easing function
@@ -34,11 +43,20 @@ function AnimatedValue({ value, suffix = '', prefix = '' }: { value: number; suf
       setDisplayValue(current);
       
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        frameRef.current = requestAnimationFrame(animate);
+      } else {
+        frameRef.current = null;
       }
     };
     
-    requestAnimationFrame(animate);
+    frameRef.current = requestAnimationFrame(animate);
+    
+    return () => {
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+    };
   }, [value]);
   
   return (
