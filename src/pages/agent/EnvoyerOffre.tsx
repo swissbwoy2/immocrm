@@ -26,6 +26,7 @@ const EnvoyerOffre = () => {
   const [clients, setClients] = useState<any[]>([]);
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [draftDialogOpen, setDraftDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Lire le clientId depuis les query params de l'URL
   const searchParams = new URLSearchParams(location.search);
@@ -128,6 +129,8 @@ const EnvoyerOffre = () => {
   };
 
   const handleSubmit = async () => {
+    if (isSubmitting) return; // Protection double-clic
+    
     if (selectedClientIds.length === 0 || !formData.localisation || !formData.prix || !formData.surface || !formData.nombrePieces) {
       toast({ title: "Erreur", description: "Veuillez sélectionner au moins un client et remplir tous les champs obligatoires", variant: "destructive" });
       return;
@@ -135,6 +138,7 @@ const EnvoyerOffre = () => {
 
     if (!agent) return;
 
+    setIsSubmitting(true);
     try {
       // Boucle sur chaque client sélectionné
       for (const clientId of selectedClientIds) {
@@ -334,6 +338,8 @@ const EnvoyerOffre = () => {
     } catch (error) {
       console.error('Error sending offer:', error);
       toast({ title: "Erreur", description: "Impossible d'envoyer l'offre", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -535,8 +541,8 @@ const EnvoyerOffre = () => {
                 <RotateCcw className="h-4 w-4" />
                 Réinitialiser
               </Button>
-              <Button onClick={handleSubmit} className="flex-1" size="lg">
-                Envoyer
+              <Button onClick={handleSubmit} className="flex-1" size="lg" disabled={isSubmitting || selectedClientIds.length === 0}>
+                {isSubmitting ? 'Envoi en cours...' : 'Envoyer'}
               </Button>
             </div>
 

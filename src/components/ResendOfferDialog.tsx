@@ -64,6 +64,8 @@ export const ResendOfferDialog = ({
   const [sending, setSending] = useState(false);
 
   const handleResend = async () => {
+    if (sending) return; // Protection double-clic
+    
     if (selectedClientIds.length === 0) {
       toast.error('Veuillez sélectionner au moins un client');
       return;

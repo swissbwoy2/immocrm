@@ -88,6 +88,7 @@ const Messagerie = () => {
     name: string;
     size: number;
   } | null>(null);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
 
   // Dialog states
   const [signatureDatesDialogOpen, setSignatureDatesDialogOpen] = useState(false);
@@ -493,6 +494,8 @@ const Messagerie = () => {
   };
 
   const handleSendMessage = async (textOverride?: string) => {
+    if (isSendingMessage) return; // Protection double-envoi
+    
     const content = textOverride ?? messageText;
     if ((!content.trim() && !pendingAttachment) || !selectedConv || !user || !agentId) {
       console.log('[Messagerie Agent] Message vide ou conversation non sélectionnée');
@@ -501,6 +504,7 @@ const Messagerie = () => {
 
     console.log('[Messagerie Agent] Envoi du message...', { conversationId: selectedConv, agentId });
 
+    setIsSendingMessage(true);
     try {
       // Vérifier si c'est une conversation client et si l'agent est toujours assigné
       const currentConversation = conversations.find(c => c.id === selectedConv);
@@ -628,6 +632,8 @@ const Messagerie = () => {
         description: error?.message || "Impossible d'envoyer le message. Veuillez réessayer.",
         variant: "destructive",
       });
+    } finally {
+      setIsSendingMessage(false);
     }
   };
 
@@ -1410,7 +1416,7 @@ const Messagerie = () => {
             onSendMessage={handleSendMessage}
             message={messageText}
             onMessageChange={setMessageText}
-            disabled={false}
+            disabled={isSendingMessage}
             placeholder="Écrivez un message..."
             pendingAttachment={pendingAttachment}
             onRemoveAttachment={() => setPendingAttachment(null)}
