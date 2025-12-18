@@ -23,6 +23,7 @@ export function FloatingNav() {
           ? 'translate-y-0 opacity-100' 
           : '-translate-y-full opacity-0'
       }`}
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
       <div className="bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-lg shadow-black/5">
         <div className="container mx-auto px-4 py-3">

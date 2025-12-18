@@ -51,7 +51,10 @@ export default function Landing() {
       <FloatingNav />
       
       {/* Top banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-white/10">
+      <div 
+        className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-white/10"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
         <div className="container mx-auto px-4 py-2 text-center">
           <p className="text-xs sm:text-sm text-slate-300">
             Un logiciel propulsé par{' '}
@@ -87,7 +90,10 @@ export default function Landing() {
       <LandingFooter />
 
       {/* Floating CTA - harmonized with dashboard style */}
-      <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 animate-fade-in">
+      <div 
+        className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 animate-fade-in"
+        style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+      >
         <div className="relative group">
           {/* Subtle glow */}
           <div className="absolute -inset-1 bg-primary/20 rounded-full blur-lg opacity-60 group-hover:opacity-100 transition-opacity" />

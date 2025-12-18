@@ -29,7 +29,10 @@ export function CookieConsentBanner() {
   if (!showBanner) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[60] p-4 animate-in slide-in-from-bottom-5 fade-in duration-500">
+    <div 
+      className="fixed bottom-0 left-0 right-0 z-[60] p-4 animate-in slide-in-from-bottom-5 fade-in duration-500"
+      style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+    >
       {/* Gradient top border */}
       <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
       
