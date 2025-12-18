@@ -1,6 +1,6 @@
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, memo } from 'react';
 
 interface PremiumKPICardProps {
   title: string;
@@ -12,15 +12,24 @@ interface PremiumKPICardProps {
   delay?: number;
 }
 
-function AnimatedNumber({ value }: { value: number }) {
-  const [displayValue, setDisplayValue] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
+const AnimatedNumber = memo(function AnimatedNumber({ value }: { value: number }) {
+  const [displayValue, setDisplayValue] = useState(value);
+  const frameRef = useRef<number | null>(null);
+  const startValueRef = useRef(0);
+  const hasAnimated = useRef(false);
   
   useEffect(() => {
-    const duration = 1000;
-    const start = 0;
-    const end = value;
+    // Only animate once on mount, not on every value change
+    if (hasAnimated.current) {
+      setDisplayValue(value);
+      return;
+    }
+    
+    hasAnimated.current = true;
+    const duration = 800;
     const startTime = performance.now();
+    const start = startValueRef.current;
+    const end = value;
     
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
@@ -33,17 +42,26 @@ function AnimatedNumber({ value }: { value: number }) {
       setDisplayValue(current);
       
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        frameRef.current = requestAnimationFrame(animate);
+      } else {
+        frameRef.current = null;
       }
     };
     
-    requestAnimationFrame(animate);
+    frameRef.current = requestAnimationFrame(animate);
+    
+    return () => {
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+    };
   }, [value]);
   
-  return <span ref={ref}>{displayValue.toLocaleString()}</span>;
-}
+  return <span>{displayValue.toLocaleString()}</span>;
+});
 
-export function PremiumKPICard({ 
+export const PremiumKPICard = memo(function PremiumKPICard({ 
   title, 
   value, 
   icon: Icon, 
@@ -60,28 +78,24 @@ export function PremiumKPICard({
       iconColor: 'text-primary',
       glowColor: 'group-hover:shadow-primary/20',
       borderGradient: 'from-primary/40 via-primary/20 to-primary/40',
-      particleColor: 'bg-primary/30',
     },
     success: {
       iconBg: 'bg-success/10',
       iconColor: 'text-success',
       glowColor: 'group-hover:shadow-success/20',
       borderGradient: 'from-success/40 via-emerald-400/20 to-success/40',
-      particleColor: 'bg-success/30',
     },
     warning: {
       iconBg: 'bg-warning/10',
       iconColor: 'text-warning',
       glowColor: 'group-hover:shadow-warning/20',
       borderGradient: 'from-warning/40 via-orange-400/20 to-warning/40',
-      particleColor: 'bg-warning/30',
     },
     danger: {
       iconBg: 'bg-destructive/10',
       iconColor: 'text-destructive',
       glowColor: 'group-hover:shadow-destructive/20',
       borderGradient: 'from-destructive/40 via-red-400/20 to-destructive/40',
-      particleColor: 'bg-destructive/30',
     },
   };
 
@@ -92,38 +106,23 @@ export function PremiumKPICard({
       className={cn(
         'group relative overflow-hidden rounded-xl',
         'bg-card border border-border/50',
-        'transition-all duration-500 ease-out',
-        'hover:shadow-xl hover:-translate-y-1',
+        'transition-all duration-300 ease-out',
+        'hover:shadow-lg hover:-translate-y-0.5',
         config.glowColor,
         onClick && 'cursor-pointer'
       )}
       onClick={onClick}
       style={{ animationDelay: `${delay}ms` }}
     >
-      {/* Animated border gradient */}
+      {/* Animated border gradient - simplified */}
       <div 
         className={cn(
           'absolute inset-0 rounded-xl p-[1px]',
           'bg-gradient-to-r opacity-0 group-hover:opacity-100',
-          'transition-opacity duration-500',
+          'transition-opacity duration-300',
           config.borderGradient
         )}
       />
-      
-      {/* Glassmorphism overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background/50 via-background/80 to-background/50 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      
-      {/* Floating particles on hover */}
-      <div className="absolute inset-0 overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
-        <div className={cn('absolute w-2 h-2 rounded-full blur-sm animate-float', config.particleColor)} style={{ top: '20%', left: '10%', animationDelay: '0s' }} />
-        <div className={cn('absolute w-1.5 h-1.5 rounded-full blur-sm animate-float', config.particleColor)} style={{ top: '60%', right: '15%', animationDelay: '0.5s' }} />
-        <div className={cn('absolute w-1 h-1 rounded-full blur-sm animate-float', config.particleColor)} style={{ bottom: '20%', left: '30%', animationDelay: '1s' }} />
-      </div>
-      
-      {/* Shine effect */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-      </div>
       
       {/* Content */}
       <div className="relative p-3 sm:p-4 lg:p-5">
@@ -132,7 +131,7 @@ export function PremiumKPICard({
             <p className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate uppercase tracking-wider">
               {title}
             </p>
-            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mt-1 truncate transition-transform duration-300 group-hover:scale-105 origin-left">
+            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold mt-1 truncate">
               {numericValue !== null ? <AnimatedNumber value={numericValue} /> : value}
             </h3>
             {subtitle && (
@@ -143,7 +142,7 @@ export function PremiumKPICard({
           </div>
           <div className={cn(
             'p-2 sm:p-2.5 lg:p-3 rounded-xl flex-shrink-0',
-            'transition-all duration-500 group-hover:scale-110 group-hover:rotate-6',
+            'transition-transform duration-300 group-hover:scale-105',
             config.iconBg
           )}>
             <Icon className={cn('w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6', config.iconColor)} />
@@ -152,4 +151,4 @@ export function PremiumKPICard({
       </div>
     </div>
   );
-}
+});
