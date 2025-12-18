@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send, RefreshCw } from 'lucide-react';
 import { ClientActivityStats } from '@/components/admin/ClientActivityStats';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -170,6 +170,7 @@ export default function ClientDetail() {
   const [deleting, setDeleting] = useState(false);
   const [sendEmailDialogOpen, setSendEmailDialogOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [regeneratingContract, setRegeneratingContract] = useState(false);
   
   // Hook pour les candidats supplémentaires et solvabilité
   const { candidates, refresh: refreshCandidates } = useClientCandidates(id);
@@ -1749,9 +1750,13 @@ export default function ClientDetail() {
                       className="w-full group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30"
                       onClick={async () => {
                         try {
+                          // Extract file path from URL
+                          const urlParts = client.mandat_pdf_url!.split('/mandat-contracts/');
+                          const filePath = urlParts[urlParts.length - 1];
+                          
                           const { data, error } = await supabase.storage
                             .from('mandat-contracts')
-                            .download(client.mandat_pdf_url);
+                            .download(filePath);
                           if (error) throw error;
                           const url = URL.createObjectURL(data);
                           const link = document.createElement('a');
@@ -1773,6 +1778,86 @@ export default function ClientDetail() {
                       Télécharger le contrat PDF
                     </Button>
                   )}
+
+                  {/* Regenerate button */}
+                  {client.demande_mandat_id && (
+                    <Button 
+                      variant="outline"
+                      className="w-full group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-orange-500/10 hover:border-orange-500/30"
+                      disabled={regeneratingContract}
+                      onClick={async () => {
+                        if (!client.demande_mandat_id) return;
+                        
+                        setRegeneratingContract(true);
+                        try {
+                          // Fetch demande_mandat data
+                          const { data: demande, error: demandeError } = await supabase
+                            .from('demandes_mandat')
+                            .select('*')
+                            .eq('id', client.demande_mandat_id)
+                            .single();
+                          
+                          if (demandeError) throw demandeError;
+                          
+                          // Call generate-mandat-contract function
+                          const { data: result, error: funcError } = await supabase.functions.invoke('generate-mandat-contract', {
+                            body: {
+                              clientId: client.id,
+                              demandeId: demande.id,
+                              prenom: demande.prenom,
+                              nom: demande.nom,
+                              email: demande.email,
+                              telephone: demande.telephone,
+                              adresse: demande.adresse,
+                              date_naissance: demande.date_naissance,
+                              nationalite: demande.nationalite,
+                              type_permis: demande.type_permis,
+                              etat_civil: demande.etat_civil,
+                              profession: demande.profession,
+                              employeur: demande.employeur,
+                              revenus_mensuels: demande.revenus_mensuels,
+                              type_recherche: demande.type_recherche,
+                              type_bien: demande.type_bien,
+                              pieces_recherche: demande.pieces_recherche,
+                              region_recherche: demande.region_recherche,
+                              budget_max: demande.budget_max,
+                              signature_data: demande.signature_data,
+                              cgv_acceptees_at: demande.cgv_acceptees_at,
+                              candidats: demande.candidats,
+                              gerance_actuelle: demande.gerance_actuelle,
+                              loyer_actuel: demande.loyer_actuel,
+                              depuis_le: demande.depuis_le,
+                              motif_changement: demande.motif_changement,
+                              nombre_occupants: demande.nombre_occupants,
+                              souhaits_particuliers: demande.souhaits_particuliers,
+                            }
+                          });
+                          
+                          if (funcError) throw funcError;
+                          
+                          toast({
+                            title: 'Contrat régénéré',
+                            description: 'Le PDF a été régénéré avec succès et un email a été envoyé à l\'admin',
+                          });
+                          
+                          // Reload client data to get new PDF URL
+                          loadClientData();
+                        } catch (error) {
+                          console.error('Error regenerating contract:', error);
+                          toast({
+                            title: 'Erreur',
+                            description: 'Impossible de régénérer le contrat',
+                            variant: 'destructive',
+                          });
+                        } finally {
+                          setRegeneratingContract(false);
+                        }
+                      }}
+                    >
+                      <RefreshCw className={`w-4 h-4 mr-2 ${regeneratingContract ? 'animate-spin' : 'group-hover:scale-110'} transition-transform`} />
+                      {regeneratingContract ? 'Régénération...' : 'Régénérer le PDF'}
+                    </Button>
+                  )}
                 </>
               ) : (
                 <div className="text-center py-8">
@@ -1783,6 +1868,83 @@ export default function ClientDetail() {
                   <p className="text-xs text-muted-foreground">
                     Le contrat sera généré lors de l'activation du mandat
                   </p>
+                  
+                  {/* Button to generate if demande_mandat_id exists but no PDF */}
+                  {client.demande_mandat_id && (
+                    <Button 
+                      variant="outline"
+                      className="mt-4 group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30"
+                      disabled={regeneratingContract}
+                      onClick={async () => {
+                        if (!client.demande_mandat_id) return;
+                        
+                        setRegeneratingContract(true);
+                        try {
+                          const { data: demande, error: demandeError } = await supabase
+                            .from('demandes_mandat')
+                            .select('*')
+                            .eq('id', client.demande_mandat_id)
+                            .single();
+                          
+                          if (demandeError) throw demandeError;
+                          
+                          const { data: result, error: funcError } = await supabase.functions.invoke('generate-mandat-contract', {
+                            body: {
+                              clientId: client.id,
+                              demandeId: demande.id,
+                              prenom: demande.prenom,
+                              nom: demande.nom,
+                              email: demande.email,
+                              telephone: demande.telephone,
+                              adresse: demande.adresse,
+                              date_naissance: demande.date_naissance,
+                              nationalite: demande.nationalite,
+                              type_permis: demande.type_permis,
+                              etat_civil: demande.etat_civil,
+                              profession: demande.profession,
+                              employeur: demande.employeur,
+                              revenus_mensuels: demande.revenus_mensuels,
+                              type_recherche: demande.type_recherche,
+                              type_bien: demande.type_bien,
+                              pieces_recherche: demande.pieces_recherche,
+                              region_recherche: demande.region_recherche,
+                              budget_max: demande.budget_max,
+                              signature_data: demande.signature_data,
+                              cgv_acceptees_at: demande.cgv_acceptees_at,
+                              candidats: demande.candidats,
+                              gerance_actuelle: demande.gerance_actuelle,
+                              loyer_actuel: demande.loyer_actuel,
+                              depuis_le: demande.depuis_le,
+                              motif_changement: demande.motif_changement,
+                              nombre_occupants: demande.nombre_occupants,
+                              souhaits_particuliers: demande.souhaits_particuliers,
+                            }
+                          });
+                          
+                          if (funcError) throw funcError;
+                          
+                          toast({
+                            title: 'Contrat généré',
+                            description: 'Le PDF a été généré avec succès',
+                          });
+                          
+                          loadClientData();
+                        } catch (error) {
+                          console.error('Error generating contract:', error);
+                          toast({
+                            title: 'Erreur',
+                            description: 'Impossible de générer le contrat',
+                            variant: 'destructive',
+                          });
+                        } finally {
+                          setRegeneratingContract(false);
+                        }
+                      }}
+                    >
+                      <FilePlus className={`w-4 h-4 mr-2 ${regeneratingContract ? 'animate-spin' : 'group-hover:scale-110'} transition-transform`} />
+                      {regeneratingContract ? 'Génération...' : 'Générer le PDF'}
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -364,6 +365,126 @@ serve(async (req) => {
     if (updateError) {
       console.error('Error updating client:', updateError);
       // Don't throw, PDF is still generated and uploaded
+    }
+
+    // ==================== SEND EMAIL TO ADMIN ====================
+    try {
+      const resendApiKey = Deno.env.get('RESEND_API_KEY');
+      const fromEmail = Deno.env.get('RESEND_FROM_EMAIL') || 'noreply@immo-rama.ch';
+      
+      if (resendApiKey) {
+        const resend = new Resend(resendApiKey);
+        
+        // Convert PDF to base64 for attachment
+        const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
+        
+        const emailResult = await resend.emails.send({
+          from: fromEmail,
+          to: ['info@immo-rama.ch'],
+          subject: `🎉 Nouveau contrat signé - ${contractData.prenom} ${contractData.nom}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: linear-gradient(135deg, #2D4A6B, #1a2f44); padding: 30px; border-radius: 10px 10px 0 0;">
+                <h1 style="color: white; margin: 0;">📋 Nouveau Contrat de Mandat</h1>
+              </div>
+              <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
+                <p style="color: #374151; font-size: 16px;">Un nouveau contrat de mandat a été signé électroniquement.</p>
+                
+                <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb;">
+                  <h2 style="color: #2D4A6B; margin-top: 0;">Informations du client</h2>
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                      <td style="padding: 8px 0; color: #6b7280; width: 40%;">Nom complet:</td>
+                      <td style="padding: 8px 0; font-weight: bold; color: #111827;">${contractData.prenom} ${contractData.nom}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; color: #6b7280;">Email:</td>
+                      <td style="padding: 8px 0; color: #111827;">${contractData.email}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; color: #6b7280;">Téléphone:</td>
+                      <td style="padding: 8px 0; color: #111827;">${contractData.telephone || 'Non renseigné'}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; color: #6b7280;">Budget max:</td>
+                      <td style="padding: 8px 0; color: #111827;">CHF ${contractData.budget_max?.toLocaleString('fr-CH') || '-'}.-</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; color: #6b7280;">Région:</td>
+                      <td style="padding: 8px 0; color: #111827;">${contractData.region_recherche || 'Non renseigné'}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 8px 0; color: #6b7280;">Date de signature:</td>
+                      <td style="padding: 8px 0; color: #111827;">${contractDate}</td>
+                    </tr>
+                  </table>
+                </div>
+                
+                <p style="color: #6b7280; font-size: 14px;">Le contrat PDF est joint à cet email. Vous pouvez également le consulter depuis le tableau de bord admin.</p>
+                
+                <div style="margin-top: 30px; text-align: center;">
+                  <a href="${supabaseUrl.replace('.supabase.co', '')}/admin/clients/${contractData.clientId}" 
+                     style="background: #2D4A6B; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; display: inline-block;">
+                    Voir le profil client →
+                  </a>
+                </div>
+              </div>
+              <div style="background: #f3f4f6; padding: 20px; border-radius: 0 0 10px 10px; text-align: center;">
+                <p style="color: #9ca3af; font-size: 12px; margin: 0;">IMMO-RAMA Sàrl - Recherche Immobilière</p>
+              </div>
+            </div>
+          `,
+          attachments: [{
+            filename: `contrat-mandat-${contractData.nom}-${contractData.prenom}.pdf`,
+            content: pdfBase64,
+          }]
+        });
+        
+        console.log('Email sent to admin:', emailResult);
+      } else {
+        console.log('RESEND_API_KEY not configured, skipping email');
+      }
+    } catch (emailError) {
+      console.error('Error sending email to admin:', emailError);
+      // Don't throw, email is not critical
+    }
+
+    // ==================== CREATE ADMIN NOTIFICATIONS ====================
+    try {
+      // Get all admin user IDs
+      const { data: adminUsers, error: adminError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'admin');
+      
+      if (!adminError && adminUsers && adminUsers.length > 0) {
+        const notifications = adminUsers.map(admin => ({
+          user_id: admin.user_id,
+          type: 'contrat_signe',
+          title: '📋 Nouveau contrat signé',
+          message: `${contractData.prenom} ${contractData.nom} a signé son contrat de mandat`,
+          link: `/admin/clients/${contractData.clientId}`,
+          metadata: {
+            client_id: contractData.clientId,
+            client_name: `${contractData.prenom} ${contractData.nom}`,
+            client_email: contractData.email,
+            pdf_url: publicUrl
+          }
+        }));
+        
+        const { error: notifError } = await supabase
+          .from('notifications')
+          .insert(notifications);
+        
+        if (notifError) {
+          console.error('Error creating admin notifications:', notifError);
+        } else {
+          console.log(`Created ${notifications.length} admin notifications`);
+        }
+      }
+    } catch (notifError) {
+      console.error('Error creating notifications:', notifError);
+      // Don't throw, notifications are not critical
     }
 
     return new Response(
