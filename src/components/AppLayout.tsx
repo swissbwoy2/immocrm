@@ -4,6 +4,8 @@ import { AppSidebar } from '@/components/AppSidebar';
 import { Menu } from 'lucide-react';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import { useSwipeGesture } from '@/hooks/useSwipeGesture';
+import { OfflineIndicator } from '@/components/OfflineIndicator';
+import { PageTransition } from '@/components/PageTransition';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -26,10 +28,12 @@ function AppLayoutContent({ children }: AppLayoutProps) {
     },
     threshold: 60,
     edgeThreshold: 40,
+    enableHaptics: true,
   });
 
   return (
     <div className="min-h-screen flex w-full bg-background">
+      <OfflineIndicator />
       <AppSidebar />
       <div className="flex-1 flex flex-col w-full min-w-0">
         {/* Mobile Header - toujours visible */}
@@ -50,9 +54,11 @@ function AppLayoutContent({ children }: AppLayoutProps) {
           </button>
         </header>
         
-        {/* Main Content - zone sans scroll pour permettre aux enfants de gérer leur propre scroll */}
+        {/* Main Content - avec animations de transition */}
         <main className="flex-1 min-h-0 overflow-hidden">
-          {children}
+          <PageTransition>
+            {children}
+          </PageTransition>
         </main>
       </div>
     </div>
