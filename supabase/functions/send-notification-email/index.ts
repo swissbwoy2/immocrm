@@ -103,6 +103,42 @@ const getNotificationColor = (type: string): string => {
   return colors[type] || '#6366f1';
 };
 
+// Send push notification to user
+async function sendPushNotification(
+  supabaseUrl: string,
+  supabaseServiceKey: string,
+  userId: string,
+  title: string,
+  body: string,
+  link?: string
+): Promise<void> {
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-push-notification`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${supabaseServiceKey}`,
+      },
+      body: JSON.stringify({
+        user_id: userId,
+        title,
+        body,
+        link,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error("Push notification error:", error);
+    } else {
+      const result = await response.json();
+      console.log("Push notification result:", result);
+    }
+  } catch (error) {
+    console.error("Failed to send push notification:", error);
+  }
+}
+
 const generateEmailHtml = (
   title: string,
   message: string,
@@ -240,6 +276,10 @@ serve(async (req) => {
     const userName = profile.prenom ? `${profile.prenom}` : undefined;
     const emailHtml = generateEmailHtml(title, message, notification_type, link, userName);
 
+    // Send push notification in parallel
+    const pushPromise = sendPushNotification(supabaseUrl, supabaseServiceKey, user_id, title, message, link);
+
+
     // Send email via Resend - use hardcoded value to avoid env variable issues
     const fromEmail = "Logisorama <support@logisorama.ch>";
     
@@ -278,10 +318,13 @@ serve(async (req) => {
 
         console.log(`Email notification sent successfully to ${profile.email}`, emailData);
         
+        // Wait for push notification to complete
+        await pushPromise;
+        
         return new Response(
           JSON.stringify({ 
             success: true, 
-            message: "Notification email sent",
+            message: "Notification email and push sent",
             email_id: emailData?.id 
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
