@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send, Bell, Power, Sparkles } from 'lucide-react';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -187,8 +188,12 @@ export default function AdminDashboard() {
 
   const clientsSansAgent = clients.filter(c => !c.agentId).length;
 
+  const handleRefresh = useCallback(async () => {
+    await loadData();
+  }, []);
+
   return (
-    <div className="flex-1 overflow-y-auto">
+    <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8">
           {/* Header avec dégradé animé */}
           <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-6 md:p-8 mb-8 animate-fade-in">
@@ -560,5 +565,6 @@ export default function AdminDashboard() {
           </Card>
         </div>
       </div>
+    </PullToRefresh>
   );
 }

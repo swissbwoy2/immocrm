@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -102,8 +103,12 @@ export default function ApporteurDashboard() {
     );
   }
 
+  const handleRefresh = useCallback(async () => {
+    await loadApporteurData();
+  }, []);
+
   return (
-    <div className="space-y-6">
+    <PullToRefresh onRefresh={handleRefresh} className="space-y-6">
       {/* Header avec dégradé animé */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-6 md:p-8 animate-fade-in">
         {/* Particules flottantes */}
@@ -326,6 +331,6 @@ export default function ApporteurDashboard() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PullToRefresh>
   );
 }
