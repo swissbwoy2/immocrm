@@ -6,6 +6,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Mapping des types du formulaire vers les types de la table documents
+const mapDocumentType = (formType: string): string => {
+  const typeMapping: Record<string, string> = {
+    'poursuites': 'extrait_poursuites',
+    'salaire1': 'fiche_salaire',
+    'salaire2': 'fiche_salaire',
+    'salaire3': 'fiche_salaire',
+    'identite': 'piece_identite',
+  };
+  return typeMapping[formType] || formType;
+};
+
+// Détecter le MIME type à partir du nom du fichier
+const getMimeType = (fileName: string): string => {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  switch (ext) {
+    case 'pdf': return 'application/pdf';
+    case 'jpg':
+    case 'jpeg': return 'image/jpeg';
+    case 'png': return 'image/png';
+    default: return 'application/octet-stream';
+  }
+};
+
 interface DemandeMandat {
   id?: string;
   adresse?: string;
@@ -372,9 +396,20 @@ serve(async (req) => {
 
     // Transfer documents from demandeMandat
     if (demandeMandat?.documents_uploades && demandeMandat.documents_uploades.length > 0 && clientRecordId) {
-      console.log('Transferring documents:', demandeMandat.documents_uploades.length);
+      console.log('Transferring documents:', demandeMandat.documents_uploades.length, JSON.stringify(demandeMandat.documents_uploades));
       
       for (const doc of demandeMandat.documents_uploades) {
+        const mappedType = mapDocumentType(doc.type);
+        const mimeType = getMimeType(doc.name);
+        
+        console.log('Inserting document:', { 
+          name: doc.name, 
+          originalType: doc.type, 
+          mappedType, 
+          mimeType,
+          url: doc.url?.substring(0, 50) + '...'
+        });
+        
         const { error: docError } = await supabaseAdmin
           .from('documents')
           .insert({
@@ -382,13 +417,15 @@ serve(async (req) => {
             client_id: clientRecordId,
             nom: doc.name,
             url: doc.url,
-            type: doc.type,
-            type_document: doc.type,
+            type: mimeType,              // MIME type correct
+            type_document: mappedType,   // Type mappé correct
             statut: 'validé',
           });
 
         if (docError) {
-          console.error('Error transferring document:', docError);
+          console.error('Error transferring document:', docError, { doc: doc.name, mappedType, mimeType });
+        } else {
+          console.log('Document transferred successfully:', doc.name);
         }
       }
     }
