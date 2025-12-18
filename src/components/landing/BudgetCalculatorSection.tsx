@@ -384,6 +384,26 @@ export function BudgetCalculatorSection() {
                           </Link>
                         </Button>
                       </div>
+
+                      {/* Lead Capture après résultat */}
+                      <div className="mt-4 p-4 rounded-xl bg-primary/5 border border-primary/20">
+                        <p className="text-sm text-center text-muted-foreground mb-3">
+                          📋 <strong className="text-foreground">Reçois ta shortlist personnalisée</strong> en 24h
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <input
+                            type="tel"
+                            placeholder="Ton numéro"
+                            className="flex-1 h-10 px-3 rounded-lg border border-border/50 bg-background/80 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          />
+                          <Button size="sm" className="h-10 whitespace-nowrap">
+                            M'appeler
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground text-center mt-2">
+                          Gratuit • Sans engagement
+                        </p>
+                      </div>
                     </div>
                   ) : null}
                 </div>
