@@ -69,40 +69,106 @@ export default function Documents() {
     loadDocuments();
   }, [user?.id]);
 
+  // Helpers pour mapper les types de documents du mandat
+  const mapFormTypeToDocType = (formType: string): string => {
+    const typeMapping: Record<string, string> = {
+      'poursuites': 'extrait_poursuites',
+      'salaire1': 'fiche_salaire',
+      'salaire2': 'fiche_salaire',
+      'salaire3': 'fiche_salaire',
+      'identite': 'piece_identite',
+    };
+    return typeMapping[formType] || formType;
+  };
+
+  const getMimeTypeFromName = (fileName: string): string => {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'pdf': return 'application/pdf';
+      case 'jpg':
+      case 'jpeg': return 'image/jpeg';
+      case 'png': return 'image/png';
+      default: return 'application/octet-stream';
+    }
+  };
+
   const loadDocuments = async () => {
     if (!user) return;
 
     try {
+      // 1. Récupérer le profil pour l'email
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', user.id)
+        .single();
+
+      // 2. Récupérer le client
       const { data: clientData } = await supabase
         .from('clients')
         .select('id')
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (!clientData) {
-        console.log('No client data found');
-        return;
+      if (clientData) {
+        setClientId(clientData.id);
       }
-      
-      setClientId(clientData.id);
 
-      const { data: docsData, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('client_id', clientData.id)
-        .order('date_upload', { ascending: false });
+      // 3. Charger les documents de la table documents
+      let docsFromTable: any[] = [];
+      if (clientData) {
+        const { data, error } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('client_id', clientData.id)
+          .order('date_upload', { ascending: false });
 
-      if (error) throw error;
-      setDocuments(docsData || []);
+        if (!error) docsFromTable = data || [];
+      }
 
-      const { data: requestsData } = await supabase
-        .from('document_requests')
-        .select('*')
-        .eq('client_id', clientData.id)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+      // 4. Si pas de documents dans la table, récupérer depuis demandes_mandat
+      if (docsFromTable.length === 0 && profileData?.email) {
+        console.log('No documents in table, fetching from demandes_mandat for email:', profileData.email);
+        
+        const { data: mandatData } = await supabase
+          .from('demandes_mandat')
+          .select('documents_uploades')
+          .eq('email', profileData.email)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      setDocumentRequests(requestsData || []);
+        if (mandatData?.documents_uploades && Array.isArray(mandatData.documents_uploades) && mandatData.documents_uploades.length > 0) {
+          console.log('Found documents in demandes_mandat:', mandatData.documents_uploades.length);
+          
+          // Transformer les documents du mandat en format compatible
+          const mandatDocs = mandatData.documents_uploades.map((doc: any, index: number) => ({
+            id: `mandat-${index}`,
+            nom: doc.name,
+            url: doc.url,
+            type: getMimeTypeFromName(doc.name),
+            type_document: mapFormTypeToDocType(doc.type),
+            date_upload: new Date().toISOString(),
+            source: 'mandat', // Pour identifier l'origine
+          }));
+          
+          docsFromTable = mandatDocs;
+        }
+      }
+
+      setDocuments(docsFromTable);
+
+      // Charger les demandes de documents
+      if (clientData) {
+        const { data: requestsData } = await supabase
+          .from('document_requests')
+          .select('*')
+          .eq('client_id', clientData.id)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false });
+
+        setDocumentRequests(requestsData || []);
+      }
     } catch (error) {
       console.error('Error loading documents:', error);
       toast({
