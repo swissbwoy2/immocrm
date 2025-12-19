@@ -157,12 +157,8 @@ export default function AgentDocuments() {
         const blob = new Blob([bytes], { type: document.type });
         blobUrl = URL.createObjectURL(blob);
       } else {
-        // Extraire le chemin du fichier
-        let filePath = document.url;
-        if (filePath.includes('/storage/v1/object/')) {
-          const parts = filePath.split('/client-documents/');
-          filePath = parts[1] || filePath;
-        }
+        // Extraire le chemin du fichier avec la fonction utilitaire
+        const filePath = getStoragePath(document.url);
 
         // Télécharger le fichier en blob depuis le storage
         const { data, error } = await supabase.storage
@@ -216,11 +212,7 @@ export default function AgentDocuments() {
       }
 
       // Sinon, créer une URL signée depuis le storage
-      let filePath = document.url;
-      if (filePath.includes('/storage/v1/object/')) {
-        const parts = filePath.split('/client-documents/');
-        filePath = parts[1] || filePath;
-      }
+      const filePath = getStoragePath(document.url);
 
       const { data, error } = await supabase.storage
         .from('client-documents')
@@ -248,11 +240,7 @@ export default function AgentDocuments() {
     try {
       // Supprimer du storage si ce n'est pas une data URL
       if (!documentToDelete.url.startsWith('data:')) {
-        let filePath = documentToDelete.url;
-        if (filePath.includes('/storage/v1/object/')) {
-          const parts = filePath.split('/client-documents/');
-          filePath = parts[1] || filePath;
-        }
+        const filePath = getStoragePath(documentToDelete.url);
         
         const { error: storageError } = await supabase.storage
           .from('client-documents')
