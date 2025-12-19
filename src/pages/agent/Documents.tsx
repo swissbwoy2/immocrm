@@ -11,6 +11,29 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
+// Fonction utilitaire pour extraire le chemin du storage
+const getStoragePath = (url: string): string => {
+  // Si c'est une data URL, retourner tel quel
+  if (url.startsWith('data:')) return url;
+  
+  // Si c'est déjà un chemin relatif (ex: mandat/xxx.pdf ou user_id/xxx.pdf)
+  if (!url.includes('://')) return url;
+  
+  // Si c'est une URL complète Supabase avec /client-documents/
+  if (url.includes('/client-documents/')) {
+    const parts = url.split('/client-documents/');
+    return parts[1] || url;
+  }
+  
+  // Si c'est une URL avec /public/ ou /object/public/
+  if (url.includes('/object/public/')) {
+    const parts = url.split('/object/public/client-documents/');
+    return parts[1] || url;
+  }
+  
+  return url;
+};
+
 export default function AgentDocuments() {
   const { user } = useAuth();
   const [documents, setDocuments] = useState<any[]>([]);
