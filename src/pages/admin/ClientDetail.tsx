@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send, RefreshCw, FileCheck } from 'lucide-react';
+import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
 import { ClientActivityStats } from '@/components/admin/ClientActivityStats';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -168,6 +169,8 @@ export default function ClientDetail() {
   const [client, setClient] = useState<Client | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [agent, setAgent] = useState<Agent | null>(null);
+  const [offres, setOffres] = useState<any[]>([]);
+  const [candidatures, setCandidatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<any>({});
@@ -246,6 +249,26 @@ export default function ClientDetail() {
           });
         }
       }
+
+      // Load offers for this client
+      const { data: offresData, error: offresError } = await supabase
+        .from('offres')
+        .select('*')
+        .eq('client_id', id)
+        .order('date_envoi', { ascending: false });
+
+      if (offresError) throw offresError;
+      setOffres(offresData || []);
+
+      // Load candidatures with offer details
+      const { data: candidaturesData, error: candidaturesError } = await supabase
+        .from('candidatures')
+        .select('*, offres(adresse, prix, pieces, surface)')
+        .eq('client_id', id)
+        .order('created_at', { ascending: false });
+
+      if (candidaturesError) throw candidaturesError;
+      setCandidatures(candidaturesData || []);
     } catch (error) {
       console.error('Error loading client data:', error);
       toast({
@@ -720,6 +743,92 @@ export default function ClientDetail() {
   const clientHasStableStatus = hasStableStatus(client.type_permis, client.nationalite);
 
   const progressColor = daysElapsed < 60 ? 'from-green-500 to-emerald-400' : daysElapsed < 90 ? 'from-orange-500 to-amber-400' : 'from-red-500 to-rose-400';
+
+  // Helper functions for offers and candidatures
+  const getStatutLabel = (statut: string) => {
+    const labels: Record<string, string> = {
+      'envoyee': 'Envoyée',
+      'vue': 'Vue',
+      'interessé': 'Intéressé',
+      'visite_prevue': 'Visite prévue',
+      'visite_effectuee': 'Visite effectuée',
+      'candidature_deposee': 'Candidature déposée',
+      'acceptee': 'Acceptée',
+      'refusee': 'Refusée',
+      'annulee': 'Annulée',
+    };
+    return labels[statut] || statut;
+  };
+
+  const getStatutBadgeVariant = (statut: string): "default" | "secondary" | "destructive" | "outline" => {
+    if (['acceptee', 'visite_effectuee'].includes(statut)) return 'default';
+    if (statut === 'refusee' || statut === 'annulee') return 'destructive';
+    if (['interessé', 'visite_prevue', 'candidature_deposee'].includes(statut)) return 'secondary';
+    return 'outline';
+  };
+
+  const getCandidatureStatutLabel = (statut: string) => {
+    const labels: Record<string, string> = {
+      'en_attente': 'En attente',
+      'candidature_deposee': 'Dossier envoyé',
+      'acceptee': 'Acceptée',
+      'refusee': 'Refusée',
+      'bail_conclu': 'Client confirme',
+      'attente_bail': 'Validation régie',
+      'bail_recu': 'Bail reçu',
+      'signature_planifiee': 'Date choisie',
+      'signature_effectuee': 'Bail signé',
+      'etat_lieux_fixe': 'EDL fixé',
+      'cles_remises': 'Clés remises',
+    };
+    return labels[statut] || statut;
+  };
+
+  const getCandidatureStatutVariant = (statut: string): "default" | "secondary" | "destructive" | "outline" => {
+    if (['acceptee', 'bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(statut)) return 'default';
+    if (statut === 'refusee') return 'destructive';
+    return 'secondary';
+  };
+
+  const handleCandidatureStatutChange = async (candidatureId: string, newStatut: string, offreId?: string) => {
+    try {
+      const { error: candError } = await supabase
+        .from('candidatures')
+        .update({ statut: newStatut })
+        .eq('id', candidatureId);
+
+      if (candError) throw candError;
+
+      // Also update offres table to sync status
+      if (offreId) {
+        const offreStatut = newStatut === 'acceptee' ? 'acceptee' : newStatut === 'refusee' ? 'refusee' : 'candidature_deposee';
+        await supabase
+          .from('offres')
+          .update({ statut: offreStatut })
+          .eq('id', offreId);
+        
+        setOffres(prev => 
+          prev.map(o => o.id === offreId ? { ...o, statut: offreStatut } : o)
+        );
+      }
+
+      setCandidatures(prev => 
+        prev.map(c => c.id === candidatureId ? { ...c, statut: newStatut } : c)
+      );
+
+      toast({
+        title: 'Statut mis à jour',
+        description: `Candidature marquée comme ${getCandidatureStatutLabel(newStatut).toLowerCase()}`,
+      });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de mettre à jour le statut',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <div className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-primary/5">
@@ -1732,6 +1841,156 @@ export default function ClientDetail() {
                     <p className="text-sm">{client.note_agent}</p>
                   </div>
                 </>
+              )}
+            </CardContent>
+          </PremiumCard>
+
+          {/* Offres envoyées */}
+          <PremiumCard icon={Send} title={`Offres envoyées (${offres.length})`} className="lg:col-span-2" delay={700}>
+            <CardContent className="space-y-4">
+              <div className="flex justify-end mb-2">
+                <Button 
+                  onClick={() => navigate(`/admin/envoyer-offre?clientId=${client.id}`)}
+                  className="group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                >
+                  <Send className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                  Envoyer une offre
+                </Button>
+              </div>
+              {offres.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {offres.map((offre, index) => (
+                    <div 
+                      key={offre.id}
+                      className="group p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-border/30 hover:bg-muted/50 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.1)] transition-all duration-300 animate-fade-in"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-start gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <MapPin className="w-4 h-4 text-primary" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-sm group-hover:text-primary transition-colors">{offre.adresse}</h4>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant={getStatutBadgeVariant(offre.statut)} className="text-xs">
+                          {getStatutLabel(offre.statut)}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-sm">
+                        <div className="p-2 rounded-lg bg-muted/50">
+                          <p className="text-xs text-muted-foreground">Prix</p>
+                          <p className="font-medium">{offre.prix?.toLocaleString()} CHF</p>
+                        </div>
+                        <div className="p-2 rounded-lg bg-muted/50">
+                          <p className="text-xs text-muted-foreground">Surface</p>
+                          <p className="font-medium">{offre.surface || 'N/A'} m²</p>
+                        </div>
+                        <div className="p-2 rounded-lg bg-muted/50">
+                          <p className="text-xs text-muted-foreground">Pièces</p>
+                          <p className="font-medium">{offre.pieces || 'N/A'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 animate-fade-in">
+                  <div className="relative mx-auto w-20 h-20 mb-4">
+                    <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 rounded-full" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Send className="w-10 h-10 text-muted-foreground" />
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground">Aucune offre envoyée</p>
+                </div>
+              )}
+            </CardContent>
+          </PremiumCard>
+
+          {/* Candidatures déposées */}
+          <PremiumCard icon={FileCheck} title={`Candidatures déposées (${candidatures.length})`} className="lg:col-span-2" delay={750}>
+            <CardContent className="space-y-4">
+              {candidatures.length > 0 ? (
+                <div className="space-y-4">
+                  {candidatures.map((candidature, index) => (
+                    <div 
+                      key={candidature.id}
+                      className="group p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-border/30 hover:bg-muted/50 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.1)] transition-all duration-300 animate-fade-in"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
+                      {/* Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-primary/10">
+                            <MapPin className="w-4 h-4 text-primary" />
+                          </div>
+                          <div>
+                            <h4 className="font-medium text-sm group-hover:text-primary transition-colors">
+                              {candidature.offres?.adresse || 'Offre inconnue'}
+                            </h4>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {candidature.offres && (
+                                <span>{candidature.offres.prix?.toLocaleString()} CHF • {candidature.offres.pieces || 'N/A'} pièces</span>
+                              )}
+                              {' • '}
+                              Déposée le {new Date(candidature.date_depot || candidature.created_at).toLocaleDateString('fr-CH')}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={getCandidatureStatutVariant(candidature.statut)}>
+                            {getCandidatureStatutLabel(candidature.statut)}
+                          </Badge>
+                          <Badge variant={candidature.dossier_complet ? "outline" : "secondary"} className="text-xs bg-card/50">
+                            {candidature.dossier_complet ? "Complet" : "Incomplet"}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      {/* Workflow Timeline */}
+                      <CandidatureWorkflowTimeline currentStatut={candidature.statut} />
+                      
+                      {/* Action buttons for pending candidatures */}
+                      {candidature.statut === 'en_attente' && (
+                        <div className="flex gap-2 mt-4 pt-4 border-t border-border/30">
+                          <Button
+                            size="sm"
+                            className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 hover:bg-green-500/30"
+                            variant="outline"
+                            onClick={() => handleCandidatureStatutChange(candidature.id, 'acceptee', candidature.offre_id)}
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-1" />
+                            Accepter
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/30"
+                            onClick={() => handleCandidatureStatutChange(candidature.id, 'refusee', candidature.offre_id)}
+                          >
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Refuser
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 animate-fade-in">
+                  <div className="relative mx-auto w-20 h-20 mb-4">
+                    <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 rounded-full" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <FileCheck className="w-10 h-10 text-muted-foreground" />
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground">Aucune candidature déposée</p>
+                </div>
               )}
             </CardContent>
           </PremiumCard>
