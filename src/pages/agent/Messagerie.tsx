@@ -371,7 +371,7 @@ const Messagerie = () => {
       const clientIds = convData?.filter(c => c.client_id).map(c => c.client_id) || [];
       const adminUserIds = convData?.filter(c => c.admin_user_id).map(c => c.admin_user_id) || [];
       
-      const contactsMapping: Record<string, { name: string; type: string; clientId?: string }> = {};
+      const contactsMapping: Record<string, { name: string; type: string; clientId?: string; lastSeenAt?: string | null; isOnline?: boolean | null }> = {};
 
       if (clientIds.length > 0) {
         const { data: clientsData } = await supabase
