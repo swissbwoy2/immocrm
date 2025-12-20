@@ -53,7 +53,7 @@ export function GooglePlacesAutocomplete({
   className,
   disabled = false,
   multiSelect = false,
-  types = ['(regions)', 'locality', 'sublocality', 'postal_code'],
+  types = ['locality', 'sublocality', 'postal_code', 'administrative_area_level_1', 'administrative_area_level_2'],
   restrictToSwitzerland = true,
 }: GooglePlacesAutocompleteProps) {
   const { isLoaded, isLoading: mapsLoading, isFallback } = useGoogleMapsLoader();
