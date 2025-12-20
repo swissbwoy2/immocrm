@@ -154,17 +154,12 @@ export function SwissRomandeMapGoogle({ clients = [], client = null, onRegionCli
       mapRef.current = new google.maps.Map(mapContainerRef.current, {
         center: initialCenter,
         zoom: initialZoom,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false,
-        styles: [
-          { elementType: 'geometry', stylers: [{ color: '#f5f5f5' }] },
-          { elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-          { elementType: 'labels.text.fill', stylers: [{ color: '#616161' }] },
-          { elementType: 'labels.text.stroke', stylers: [{ color: '#f5f5f5' }] },
-          { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#c9c9c9' }] },
-          { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#9e9e9e' }] },
-        ],
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: true,
+        mapTypeId: 'roadmap',
+        tilt: 45,
+        heading: 0,
       });
 
       infoWindowRef.current = new google.maps.InfoWindow();
