@@ -7,6 +7,7 @@ import { useSwipeGesture } from '@/hooks/useSwipeGesture';
 import { OfflineIndicator } from '@/components/OfflineIndicator';
 import { PageTransition } from '@/components/PageTransition';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { usePresence } from '@/hooks/usePresence';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -17,6 +18,9 @@ function AppLayoutContent({ children }: AppLayoutProps) {
   
   // Initialize push notifications for mobile apps
   usePushNotifications();
+  
+  // Track user presence (online status)
+  usePresence();
 
   // Swipe gestures for mobile sidebar
   useSwipeGesture({

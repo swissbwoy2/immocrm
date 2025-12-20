@@ -87,11 +87,11 @@ const MesClients = () => {
 
       if (error) throw error;
 
-      // Load profiles separately
+      // Load profiles separately - now including presence fields
       const userIds = clientsData?.map(c => c.user_id) || [];
       const { data: profilesData } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, prenom, nom, email, telephone, last_seen_at, is_online')
         .in('id', userIds);
 
       const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
@@ -317,6 +317,8 @@ const MesClients = () => {
           solvabilityIssues,
           unstableCandidatesCount,
           unstableGarants,
+          lastSeenAt: profile?.last_seen_at,
+          isOnline: profile?.is_online,
         };
       }) || [];
 

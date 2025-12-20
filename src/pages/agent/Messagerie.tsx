@@ -78,7 +78,7 @@ const Messagerie = () => {
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const [agentId, setAgentId] = useState<string | null>(null);
-  const [contactsMap, setContactsMap] = useState<Record<string, { name: string; type: string; clientId?: string }>>({});
+  const [contactsMap, setContactsMap] = useState<Record<string, { name: string; type: string; clientId?: string; lastSeenAt?: string | null; isOnline?: boolean | null }>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
@@ -382,7 +382,7 @@ const Messagerie = () => {
         const userIds = clientsData?.map(c => c.user_id) || [];
         const { data: profilesData } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, prenom, nom, email, telephone, last_seen_at, is_online')
           .in('id', userIds);
 
         const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
@@ -395,7 +395,9 @@ const Messagerie = () => {
           contactsMapping[client.id] = { 
             name: fullName || conv?.client_name || 'Destinataire inconnu', 
             type: 'client', 
-            clientId: client.id 
+            clientId: client.id,
+            lastSeenAt: profile?.last_seen_at,
+            isOnline: profile?.is_online,
           };
         });
       }
@@ -1285,6 +1287,8 @@ const Messagerie = () => {
                 isArchived={conv.is_archived}
                 onClick={() => setSelectedConv(conv.id)}
                 index={index}
+                lastSeenAt={contactInfo.type === 'client' ? contactInfo.lastSeenAt : undefined}
+                isOnline={contactInfo.type === 'client' ? contactInfo.isOnline : undefined}
               />
             );
           })

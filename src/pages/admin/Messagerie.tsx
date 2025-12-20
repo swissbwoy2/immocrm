@@ -248,8 +248,8 @@ const Messagerie = () => {
         ];
         
         const { data: profilesData } = allUserIds.length > 0
-          ? await supabase.from('profiles').select('id, prenom, nom, email').in('id', allUserIds)
-          : { data: [] as { id: string; prenom: string; nom: string; email: string }[] };
+          ? await supabase.from('profiles').select('id, prenom, nom, email, last_seen_at, is_online').in('id', allUserIds)
+          : { data: [] as { id: string; prenom: string; nom: string; email: string; last_seen_at: string | null; is_online: boolean | null }[] };
 
         // Charger les derniers messages de chaque conversation
         const { data: lastMessagesData } = conversationIds.length > 0
@@ -273,7 +273,7 @@ const Messagerie = () => {
         
         const clientsMap = new Map<string, string>(clientsData?.map(c => [c.id, c.user_id] as [string, string]) || []);
         const agentsMap = new Map<string, string>(agentsData?.map(a => [a.id, a.user_id] as [string, string]) || []);
-        const profilesMap = new Map<string, { id: string; prenom: string; nom: string; email: string }>(
+        const profilesMap = new Map<string, { id: string; prenom: string; nom: string; email: string; last_seen_at: string | null; is_online: boolean | null }>(
           profilesData?.map(p => [p.id, p] as [string, typeof p]) || []
         );
         
@@ -302,6 +302,8 @@ const Messagerie = () => {
               ? `${adminProfile.prenom} ${adminProfile.nom}`
               : null,
             lastMessageText,
+            clientLastSeenAt: clientProfile?.last_seen_at,
+            clientIsOnline: clientProfile?.is_online,
           };
         });
         
@@ -568,6 +570,8 @@ const Messagerie = () => {
                 isSelected={selectedConv === conv.id}
                 onClick={() => setSelectedConv(conv.id)}
                 index={index}
+                lastSeenAt={conv.conversation_type !== 'admin-agent' ? conv.clientLastSeenAt : undefined}
+                isOnline={conv.conversation_type !== 'admin-agent' ? conv.clientIsOnline : undefined}
               />
             );
           })
@@ -585,6 +589,8 @@ const Messagerie = () => {
       }
       avatarUrl={null}
       status={currentConversation.subject}
+      lastSeenAt={currentConversation.conversation_type !== 'admin-agent' ? currentConversation.clientLastSeenAt : undefined}
+      isOnline={currentConversation.conversation_type !== 'admin-agent' ? currentConversation.clientIsOnline : undefined}
     />
   );
 
