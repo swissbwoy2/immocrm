@@ -104,7 +104,7 @@ export default function Parametres() {
       <PremiumPageHeader
         title="Paramètres"
         subtitle="Gérez votre compte et vos préférences"
-        icon={<Settings className="w-6 h-6" />}
+        icon={Settings}
       />
 
       <Tabs defaultValue="profil" className="space-y-6">

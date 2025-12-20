@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Users, Wrench, TrendingUp, FileText, Calendar, Plus, MessageSquare, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Building2, Users, Wrench, TrendingUp, FileText, Plus, AlertTriangle, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,7 +18,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { toast } from 'sonner';
-
 export default function ProprietaireDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -239,26 +238,25 @@ export default function ProprietaireDashboard() {
           <PremiumKPICard
             title="Immeubles"
             value={stats.totalImmeubles}
-            icon={<Building2 className="w-5 h-5" />}
-            trend={stats.totalImmeubles > 0 ? 'up' : undefined}
+            icon={Building2}
             onClick={() => navigate('/proprietaire/immeubles')}
           />
           <PremiumKPICard
             title="Lots"
             value={stats.totalLots}
-            icon={<Building2 className="w-5 h-5" />}
+            icon={Building2}
             onClick={() => navigate('/proprietaire/immeubles')}
           />
           <PremiumKPICard
             title="Locataires"
             value={stats.totalLocataires}
-            icon={<Users className="w-5 h-5" />}
+            icon={Users}
             onClick={() => navigate('/proprietaire/locataires')}
           />
           <PremiumKPICard
             title="Tickets ouverts"
             value={stats.ticketsOuverts}
-            icon={<Wrench className="w-5 h-5" />}
+            icon={Wrench}
             variant={stats.ticketsOuverts > 0 ? 'warning' : 'default'}
             onClick={() => navigate('/proprietaire/tickets')}
           />
@@ -305,13 +303,15 @@ export default function ProprietaireDashboard() {
 
             {immeubles.length === 0 ? (
               <PremiumEmptyState
-                icon={<Building2 className="w-12 h-12" />}
+                icon={Building2}
                 title="Aucun immeuble"
                 description="Vous n'avez pas encore d'immeuble enregistré."
-                action={{
-                  label: 'Ajouter un immeuble',
-                  onClick: () => navigate('/proprietaire/immeubles/nouveau')
-                }}
+                action={
+                  <Button onClick={() => navigate('/proprietaire/immeubles/nouveau')}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Ajouter un immeuble
+                  </Button>
+                }
               />
             ) : (
               <div className="grid sm:grid-cols-2 gap-4">
@@ -338,7 +338,7 @@ export default function ProprietaireDashboard() {
                 </h3>
                 <PremiumAgentCard
                   agent={agent}
-                  onClick={() => navigate('/proprietaire/messagerie')}
+                  onMessage={() => navigate('/proprietaire/messagerie')}
                 />
               </div>
             )}

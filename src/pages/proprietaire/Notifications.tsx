@@ -125,20 +125,20 @@ export default function Notifications() {
       <PremiumPageHeader
         title="Notifications"
         subtitle={unreadCount > 0 ? `${unreadCount} non lue${unreadCount > 1 ? 's' : ''}` : 'Toutes les notifications'}
-        icon={<Bell className="w-6 h-6" />}
-        actions={
-          unreadCount > 0 && (
+        icon={Bell}
+        action={
+          unreadCount > 0 ? (
             <Button variant="outline" onClick={handleMarkAllAsRead}>
               <CheckCheck className="w-4 h-4 mr-2" />
               Tout marquer comme lu
             </Button>
-          )
+          ) : undefined
         }
       />
 
       {notifications.length === 0 ? (
         <PremiumEmptyState
-          icon={<Bell className="w-12 h-12" />}
+          icon={Bell}
           title="Aucune notification"
           description="Vous n'avez pas encore de notifications."
         />

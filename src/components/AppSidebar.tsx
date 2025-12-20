@@ -107,6 +107,22 @@ const getMenuForRole = (role: string) => {
         { name: 'Notifications', icon: Bell, path: '/apporteur/notifications', notifKey: 'total' },
         { name: 'Paramètres', icon: Settings, path: '/apporteur/parametres', notifKey: null },
       ];
+    case 'proprietaire':
+      return [
+        { name: 'Tableau de bord', icon: LayoutDashboard, path: '/proprietaire', notifKey: null },
+        { name: 'Messagerie', icon: MessageSquare, path: '/proprietaire/messagerie', notifKey: 'new_message' },
+        { name: 'Calendrier', icon: Calendar, path: '/proprietaire/calendrier', notifKey: null },
+        { name: 'Mes immeubles', icon: Home, path: '/proprietaire/immeubles', notifKey: null },
+        { name: 'Locataires', icon: Users, path: '/proprietaire/locataires', notifKey: null },
+        { name: 'Comptabilité', icon: DollarSign, path: '/proprietaire/comptabilite', notifKey: null },
+        { name: 'Baux', icon: FileText, path: '/proprietaire/baux', notifKey: null },
+        { name: 'Hypothèques', icon: Clipboard, path: '/proprietaire/hypotheques', notifKey: null },
+        { name: 'Assurances', icon: FileCheck, path: '/proprietaire/assurances', notifKey: null },
+        { name: 'Tickets', icon: AlarmClock, path: '/proprietaire/tickets', notifKey: null },
+        { name: 'Documents', icon: FileText, path: '/proprietaire/documents', notifKey: null },
+        { name: 'Notifications', icon: Bell, path: '/proprietaire/notifications', notifKey: 'total' },
+        { name: 'Paramètres', icon: Settings, path: '/proprietaire/parametres', notifKey: null },
+      ];
     default:
       return [];
   }
