@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, MoreVertical } from 'lucide-react';
 import { ChatAvatar } from './ChatAvatar';
 import { cn } from '@/lib/utils';
+import { OnlineStatusBadge } from '@/components/premium/OnlineStatusBadge';
 
 interface ChatHeaderProps {
   name: string;
@@ -12,6 +13,8 @@ interface ChatHeaderProps {
   onBackClick?: () => void;
   onOptionsClick?: () => void;
   className?: string;
+  lastSeenAt?: string | null;
+  isOnline?: boolean | null;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -22,6 +25,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onBackClick,
   onOptionsClick,
   className,
+  lastSeenAt,
+  isOnline,
 }) => {
   return (
     <div
@@ -47,16 +52,21 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         <h2 className="font-semibold text-base text-foreground truncate">
           {name}
         </h2>
-        {status && !isArchived && (
-          <p className="text-xs text-muted-foreground truncate">
-            {status}
-          </p>
-        )}
-        {isArchived && (
+        {isArchived ? (
           <p className="text-xs text-warning truncate">
             Conversation archivée
           </p>
-        )}
+        ) : lastSeenAt || isOnline ? (
+          <OnlineStatusBadge 
+            lastSeenAt={lastSeenAt} 
+            isOnline={isOnline}
+            size="sm"
+          />
+        ) : status ? (
+          <p className="text-xs text-muted-foreground truncate">
+            {status}
+          </p>
+        ) : null}
       </div>
 
       {onOptionsClick && (

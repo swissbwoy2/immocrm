@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { ClientTypeBadge } from '@/components/ClientTypeBadge';
 import { cn } from '@/lib/utils';
+import { OnlineStatusBadge } from './OnlineStatusBadge';
 
 interface ClientData {
   id: string;
@@ -37,6 +38,8 @@ interface ClientData {
   unstableCandidatesCount: number;
   unstableGarants: any[];
   garant: { nom: string; prenom: string; revenus: number; permis?: string } | null;
+  lastSeenAt?: string | null;
+  isOnline?: boolean | null;
 }
 
 interface PremiumClientCardProps {
@@ -170,12 +173,19 @@ export function PremiumClientCard({
 
         {/* Client info */}
         <div className="mb-4">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-1">
             <h3 className="text-xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
               {client.prenom} {client.nom}
             </h3>
             <ClientTypeBadge typeRecherche={client.typeRecherche} size="sm" />
           </div>
+          
+          {/* Online status */}
+          <OnlineStatusBadge 
+            lastSeenAt={client.lastSeenAt} 
+            isOnline={client.isOnline}
+            className="mb-2"
+          />
           
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
             <MapPin className="h-4 w-4" />

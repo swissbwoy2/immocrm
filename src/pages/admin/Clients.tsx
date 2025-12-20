@@ -56,6 +56,8 @@ interface Profile {
   email: string;
   telephone?: string;
   actif?: boolean;
+  last_seen_at?: string | null;
+  is_online?: boolean | null;
 }
 
 interface Agent {
@@ -125,14 +127,14 @@ const Clients = () => {
       if (clientsError) throw clientsError;
       setClients(clientsData || []);
 
-      // Load all client profiles
+      // Load all client profiles - now including presence fields
       const clientUserIds = clientsData?.map(c => c.user_id) || [];
       const clientIds = clientsData?.map(c => c.id) || [];
 
       if (clientUserIds.length > 0) {
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, nom, prenom, email, telephone, actif, last_seen_at, is_online')
           .in('id', clientUserIds);
 
         if (profilesError) throw profilesError;

@@ -1825,6 +1825,8 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          is_online: boolean | null
+          last_seen_at: string | null
           nom: string
           notifications_email: boolean | null
           prenom: string
@@ -1837,6 +1839,8 @@ export type Database = {
           created_at?: string | null
           email: string
           id: string
+          is_online?: boolean | null
+          last_seen_at?: string | null
           nom: string
           notifications_email?: boolean | null
           prenom: string
@@ -1849,6 +1853,8 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          is_online?: boolean | null
+          last_seen_at?: string | null
           nom?: string
           notifications_email?: boolean | null
           prenom?: string
@@ -2470,6 +2476,9 @@ export type Database = {
       }
       is_assigned_agent: { Args: { _client_user_id: string }; Returns: boolean }
       is_my_assigned_agent: { Args: { _agent_id: string }; Returns: boolean }
+      mark_inactive_users_offline: { Args: never; Returns: number }
+      set_user_offline: { Args: never; Returns: undefined }
+      update_user_presence: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "agent" | "client" | "apporteur"
