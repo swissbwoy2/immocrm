@@ -33,8 +33,8 @@ import { calculateDaysElapsed } from '@/utils/calculations';
 import { Progress } from '@/components/ui/progress';
 import { ClientTypeBadge } from '@/components/ClientTypeBadge';
 import { ClientNotesManager } from '@/components/ClientNotesManager';
-import { SwissRomandeMap } from '@/components/SwissRomandeMap';
-import { RegionAutocomplete } from '@/components/RegionAutocomplete';
+import { SwissRomandeMapGoogle } from '@/components/SwissRomandeMapGoogle';
+import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
 import { ApporteurInfoCard } from '@/components/ApporteurInfoCard';
 import { RentalApplicationFormDialog } from '@/components/RentalApplicationFormDialog';
 import { OnlineStatusBadge } from '@/components/premium/OnlineStatusBadge';
@@ -1022,7 +1022,7 @@ export default function ClientDetail() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Région(s) de recherche</Label>
-                        <RegionAutocomplete
+                        <GooglePlacesAutocomplete
                           value={editFormData.region_recherche || ''}
                           onChange={(value) => setEditFormData({ ...editFormData, region_recherche: value })}
                           placeholder="Tapez une région, commune..."
@@ -1436,7 +1436,7 @@ export default function ClientDetail() {
           </Card>
 
           {/* Carte de localisation */}
-          <SwissRomandeMap client={client} />
+          <SwissRomandeMapGoogle client={client} />
 
           {/* Autres informations */}
           <Card>

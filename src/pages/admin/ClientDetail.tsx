@@ -26,10 +26,10 @@ import { SolvabilityAlert } from '@/components/SolvabilityAlert';
 import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSection';
 import { useClientCandidates } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck, hasStableStatus } from '@/hooks/useSolvabilityCheck';
-import { RegionAutocomplete } from '@/components/RegionAutocomplete';
+import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
 import { ApporteurInfoCard } from '@/components/ApporteurInfoCard';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
-import { SwissRomandeMap } from '@/components/SwissRomandeMap';
+import { SwissRomandeMapGoogle } from '@/components/SwissRomandeMapGoogle';
 import { OnlineStatusBadge } from '@/components/premium/OnlineStatusBadge';
 
 interface Client {
@@ -1337,7 +1337,7 @@ export default function ClientDetail() {
                       </div>
                       <div className="space-y-2">
                         <Label>Région(s) de recherche</Label>
-                        <RegionAutocomplete
+                        <GooglePlacesAutocomplete
                           value={editFormData.region_recherche || ''}
                           onChange={(value) => setEditFormData({ ...editFormData, region_recherche: value })}
                           placeholder="Tapez une région, commune..."
@@ -1753,7 +1753,7 @@ export default function ClientDetail() {
           </PremiumCard>
 
           {/* Carte de localisation */}
-          <SwissRomandeMap client={client} />
+          <SwissRomandeMapGoogle client={client} />
 
           {/* Autres informations */}
           <PremiumCard icon={FileText} title="Autres informations" delay={600}>
