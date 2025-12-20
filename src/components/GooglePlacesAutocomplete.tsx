@@ -56,7 +56,7 @@ export function GooglePlacesAutocomplete({
   types = ['(regions)', 'locality', 'sublocality', 'postal_code'],
   restrictToSwitzerland = true,
 }: GooglePlacesAutocompleteProps) {
-  const { isLoaded, isLoading: mapsLoading, error: mapsError } = useGoogleMapsLoader();
+  const { isLoaded, isLoading: mapsLoading, isFallback } = useGoogleMapsLoader();
   
   const [inputValue, setInputValue] = useState('');
   const [suggestions, setSuggestions] = useState<PlacePrediction[]>([]);
@@ -69,6 +69,9 @@ export function GooglePlacesAutocomplete({
   const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Determine if we're in manual mode (fallback or not loaded)
+  const isManualMode = isFallback || (!isLoaded && !mapsLoading);
 
   // Parse selected regions from comma-separated value
   const selectedRegions = value ? value.split(',').map(r => r.trim()).filter(Boolean) : [];
@@ -83,7 +86,8 @@ export function GooglePlacesAutocomplete({
 
   // Fetch predictions from Google Places
   const fetchPredictions = useCallback(async (input: string) => {
-    if (!autocompleteServiceRef.current || !input || input.length < 2) {
+    // Skip if in manual mode or no service
+    if (isManualMode || !autocompleteServiceRef.current || !input || input.length < 2) {
       setSuggestions([]);
       setIsOpen(false);
       return;
@@ -133,12 +137,17 @@ export function GooglePlacesAutocomplete({
       setIsSearching(false);
       setSuggestions([]);
     }
-  }, [restrictToSwitzerland, types, selectedRegions]);
+  }, [isManualMode, restrictToSwitzerland, types, selectedRegions]);
 
   // Handle input change with debounce
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
+
+    // In manual mode, just update the input - no autocomplete
+    if (isManualMode) {
+      return;
+    }
 
     // Clear previous timeout
     if (debounceTimeoutRef.current) {
@@ -156,7 +165,9 @@ export function GooglePlacesAutocomplete({
     const name = prediction.structured_formatting.main_text;
 
     // Reset session token after selection
-    sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+    if (window.google?.maps?.places) {
+      sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+    }
 
     if (multiSelect) {
       if (!selectedRegions.includes(name)) {
@@ -172,6 +183,22 @@ export function GooglePlacesAutocomplete({
     setIsOpen(false);
     setSuggestions([]);
     inputRef.current?.focus();
+  };
+
+  // Handle manual add (for fallback mode)
+  const handleManualAdd = () => {
+    const trimmedValue = inputValue.trim();
+    if (!trimmedValue) return;
+
+    if (multiSelect) {
+      if (!selectedRegions.includes(trimmedValue)) {
+        const newRegions = [...selectedRegions, trimmedValue];
+        onChange(newRegions.join(', '));
+      }
+      setInputValue('');
+    } else {
+      onChange(trimmedValue);
+    }
   };
 
   // Remove a selected region (multi-select mode)
@@ -192,11 +219,25 @@ export function GooglePlacesAutocomplete({
 
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // In manual mode, Enter adds the value
+    if (isManualMode) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleManualAdd();
+      }
+      if (e.key === 'Backspace' && multiSelect && inputValue === '' && selectedRegions.length > 0) {
+        handleRemoveRegion(selectedRegions[selectedRegions.length - 1]);
+      }
+      return;
+    }
+
     if (!isOpen || suggestions.length === 0) {
       if (e.key === 'Enter') {
         e.preventDefault();
         if (!multiSelect) {
           onChange(inputValue);
+        } else {
+          handleManualAdd();
         }
       }
       if (e.key === 'Backspace' && multiSelect && inputValue === '' && selectedRegions.length > 0) {
@@ -221,6 +262,8 @@ export function GooglePlacesAutocomplete({
         } else if (!multiSelect) {
           onChange(inputValue);
           setIsOpen(false);
+        } else {
+          handleManualAdd();
         }
         break;
       case 'Escape':
@@ -264,28 +307,6 @@ export function GooglePlacesAutocomplete({
     inputRef.current?.focus();
   };
 
-  // Loading/error states
-  if (mapsLoading) {
-    return (
-      <div className={cn("relative", className)}>
-        <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">Chargement Google Maps...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (mapsError) {
-    return (
-      <div className={cn("relative", className)}>
-        <div className="flex items-center gap-2 p-2 border rounded-md bg-destructive/10 text-destructive">
-          <span className="text-sm">Erreur: {mapsError}</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div ref={containerRef} className={cn("relative", className)}>
       <div
@@ -318,27 +339,44 @@ export function GooglePlacesAutocomplete({
 
         {/* Input field */}
         <div className="relative flex-1 min-w-[150px]">
-          <MapPin className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <MapPin className={cn(
+            "absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4",
+            isManualMode ? "text-amber-500" : "text-muted-foreground"
+          )} />
           <Input
             ref={inputRef}
             type="text"
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            onFocus={() => inputValue.length >= 2 && fetchPredictions(inputValue)}
+            onFocus={() => !isManualMode && inputValue.length >= 2 && fetchPredictions(inputValue)}
             onBlur={handleBlur}
-            placeholder={multiSelect && selectedRegions.length > 0 ? "Ajouter une localité..." : placeholder}
-            disabled={disabled || !isLoaded}
+            placeholder={
+              multiSelect && selectedRegions.length > 0 
+                ? "Ajouter une localité..." 
+                : isManualMode 
+                  ? "Saisie manuelle..." 
+                  : placeholder
+            }
+            disabled={disabled}
             className={cn("pl-8 pr-8 border-0 shadow-none focus-visible:ring-0")}
           />
           {isSearching && (
+            <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+          )}
+          {mapsLoading && (
             <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
           )}
         </div>
 
         {/* Status indicators */}
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-          {!multiSelect && value && (
+          {isManualMode && (
+            <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
+              Manuel
+            </Badge>
+          )}
+          {!multiSelect && value && !isManualMode && (
             <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
               <Check className="h-3 w-3 mr-1" />
               OK
@@ -349,7 +387,7 @@ export function GooglePlacesAutocomplete({
               {selectedRegions.length}
             </Badge>
           )}
-          {(value || selectedRegions.length > 0) && !isSearching && (
+          {(value || selectedRegions.length > 0) && !isSearching && !mapsLoading && (
             <button
               type="button"
               onClick={handleClearAll}
@@ -363,7 +401,7 @@ export function GooglePlacesAutocomplete({
       </div>
 
       {/* Suggestions dropdown */}
-      {isOpen && suggestions.length > 0 && (
+      {isOpen && suggestions.length > 0 && !isManualMode && (
         <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg max-h-64 overflow-auto">
           {suggestions.map((prediction, index) => (
             <button
@@ -395,11 +433,20 @@ export function GooglePlacesAutocomplete({
       )}
 
       {/* No results message */}
-      {isOpen && suggestions.length === 0 && inputValue.length >= 2 && !isSearching && (
+      {isOpen && suggestions.length === 0 && inputValue.length >= 2 && !isSearching && !isManualMode && (
         <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg p-3">
           <p className="text-sm text-muted-foreground">Aucun résultat pour "{inputValue}"</p>
           <p className="text-xs text-muted-foreground mt-1">
             Appuyez sur Entrée pour utiliser cette valeur
+          </p>
+        </div>
+      )}
+
+      {/* Manual mode helper */}
+      {isManualMode && inputValue.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg p-3">
+          <p className="text-xs text-muted-foreground">
+            Appuyez sur Entrée pour ajouter "{inputValue}"
           </p>
         </div>
       )}
