@@ -148,8 +148,8 @@ export default function Documents() {
       <PremiumPageHeader
         title="Documents"
         subtitle={`${documents.length} document${documents.length > 1 ? 's' : ''} dans votre GED`}
-        icon={<FileText className="w-6 h-6" />}
-        actions={
+        icon={FileText}
+        action={
           <Button onClick={() => navigate('/proprietaire/documents/upload')}>
             <Upload className="w-4 h-4 mr-2" />
             Ajouter un document
@@ -203,17 +203,19 @@ export default function Documents() {
       {/* Content */}
       {filteredDocuments.length === 0 ? (
         <PremiumEmptyState
-          icon={<FolderOpen className="w-12 h-12" />}
+          icon={FolderOpen}
           title={searchTerm || typeFilter !== 'all' || immeubleFilter !== 'all' ? "Aucun résultat" : "Aucun document"}
           description={
             searchTerm || typeFilter !== 'all' || immeubleFilter !== 'all'
               ? "Aucun document ne correspond à vos critères."
               : "Commencez par ajouter vos premiers documents."
           }
-          action={!searchTerm && typeFilter === 'all' && immeubleFilter === 'all' ? {
-            label: 'Ajouter un document',
-            onClick: () => navigate('/proprietaire/documents/upload')
-          } : undefined}
+          action={!searchTerm && typeFilter === 'all' && immeubleFilter === 'all' ? (
+            <Button onClick={() => navigate('/proprietaire/documents/upload')}>
+              <Upload className="w-4 h-4 mr-2" />
+              Ajouter un document
+            </Button>
+          ) : undefined}
         />
       ) : (
         <div className="space-y-6">
@@ -223,12 +225,12 @@ export default function Documents() {
                 <CardTitle className="text-base flex items-center gap-2">
                   <FolderOpen className="w-4 h-4 text-primary" />
                   {getTypeLabel(type)}
-                  <Badge variant="secondary">{docs.length}</Badge>
+                  <Badge variant="secondary">{(docs as any[]).length}</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {docs.map((doc) => (
+                  {(docs as any[]).map((doc) => (
                     <Card 
                       key={doc.id} 
                       className="group cursor-pointer hover:shadow-md transition-shadow"

@@ -145,8 +145,8 @@ export default function Tickets() {
       <PremiumPageHeader
         title="Tickets techniques"
         subtitle="Gestion des demandes d'intervention"
-        icon={<Wrench className="w-6 h-6" />}
-        actions={
+        icon={Wrench}
+        action={
           <Button onClick={() => navigate('/proprietaire/tickets/nouveau')}>
             <Plus className="w-4 h-4 mr-2" />
             Nouveau ticket
@@ -245,17 +245,19 @@ export default function Tickets() {
           <TabsContent key={tab} value={tab}>
             {getFilteredTickets(tab).length === 0 ? (
               <PremiumEmptyState
-                icon={<Wrench className="w-12 h-12" />}
+                icon={Wrench}
                 title="Aucun ticket"
                 description={
                   tab === 'ouverts' 
                     ? "Aucun ticket en cours. Tout est en ordre !" 
                     : "Aucun ticket dans cette catégorie."
                 }
-                action={tab === 'ouverts' ? {
-                  label: 'Créer un ticket',
-                  onClick: () => navigate('/proprietaire/tickets/nouveau')
-                } : undefined}
+                action={tab === 'ouverts' ? (
+                  <Button onClick={() => navigate('/proprietaire/tickets/nouveau')}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Créer un ticket
+                  </Button>
+                ) : undefined}
               />
             ) : (
               <div className="grid md:grid-cols-2 gap-4">

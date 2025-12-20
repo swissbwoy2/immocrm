@@ -158,8 +158,8 @@ export default function Comptabilite() {
       <PremiumPageHeader
         title="Comptabilité"
         subtitle="Suivi financier de votre patrimoine immobilier"
-        icon={<DollarSign className="w-6 h-6" />}
-        actions={
+        icon={DollarSign}
+        action={
           <div className="flex gap-2">
             <Button variant="outline">
               <Download className="w-4 h-4 mr-2" />
@@ -270,13 +270,15 @@ export default function Comptabilite() {
       {/* Transactions List */}
       {transactions.length === 0 ? (
         <PremiumEmptyState
-          icon={<DollarSign className="w-12 h-12" />}
+          icon={DollarSign}
           title="Aucune transaction"
           description="Aucune écriture comptable pour la période sélectionnée."
-          action={{
-            label: 'Ajouter une écriture',
-            onClick: () => navigate('/proprietaire/comptabilite/nouvelle')
-          }}
+          action={
+            <Button onClick={() => navigate('/proprietaire/comptabilite/nouvelle')}>
+              <Plus className="w-4 h-4 mr-2" />
+              Ajouter une écriture
+            </Button>
+          }
         />
       ) : (
         <Card>

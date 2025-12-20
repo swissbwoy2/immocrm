@@ -143,7 +143,7 @@ export default function Locataires() {
       <PremiumPageHeader
         title="Locataires"
         subtitle={`${locataires.length} locataire${locataires.length > 1 ? 's' : ''} dans vos immeubles`}
-        icon={<Users className="w-6 h-6" />}
+        icon={Users}
       />
 
       {/* Stats */}
@@ -228,7 +228,7 @@ export default function Locataires() {
       {/* Content */}
       {filteredLocataires.length === 0 ? (
         <PremiumEmptyState
-          icon={<Users className="w-12 h-12" />}
+          icon={Users}
           title={searchTerm || statutFilter !== 'all' || immeubleFilter !== 'all' ? "Aucun résultat" : "Aucun locataire"}
           description={
             searchTerm || statutFilter !== 'all' || immeubleFilter !== 'all'

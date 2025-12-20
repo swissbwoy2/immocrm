@@ -101,6 +101,22 @@ const AdminApporteurs = lazy(() => import("./pages/admin/Apporteurs"));
 const AdminApporteurDetail = lazy(() => import("./pages/admin/ApporteurDetail"));
 const AdminReferrals = lazy(() => import("./pages/admin/Referrals"));
 
+// Proprietaire pages
+const ProprietaireDashboard = lazy(() => import("./pages/proprietaire/Dashboard"));
+const ProprietaireMesImmeubles = lazy(() => import("./pages/proprietaire/MesImmeubles"));
+const ProprietaireImmeubleDetail = lazy(() => import("./pages/proprietaire/ImmeubleDetail"));
+const ProprietaireLocataires = lazy(() => import("./pages/proprietaire/Locataires"));
+const ProprietaireComptabilite = lazy(() => import("./pages/proprietaire/Comptabilite"));
+const ProprietaireTickets = lazy(() => import("./pages/proprietaire/Tickets"));
+const ProprietaireDocuments = lazy(() => import("./pages/proprietaire/Documents"));
+const ProprietaireBaux = lazy(() => import("./pages/proprietaire/Baux"));
+const ProprietaireHypotheques = lazy(() => import("./pages/proprietaire/Hypotheques"));
+const ProprietaireAssurances = lazy(() => import("./pages/proprietaire/Assurances"));
+const ProprietaireCalendrier = lazy(() => import("./pages/proprietaire/Calendrier"));
+const ProprietaireMessagerie = lazy(() => import("./pages/proprietaire/Messagerie"));
+const ProprietaireNotifications = lazy(() => import("./pages/proprietaire/Notifications"));
+const ProprietaireParametres = lazy(() => import("./pages/proprietaire/Parametres"));
+
 // Optimized QueryClient with caching
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -213,6 +229,22 @@ const App = () => (
               <Route path="/admin/apporteurs" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminApporteurs /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/apporteurs/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminApporteurDetail /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/referrals" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminReferrals /></AppLayout></ProtectedRoute>} />
+
+              {/* Proprietaire Routes */}
+              <Route path="/proprietaire" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireDashboard /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/immeubles" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireMesImmeubles /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/immeubles/:id" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireImmeubleDetail /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/locataires" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireLocataires /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/comptabilite" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireComptabilite /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/tickets" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireTickets /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/documents" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireDocuments /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/baux" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireBaux /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/hypotheques" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireHypotheques /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/assurances" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireAssurances /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/calendrier" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireCalendrier /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/messagerie" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireMessagerie /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/notifications" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireNotifications /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/parametres" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireParametres /></AppLayout></ProtectedRoute>} />
 
               {/* Public Routes */}
               <Route path="/download/:token" element={<DownloadFiles />} />
