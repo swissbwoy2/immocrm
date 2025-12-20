@@ -13,10 +13,13 @@ import logoImmoRama from "@/assets/logo-immo-rama-new.png";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { OfferAttachmentUploader } from "@/components/OfferAttachmentUploader";
+import { GoogleAddressAutocomplete, AddressComponents } from "@/components/GoogleAddressAutocomplete";
 
 interface FormData {
   clientId: string;
   localisation: string;
+  npa: string;
+  ville: string;
   prix: string;
   surface: string;
   nombrePieces: string;
@@ -37,6 +40,8 @@ interface FormData {
 const initialFormData: FormData = {
   clientId: '',
   localisation: '',
+  npa: '',
+  ville: '',
   prix: '',
   surface: '',
   nombrePieces: '',
@@ -441,10 +446,45 @@ const AdminEnvoyerOffre = () => {
             </Card>
 
             <Card className="card-interactive p-6 space-y-4 animate-fade-in" style={{ animationDelay: '50ms' }}>
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label>📍 Adresse complète *</Label>
+                  <GoogleAddressAutocomplete
+                    value={formData.localisation}
+                    onChange={(address: AddressComponents) => setFormData({ 
+                      ...formData, 
+                      localisation: address.fullAddress,
+                      npa: address.postalCode,
+                      ville: address.city
+                    })}
+                    onInputChange={(value) => setFormData({ ...formData, localisation: value })}
+                    placeholder="Commencez à taper une adresse..."
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>📍 Localisation *</Label>
-                  <Input value={formData.localisation} onChange={(e) => setFormData({ ...formData, localisation: e.target.value })} placeholder="Chemin des Acacias 8 1023 Crissier" />
+                  <Label>📮 NPA</Label>
+                  <Input 
+                    value={formData.npa} 
+                    onChange={(e) => setFormData({ ...formData, npa: e.target.value })} 
+                    placeholder="1000" 
+                  />
+                </div>
+                <div>
+                  <Label>🏙️ Ville</Label>
+                  <Input 
+                    value={formData.ville} 
+                    onChange={(e) => setFormData({ ...formData, ville: e.target.value })} 
+                    placeholder="Lausanne" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>💰 Prix (CHF) *</Label>
                 </div>
                 <div>
                   <Label>💰 Prix (CHF) *</Label>
