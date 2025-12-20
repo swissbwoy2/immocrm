@@ -23,16 +23,19 @@ interface VisiteWithDetails {
 
 // Helper function to calculate calendar day difference accounting for timezone
 function getCalendarDaysDiff(date1: Date, date2: Date, timezone: string = "Europe/Zurich"): number {
-  // Convert to local dates in the specified timezone
   const d1 = new Date(date1.toLocaleString("en-US", { timeZone: timezone }));
   const d2 = new Date(date2.toLocaleString("en-US", { timeZone: timezone }));
-  
-  // Set hours to 0 to compare only calendar days
   d1.setHours(0, 0, 0, 0);
   d2.setHours(0, 0, 0, 0);
-  
-  // Calculate difference in days
   return Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+// Generate a unique lock key for the current execution window
+function getLockKey(): string {
+  const now = new Date();
+  // Round to 5-minute window to prevent concurrent executions
+  const windowStart = new Date(Math.floor(now.getTime() / (5 * 60 * 1000)) * (5 * 60 * 1000));
+  return `visit_reminders_${windowStart.toISOString()}`;
 }
 
 serve(async (req) => {
@@ -46,7 +49,32 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const now = new Date();
-    console.log(`[${now.toISOString()}] Checking for visit reminders...`);
+    const lockKey = getLockKey();
+    console.log(`[${now.toISOString()}] Starting visit reminders check with lock: ${lockKey}`);
+
+    // Try to acquire a distributed lock using a temporary table or advisory lock
+    // Using advisory lock for PostgreSQL to prevent concurrent execution
+    const { data: lockResult, error: lockError } = await supabase.rpc('pg_try_advisory_lock', {
+      lock_key: 123456789 // Fixed key for visit reminders
+    });
+
+    if (lockError) {
+      console.log("Could not acquire advisory lock, using fallback approach");
+    } else if (lockResult === false) {
+      console.log("Another instance is already running, skipping this execution");
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Skipped - another instance running",
+          reminders_sent: 0,
+          timestamp: now.toISOString(),
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
     // Récupérer toutes les visites planifiées à venir
     const { data: visites, error: visitesError } = await supabase
@@ -80,122 +108,116 @@ serve(async (req) => {
       urgencyLevel: "critical" | "high" | "normal";
     }> = [];
 
+    // Batch fetch all required data to reduce queries
+    const agentIds = [...new Set((visites || []).map(v => v.agent_id).filter(Boolean))];
+    const clientIds = [...new Set((visites || []).map(v => v.client_id).filter(Boolean))];
+    const visiteIds = (visites || []).map(v => v.id);
+
+    // Fetch agents in batch
+    const { data: agentsData } = await supabase
+      .from("agents")
+      .select("id, user_id")
+      .in("id", agentIds);
+    const agentMap = new Map(agentsData?.map(a => [a.id, a.user_id]) || []);
+
+    // Fetch clients in batch
+    const { data: clientsData } = await supabase
+      .from("clients")
+      .select("id, user_id")
+      .in("id", clientIds);
+    const clientMap = new Map(clientsData?.map(c => [c.id, c.user_id]) || []);
+
+    // Fetch admins once
+    const { data: admins } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "admin");
+    const adminUserIds = admins?.map(a => a.user_id) || [];
+
+    // Fetch all existing reminders in batch to avoid N+1 queries
+    const { data: existingReminders } = await supabase
+      .from("visit_reminders")
+      .select("visite_id, user_id, reminder_type")
+      .in("visite_id", visiteIds);
+    
+    const existingReminderSet = new Set(
+      existingReminders?.map(r => `${r.visite_id}:${r.user_id}:${r.reminder_type}`) || []
+    );
+
     for (const visite of visites || []) {
       const visiteDate = new Date(visite.date_visite);
       const timeDiff = visiteDate.getTime() - now.getTime();
       const minutesDiff = Math.floor(timeDiff / (1000 * 60));
       const hoursDiff = Math.floor(timeDiff / (1000 * 60 * 60));
-      
-      // Use calendar days instead of simple time division to account for timezone
       const daysDiff = getCalendarDaysDiff(now, visiteDate);
 
       // Déterminer les types de rappels à envoyer
       const remindersNeeded: Array<{ type: string; urgency: "critical" | "high" | "normal" }> = [];
 
-      // Visite dans la journée - rappels urgents
+      // Only send ONE type of reminder per visite to avoid spam
       if (minutesDiff <= 30 && minutesDiff > 0) {
         remindersNeeded.push({ type: "30min_before", urgency: "critical" });
       } else if (minutesDiff <= 60 && minutesDiff > 30) {
         remindersNeeded.push({ type: "1h_before", urgency: "critical" });
       } else if (minutesDiff <= 180 && minutesDiff > 60) {
         remindersNeeded.push({ type: "3h_before", urgency: "critical" });
-      }
-      // Visite le jour même (mais pas dans les 3h)
-      else if (daysDiff === 0 && hoursDiff > 3) {
+      } else if (daysDiff === 0 && hoursDiff > 3) {
         remindersNeeded.push({ type: "day_of", urgency: "high" });
-      }
-      // Visite demain
-      else if (daysDiff === 1) {
+      } else if (daysDiff === 1) {
         remindersNeeded.push({ type: "day_before", urgency: "high" });
-      }
-      // Visite dans la semaine
-      else if (daysDiff >= 2 && daysDiff <= 7) {
+      } else if (daysDiff >= 2 && daysDiff <= 7) {
         remindersNeeded.push({ type: "week_before", urgency: "normal" });
       }
 
       for (const reminder of remindersNeeded) {
-        // Récupérer les destinataires avec leurs rôles
-
         // Agent
-        const { data: agent } = await supabase
-          .from("agents")
-          .select("user_id")
-          .eq("id", visite.agent_id)
-          .single();
-        
-        if (agent?.user_id) {
-          // Vérifier si rappel déjà envoyé
-          const { data: existingReminder } = await supabase
-            .from("visit_reminders")
-            .select("id")
-            .eq("visite_id", visite.id)
-            .eq("user_id", agent.user_id)
-            .eq("reminder_type", reminder.type)
-            .maybeSingle();
-
-          if (!existingReminder) {
+        const agentUserId = agentMap.get(visite.agent_id);
+        if (agentUserId) {
+          const key = `${visite.id}:${agentUserId}:${reminder.type}`;
+          if (!existingReminderSet.has(key)) {
             remindersToSend.push({
               visite: visite as VisiteWithDetails,
               reminderType: reminder.type,
-              recipientId: agent.user_id,
+              recipientId: agentUserId,
               recipientRole: 'agent',
               urgencyLevel: reminder.urgency,
             });
+            existingReminderSet.add(key); // Prevent duplicates within same run
           }
         }
 
-        // Client assigné à la visite
+        // Client
         if (visite.client_id) {
-          const { data: client } = await supabase
-            .from("clients")
-            .select("user_id")
-            .eq("id", visite.client_id)
-            .single();
-          
-          if (client?.user_id) {
-            const { data: existingReminder } = await supabase
-              .from("visit_reminders")
-              .select("id")
-              .eq("visite_id", visite.id)
-              .eq("user_id", client.user_id)
-              .eq("reminder_type", reminder.type)
-              .maybeSingle();
-
-            if (!existingReminder) {
+          const clientUserId = clientMap.get(visite.client_id);
+          if (clientUserId) {
+            const key = `${visite.id}:${clientUserId}:${reminder.type}`;
+            if (!existingReminderSet.has(key)) {
               remindersToSend.push({
                 visite: visite as VisiteWithDetails,
                 reminderType: reminder.type,
-                recipientId: client.user_id,
+                recipientId: clientUserId,
                 recipientRole: 'client',
                 urgencyLevel: reminder.urgency,
               });
+              existingReminderSet.add(key);
             }
           }
         }
 
-        // Admins
-        const { data: admins } = await supabase
-          .from("user_roles")
-          .select("user_id")
-          .eq("role", "admin");
-        
-        for (const admin of admins || []) {
-          const { data: existingReminder } = await supabase
-            .from("visit_reminders")
-            .select("id")
-            .eq("visite_id", visite.id)
-            .eq("user_id", admin.user_id)
-            .eq("reminder_type", reminder.type)
-            .maybeSingle();
-
-          if (!existingReminder) {
-            remindersToSend.push({
-              visite: visite as VisiteWithDetails,
-              reminderType: reminder.type,
-              recipientId: admin.user_id,
-              recipientRole: 'admin',
-              urgencyLevel: reminder.urgency,
-            });
+        // Admins - only for critical/high urgency to reduce admin spam
+        if (reminder.urgency !== "normal") {
+          for (const adminUserId of adminUserIds) {
+            const key = `${visite.id}:${adminUserId}:${reminder.type}`;
+            if (!existingReminderSet.has(key)) {
+              remindersToSend.push({
+                visite: visite as VisiteWithDetails,
+                reminderType: reminder.type,
+                recipientId: adminUserId,
+                recipientRole: 'admin',
+                urgencyLevel: reminder.urgency,
+              });
+              existingReminderSet.add(key);
+            }
           }
         }
       }
@@ -203,12 +225,17 @@ serve(async (req) => {
 
     console.log(`Sending ${remindersToSend.length} reminders`);
 
-    // Envoyer les notifications
+    // Batch process reminders
+    const reminderRecords: Array<{
+      visite_id: string;
+      user_id: string;
+      reminder_type: string;
+    }> = [];
+
     for (const reminder of remindersToSend) {
       const { visite, reminderType, recipientId, recipientRole, urgencyLevel } = reminder;
       const visiteDate = new Date(visite.date_visite);
 
-      // Formater le message selon l'urgence
       let title: string;
       let message: string;
       let emoji: string;
@@ -232,10 +259,9 @@ serve(async (req) => {
           message = getReminderMessage(reminderType, visite, visiteDate);
       }
 
-      // Générer le lien selon le rôle
       const link = getRecipientLink(recipientRole);
 
-      // Créer la notification
+      // Use create_notification RPC which now has built-in dedup protection
       const { error: notifError } = await supabase.rpc("create_notification", {
         p_user_id: recipientId,
         p_type: "visit_reminder",
@@ -254,18 +280,35 @@ serve(async (req) => {
         continue;
       }
 
-      // Marquer le rappel comme envoyé
-      const { error: insertError } = await supabase.from("visit_reminders").insert({
+      // Add to batch for visit_reminders table
+      reminderRecords.push({
         visite_id: visite.id,
         user_id: recipientId,
         reminder_type: reminderType,
       });
 
-      if (insertError && !insertError.message.includes("duplicate")) {
-        console.error(`Error inserting reminder record:`, insertError);
-      }
-
       console.log(`Sent ${reminderType} reminder to ${recipientId} (${recipientRole}) for visit ${visite.id}`);
+    }
+
+    // Batch insert reminder records
+    if (reminderRecords.length > 0) {
+      const { error: insertError } = await supabase
+        .from("visit_reminders")
+        .upsert(reminderRecords, { 
+          onConflict: 'visite_id,user_id,reminder_type',
+          ignoreDuplicates: true 
+        });
+
+      if (insertError) {
+        console.error("Error batch inserting reminder records:", insertError);
+      }
+    }
+
+    // Release advisory lock (ignore errors)
+    try {
+      await supabase.rpc('pg_advisory_unlock', { lock_key: 123456789 });
+    } catch {
+      // Ignore unlock errors
     }
 
     return new Response(

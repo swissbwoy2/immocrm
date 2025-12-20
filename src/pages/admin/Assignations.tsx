@@ -222,12 +222,13 @@ export default function Assignations() {
           .single();
 
         if (agentData) {
-          await supabase.from('notifications').insert({
-            user_id: agentData.user_id,
-            type: 'client_assigned',
-            title: assignment.is_primary ? 'Nouveau client assigné (Principal)' : 'Nouveau client assigné (Co-agent)',
-            message: `${clientName} vous a été assigné${assignment.is_primary ? ' en tant qu\'agent principal' : ' en tant que co-agent'} (${assignment.commission_split}% de commission)`,
-            link: '/agent/mes-clients',
+          await supabase.rpc('create_notification', {
+            p_user_id: agentData.user_id,
+            p_type: 'client_assigned',
+            p_title: assignment.is_primary ? 'Nouveau client assigné (Principal)' : 'Nouveau client assigné (Co-agent)',
+            p_message: `${clientName} vous a été assigné${assignment.is_primary ? ' en tant qu\'agent principal' : ' en tant que co-agent'} (${assignment.commission_split}% de commission)`,
+            p_link: '/agent/mes-clients',
+            p_metadata: { client_id: clientId }
           });
         }
       }
@@ -283,12 +284,13 @@ export default function Assignations() {
           .single();
 
         if (agentData) {
-          await supabase.from('notifications').insert({
-            user_id: agentData.user_id,
-            type: 'client_removed',
-            title: 'Client retiré',
-            message: `${clientName} a été retiré de votre portefeuille`,
-            link: '/agent/mes-clients',
+          await supabase.rpc('create_notification', {
+            p_user_id: agentData.user_id,
+            p_type: 'client_removed',
+            p_title: 'Client retiré',
+            p_message: `${clientName} a été retiré de votre portefeuille`,
+            p_link: '/agent/mes-clients',
+            p_metadata: { client_id: clientId }
           });
         }
       }
@@ -402,12 +404,13 @@ export default function Assignations() {
             .single();
 
           if (agentData) {
-            await supabase.from('notifications').insert({
-              user_id: agentData.user_id,
-              type: 'client_removed',
-              title: 'Client retiré',
-              message: `${clientName} a été retiré de votre portefeuille`,
-              link: '/agent/mes-clients',
+            await supabase.rpc('create_notification', {
+              p_user_id: agentData.user_id,
+              p_type: 'client_removed',
+              p_title: 'Client retiré',
+              p_message: `${clientName} a été retiré de votre portefeuille`,
+              p_link: '/agent/mes-clients',
+              p_metadata: { client_id: editingClientId }
             });
           }
         }
