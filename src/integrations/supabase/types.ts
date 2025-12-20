@@ -270,6 +270,185 @@ export type Database = {
         }
         Relationships: []
       }
+      assurances_immeuble: {
+        Row: {
+          assureur: string
+          created_at: string | null
+          date_debut: string | null
+          date_fin: string | null
+          date_prochaine_echeance: string | null
+          delai_resiliation_mois: number | null
+          document_url: string | null
+          franchise: number | null
+          id: string
+          immeuble_id: string
+          mois_resiliation: number | null
+          notes: string | null
+          numero_police: string | null
+          periodicite_paiement: string | null
+          prime_annuelle: number | null
+          risques_couverts: Json | null
+          type_assurance: string | null
+          updated_at: string | null
+          valeur_assuree: number | null
+        }
+        Insert: {
+          assureur: string
+          created_at?: string | null
+          date_debut?: string | null
+          date_fin?: string | null
+          date_prochaine_echeance?: string | null
+          delai_resiliation_mois?: number | null
+          document_url?: string | null
+          franchise?: number | null
+          id?: string
+          immeuble_id: string
+          mois_resiliation?: number | null
+          notes?: string | null
+          numero_police?: string | null
+          periodicite_paiement?: string | null
+          prime_annuelle?: number | null
+          risques_couverts?: Json | null
+          type_assurance?: string | null
+          updated_at?: string | null
+          valeur_assuree?: number | null
+        }
+        Update: {
+          assureur?: string
+          created_at?: string | null
+          date_debut?: string | null
+          date_fin?: string | null
+          date_prochaine_echeance?: string | null
+          delai_resiliation_mois?: number | null
+          document_url?: string | null
+          franchise?: number | null
+          id?: string
+          immeuble_id?: string
+          mois_resiliation?: number | null
+          notes?: string | null
+          numero_police?: string | null
+          periodicite_paiement?: string | null
+          prime_annuelle?: number | null
+          risques_couverts?: Json | null
+          type_assurance?: string | null
+          updated_at?: string | null
+          valeur_assuree?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assurances_immeuble_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      baux: {
+        Row: {
+          autres_charges: number | null
+          clauses_particulieres: string | null
+          created_at: string | null
+          date_debut: string
+          date_derniere_indexation: string | null
+          date_fin: string | null
+          date_signature: string | null
+          date_versement_garantie: string | null
+          document_url: string | null
+          duree_initiale: string | null
+          id: string
+          indice_reference: string | null
+          lieu_signature: string | null
+          locataire_id: string | null
+          lot_id: string
+          loyer_actuel: number | null
+          loyer_initial: number | null
+          montant_garantie: number | null
+          motif_resiliation: string | null
+          preavis_mois: number | null
+          provisions_chauffage: number | null
+          provisions_eau: number | null
+          statut: string | null
+          total_mensuel: number | null
+          type_garantie: string | null
+          updated_at: string | null
+          valeur_indice_reference: number | null
+        }
+        Insert: {
+          autres_charges?: number | null
+          clauses_particulieres?: string | null
+          created_at?: string | null
+          date_debut: string
+          date_derniere_indexation?: string | null
+          date_fin?: string | null
+          date_signature?: string | null
+          date_versement_garantie?: string | null
+          document_url?: string | null
+          duree_initiale?: string | null
+          id?: string
+          indice_reference?: string | null
+          lieu_signature?: string | null
+          locataire_id?: string | null
+          lot_id: string
+          loyer_actuel?: number | null
+          loyer_initial?: number | null
+          montant_garantie?: number | null
+          motif_resiliation?: string | null
+          preavis_mois?: number | null
+          provisions_chauffage?: number | null
+          provisions_eau?: number | null
+          statut?: string | null
+          total_mensuel?: number | null
+          type_garantie?: string | null
+          updated_at?: string | null
+          valeur_indice_reference?: number | null
+        }
+        Update: {
+          autres_charges?: number | null
+          clauses_particulieres?: string | null
+          created_at?: string | null
+          date_debut?: string
+          date_derniere_indexation?: string | null
+          date_fin?: string | null
+          date_signature?: string | null
+          date_versement_garantie?: string | null
+          document_url?: string | null
+          duree_initiale?: string | null
+          id?: string
+          indice_reference?: string | null
+          lieu_signature?: string | null
+          locataire_id?: string | null
+          lot_id?: string
+          loyer_actuel?: number | null
+          loyer_initial?: number | null
+          montant_garantie?: number | null
+          motif_resiliation?: string | null
+          preavis_mois?: number | null
+          provisions_chauffage?: number | null
+          provisions_eau?: number | null
+          statut?: string | null
+          total_mensuel?: number | null
+          type_garantie?: string | null
+          updated_at?: string | null
+          valeur_indice_reference?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "baux_locataire_id_fkey"
+            columns: ["locataire_id"]
+            isOneToOne: false
+            referencedRelation: "locataires_immeuble"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "baux_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_events: {
         Row: {
           agent_id: string | null
@@ -443,6 +622,110 @@ export type Database = {
             columns: ["offre_id"]
             isOneToOne: false
             referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidatures_location: {
+        Row: {
+          adresse_actuelle: string | null
+          civilite: string | null
+          co_candidats: Json | null
+          created_at: string | null
+          date_emmenagement_souhaitee: string | null
+          date_engagement: string | null
+          date_naissance: string | null
+          date_visite: string | null
+          documents: Json | null
+          email: string | null
+          employeur: string | null
+          id: string
+          lot_id: string
+          loyer_actuel: number | null
+          motif_changement: string | null
+          motif_refus: string | null
+          nationalite: string | null
+          nom: string
+          nombre_occupants: number | null
+          note_agent: string | null
+          prenom: string
+          profession: string | null
+          revenus_mensuels: number | null
+          score_dossier: number | null
+          statut: string | null
+          telephone: string | null
+          type_contrat: string | null
+          type_permis: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          adresse_actuelle?: string | null
+          civilite?: string | null
+          co_candidats?: Json | null
+          created_at?: string | null
+          date_emmenagement_souhaitee?: string | null
+          date_engagement?: string | null
+          date_naissance?: string | null
+          date_visite?: string | null
+          documents?: Json | null
+          email?: string | null
+          employeur?: string | null
+          id?: string
+          lot_id: string
+          loyer_actuel?: number | null
+          motif_changement?: string | null
+          motif_refus?: string | null
+          nationalite?: string | null
+          nom: string
+          nombre_occupants?: number | null
+          note_agent?: string | null
+          prenom: string
+          profession?: string | null
+          revenus_mensuels?: number | null
+          score_dossier?: number | null
+          statut?: string | null
+          telephone?: string | null
+          type_contrat?: string | null
+          type_permis?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          adresse_actuelle?: string | null
+          civilite?: string | null
+          co_candidats?: Json | null
+          created_at?: string | null
+          date_emmenagement_souhaitee?: string | null
+          date_engagement?: string | null
+          date_naissance?: string | null
+          date_visite?: string | null
+          documents?: Json | null
+          email?: string | null
+          employeur?: string | null
+          id?: string
+          lot_id?: string
+          loyer_actuel?: number | null
+          motif_changement?: string | null
+          motif_refus?: string | null
+          nationalite?: string | null
+          nom?: string
+          nombre_occupants?: number | null
+          note_agent?: string | null
+          prenom?: string
+          profession?: string | null
+          revenus_mensuels?: number | null
+          score_dossier?: number | null
+          statut?: string | null
+          telephone?: string | null
+          type_contrat?: string | null
+          type_permis?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidatures_location_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
             referencedColumns: ["id"]
           },
         ]
@@ -1393,6 +1676,88 @@ export type Database = {
           },
         ]
       }
+      documents_immeuble: {
+        Row: {
+          annee: number | null
+          created_at: string | null
+          date_document: string | null
+          description: string | null
+          est_confidentiel: boolean | null
+          id: string
+          immeuble_id: string | null
+          locataire_id: string | null
+          lot_id: string | null
+          mime_type: string | null
+          nom: string
+          tags: Json | null
+          taille: number | null
+          type_document: string
+          updated_at: string | null
+          uploaded_by: string | null
+          url: string
+        }
+        Insert: {
+          annee?: number | null
+          created_at?: string | null
+          date_document?: string | null
+          description?: string | null
+          est_confidentiel?: boolean | null
+          id?: string
+          immeuble_id?: string | null
+          locataire_id?: string | null
+          lot_id?: string | null
+          mime_type?: string | null
+          nom: string
+          tags?: Json | null
+          taille?: number | null
+          type_document: string
+          updated_at?: string | null
+          uploaded_by?: string | null
+          url: string
+        }
+        Update: {
+          annee?: number | null
+          created_at?: string | null
+          date_document?: string | null
+          description?: string | null
+          est_confidentiel?: boolean | null
+          id?: string
+          immeuble_id?: string | null
+          locataire_id?: string | null
+          lot_id?: string | null
+          mime_type?: string | null
+          nom?: string
+          tags?: Json | null
+          taille?: number | null
+          type_document?: string
+          updated_at?: string | null
+          uploaded_by?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_immeuble_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_immeuble_locataire_id_fkey"
+            columns: ["locataire_id"]
+            isOneToOne: false
+            referencedRelation: "locataires_immeuble"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_immeuble_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_configurations: {
         Row: {
           created_at: string | null
@@ -1480,6 +1845,89 @@ export type Database = {
         }
         Relationships: []
       }
+      hypotheques: {
+        Row: {
+          compte_3a: string | null
+          creancier: string
+          created_at: string | null
+          date_debut: string | null
+          date_fin: string | null
+          date_prochaine_echeance: string | null
+          document_url: string | null
+          id: string
+          immeuble_id: string
+          marge_saron: number | null
+          montant_actuel: number | null
+          montant_amortissement: number | null
+          montant_initial: number
+          notes: string | null
+          numero: string | null
+          numero_pret: string | null
+          periodicite_amortissement: string | null
+          rang: number | null
+          taux_interet: number | null
+          type_amortissement: string | null
+          type_taux: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          compte_3a?: string | null
+          creancier: string
+          created_at?: string | null
+          date_debut?: string | null
+          date_fin?: string | null
+          date_prochaine_echeance?: string | null
+          document_url?: string | null
+          id?: string
+          immeuble_id: string
+          marge_saron?: number | null
+          montant_actuel?: number | null
+          montant_amortissement?: number | null
+          montant_initial: number
+          notes?: string | null
+          numero?: string | null
+          numero_pret?: string | null
+          periodicite_amortissement?: string | null
+          rang?: number | null
+          taux_interet?: number | null
+          type_amortissement?: string | null
+          type_taux?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          compte_3a?: string | null
+          creancier?: string
+          created_at?: string | null
+          date_debut?: string | null
+          date_fin?: string | null
+          date_prochaine_echeance?: string | null
+          document_url?: string | null
+          id?: string
+          immeuble_id?: string
+          marge_saron?: number | null
+          montant_actuel?: number | null
+          montant_amortissement?: number | null
+          montant_initial?: number
+          notes?: string | null
+          numero?: string | null
+          numero_pret?: string | null
+          periodicite_amortissement?: string | null
+          rang?: number | null
+          taux_interet?: number | null
+          type_amortissement?: string | null
+          type_taux?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hypotheques_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       imap_configurations: {
         Row: {
           created_at: string | null
@@ -1521,6 +1969,98 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      immeubles: {
+        Row: {
+          adresse: string
+          annee_construction: number | null
+          canton: string | null
+          code_postal: string | null
+          commune_rf: string | null
+          created_at: string | null
+          date_derniere_estimation: string | null
+          etat_locatif_annuel: number | null
+          folio_rf: string | null
+          id: string
+          nb_unites: number | null
+          nom: string
+          notes: string | null
+          numero_parcelle: string | null
+          pays: string | null
+          proprietaire_id: string
+          statut: string | null
+          surface_totale: number | null
+          taux_vacance: number | null
+          type_bien: string | null
+          updated_at: string | null
+          valeur_assurance: number | null
+          valeur_estimee: number | null
+          valeur_fiscale: number | null
+          ville: string | null
+        }
+        Insert: {
+          adresse: string
+          annee_construction?: number | null
+          canton?: string | null
+          code_postal?: string | null
+          commune_rf?: string | null
+          created_at?: string | null
+          date_derniere_estimation?: string | null
+          etat_locatif_annuel?: number | null
+          folio_rf?: string | null
+          id?: string
+          nb_unites?: number | null
+          nom: string
+          notes?: string | null
+          numero_parcelle?: string | null
+          pays?: string | null
+          proprietaire_id: string
+          statut?: string | null
+          surface_totale?: number | null
+          taux_vacance?: number | null
+          type_bien?: string | null
+          updated_at?: string | null
+          valeur_assurance?: number | null
+          valeur_estimee?: number | null
+          valeur_fiscale?: number | null
+          ville?: string | null
+        }
+        Update: {
+          adresse?: string
+          annee_construction?: number | null
+          canton?: string | null
+          code_postal?: string | null
+          commune_rf?: string | null
+          created_at?: string | null
+          date_derniere_estimation?: string | null
+          etat_locatif_annuel?: number | null
+          folio_rf?: string | null
+          id?: string
+          nb_unites?: number | null
+          nom?: string
+          notes?: string | null
+          numero_parcelle?: string | null
+          pays?: string | null
+          proprietaire_id?: string
+          statut?: string | null
+          surface_totale?: number | null
+          taux_vacance?: number | null
+          type_bien?: string | null
+          updated_at?: string | null
+          valeur_assurance?: number | null
+          valeur_estimee?: number | null
+          valeur_fiscale?: number | null
+          ville?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "immeubles_proprietaire_id_fkey"
+            columns: ["proprietaire_id"]
+            isOneToOne: false
+            referencedRelation: "proprietaires"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leads: {
         Row: {
@@ -1614,6 +2154,172 @@ export type Database = {
           url?: string
         }
         Relationships: []
+      }
+      locataires_immeuble: {
+        Row: {
+          charges: number | null
+          civilite: string | null
+          created_at: string | null
+          date_entree: string | null
+          date_naissance: string | null
+          date_preavis: string | null
+          date_sortie: string | null
+          email: string | null
+          employeur: string | null
+          garantie: number | null
+          id: string
+          lot_id: string
+          loyer: number | null
+          nationalite: string | null
+          nom: string
+          notes: string | null
+          numero_garantie: string | null
+          prenom: string | null
+          profession: string | null
+          solde_locataire: number | null
+          statut: string | null
+          telephone: string | null
+          telephone_urgence: string | null
+          total_mensuel: number | null
+          type_garantie: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          charges?: number | null
+          civilite?: string | null
+          created_at?: string | null
+          date_entree?: string | null
+          date_naissance?: string | null
+          date_preavis?: string | null
+          date_sortie?: string | null
+          email?: string | null
+          employeur?: string | null
+          garantie?: number | null
+          id?: string
+          lot_id: string
+          loyer?: number | null
+          nationalite?: string | null
+          nom: string
+          notes?: string | null
+          numero_garantie?: string | null
+          prenom?: string | null
+          profession?: string | null
+          solde_locataire?: number | null
+          statut?: string | null
+          telephone?: string | null
+          telephone_urgence?: string | null
+          total_mensuel?: number | null
+          type_garantie?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          charges?: number | null
+          civilite?: string | null
+          created_at?: string | null
+          date_entree?: string | null
+          date_naissance?: string | null
+          date_preavis?: string | null
+          date_sortie?: string | null
+          email?: string | null
+          employeur?: string | null
+          garantie?: number | null
+          id?: string
+          lot_id?: string
+          loyer?: number | null
+          nationalite?: string | null
+          nom?: string
+          notes?: string | null
+          numero_garantie?: string | null
+          prenom?: string | null
+          profession?: string | null
+          solde_locataire?: number | null
+          statut?: string | null
+          telephone?: string | null
+          telephone_urgence?: string | null
+          total_mensuel?: number | null
+          type_garantie?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locataires_immeuble_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lots: {
+        Row: {
+          charges_actuelles: number | null
+          created_at: string | null
+          date_liberation: string | null
+          designation: string | null
+          equipements: Json | null
+          etage: string | null
+          id: string
+          immeuble_id: string
+          loyer_actuel: number | null
+          nb_pieces: number | null
+          notes: string | null
+          provisions_chauffage: number | null
+          reference: string | null
+          statut: string | null
+          surface: number | null
+          total_mensuel: number | null
+          type_lot: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          charges_actuelles?: number | null
+          created_at?: string | null
+          date_liberation?: string | null
+          designation?: string | null
+          equipements?: Json | null
+          etage?: string | null
+          id?: string
+          immeuble_id: string
+          loyer_actuel?: number | null
+          nb_pieces?: number | null
+          notes?: string | null
+          provisions_chauffage?: number | null
+          reference?: string | null
+          statut?: string | null
+          surface?: number | null
+          total_mensuel?: number | null
+          type_lot?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          charges_actuelles?: number | null
+          created_at?: string | null
+          date_liberation?: string | null
+          designation?: string | null
+          equipements?: Json | null
+          etage?: string | null
+          id?: string
+          immeuble_id?: string
+          loyer_actuel?: number | null
+          nb_pieces?: number | null
+          notes?: string | null
+          provisions_chauffage?: number | null
+          reference?: string | null
+          statut?: string | null
+          surface?: number | null
+          total_mensuel?: number | null
+          type_lot?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lots_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -1862,6 +2568,74 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      proprietaires: {
+        Row: {
+          adresse: string | null
+          agent_id: string | null
+          canton: string | null
+          civilite: string | null
+          code_postal: string | null
+          created_at: string | null
+          iban: string | null
+          id: string
+          nom_banque: string | null
+          notes_admin: string | null
+          statut: string | null
+          telephone: string | null
+          telephone_secondaire: string | null
+          titulaire_compte: string | null
+          updated_at: string | null
+          user_id: string
+          ville: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          agent_id?: string | null
+          canton?: string | null
+          civilite?: string | null
+          code_postal?: string | null
+          created_at?: string | null
+          iban?: string | null
+          id?: string
+          nom_banque?: string | null
+          notes_admin?: string | null
+          statut?: string | null
+          telephone?: string | null
+          telephone_secondaire?: string | null
+          titulaire_compte?: string | null
+          updated_at?: string | null
+          user_id: string
+          ville?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          agent_id?: string | null
+          canton?: string | null
+          civilite?: string | null
+          code_postal?: string | null
+          created_at?: string | null
+          iban?: string | null
+          id?: string
+          nom_banque?: string | null
+          notes_admin?: string | null
+          statut?: string | null
+          telephone?: string | null
+          telephone_secondaire?: string | null
+          titulaire_compte?: string | null
+          updated_at?: string | null
+          user_id?: string
+          ville?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proprietaires_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       received_emails: {
         Row: {
@@ -2153,6 +2927,116 @@ export type Database = {
           },
         ]
       }
+      tickets_techniques: {
+        Row: {
+          agent_id: string | null
+          categorie: string | null
+          created_at: string | null
+          cree_par: string | null
+          date_intervention_prevue: string | null
+          date_intervention_reelle: string | null
+          date_resolution: string | null
+          description: string | null
+          facture_url: string | null
+          fournisseur_id: string | null
+          fournisseur_nom: string | null
+          id: string
+          immeuble_id: string
+          locataire_id: string | null
+          lot_id: string | null
+          montant_devis: number | null
+          montant_facture: number | null
+          notes: string | null
+          numero_ticket: string | null
+          photos: Json | null
+          priorite: string | null
+          statut: string | null
+          titre: string
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          categorie?: string | null
+          created_at?: string | null
+          cree_par?: string | null
+          date_intervention_prevue?: string | null
+          date_intervention_reelle?: string | null
+          date_resolution?: string | null
+          description?: string | null
+          facture_url?: string | null
+          fournisseur_id?: string | null
+          fournisseur_nom?: string | null
+          id?: string
+          immeuble_id: string
+          locataire_id?: string | null
+          lot_id?: string | null
+          montant_devis?: number | null
+          montant_facture?: number | null
+          notes?: string | null
+          numero_ticket?: string | null
+          photos?: Json | null
+          priorite?: string | null
+          statut?: string | null
+          titre: string
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          categorie?: string | null
+          created_at?: string | null
+          cree_par?: string | null
+          date_intervention_prevue?: string | null
+          date_intervention_reelle?: string | null
+          date_resolution?: string | null
+          description?: string | null
+          facture_url?: string | null
+          fournisseur_id?: string | null
+          fournisseur_nom?: string | null
+          id?: string
+          immeuble_id?: string
+          locataire_id?: string | null
+          lot_id?: string | null
+          montant_devis?: number | null
+          montant_facture?: number | null
+          notes?: string | null
+          numero_ticket?: string | null
+          photos?: Json | null
+          priorite?: string | null
+          statut?: string | null
+          titre?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_techniques_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_techniques_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_techniques_locataire_id_fkey"
+            columns: ["locataire_id"]
+            isOneToOne: false
+            referencedRelation: "locataires_immeuble"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tickets_techniques_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           adresse: string | null
@@ -2276,6 +3160,109 @@ export type Database = {
             columns: ["offre_id"]
             isOneToOne: false
             referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions_comptables: {
+        Row: {
+          categorie: string
+          created_at: string | null
+          credit: number | null
+          date_echeance: string | null
+          date_paiement: string | null
+          date_transaction: string
+          debit: number | null
+          document_url: string | null
+          est_recurrente: boolean | null
+          id: string
+          immeuble_id: string
+          libelle: string
+          locataire_id: string | null
+          lot_id: string | null
+          mode_paiement: string | null
+          notes: string | null
+          numero_facture: string | null
+          numero_piece: string | null
+          periodicite: string | null
+          sous_categorie: string | null
+          statut: string | null
+          tiers_nom: string | null
+          tiers_reference: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          categorie: string
+          created_at?: string | null
+          credit?: number | null
+          date_echeance?: string | null
+          date_paiement?: string | null
+          date_transaction: string
+          debit?: number | null
+          document_url?: string | null
+          est_recurrente?: boolean | null
+          id?: string
+          immeuble_id: string
+          libelle: string
+          locataire_id?: string | null
+          lot_id?: string | null
+          mode_paiement?: string | null
+          notes?: string | null
+          numero_facture?: string | null
+          numero_piece?: string | null
+          periodicite?: string | null
+          sous_categorie?: string | null
+          statut?: string | null
+          tiers_nom?: string | null
+          tiers_reference?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          categorie?: string
+          created_at?: string | null
+          credit?: number | null
+          date_echeance?: string | null
+          date_paiement?: string | null
+          date_transaction?: string
+          debit?: number | null
+          document_url?: string | null
+          est_recurrente?: boolean | null
+          id?: string
+          immeuble_id?: string
+          libelle?: string
+          locataire_id?: string | null
+          lot_id?: string | null
+          mode_paiement?: string | null
+          notes?: string | null
+          numero_facture?: string | null
+          numero_piece?: string | null
+          periodicite?: string | null
+          sous_categorie?: string | null
+          statut?: string | null
+          tiers_nom?: string | null
+          tiers_reference?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_comptables_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_comptables_locataire_id_fkey"
+            columns: ["locataire_id"]
+            isOneToOne: false
+            referencedRelation: "locataires_immeuble"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_comptables_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
             referencedColumns: ["id"]
           },
         ]
@@ -2454,6 +3441,10 @@ export type Database = {
       }
       get_current_user_id: { Args: never; Returns: string }
       get_next_abaninja_client_number: { Args: never; Returns: string }
+      has_access_to_immeuble: {
+        Args: { _immeuble_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2474,14 +3465,22 @@ export type Database = {
         Args: { _client_id: string }
         Returns: boolean
       }
+      is_agent_of_proprietaire: {
+        Args: { _proprietaire_id: string }
+        Returns: boolean
+      }
       is_assigned_agent: { Args: { _client_user_id: string }; Returns: boolean }
       is_my_assigned_agent: { Args: { _agent_id: string }; Returns: boolean }
+      is_proprietaire_owner: {
+        Args: { _proprietaire_id: string }
+        Returns: boolean
+      }
       mark_inactive_users_offline: { Args: never; Returns: number }
       set_user_offline: { Args: never; Returns: undefined }
       update_user_presence: { Args: never; Returns: undefined }
     }
     Enums: {
-      app_role: "admin" | "agent" | "client" | "apporteur"
+      app_role: "admin" | "agent" | "client" | "apporteur" | "proprietaire"
       contact_type:
         | "proprietaire"
         | "gerant_regie"
@@ -2618,7 +3617,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "agent", "client", "apporteur"],
+      app_role: ["admin", "agent", "client", "apporteur", "proprietaire"],
       contact_type: [
         "proprietaire",
         "gerant_regie",
