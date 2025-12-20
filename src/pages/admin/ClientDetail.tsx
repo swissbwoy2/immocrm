@@ -29,6 +29,7 @@ import { RegionAutocomplete } from '@/components/RegionAutocomplete';
 import { ApporteurInfoCard } from '@/components/ApporteurInfoCard';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 import { SwissRomandeMap } from '@/components/SwissRomandeMap';
+import { OnlineStatusBadge } from '@/components/premium/OnlineStatusBadge';
 
 interface Client {
   id: string;
@@ -96,6 +97,8 @@ interface Profile {
   email: string;
   telephone?: string;
   actif?: boolean;
+  last_seen_at?: string | null;
+  is_online?: boolean | null;
 }
 
 interface Agent {
@@ -1469,6 +1472,14 @@ export default function ClientDetail() {
           <PremiumCard icon={User} title="Informations personnelles" delay={400}>
             <CardContent className="space-y-4">
               <div className="space-y-3">
+                {/* Online Status */}
+                <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/20">
+                  <OnlineStatusBadge 
+                    lastSeenAt={profile.last_seen_at} 
+                    isOnline={profile.is_online}
+                    size="md"
+                  />
+                </div>
                 <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
                   <div className="p-2 rounded-lg bg-primary/10">
                     <Mail className="w-4 h-4 text-primary" />
