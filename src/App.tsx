@@ -152,7 +152,7 @@ const App = () => (
               <Route path="/admin/envoyer-email" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminEnvoyerEmail /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/envoyer-offre" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminEnvoyerOffre /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/historique-emails" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminHistoriqueEmails /></AppLayout></ProtectedRoute>} />
-              <Route path="/admin/boite-reception" element={<ProtectedRoute allowedRoles={['admin']}><AdminBoiteReception /></ProtectedRoute>} />
+              <Route path="/admin/boite-reception" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminBoiteReception /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/calendrier" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminCalendrier /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/rappels" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRappels /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/candidatures" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminCandidatures /></AppLayout></ProtectedRoute>} />
@@ -179,7 +179,7 @@ const App = () => (
               <Route path="/agent/parametres" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentParametres /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/envoyer-email" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentEnvoyerEmail /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/historique-emails" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentHistoriqueEmails /></AppLayout></ProtectedRoute>} />
-              <Route path="/agent/boite-reception" element={<ProtectedRoute allowedRoles={['agent']}><AgentBoiteReception /></ProtectedRoute>} />
+              <Route path="/agent/boite-reception" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentBoiteReception /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/candidatures" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentCandidatures /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/deposer-candidature" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDeposerCandidature /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/remplir-pdf" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentRemplirPDF /></AppLayout></ProtectedRoute>} />
