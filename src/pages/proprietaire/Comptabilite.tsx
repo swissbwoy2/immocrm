@@ -1,9 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { TrendingUp, TrendingDown, DollarSign, Building2, Calendar, Download, Filter, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -13,12 +11,14 @@ import {
 } from '@/components/ui/select';
 import { PremiumPageHeader, PremiumEmptyState } from '@/components/premium';
 import { PremiumTransactionComptableCard } from '@/components/premium/PremiumTransactionComptableCard';
+import { AddTransactionDialog } from '@/components/proprietaire/AddTransactionDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 export default function Comptabilite() {
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [showAddDialog, setShowAddDialog] = useState(false);
   const { user } = useAuth();
   
   const [loading, setLoading] = useState(true);
@@ -165,7 +165,7 @@ export default function Comptabilite() {
               <Download className="w-4 h-4 mr-2" />
               Exporter
             </Button>
-            <Button onClick={() => navigate('/proprietaire/comptabilite/nouvelle')}>
+            <Button onClick={() => setShowAddDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Nouvelle écriture
             </Button>
@@ -274,7 +274,7 @@ export default function Comptabilite() {
           title="Aucune transaction"
           description="Aucune écriture comptable pour la période sélectionnée."
           action={
-            <Button onClick={() => navigate('/proprietaire/comptabilite/nouvelle')}>
+            <Button onClick={() => setShowAddDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Ajouter une écriture
             </Button>
@@ -302,6 +302,12 @@ export default function Comptabilite() {
           </CardContent>
         </Card>
       )}
+
+      <AddTransactionDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        onSuccess={loadData}
+      />
     </div>
   );
 }

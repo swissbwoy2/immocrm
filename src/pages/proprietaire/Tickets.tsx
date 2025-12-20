@@ -15,6 +15,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PremiumPageHeader, PremiumEmptyState } from '@/components/premium';
 import { PremiumTicketTechniqueCard } from '@/components/premium/PremiumTicketTechniqueCard';
+import { CreateTicketDialog } from '@/components/proprietaire/CreateTicketDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -31,6 +32,7 @@ export default function Tickets() {
   const [immeubleFilter, setImmeubleFilter] = useState<string>('all');
   const [prioriteFilter, setPrioriteFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<string>('ouverts');
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -147,7 +149,7 @@ export default function Tickets() {
         subtitle="Gestion des demandes d'intervention"
         icon={Wrench}
         action={
-          <Button onClick={() => navigate('/proprietaire/tickets/nouveau')}>
+          <Button onClick={() => setShowCreateDialog(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nouveau ticket
           </Button>
@@ -253,7 +255,7 @@ export default function Tickets() {
                     : "Aucun ticket dans cette catégorie."
                 }
                 action={tab === 'ouverts' ? (
-                  <Button onClick={() => navigate('/proprietaire/tickets/nouveau')}>
+                  <Button onClick={() => setShowCreateDialog(true)}>
                     <Plus className="w-4 h-4 mr-2" />
                     Créer un ticket
                   </Button>
@@ -274,6 +276,12 @@ export default function Tickets() {
           </TabsContent>
         ))}
       </Tabs>
+
+      <CreateTicketDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onSuccess={loadData}
+      />
     </div>
   );
 }
