@@ -19,7 +19,6 @@ import { toast } from 'sonner';
 export default function Comptabilite() {
   const { user } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const { user } = useAuth();
   
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -294,7 +293,6 @@ export default function Comptabilite() {
                   key={transaction.id}
                   transaction={transaction}
                   immeubleName={transaction.immeuble_nom}
-                  onClick={() => navigate(`/proprietaire/comptabilite/${transaction.id}`)}
                   className="rounded-none border-0"
                 />
               ))}
