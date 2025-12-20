@@ -42,16 +42,20 @@ function AppLayoutContent({ children }: AppLayoutProps) {
       <div className="flex-1 flex flex-col w-full min-w-0">
         {/* Mobile Header - toujours visible */}
         <header className="sticky top-0 z-20 flex items-center h-14 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:hidden shrink-0">
-          <SidebarTrigger className="-ml-1 transition-transform duration-200 active:scale-95">
+          <SidebarTrigger 
+            className="-ml-1 transition-transform duration-200 active:scale-95"
+            aria-label="Ouvrir le menu de navigation"
+          >
             <Menu className="h-5 w-5" />
           </SidebarTrigger>
           <button 
             onClick={() => setOpenMobile(true)}
             className="flex items-center gap-2 ml-3 hover:opacity-80 transition-opacity"
+            aria-label="Ouvrir le menu principal"
           >
             <img 
               src={logoImmoRama} 
-              alt="Immo-Rama Logo" 
+              alt="Logo Immo-Rama - Retour à l'accueil" 
               className="h-8 w-auto object-contain"
             />
             <span className="font-semibold text-lg">ImmoCRM</span>
