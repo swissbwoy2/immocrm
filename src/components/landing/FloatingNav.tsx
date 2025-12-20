@@ -29,10 +29,14 @@ export function FloatingNav() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2">
+            <Link 
+              to="/" 
+              className="flex items-center gap-2"
+              aria-label="Retour à l'accueil Immo-Rama"
+            >
               <img 
                 src={logo} 
-                alt="Immo-Rama" 
+                alt="Logo Immo-Rama" 
                 className="h-8 w-auto"
               />
             </Link>
