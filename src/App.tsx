@@ -17,7 +17,7 @@ import Landing from "./pages/Landing";
 // Lazy load all other pages
 const NouveauMandat = lazy(() => import("./pages/NouveauMandat"));
 const FirstLogin = lazy(() => import("./pages/FirstLogin"));
-const Setup = lazy(() => import("./pages/Setup"));
+
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const DownloadFiles = lazy(() => import("./pages/DownloadFiles"));
 
@@ -128,7 +128,7 @@ const App = () => (
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Landing />} />
-              <Route path="/setup" element={<Setup />} />
+              
               <Route path="/login" element={<Login />} />
               <Route path="/nouveau-mandat" element={<NouveauMandat />} />
               <Route path="/first-login" element={<FirstLogin />} />

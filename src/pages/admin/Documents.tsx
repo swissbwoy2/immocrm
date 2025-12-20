@@ -9,6 +9,7 @@ import { FileText, Download, Eye, User, Calendar, File, Search, Pencil } from 'l
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { getStoragePath, formatFileSize as formatFileSizeUtil } from '@/lib/documentUtils';
 
 export default function AdminDocuments() {
   const { user } = useAuth();
@@ -100,19 +101,6 @@ export default function AdminDocuments() {
     }
   };
 
-  // Extrait le chemin relatif depuis une URL complète ou retourne le chemin tel quel
-  const getStoragePath = (url: string): string => {
-    if (!url) return '';
-    if (url.startsWith('data:')) return url;
-    
-    // Si l'URL contient le domaine Supabase, extraire le chemin après le bucket
-    const bucketMatch = url.match(/client-documents\/(.+)$/);
-    if (bucketMatch) {
-      return bucketMatch[1];
-    }
-    
-    return url;
-  };
 
   const handlePreview = async (document: any) => {
     setSelectedDocument(document);
@@ -220,11 +208,7 @@ export default function AdminDocuments() {
     return '📎';
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
+  const formatFileSize = (bytes: number) => formatFileSizeUtil(bytes);
 
   const groupedDocuments = filteredDocuments.reduce((acc, doc) => {
     const clientName = doc.client_profile 

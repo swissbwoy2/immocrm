@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getStoragePath } from '@/lib/documentUtils';
 
 interface DocumentRequest {
   id: string;
@@ -339,19 +340,6 @@ export default function Documents() {
     }
   };
 
-  // Extrait le chemin relatif depuis une URL complète ou retourne le chemin tel quel
-  const getStoragePath = (url: string): string => {
-    if (!url) return '';
-    if (url.startsWith('data:')) return url;
-    
-    // Si l'URL contient le domaine Supabase, extraire le chemin après le bucket
-    const bucketMatch = url.match(/client-documents\/(.+)$/);
-    if (bucketMatch) {
-      return bucketMatch[1];
-    }
-    
-    return url;
-  };
 
   const handlePreview = async (document: any) => {
     try {

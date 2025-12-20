@@ -68,7 +68,6 @@ serve(async (req) => {
     }
 
     const payload = JSON.parse(rawBody);
-    console.log('AbaNinja webhook received:', JSON.stringify(payload, null, 2));
 
     // Initialize Supabase admin client
     const supabaseAdmin = createClient(
@@ -86,9 +85,6 @@ serve(async (req) => {
     // Expected events: invoice.paid, invoice.created, etc.
     const eventType = payload.event || payload.type || payload.action;
     const invoiceData = payload.data || payload.invoice || payload;
-
-    console.log('Event type:', eventType);
-    console.log('Invoice data:', JSON.stringify(invoiceData, null, 2));
 
     // Handle payment received event
     if (eventType === 'invoice.paid' || eventType === 'payment.received' || 
