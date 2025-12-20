@@ -1331,6 +1331,8 @@ const Messagerie = () => {
                 avatarUrl={null}
                 status={getContactInfo(currentConversation).type === 'admin' ? 'Admin' : undefined}
                 isArchived={currentConversation.is_archived}
+                lastSeenAt={getContactInfo(currentConversation).lastSeenAt}
+                isOnline={getContactInfo(currentConversation).isOnline}
               />
             </div>
           )}
