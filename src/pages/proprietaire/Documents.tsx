@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { FileText, Upload, Search, Filter, Building2, FolderOpen, Download, Eye, Trash2 } from 'lucide-react';
+import { FileText, Upload, Search, Filter, Building2, FolderOpen, Download, Eye } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PremiumPageHeader, PremiumEmptyState, PremiumDocumentCard } from '@/components/premium';
+import { PremiumPageHeader, PremiumEmptyState } from '@/components/premium';
+import { UploadDocumentDialog } from '@/components/proprietaire/UploadDocumentDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -34,8 +34,8 @@ const DOCUMENT_TYPES = [
 ];
 
 export default function Documents() {
-  const navigate = useNavigate();
   const { user } = useAuth();
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
   
   const [loading, setLoading] = useState(true);
   const [documents, setDocuments] = useState<any[]>([]);
@@ -150,7 +150,7 @@ export default function Documents() {
         subtitle={`${documents.length} document${documents.length > 1 ? 's' : ''} dans votre GED`}
         icon={FileText}
         action={
-          <Button onClick={() => navigate('/proprietaire/documents/upload')}>
+          <Button onClick={() => setShowUploadDialog(true)}>
             <Upload className="w-4 h-4 mr-2" />
             Ajouter un document
           </Button>
@@ -211,7 +211,7 @@ export default function Documents() {
               : "Commencez par ajouter vos premiers documents."
           }
           action={!searchTerm && typeFilter === 'all' && immeubleFilter === 'all' ? (
-            <Button onClick={() => navigate('/proprietaire/documents/upload')}>
+            <Button onClick={() => setShowUploadDialog(true)}>
               <Upload className="w-4 h-4 mr-2" />
               Ajouter un document
             </Button>
@@ -284,6 +284,12 @@ export default function Documents() {
           ))}
         </div>
       )}
+
+      <UploadDocumentDialog
+        open={showUploadDialog}
+        onOpenChange={setShowUploadDialog}
+        onSuccess={loadData}
+      />
     </div>
   );
 }

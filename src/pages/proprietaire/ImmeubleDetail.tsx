@@ -15,6 +15,8 @@ import { PremiumTicketTechniqueCard } from '@/components/premium/PremiumTicketTe
 import { PremiumDocumentCard } from '@/components/premium/PremiumDocumentCard';
 import { AddLotDialog } from '@/components/proprietaire/AddLotDialog';
 import { AddLocataireDialog } from '@/components/proprietaire/AddLocataireDialog';
+import { CreateTicketDialog } from '@/components/proprietaire/CreateTicketDialog';
+import { UploadDocumentDialog } from '@/components/proprietaire/UploadDocumentDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -112,6 +114,8 @@ export default function ImmeubleDetail() {
   
   const [showAddLotDialog, setShowAddLotDialog] = useState(false);
   const [showAddLocataireDialog, setShowAddLocataireDialog] = useState(false);
+  const [showCreateTicketDialog, setShowCreateTicketDialog] = useState(false);
+  const [showUploadDocumentDialog, setShowUploadDocumentDialog] = useState(false);
   const [selectedLotId, setSelectedLotId] = useState<string | null>(null);
 
   const formatCurrency = (value: number | null) => {
@@ -466,10 +470,9 @@ export default function ImmeubleDetail() {
           )}
         </TabsContent>
 
-        {/* Tickets Tab */}
         <TabsContent value="tickets" className="space-y-4">
           <div className="flex justify-end">
-            <Button onClick={() => navigate(`/proprietaire/tickets/nouveau?immeuble=${id}`)}>
+            <Button onClick={() => setShowCreateTicketDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Nouveau ticket
             </Button>
@@ -503,10 +506,9 @@ export default function ImmeubleDetail() {
           )}
         </TabsContent>
 
-        {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-4">
           <div className="flex justify-end">
-            <Button onClick={() => navigate(`/proprietaire/documents/upload?immeuble=${id}`)}>
+            <Button onClick={() => setShowUploadDocumentDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Ajouter un document
             </Button>
@@ -558,6 +560,20 @@ export default function ImmeubleDetail() {
           setSelectedLotId(null);
           loadData();
         }}
+      />
+
+      <CreateTicketDialog
+        open={showCreateTicketDialog}
+        onOpenChange={setShowCreateTicketDialog}
+        immeubleId={id}
+        onSuccess={loadData}
+      />
+
+      <UploadDocumentDialog
+        open={showUploadDocumentDialog}
+        onOpenChange={setShowUploadDocumentDialog}
+        immeubleId={id}
+        onSuccess={loadData}
       />
     </div>
   );
