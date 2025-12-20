@@ -27,6 +27,7 @@ import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck
 import { StickyNote } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getStoragePath } from '@/lib/documentUtils';
 import { useToast } from '@/hooks/use-toast';
 import { calculateDaysElapsed } from '@/utils/calculations';
 import { Progress } from '@/components/ui/progress';
@@ -544,11 +545,7 @@ export default function ClientDetail() {
         return;
       }
 
-      let filePath = document.url;
-      if (filePath.includes('/storage/v1/object/')) {
-        const parts = filePath.split('/client-documents/');
-        filePath = parts[1] || filePath;
-      }
+      const filePath = getStoragePath(document.url);
 
       const { data, error } = await supabase.storage
         .from('client-documents')

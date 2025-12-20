@@ -69,13 +69,6 @@ serve(async (req) => {
       throw new Error('recipient_email, subject, and body_html are required');
     }
 
-    console.log(`Sending email to ${recipient_email} via ${emailConfig.smtp_host}:${emailConfig.smtp_port}`);
-    if (cc && cc.length > 0) {
-      console.log(`CC recipients: ${cc.join(', ')}`);
-    }
-    if (bcc && bcc.length > 0) {
-      console.log(`BCC recipients: ${bcc.length} addresses`);
-    }
 
     // Build email body with signature
     let fullBodyHtml = body_html.replace(/\n/g, '<br/>');
@@ -102,7 +95,6 @@ serve(async (req) => {
               content: bytes,
               contentType: attachment.content_type || 'application/octet-stream',
             });
-            console.log(`Attached (base64): ${attachment.filename} (${bytes.length} bytes)`);
           } else if (attachment.url) {
             // Handle Supabase storage URLs
             let fetchUrl = attachment.url;
@@ -126,7 +118,6 @@ serve(async (req) => {
                 content: new Uint8Array(arrayBuffer),
                 contentType: attachment.content_type || 'application/octet-stream',
               });
-              console.log(`Attached (URL): ${attachment.filename} (${arrayBuffer.byteLength} bytes)`);
             } else {
               console.warn(`Failed to download attachment: ${attachment.filename} - ${response.status}`);
             }
@@ -141,11 +132,6 @@ serve(async (req) => {
     const port = emailConfig.smtp_port || 465;
     const useTLS = port === 465;
     
-    console.log(`SMTP connection: host=${emailConfig.smtp_host}, port=${port}, implicitTLS=${useTLS}`);
-    
-    if (port === 587) {
-      console.warn('WARNING: Port 587 (STARTTLS) may not work reliably. Consider using port 465 with implicit TLS.');
-    }
     
     client = new SMTPClient({
       connection: {
@@ -197,8 +183,6 @@ serve(async (req) => {
 
     // Send email
     await client.send(emailOptions);
-
-    console.log('Email sent successfully');
 
     // Close connection
     await client.close();

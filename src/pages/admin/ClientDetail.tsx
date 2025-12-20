@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getStoragePath } from '@/lib/documentUtils';
 import { calculateDaysElapsed } from '@/utils/calculations';
 import { SendEmailDialog } from '@/components/SendEmailDialog';
 import { MergeDocumentsDialog } from '@/components/MergeDocumentsDialog';
@@ -337,19 +338,6 @@ export default function ClientDetail() {
     }
   };
 
-  // Extrait le chemin relatif depuis une URL complète ou retourne le chemin tel quel
-  const getStoragePath = (url: string): string => {
-    if (!url) return '';
-    if (url.startsWith('data:')) return url;
-    
-    // Si l'URL contient le domaine Supabase, extraire le chemin après le bucket
-    const bucketMatch = url.match(/client-documents\/(.+)$/);
-    if (bucketMatch) {
-      return bucketMatch[1];
-    }
-    
-    return url;
-  };
 
   const handleDownloadDocument = async (doc: any) => {
     try {
