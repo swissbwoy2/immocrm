@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { MandatFormData, DECOUVERTES_AGENCE, TYPES_BIEN, PIECES_OPTIONS } from './types';
 import { Home, Building2, AlertCircle, CheckCircle, Calculator, Users, TrendingUp, Wallet, Info, UserPlus } from 'lucide-react';
 import CapacityGauge from './CapacityGauge';
-import { RegionAutocomplete } from '@/components/RegionAutocomplete';
+import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
 
 interface Props {
   data: MandatFormData;
@@ -246,7 +246,7 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
 
           <div className="space-y-2">
             <Label htmlFor="region_recherche">Région(s) *</Label>
-            <RegionAutocomplete
+            <GooglePlacesAutocomplete
               value={data.region_recherche}
               onChange={(value) => onChange({ region_recherche: value })}
               placeholder="Tapez une région, commune ou district..."
