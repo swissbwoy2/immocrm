@@ -61,7 +61,7 @@ const Messagerie = () => {
   const [offresMap, setOffresMap] = useState<Record<string, any>>({});
   const [candidaturesMap, setCandidaturesMap] = useState<Record<string, any>>({});
   const [visitesMap, setVisitesMap] = useState<Record<string, any>>({});
-  const [agentsMap, setAgentsMap] = useState<Record<string, string>>({});
+  const [agentsMap, setAgentsMap] = useState<Record<string, { name: string; lastSeenAt?: string | null; isOnline?: boolean | null }>>({});
   const [selectedConv, setSelectedConv] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const [clientId, setClientId] = useState<string | null>(null);
@@ -341,16 +341,20 @@ const Messagerie = () => {
         const userIds = agentsData?.map(a => a.user_id) || [];
         const { data: profilesData } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, prenom, nom, last_seen_at, is_online')
           .in('id', userIds);
 
         const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
-        const agentsMapping: Record<string, string> = {};
+        const agentsMapping: Record<string, { name: string; lastSeenAt?: string | null; isOnline?: boolean | null }> = {};
         
         agentsData?.forEach(agent => {
           const profile = profilesMap.get(agent.user_id);
           const fullName = `${profile?.prenom || ''} ${profile?.nom || ''}`.trim();
-          agentsMapping[agent.id] = fullName || 'Mon agent';
+          agentsMapping[agent.id] = {
+            name: fullName || 'Mon agent',
+            lastSeenAt: profile?.last_seen_at,
+            isOnline: profile?.is_online
+          };
         });
         setAgentsMap(agentsMapping);
       }
@@ -1115,8 +1119,12 @@ const Messagerie = () => {
     }
   };
 
+  const getAgentInfo = (agentId: string) => {
+    return agentsMap[agentId] || { name: "Mon agent", lastSeenAt: null, isOnline: null };
+  };
+
   const getAgentName = (agentId: string) => {
-    return agentsMap[agentId] || "Mon agent";
+    return getAgentInfo(agentId).name;
   };
 
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
@@ -1543,6 +1551,8 @@ const Messagerie = () => {
                 isSelected={selectedConv === conv.id}
                 onClick={() => setSelectedConv(conv.id)}
                 index={index}
+                lastSeenAt={getAgentInfo(conv.agent_id).lastSeenAt}
+                isOnline={getAgentInfo(conv.agent_id).isOnline}
               />
             );
           })
@@ -1555,6 +1565,8 @@ const Messagerie = () => {
     <ChatHeader
       name={getAgentName(currentConversation.agent_id)}
       avatarUrl={null}
+      lastSeenAt={getAgentInfo(currentConversation.agent_id).lastSeenAt}
+      isOnline={getAgentInfo(currentConversation.agent_id).isOnline}
     />
   );
 
