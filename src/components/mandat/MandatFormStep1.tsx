@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MandatFormData, NATIONALITES, TYPES_PERMIS, ETATS_CIVILS } from './types';
 import { User, Mail, Phone, MapPin, Calendar, Globe, Shield, Heart } from 'lucide-react';
+import { GoogleAddressAutocomplete, AddressComponents } from '@/components/GoogleAddressAutocomplete';
 
 // Constantes pour les sélecteurs de date
 const MONTHS = [
@@ -158,18 +159,17 @@ export default function MandatFormStep1({ data, onChange }: Props) {
           />
         </div>
 
-        {/* Adresse - Full width */}
+        {/* Adresse - Full width with autocomplete */}
         <div className="space-y-2 md:col-span-2 group">
           <Label htmlFor="adresse" className="flex items-center gap-2 text-sm font-medium">
             <MapPin className="h-4 w-4 text-primary/70" />
             Adresse actuelle <span className="text-destructive">*</span>
           </Label>
-          <Input
-            id="adresse"
+          <GoogleAddressAutocomplete
             value={data.adresse}
-            onChange={(e) => onChange({ adresse: e.target.value })}
-            placeholder="Rue, numéro, code postal, ville"
-            required
+            onChange={(address: AddressComponents) => onChange({ adresse: address.fullAddress })}
+            onInputChange={(value) => onChange({ adresse: value })}
+            placeholder="Commencez à taper votre adresse..."
             className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm"
           />
         </div>

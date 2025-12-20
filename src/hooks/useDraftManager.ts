@@ -6,6 +6,8 @@ const DRAFTS_KEY = 'envoyer-offre-drafts';
 export interface OfferFormData {
   clientId: string;
   localisation: string;
+  npa: string;
+  ville: string;
   prix: string;
   surface: string;
   nombrePieces: string;
@@ -35,6 +37,8 @@ export interface Draft {
 export const initialFormData: OfferFormData = {
   clientId: "",
   localisation: "",
+  npa: "",
+  ville: "",
   prix: "",
   surface: "",
   nombrePieces: "",

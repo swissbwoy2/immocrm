@@ -16,6 +16,7 @@ import { OfferAttachmentUploader } from "@/components/OfferAttachmentUploader";
 import { useDraftManager, initialFormData } from "@/hooks/useDraftManager";
 import { DraftManagerDialog } from "@/components/DraftManagerDialog";
 import { ClientMultiSelect } from "@/components/ClientMultiSelect";
+import { GoogleAddressAutocomplete, AddressComponents } from "@/components/GoogleAddressAutocomplete";
 
 const EnvoyerOffre = () => {
   const location = useLocation();
@@ -380,11 +381,43 @@ const EnvoyerOffre = () => {
             </Card>
 
             <Card className="p-6 space-y-4">
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <Label>📍 Adresse complète *</Label>
+                  <GoogleAddressAutocomplete
+                    value={formData.localisation}
+                    onChange={(address: AddressComponents) => setFormData({ 
+                      ...formData, 
+                      localisation: address.fullAddress,
+                      npa: address.postalCode,
+                      ville: address.city
+                    })}
+                    onInputChange={(value) => setFormData({ ...formData, localisation: value })}
+                    placeholder="Commencez à taper une adresse..."
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>📍 Localisation *</Label>
-                  <Input value={formData.localisation} onChange={(e) => setFormData({ ...formData, localisation: e.target.value })} placeholder="Chemin des Acacias 8 1023 Crissier" />
+                  <Label>📮 NPA</Label>
+                  <Input 
+                    value={formData.npa} 
+                    onChange={(e) => setFormData({ ...formData, npa: e.target.value })} 
+                    placeholder="1000" 
+                  />
                 </div>
+                <div>
+                  <Label>🏙️ Ville</Label>
+                  <Input 
+                    value={formData.ville} 
+                    onChange={(e) => setFormData({ ...formData, ville: e.target.value })} 
+                    placeholder="Lausanne" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>💰 Prix (CHF) *</Label>
                   <Input type="number" value={formData.prix} onChange={(e) => setFormData({ ...formData, prix: e.target.value })} placeholder="1750" />
