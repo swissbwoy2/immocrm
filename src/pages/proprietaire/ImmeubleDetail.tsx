@@ -259,12 +259,14 @@ export default function ImmeubleDetail() {
         title={immeuble.nom}
         subtitle={`${immeuble.adresse}${immeuble.ville ? `, ${immeuble.ville}` : ''}`}
         icon={Building2}
-        badge={getStatutBadge(immeuble.statut)}
         action={
-          <Button variant="outline" onClick={() => navigate(`/proprietaire/immeubles/${id}/edit`)}>
-            <Edit className="w-4 h-4 mr-2" />
-            Modifier
-          </Button>
+          <div className="flex items-center gap-2">
+            {getStatutBadge(immeuble.statut)}
+            <Button variant="outline" onClick={() => navigate(`/proprietaire/immeubles/${id}/edit`)}>
+              <Edit className="w-4 h-4 mr-2" />
+              Modifier
+            </Button>
+          </div>
         }
       />
 
@@ -446,13 +448,14 @@ export default function ImmeubleDetail() {
                 <PremiumLocataireImmeuble
                   key={locataire.id}
                   locataire={{
+                    id: locataire.id,
                     nom: locataire.nom,
                     prenom: locataire.prenom,
                     email: locataire.email,
                     telephone: locataire.telephone,
                     loyer: locataire.loyer,
-                    dateEntree: locataire.date_entree,
-                    solde: locataire.solde_locataire,
+                    date_entree: locataire.date_entree,
+                    solde_locataire: locataire.solde_locataire,
                     statut: locataire.statut
                   }}
                   lotReference={locataire.lot?.reference || locataire.lot?.designation}
@@ -490,9 +493,9 @@ export default function ImmeubleDetail() {
                     categorie: ticket.categorie,
                     priorite: ticket.priorite,
                     statut: ticket.statut,
-                    createdAt: ticket.created_at,
-                    lotReference: ticket.lot?.reference
+                    created_at: ticket.created_at
                   }}
+                  lotReference={ticket.lot?.reference}
                   onClick={() => navigate(`/proprietaire/tickets/${ticket.id}`)}
                 />
               ))}
@@ -522,11 +525,11 @@ export default function ImmeubleDetail() {
                   key={doc.id}
                   document={{
                     id: doc.id,
-                    name: doc.nom,
+                    nom: doc.nom,
                     type: doc.type_document,
-                    url: doc.url,
-                    uploadedAt: doc.date_document || undefined,
-                    size: doc.taille || undefined
+                    taille: doc.taille || 0,
+                    date_upload: doc.date_document || new Date().toISOString(),
+                    url: doc.url
                   }}
                 />
               ))}
