@@ -8,8 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
+import { AddressLink } from '@/components/AddressLink';
 import { 
-  MapPin, 
   Home, 
   Maximize, 
   Building, 
@@ -82,7 +82,11 @@ export function AgentOffreDetailsDialog({
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-lg font-semibold line-clamp-2">
-                {offre.adresse}
+                <AddressLink 
+                  address={offre.adresse}
+                  showIcon={false}
+                  className="text-lg font-semibold"
+                />
               </DialogTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 Envoyée le {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}

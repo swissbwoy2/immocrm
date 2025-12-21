@@ -1,4 +1,4 @@
-import { Building2, MapPin, Users, TrendingUp, Home, MoreVertical, Eye, Edit, Trash2 } from 'lucide-react';
+import { Building2, Users, TrendingUp, Home, MoreVertical, Eye, Edit, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { AddressLink } from '@/components/AddressLink';
 
 interface PremiumImmeubleCardProps {
   immeuble: {
@@ -104,14 +105,11 @@ export function PremiumImmeubleCard({
               <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1">
                 {immeuble.nom}
               </h3>
-              <div className="flex items-center gap-1 text-sm text-muted-foreground mt-0.5">
-                <MapPin className="w-3.5 h-3.5" />
-                <span className="line-clamp-1">
-                  {immeuble.adresse}
-                  {immeuble.code_postal && `, ${immeuble.code_postal}`}
-                  {immeuble.ville && ` ${immeuble.ville}`}
-                </span>
-              </div>
+              <AddressLink 
+                address={`${immeuble.adresse}${immeuble.code_postal ? `, ${immeuble.code_postal}` : ''}${immeuble.ville ? ` ${immeuble.ville}` : ''}`}
+                className="text-sm text-muted-foreground mt-0.5 line-clamp-1"
+                iconClassName="w-3.5 h-3.5"
+              />
             </div>
           </div>
           
