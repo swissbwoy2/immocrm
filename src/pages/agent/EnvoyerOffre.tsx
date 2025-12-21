@@ -336,9 +336,44 @@ const EnvoyerOffre = () => {
       
       toast({ title: "Succès", description: `Offre envoyée à ${selectedClientIds.length} client(s) avec succès` });
       navigate('/agent');
-    } catch (error) {
-      console.error('Error sending offer:', error);
-      toast({ title: "Erreur", description: "Impossible d'envoyer l'offre", variant: "destructive" });
+    } catch (error: any) {
+      // Log détaillé pour le débogage
+      console.error('Error sending offer - Full details:', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+        status: error?.status,
+        statusText: error?.statusText,
+        fullError: error
+      });
+      
+      // Déterminer le message d'erreur approprié
+      let errorMessage = "Impossible d'envoyer l'offre";
+      
+      if (error?.code === '42501' || error?.message?.includes('row-level security')) {
+        errorMessage = "Erreur de permissions: vous n'êtes pas autorisé à envoyer cette offre. Vérifiez que le client vous est bien assigné.";
+      } else if (error?.code === '23505') {
+        errorMessage = "Cette offre existe déjà pour ce client.";
+      } else if (error?.code === '23503') {
+        errorMessage = "Erreur de référence: le client ou l'agent n'existe plus.";
+      } else if (error?.code === 'PGRST116') {
+        errorMessage = "Erreur de données: enregistrement non trouvé.";
+      } else if (error?.message?.includes('conversation')) {
+        errorMessage = "Erreur lors de la création de la conversation. Réessayez.";
+      } else if (error?.message?.includes('message')) {
+        errorMessage = "Erreur lors de l'envoi du message. L'offre a peut-être été créée.";
+      } else if (error?.message?.includes('visite')) {
+        errorMessage = "Erreur lors de la création des visites. L'offre a été envoyée.";
+      } else if (error?.message) {
+        errorMessage = `Erreur: ${error.message}`;
+      }
+      
+      toast({ 
+        title: "Erreur d'envoi", 
+        description: errorMessage, 
+        variant: "destructive" 
+      });
     } finally {
       setIsSubmitting(false);
     }
