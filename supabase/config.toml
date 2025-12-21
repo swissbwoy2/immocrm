@@ -80,3 +80,6 @@ verify_jwt = false
 
 [functions.get-google-maps-token]
 verify_jwt = false
+
+[functions.create-proprietaire]
+verify_jwt = false
