@@ -8,6 +8,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { PageLoader } from "./components/PageLoader";
 import { ScrollToTop } from "./components/ScrollToTop";
+import { useAppVersionCheck } from "./hooks/useAppVersionCheck";
 
 // Eager load critical pages
 import Login from "./pages/Login";
@@ -129,6 +130,12 @@ const queryClient = new QueryClient({
   },
 });
 
+// Component to use hooks inside providers
+const AppContent = () => {
+  useAppVersionCheck();
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -141,6 +148,7 @@ const App = () => (
         }}
       >
         <AuthProvider>
+          <AppContent />
           <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Landing />} />
