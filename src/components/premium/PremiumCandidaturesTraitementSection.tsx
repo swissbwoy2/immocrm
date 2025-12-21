@@ -1,8 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileCheck, MapPin, Home, User, ArrowRight, Sparkles, ChevronRight } from 'lucide-react';
+import { FileCheck, Home, User, ArrowRight, Sparkles, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { AddressLink } from '@/components/AddressLink';
 
 interface Candidature {
   id: string;
@@ -192,10 +193,11 @@ export function PremiumCandidaturesTraitementSection({
                   <div className="flex-1 min-w-0">
                     {/* Address and status */}
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-4 h-4 text-muted-foreground" />
-                        <p className="font-semibold text-sm truncate">{cand.offres?.adresse}</p>
-                      </div>
+                      <AddressLink 
+                        address={cand.offres?.adresse || ''}
+                        className="font-semibold text-sm truncate"
+                        iconClassName="w-4 h-4"
+                      />
                       <Badge className={`${statusInfo.badgeBg} text-white text-xs px-2 py-0.5 shadow-md`}>
                         {statusInfo.emoji} {statusInfo.label}
                       </Badge>

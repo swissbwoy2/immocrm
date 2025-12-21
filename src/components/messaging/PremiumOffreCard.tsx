@@ -1,7 +1,8 @@
 import React from 'react';
-import { Home, MapPin, Ruler, DoorOpen, ExternalLink } from 'lucide-react';
+import { Home, Ruler, DoorOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
+import { AddressLink } from '@/components/AddressLink';
 
 interface PremiumOffreCardProps {
   offre: any;
@@ -50,9 +51,12 @@ export const PremiumOffreCard: React.FC<PremiumOffreCardProps> = ({ offre, class
             <Home className="h-5 w-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-bold text-foreground truncate">{offre.adresse}</p>
-            <div className="flex items-center gap-1 text-muted-foreground text-xs mt-0.5">
-              <MapPin className="h-3 w-3" />
+            <AddressLink 
+              address={offre.adresse}
+              className="font-bold text-foreground truncate block"
+              showIcon={false}
+            />
+            <div className="text-muted-foreground text-xs mt-0.5">
               <span>{offre.type_bien || 'Appartement'}</span>
             </div>
           </div>

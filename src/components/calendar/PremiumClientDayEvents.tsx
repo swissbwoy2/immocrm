@@ -1,10 +1,11 @@
 import { differenceInDays, differenceInHours, isToday, isTomorrow } from 'date-fns';
 import { toSwissTime, formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
 import { 
-  Calendar, Clock, MapPin, Home, Maximize, User, Phone, KeyRound, 
+  Calendar, Clock, Home, Maximize, User, Phone, KeyRound, 
   Check, X, FileCheck, ThumbsUp, ThumbsDown, Minus, Sparkles, Eye,
   Building, ExternalLink, ArrowRight
 } from 'lucide-react';
+import { AddressLink } from '@/components/AddressLink';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -254,9 +255,11 @@ export function PremiumClientDayEvents({
                         {/* Header with address and price */}
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-base leading-tight truncate group-hover:text-primary transition-colors">
-                              {data.adresse}
-                            </h4>
+                            <AddressLink 
+                              address={data.adresse}
+                              className="font-bold text-base leading-tight truncate group-hover:text-primary transition-colors"
+                              showIcon={false}
+                            />
                             <div className="flex flex-wrap gap-2 mt-2">
                               <Badge variant="outline" className={cn("gap-1 text-xs border", statusConfig.className)}>
                                 <StatusIcon className="h-3 w-3" />

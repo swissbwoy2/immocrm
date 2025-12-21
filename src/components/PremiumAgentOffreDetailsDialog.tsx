@@ -13,7 +13,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { CandidatureWorkflowInteractive } from '@/components/CandidatureWorkflowInteractive';
 import { 
-  MapPin, 
   Home, 
   Maximize, 
   Building, 
@@ -39,9 +38,11 @@ import {
   Minus,
   Image,
   Video,
-  ChevronRight
+  ChevronRight,
+  MapPin
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AddressLink } from '@/components/AddressLink';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -187,7 +188,11 @@ export function PremiumAgentOffreDetailsDialog({
                   <span>Offre envoyée</span>
                 </div>
                 <DialogTitle className="text-xl font-bold line-clamp-2 leading-tight">
-                  {offre.adresse}
+                  <AddressLink 
+                    address={offre.adresse}
+                    showIcon={false}
+                    className="text-xl font-bold"
+                  />
                 </DialogTitle>
                 <div className="flex items-center gap-3 text-sm text-muted-foreground">
                   <div className="flex items-center gap-1.5">

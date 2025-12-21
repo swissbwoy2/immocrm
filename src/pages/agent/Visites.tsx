@@ -14,8 +14,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Calendar, Clock, User, MessageSquare, ThumbsUp, ThumbsDown, Minus, AlertTriangle, 
   Bell, History, CheckCircle, XCircle, Trash2, Upload, X, Image, Video, 
-  MapPin, Home, Maximize2, Banknote, ChevronRight, Sparkles, Eye
+  Home, Maximize2, Banknote, ChevronRight, Sparkles, Eye
 } from 'lucide-react';
+import { AddressLink } from '@/components/AddressLink';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -686,11 +687,12 @@ export default function AgentVisites() {
           </div>
           
           {/* Address */}
-          <div className="flex items-start gap-2 mb-3">
-            <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-            <p className="font-semibold text-foreground group-hover:text-primary transition-colors duration-300 line-clamp-2">
-              {visite.adresse}
-            </p>
+          <div className="mb-3">
+            <AddressLink 
+              address={visite.adresse}
+              className="font-semibold text-foreground group-hover:text-primary transition-colors duration-300"
+              truncate
+            />
           </div>
 
           {/* Client info */}
@@ -819,9 +821,12 @@ export default function AgentVisites() {
             </Badge>
           </div>
           
-          <div className="flex items-start gap-2 mb-3">
-            <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-            <p className="font-semibold text-foreground line-clamp-2">{visite.adresse}</p>
+          <div className="mb-3">
+            <AddressLink 
+              address={visite.adresse}
+              className="font-semibold text-foreground"
+              truncate
+            />
           </div>
 
           {visite.client_profile && (

@@ -1,9 +1,10 @@
 import { ReactNode } from "react";
 import { 
-  MapPin, Calendar, Square, Home, ChevronDown, ChevronUp 
+  Calendar, Square, Home, ChevronDown, ChevronUp 
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { AddressLink } from "@/components/AddressLink";
 
 interface OffreData {
   id: string;
@@ -115,10 +116,11 @@ export function PremiumCandidatureCard({
               {/* Left section - Address and status */}
               <div className="flex-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-primary shrink-0" />
-                    <h3 className="text-lg md:text-xl font-bold truncate">{offre.adresse}</h3>
-                  </div>
+                  <AddressLink 
+                    address={offre.adresse}
+                    className="text-lg md:text-xl font-bold truncate"
+                    iconClassName="h-5 w-5 text-primary"
+                  />
                   <Badge 
                     variant={statutVariant}
                     className={`${styles.badge} ${isSpecialStatus ? 'animate-pulse' : ''}`}

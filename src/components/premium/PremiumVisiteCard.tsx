@@ -1,8 +1,9 @@
-import { Calendar, MapPin, Home, Maximize2, Banknote, Clock, ChevronRight } from 'lucide-react';
+import { Calendar, Home, Maximize2, Banknote, Clock, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { differenceInDays, differenceInHours } from 'date-fns';
 import { toSwissTime, formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
+import { AddressLink } from '@/components/AddressLink';
 
 interface PremiumVisiteCardProps {
   visite: {
@@ -93,11 +94,12 @@ export function PremiumVisiteCard({ visite, index = 0, onClick, className }: Pre
         </div>
         
         {/* Address */}
-        <div className="flex items-start gap-2 mb-4">
-          <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-          <p className="font-semibold text-foreground group-hover:text-primary transition-colors duration-300 line-clamp-2">
-            {visite.adresse}
-          </p>
+        <div className="mb-4">
+          <AddressLink 
+            address={visite.adresse} 
+            className="font-semibold text-foreground group-hover:text-primary transition-colors duration-300"
+            truncate
+          />
         </div>
         
         {/* Property details grid */}
