@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
-import { Camera, Save, Mail, Phone, User, Settings, Shield, Bell, Target } from 'lucide-react';
+import { Camera, Save, Mail, Phone, User, Settings, Shield, Bell, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -25,6 +25,7 @@ export default function AdminParametres() {
   const [notificationsEmail, setNotificationsEmail] = useState(true);
   const [emailConfigOpen, setEmailConfigOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [forcingUpdate, setForcingUpdate] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -140,6 +141,42 @@ export default function AdminParametres() {
     }
   };
 
+  const handleForceUpdateAllUsers = async () => {
+    setForcingUpdate(true);
+    try {
+      // Generate new version timestamp
+      const newVersion = `v${Date.now()}`;
+      
+      // Update version in database
+      const { error: updateError } = await supabase
+        .from('app_config')
+        .update({ value: newVersion, updated_at: new Date().toISOString() })
+        .eq('key', 'app_version');
+      
+      if (updateError) throw updateError;
+      
+      // Send broadcast to force refresh all connected users
+      const channel = supabase.channel('app-updates');
+      await channel.subscribe();
+      
+      await channel.send({
+        type: 'broadcast',
+        event: 'force-refresh',
+        payload: { version: newVersion }
+      });
+      
+      // Clean up
+      await supabase.removeChannel(channel);
+      
+      toast.success('Signal de mise à jour envoyé à tous les utilisateurs connectés');
+    } catch (error) {
+      console.error('Error forcing update:', error);
+      toast.error('Erreur lors de l\'envoi du signal de mise à jour');
+    } finally {
+      setForcingUpdate(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -157,6 +194,34 @@ export default function AdminParametres() {
         </div>
 
         <div className="grid gap-6 max-w-2xl">
+          {/* Forcer la mise à jour */}
+          <Card className="border-orange-500/30 bg-orange-500/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-orange-600">
+                <RefreshCw className="w-5 h-5" />
+                Mise à jour de l'application
+              </CardTitle>
+              <CardDescription>
+                Forcez le rechargement de l'application pour tous les utilisateurs connectés
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Cette action enverra un signal à tous les utilisateurs actuellement connectés pour qu'ils rechargent l'application. 
+                Utile après une mise à jour importante.
+              </p>
+              <Button 
+                variant="outline" 
+                className="border-orange-500/50 text-orange-600 hover:bg-orange-500/10"
+                onClick={handleForceUpdateAllUsers}
+                disabled={forcingUpdate}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${forcingUpdate ? 'animate-spin' : ''}`} />
+                {forcingUpdate ? 'Envoi en cours...' : 'Forcer la mise à jour pour tous'}
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Objectifs par défaut des agents */}
           <AdminDefaultGoalsManager />
           
