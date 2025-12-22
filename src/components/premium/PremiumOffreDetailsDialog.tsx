@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   Building2, 
-  MapPin, 
   Home, 
   Square, 
   Calendar, 
@@ -19,13 +18,15 @@ import {
   MessageSquare, 
   Info, 
   FileCheck,
-  Sparkles
+  Sparkles,
+  MapPin
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { ChanceIndicator } from "@/components/ChanceIndicator";
 import { CandidatureWorkflowInteractive } from "@/components/CandidatureWorkflowInteractive";
 import { calculateChances } from "@/utils/chanceCalculator";
+import { AddressLink } from "@/components/AddressLink";
 
 interface PremiumOffreDetailsDialogProps {
   open: boolean;
@@ -95,10 +96,11 @@ export function PremiumOffreDetailsDialog({
           <div className="p-5 rounded-2xl bg-gradient-to-br from-muted/60 via-muted/30 to-transparent backdrop-blur-sm border border-border/40 shadow-lg shadow-primary/5 hover:shadow-xl hover:shadow-primary/10 transition-all duration-500">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <MapPin className="h-4 w-4 text-primary" />
-                  <h3 className="text-xl font-semibold">{offre.adresse}</h3>
-                </div>
+                <AddressLink 
+                  address={offre.adresse}
+                  className="text-xl font-semibold mb-2"
+                  iconClassName="text-primary"
+                />
                 <Badge 
                   variant={statutInfo.variant} 
                   className={cn(
