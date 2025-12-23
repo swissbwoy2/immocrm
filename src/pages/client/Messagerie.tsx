@@ -90,6 +90,10 @@ const Messagerie = () => {
   const [accepteConditions, setAccepteConditions] = useState(false);
   const [recommendationEmails, setRecommendationEmails] = useState<string[]>(["", "", "", "", ""]);
   const [selectedSignatureDate, setSelectedSignatureDate] = useState<string>("");
+  const [proposedSlots, setProposedSlots] = useState<any[]>([]);
+  const [delegateProposedSlots, setDelegateProposedSlots] = useState<any[]>([]);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
+  const [processedOffreIds, setProcessedOffreIds] = useState<Set<string>>(new Set());
 
   const scrollViewportRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -562,6 +566,10 @@ const Messagerie = () => {
   // Unified action handler
   const handleOffreAction = async (offreId: string, action: string, data?: any) => {
     if (!user || !clientId) return;
+    
+    // Prevent double processing
+    if (isProcessingAction) return;
+    setIsProcessingAction(true);
 
     const offre = offresMap[offreId];
     const candidature = candidaturesMap[offreId];
@@ -594,6 +602,9 @@ const Messagerie = () => {
 
       switch (action) {
         case 'interesse':
+          // Mark as processed to hide buttons immediately
+          setProcessedOffreIds(prev => new Set(prev).add(offreId));
+          
           await supabase
             .from('offres')
             .update({ statut: 'interesse' })
@@ -623,16 +634,36 @@ const Messagerie = () => {
           break;
 
         case 'planifier_visite':
+          // Load proposed slots from agent
+          const { data: visitSlots } = await supabase
+            .from('visites')
+            .select('*')
+            .eq('offre_id', offreId)
+            .eq('statut', 'planifiee')
+            .order('date_visite', { ascending: true });
+          
+          setProposedSlots(visitSlots || []);
           setSelectedOffre(offre);
           setVisitDate("");
           setVisitDialogOpen(true);
+          setIsProcessingAction(false);
           return; // Don't reload messages yet
 
         case 'deleguer_visite':
+          // Load proposed slots from agent
+          const { data: delegateSlots } = await supabase
+            .from('visites')
+            .select('*')
+            .eq('offre_id', offreId)
+            .eq('statut', 'planifiee')
+            .order('date_visite', { ascending: true });
+          
+          setDelegateProposedSlots(delegateSlots || []);
           setSelectedOffre(offre);
           setDelegateDate("");
           setDelegateNotes("");
           setDelegateDialogOpen(true);
+          setIsProcessingAction(false);
           return;
 
         case 'postuler':
@@ -814,6 +845,8 @@ const Messagerie = () => {
             offre_id: offreId
           });
 
+          // Mark as processed
+          setProcessedOffreIds(prev => new Set(prev).add(offreId));
           toast({ title: "Offre refusée" });
           break;
       }
@@ -827,6 +860,8 @@ const Messagerie = () => {
         description: "Impossible d'effectuer cette action",
         variant: "destructive"
       });
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -846,17 +881,32 @@ const Messagerie = () => {
         return;
       }
 
-      // Create visit
-      const { data: visite } = await supabase.from('visites').insert({
-        offre_id: selectedOffre.id,
-        client_id: clientData.id,
-        agent_id: clientData.agent_id,
-        adresse: selectedOffre.adresse,
-        date_visite: visitDate,
-        statut: 'planifiee',
-        est_deleguee: false,
-        source: 'planifiee_client'
-      }).select().single();
+      // Check if visit already exists for this offer
+      const { data: existingVisites } = await supabase
+        .from('visites')
+        .select('id')
+        .eq('offre_id', selectedOffre.id)
+        .eq('client_id', clientData.id)
+        .eq('statut', 'planifiee');
+
+      if (existingVisites && existingVisites.length > 0) {
+        // Update existing visit instead of creating duplicate
+        await supabase.from('visites')
+          .update({ date_visite: visitDate })
+          .eq('id', existingVisites[0].id);
+      } else {
+        // Create visit
+        await supabase.from('visites').insert({
+          offre_id: selectedOffre.id,
+          client_id: clientData.id,
+          agent_id: clientData.agent_id,
+          adresse: selectedOffre.adresse,
+          date_visite: visitDate,
+          statut: 'planifiee',
+          est_deleguee: false,
+          source: 'planifiee_client'
+        });
+      }
 
       await supabase
         .from('offres')
@@ -865,17 +915,26 @@ const Messagerie = () => {
 
       const formattedDate = format(new Date(visitDate), 'EEEE d MMMM yyyy à HH:mm', { locale: fr });
       
-      // Create calendar event
-      await supabase.from('calendar_events').insert({
-        title: `Visite - ${selectedOffre.adresse}`,
-        event_type: 'visite',
-        event_date: visitDate,
-        description: `Visite planifiée par le client pour ${selectedOffre.adresse}`,
-        client_id: clientData.id,
-        agent_id: clientData.agent_id,
-        created_by: user.id,
-        priority: 'normale'
-      });
+      // Check if calendar event already exists before creating
+      const { data: existingEvents } = await supabase
+        .from('calendar_events')
+        .select('id')
+        .eq('event_type', 'visite')
+        .eq('client_id', clientData.id)
+        .ilike('title', `%${selectedOffre.adresse}%`);
+
+      if (!existingEvents || existingEvents.length === 0) {
+        await supabase.from('calendar_events').insert({
+          title: `Visite - ${selectedOffre.adresse}`,
+          event_type: 'visite',
+          event_date: visitDate,
+          description: `Visite planifiée par le client pour ${selectedOffre.adresse}`,
+          client_id: clientData.id,
+          agent_id: clientData.agent_id,
+          created_by: user.id,
+          priority: 'normale'
+        });
+      }
 
       await supabase.from('messages').insert({
         conversation_id: selectedConv,
@@ -909,10 +968,12 @@ const Messagerie = () => {
           p_title: '📅 Nouvelle visite planifiée',
           p_message: `${clientName} a planifié une visite le ${formattedDate} au ${selectedOffre.adresse}`,
           p_link: '/agent/visites',
-          p_metadata: { visite_id: visite?.id, offre_id: selectedOffre.id }
+          p_metadata: { offre_id: selectedOffre.id }
         });
       }
 
+      // Mark as processed to hide buttons
+      setProcessedOffreIds(prev => new Set(prev).add(selectedOffre.id));
       setVisitDialogOpen(false);
       toast({ title: "Visite planifiée", description: "Votre agent a été notifié" });
       loadMessages(selectedConv!);
@@ -924,7 +985,13 @@ const Messagerie = () => {
 
   // Confirm delegate visit
   const confirmDelegateVisit = async () => {
-    if (!selectedOffre || !delegateDate || !user || !clientId) return;
+    if (!selectedOffre || !user || !clientId) return;
+    
+    // If proposed slots exist, a date must be selected
+    if (delegateProposedSlots.length > 0 && !delegateDate) {
+      toast({ title: "Erreur", description: "Veuillez sélectionner un créneau", variant: "destructive" });
+      return;
+    }
 
     try {
       const { data: clientData } = await supabase
@@ -938,42 +1005,79 @@ const Messagerie = () => {
         return;
       }
 
-      // Create delegated visit
-      const { data: visite } = await supabase.from('visites').insert({
-        offre_id: selectedOffre.id,
-        client_id: clientData.id,
-        agent_id: clientData.agent_id,
-        adresse: selectedOffre.adresse,
-        date_visite: delegateDate,
-        statut: 'planifiee',
-        est_deleguee: true,
-        notes: delegateNotes || 'Visite déléguée à l\'agent par le client'
-      }).select().single();
+      // Check for existing delegated visits
+      const { data: existingVisites } = await supabase
+        .from('visites')
+        .select('id')
+        .eq('offre_id', selectedOffre.id)
+        .eq('client_id', clientData.id)
+        .eq('est_deleguee', true);
+
+      if (existingVisites && existingVisites.length > 0) {
+        // Update existing visit
+        if (delegateDate) {
+          await supabase.from('visites')
+            .update({ 
+              date_visite: delegateDate,
+              notes: delegateNotes || 'Visite déléguée à l\'agent par le client'
+            })
+            .eq('id', existingVisites[0].id);
+        }
+      } else if (delegateDate) {
+        // Create delegated visit only if date is provided
+        await supabase.from('visites').insert({
+          offre_id: selectedOffre.id,
+          client_id: clientData.id,
+          agent_id: clientData.agent_id,
+          adresse: selectedOffre.adresse,
+          date_visite: delegateDate,
+          statut: 'planifiee',
+          est_deleguee: true,
+          notes: delegateNotes || 'Visite déléguée à l\'agent par le client'
+        });
+      }
 
       await supabase
         .from('offres')
         .update({ statut: 'interesse' })
         .eq('id', selectedOffre.id);
 
-      const formattedDate = format(new Date(delegateDate), 'EEEE d MMMM yyyy à HH:mm', { locale: fr });
+      let messageContent: string;
       
-      // Create calendar event for delegated visit
-      await supabase.from('calendar_events').insert({
-        title: `Visite déléguée - ${selectedOffre.adresse}`,
-        event_type: 'visite',
-        event_date: delegateDate,
-        description: `Visite déléguée par le client pour ${selectedOffre.adresse}\n${delegateNotes ? `Notes: ${delegateNotes}` : ''}`,
-        client_id: clientData.id,
-        agent_id: clientData.agent_id,
-        created_by: user.id,
-        priority: 'haute'
-      });
+      if (delegateDate) {
+        const formattedDate = format(new Date(delegateDate), 'EEEE d MMMM yyyy à HH:mm', { locale: fr });
+        
+        // Check for existing calendar event before creating
+        const { data: existingEvents } = await supabase
+          .from('calendar_events')
+          .select('id')
+          .eq('event_type', 'visite')
+          .eq('client_id', clientData.id)
+          .ilike('title', `%${selectedOffre.adresse}%`);
+
+        if (!existingEvents || existingEvents.length === 0) {
+          await supabase.from('calendar_events').insert({
+            title: `Visite déléguée - ${selectedOffre.adresse}`,
+            event_type: 'visite',
+            event_date: delegateDate,
+            description: `Visite déléguée par le client pour ${selectedOffre.adresse}\n${delegateNotes ? `Notes: ${delegateNotes}` : ''}`,
+            client_id: clientData.id,
+            agent_id: clientData.agent_id,
+            created_by: user.id,
+            priority: 'haute'
+          });
+        }
+
+        messageContent = `🏠 **Demande de visite déléguée**\n\n📍 ${selectedOffre.adresse}\n📅 Date souhaitée : ${formattedDate}\n${delegateNotes ? `📝 Notes : ${delegateNotes}` : ''}\n\nPouvez-vous effectuer cette visite pour moi ?`;
+      } else {
+        messageContent = `🏠 **Demande de visite déléguée**\n\n📍 ${selectedOffre.adresse}\n\n📋 Je souhaite que vous organisiez et effectuiez la visite pour moi. Merci de me proposer des créneaux ou de fixer une date.`;
+      }
 
       await supabase.from('messages').insert({
         conversation_id: selectedConv,
         sender_id: user.id,
         sender_type: 'client',
-        content: `🏠 **Demande de visite déléguée**\n\n📍 ${selectedOffre.adresse}\n📅 Date souhaitée : ${formattedDate}\n${delegateNotes ? `📝 Notes : ${delegateNotes}` : ''}\n\nPouvez-vous effectuer cette visite pour moi ?`,
+        content: messageContent,
         offre_id: selectedOffre.id
       });
 
@@ -999,12 +1103,14 @@ const Messagerie = () => {
           p_user_id: agentData.user_id,
           p_type: 'visit_delegated',
           p_title: '🏠 Visite déléguée',
-          p_message: `${clientName} vous demande d'effectuer une visite le ${formattedDate} au ${selectedOffre.adresse}`,
+          p_message: `${clientName} vous demande d'effectuer une visite pour ${selectedOffre.adresse}`,
           p_link: '/agent/visites',
-          p_metadata: { visite_id: visite?.id, offre_id: selectedOffre.id }
+          p_metadata: { offre_id: selectedOffre.id }
         });
       }
 
+      // Mark as processed to hide buttons
+      setProcessedOffreIds(prev => new Set(prev).add(selectedOffre.id));
       setDelegateDialogOpen(false);
       toast({ title: "Visite déléguée", description: "Votre agent a été notifié" });
       loadMessages(selectedConv!);
@@ -1155,6 +1261,17 @@ const Messagerie = () => {
   // Contextual action buttons based on offer/candidature status
   const OffreActions = ({ offre, visite, onAction }: { offre: any, visite?: any, onAction: (action: string, data?: any) => void }) => {
     if (!offre) return null;
+    
+    // Check if this offer has been processed (action already taken)
+    if (processedOffreIds.has(offre.id)) {
+      return (
+        <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-950 rounded-lg">
+          <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-1">
+            <Check className="h-3 w-3" /> Action en cours de traitement...
+          </p>
+        </div>
+      );
+    }
 
     const candidature = candidaturesMap[offre.id];
     const statut = candidature?.statut || offre.statut;
@@ -1167,26 +1284,26 @@ const Messagerie = () => {
       return (
         <div className="mt-3 space-y-2">
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => onAction('interesse')} className="flex-1">
+            <Button size="sm" onClick={() => onAction('interesse')} disabled={isProcessingAction} className="flex-1">
               <Heart className="h-4 w-4 mr-1" /> Intéressé(e)
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onAction('planifier_visite')} className="flex-1">
+            <Button size="sm" variant="outline" onClick={() => onAction('planifier_visite')} disabled={isProcessingAction} className="flex-1">
               <Calendar className="h-4 w-4 mr-1" /> Planifier visite
             </Button>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} className="flex-1">
+            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} disabled={isProcessingAction} className="flex-1">
               <User className="h-4 w-4 mr-1" /> Déléguer visite
             </Button>
-            <Button size="sm" variant="secondary" onClick={() => onAction('postuler')} className="flex-1">
+            <Button size="sm" variant="secondary" onClick={() => onAction('postuler')} disabled={isProcessingAction} className="flex-1">
               <FileText className="h-4 w-4 mr-1" /> Postuler
             </Button>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="ghost" onClick={() => onAction('details')}>
+            <Button size="sm" variant="ghost" onClick={() => onAction('details')} disabled={isProcessingAction}>
               <ExternalLink className="h-4 w-4 mr-1" /> Détails
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => onAction('refuser')}>
+            <Button size="sm" variant="ghost" onClick={() => onAction('refuser')} disabled={isProcessingAction}>
               <X className="h-4 w-4 mr-1" /> Refuser
             </Button>
           </div>
@@ -1680,21 +1797,39 @@ const Messagerie = () => {
               Planifier une visite
             </DialogTitle>
             <DialogDescription>
-              Choisissez la date et l'heure de votre visite pour {selectedOffre?.adresse}
+              {proposedSlots.length > 0 
+                ? `Sélectionnez un créneau proposé par votre agent pour ${selectedOffre?.adresse}`
+                : `Choisissez la date et l'heure de votre visite pour ${selectedOffre?.adresse}`
+              }
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="visit-date">Date et heure</Label>
-              <Input
-                id="visit-date"
-                type="datetime-local"
-                value={visitDate}
-                onChange={(e) => setVisitDate(e.target.value)}
-                min={new Date().toISOString().slice(0, 16)}
-                className="mt-1.5"
-              />
-            </div>
+            {proposedSlots.length > 0 ? (
+              <RadioGroup value={visitDate} onValueChange={setVisitDate} className="space-y-2">
+                {proposedSlots.map((slot, idx) => (
+                  <div key={idx} className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                    <RadioGroupItem value={slot.date_visite} id={`slot-${idx}`} />
+                    <Label htmlFor={`slot-${idx}`} className="flex-1 cursor-pointer">
+                      <span className="font-medium">
+                        {format(new Date(slot.date_visite), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })}
+                      </span>
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            ) : (
+              <div>
+                <Label htmlFor="visit-date">Date et heure</Label>
+                <Input
+                  id="visit-date"
+                  type="datetime-local"
+                  value={visitDate}
+                  onChange={(e) => setVisitDate(e.target.value)}
+                  min={new Date().toISOString().slice(0, 16)}
+                  className="mt-1.5"
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setVisitDialogOpen(false)}>Annuler</Button>
@@ -1718,17 +1853,29 @@ const Messagerie = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="delegate-date">Date et heure souhaitées</Label>
-              <Input
-                id="delegate-date"
-                type="datetime-local"
-                value={delegateDate}
-                onChange={(e) => setDelegateDate(e.target.value)}
-                min={new Date().toISOString().slice(0, 16)}
-                className="mt-1.5"
-              />
-            </div>
+            {delegateProposedSlots.length > 0 ? (
+              <div>
+                <Label>Sélectionnez un créneau</Label>
+                <RadioGroup value={delegateDate} onValueChange={setDelegateDate} className="space-y-2 mt-2">
+                  {delegateProposedSlots.map((slot, idx) => (
+                    <div key={idx} className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                      <RadioGroupItem value={slot.date_visite} id={`delegate-slot-${idx}`} />
+                      <Label htmlFor={`delegate-slot-${idx}`} className="flex-1 cursor-pointer">
+                        <span className="font-medium">
+                          {format(new Date(slot.date_visite), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })}
+                        </span>
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+            ) : (
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  Aucun créneau proposé. Votre agent organisera la visite et vous proposera des dates.
+                </p>
+              </div>
+            )}
             <div>
               <Label htmlFor="delegate-notes">Notes pour l'agent (optionnel)</Label>
               <Textarea
@@ -1742,7 +1889,11 @@ const Messagerie = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDelegateDialogOpen(false)}>Annuler</Button>
-            <Button onClick={confirmDelegateVisit} disabled={!delegateDate} className="bg-gradient-to-r from-primary to-primary/80">
+            <Button 
+              onClick={confirmDelegateVisit} 
+              disabled={delegateProposedSlots.length > 0 && !delegateDate}
+              className="bg-gradient-to-r from-primary to-primary/80"
+            >
               <User className="h-4 w-4 mr-2" /> Déléguer
             </Button>
           </DialogFooter>
