@@ -8,10 +8,13 @@ const corsHeaders = {
 };
 
 interface NotificationEmailRequest {
-  user_id: string;
-  notification_type: string;
-  title: string;
-  message: string;
+  // New approach: pass notification_id and fetch from DB
+  notification_id?: string;
+  // Legacy support: direct values
+  user_id?: string;
+  notification_type?: string;
+  title?: string;
+  message?: string;
   link?: string;
 }
 
@@ -56,6 +59,11 @@ const getNotificationIcon = (type: string): string => {
     // Visit notifications (admin)
     visit_confirmed_admin: '✅',
     visit_refused_admin: '❌',
+    new_offer_admin: '📬',
+    new_visit_admin: '📅',
+    coagent_added: '👥',
+    coagent_assignment: '👥',
+    badge_earned: '🏆',
   };
   return icons[type] || '🔔';
 };
@@ -99,6 +107,11 @@ const getNotificationColor = (type: string): string => {
     // Visit notifications (admin)
     visit_confirmed_admin: '#10b981',
     visit_refused_admin: '#ef4444',
+    new_offer_admin: '#f59e0b',
+    new_visit_admin: '#06b6d4',
+    coagent_added: '#6366f1',
+    coagent_assignment: '#6366f1',
+    badge_earned: '#f59e0b',
   };
   return colors[type] || '#6366f1';
 };
@@ -240,7 +253,49 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { user_id, notification_type, title, message, link }: NotificationEmailRequest = await req.json();
+    const requestData: NotificationEmailRequest = await req.json();
+    
+    let user_id: string;
+    let notification_type: string;
+    let title: string;
+    let message: string;
+    let link: string | undefined;
+    let notificationId: string | undefined;
+
+    // Check if notification_id is provided - fetch from DB
+    if (requestData.notification_id) {
+      notificationId = requestData.notification_id;
+      console.log(`Fetching notification from DB: ${notificationId}`);
+      
+      const { data: notification, error: notifError } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("id", notificationId)
+        .single();
+
+      if (notifError || !notification) {
+        console.error("Notification not found:", notifError);
+        return new Response(
+          JSON.stringify({ success: false, error: "Notification not found" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      user_id = notification.user_id;
+      notification_type = notification.type;
+      title = notification.title;
+      message = notification.message;
+      link = notification.link;
+      
+      console.log(`Notification loaded: user=${user_id}, type=${notification_type}, title=${title}`);
+    } else {
+      // Legacy support: use direct values
+      user_id = requestData.user_id!;
+      notification_type = requestData.notification_type!;
+      title = requestData.title!;
+      message = requestData.message!;
+      link = requestData.link;
+    }
 
     if (!user_id || !title || !message) {
       throw new Error("user_id, title, and message are required");
@@ -279,7 +334,6 @@ serve(async (req) => {
     // Send push notification in parallel
     const pushPromise = sendPushNotification(supabaseUrl, supabaseServiceKey, user_id, title, message, link);
 
-
     // Send email via Resend - use hardcoded value to avoid env variable issues
     const fromEmail = "Logisorama <support@logisorama.ch>";
     
@@ -288,6 +342,7 @@ serve(async (req) => {
     // Retry logic with exponential backoff for rate limiting
     const maxRetries = 3;
     let lastError: any = null;
+    let emailSent = false;
     
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
@@ -317,6 +372,21 @@ serve(async (req) => {
         }
 
         console.log(`Email notification sent successfully to ${profile.email}`, emailData);
+        emailSent = true;
+        
+        // Mark notification as email_sent if we have notification_id
+        if (notificationId) {
+          const { error: updateError } = await supabase
+            .from("notifications")
+            .update({ email_sent: true })
+            .eq("id", notificationId);
+          
+          if (updateError) {
+            console.warn("Failed to mark notification as email_sent:", updateError);
+          } else {
+            console.log(`Notification ${notificationId} marked as email_sent`);
+          }
+        }
         
         // Wait for push notification to complete
         await pushPromise;
