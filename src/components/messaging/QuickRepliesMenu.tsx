@@ -150,6 +150,7 @@ export const QuickRepliesMenu: React.FC<QuickRepliesMenuProps> = ({
           <div className="p-2 space-y-1">
             {QUICK_REPLIES.map((reply) => (
               <button
+                type="button"
                 key={reply.id}
                 onClick={() => handleSelectReply(reply.template)}
                 className={cn(
