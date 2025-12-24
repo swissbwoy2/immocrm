@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, 
   FileText, User, Send, Home, Building2, Briefcase, AlertCircle, Edit, Download, Eye, Upload, MailPlus,
-  FileCheck, CheckCircle, XCircle, Clock, Pencil, Trash2, FilePlus, Users, MessageSquare
+  FileCheck, CheckCircle, XCircle, Clock, Pencil, Trash2, FilePlus, Users, MessageSquare, FileDown
 } from 'lucide-react';
+import { DownloadClientPDFButton } from '@/components/DownloadClientPDFButton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { SendDossierDialog } from '@/components/SendDossierDialog';
 import { MergeDocumentsDialog } from '@/components/MergeDocumentsDialog';
@@ -684,11 +685,13 @@ export default function ClientDetail() {
 
           {/* Boutons d'action - Responsive grid sur mobile */}
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap lg:flex-nowrap w-full sm:w-auto">
-            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSendDossierDialogOpen(true)}>
-              <MailPlus className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Envoyer dossier</span>
-              <span className="sm:hidden">Dossier</span>
-            </Button>
+            <DownloadClientPDFButton
+              clientId={client.id}
+              clientData={client}
+              profileData={profile}
+              variant="outline"
+              className="w-full sm:w-auto"
+            />
             <Button variant="outline" className="w-full sm:w-auto" onClick={() => setSendDossierDialogOpen(true)}>
               <MailPlus className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Envoyer dossier</span>
