@@ -39,6 +39,24 @@ interface ContractData {
   souhaits_particuliers?: string;
 }
 
+// Helper function to sanitize text for WinAnsi encoding (pdf-lib limitation)
+const sanitizeText = (text: string | null | undefined): string => {
+  if (!text) return '-';
+  return String(text)
+    .replace(/\u202f/g, ' ')  // Narrow No-Break Space → regular space
+    .replace(/\u00a0/g, ' ')  // No-Break Space → regular space
+    .replace(/\u2019/g, "'")  // Right single quote → apostrophe
+    .replace(/\u2018/g, "'")  // Left single quote → apostrophe
+    .replace(/\u201c/g, '"')  // Left double quote → quote
+    .replace(/\u201d/g, '"')  // Right double quote → quote
+    .replace(/\u2013/g, '-')  // En dash → hyphen
+    .replace(/\u2014/g, '-')  // Em dash → hyphen
+    .replace(/\u2026/g, '...')// Ellipsis → three dots
+    .replace(/\u2032/g, "'")  // Prime → apostrophe
+    .replace(/\u2033/g, '"')  // Double prime → quote
+    .replace(/[^\x00-\xFF]/g, ''); // Remove any other non-Latin1 characters
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -75,9 +93,9 @@ serve(async (req) => {
       return page;
     };
 
-    // Helper to draw text
+    // Helper to draw text with sanitization
     const drawText = (page: any, text: string, x: number, y: number, options: any = {}) => {
-      page.drawText(text || '-', {
+      page.drawText(sanitizeText(text), {
         x,
         y,
         size: options.size || 10,

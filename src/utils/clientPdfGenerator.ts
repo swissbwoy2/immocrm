@@ -123,6 +123,24 @@ const MARGIN = 50;
 const LINE_HEIGHT = 14;
 const SECTION_SPACING = 20;
 
+// Helper function to sanitize text for WinAnsi encoding (pdf-lib limitation)
+const sanitizeText = (text: string | null | undefined): string => {
+  if (!text) return '-';
+  return String(text)
+    .replace(/\u202f/g, ' ')  // Narrow No-Break Space → regular space
+    .replace(/\u00a0/g, ' ')  // No-Break Space → regular space
+    .replace(/\u2019/g, "'")  // Right single quote → apostrophe
+    .replace(/\u2018/g, "'")  // Left single quote → apostrophe
+    .replace(/\u201c/g, '"')  // Left double quote → quote
+    .replace(/\u201d/g, '"')  // Right double quote → quote
+    .replace(/\u2013/g, '-')  // En dash → hyphen
+    .replace(/\u2014/g, '-')  // Em dash → hyphen
+    .replace(/\u2026/g, '...')// Ellipsis → three dots
+    .replace(/\u2032/g, "'")  // Prime → apostrophe
+    .replace(/\u2033/g, '"')  // Double prime → quote
+    .replace(/[^\x00-\xFF]/g, ''); // Remove any other non-Latin1 characters
+};
+
 export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8Array> {
   const { client, profile, candidates = [], candidatures = [], documents = [], agents = [] } = input;
   
@@ -148,14 +166,14 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
   const drawFooter = () => {
     const pageCount = pdfDoc.getPageCount();
     const footerY = 25;
-    page.drawText(`Page ${pageCount}`, {
+    page.drawText(sanitizeText(`Page ${pageCount}`), {
       x: PAGE_WIDTH / 2 - 20,
       y: footerY,
       size: 8,
       font: helvetica,
       color: COLORS.secondary,
     });
-    page.drawText('CONFIDENTIEL - IMMO-RAMA', {
+    page.drawText(sanitizeText('CONFIDENTIEL - IMMO-RAMA'), {
       x: MARGIN,
       y: footerY,
       size: 8,
@@ -163,7 +181,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
       color: COLORS.secondary,
     });
     const date = new Date().toLocaleDateString('fr-CH');
-    page.drawText(`Généré le ${date}`, {
+    page.drawText(sanitizeText(`Généré le ${date}`), {
       x: PAGE_WIDTH - MARGIN - 80,
       y: footerY,
       size: 8,
@@ -182,7 +200,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
       height: 20,
       color: COLORS.lightGray,
     });
-    page.drawText(title.toUpperCase(), {
+    page.drawText(sanitizeText(title.toUpperCase()), {
       x: MARGIN + 5,
       y: y,
       size: 11,
@@ -195,7 +213,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
   const drawField = (label: string, value: string | number | boolean | null | undefined, isBoolean = false) => {
     checkNewPage(LINE_HEIGHT + 5);
     const labelWidth = 180;
-    page.drawText(label + ' :', {
+    page.drawText(sanitizeText(label + ' :'), {
       x: MARGIN,
       y: y,
       size: 9,
@@ -207,13 +225,13 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
     let valueColor = COLORS.text;
     
     if (isBoolean) {
-      displayValue = value === true ? '✓ Oui' : '✗ Non';
+      displayValue = value === true ? 'Oui' : 'Non';
       valueColor = value === true ? COLORS.danger : COLORS.success;
     } else if (value !== null && value !== undefined && value !== '') {
       displayValue = String(value);
     }
     
-    page.drawText(displayValue, {
+    page.drawText(sanitizeText(displayValue), {
       x: MARGIN + labelWidth,
       y: y,
       size: 9,
@@ -231,7 +249,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
       // Left column
       const left = fields[i];
       if (left) {
-        page.drawText(left.label + ' :', {
+        page.drawText(sanitizeText(left.label + ' :'), {
           x: MARGIN,
           y: y,
           size: 9,
@@ -241,12 +259,12 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
         let displayValue = '-';
         let valueColor = COLORS.text;
         if (left.isBoolean) {
-          displayValue = left.value === true ? '✓ Oui' : '✗ Non';
+          displayValue = left.value === true ? 'Oui' : 'Non';
           valueColor = left.value === true ? COLORS.danger : COLORS.success;
         } else if (left.value !== null && left.value !== undefined && left.value !== '') {
           displayValue = String(left.value);
         }
-        page.drawText(displayValue, {
+        page.drawText(sanitizeText(displayValue), {
           x: MARGIN + 100,
           y: y,
           size: 9,
@@ -258,7 +276,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
       // Right column
       const right = fields[i + 1];
       if (right) {
-        page.drawText(right.label + ' :', {
+        page.drawText(sanitizeText(right.label + ' :'), {
           x: MARGIN + colWidth,
           y: y,
           size: 9,
@@ -268,12 +286,12 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
         let displayValue = '-';
         let valueColor = COLORS.text;
         if (right.isBoolean) {
-          displayValue = right.value === true ? '✓ Oui' : '✗ Non';
+          displayValue = right.value === true ? 'Oui' : 'Non';
           valueColor = right.value === true ? COLORS.danger : COLORS.success;
         } else if (right.value !== null && right.value !== undefined && right.value !== '') {
           displayValue = String(right.value);
         }
-        page.drawText(displayValue, {
+        page.drawText(sanitizeText(displayValue), {
           x: MARGIN + colWidth + 100,
           y: y,
           size: 9,
@@ -287,7 +305,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
   };
   
   // Header
-  page.drawText('IMMO-RAMA', {
+  page.drawText(sanitizeText('IMMO-RAMA'), {
     x: MARGIN,
     y: y,
     size: 24,
@@ -302,7 +320,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
     hour: '2-digit',
     minute: '2-digit'
   });
-  page.drawText(dateGen, {
+  page.drawText(sanitizeText(dateGen), {
     x: PAGE_WIDTH - MARGIN - 150,
     y: y,
     size: 10,
@@ -314,7 +332,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
   
   // Title
   const clientName = `${profile?.prenom || client.prenom || ''} ${profile?.nom || client.nom || ''}`.trim() || 'Client';
-  page.drawText(`FICHE CLIENT : ${clientName.toUpperCase()}`, {
+  page.drawText(sanitizeText(`FICHE CLIENT : ${clientName.toUpperCase()}`), {
     x: MARGIN,
     y: y,
     size: 16,
@@ -325,7 +343,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
   
   // Statut badge
   if (client.statut) {
-    page.drawText(`Statut: ${client.statut}`, {
+    page.drawText(sanitizeText(`Statut: ${client.statut}`), {
       x: MARGIN,
       y: y,
       size: 10,
@@ -334,7 +352,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
     });
   }
   if (client.priorite) {
-    page.drawText(`Priorité: ${client.priorite}`, {
+    page.drawText(sanitizeText(`Priorité: ${client.priorite}`), {
       x: MARGIN + 120,
       y: y,
       size: 10,
@@ -440,7 +458,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
     drawSectionTitle(`Candidats associés (${candidates.length})`);
     for (const candidate of candidates) {
       checkNewPage(60);
-      page.drawText(`• ${candidate.prenom} ${candidate.nom} - ${candidate.type}`, {
+      page.drawText(sanitizeText(`- ${candidate.prenom} ${candidate.nom} - ${candidate.type}`), {
         x: MARGIN,
         y: y,
         size: 10,
@@ -456,7 +474,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
       ].filter(Boolean).join(' | ');
       
       if (candidateInfo) {
-        page.drawText(candidateInfo, {
+        page.drawText(sanitizeText(candidateInfo), {
           x: MARGIN + 10,
           y: y,
           size: 9,
@@ -474,11 +492,11 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
     drawSectionTitle(`Candidatures (${candidatures.length})`);
     for (const cand of candidatures) {
       checkNewPage(30);
-      const adresse = cand.offre?.adresse || 'Adresse non spécifiée';
+      const adresse = cand.offre?.adresse || 'Adresse non specifiee';
       const statut = cand.statut || 'En attente';
       const date = cand.date_depot ? new Date(cand.date_depot).toLocaleDateString('fr-CH') : '-';
       
-      page.drawText(`• ${adresse}`, {
+      page.drawText(sanitizeText(`- ${adresse}`), {
         x: MARGIN,
         y: y,
         size: 10,
@@ -487,7 +505,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
       });
       y -= LINE_HEIGHT;
       
-      page.drawText(`Statut: ${statut} | Déposée le: ${date}`, {
+      page.drawText(sanitizeText(`Statut: ${statut} | Deposee le: ${date}`), {
         x: MARGIN + 10,
         y: y,
         size: 9,
@@ -500,11 +518,11 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
   
   // Section 8: Documents
   if (documents.length > 0) {
-    drawSectionTitle(`Documents uploadés (${documents.length})`);
+    drawSectionTitle(`Documents uploades (${documents.length})`);
     for (const doc of documents) {
       checkNewPage(LINE_HEIGHT + 5);
       const typeDoc = doc.type_document || 'Autre';
-      page.drawText(`• ${doc.nom} (${typeDoc})`, {
+      page.drawText(sanitizeText(`- ${doc.nom} (${typeDoc})`), {
         x: MARGIN,
         y: y,
         size: 9,
@@ -517,11 +535,11 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
   
   // Section 9: Agents assignés
   if (agents.length > 0) {
-    drawSectionTitle('Agent(s) assigné(s)');
+    drawSectionTitle('Agent(s) assigne(s)');
     for (const agent of agents) {
       checkNewPage(30);
       const agentName = `${agent.prenom || ''} ${agent.nom || ''}`.trim() || 'Agent';
-      page.drawText(`• ${agentName}`, {
+      page.drawText(sanitizeText(`- ${agentName}`), {
         x: MARGIN,
         y: y,
         size: 10,
@@ -532,7 +550,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
       
       const contactInfo = [agent.email, agent.telephone].filter(Boolean).join(' | ');
       if (contactInfo) {
-        page.drawText(contactInfo, {
+        page.drawText(sanitizeText(contactInfo), {
           x: MARGIN + 10,
           y: y,
           size: 9,
@@ -551,7 +569,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
     const noteLines = client.note_agent.split('\n');
     for (const line of noteLines) {
       checkNewPage(LINE_HEIGHT + 2);
-      page.drawText(line.substring(0, 80), {
+      page.drawText(sanitizeText(line.substring(0, 80)), {
         x: MARGIN,
         y: y,
         size: 9,
@@ -566,21 +584,21 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
   const pages = pdfDoc.getPages();
   for (let i = 0; i < pages.length; i++) {
     const p = pages[i];
-    p.drawText(`Page ${i + 1} / ${pages.length}`, {
+    p.drawText(sanitizeText(`Page ${i + 1} / ${pages.length}`), {
       x: PAGE_WIDTH / 2 - 25,
       y: 25,
       size: 8,
       font: helvetica,
       color: COLORS.secondary,
     });
-    p.drawText('CONFIDENTIEL - IMMO-RAMA', {
+    p.drawText(sanitizeText('CONFIDENTIEL - IMMO-RAMA'), {
       x: MARGIN,
       y: 25,
       size: 8,
       font: helvetica,
       color: COLORS.secondary,
     });
-    p.drawText(`Généré le ${new Date().toLocaleDateString('fr-CH')}`, {
+    p.drawText(sanitizeText(`Genere le ${new Date().toLocaleDateString('fr-CH')}`), {
       x: PAGE_WIDTH - MARGIN - 80,
       y: 25,
       size: 8,
