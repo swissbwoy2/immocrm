@@ -343,10 +343,12 @@ function getReminderMessage(
     weekday: "long",
     day: "numeric",
     month: "long",
+    timeZone: "Europe/Zurich",
   });
   const formattedTime = visiteDate.toLocaleTimeString("fr-CH", {
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Europe/Zurich",
   });
 
   const baseInfo = `${visite.adresse}\n${formattedDate} à ${formattedTime}`;
