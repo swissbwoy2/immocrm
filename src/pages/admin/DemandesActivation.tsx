@@ -318,11 +318,21 @@ export default function DemandesActivation() {
         }
       }
 
-      // Mettre à jour le statut
+      // Mettre à jour le statut de la demande
       await supabase
         .from('demandes_mandat')
         .update({ statut: 'active' })
         .eq('id', demande.id);
+
+      // S'assurer que le profil est bien activé (éviter la désynchronisation)
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ actif: true, updated_at: new Date().toISOString() })
+        .eq('email', demande.email);
+
+      if (profileError) {
+        console.error('Erreur activation profil:', profileError);
+      }
 
       toast.success('Compte activé avec toutes les données ! Contrat PDF généré.');
       await loadData();
