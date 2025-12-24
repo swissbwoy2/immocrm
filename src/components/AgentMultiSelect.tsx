@@ -39,6 +39,7 @@ interface AgentMultiSelectProps {
   selectedAssignments: AgentAssignment[];
   onSelectionChange: (assignments: AgentAssignment[]) => void;
   disabled?: boolean;
+  defaultCommissionSplit?: number;
 }
 
 export const AgentMultiSelect = ({
@@ -46,6 +47,7 @@ export const AgentMultiSelect = ({
   selectedAssignments,
   onSelectionChange,
   disabled = false,
+  defaultCommissionSplit = 45,
 }: AgentMultiSelectProps) => {
   const [open, setOpen] = useState(false);
 
@@ -72,7 +74,7 @@ export const AgentMultiSelect = ({
       const newAssignment: AgentAssignment = {
         agent_id: agentId,
         is_primary: selectedAssignments.length === 0, // First agent is primary by default
-        commission_split: 50,
+        commission_split: defaultCommissionSplit,
       };
       onSelectionChange([...selectedAssignments, newAssignment]);
     }

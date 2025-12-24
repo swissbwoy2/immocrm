@@ -184,12 +184,15 @@ export default function Assignations() {
 
       if (insertError) throw insertError;
 
-      // Update clients.agent_id with primary agent for backward compatibility
+      // Update clients.agent_id and commission_split with primary agent for backward compatibility
       const primaryAgent = agentAssignments.find(a => a.is_primary);
       if (primaryAgent) {
         await supabase
           .from('clients')
-          .update({ agent_id: primaryAgent.agent_id })
+          .update({ 
+            agent_id: primaryAgent.agent_id,
+            commission_split: primaryAgent.commission_split 
+          })
           .eq('id', clientId);
 
         await supabase.rpc('increment_agent_clients', { agent_uuid: primaryAgent.agent_id });
@@ -378,6 +381,18 @@ export default function Assignations() {
 
       if (errors.length > 0) {
         throw new Error('Erreur lors de la mise à jour');
+      }
+
+      // Sync clients.commission_split with primary agent
+      const primaryAgent = editAgentAssignments.find(a => a.is_primary);
+      if (primaryAgent) {
+        await supabase
+          .from('clients')
+          .update({ 
+            agent_id: primaryAgent.agent_id,
+            commission_split: primaryAgent.commission_split 
+          })
+          .eq('id', editingClientId);
       }
 
       // Update agent counts
