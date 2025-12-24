@@ -72,10 +72,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .single();
 
         if (agentData?.statut === 'en_attente') {
-          await supabase
+          const { error: updateError } = await supabase
             .from('agents')
-            .update({ statut: 'actif' })
+            .update({ statut: 'actif', updated_at: new Date().toISOString() })
             .eq('user_id', userId);
+          
+          if (updateError) {
+            console.error('Failed to activate agent on first login:', updateError);
+          } else {
+            console.log('Agent activated successfully on first login:', userId);
+          }
         }
       }
 
@@ -88,10 +94,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .single();
 
         if (apporteurData?.statut === 'en_attente') {
-          await supabase
+          const { error: updateError } = await supabase
             .from('apporteurs')
-            .update({ statut: 'actif' })
+            .update({ statut: 'actif', updated_at: new Date().toISOString() })
             .eq('user_id', userId);
+          
+          if (updateError) {
+            console.error('Failed to activate apporteur on first login:', updateError);
+          } else {
+            console.log('Apporteur activated successfully on first login:', userId);
+          }
         }
       }
     } catch (error) {
