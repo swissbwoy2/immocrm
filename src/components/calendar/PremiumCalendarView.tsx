@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { CalendarEvent, eventTypeCalendarColors } from './types';
 import { toSwissTime, formatSwissDate, formatSwissTime, getSwissDateString } from '@/lib/dateUtils';
+import { useIsIOS } from '@/hooks/useIsIOS';
 
 interface PremiumCalendarViewProps {
   events: CalendarEvent[];
@@ -22,7 +23,8 @@ const PremiumCalendarDay = memo(({
   isCurrentMonth, 
   onDateSelect, 
   onEventClick,
-  animationDelay
+  animationDelay,
+  isIOS
 }: {
   day: Date;
   dayEvents: { type: string; event: any; isVisite: boolean; isDelegated?: boolean }[];
@@ -31,6 +33,7 @@ const PremiumCalendarDay = memo(({
   onDateSelect: (date: Date) => void;
   onEventClick?: (event: any, type: 'event' | 'visite') => void;
   animationDelay: number;
+  isIOS: boolean;
 }) => {
   const isWeekend = day.getDay() === 0 || day.getDay() === 6;
   const isTodayDate = isToday(day);
@@ -61,12 +64,13 @@ const PremiumCalendarDay = memo(({
   return (
     <div
       onClick={() => onDateSelect(day)}
-      style={{ animationDelay: `${animationDelay}ms` }}
+      style={isIOS ? undefined : { animationDelay: `${animationDelay}ms` }}
       className={cn(
-        'h-20 md:h-24 p-1.5 rounded-xl border cursor-pointer min-w-0 group animate-fade-in',
+        'h-20 md:h-24 p-1.5 rounded-xl border cursor-pointer min-w-0 group',
         'transition-all duration-300 ease-out',
         'hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/10 hover:border-primary/40',
-        'backdrop-blur-sm',
+        // iOS optimizations: remove blur and animation
+        isIOS ? 'ios-gpu-accelerated bg-card/95' : 'backdrop-blur-sm animate-fade-in',
         !isCurrentMonth && 'opacity-40',
         isWeekend && 'bg-muted/20',
         isTodayDate && 'border-primary border-2 bg-gradient-to-br from-primary/10 to-primary/5 shadow-md shadow-primary/20',
@@ -113,6 +117,7 @@ const PremiumCalendarDay = memo(({
 PremiumCalendarDay.displayName = 'PremiumCalendarDay';
 
 export function PremiumCalendarView({ events, visites, selectedDate, onDateSelect, onEventClick }: PremiumCalendarViewProps) {
+  const isIOS = useIsIOS();
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   // Memoize calendar calculations
@@ -176,11 +181,18 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
   };
 
   return (
-    <div className="relative overflow-hidden bg-card/80 backdrop-blur-xl rounded-2xl border border-border/50 shadow-xl p-4 md:p-6 w-full max-w-full">
-      {/* Background effects */}
+    <div className={cn(
+      "relative overflow-hidden rounded-2xl border border-border/50 shadow-xl p-4 md:p-6 w-full max-w-full",
+      isIOS ? "bg-card ios-gpu-accelerated" : "bg-card/80 backdrop-blur-xl"
+    )}>
+      {/* Background effects - disabled on iOS for performance */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-      <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
+      {!isIOS && (
+        <>
+          <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
+        </>
+      )}
       
       <div className="relative z-10">
         {/* Header */}
@@ -256,6 +268,7 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
               onDateSelect={onDateSelect}
               onEventClick={onEventClick}
               animationDelay={index * 10}
+              isIOS={isIOS}
             />
           ))}
         </div>
