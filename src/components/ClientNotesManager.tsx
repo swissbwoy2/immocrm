@@ -84,11 +84,11 @@ export const ClientNotesManager = ({ clientId, agentId }: ClientNotesManagerProp
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap justify-between items-center gap-2">
         <h3 className="text-lg font-semibold">Notes & Rappels</h3>
-        <Button onClick={() => setIsAdding(!isAdding)} size="sm">
+        <Button onClick={() => setIsAdding(!isAdding)} size="sm" className="shrink-0">
           <Plus className="h-4 w-4 mr-2" />
-          Ajouter une note
+          Ajouter
         </Button>
       </div>
 
