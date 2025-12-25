@@ -1,4 +1,4 @@
-import { Calendar, Clock, Sparkles, TrendingUp, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Calendar, Clock, Sparkles, TrendingUp, AlertTriangle, CheckCircle2, Home, PartyPopper } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 
@@ -8,6 +8,9 @@ interface PremiumMandatProgressProps {
   totalDays?: number;
   startDate: string;
   className?: string;
+  isRelogged?: boolean;
+  reloggedStatus?: 'signature_effectuee' | 'etat_lieux_fixe' | 'cles_remises' | null;
+  reloggedDate?: string | null;
 }
 
 export function PremiumMandatProgress({
@@ -15,20 +18,35 @@ export function PremiumMandatProgress({
   daysRemaining,
   totalDays = 90,
   startDate,
-  className
+  className,
+  isRelogged = false,
+  reloggedStatus = null,
+  reloggedDate = null
 }: PremiumMandatProgressProps) {
   const [animatedProgress, setAnimatedProgress] = useState(0);
   const [animatedDays, setAnimatedDays] = useState(0);
   
-  const progressPercentage = Math.min((daysElapsed / totalDays) * 100, 100);
+  const progressPercentage = isRelogged ? 100 : Math.min((daysElapsed / totalDays) * 100, 100);
   const endDate = new Date(new Date(startDate).getTime() + totalDays * 24 * 60 * 60 * 1000);
   
   // Determine status
   const getStatus = () => {
+    if (isRelogged) {
+      return { label: getReloggedLabel(), color: 'emerald', icon: Home };
+    }
     if (daysRemaining <= 0) return { label: 'Expiré', color: 'red', icon: AlertTriangle };
     if (daysElapsed < totalDays * 0.5) return { label: 'En bonne voie', color: 'green', icon: TrendingUp };
     if (daysElapsed < totalDays * 0.75) return { label: 'Mi-parcours', color: 'orange', icon: Clock };
     return { label: 'Fin proche', color: 'orange', icon: AlertTriangle };
+  };
+  
+  const getReloggedLabel = () => {
+    switch (reloggedStatus) {
+      case 'cles_remises': return '🏠 Relogé !';
+      case 'etat_lieux_fixe': return '🔑 EDL fixé';
+      case 'signature_effectuee': return '✅ Bail signé';
+      default: return '✅ Relogé';
+    }
   };
   
   const status = getStatus();
@@ -43,13 +61,14 @@ export function PremiumMandatProgress({
     // Animate days counter
     const duration = 1500;
     const steps = 60;
-    const increment = Math.floor(daysElapsed) / steps;
+    const targetDays = isRelogged ? daysElapsed : daysElapsed;
+    const increment = Math.floor(targetDays) / steps;
     let current = 0;
     
     const interval = setInterval(() => {
       current += increment;
-      if (current >= daysElapsed) {
-        setAnimatedDays(Math.floor(daysElapsed));
+      if (current >= targetDays) {
+        setAnimatedDays(Math.floor(targetDays));
         clearInterval(interval);
       } else {
         setAnimatedDays(Math.floor(current));
@@ -60,12 +79,106 @@ export function PremiumMandatProgress({
       clearTimeout(timer);
       clearInterval(interval);
     };
-  }, [progressPercentage, daysElapsed]);
+  }, [progressPercentage, daysElapsed, isRelogged]);
   
   // Calculate stroke dasharray for circular progress
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (animatedProgress / 100) * circumference;
+  
+  // If relogged, show success state
+  if (isRelogged) {
+    return (
+      <div className={cn(
+        'relative overflow-hidden rounded-2xl',
+        'bg-gradient-to-br from-emerald-500/10 via-green-500/5 to-teal-500/10',
+        'backdrop-blur-xl border-2 border-emerald-500/30',
+        'p-6 shadow-lg shadow-emerald-500/10',
+        'group hover:shadow-xl hover:shadow-emerald-500/20 transition-all duration-500',
+        className
+      )}>
+        {/* Animated gradient border */}
+        <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+          <div className="absolute inset-[-1px] rounded-2xl bg-gradient-to-r from-emerald-500/50 via-green-500/50 to-emerald-500/50 animate-gradient-x" />
+          <div className="absolute inset-[1px] rounded-2xl bg-card" />
+        </div>
+        
+        {/* Success particles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-2 h-2 rounded-full bg-emerald-500/40 animate-float"
+              style={{
+                left: `${10 + i * 12}%`,
+                top: `${15 + (i % 4) * 20}%`,
+                animationDelay: `${i * 0.3}s`,
+                animationDuration: `${2 + i * 0.4}s`
+              }}
+            />
+          ))}
+        </div>
+        
+        {/* Shine effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+        
+        <div className="relative z-10">
+          {/* Header */}
+          <div className="flex items-center gap-2 mb-6">
+            <div className="p-2 bg-emerald-500/20 rounded-xl">
+              <PartyPopper className="w-5 h-5 text-emerald-500" />
+            </div>
+            <h3 className="font-semibold text-lg text-emerald-700 dark:text-emerald-300">Mandat terminé avec succès !</h3>
+          </div>
+          
+          <div className="flex flex-col lg:flex-row items-center gap-8">
+            {/* Success Circle */}
+            <div className="relative w-32 h-32 flex-shrink-0">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-500/20 to-green-500/20 animate-pulse" />
+              <div className="absolute inset-2 rounded-full bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                <Home className="w-12 h-12 text-white" />
+              </div>
+              {/* Glow effect */}
+              <div className="absolute inset-0 rounded-full bg-emerald-500/30 blur-xl" />
+            </div>
+            
+            {/* Info */}
+            <div className="flex-1 w-full text-center lg:text-left">
+              <h4 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mb-2">
+                {getReloggedLabel()}
+              </h4>
+              <p className="text-muted-foreground mb-4">
+                Félicitations ! Le client a trouvé son logement.
+              </p>
+              
+              {reloggedDate && (
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                  <Calendar className="w-4 h-4 text-emerald-500" />
+                  <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                    {reloggedStatus === 'cles_remises' ? 'Clés remises le' : 
+                     reloggedStatus === 'signature_effectuee' ? 'Bail signé le' :
+                     'État des lieux le'} {new Date(reloggedDate).toLocaleDateString('fr-CH')}
+                  </span>
+                </div>
+              )}
+            </div>
+            
+            {/* Status card */}
+            <div className="flex-shrink-0 p-4 rounded-xl text-center min-w-[140px] bg-emerald-500/10 border border-emerald-500/30">
+              <div className="w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center bg-emerald-500/20">
+                <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+              </div>
+              <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">100%</p>
+              <p className="text-xs text-muted-foreground">Terminé</p>
+              <div className="mt-2 px-2 py-1 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                Succès
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className={cn(

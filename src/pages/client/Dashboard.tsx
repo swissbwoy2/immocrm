@@ -681,14 +681,29 @@ export default function ClientDashboard() {
                     </div>
                   </div>
                 </PremiumStatusCard>
-              ) : (
-                <PremiumMandatProgress
-                  daysElapsed={daysElapsed}
-                  daysRemaining={daysRemaining}
-                  totalDays={90}
-                  startDate={client.date_ajout || client.created_at}
-                />
-              )}
+              ) : (() => {
+                // Determine if client is relogged based on candidatures
+                const reloggedCandidature = candidatures.find(c => 
+                  ['signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(c.statut)
+                );
+                const isRelogged = client.statut === 'reloge' || !!reloggedCandidature;
+                const reloggedStatus = reloggedCandidature?.statut as 'signature_effectuee' | 'etat_lieux_fixe' | 'cles_remises' | null;
+                const reloggedDate = reloggedCandidature?.signature_effectuee_at || 
+                                    reloggedCandidature?.cles_remises_at || 
+                                    reloggedCandidature?.date_etat_lieux;
+                
+                return (
+                  <PremiumMandatProgress
+                    daysElapsed={daysElapsed}
+                    daysRemaining={daysRemaining}
+                    totalDays={90}
+                    startDate={client.date_ajout || client.created_at}
+                    isRelogged={isRelogged}
+                    reloggedStatus={reloggedStatus}
+                    reloggedDate={reloggedDate}
+                  />
+                );
+              })()}
             </div>
 
             {/* Mon agent - PremiumAgentCard */}
