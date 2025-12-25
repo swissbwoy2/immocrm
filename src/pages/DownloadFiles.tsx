@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Download, FileText, Image, File, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useFileDownload } from '@/hooks/useFileDownload';
 
 interface SharedDocument {
   id: string;
@@ -22,6 +23,7 @@ const DownloadFiles = () => {
   const [documents, setDocuments] = useState<SharedDocument[]>([]);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const { downloadFromUrl } = useFileDownload();
 
   useEffect(() => {
     if (token) {
@@ -85,22 +87,19 @@ const DownloadFiles = () => {
     try {
       setDownloading(doc.id);
       
-      const response = await fetch(doc.downloadUrl);
-      const blob = await response.blob();
-      
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = doc.nom;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      
-      toast({
-        title: "Téléchargement démarré",
-        description: doc.nom,
+      const result = await downloadFromUrl(doc.downloadUrl, {
+        filename: doc.nom,
+        mimeType: doc.type,
       });
+      
+      if (result.success) {
+        toast({
+          title: "Téléchargement démarré",
+          description: doc.nom,
+        });
+      } else {
+        throw new Error(result.error);
+      }
     } catch (err) {
       console.error('Download error:', err);
       toast({

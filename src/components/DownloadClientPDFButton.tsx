@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FileDown, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { generateClientPDF, downloadPDF } from '@/utils/clientPdfGenerator';
+import { generateClientPDF } from '@/utils/clientPdfGenerator';
 import { supabase } from '@/integrations/supabase/client';
+import { useFileDownload } from '@/hooks/useFileDownload';
 
 interface DownloadClientPDFButtonProps {
   clientId: string;
@@ -33,6 +34,7 @@ export function DownloadClientPDFButton({
   className,
 }: DownloadClientPDFButtonProps) {
   const [isGenerating, setIsGenerating] = useState(false);
+  const { downloadBytes } = useFileDownload();
 
   const handleDownload = async () => {
     setIsGenerating(true);
@@ -117,9 +119,17 @@ export function DownloadClientPDFButton({
       const date = new Date().toISOString().split('T')[0];
       const filename = `Fiche_Client_${nom}_${prenom}_${date}.pdf`;
 
-      // Download
-      downloadPDF(pdfBytes, filename);
-      toast.success('Fiche client téléchargée avec succès');
+      // Download using native-compatible hook
+      const result = await downloadBytes(pdfBytes, {
+        filename,
+        mimeType: 'application/pdf',
+      });
+      
+      if (result.success) {
+        toast.success('Fiche client téléchargée avec succès');
+      } else {
+        throw new Error(result.error);
+      }
     } catch (error) {
       console.error('Erreur lors de la génération du PDF:', error);
       toast.error('Erreur lors de la génération du PDF');
