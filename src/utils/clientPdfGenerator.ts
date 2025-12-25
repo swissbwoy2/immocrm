@@ -610,6 +610,7 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
   return pdfDoc.save();
 }
 
+// Legacy function for web - use useFileDownload hook for iOS support
 export function downloadPDF(pdfBytes: Uint8Array, filename: string) {
   const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
   const url = URL.createObjectURL(blob);

@@ -29,6 +29,7 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import SignaturePad from '@/components/mandat/SignaturePad';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useFileDownload } from '@/hooks/useFileDownload';
 
 // Set worker path for Vite compatibility
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -109,6 +110,7 @@ export default function PDFFormFiller() {
   const pdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [renderScale, setRenderScale] = useState(1);
+  const { downloadBytes } = useFileDownload();
 
   // Load PDF and render
   const loadPdf = useCallback(async (arrayBuffer: ArrayBuffer) => {
@@ -567,14 +569,20 @@ export default function PDFFormFiller() {
       const pdfBytesResult = await generateFilledPdf();
       if (!pdfBytesResult) return;
 
-      const blob = new Blob([new Uint8Array(pdfBytesResult)], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `document-signe-${new Date().toISOString().slice(0, 10)}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('PDF téléchargé');
+      const filename = `document-signe-${new Date().toISOString().slice(0, 10)}.pdf`;
+      const result = await downloadBytes(pdfBytesResult, {
+        filename,
+        mimeType: 'application/pdf',
+      });
+      
+      if (result.success) {
+        toast.success('PDF téléchargé');
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Erreur lors du téléchargement');
     } finally {
       setIsGenerating(false);
     }
