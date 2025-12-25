@@ -649,38 +649,78 @@ export default function ClientDetail() {
               <h1 className="text-2xl sm:text-3xl font-bold">
                 {profile.prenom} {profile.nom}
               </h1>
+              {/* Badge Relogé */}
+              {(client.statut === 'reloge' || candidatures.some(c => ['signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(c.statut))) && (
+                <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">
+                  <Home className="w-3 h-3 mr-1" />
+                  🏠 Relogé
+                </Badge>
+              )}
               <ClientTypeBadge typeRecherche={client.type_recherche} />
               <Badge variant="outline">{client.nationalite || 'N/A'}</Badge>
               <Badge variant="secondary">Permis {client.type_permis || 'N/A'}</Badge>
             </div>
 
-            {/* Progress bar */}
-            <div className="mt-4 max-w-2xl">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-muted-foreground">Progression du mandat</p>
-                <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                  daysElapsed < 60 
-                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-                    : daysElapsed < 90 
-                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' 
-                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                }`}>
-                  {Math.floor(daysRemaining)}j {Math.floor((daysRemaining - Math.floor(daysRemaining)) * 24)}h
+            {/* Progress bar - Show success state if relogged */}
+            {(() => {
+              const isRelogged = client.statut === 'reloge' || candidatures.some(c => ['signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(c.statut));
+              const reloggedCandidature = candidatures.find(c => ['cles_remises', 'etat_lieux_fixe', 'signature_effectuee'].includes(c.statut));
+              
+              if (isRelogged && reloggedCandidature) {
+                const statusLabel = reloggedCandidature.statut === 'cles_remises' ? '🏠 Relogé' : 
+                                   reloggedCandidature.statut === 'signature_effectuee' ? '✅ Bail signé' : 
+                                   '🔑 EDL fixé';
+                return (
+                  <div className="mt-4 max-w-2xl">
+                    <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-full bg-emerald-500/20">
+                          <Home className="w-5 h-5 text-emerald-500" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-emerald-600 dark:text-emerald-400">{statusLabel}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Mandat terminé avec succès
+                            {reloggedCandidature.signature_effectuee_at && (
+                              <> le {new Date(reloggedCandidature.signature_effectuee_at).toLocaleDateString('fr-CH')}</>
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              
+              return (
+                <div className="mt-4 max-w-2xl">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-muted-foreground">Progression du mandat</p>
+                    <div className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                      daysElapsed < 60 
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                        : daysElapsed < 90 
+                        ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' 
+                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                    }`}>
+                      {Math.floor(daysRemaining)}j {Math.floor((daysRemaining - Math.floor(daysRemaining)) * 24)}h
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground text-right mb-2">
+                    {Math.floor(daysElapsed)} / 90 jours
+                  </p>
+                  <Progress 
+                    value={progressPercentage} 
+                    className="h-3" 
+                    indicatorClassName={
+                      daysElapsed < 60 ? 'bg-green-500' :
+                      daysElapsed < 90 ? 'bg-orange-500' :
+                      'bg-red-500'
+                    }
+                  />
                 </div>
-              </div>
-              <p className="text-xs text-muted-foreground text-right mb-2">
-                {Math.floor(daysElapsed)} / 90 jours
-              </p>
-              <Progress 
-                value={progressPercentage} 
-                className="h-3" 
-                indicatorClassName={
-                  daysElapsed < 60 ? 'bg-green-500' :
-                  daysElapsed < 90 ? 'bg-orange-500' :
-                  'bg-red-500'
-                }
-              />
-            </div>
+              );
+            })()}
           </div>
 
           {/* Boutons d'action - Responsive grid sur mobile */}

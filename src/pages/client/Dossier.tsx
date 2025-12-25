@@ -430,11 +430,20 @@ export default function Dossier() {
         />
 
         {/* Premium Mandat Progress */}
-        <PremiumMandatProgress
-          daysElapsed={daysElapsed}
-          daysRemaining={daysRemaining}
-          startDate={client.date_ajout || client.created_at}
-        />
+        {(() => {
+          // Check if client is relogged - need to load candidatures
+          const isRelogged = client.statut === 'reloge';
+          
+          return (
+            <PremiumMandatProgress
+              daysElapsed={daysElapsed}
+              daysRemaining={daysRemaining}
+              startDate={client.date_ajout || client.created_at}
+              isRelogged={isRelogged}
+              reloggedStatus={isRelogged ? 'cles_remises' : null}
+            />
+          );
+        })()}
 
         {/* Alerte documents manquants */}
         <MissingDocumentsAlert documents={documents} />
