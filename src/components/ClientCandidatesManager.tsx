@@ -111,12 +111,12 @@ export function ClientCandidatesManager({
     <>
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Users className="w-5 h-5" />
-              Candidats du dossier
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg min-w-0">
+              <Users className="w-5 h-5 shrink-0" />
+              <span className="truncate">Candidats du dossier</span>
             </CardTitle>
-            <Button size="sm" onClick={() => { setEditCandidate(null); setAddDialogOpen(true); }}>
+            <Button size="sm" className="shrink-0" onClick={() => { setEditCandidate(null); setAddDialogOpen(true); }}>
               <UserPlus className="w-4 h-4 mr-2" />
               Ajouter
             </Button>

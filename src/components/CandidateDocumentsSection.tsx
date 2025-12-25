@@ -296,39 +296,43 @@ export function CandidateDocumentsSection({
     <>
       <div className="space-y-6">
         {/* Documents du client principal */}
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-base">
-                <User className="w-4 h-4" />
-                👤 Client principal: {clientName || 'Client'}
-                <Badge variant="outline" className="ml-2">
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-base min-w-0">
+                  <User className="w-4 h-4 shrink-0" />
+                  <span className="truncate">👤 {clientName || 'Client'}</span>
+                </CardTitle>
+                <Badge variant="outline" className="shrink-0">
                   {clientDocuments.length} doc{clientDocuments.length > 1 ? 's' : ''}
                 </Badge>
                 {(() => {
                   const status = getCompletionStatus(clientDocuments);
                   return status.complete === status.total ? (
-                    <Badge className="bg-green-600 ml-1">
+                    <Badge className="bg-green-600 shrink-0">
                       <CheckCircle className="w-3 h-3 mr-1" />
                       Complet
                     </Badge>
                   ) : (
-                    <Badge variant="secondary" className="ml-1">
+                    <Badge variant="secondary" className="shrink-0">
                       {status.complete}/{status.total}
                     </Badge>
                   );
                 })()}
-              </CardTitle>
-              <div className="flex gap-2">
+              </div>
+              <div className="flex flex-wrap gap-2">
                 {agentId && agentUserId && (
-                  <Button size="sm" variant="outline" onClick={() => openRequestDialog(null)}>
-                    <Mail className="w-4 h-4 mr-2" />
-                    Demander
+                  <Button size="sm" variant="outline" className="shrink-0" onClick={() => openRequestDialog(null)}>
+                    <Mail className="w-4 h-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Demander</span>
+                    <span className="sm:hidden">Dem.</span>
                   </Button>
                 )}
-                <Button size="sm" variant="outline" onClick={() => openUploadForCandidate(null)}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Ajouter
+                <Button size="sm" variant="outline" className="shrink-0" onClick={() => openUploadForCandidate(null)}>
+                  <Upload className="w-4 h-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Ajouter</span>
+                  <span className="sm:hidden">Ajt.</span>
                 </Button>
               </div>
             </div>
@@ -377,37 +381,41 @@ export function CandidateDocumentsSection({
           const TypeIcon = candidate.type === 'garant' ? Shield : Users;
 
           return (
-            <Card key={candidate.id}>
+            <Card key={candidate.id} className="overflow-hidden">
               <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <TypeIcon className={`w-4 h-4 ${candidate.type === 'garant' ? 'text-purple-600' : 'text-blue-600'}`} />
-                    {CANDIDATE_TYPE_LABELS[candidate.type]}: {candidate.prenom} {candidate.nom}
-                    <Badge variant="outline" className="ml-2">
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-base min-w-0">
+                      <TypeIcon className={`w-4 h-4 shrink-0 ${candidate.type === 'garant' ? 'text-purple-600' : 'text-blue-600'}`} />
+                      <span className="truncate">{CANDIDATE_TYPE_LABELS[candidate.type]}: {candidate.prenom}</span>
+                    </CardTitle>
+                    <Badge variant="outline" className="shrink-0">
                       {candidateDocs.length} doc{candidateDocs.length > 1 ? 's' : ''}
                     </Badge>
                     {status.complete === status.total ? (
-                      <Badge className="bg-green-600 ml-1">
+                      <Badge className="bg-green-600 shrink-0">
                         <CheckCircle className="w-3 h-3 mr-1" />
                         Complet
                       </Badge>
                     ) : (
-                      <Badge variant="secondary" className="ml-1">
+                      <Badge variant="secondary" className="shrink-0">
                         <AlertTriangle className="w-3 h-3 mr-1" />
                         {status.complete}/{status.total}
                       </Badge>
                     )}
-                  </CardTitle>
-                  <div className="flex gap-2">
+                  </div>
+                  <div className="flex flex-wrap gap-2">
                     {agentId && agentUserId && (
-                      <Button size="sm" variant="outline" onClick={() => openRequestDialog(candidate)}>
-                        <Mail className="w-4 h-4 mr-2" />
-                        Demander
+                      <Button size="sm" variant="outline" className="shrink-0" onClick={() => openRequestDialog(candidate)}>
+                        <Mail className="w-4 h-4 mr-1 sm:mr-2" />
+                        <span className="hidden sm:inline">Demander</span>
+                        <span className="sm:hidden">Dem.</span>
                       </Button>
                     )}
-                    <Button size="sm" variant="outline" onClick={() => openUploadForCandidate(candidate)}>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Ajouter
+                    <Button size="sm" variant="outline" className="shrink-0" onClick={() => openUploadForCandidate(candidate)}>
+                      <Upload className="w-4 h-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Ajouter</span>
+                      <span className="sm:hidden">Ajt.</span>
                     </Button>
                   </div>
                 </div>
