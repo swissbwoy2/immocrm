@@ -10,15 +10,12 @@ interface ToastProps {
  * Wrapper de compatibilité pour migrer de shadcn toast vers sonner.
  * Utilise sonner en interne mais maintient l'API existante.
  */
-function toast({ title, description, variant }: ToastProps) {
+function toast(props: ToastProps) {
+  const { title, description, variant } = props;
   if (variant === 'destructive') {
-    sonnerToast.error(title, {
-      description,
-    });
+    sonnerToast.error(title, { description });
   } else {
-    sonnerToast(title, {
-      description,
-    });
+    sonnerToast.success(title, { description });
   }
 }
 
