@@ -1581,18 +1581,20 @@ export default function ClientDetail() {
               <FileText className="w-5 h-5" />
               Documents du client ({documents.length})
             </CardTitle>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {documents.length >= 2 && (
-                <Button variant="outline" onClick={() => setMergeDialogOpen(true)}>
-                  <FilePlus className="w-4 h-4 mr-2" />
-                  Créer dossier complet
+                <Button variant="outline" onClick={() => setMergeDialogOpen(true)} className="shrink-0">
+                  <FilePlus className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Créer dossier complet</span>
+                  <span className="sm:hidden">Dossier</span>
                 </Button>
               )}
               <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button>
-                    <Upload className="w-4 h-4 mr-2" />
-                    Ajouter un document
+                  <Button className="shrink-0">
+                    <Upload className="w-4 h-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Ajouter un document</span>
+                    <span className="sm:hidden">Ajouter</span>
                   </Button>
                 </DialogTrigger>
               <DialogContent>
