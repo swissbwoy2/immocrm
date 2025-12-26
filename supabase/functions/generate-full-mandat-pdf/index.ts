@@ -545,7 +545,15 @@ const handler = async (req: Request): Promise<Response> => {
     
     // Save PDF
     const pdfBytes = await pdfDoc.save();
-    const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
+    
+    // Convert to base64 in chunks to avoid stack overflow
+    const chunkSize = 8192;
+    let pdfBase64 = '';
+    for (let i = 0; i < pdfBytes.length; i += chunkSize) {
+      const chunk = pdfBytes.slice(i, i + chunkSize);
+      pdfBase64 += String.fromCharCode(...chunk);
+    }
+    pdfBase64 = btoa(pdfBase64);
     
     console.log(`Full mandat PDF generated, size: ${pdfBytes.length} bytes`);
     
