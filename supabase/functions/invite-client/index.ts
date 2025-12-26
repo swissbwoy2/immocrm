@@ -275,6 +275,7 @@ serve(async (req) => {
           demande_mandat_id: demandeMandat.id || null,
           mandat_signature_data: demandeMandat.signature_data || null,
           mandat_date_signature: demandeMandat.cgv_acceptees_at || new Date().toISOString(),
+          // Note: mandat_pdf_url is now set by send-mandat-pdf when generating PDF
         });
 
         // Set residence based on type_permis

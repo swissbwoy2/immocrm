@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Calendar, TrendingUp, AlertCircle, RefreshCw, Search, ArrowUpDown, User, Undo2, History } from "lucide-react";
+import { Calendar, TrendingUp, AlertCircle, RefreshCw, Search, ArrowUpDown, User, Undo2, History, FileText, Download, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from "@/utils/calculations";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ const Mandats = () => {
   const [renewalReason, setRenewalReason] = useState("");
   const [isRenewing, setIsRenewing] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState<string | null>(null);
   
   // Filtres et tri
   const [searchTerm, setSearchTerm] = useState("");
@@ -164,6 +165,64 @@ const Mandats = () => {
       toast.error("Erreur lors de l'annulation du renouvellement");
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  const handleViewMandat = async (client: any) => {
+    setIsDownloadingPdf(client.id);
+    
+    try {
+      // Check if client has stored PDF
+      if (client.mandat_pdf_url) {
+        // Download from storage
+        const { data, error } = await supabase.storage
+          .from('mandat-contracts')
+          .download(client.mandat_pdf_url);
+        
+        if (error) throw error;
+        
+        const url = URL.createObjectURL(data);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `Mandat_${client.profiles?.nom || 'client'}_${client.profiles?.prenom || ''}.pdf`;
+        link.click();
+        URL.revokeObjectURL(url);
+        
+        toast.success("PDF téléchargé avec succès");
+      } else {
+        // Generate PDF on-the-fly using the edge function
+        const { data, error } = await supabase.functions.invoke('generate-full-mandat-pdf', {
+          body: { client_id: client.id }
+        });
+        
+        if (error) throw error;
+        
+        if (data?.pdf_base64) {
+          // Convert base64 to blob
+          const binaryString = atob(data.pdf_base64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: 'application/pdf' });
+          
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = data.filename || `Mandat_${client.profiles?.nom || 'client'}.pdf`;
+          link.click();
+          URL.revokeObjectURL(url);
+          
+          toast.success("PDF généré et téléchargé avec succès");
+        } else {
+          throw new Error('Aucun PDF retourné');
+        }
+      }
+    } catch (error) {
+      console.error('Error downloading/generating PDF:', error);
+      toast.error("Erreur lors du téléchargement du PDF");
+    } finally {
+      setIsDownloadingPdf(null);
     }
   };
 
@@ -460,23 +519,36 @@ const Mandats = () => {
                     </div>
                   </div>
 
-                  {/* Action bouton */}
-                  {daysRemaining <= 30 && (
-                    <div className="pt-3 border-t">
+                  {/* Action boutons */}
+                  <div className="pt-3 border-t flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => handleViewMandat(client)}
+                      variant="outline"
+                      size="sm"
+                      disabled={isDownloadingPdf === client.id}
+                    >
+                      {isDownloadingPdf === client.id ? (
+                        <div className="h-4 w-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <FileText className="h-4 w-4 mr-2" />
+                      )}
+                      Voir le mandat
+                    </Button>
+                    
+                    {daysRemaining <= 30 && (
                       <Button
                         onClick={() => {
                           setSelectedClient(client);
                           setRenewalDialogOpen(true);
                         }}
                         variant="outline"
-                        className="w-full sm:w-auto"
                         size="sm"
                       >
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Renouveler le mandat
                       </Button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </Card>
             );
