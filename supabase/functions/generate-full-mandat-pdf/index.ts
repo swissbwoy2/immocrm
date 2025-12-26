@@ -102,13 +102,16 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { client_id, demande_id } = await req.json();
+    const { client_id, demande_id, core_only } = await req.json();
     
     if (!client_id && !demande_id) {
       throw new Error('client_id ou demande_id requis');
     }
     
-    console.log(`Generating full mandat PDF for client_id: ${client_id}, demande_id: ${demande_id}`);
+    // core_only = true means generate PDF without embedding identity documents (for client-side assembly)
+    const skipIdentityDocs = core_only === true;
+    
+    console.log(`Generating ${skipIdentityDocs ? 'CORE' : 'full'} mandat PDF for client_id: ${client_id}, demande_id: ${demande_id}`);
     
     // Initialize Supabase client
     const supabaseAdmin = createClient(
@@ -763,8 +766,10 @@ const handler = async (req: Request): Promise<Response> => {
     yPosition -= lineHeight;
     addText('Mandant', margin, yPosition, 9, helveticaFont, rgb(0.4, 0.4, 0.4));
     
-    // ===== 8. PIECES D'IDENTITE (if available) =====
-    if (documentsData && documentsData.length > 0) {
+    // ===== 8. PIECES D'IDENTITE (if available and NOT core_only mode) =====
+    // In core_only mode, skip embedding identity documents to save memory
+    // The client-side will assemble these documents separately
+    if (!skipIdentityDocs && documentsData && documentsData.length > 0) {
       page = pdfDoc.addPage([pageWidth, pageHeight]);
       yPosition = pageHeight - margin;
       
@@ -850,10 +855,11 @@ const handler = async (req: Request): Promise<Response> => {
               const pdfBytes = new Uint8Array(await fileData.arrayBuffer());
               const externalPdf = await PDFDocument.load(pdfBytes);
               
-              // MEMORY OPTIMIZATION: Limit to 3 pages max to avoid memory overflow
-              const MAX_PAGES = 3;
+              // ALL PAGES: Copy all pages from identity document (up to 30 max per document)
+              const MAX_PAGES = 30;
               const totalPages = externalPdf.getPageCount();
-              const pageIndicesToCopy = externalPdf.getPageIndices().slice(0, MAX_PAGES);
+              const pagesToCopy = Math.min(totalPages, MAX_PAGES);
+              const pageIndicesToCopy = externalPdf.getPageIndices().slice(0, pagesToCopy);
               const copiedPages = await pdfDoc.copyPages(externalPdf, pageIndicesToCopy);
               
               for (const copiedPage of copiedPages) {
@@ -861,15 +867,12 @@ const handler = async (req: Request): Promise<Response> => {
               }
               
               const truncatedMessage = totalPages > MAX_PAGES 
-                ? ` (${MAX_PAGES}/${totalPages} pages integrees - document tronque pour limiter la taille)`
+                ? ` (${pagesToCopy}/${totalPages} pages integrees - limite atteinte)`
                 : '';
               
               addText(`[Document PDF integre: ${copiedPages.length} page(s)${truncatedMessage}]`, margin, yPosition, 9, helveticaFont, rgb(0.2, 0.5, 0.2));
               yPosition -= lineHeight;
               console.log(`Successfully embedded PDF: ${doc.nom} with ${copiedPages.length}/${totalPages} pages`);
-              
-              // Release memory
-              externalPdf.getPages().forEach(p => p);
             } else {
               console.error(`Failed to download PDF: ${fetchError?.message}`);
               addText(`[PDF non disponible: ${doc.nom}]`, margin, yPosition, 9, helveticaFont, rgb(0.5, 0.5, 0.5));
@@ -886,6 +889,15 @@ const handler = async (req: Request): Promise<Response> => {
         }
         yPosition -= 10;
       }
+    } else if (skipIdentityDocs && documentsData && documentsData.length > 0) {
+      // In core_only mode, just add a placeholder page indicating documents will be added
+      page = pdfDoc.addPage([pageWidth, pageHeight]);
+      yPosition = pageHeight - margin;
+      
+      drawSectionTitle('8. PIECES D\'IDENTITE');
+      addText(`${documentsData.length} document(s) d'identite a integrer`, margin, yPosition, 10);
+      yPosition -= lineHeight;
+      addText('(Documents integres dans le mandat complet)', margin, yPosition, 9, helveticaFont, rgb(0.5, 0.5, 0.5));
     }
     
     // Footer on each page
