@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -77,6 +77,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Boîte de réception', icon: Inbox, path: '/agent/boite-reception', notifKey: null },
         { name: 'Documents', icon: FileText, path: '/agent/documents', notifKey: null },
         { name: 'Remplir PDF', icon: FilePen, path: '/agent/remplir-pdf', notifKey: null },
+        { name: 'Remplir demande IA', icon: Brain, path: '/agent/remplir-demande', notifKey: null },
         { name: 'Contacts', icon: Contact, path: '/agent/contacts', notifKey: null },
         { name: 'Notifications', icon: Bell, path: '/agent/notifications', notifKey: 'total' },
         { name: 'Paramètres', icon: Settings, path: '/agent/parametres', notifKey: null },
