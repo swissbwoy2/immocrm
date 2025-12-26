@@ -63,6 +63,21 @@ export interface ClientDataForAI {
   }>;
 }
 
+export interface OffreDataForAI {
+  id: string;
+  adresse?: string;
+  prix?: number;
+  pieces?: number;
+  surface?: number;
+  etage?: string;
+  type_bien?: string;
+  disponibilite?: string;
+  code_immeuble?: string;
+  concierge_nom?: string;
+  concierge_tel?: string;
+  locataire_actuel?: string;
+}
+
 export function useAIFormFiller() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [progress, setProgress] = useState<{ step: string; percent: number }>({ step: '', percent: 0 });
@@ -158,10 +173,40 @@ export function useAIFormFiller() {
     };
   }, []);
 
+  // Fetch offre data
+  const fetchOffreData = useCallback(async (offreId: string): Promise<OffreDataForAI | null> => {
+    const { data: offreData, error: offreError } = await supabase
+      .from('offres')
+      .select('*')
+      .eq('id', offreId)
+      .single();
+
+    if (offreError || !offreData) {
+      console.error('Error fetching offre:', offreError);
+      return null;
+    }
+
+    return {
+      id: offreData.id,
+      adresse: offreData.adresse,
+      prix: offreData.prix,
+      pieces: offreData.pieces,
+      surface: offreData.surface,
+      etage: offreData.etage,
+      type_bien: offreData.type_bien,
+      disponibilite: offreData.disponibilite,
+      code_immeuble: offreData.code_immeuble,
+      concierge_nom: offreData.concierge_nom,
+      concierge_tel: offreData.concierge_tel,
+      locataire_actuel: offreData.locataire_nom,
+    };
+  }, []);
+
   // Main analyze function
   const analyzeAndFill = useCallback(async (
     pdfFile: File | Uint8Array,
-    clientId: string
+    clientId: string,
+    offreId?: string
   ): Promise<AIFormResult | null> => {
     setIsAnalyzing(true);
     setError(null);
@@ -178,13 +223,13 @@ export function useAIFormFiller() {
         pdfBytes = pdfFile;
       }
 
-      setProgress({ step: 'Extraction du texte...', percent: 25 });
+      setProgress({ step: 'Extraction du texte...', percent: 20 });
 
       // Extract text from PDF
       const pdfText = await extractPdfText(pdfBytes);
       console.log('Extracted PDF text length:', pdfText.length);
 
-      setProgress({ step: 'Récupération des données client...', percent: 40 });
+      setProgress({ step: 'Récupération des données client...', percent: 35 });
 
       // Fetch client data
       const clientData = await fetchClientData(clientId);
@@ -192,11 +237,18 @@ export function useAIFormFiller() {
         throw new Error('Impossible de récupérer les données du client');
       }
 
-      setProgress({ step: 'Analyse IA en cours...', percent: 60 });
+      // Fetch offre data if provided
+      let offreData: OffreDataForAI | null = null;
+      if (offreId) {
+        setProgress({ step: 'Récupération des données de l\'offre...', percent: 50 });
+        offreData = await fetchOffreData(offreId);
+      }
+
+      setProgress({ step: 'Analyse IA en cours...', percent: 65 });
 
       // Call the AI edge function
       const { data, error: funcError } = await supabase.functions.invoke('fill-rental-form-ai', {
-        body: { pdfText, clientData }
+        body: { pdfText, clientData, offreData }
       });
 
       if (funcError) {
@@ -226,7 +278,7 @@ export function useAIFormFiller() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [extractPdfText, fetchClientData]);
+  }, [extractPdfText, fetchClientData, fetchOffreData]);
 
   const reset = useCallback(() => {
     setIsAnalyzing(false);
@@ -243,5 +295,6 @@ export function useAIFormFiller() {
     analyzeAndFill,
     reset,
     fetchClientData,
+    fetchOffreData,
   };
 }
