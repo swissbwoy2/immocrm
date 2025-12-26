@@ -226,19 +226,149 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
   addText(`Vehicule: ${vehiculeInfo}`, margin + 300, yPosition, 10);
   yPosition -= 20;
   
-  // Section 6: Candidats
+  // Section 6: Candidats associés (avec informations complètes)
   if (data.candidats && data.candidats.length > 0) {
     checkNewPage();
     addText(`6. CANDIDATS ASSOCIES (${data.candidats.length})`, margin, yPosition, 12, helveticaBold);
-    yPosition -= 20;
+    yPosition -= 25;
     
-    for (const candidat of data.candidats) {
-      addText(`- ${candidat.prenom} ${candidat.nom} (${candidat.lien_avec_client})`, margin, yPosition, 10);
-      yPosition -= lineHeight;
-      addText(`  Profession: ${candidat.profession} | Revenus: ${formatCurrency(candidat.revenus_mensuels)}`, margin + 10, yPosition, 9, helveticaFont, rgb(0.4, 0.4, 0.4));
+    for (let i = 0; i < data.candidats.length; i++) {
+      const candidat = data.candidats[i];
+      
+      // Check if we need a new page for this candidate (need at least 200px)
+      if (yPosition < margin + 200) {
+        page = pdfDoc.addPage([pageWidth, pageHeight]);
+        yPosition = pageHeight - margin;
+        addText(`6. CANDIDATS ASSOCIES (suite)`, margin, yPosition, 12, helveticaBold);
+        yPosition -= 25;
+      }
+      
+      // Header du candidat avec type et lien
+      const typeLabel = candidat.type === 'garant' ? 'GARANT' : candidat.type === 'colocataire' ? 'COLOCATAIRE' : 'CANDIDAT';
+      addText(`${typeLabel}: ${candidat.prenom || ''} ${candidat.nom || ''}`, margin, yPosition, 11, helveticaBold);
+      if (candidat.lien_avec_client) {
+        addText(`(${candidat.lien_avec_client})`, margin + 250, yPosition, 10, helveticaFont, rgb(0.4, 0.4, 0.4));
+      }
       yPosition -= lineHeight + 5;
+      
+      // Ligne de séparation
+      page.drawLine({
+        start: { x: margin, y: yPosition + 5 },
+        end: { x: pageWidth - margin, y: yPosition + 5 },
+        thickness: 0.5,
+        color: rgb(0.8, 0.8, 0.8),
+      });
+      yPosition -= 10;
+      
+      // Informations personnelles
+      addText('Informations personnelles', margin, yPosition, 9, helveticaBold, rgb(0.3, 0.3, 0.3));
+      yPosition -= lineHeight;
+      
+      const personalRow1Left = `Date naissance: ${candidat.date_naissance ? formatDate(candidat.date_naissance) : '-'}`;
+      const personalRow1Right = `Nationalite: ${candidat.nationalite || '-'}`;
+      addText(personalRow1Left, margin, yPosition, 9);
+      addText(personalRow1Right, margin + 270, yPosition, 9);
+      yPosition -= lineHeight;
+      
+      const personalRow2Left = `Type permis: ${candidat.type_permis || '-'}`;
+      const personalRow2Right = `Situation familiale: ${candidat.situation_familiale || '-'}`;
+      addText(personalRow2Left, margin, yPosition, 9);
+      addText(personalRow2Right, margin + 270, yPosition, 9);
+      yPosition -= lineHeight;
+      
+      if (candidat.email || candidat.telephone) {
+        const contactRow = `Email: ${candidat.email || '-'}   |   Tel: ${candidat.telephone || '-'}`;
+        addText(contactRow, margin, yPosition, 9);
+        yPosition -= lineHeight;
+      }
+      
+      if (candidat.adresse) {
+        addText(`Adresse: ${candidat.adresse}`, margin, yPosition, 9);
+        yPosition -= lineHeight;
+      }
+      yPosition -= 5;
+      
+      // Situation actuelle (si disponible)
+      if (candidat.gerance_actuelle || candidat.loyer_actuel || candidat.depuis_le) {
+        addText('Situation actuelle', margin, yPosition, 9, helveticaBold, rgb(0.3, 0.3, 0.3));
+        yPosition -= lineHeight;
+        
+        const situationRow1Left = `Gerance: ${candidat.gerance_actuelle || '-'}`;
+        const situationRow1Right = `Loyer actuel: ${candidat.loyer_actuel ? formatCurrency(candidat.loyer_actuel) : '-'}`;
+        addText(situationRow1Left, margin, yPosition, 9);
+        addText(situationRow1Right, margin + 270, yPosition, 9);
+        yPosition -= lineHeight;
+        
+        const situationRow2Left = `Depuis le: ${candidat.depuis_le ? formatDate(candidat.depuis_le) : '-'}`;
+        const situationRow2Right = `Pieces: ${candidat.pieces_actuel || '-'}`;
+        addText(situationRow2Left, margin, yPosition, 9);
+        addText(situationRow2Right, margin + 270, yPosition, 9);
+        yPosition -= lineHeight;
+        
+        if (candidat.motif_changement) {
+          addText(`Motif changement: ${candidat.motif_changement}`, margin, yPosition, 9);
+          yPosition -= lineHeight;
+        }
+        yPosition -= 5;
+      }
+      
+      // Situation professionnelle
+      addText('Situation professionnelle', margin, yPosition, 9, helveticaBold, rgb(0.3, 0.3, 0.3));
+      yPosition -= lineHeight;
+      
+      const proRow1Left = `Profession: ${candidat.profession || '-'}`;
+      const proRow1Right = `Employeur: ${candidat.employeur || '-'}`;
+      addText(proRow1Left, margin, yPosition, 9);
+      addText(proRow1Right, margin + 270, yPosition, 9);
+      yPosition -= lineHeight;
+      
+      const proRow2Left = `Secteur: ${candidat.secteur_activite || '-'}`;
+      const proRow2Right = `Type contrat: ${candidat.type_contrat || '-'}`;
+      addText(proRow2Left, margin, yPosition, 9);
+      addText(proRow2Right, margin + 270, yPosition, 9);
+      yPosition -= lineHeight;
+      
+      if (candidat.anciennete_mois || candidat.date_engagement) {
+        const proRow3Left = `Anciennete: ${candidat.anciennete_mois ? candidat.anciennete_mois + ' mois' : '-'}`;
+        const proRow3Right = `Engage le: ${candidat.date_engagement ? formatDate(candidat.date_engagement) : '-'}`;
+        addText(proRow3Left, margin, yPosition, 9);
+        addText(proRow3Right, margin + 270, yPosition, 9);
+        yPosition -= lineHeight;
+      }
+      yPosition -= 5;
+      
+      // Situation financière
+      addText('Situation financiere', margin, yPosition, 9, helveticaBold, rgb(0.3, 0.3, 0.3));
+      yPosition -= lineHeight;
+      
+      const finRow1Left = `Revenus mensuels: ${candidat.revenus_mensuels ? formatCurrency(candidat.revenus_mensuels) : '-'}`;
+      const finRow1Right = `Source: ${candidat.source_revenus || '-'}`;
+      addText(finRow1Left, margin, yPosition, 9);
+      addText(finRow1Right, margin + 270, yPosition, 9);
+      yPosition -= lineHeight;
+      
+      const finRow2Left = `Charges mensuelles: ${candidat.charges_mensuelles ? formatCurrency(candidat.charges_mensuelles) : '-'}`;
+      const finRow2Right = `Apport personnel: ${candidat.apport_personnel ? formatCurrency(candidat.apport_personnel) : '-'}`;
+      addText(finRow2Left, margin, yPosition, 9);
+      addText(finRow2Right, margin + 270, yPosition, 9);
+      yPosition -= lineHeight;
+      
+      // Ligne pour les indicateurs booléens
+      const indicators = [];
+      indicators.push(`Poursuites: ${candidat.poursuites ? 'Oui' : 'Non'}`);
+      indicators.push(`Curatelle: ${candidat.curatelle ? 'Oui' : 'Non'}`);
+      indicators.push(`Autres credits: ${candidat.autres_credits ? 'Oui' : 'Non'}`);
+      addText(indicators.join('   |   '), margin, yPosition, 9);
+      yPosition -= lineHeight;
+      
+      if (candidat.charges_extraordinaires && candidat.montant_charges_extra) {
+        addText(`Charges extraordinaires: ${formatCurrency(candidat.montant_charges_extra)}`, margin, yPosition, 9);
+        yPosition -= lineHeight;
+      }
+      
+      // Espacement entre candidats
+      yPosition -= 20;
     }
-    yPosition -= 10;
   }
   
   // Section 7: Acompte
