@@ -8,10 +8,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Calendar, TrendingUp, AlertCircle, RefreshCw, Search, ArrowUpDown, User, Undo2, History, FileText, Download, Eye } from "lucide-react";
+import { Calendar, TrendingUp, AlertCircle, RefreshCw, Search, ArrowUpDown, User, Undo2, History, FileText, Download, Eye, FileArchive, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from "@/utils/calculations";
 import { toast } from "sonner";
+import { useFullMandatAssembler } from "@/hooks/useFullMandatAssembler";
 
 type SortField = 'days' | 'name' | 'agent' | 'date';
 type SortOrder = 'asc' | 'desc';
@@ -29,6 +30,10 @@ const Mandats = () => {
   const [isRenewing, setIsRenewing] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState<string | null>(null);
+  const [assemblingClientId, setAssemblingClientId] = useState<string | null>(null);
+  
+  // Full mandat assembler hook
+  const { assembleFullMandat, isAssembling, progress: assemblyProgress, error: assemblyError } = useFullMandatAssembler();
   
   // Filtres et tri
   const [searchTerm, setSearchTerm] = useState("");
@@ -557,14 +562,45 @@ const Mandats = () => {
                       onClick={() => handleViewMandat(client)}
                       variant="outline"
                       size="sm"
-                      disabled={isDownloadingPdf === client.id}
+                      disabled={isDownloadingPdf === client.id || (isAssembling && assemblingClientId === client.id)}
                     >
                       {isDownloadingPdf === client.id ? (
                         <div className="h-4 w-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
                       ) : (
                         <FileText className="h-4 w-4 mr-2" />
                       )}
-                      Voir le mandat
+                      Contrat
+                    </Button>
+                    
+                    <Button
+                      onClick={async () => {
+                        setAssemblingClientId(client.id);
+                        const clientName = client.profiles 
+                          ? `${client.profiles.nom}_${client.profiles.prenom}`.replace(/\s+/g, '_')
+                          : 'client';
+                        const result = await assembleFullMandat(client.id, clientName);
+                        if (result.success) {
+                          toast.success(`Mandat complet téléchargé (${result.pagesAdded || 0} pages d'annexes)`);
+                        } else {
+                          toast.error(result.error || "Erreur lors de l'assemblage");
+                        }
+                        setAssemblingClientId(null);
+                      }}
+                      variant="default"
+                      size="sm"
+                      disabled={isAssembling && assemblingClientId === client.id}
+                    >
+                      {isAssembling && assemblingClientId === client.id ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          {assemblyProgress ? `${Math.round(assemblyProgress.percent)}%` : 'Assemblage...'}
+                        </>
+                      ) : (
+                        <>
+                          <FileArchive className="h-4 w-4 mr-2" />
+                          Mandat complet
+                        </>
+                      )}
                     </Button>
                     
                     {daysRemaining <= 30 && (
@@ -581,6 +617,17 @@ const Mandats = () => {
                       </Button>
                     )}
                   </div>
+                  
+                  {/* Progress bar for assembly */}
+                  {isAssembling && assemblingClientId === client.id && assemblyProgress && (
+                    <div className="pt-2 space-y-1">
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{assemblyProgress.step}</span>
+                        <span>{assemblyProgress.current}/{assemblyProgress.total}</span>
+                      </div>
+                      <Progress value={assemblyProgress.percent} className="h-1.5" />
+                    </div>
+                  )}
                 </div>
               </Card>
             );
