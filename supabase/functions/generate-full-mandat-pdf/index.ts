@@ -7,6 +7,29 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Native base64 encoder for Uint8Array - avoids stack overflow
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  const base64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let result = '';
+  const len = bytes.length;
+  let i = 0;
+  
+  while (i < len) {
+    const a = bytes[i++];
+    const b = i < len ? bytes[i++] : 0;
+    const c = i < len ? bytes[i++] : 0;
+    
+    const triplet = (a << 16) | (b << 8) | c;
+    
+    result += base64chars[(triplet >> 18) & 0x3F];
+    result += base64chars[(triplet >> 12) & 0x3F];
+    result += i > len + 1 ? '=' : base64chars[(triplet >> 6) & 0x3F];
+    result += i > len ? '=' : base64chars[triplet & 0x3F];
+  }
+  
+  return result;
+}
+
 // Sanitize text to remove Unicode characters that can't be encoded in WinAnsi
 function sanitizeText(text: string | null | undefined): string {
   if (!text) return '-';
@@ -45,6 +68,32 @@ function formatCurrency(value: number | null | undefined): string {
   if (!value) return '-';
   const formatted = value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'");
   return `${formatted} CHF`;
+}
+
+// Extract storage path from URL (handle both full URLs and paths)
+function extractStoragePath(url: string): string {
+  if (!url) return url;
+  
+  // If it's already just a path, return it
+  if (!url.startsWith('http')) return url;
+  
+  // Extract path from Supabase storage URL
+  const patterns = [
+    /\/storage\/v1\/object\/public\/[^/]+\/(.+)$/,
+    /\/storage\/v1\/object\/sign\/[^/]+\/(.+)\?/,
+    /\/storage\/v1\/object\/authenticated\/[^/]+\/(.+)$/,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  
+  // Try to get just the filename/path after the bucket
+  const parts = url.split('/client-documents/');
+  if (parts.length > 1) return parts[1].split('?')[0];
+  
+  return url;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -225,6 +274,37 @@ const handler = async (req: Request): Promise<Response> => {
       yPosition -= 30;
     };
     
+    // Helper function to draw multi-line text with wrapping
+    const addWrappedText = (text: string, x: number, maxWidth: number, fontSize: number, font = helveticaFont): number => {
+      const safeText = sanitizeText(text);
+      const words = safeText.split(' ');
+      let currentLine = '';
+      let linesDrawn = 0;
+      
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        const textWidth = font.widthOfTextAtSize(testLine, fontSize);
+        
+        if (textWidth > maxWidth && currentLine) {
+          page.drawText(currentLine, { x, y: yPosition, size: fontSize, font, color: rgb(0, 0, 0) });
+          yPosition -= lineHeight;
+          linesDrawn++;
+          currentLine = word;
+          checkNewPage();
+        } else {
+          currentLine = testLine;
+        }
+      }
+      
+      if (currentLine) {
+        page.drawText(currentLine, { x, y: yPosition, size: fontSize, font, color: rgb(0, 0, 0) });
+        yPosition -= lineHeight;
+        linesDrawn++;
+      }
+      
+      return linesDrawn;
+    };
+    
     // ===== HEADER =====
     addText('IMMO-RAMA SA', margin, yPosition, 20, helveticaBold, rgb(0.1, 0.2, 0.4));
     yPosition -= 25;
@@ -388,35 +468,259 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
     
-    // ===== 6. DISPOSITIONS DU MANDAT =====
-    checkNewPage();
+    // ===== 6. DISPOSITIONS OFFICIELLES DU MANDAT =====
+    page = pdfDoc.addPage([pageWidth, pageHeight]);
+    yPosition = pageHeight - margin;
     drawSectionTitle('6. DISPOSITIONS DU MANDAT');
     
-    const acompte = isPurchase ? 2500 : 300;
+    const maxTextWidth = pageWidth - 2 * margin - 20;
     
-    const dispositions = [
-      `- Acompte: ${acompte} CHF pour l'activation des recherches`,
-      '- Commission: 1 mois de loyer brut a la signature du bail',
-      '- Commission minimale: CHF 500.- (hors TVA)',
-      '- Validite du mandat: 3 mois, renouvelable',
-      '- En cas de non-renouvellement, l\'acompte est restitue sous 30 jours',
-      '- Resiliation: par lettre recommandee au moins 30 jours avant echeance',
-    ];
-    
-    for (const disp of dispositions) {
-      addText(disp, margin, yPosition, 9);
+    if (isPurchase) {
+      // ACHAT - 5 articles officiels
+      addText('MANDAT DE RECHERCHE DE BIEN FONCIER', margin, yPosition, 11, helveticaBold);
+      yPosition -= 20;
+      
+      // Article 1
+      addText('1. MANDAT', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       yPosition -= lineHeight;
+      addWrappedText(
+        "Le mandant charge le mandataire de lui presenter le bien ci-apres designe et d'intervenir en tant qu'intermediaire dans le suivi, la negociation et la conclusion dudit mandat.",
+        margin, maxTextWidth, 9
+      );
+      yPosition -= 10;
+      
+      // Article 2
+      checkNewPage();
+      addText('2. DUREE', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      yPosition -= lineHeight;
+      addWrappedText(
+        "Le present contrat est conclu pour une duree de 6 mois a compter de sa date de signature. En l'absence de resiliation, par lettre recommandee, au moins 30 jours avant son echeance, le present contrat est repute renouvele par reconduction tacite, a chaque fois pour 3 mois supplementaires.",
+        margin, maxTextWidth, 9
+      );
+      yPosition -= 10;
+      
+      // Article 3
+      checkNewPage();
+      addText('3. HONORAIRES', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      yPosition -= lineHeight;
+      addWrappedText(
+        "Le mandant s'engage a payer au mandataire, a la conclusion de l'acte de vente chez un notaire, le montant correspondant a 1% du prix de vente defini entre les parties.",
+        margin, maxTextWidth, 9
+      );
+      yPosition -= 5;
+      addWrappedText(
+        "Un acompte de CHF 2'500.- est du pour activer vos recherches, et sera deduit de la commission en cas de reussite ou rembourse totalement en cas d'echec.",
+        margin, maxTextWidth, 9
+      );
+      yPosition -= 5;
+      addWrappedText(
+        "En toute confidentialite le mandataire s'engage egalement a communiquer au mandant toutes les informations necessaires pour au bon deroulement de cette mission.",
+        margin, maxTextWidth, 9
+      );
+      yPosition -= 5;
+      addWrappedText(
+        "Si le mandant se porte acquereur, par ses propres moyens ou par tout autre moyen, d'un bien presente par le mandataire, la commission est integralement due au mandataire.",
+        margin, maxTextWidth, 9
+      );
+      yPosition -= 10;
+      
+      // Article 4
+      checkNewPage();
+      addText('4. MODIFICATION DU CONTRAT', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      yPosition -= lineHeight;
+      addWrappedText(
+        "Le present contrat constitue l'integralite de l'accord passe par le Mandant et le Mandataire. Il ne pourra etre modifie si ce n'est par un accord ecrit subsequent entre les parties.",
+        margin, maxTextWidth, 9
+      );
+      yPosition -= 10;
+      
+      // Article 5
+      checkNewPage();
+      addText('5. ELECTION DE FOR ET DE DROIT', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      yPosition -= lineHeight;
+      addWrappedText(
+        "En cas de litige relatif a l'interpretation ou a l'execution du present contrat, les parties acceptent la competence exclusive des tribunaux genevois, sous reserve d'un recours au Tribunal Federal. Le droit suisse est applicable, sous reserve des dispositions prevues dans le present contrat.",
+        margin, maxTextWidth, 9
+      );
+      yPosition -= 15;
+      
+    } else {
+      // LOCATION - 11 articles officiels
+      addText('DISPOSITIONS DU MANDAT DE RECHERCHE - LOCATION', margin, yPosition, 11, helveticaBold);
+      yPosition -= 20;
+      
+      // Article 1
+      addText('1.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      addWrappedText(
+        "Les chercheurs de logement (chercheurs) chargent Immo-Rama de leur entremettre des offres de logement ou locaux commerciaux pour la location. A ce propos, Immo-Rama transmet aux chercheurs les informations necessaires pour qu'ils puissent prendre contact, ou alors c'est Immo-Rama qui contacte les offreurs. Si le chercheur a d'ailleurs rempli des criteres de recherche, Immo-Rama lui transmet de nouvelles offres qui correspondent aux criteres de recherche.",
+        margin + 20, maxTextWidth - 20, 9
+      );
+      yPosition -= 8;
+      
+      // Article 2
+      checkNewPage();
+      addText('2.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      addWrappedText(
+        "Au cas ou un contrat de bail serait conclu avec un objet ou un offreur propose par Immo-Rama, une commission d'agence est due. Les chercheurs doivent egalement payer une commission lorsqu'un contrat a ete conclu avec l'offreur fourni concernant un autre objet que celui indique par Immo-Rama. La commission depend du prix du loyer brut.",
+        margin + 20, maxTextWidth - 20, 9
+      );
+      yPosition -= 8;
+      
+      // Article 2.1 (highlighted)
+      checkNewPage();
+      page.drawRectangle({
+        x: margin,
+        y: yPosition - 35,
+        width: pageWidth - 2 * margin,
+        height: 45,
+        color: rgb(0.95, 0.95, 1),
+      });
+      addText('2.1', margin + 5, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      yPosition -= lineHeight;
+      addWrappedText(
+        "La commission est de 1 mois de loyer brut (loyer avec les charges) a la signature du contrat de bail. Une caution a hauteur de CHF 300.- doit etre versee pour l'activation de votre dossier. Elle sera comptabilisee en cas de reussite et deductible. Le mandat de recherche est valable 3 mois, passe ce delai, le mandat est renouvelable ou prend fin.",
+        margin + 25, maxTextWidth - 30, 9
+      );
+      yPosition -= 10;
+      
+      // Article 2.2
+      checkNewPage();
+      addText('2.2', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      addWrappedText(
+        "La commission minimale est de CHF 500.-. La commission ne comprend pas la TVA.",
+        margin + 25, maxTextWidth - 25, 9
+      );
+      yPosition -= 8;
+      
+      // Article 2.3
+      checkNewPage();
+      addText('2.3', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      addWrappedText(
+        "En cas de resiliation du mandat avant terme, l'acompte ne sera pas remboursee, ni entierement, ni partiellement.",
+        margin + 25, maxTextWidth - 25, 9
+      );
+      yPosition -= 8;
+      
+      // Article 3
+      checkNewPage();
+      addText('3.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      addWrappedText(
+        "Les chercheurs s'engagent a declarer immediatement a Immo-Rama toute conclusion de contrat par oral ou par ecrit ainsi que des prolongations ou renouvellements de contrat et des modifications apportees a leur mandat de recherche.",
+        margin + 20, maxTextWidth - 20, 9
+      );
+      yPosition -= 8;
+      
+      // Article 4
+      checkNewPage();
+      addText('4.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      addWrappedText(
+        "Lorsque les chercheurs connaissent les adresses proposees par Immo-Rama d'une autre source, ils doivent le faire savoir a Immo-Rama dans un delai de 24 heures.",
+        margin + 20, maxTextWidth - 20, 9
+      );
+      yPosition -= 8;
+      
+      // Article 5
+      checkNewPage();
+      addText('5.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      addWrappedText(
+        "Immo-Rama se reserve le droit de demander des securites, des references ou des preuves de la part des chercheurs ou de refuser des chercheurs potentiels sans donner de raisons.",
+        margin + 20, maxTextWidth - 20, 9
+      );
+      yPosition -= 8;
+      
+      // Article 6
+      checkNewPage();
+      addText('6.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      addWrappedText(
+        "Les informations donnees par Immo-Rama aux chercheurs ne peuvent etre remises a des tierces personnes.",
+        margin + 20, maxTextWidth - 20, 9
+      );
+      yPosition -= 8;
+      
+      // Article 7
+      checkNewPage();
+      addText('7.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      addWrappedText(
+        "Lorsqu'Immo-Rama est informee de la conclusion d'un contrat de location, il annule le mandat de recherche.",
+        margin + 20, maxTextWidth - 20, 9
+      );
+      yPosition -= 8;
+      
+      // Article 8
+      checkNewPage();
+      addText('8.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      addWrappedText(
+        "Si un client sous contrat confirme par ecrit ou verbalement que son dossier de candidature pour un logement peut etre transmis a la gerance en charge, Immo-Rama aura droit a une commission.",
+        margin + 20, maxTextWidth - 20, 9
+      );
+      yPosition -= 8;
+      
+      // Article 9 (highlighted)
+      checkNewPage();
+      page.drawRectangle({
+        x: margin,
+        y: yPosition - 35,
+        width: pageWidth - 2 * margin,
+        height: 45,
+        color: rgb(0.97, 0.97, 0.97),
+      });
+      addText('9. Position de Immo-Rama', margin + 5, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      yPosition -= lineHeight;
+      addWrappedText(
+        "Immo-Rama ne peut assurer aucune garantie de succes quant a la conclusion d'un contrat. Les contrats sont passes directement entre les chercheurs et les offreurs.",
+        margin + 25, maxTextWidth - 30, 9
+      );
+      yPosition -= 10;
+      
+      // Article 10
+      checkNewPage();
+      addText('10.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      addWrappedText(
+        "Les chercheurs autorisent Immo-Rama a transmettre les donnees indiquees ainsi que les resultats des demandes concernant la solvabilite et la reference a des offreurs potentiels.",
+        margin + 25, maxTextWidth - 25, 9
+      );
+      yPosition -= 8;
+      
+      // Article 11
+      checkNewPage();
+      addText('11.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      addWrappedText(
+        "La juridiction competente est Berne (Suisse). Le Code des obligations suisse (CO) fait foi.",
+        margin + 25, maxTextWidth - 25, 9
+      );
+      yPosition -= 15;
     }
-    yPosition -= 10;
     
-    addText('Coordonnees bancaires:', margin, yPosition, 10, helveticaBold);
+    // ===== INFORMATIONS BANCAIRES =====
+    checkNewPage();
+    yPosition -= 10;
+    page.drawRectangle({
+      x: margin - 5,
+      y: yPosition - 85,
+      width: pageWidth - 2 * margin + 10,
+      height: 95,
+      color: rgb(0.95, 0.97, 1),
+    });
+    
+    addText('INFORMATIONS BANCAIRES POUR L\'ACTIVATION DE VOS RECHERCHES', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    yPosition -= 5;
+    addText('Votre dossier sera active des reception du paiement ou de la preuve de paiement.', margin, yPosition, 8, helveticaFont, rgb(0.4, 0.4, 0.4));
+    yPosition -= 18;
+    
+    addText('BANQUE RAIFFEISEN DU GROS DE VAUD', margin, yPosition, 10, helveticaBold);
     yPosition -= lineHeight;
-    addText('Beneficiaire: Immo-Rama, Chemin de l\'Esparcette 5, 1023 Crissier', margin, yPosition, 9);
+    addText('Agence Immo-Rama', margin, yPosition, 9);
     yPosition -= lineHeight;
-    addText('IBAN: CH87 8080 8004 9815 5643 7', margin, yPosition, 9);
-    yPosition -= lineHeight;
-    addText('SWIFT-BIC: RAIFCH22 | BANQUE RAIFFEISEN DU GROS DE VAUD', margin, yPosition, 9);
-    yPosition -= 25;
+    addText('Chemin de l\'Esparcette 5, 1023 Crissier', margin, yPosition, 9);
+    yPosition -= lineHeight + 5;
+    
+    addText('IBAN: CH87 8080 8004 9815 5643 7', margin, yPosition, 10, helveticaBold);
+    addText('SWIFT-BIC: RAIFCH22', margin + 250, yPosition, 10);
+    yPosition -= lineHeight + 5;
+    
+    const acompte = isPurchase ? "2'500 CHF" : "300 CHF";
+    addText(`Acompte pour l'activation de vos recherches: ${acompte}`, margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    yPosition -= 30;
     
     // ===== 7. SIGNATURE ET VALIDATION =====
     checkNewPage();
@@ -469,22 +773,29 @@ const handler = async (req: Request): Promise<Response> => {
       for (const doc of documentsData) {
         if (!doc.url) continue;
         
+        const storagePath = extractStoragePath(doc.url);
+        console.log(`Processing document: ${doc.nom}, path: ${storagePath}, type: ${doc.type}`);
+        
         addText(`Document: ${doc.nom || doc.type_document}`, margin, yPosition, 10);
         yPosition -= lineHeight;
         
-        // Try to embed image if it's an image
-        if (doc.type && (doc.type.includes('image/png') || doc.type.includes('image/jpeg'))) {
+        // Try to embed based on file type
+        const mimeType = doc.type?.toLowerCase() || '';
+        const isImage = mimeType.includes('image/png') || mimeType.includes('image/jpeg') || mimeType.includes('image/jpg');
+        const isPdf = mimeType.includes('application/pdf') || doc.nom?.toLowerCase().endsWith('.pdf');
+        
+        if (isImage) {
           try {
             // Fetch the image from storage
             const { data: fileData, error: fetchError } = await supabaseAdmin.storage
               .from('client-documents')
-              .download(doc.url);
+              .download(storagePath);
             
             if (!fetchError && fileData) {
               const imageBytes = new Uint8Array(await fileData.arrayBuffer());
               let embeddedImage;
               
-              if (doc.type.includes('png')) {
+              if (mimeType.includes('png')) {
                 embeddedImage = await pdfDoc.embedPng(imageBytes);
               } else {
                 embeddedImage = await pdfDoc.embedJpg(imageBytes);
@@ -517,14 +828,48 @@ const handler = async (req: Request): Promise<Response> => {
               });
               
               yPosition -= imgHeight + 20;
+              console.log(`Successfully embedded image: ${doc.nom}`);
+            } else {
+              console.error(`Failed to download image: ${fetchError?.message}`);
+              addText(`[Image non disponible: ${doc.nom}]`, margin, yPosition, 9, helveticaFont, rgb(0.5, 0.5, 0.5));
+              yPosition -= lineHeight;
             }
           } catch (imgError) {
             console.error('Error embedding document image:', imgError);
-            addText(`[Image non disponible: ${doc.nom}]`, margin, yPosition, 9, helveticaFont, rgb(0.5, 0.5, 0.5));
+            addText(`[Erreur image: ${doc.nom}]`, margin, yPosition, 9, helveticaFont, rgb(0.5, 0.5, 0.5));
+            yPosition -= lineHeight;
+          }
+        } else if (isPdf) {
+          try {
+            // Fetch the PDF from storage
+            const { data: fileData, error: fetchError } = await supabaseAdmin.storage
+              .from('client-documents')
+              .download(storagePath);
+            
+            if (!fetchError && fileData) {
+              const pdfBytes = new Uint8Array(await fileData.arrayBuffer());
+              const externalPdf = await PDFDocument.load(pdfBytes);
+              const copiedPages = await pdfDoc.copyPages(externalPdf, externalPdf.getPageIndices());
+              
+              for (const copiedPage of copiedPages) {
+                pdfDoc.addPage(copiedPage);
+              }
+              
+              addText(`[Document PDF integre: ${copiedPages.length} page(s)]`, margin, yPosition, 9, helveticaFont, rgb(0.2, 0.5, 0.2));
+              yPosition -= lineHeight;
+              console.log(`Successfully embedded PDF: ${doc.nom} with ${copiedPages.length} pages`);
+            } else {
+              console.error(`Failed to download PDF: ${fetchError?.message}`);
+              addText(`[PDF non disponible: ${doc.nom}]`, margin, yPosition, 9, helveticaFont, rgb(0.5, 0.5, 0.5));
+              yPosition -= lineHeight;
+            }
+          } catch (pdfError) {
+            console.error('Error embedding document PDF:', pdfError);
+            addText(`[Erreur PDF: ${doc.nom}]`, margin, yPosition, 9, helveticaFont, rgb(0.5, 0.5, 0.5));
             yPosition -= lineHeight;
           }
         } else {
-          addText(`[Document PDF - voir piece jointe: ${doc.nom}]`, margin, yPosition, 9, helveticaFont, rgb(0.5, 0.5, 0.5));
+          addText(`[Format non supporte: ${doc.type || 'inconnu'}]`, margin, yPosition, 9, helveticaFont, rgb(0.5, 0.5, 0.5));
           yPosition -= lineHeight;
         }
         yPosition -= 10;
@@ -546,14 +891,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Save PDF
     const pdfBytes = await pdfDoc.save();
     
-    // Convert to base64 in chunks to avoid stack overflow
-    const chunkSize = 8192;
-    let pdfBase64 = '';
-    for (let i = 0; i < pdfBytes.length; i += chunkSize) {
-      const chunk = pdfBytes.slice(i, i + chunkSize);
-      pdfBase64 += String.fromCharCode(...chunk);
-    }
-    pdfBase64 = btoa(pdfBase64);
+    // Convert to base64 using native encoder (no stack overflow)
+    const pdfBase64 = uint8ArrayToBase64(pdfBytes);
     
     console.log(`Full mandat PDF generated, size: ${pdfBytes.length} bytes`);
     
