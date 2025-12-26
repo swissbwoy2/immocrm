@@ -93,7 +93,9 @@ export function useAIFormFiller() {
 
   // Extract text from PDF
   const extractPdfText = useCallback(async (pdfBytes: Uint8Array): Promise<string> => {
-    const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+    // Important: PDF.js may detach the underlying ArrayBuffer when using workers.
+    // Always pass a copy so we don't mutate the original bytes used later for pdf-lib filling.
+    const loadingTask = pdfjsLib.getDocument({ data: pdfBytes.slice() });
     const pdf = await loadingTask.promise;
     
     let fullText = '';
@@ -327,14 +329,22 @@ export function useAIFormFiller() {
         pdfBytes = pdfFile;
       }
 
+      // Keep a dedicated copy for filling (PDF.js can detach/consume the buffer used for text extraction)
+      const pdfBytesForFilling = pdfBytes.slice();
+
       // Store original PDF bytes for later filling (both ref and state)
-      pdfBytesRef.current = pdfBytes;
-      setOriginalPdfBytes(pdfBytes);
-      console.log('PDF bytes stored, length:', pdfBytes.length, 'header:', String.fromCharCode(...pdfBytes.slice(0, 5)));
+      pdfBytesRef.current = pdfBytesForFilling;
+      setOriginalPdfBytes(pdfBytesForFilling);
+      console.log(
+        'PDF bytes stored (for filling), length:',
+        pdfBytesForFilling.length,
+        'header:',
+        String.fromCharCode(...pdfBytesForFilling.slice(0, 5))
+      );
 
       setProgress({ step: 'Extraction du texte...', percent: 20 });
 
-      // Extract text from PDF
+      // Extract text from PDF (extractPdfText() uses its own copy internally)
       const pdfText = await extractPdfText(pdfBytes);
       console.log('Extracted PDF text length:', pdfText.length);
 
@@ -374,7 +384,7 @@ export function useAIFormFiller() {
         fields: data.fields || [],
         warnings: data.warnings || [],
         suggestions: data.suggestions || [],
-        pdfBytes: pdfBytes,
+        pdfBytes: pdfBytesRef.current || undefined,
       };
 
       setResult(formResult);
@@ -396,25 +406,32 @@ export function useAIFormFiller() {
     filledCount: number; 
     totalFields: number 
   } | null> => {
-    // Use ref for synchronous access (avoids stale closure issues)
-    const bytes = pdfBytesRef.current;
-    
+    // Prefer bytes stored on the result (dedicated copy), fallback to ref.
+    const bytes = result?.pdfBytes ?? pdfBytesRef.current;
+
     if (!bytes || bytes.length === 0) {
-      console.error('No PDF bytes available in ref, length:', bytes?.length);
-      return null;
-    }
-    
-    if (!result) {
-      console.error('No result available');
+      console.error('No PDF bytes available for filling, length:', bytes?.length);
       return null;
     }
 
     // Verify PDF header
     const header = String.fromCharCode(...bytes.slice(0, 5));
-    console.log('generateFilledPdf - PDF header check:', header, 'bytes length:', bytes.length);
-    
+    console.log(
+      'generateFilledPdf - PDF header check:',
+      header,
+      'bytes length:',
+      bytes.length,
+      'source:',
+      result?.pdfBytes ? 'result.pdfBytes' : 'pdfBytesRef'
+    );
+
     if (!header.startsWith('%PDF')) {
       console.error('Invalid PDF header:', header);
+      return null;
+    }
+
+    if (!result) {
+      console.error('No result available');
       return null;
     }
 
