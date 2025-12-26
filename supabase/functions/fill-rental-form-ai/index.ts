@@ -69,6 +69,7 @@ interface FormField {
   value: string;
   confidence: number;
   source?: string;
+  field_name?: string; // Technical PDF field name for direct mapping
 }
 
 serve(async (req) => {
@@ -105,7 +106,7 @@ Ton rôle est d'analyser un formulaire PDF de demande de location et de le pré-
 RÈGLES IMPORTANTES:
 1. Identifie chaque champ du formulaire dans le texte PDF
 2. Mappe les données du candidat ET du logement aux champs correspondants
-3. Pour les champs à cocher (oui/non), indique "☑" pour oui et "☐" pour non
+3. Pour les champs à cocher (oui/non), indique "Oui" ou "Non" en texte
 4. Si une donnée n'est pas disponible, laisse le champ vide ou indique "N/A"
 5. Adapte le format des dates au format suisse (JJ.MM.AAAA)
 6. Les revenus et loyers doivent être en CHF
@@ -113,19 +114,21 @@ RÈGLES IMPORTANTES:
 8. Pour les informations sur le logement demandé (adresse, loyer, pièces, surface, étage), utilise les données de l'offre
 9. Pour les informations sur la régie/gérance du nouveau logement, utilise les données de l'offre
 10. Pour le locataire actuel et le concierge, utilise les données de l'offre si disponibles
+11. IMPORTANT: Pour chaque champ, essaie de deviner le nom technique probable du champ PDF (field_name) basé sur le label. Utilise des formats comme: nom, prenom, date_naissance, adresse, profession, employeur, revenus, loyer, etc.
 
 DONNÉES DISPONIBLES:
 ${dataSummary}
 
 Retourne un JSON structuré avec tous les champs identifiés et leurs valeurs à insérer.
-Le format doit être:
+Le format DOIT être:
 {
   "fields": [
     {
-      "label": "Nom exact du champ dans le formulaire",
+      "label": "Nom exact du champ dans le formulaire (ex: Nom de famille)",
       "value": "Valeur à insérer",
       "confidence": 0.9,
-      "source": "profile.nom ou offre.adresse etc"
+      "source": "profile.nom ou offre.adresse etc",
+      "field_name": "nom_technique_probable_du_champ_pdf (ex: nom, prenom, date_naissance)"
     }
   ],
   "warnings": ["Liste des champs non remplis ou informations manquantes"],

@@ -16,10 +16,12 @@ import {
   Copy,
   Loader2,
   Search,
-  Home
+  Home,
+  Download
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAIFormFiller, FormField, AIFormResult, OffreDataForAI } from '@/hooks/useAIFormFiller';
+import { useFileDownload } from '@/hooks/useFileDownload';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -59,9 +61,11 @@ export default function SmartRentalFormFiller() {
   const [offreSearchQuery, setOffreSearchQuery] = useState('');
   const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [isLoadingOffres, setIsLoadingOffres] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { isAnalyzing, progress, error, result, analyzeAndFill, reset } = useAIFormFiller();
+  const { isAnalyzing, progress, error, result, analyzeAndFill, generateFilledPdf, reset } = useAIFormFiller();
+  const { downloadBytes } = useFileDownload();
 
   // Load clients
   useEffect(() => {
@@ -180,6 +184,50 @@ export default function SmartRentalFormFiller() {
       .join('\n');
     navigator.clipboard.writeText(text);
     toast.success('Tous les champs copiés!');
+  };
+
+  const handleDownloadFilledPdf = async () => {
+    if (!result || !pdfFile) return;
+    
+    setIsGeneratingPdf(true);
+    try {
+      const fillResult = await generateFilledPdf();
+      
+      if (!fillResult) {
+        toast.error('Erreur lors de la génération du PDF');
+        return;
+      }
+
+      const { filledPdfBytes, filledCount, totalFields } = fillResult;
+
+      // Generate filename
+      const clientName = selectedClientProfile 
+        ? `${selectedClientProfile.prenom}_${selectedClientProfile.nom}`.replace(/\s+/g, '_')
+        : 'client';
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `demande_location_${clientName}_${date}.pdf`;
+
+      // Download the PDF
+      const downloadResult = await downloadBytes(filledPdfBytes, {
+        filename,
+        mimeType: 'application/pdf'
+      });
+
+      if (downloadResult.success) {
+        if (totalFields > 0 && filledCount > 0) {
+          toast.success(`PDF téléchargé! ${filledCount}/${totalFields} champs du formulaire remplis automatiquement.`);
+        } else {
+          toast.success('PDF téléchargé! Les données ont été préparées pour copier-coller.');
+        }
+      } else {
+        toast.error(downloadResult.error || 'Erreur lors du téléchargement');
+      }
+    } catch (err) {
+      console.error('Error downloading filled PDF:', err);
+      toast.error('Erreur lors de la génération du PDF');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const filteredClients = clients.filter(client => {
@@ -488,14 +536,43 @@ export default function SmartRentalFormFiller() {
                   4. Résultats du remplissage
                 </CardTitle>
                 {result && (
-                  <Button variant="outline" size="sm" onClick={copyAllFields}>
-                    <Copy className="h-4 w-4 mr-1" />
-                    Copier tout
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={copyAllFields}>
+                      <Copy className="h-4 w-4 mr-1" />
+                      Copier tout
+                    </Button>
+                  </div>
                 )}
               </div>
             </CardHeader>
             <CardContent>
+              {/* Download Button - shown when results are available */}
+              {result && (
+                <div className="mb-4">
+                  <Button
+                    onClick={handleDownloadFilledPdf}
+                    disabled={isGeneratingPdf}
+                    className="w-full h-12 text-lg bg-green-600 hover:bg-green-700"
+                    size="lg"
+                  >
+                    {isGeneratingPdf ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Génération du PDF...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-5 w-5 mr-2" />
+                        Télécharger le PDF rempli
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    {result.fields.length} champs identifiés seront insérés dans le PDF
+                  </p>
+                </div>
+              )}
+              
               {!result ? (
                 <div className="flex flex-col items-center justify-center h-[500px] text-muted-foreground">
                   <Brain className="h-12 w-12 mb-4 opacity-20" />

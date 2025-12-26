@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { PDFDocument } from 'pdf-lib';
 
 // Set worker path
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -11,12 +12,14 @@ export interface FormField {
   value: string;
   confidence: number;
   source?: string;
+  field_name?: string; // Technical PDF field name for direct mapping
 }
 
 export interface AIFormResult {
   fields: FormField[];
   warnings: string[];
   suggestions: string[];
+  pdfBytes?: Uint8Array; // Store original PDF bytes for filling
 }
 
 export interface ClientDataForAI {
@@ -83,6 +86,7 @@ export function useAIFormFiller() {
   const [progress, setProgress] = useState<{ step: string; percent: number }>({ step: '', percent: 0 });
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AIFormResult | null>(null);
+  const [originalPdfBytes, setOriginalPdfBytes] = useState<Uint8Array | null>(null);
 
   // Extract text from PDF
   const extractPdfText = useCallback(async (pdfBytes: Uint8Array): Promise<string> => {
@@ -100,6 +104,103 @@ export function useAIFormFiller() {
     }
     
     return fullText;
+  }, []);
+
+  // Fill PDF form with values from AI analysis
+  const fillPdfForm = useCallback(async (
+    pdfBytes: Uint8Array,
+    fields: FormField[]
+  ): Promise<{ filledPdfBytes: Uint8Array; filledCount: number; totalFields: number }> => {
+    const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+    const form = pdfDoc.getForm();
+    const pdfFields = form.getFields();
+    
+    let filledCount = 0;
+    const totalFields = pdfFields.length;
+
+    console.log(`PDF has ${totalFields} form fields`);
+
+    // Create a map of PDF field names (lowercase) for matching
+    const pdfFieldMap = new Map<string, any>();
+    pdfFields.forEach(field => {
+      const name = field.getName().toLowerCase().trim();
+      pdfFieldMap.set(name, field);
+      console.log(`PDF field: "${field.getName()}" (type: ${field.constructor.name})`);
+    });
+
+    // Try to fill each field from AI analysis
+    for (const aiField of fields) {
+      if (!aiField.value || aiField.value === 'N/A' || aiField.value === '—') continue;
+
+      // Try different matching strategies
+      let matched = false;
+      const searchTerms = [
+        aiField.field_name?.toLowerCase().trim(),
+        aiField.label?.toLowerCase().trim(),
+        // Generate variations
+        aiField.label?.toLowerCase().replace(/[^a-z0-9]/g, ''),
+        aiField.label?.toLowerCase().replace(/\s+/g, '_'),
+      ].filter(Boolean);
+
+      for (const [pdfFieldName, pdfField] of pdfFieldMap.entries()) {
+        for (const searchTerm of searchTerms) {
+          if (!searchTerm) continue;
+          
+          // Check for exact or partial match
+          if (pdfFieldName === searchTerm || 
+              pdfFieldName.includes(searchTerm) || 
+              searchTerm.includes(pdfFieldName)) {
+            try {
+              const fieldType = pdfField.constructor.name;
+              
+              if (fieldType === 'PDFTextField') {
+                pdfField.setText(aiField.value);
+                filledCount++;
+                matched = true;
+                console.log(`Filled text field "${pdfField.getName()}" with "${aiField.value}"`);
+              } else if (fieldType === 'PDFCheckBox') {
+                const isChecked = aiField.value.toLowerCase() === 'oui' || 
+                                  aiField.value === '☑' ||
+                                  aiField.value.toLowerCase() === 'true';
+                if (isChecked) {
+                  pdfField.check();
+                } else {
+                  pdfField.uncheck();
+                }
+                filledCount++;
+                matched = true;
+                console.log(`Set checkbox "${pdfField.getName()}" to ${isChecked}`);
+              } else if (fieldType === 'PDFDropdown') {
+                try {
+                  pdfField.select(aiField.value);
+                  filledCount++;
+                  matched = true;
+                  console.log(`Selected dropdown "${pdfField.getName()}" value "${aiField.value}"`);
+                } catch {
+                  // Value might not be in options
+                  console.log(`Could not select "${aiField.value}" in dropdown "${pdfField.getName()}"`);
+                }
+              }
+              
+              if (matched) break;
+            } catch (err) {
+              console.warn(`Error filling field ${pdfField.getName()}:`, err);
+            }
+          }
+        }
+        if (matched) break;
+      }
+    }
+
+    // Flatten the form to make it non-editable (optional, comment out if you want editable)
+    // form.flatten();
+
+    const filledPdfBytes = await pdfDoc.save();
+    return { 
+      filledPdfBytes: new Uint8Array(filledPdfBytes), 
+      filledCount, 
+      totalFields 
+    };
   }, []);
 
   // Fetch client data with candidates
@@ -223,6 +324,9 @@ export function useAIFormFiller() {
         pdfBytes = pdfFile;
       }
 
+      // Store original PDF bytes for later filling
+      setOriginalPdfBytes(pdfBytes);
+
       setProgress({ step: 'Extraction du texte...', percent: 20 });
 
       // Extract text from PDF
@@ -265,6 +369,7 @@ export function useAIFormFiller() {
         fields: data.fields || [],
         warnings: data.warnings || [],
         suggestions: data.suggestions || [],
+        pdfBytes: pdfBytes,
       };
 
       setResult(formResult);
@@ -280,11 +385,32 @@ export function useAIFormFiller() {
     }
   }, [extractPdfText, fetchClientData, fetchOffreData]);
 
+  // Generate filled PDF and return bytes
+  const generateFilledPdf = useCallback(async (): Promise<{ 
+    filledPdfBytes: Uint8Array; 
+    filledCount: number; 
+    totalFields: number 
+  } | null> => {
+    if (!originalPdfBytes || !result) {
+      console.error('No PDF or result available');
+      return null;
+    }
+
+    try {
+      const fillResult = await fillPdfForm(originalPdfBytes, result.fields);
+      return fillResult;
+    } catch (err) {
+      console.error('Error generating filled PDF:', err);
+      return null;
+    }
+  }, [originalPdfBytes, result, fillPdfForm]);
+
   const reset = useCallback(() => {
     setIsAnalyzing(false);
     setProgress({ step: '', percent: 0 });
     setError(null);
     setResult(null);
+    setOriginalPdfBytes(null);
   }, []);
 
   return {
@@ -292,7 +418,10 @@ export function useAIFormFiller() {
     progress,
     error,
     result,
+    originalPdfBytes,
     analyzeAndFill,
+    generateFilledPdf,
+    fillPdfForm,
     reset,
     fetchClientData,
     fetchOffreData,
