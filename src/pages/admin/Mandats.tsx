@@ -171,56 +171,88 @@ const Mandats = () => {
   const handleViewMandat = async (client: any) => {
     setIsDownloadingPdf(client.id);
     
+    const downloadFromBase64 = (base64: string, filename: string) => {
+      const binaryString = atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    };
+    
+    const extractStoragePath = (url: string): string => {
+      if (!url) return url;
+      if (!url.startsWith('http')) return url;
+      
+      const patterns = [
+        /\/storage\/v1\/object\/public\/[^/]+\/(.+)$/,
+        /\/storage\/v1\/object\/sign\/[^/]+\/(.+)\?/,
+        /\/storage\/v1\/object\/authenticated\/[^/]+\/(.+)$/,
+      ];
+      
+      for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) return match[1];
+      }
+      
+      const parts = url.split('/mandat-contracts/');
+      if (parts.length > 1) return parts[1].split('?')[0];
+      
+      return url;
+    };
+    
     try {
-      // Check if client has stored PDF
+      // Priority 1: Try to download directly from storage if URL exists
       if (client.mandat_pdf_url) {
-        // Download from storage
+        const storagePath = extractStoragePath(client.mandat_pdf_url);
+        console.log('Attempting direct download from storage:', storagePath);
+        
         const { data, error } = await supabase.storage
           .from('mandat-contracts')
-          .download(client.mandat_pdf_url);
+          .download(storagePath);
         
-        if (error) throw error;
-        
-        const url = URL.createObjectURL(data);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `Mandat_${client.profiles?.nom || 'client'}_${client.profiles?.prenom || ''}.pdf`;
-        link.click();
-        URL.revokeObjectURL(url);
-        
-        toast.success("PDF téléchargé avec succès");
-      } else {
-        // Generate PDF on-the-fly using the edge function
-        const { data, error } = await supabase.functions.invoke('generate-full-mandat-pdf', {
-          body: { client_id: client.id }
-        });
-        
-        if (error) throw error;
-        
-        if (data?.pdf_base64) {
-          // Convert base64 to blob
-          const binaryString = atob(data.pdf_base64);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          const blob = new Blob([bytes], { type: 'application/pdf' });
-          
-          const url = URL.createObjectURL(blob);
+        if (!error && data) {
+          const url = URL.createObjectURL(data);
           const link = document.createElement('a');
           link.href = url;
-          link.download = data.filename || `Mandat_${client.profiles?.nom || 'client'}.pdf`;
+          link.download = `Mandat_${client.profiles?.nom || 'client'}_${client.profiles?.prenom || ''}.pdf`;
           link.click();
           URL.revokeObjectURL(url);
           
-          toast.success("PDF généré et téléchargé avec succès");
-        } else {
-          throw new Error('Aucun PDF retourné');
+          toast.success("PDF téléchargé avec succès");
+          setIsDownloadingPdf(null);
+          return;
         }
+        
+        console.warn('Direct download failed, falling back to generation:', error?.message);
+      }
+      
+      // Priority 2: Generate PDF on-the-fly (with page limit for memory optimization)
+      console.log('Generating PDF on-the-fly for client:', client.id);
+      const { data, error } = await supabase.functions.invoke('generate-full-mandat-pdf', {
+        body: { client_id: client.id }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.pdf_base64) {
+        downloadFromBase64(
+          data.pdf_base64, 
+          data.filename || `Mandat_${client.profiles?.nom || 'client'}.pdf`
+        );
+        toast.success("PDF généré et téléchargé avec succès");
+      } else {
+        throw new Error('Aucun PDF retourné');
       }
     } catch (error) {
       console.error('Error downloading/generating PDF:', error);
-      toast.error("Erreur lors du téléchargement du PDF");
+      toast.error("Erreur lors du téléchargement du PDF. Veuillez réessayer.");
     } finally {
       setIsDownloadingPdf(null);
     }

@@ -849,15 +849,27 @@ const handler = async (req: Request): Promise<Response> => {
             if (!fetchError && fileData) {
               const pdfBytes = new Uint8Array(await fileData.arrayBuffer());
               const externalPdf = await PDFDocument.load(pdfBytes);
-              const copiedPages = await pdfDoc.copyPages(externalPdf, externalPdf.getPageIndices());
+              
+              // MEMORY OPTIMIZATION: Limit to 3 pages max to avoid memory overflow
+              const MAX_PAGES = 3;
+              const totalPages = externalPdf.getPageCount();
+              const pageIndicesToCopy = externalPdf.getPageIndices().slice(0, MAX_PAGES);
+              const copiedPages = await pdfDoc.copyPages(externalPdf, pageIndicesToCopy);
               
               for (const copiedPage of copiedPages) {
                 pdfDoc.addPage(copiedPage);
               }
               
-              addText(`[Document PDF integre: ${copiedPages.length} page(s)]`, margin, yPosition, 9, helveticaFont, rgb(0.2, 0.5, 0.2));
+              const truncatedMessage = totalPages > MAX_PAGES 
+                ? ` (${MAX_PAGES}/${totalPages} pages integrees - document tronque pour limiter la taille)`
+                : '';
+              
+              addText(`[Document PDF integre: ${copiedPages.length} page(s)${truncatedMessage}]`, margin, yPosition, 9, helveticaFont, rgb(0.2, 0.5, 0.2));
               yPosition -= lineHeight;
-              console.log(`Successfully embedded PDF: ${doc.nom} with ${copiedPages.length} pages`);
+              console.log(`Successfully embedded PDF: ${doc.nom} with ${copiedPages.length}/${totalPages} pages`);
+              
+              // Release memory
+              externalPdf.getPages().forEach(p => p);
             } else {
               console.error(`Failed to download PDF: ${fetchError?.message}`);
               addText(`[PDF non disponible: ${doc.nom}]`, margin, yPosition, 9, helveticaFont, rgb(0.5, 0.5, 0.5));
