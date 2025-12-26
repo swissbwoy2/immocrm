@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -87,6 +87,9 @@ export function useAIFormFiller() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AIFormResult | null>(null);
   const [originalPdfBytes, setOriginalPdfBytes] = useState<Uint8Array | null>(null);
+  
+  // Use ref for synchronous access to PDF bytes (avoids stale state in callbacks)
+  const pdfBytesRef = useRef<Uint8Array | null>(null);
 
   // Extract text from PDF
   const extractPdfText = useCallback(async (pdfBytes: Uint8Array): Promise<string> => {
@@ -324,8 +327,10 @@ export function useAIFormFiller() {
         pdfBytes = pdfFile;
       }
 
-      // Store original PDF bytes for later filling
+      // Store original PDF bytes for later filling (both ref and state)
+      pdfBytesRef.current = pdfBytes;
       setOriginalPdfBytes(pdfBytes);
+      console.log('PDF bytes stored, length:', pdfBytes.length, 'header:', String.fromCharCode(...pdfBytes.slice(0, 5)));
 
       setProgress({ step: 'Extraction du texte...', percent: 20 });
 
@@ -391,19 +396,36 @@ export function useAIFormFiller() {
     filledCount: number; 
     totalFields: number 
   } | null> => {
-    if (!originalPdfBytes || !result) {
-      console.error('No PDF or result available');
+    // Use ref for synchronous access (avoids stale closure issues)
+    const bytes = pdfBytesRef.current;
+    
+    if (!bytes || bytes.length === 0) {
+      console.error('No PDF bytes available in ref, length:', bytes?.length);
+      return null;
+    }
+    
+    if (!result) {
+      console.error('No result available');
+      return null;
+    }
+
+    // Verify PDF header
+    const header = String.fromCharCode(...bytes.slice(0, 5));
+    console.log('generateFilledPdf - PDF header check:', header, 'bytes length:', bytes.length);
+    
+    if (!header.startsWith('%PDF')) {
+      console.error('Invalid PDF header:', header);
       return null;
     }
 
     try {
-      const fillResult = await fillPdfForm(originalPdfBytes, result.fields);
+      const fillResult = await fillPdfForm(bytes, result.fields);
       return fillResult;
     } catch (err) {
       console.error('Error generating filled PDF:', err);
       return null;
     }
-  }, [originalPdfBytes, result, fillPdfForm]);
+  }, [result, fillPdfForm]);
 
   const reset = useCallback(() => {
     setIsAnalyzing(false);
@@ -411,6 +433,7 @@ export function useAIFormFiller() {
     setError(null);
     setResult(null);
     setOriginalPdfBytes(null);
+    pdfBytesRef.current = null;
   }, []);
 
   return {
