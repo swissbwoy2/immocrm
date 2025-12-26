@@ -58,13 +58,38 @@ interface CandidateData {
   nom: string;
   type: string;
   lien_avec_client?: string;
+  // Informations personnelles
+  email?: string;
+  telephone?: string;
+  adresse?: string;
   date_naissance?: string;
   nationalite?: string;
   type_permis?: string;
+  situation_familiale?: string;
+  // Situation actuelle
+  gerance_actuelle?: string;
+  contact_gerance?: string;
+  loyer_actuel?: number;
+  pieces_actuel?: number;
+  depuis_le?: string;
+  motif_changement?: string;
+  // Situation professionnelle
   profession?: string;
   employeur?: string;
-  revenus_mensuels?: number;
+  secteur_activite?: string;
   type_contrat?: string;
+  source_revenus?: string;
+  anciennete_mois?: number;
+  date_engagement?: string;
+  // Situation financière
+  revenus_mensuels?: number;
+  charges_mensuelles?: number;
+  charges_extraordinaires?: boolean;
+  montant_charges_extra?: number;
+  apport_personnel?: number;
+  autres_credits?: boolean;
+  poursuites?: boolean;
+  curatelle?: boolean;
 }
 
 interface CandidatureData {
@@ -453,37 +478,158 @@ export async function generateClientPDF(input: PDFGeneratorInput): Promise<Uint8
     drawField('Souhaits particuliers', client.souhaits_particuliers);
   }
   
-  // Section 6: Candidats associés
+  // Section 6: Candidats associés (avec détails complets)
   if (candidates.length > 0) {
     drawSectionTitle(`Candidats associés (${candidates.length})`);
-    for (const candidate of candidates) {
-      checkNewPage(60);
-      page.drawText(sanitizeText(`- ${candidate.prenom} ${candidate.nom} - ${candidate.type}`), {
+    
+    for (let idx = 0; idx < candidates.length; idx++) {
+      const candidate = candidates[idx];
+      
+      // En-tête du candidat avec fond coloré
+      checkNewPage(200); // Réserver de l'espace pour les infos du candidat
+      
+      // Titre du candidat
+      page.drawRectangle({
         x: MARGIN,
+        y: y - 5,
+        width: PAGE_WIDTH - 2 * MARGIN,
+        height: 18,
+        color: rgb(0.95, 0.95, 0.98),
+      });
+      page.drawText(sanitizeText(`${idx + 1}. ${candidate.prenom} ${candidate.nom} - ${candidate.type.toUpperCase()}`), {
+        x: MARGIN + 5,
         y: y,
         size: 10,
         font: helveticaBold,
-        color: COLORS.text,
+        color: COLORS.primary,
       });
-      y -= LINE_HEIGHT;
-      
-      const candidateInfo = [
-        candidate.lien_avec_client ? `Lien: ${candidate.lien_avec_client}` : null,
-        candidate.profession ? `Profession: ${candidate.profession}` : null,
-        candidate.revenus_mensuels ? `Revenus: CHF ${candidate.revenus_mensuels.toLocaleString('fr-CH')}` : null,
-      ].filter(Boolean).join(' | ');
-      
-      if (candidateInfo) {
-        page.drawText(sanitizeText(candidateInfo), {
-          x: MARGIN + 10,
+      if (candidate.lien_avec_client) {
+        page.drawText(sanitizeText(`(${candidate.lien_avec_client})`), {
+          x: MARGIN + 250,
           y: y,
           size: 9,
           font: helvetica,
           color: COLORS.secondary,
         });
-        y -= LINE_HEIGHT;
       }
+      y -= 25;
+      
+      // Sous-section: Informations personnelles
+      page.drawText(sanitizeText('Informations personnelles'), {
+        x: MARGIN,
+        y: y,
+        size: 9,
+        font: helveticaBold,
+        color: COLORS.primary,
+      });
+      y -= LINE_HEIGHT + 2;
+      
+      drawTwoColumns([
+        { label: 'Email', value: candidate.email },
+        { label: 'Téléphone', value: candidate.telephone },
+        { label: 'Date naissance', value: candidate.date_naissance ? new Date(candidate.date_naissance).toLocaleDateString('fr-CH') : null },
+        { label: 'Nationalité', value: candidate.nationalite },
+        { label: 'Type de permis', value: candidate.type_permis },
+        { label: 'Situation fam.', value: candidate.situation_familiale },
+      ]);
+      if (candidate.adresse) {
+        drawField('Adresse', candidate.adresse);
+      }
+      
       y -= 5;
+      
+      // Sous-section: Situation actuelle
+      if (candidate.gerance_actuelle || candidate.loyer_actuel || candidate.depuis_le) {
+        checkNewPage(60);
+        page.drawText(sanitizeText('Situation actuelle'), {
+          x: MARGIN,
+          y: y,
+          size: 9,
+          font: helveticaBold,
+          color: COLORS.primary,
+        });
+        y -= LINE_HEIGHT + 2;
+        
+        drawTwoColumns([
+          { label: 'Gérance actuelle', value: candidate.gerance_actuelle },
+          { label: 'Contact gérance', value: candidate.contact_gerance },
+          { label: 'Loyer actuel', value: candidate.loyer_actuel ? `CHF ${candidate.loyer_actuel.toLocaleString('fr-CH')}` : null },
+          { label: 'Pièces actuelles', value: candidate.pieces_actuel },
+          { label: 'Depuis le', value: candidate.depuis_le ? new Date(candidate.depuis_le).toLocaleDateString('fr-CH') : null },
+        ]);
+        if (candidate.motif_changement) {
+          drawField('Motif changement', candidate.motif_changement);
+        }
+        y -= 5;
+      }
+      
+      // Sous-section: Situation professionnelle
+      checkNewPage(60);
+      page.drawText(sanitizeText('Situation professionnelle'), {
+        x: MARGIN,
+        y: y,
+        size: 9,
+        font: helveticaBold,
+        color: COLORS.primary,
+      });
+      y -= LINE_HEIGHT + 2;
+      
+      const ancienneteCand = candidate.anciennete_mois 
+        ? `${Math.floor(candidate.anciennete_mois / 12)} ans ${candidate.anciennete_mois % 12} mois`
+        : null;
+      
+      drawTwoColumns([
+        { label: 'Profession', value: candidate.profession },
+        { label: 'Employeur', value: candidate.employeur },
+        { label: 'Secteur activité', value: candidate.secteur_activite },
+        { label: 'Type de contrat', value: candidate.type_contrat },
+        { label: 'Source revenus', value: candidate.source_revenus },
+        { label: 'Ancienneté', value: ancienneteCand },
+        { label: 'Date engagement', value: candidate.date_engagement ? new Date(candidate.date_engagement).toLocaleDateString('fr-CH') : null },
+      ]);
+      
+      y -= 5;
+      
+      // Sous-section: Situation financière
+      checkNewPage(60);
+      page.drawText(sanitizeText('Situation financière'), {
+        x: MARGIN,
+        y: y,
+        size: 9,
+        font: helveticaBold,
+        color: COLORS.primary,
+      });
+      y -= LINE_HEIGHT + 2;
+      
+      drawTwoColumns([
+        { label: 'Revenus mensuels', value: candidate.revenus_mensuels ? `CHF ${candidate.revenus_mensuels.toLocaleString('fr-CH')}` : null },
+        { label: 'Charges mensuelles', value: candidate.charges_mensuelles ? `CHF ${candidate.charges_mensuelles.toLocaleString('fr-CH')}` : null },
+        { label: 'Apport personnel', value: candidate.apport_personnel ? `CHF ${candidate.apport_personnel.toLocaleString('fr-CH')}` : null },
+      ]);
+      
+      drawTwoColumns([
+        { label: 'Poursuites', value: candidate.poursuites, isBoolean: true },
+        { label: 'Curatelle', value: candidate.curatelle, isBoolean: true },
+        { label: 'Autres crédits', value: candidate.autres_credits, isBoolean: true },
+        { label: 'Charges extra.', value: candidate.charges_extraordinaires, isBoolean: true },
+      ]);
+      
+      if (candidate.charges_extraordinaires && candidate.montant_charges_extra) {
+        drawField('Montant charges extra.', `CHF ${candidate.montant_charges_extra.toLocaleString('fr-CH')}`);
+      }
+      
+      // Séparateur entre candidats
+      if (idx < candidates.length - 1) {
+        y -= 10;
+        checkNewPage(20);
+        page.drawLine({
+          start: { x: MARGIN + 50, y: y },
+          end: { x: PAGE_WIDTH - MARGIN - 50, y: y },
+          thickness: 0.5,
+          color: COLORS.lightGray,
+        });
+        y -= 15;
+      }
     }
   }
   
