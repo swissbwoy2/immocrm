@@ -216,16 +216,113 @@ serve(async (req) => {
     page = addPage();
     y = pageHeight - margin - 20;
 
-    // Section 5: Associated Candidates
+    // Section 5: Associated Candidates (avec informations complètes)
     if (contractData.candidats && contractData.candidats.length > 0) {
       y = drawSectionTitle(page, '5. Candidats associés', y);
       
-      for (const candidat of contractData.candidats) {
-        drawText(page, `• ${candidat.prenom} ${candidat.nom}`, col1, y, { size: 10 });
-        drawText(page, `(${candidat.lienAvecClient || candidat.type || 'Candidat'})`, col1 + 150, y, { size: 9, color: grayColor });
+      for (let i = 0; i < contractData.candidats.length; i++) {
+        const candidat = contractData.candidats[i];
+        
+        // Check if we need a new page for this candidate (need at least 200px)
+        if (y < margin + 200) {
+          page = addPage();
+          y = pageHeight - margin - 20;
+          y = drawSectionTitle(page, '5. Candidats associés (suite)', y);
+        }
+        
+        // Header du candidat avec type et lien
+        const typeLabel = candidat.type === 'garant' ? 'GARANT' : candidat.type === 'colocataire' ? 'COLOCATAIRE' : 'CANDIDAT';
+        drawText(page, `${typeLabel}: ${candidat.prenom || ''} ${candidat.nom || ''}`, col1, y, { size: 11, bold: true });
+        if (candidat.lienAvecClient || candidat.lien_avec_client) {
+          drawText(page, `(${candidat.lienAvecClient || candidat.lien_avec_client})`, col1 + 200, y, { size: 10, color: grayColor });
+        }
+        y -= lineHeight + 5;
+        
+        // Ligne de séparation
+        page.drawLine({
+          start: { x: margin, y: y + 5 },
+          end: { x: pageWidth - margin, y: y + 5 },
+          thickness: 0.5,
+          color: grayColor,
+        });
+        y -= 8;
+        
+        // Informations personnelles
+        drawText(page, 'Informations personnelles', col1, y, { size: 9, bold: true, color: primaryColor });
         y -= lineHeight;
+        
+        y = drawField(page, 'Date de naissance', candidat.date_naissance || '-', col1, y);
+        drawField(page, 'Nationalité', candidat.nationalite || '-', col2, y + 30);
+        
+        y = drawField(page, 'Type de permis', candidat.type_permis || '-', col1, y);
+        drawField(page, 'Situation familiale', candidat.situation_familiale || '-', col2, y + 30);
+        
+        if (candidat.email || candidat.telephone) {
+          y = drawField(page, 'Email', candidat.email || '-', col1, y);
+          drawField(page, 'Téléphone', candidat.telephone || '-', col2, y + 30);
+        }
+        
+        if (candidat.adresse) {
+          y = drawField(page, 'Adresse', candidat.adresse, col1, y, 400);
+        }
+        
+        // Situation actuelle (si disponible)
+        if (candidat.gerance_actuelle || candidat.loyer_actuel || candidat.depuis_le) {
+          drawText(page, 'Situation actuelle', col1, y, { size: 9, bold: true, color: primaryColor });
+          y -= lineHeight;
+          
+          y = drawField(page, 'Gérance actuelle', candidat.gerance_actuelle || '-', col1, y);
+          drawField(page, 'Loyer actuel', candidat.loyer_actuel ? `CHF ${candidat.loyer_actuel}.-` : '-', col2, y + 30);
+          
+          y = drawField(page, 'Locataire depuis', candidat.depuis_le || '-', col1, y);
+          drawField(page, 'Nombre de pièces', String(candidat.pieces_actuel || '-'), col2, y + 30);
+          
+          if (candidat.motif_changement) {
+            y = drawField(page, 'Motif du changement', candidat.motif_changement, col1, y, 400);
+          }
+        }
+        
+        // Situation professionnelle
+        drawText(page, 'Situation professionnelle', col1, y, { size: 9, bold: true, color: primaryColor });
+        y -= lineHeight;
+        
+        y = drawField(page, 'Profession', candidat.profession || '-', col1, y);
+        drawField(page, 'Employeur', candidat.employeur || '-', col2, y + 30);
+        
+        y = drawField(page, 'Secteur d\'activité', candidat.secteur_activite || '-', col1, y);
+        drawField(page, 'Type de contrat', candidat.type_contrat || '-', col2, y + 30);
+        
+        if (candidat.anciennete_mois || candidat.date_engagement) {
+          y = drawField(page, 'Ancienneté', candidat.anciennete_mois ? `${candidat.anciennete_mois} mois` : '-', col1, y);
+          drawField(page, 'Date d\'engagement', candidat.date_engagement || '-', col2, y + 30);
+        }
+        
+        // Situation financière
+        drawText(page, 'Situation financière', col1, y, { size: 9, bold: true, color: primaryColor });
+        y -= lineHeight;
+        
+        y = drawField(page, 'Revenus mensuels', candidat.revenus_mensuels ? `CHF ${candidat.revenus_mensuels?.toLocaleString('fr-CH')}.-` : '-', col1, y);
+        drawField(page, 'Source des revenus', candidat.source_revenus || '-', col2, y + 30);
+        
+        y = drawField(page, 'Charges mensuelles', candidat.charges_mensuelles ? `CHF ${candidat.charges_mensuelles?.toLocaleString('fr-CH')}.-` : '-', col1, y);
+        drawField(page, 'Apport personnel', candidat.apport_personnel ? `CHF ${candidat.apport_personnel?.toLocaleString('fr-CH')}.-` : '-', col2, y + 30);
+        
+        // Indicateurs booléens
+        const poursuites = candidat.poursuites ? 'Oui' : 'Non';
+        const curatelle = candidat.curatelle ? 'Oui' : 'Non';
+        const autresCredits = candidat.autres_credits ? 'Oui' : 'Non';
+        
+        drawText(page, `Poursuites: ${poursuites}  |  Curatelle: ${curatelle}  |  Autres crédits: ${autresCredits}`, col1, y, { size: 9 });
+        y -= lineHeight;
+        
+        if (candidat.charges_extraordinaires && candidat.montant_charges_extra) {
+          drawText(page, `Charges extraordinaires: CHF ${candidat.montant_charges_extra?.toLocaleString('fr-CH')}.-`, col1, y, { size: 9 });
+          y -= lineHeight;
+        }
+        
+        // Espacement entre candidats
+        y -= 25;
       }
-      y -= 20;
     }
 
     // Section 6: General Conditions Summary
