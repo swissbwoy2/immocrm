@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -50,6 +51,8 @@ interface MandatData {
   candidats: any[];
   signature_data: string;
   code_promo: string;
+  demande_id?: string;
+  client_id?: string;
 }
 
 // Sanitize text to remove Unicode characters that can't be encoded in WinAnsi
@@ -478,11 +481,75 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log(`Generating PDF for ${data.prenom} ${data.nom}...`);
     
+    // Initialize Supabase client for storage
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
+    
     // Generate PDF
     const pdfBytes = await generateMandatPDF(data);
     const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
     
     console.log(`PDF generated, size: ${pdfBytes.length} bytes`);
+    
+    // Upload PDF to storage
+    let storedPdfPath: string | null = null;
+    const timestamp = new Date().toISOString().split('T')[0];
+    const safeName = sanitizeText(`${data.nom}_${data.prenom}`).replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = `mandat_${safeName}_${timestamp}.pdf`;
+    
+    // Use demande_id or client_id if available, otherwise use email hash
+    const folderId = data.demande_id || data.client_id || btoa(data.email).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
+    const storagePath = `${folderId}/${fileName}`;
+    
+    try {
+      const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+        .from('mandat-contracts')
+        .upload(storagePath, pdfBytes, {
+          contentType: 'application/pdf',
+          upsert: true
+        });
+      
+      if (uploadError) {
+        console.error('Error uploading PDF to storage:', uploadError);
+      } else {
+        storedPdfPath = storagePath;
+        console.log('PDF uploaded to storage:', storedPdfPath);
+        
+        // If demande_id provided, update demandes_mandat with PDF path
+        if (data.demande_id) {
+          const { error: updateError } = await supabaseAdmin
+            .from('demandes_mandat')
+            .update({ mandat_pdf_url: storedPdfPath })
+            .eq('id', data.demande_id);
+          
+          if (updateError) {
+            console.error('Error updating demande with PDF URL:', updateError);
+          }
+        }
+        
+        // If client_id provided, update clients with PDF path
+        if (data.client_id) {
+          const { error: updateError } = await supabaseAdmin
+            .from('clients')
+            .update({ mandat_pdf_url: storedPdfPath })
+            .eq('id', data.client_id);
+          
+          if (updateError) {
+            console.error('Error updating client with PDF URL:', updateError);
+          }
+        }
+      }
+    } catch (storageError) {
+      console.error('Storage error:', storageError);
+    }
     
     // Send email with PDF attachment
     const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") || "noreply@immo-rama.ch";
@@ -570,7 +637,11 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Email sent successfully:", emailResponse);
 
     return new Response(
-      JSON.stringify({ success: true, emailId: emailResponse.data?.id }),
+      JSON.stringify({ 
+        success: true, 
+        emailId: emailResponse.data?.id,
+        pdfPath: storedPdfPath
+      }),
       {
         status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders },
