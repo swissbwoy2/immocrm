@@ -86,3 +86,6 @@ verify_jwt = false
 
 [functions.generate-full-mandat-pdf]
 verify_jwt = false
+
+[functions.fill-rental-form-ai]
+verify_jwt = true

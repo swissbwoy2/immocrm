@@ -71,6 +71,7 @@ const AgentBoiteReception = lazy(() => import("./pages/agent/BoiteReception"));
 const AgentCandidatures = lazy(() => import("./pages/agent/Candidatures"));
 const AgentDeposerCandidature = lazy(() => import("./pages/agent/DeposerCandidature"));
 const AgentRemplirPDF = lazy(() => import("./pages/agent/RemplirPDF"));
+const AgentRemplirDemande = lazy(() => import("./pages/agent/RemplirDemande"));
 const AgentContacts = lazy(() => import("./pages/agent/Contacts"));
 
 // Client pages
@@ -207,6 +208,7 @@ const App = () => (
               <Route path="/agent/candidatures" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentCandidatures /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/deposer-candidature" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDeposerCandidature /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/remplir-pdf" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentRemplirPDF /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/remplir-demande" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentRemplirDemande /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/contacts" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentContacts /></AppLayout></ProtectedRoute>} />
 
               {/* Client Routes */}
