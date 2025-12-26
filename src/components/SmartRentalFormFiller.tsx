@@ -14,12 +14,12 @@ import {
   AlertTriangle,
   Lightbulb,
   Copy,
-  Download,
   Loader2,
-  Search
+  Search,
+  Home
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAIFormFiller, FormField, AIFormResult } from '@/hooks/useAIFormFiller';
+import { useAIFormFiller, FormField, AIFormResult, OffreDataForAI } from '@/hooks/useAIFormFiller';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -37,13 +37,28 @@ interface Client {
   region_recherche?: string;
 }
 
+interface Offre {
+  id: string;
+  adresse: string;
+  prix: number;
+  charges?: number;
+  pieces?: number;
+  surface?: number;
+  type_bien?: string;
+  created_at: string;
+}
+
 export default function SmartRentalFormFiller() {
   const { userRole } = useAuth();
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedOffreId, setSelectedOffreId] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
+  const [offres, setOffres] = useState<Offre[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [offreSearchQuery, setOffreSearchQuery] = useState('');
   const [isLoadingClients, setIsLoadingClients] = useState(true);
+  const [isLoadingOffres, setIsLoadingOffres] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { isAnalyzing, progress, error, result, analyzeAndFill, reset } = useAIFormFiller();
@@ -52,6 +67,16 @@ export default function SmartRentalFormFiller() {
   useEffect(() => {
     loadClients();
   }, [userRole]);
+
+  // Load offres when client is selected
+  useEffect(() => {
+    if (selectedClientId) {
+      loadOffresForClient(selectedClientId);
+    } else {
+      setOffres([]);
+      setSelectedOffreId(null);
+    }
+  }, [selectedClientId]);
 
   const loadClients = async () => {
     setIsLoadingClients(true);
@@ -100,6 +125,27 @@ export default function SmartRentalFormFiller() {
     }
   };
 
+  const loadOffresForClient = async (clientId: string) => {
+    setIsLoadingOffres(true);
+    setSelectedOffreId(null);
+    try {
+      // Get offers sent to this client
+      const { data, error } = await supabase
+        .from('offres')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setOffres((data || []) as Offre[]);
+    } catch (err) {
+      console.error('Error loading offres:', err);
+      toast.error('Erreur lors du chargement des offres');
+    } finally {
+      setIsLoadingOffres(false);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type === 'application/pdf') {
@@ -116,7 +162,7 @@ export default function SmartRentalFormFiller() {
       return;
     }
 
-    const result = await analyzeAndFill(pdfFile, selectedClientId);
+    const result = await analyzeAndFill(pdfFile, selectedClientId, selectedOffreId || undefined);
     if (result) {
       toast.success(`${result.fields.length} champs identifiés et pré-remplis!`);
     }
@@ -144,23 +190,32 @@ export default function SmartRentalFormFiller() {
     return fullName.includes(searchQuery.toLowerCase()) || email.includes(searchQuery.toLowerCase());
   });
 
+  const filteredOffres = offres.filter(offre => {
+    if (!offreSearchQuery) return true;
+    const adresse = (offre.adresse || '').toLowerCase();
+    return adresse.includes(offreSearchQuery.toLowerCase());
+  });
+
   const selectedClient = clients.find(c => c.id === selectedClientId);
   const selectedClientProfile = selectedClient?.profiles as any;
+  const selectedOffre = offres.find(o => o.id === selectedOffreId);
+
+  const canAnalyze = pdfFile && selectedClientId;
 
   return (
-    <div className="container mx-auto p-4 md:p-6 max-w-6xl">
+    <div className="container mx-auto p-4 md:p-6 max-w-7xl">
       <div className="mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Brain className="h-7 w-7 text-primary" />
           Remplissage IA de demande de location
         </h1>
         <p className="text-muted-foreground mt-1">
-          Chargez un formulaire PDF et sélectionnez un client pour le remplir automatiquement
+          Chargez un formulaire PDF, sélectionnez un client et une offre pour le remplir automatiquement
         </p>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Left column: Upload & Client Selection */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Left column: Upload, Client & Offre Selection */}
         <div className="space-y-4">
           {/* PDF Upload */}
           <Card>
@@ -235,7 +290,7 @@ export default function SmartRentalFormFiller() {
                 />
               </div>
 
-              <ScrollArea className="h-[250px] border rounded-lg">
+              <ScrollArea className="h-[200px] border rounded-lg">
                 {isLoadingClients ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -297,10 +352,104 @@ export default function SmartRentalFormFiller() {
             </CardContent>
           </Card>
 
+          {/* Offre Selection */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Home className="h-5 w-5" />
+                3. Sélectionner l'offre / logement
+                <Badge variant="outline" className="ml-2">Optionnel</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!selectedClientId ? (
+                <div className="flex flex-col items-center justify-center h-[150px] text-muted-foreground border rounded-lg">
+                  <User className="h-8 w-8 mb-2 opacity-50" />
+                  <p className="text-center text-sm">Sélectionnez d'abord un client pour voir ses offres</p>
+                </div>
+              ) : (
+                <>
+                  <div className="relative mb-3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Rechercher une offre..."
+                      value={offreSearchQuery}
+                      onChange={(e) => setOffreSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+
+                  <ScrollArea className="h-[180px] border rounded-lg">
+                    {isLoadingOffres ? (
+                      <div className="flex items-center justify-center h-full">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : filteredOffres.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                        <Home className="h-8 w-8 mb-2 opacity-50" />
+                        <p className="text-sm">Aucune offre envoyée à ce client</p>
+                        <p className="text-xs mt-1">Le remplissage se fera sans infos logement</p>
+                      </div>
+                    ) : (
+                      <div className="p-2 space-y-1">
+                        {filteredOffres.map(offre => {
+                          const isSelected = offre.id === selectedOffreId;
+                          
+                          return (
+                            <div
+                              key={offre.id}
+                              onClick={() => setSelectedOffreId(isSelected ? null : offre.id)}
+                              className={cn(
+                                'p-3 rounded-lg cursor-pointer transition-colors',
+                                isSelected 
+                                  ? 'bg-primary text-primary-foreground' 
+                                  : 'hover:bg-muted'
+                              )}
+                            >
+                              <div className="font-medium truncate">
+                                {offre.adresse}
+                              </div>
+                              <div className={cn(
+                                'text-sm flex items-center gap-2 flex-wrap mt-1',
+                                isSelected ? 'text-primary-foreground/80' : 'text-muted-foreground'
+                              )}>
+                                <span>CHF {offre.prix}</span>
+                                {offre.pieces && <span>• {offre.pieces} pièces</span>}
+                                {offre.surface && <span>• {offre.surface}m²</span>}
+                              </div>
+                              {offre.type_bien && (
+                                <Badge 
+                                  variant={isSelected ? 'secondary' : 'outline'} 
+                                  className="mt-1"
+                                >
+                                  {offre.type_bien}
+                                </Badge>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </ScrollArea>
+
+                  {selectedOffre && (
+                    <div className="mt-3 p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                      <p className="text-sm font-medium text-green-700 dark:text-green-400">Offre sélectionnée:</p>
+                      <p className="font-semibold truncate">{selectedOffre.adresse}</p>
+                      <p className="text-sm text-muted-foreground">
+                        CHF {selectedOffre.prix}{selectedOffre.charges ? ` + ${selectedOffre.charges} charges` : ''}
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Analyze Button */}
           <Button
             onClick={handleAnalyze}
-            disabled={!pdfFile || !selectedClientId || isAnalyzing}
+            disabled={!canAnalyze || isAnalyzing}
             className="w-full h-12 text-lg"
             size="lg"
           >
@@ -336,7 +485,7 @@ export default function SmartRentalFormFiller() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <CheckCircle2 className="h-5 w-5" />
-                  3. Résultats du remplissage
+                  4. Résultats du remplissage
                 </CardTitle>
                 {result && (
                   <Button variant="outline" size="sm" onClick={copyAllFields}>
@@ -348,14 +497,17 @@ export default function SmartRentalFormFiller() {
             </CardHeader>
             <CardContent>
               {!result ? (
-                <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
+                <div className="flex flex-col items-center justify-center h-[500px] text-muted-foreground">
                   <Brain className="h-12 w-12 mb-4 opacity-20" />
                   <p className="text-center">
                     Les champs pré-remplis apparaîtront ici après l'analyse
                   </p>
+                  <p className="text-center text-sm mt-2">
+                    Sélectionnez un PDF, un client{selectedClientId && offres.length > 0 ? ' et optionnellement une offre' : ''}, puis cliquez sur "Remplir avec l'IA"
+                  </p>
                 </div>
               ) : (
-                <ScrollArea className="h-[500px]">
+                <ScrollArea className="h-[600px]">
                   <div className="space-y-4">
                     {/* Warnings */}
                     {result.warnings.length > 0 && (

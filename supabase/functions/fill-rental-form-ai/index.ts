@@ -49,6 +49,21 @@ interface ClientData {
   }>;
 }
 
+interface OffreData {
+  id: string;
+  adresse?: string;
+  prix?: number;
+  pieces?: number;
+  surface?: number;
+  etage?: string;
+  type_bien?: string;
+  disponibilite?: string;
+  code_immeuble?: string;
+  concierge_nom?: string;
+  concierge_tel?: string;
+  locataire_actuel?: string;
+}
+
 interface FormField {
   label: string;
   value: string;
@@ -62,9 +77,10 @@ serve(async (req) => {
   }
 
   try {
-    const { pdfText, clientData } = await req.json() as { 
+    const { pdfText, clientData, offreData } = await req.json() as { 
       pdfText: string; 
       clientData: ClientData;
+      offreData?: OffreData | null;
     };
 
     if (!pdfText || !clientData) {
@@ -79,24 +95,27 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Build a structured summary of client data for the AI
-    const clientSummary = buildClientSummary(clientData);
+    // Build a structured summary of client and offre data for the AI
+    const dataSummary = buildDataSummary(clientData, offreData);
 
     const systemPrompt = `Tu es un assistant expert en immobilier suisse, spécialisé dans le remplissage de formulaires de demande de location.
 
-Ton rôle est d'analyser un formulaire PDF de demande de location et de le pré-remplir avec les données d'un candidat locataire.
+Ton rôle est d'analyser un formulaire PDF de demande de location et de le pré-remplir avec les données d'un candidat locataire et du logement visé.
 
 RÈGLES IMPORTANTES:
 1. Identifie chaque champ du formulaire dans le texte PDF
-2. Mappe les données du candidat aux champs correspondants
+2. Mappe les données du candidat ET du logement aux champs correspondants
 3. Pour les champs à cocher (oui/non), indique "☑" pour oui et "☐" pour non
 4. Si une donnée n'est pas disponible, laisse le champ vide ou indique "N/A"
 5. Adapte le format des dates au format suisse (JJ.MM.AAAA)
-6. Les revenus doivent être en CHF
+6. Les revenus et loyers doivent être en CHF
 7. Si le formulaire demande des informations sur le conjoint/colocataire, utilise les données des candidats supplémentaires
+8. Pour les informations sur le logement demandé (adresse, loyer, pièces, surface, étage), utilise les données de l'offre
+9. Pour les informations sur la régie/gérance du nouveau logement, utilise les données de l'offre
+10. Pour le locataire actuel et le concierge, utilise les données de l'offre si disponibles
 
-DONNÉES DU CANDIDAT:
-${clientSummary}
+DONNÉES DISPONIBLES:
+${dataSummary}
 
 Retourne un JSON structuré avec tous les champs identifiés et leurs valeurs à insérer.
 Le format doit être:
@@ -106,7 +125,7 @@ Le format doit être:
       "label": "Nom exact du champ dans le formulaire",
       "value": "Valeur à insérer",
       "confidence": 0.9,
-      "source": "profile.nom ou candidates[0].nom etc"
+      "source": "profile.nom ou offre.adresse etc"
     }
   ],
   "warnings": ["Liste des champs non remplis ou informations manquantes"],
@@ -185,8 +204,8 @@ Le format doit être:
   }
 });
 
-function buildClientSummary(data: ClientData): string {
-  const { profile, client, candidates } = data;
+function buildDataSummary(clientData: ClientData, offreData?: OffreData | null): string {
+  const { profile, client, candidates } = clientData;
   
   let summary = `## TITULAIRE PRINCIPAL
 - Nom: ${profile.nom}
@@ -231,6 +250,39 @@ function buildClientSummary(data: ClientData): string {
 - Téléphone: ${candidate.telephone || 'Non renseigné'}
 `;
     });
+  }
+
+  // Add offre/logement data if available
+  if (offreData) {
+    summary += `\n## LOGEMENT RECHERCHÉ (OFFRE SÉLECTIONNÉE)
+- Adresse du logement: ${offreData.adresse || 'Non renseignée'}
+- Loyer mensuel: ${offreData.prix ? `CHF ${offreData.prix}` : 'Non renseigné'}
+- Nombre de pièces: ${offreData.pieces || 'Non renseigné'}
+- Surface: ${offreData.surface ? `${offreData.surface} m²` : 'Non renseignée'}
+- Étage: ${offreData.etage || 'Non renseigné'}
+- Type de bien: ${offreData.type_bien || 'Non renseigné'}
+- Date de disponibilité: ${offreData.disponibilite || 'Non renseignée'}
+- Code immeuble: ${offreData.code_immeuble || 'Non renseigné'}
+`;
+
+    // Concierge info
+    if (offreData.concierge_nom || offreData.concierge_tel) {
+      summary += `\n## CONCIERGE DU NOUVEAU LOGEMENT
+- Nom: ${offreData.concierge_nom || 'Non renseigné'}
+- Téléphone: ${offreData.concierge_tel || 'Non renseigné'}
+`;
+    }
+
+    // Current tenant info
+    if (offreData.locataire_actuel) {
+      summary += `\n## LOCATAIRE ACTUEL DU LOGEMENT
+- Nom: ${offreData.locataire_actuel || 'Non renseigné'}
+`;
+    }
+  } else {
+    summary += `\n## LOGEMENT RECHERCHÉ
+⚠️ Aucune offre sélectionnée - Les informations sur le logement ne sont pas disponibles.
+`;
   }
 
   return summary;
