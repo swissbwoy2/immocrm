@@ -64,8 +64,9 @@ export default function SmartRentalFormFiller() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { isAnalyzing, progress, error, result, analyzeAndFill, generateFilledPdf, reset } = useAIFormFiller();
+  const { isAnalyzing, progress, error, result, analyzeAndFill, generateFilledPdf, generateUniversalTemplatePdf, storedClientData, storedOffreData, reset } = useAIFormFiller();
   const { downloadBytes } = useFileDownload();
+  const [usedUniversalTemplate, setUsedUniversalTemplate] = useState(false);
 
   // Load clients
   useEffect(() => {
@@ -154,6 +155,7 @@ export default function SmartRentalFormFiller() {
     const file = e.target.files?.[0];
     if (file && file.type === 'application/pdf') {
       setPdfFile(file);
+      setUsedUniversalTemplate(false);
       reset();
     } else {
       toast.error('Veuillez sélectionner un fichier PDF');
@@ -190,15 +192,36 @@ export default function SmartRentalFormFiller() {
     if (!result || !pdfFile) return;
     
     setIsGeneratingPdf(true);
+    setUsedUniversalTemplate(false);
+    
     try {
+      // First, try to fill via AcroForm fields
       const fillResult = await generateFilledPdf();
       
-      if (!fillResult) {
-        toast.error('Erreur lors de la génération du PDF');
-        return;
-      }
+      let finalPdfBytes: Uint8Array;
+      let filledCount = 0;
+      let totalFields = 0;
+      let isUniversalTemplate = false;
 
-      const { filledPdfBytes, filledCount, totalFields } = fillResult;
+      if (fillResult && fillResult.totalFields > 0 && fillResult.filledCount > 0) {
+        // AcroForm worked - use the filled PDF
+        finalPdfBytes = fillResult.filledPdfBytes;
+        filledCount = fillResult.filledCount;
+        totalFields = fillResult.totalFields;
+        console.log(`AcroForm filling successful: ${filledCount}/${totalFields} fields`);
+      } else {
+        // Fallback to universal template
+        console.log('No AcroForm fields filled, using universal template fallback');
+        isUniversalTemplate = true;
+        setUsedUniversalTemplate(true);
+        
+        finalPdfBytes = await generateUniversalTemplatePdf(
+          result.fields,
+          storedClientData,
+          storedOffreData
+        );
+        console.log('Universal template PDF generated, bytes:', finalPdfBytes.length);
+      }
 
       // Generate filename
       const clientName = selectedClientProfile 
@@ -208,16 +231,18 @@ export default function SmartRentalFormFiller() {
       const filename = `demande_location_${clientName}_${date}.pdf`;
 
       // Download the PDF
-      const downloadResult = await downloadBytes(filledPdfBytes, {
+      const downloadResult = await downloadBytes(finalPdfBytes, {
         filename,
         mimeType: 'application/pdf'
       });
 
       if (downloadResult.success) {
-        if (totalFields > 0 && filledCount > 0) {
+        if (isUniversalTemplate) {
+          toast.success('PDF téléchargé! Le formulaire original n\'avait pas de champs remplissables, le modèle universel a été utilisé.');
+        } else if (totalFields > 0 && filledCount > 0) {
           toast.success(`PDF téléchargé! ${filledCount}/${totalFields} champs du formulaire remplis automatiquement.`);
         } else {
-          toast.success('PDF téléchargé! Les données ont été préparées pour copier-coller.');
+          toast.success('PDF téléchargé avec les données préparées.');
         }
       } else {
         toast.error(downloadResult.error || 'Erreur lors du téléchargement');
