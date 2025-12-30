@@ -286,9 +286,8 @@ export default function ProjetDetail() {
                   <div><span className="text-muted-foreground">Surface</span><p className="font-medium">{projet.surface_terrain ? `${projet.surface_terrain.toLocaleString()} m²` : '-'}</p></div>
                   <div><span className="text-muted-foreground">Bâtiment</span><p className="font-medium">{projet.batiment_existant ? 'Oui' : 'Non'}</p></div>
                   <div><span className="text-muted-foreground">Zone</span><p className="font-medium">{projet.zone_affectation || '-'}</p></div>
-                  <div><span className="text-muted-foreground">Soumis le</span><p className="font-medium">{projet.date_soumission ? format(new Date(projet.date_soumission), 'dd MMM yyyy', { locale: fr }) : '-'}</p></div>
+                <div><span className="text-muted-foreground">Soumis le</span><p className="font-medium">{projet.date_soumission ? format(new Date(projet.date_soumission), 'dd MMM yyyy', { locale: fr }) : '-'}</p></div>
                 </div>
-                />
 
                 {projet.objectifs && (
                   <>
