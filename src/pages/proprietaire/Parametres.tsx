@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Settings, User, Bell, Shield, CreditCard } from 'lucide-react';
+import { Settings, User, Bell, Shield, CreditCard, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PremiumPageHeader } from '@/components/premium';
 import { ChangePasswordCard } from '@/components/ChangePasswordCard';
+import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -226,8 +227,24 @@ export default function Parametres() {
           )}
         </TabsContent>
 
-        <TabsContent value="securite">
+        <TabsContent value="securite" className="space-y-6">
           <ChangePasswordCard />
+
+          {/* Supprimer le compte */}
+          <Card className="border-destructive/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <Trash2 className="w-5 h-5" />
+                Zone de danger
+              </CardTitle>
+              <CardDescription>
+                Supprimer définitivement votre compte et toutes vos données
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DeleteAccountDialog userType="proprietaire" />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="bancaire">
