@@ -6,6 +6,43 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Known property alert sources - domains and keywords to identify real estate alerts
+const ALERT_SOURCES = [
+  // Major Swiss property portals
+  { domain: 'realadvisor', name: 'RealAdvisor' },
+  { domain: 'immoscout', name: 'ImmoScout24' },
+  { domain: 'homegate', name: 'Homegate' },
+  { domain: 'comparis', name: 'Comparis' },
+  { domain: 'immobilier.ch', name: 'Immobilier.ch' },
+  { domain: 'immostreet', name: 'ImmoStreet' },
+  { domain: 'anibis', name: 'Anibis' },
+  { domain: 'flatfox', name: 'Flatfox' },
+  { domain: 'newhome', name: 'Newhome' },
+  { domain: 'acheter-louer', name: 'Acheter-Louer' },
+  { domain: 'immomapper', name: 'ImmoMapper' },
+  { domain: 'home.ch', name: 'Home.ch' },
+  { domain: 'propertypal', name: 'PropertyPal' },
+];
+
+// Keywords in subject that indicate property alerts
+const ALERT_KEYWORDS = [
+  'nouvelle annonce', 'nouvel appartement', 'nouveau bien', 'nouvelle offre',
+  'alerte immobilière', 'alerte logement', 'property alert', 'new listing',
+  'correspond à vos critères', 'matches your criteria', 'matching properties',
+  'résultats de recherche', 'trouvé pour vous', 'nouvelles annonces',
+  'pièces à louer', 'appartement à louer', 'maison à louer', 'studio à louer',
+  'à vendre', 'à louer', 'chf/mois', 'chf mensuel',
+];
+
+// Domains to IGNORE (internal, spam, newsletters unrelated to properties)
+const IGNORED_DOMAINS = [
+  'immo-rama.ch', 'logisorama.ch', // Internal
+  'linkedin.com', 'facebook.com', 'twitter.com', // Social
+  'google.com', 'microsoft.com', 'apple.com', // Tech
+  'noreply', 'no-reply', 'mailer-daemon', // System
+  'temu.com', 'aliexpress.com', 'amazon.com', // Shopping
+];
+
 interface ExtractedProperty {
   price: number | null;
   pieces: number | null;
@@ -28,6 +65,46 @@ interface Client {
   type_recherche: string | null;
   user_id: string;
   agent_id: string | null;
+}
+
+interface EmailData {
+  id: string;
+  subject: string | null;
+  body_text: string | null;
+  body_html: string | null;
+  from_email: string | null;
+  from_name: string | null;
+  user_id: string;
+  ai_analyzed: boolean;
+}
+
+// Check if an email is from a known property alert source
+function isPropertyAlertEmail(fromEmail: string | null, subject: string | null): { isAlert: boolean; source: string | null } {
+  const emailLower = (fromEmail || '').toLowerCase();
+  const subjectLower = (subject || '').toLowerCase();
+  
+  // Check if from ignored domain
+  for (const ignored of IGNORED_DOMAINS) {
+    if (emailLower.includes(ignored)) {
+      return { isAlert: false, source: null };
+    }
+  }
+  
+  // Check known alert sources by domain
+  for (const source of ALERT_SOURCES) {
+    if (emailLower.includes(source.domain)) {
+      return { isAlert: true, source: source.name };
+    }
+  }
+  
+  // Check subject for alert keywords
+  for (const keyword of ALERT_KEYWORDS) {
+    if (subjectLower.includes(keyword.toLowerCase())) {
+      return { isAlert: true, source: 'Alerte email' };
+    }
+  }
+  
+  return { isAlert: false, source: null };
 }
 
 // Decode quoted-printable content
@@ -97,14 +174,14 @@ function cleanEmailContent(bodyText: string | null, bodyHtml: string | null): st
   return content.substring(0, 6000);
 }
 
-async function extractPropertyInfo(emailContent: string, subject: string, fromEmail: string): Promise<ExtractedProperty> {
+async function extractPropertyInfo(emailContent: string, subject: string, fromEmail: string, sourceName: string | null): Promise<ExtractedProperty> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) {
     console.error("LOVABLE_API_KEY not configured");
-    return { price: null, pieces: null, surface: null, location: null, type_bien: null, address: null, disponibilite: null, regie: null, is_property_offer: false, confidence: 'low' };
+    return { price: null, pieces: null, surface: null, location: null, type_bien: null, address: null, disponibilite: null, regie: sourceName, is_property_offer: true, confidence: 'low' };
   }
 
-  const prompt = `Tu es un expert en extraction d'informations immobilières suisses. Analyse cet email et extrait les informations.
+  const prompt = `Tu es un expert en extraction d'informations immobilières suisses. Analyse cet email d'alerte de ${sourceName || 'portail immobilier'}.
 
 ÉMETTEUR: ${fromEmail}
 SUJET: ${subject}
@@ -112,17 +189,18 @@ SUJET: ${subject}
 CONTENU:
 ${emailContent}
 
-INSTRUCTIONS:
-1. Les emails d'alertes immobilières (RealAdvisor, Immoscout, Homegate, Comparis, etc.) contiennent TOUJOURS des offres
-2. Extrais TOUTES les informations même partielles
-3. Pour la localisation, recherche: ville, code postal, canton, quartier
-4. Les prix sont en CHF (loyer mensuel pour location)
+INSTRUCTIONS IMPORTANTES:
+1. C'est une alerte immobilière de ${sourceName || 'un portail'} - il y a FORCÉMENT des informations sur des biens
+2. Extrais le PREMIER bien mentionné (prix, pièces, surface, localisation)
+3. Pour la localisation, cherche: ville, code postal, canton, quartier
+4. Prix en CHF (loyer mensuel pour location, prix de vente pour achat)
 5. "3.5 pièces" = 3.5, "4 pièces" = 4
+6. Cherche les liens vers les annonces pour plus de détails
 
 Réponds UNIQUEMENT avec un JSON valide:
 {
-  "is_property_offer": true/false,
-  "confidence": "high"/"medium"/"low",
+  "is_property_offer": true,
+  "confidence": "high",
   "price": nombre ou null,
   "pieces": nombre ou null,
   "surface": nombre ou null,
@@ -130,7 +208,7 @@ Réponds UNIQUEMENT avec un JSON valide:
   "type_bien": "appartement"/"maison"/"studio"/"villa"/"duplex"/"attique" ou null,
   "address": "adresse complète" ou null,
   "disponibilite": "date/période" ou null,
-  "regie": "nom régie/source" ou null
+  "regie": "source de l'annonce" ou null
 }`;
 
   try {
@@ -143,7 +221,7 @@ Réponds UNIQUEMENT avec un JSON valide:
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "Tu es un assistant spécialisé dans l'extraction d'informations immobilières suisses. Tu réponds uniquement en JSON valide. Pour les emails d'alertes (RealAdvisor, Immoscout, Homegate, Comparis), considère toujours is_property_offer=true." },
+          { role: "system", content: `Tu es un assistant spécialisé dans l'extraction d'informations immobilières suisses depuis les emails d'alertes. Tu réponds uniquement en JSON valide. Source: ${sourceName || 'inconnu'}. Considère TOUJOURS is_property_offer=true pour ces alertes.` },
           { role: "user", content: prompt }
         ],
       }),
@@ -152,7 +230,7 @@ Réponds UNIQUEMENT avec un JSON valide:
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AI Gateway error:", response.status, errorText);
-      return { price: null, pieces: null, surface: null, location: null, type_bien: null, address: null, disponibilite: null, regie: null, is_property_offer: false, confidence: 'low' };
+      return { price: null, pieces: null, surface: null, location: null, type_bien: null, address: null, disponibilite: null, regie: sourceName, is_property_offer: true, confidence: 'low' };
     }
 
     const data = await response.json();
@@ -169,8 +247,8 @@ Réponds UNIQUEMENT avec un JSON valide:
         type_bien: parsed.type_bien,
         address: parsed.address,
         disponibilite: parsed.disponibilite,
-        regie: parsed.regie || getRegieFromEmail(fromEmail),
-        is_property_offer: parsed.is_property_offer === true,
+        regie: parsed.regie || sourceName,
+        is_property_offer: true, // Always true for filtered alerts
         confidence: parsed.confidence || 'medium',
       };
     }
@@ -178,24 +256,7 @@ Réponds UNIQUEMENT avec un JSON valide:
     console.error("Error extracting property info:", error);
   }
 
-  return { price: null, pieces: null, surface: null, location: null, type_bien: null, address: null, disponibilite: null, regie: null, is_property_offer: false, confidence: 'low' };
-}
-
-function getRegieFromEmail(email: string): string | null {
-  const sources: Record<string, string> = {
-    'realadvisor': 'RealAdvisor',
-    'immoscout': 'ImmoScout24',
-    'homegate': 'Homegate',
-    'comparis': 'Comparis',
-    'immostreet': 'ImmoStreet',
-    'anibis': 'Anibis',
-  };
-  
-  const lowerEmail = email.toLowerCase();
-  for (const [key, name] of Object.entries(sources)) {
-    if (lowerEmail.includes(key)) return name;
-  }
-  return null;
+  return { price: null, pieces: null, surface: null, location: null, type_bien: null, address: null, disponibilite: null, regie: sourceName, is_property_offer: true, confidence: 'low' };
 }
 
 function calculateMatchScore(property: ExtractedProperty, client: Client): { score: number; details: Record<string, any>; category: string } {
@@ -218,14 +279,15 @@ function calculateMatchScore(property: ExtractedProperty, client: Client): { sco
       details.location_info = `${property.location} correspond à ${client.region_recherche}`;
     } else {
       const regions: Record<string, string[]> = {
-        "lausanne": ["lausanne", "vaud", "lac leman", "leman", "ouest lausannois", "renens", "prilly", "crissier", "ecublens", "chavannes", "bussigny"],
-        "geneve": ["geneve", "geneva", "genf", "carouge", "lancy", "meyrin", "vernier", "onex"],
-        "vaud": ["vaud", "lausanne", "morges", "nyon", "yverdon", "vevey", "montreux", "renens", "pully", "lutry", "prilly", "ecublens", "crissier"],
-        "fribourg": ["fribourg", "bulle", "romont", "murten", "morat"],
-        "neuchatel": ["neuchatel", "la chaux-de-fonds", "le locle"],
-        "valais": ["valais", "sion", "sierre", "martigny", "monthey", "visp", "brig"],
-        "bern": ["bern", "berne", "biel", "bienne", "thun", "thoune"],
-        "zurich": ["zurich", "zürich", "winterthur", "dietikon"],
+        "lausanne": ["lausanne", "vaud", "lac leman", "leman", "ouest lausannois", "renens", "prilly", "crissier", "ecublens", "chavannes", "bussigny", "pully", "lutry", "morges"],
+        "geneve": ["geneve", "geneva", "genf", "carouge", "lancy", "meyrin", "vernier", "onex", "grand-saconnex", "bernex", "plan-les-ouates"],
+        "vaud": ["vaud", "lausanne", "morges", "nyon", "yverdon", "vevey", "montreux", "renens", "pully", "lutry", "prilly", "ecublens", "crissier", "rolle", "gland"],
+        "fribourg": ["fribourg", "bulle", "romont", "murten", "morat", "estavayer"],
+        "neuchatel": ["neuchatel", "la chaux-de-fonds", "le locle", "neuchâtel"],
+        "valais": ["valais", "sion", "sierre", "martigny", "monthey", "visp", "brig", "verbier", "zermatt"],
+        "bern": ["bern", "berne", "biel", "bienne", "thun", "thoune", "köniz", "muri"],
+        "zurich": ["zurich", "zürich", "winterthur", "dietikon", "uster", "dübendorf"],
+        "suisse romande": ["lausanne", "geneve", "geneva", "fribourg", "neuchatel", "sion", "vaud", "valais", "jura"],
       };
       
       for (const [region, cities] of Object.entries(regions)) {
@@ -337,16 +399,31 @@ serve(async (req) => {
       });
     }
 
-    const { action, email_id, match_id, limit = 20 } = await req.json();
+    const { action, match_id, limit = 100 } = await req.json();
     console.log(`AI Matching action: ${action} by user: ${user.id}`);
 
     if (action === 'analyze') {
-      // Get unanalyzed emails - include body_html for better extraction
-      const { data: emails, error: emailsError } = await supabase
-        .from('received_emails')
-        .select('id, subject, body_text, body_html, from_email, from_name, user_id')
+      // Get agent info first
+      const { data: agentData } = await supabase
+        .from('agents')
+        .select('id')
         .eq('user_id', user.id)
-        .eq('ai_analyzed', false)
+        .single();
+
+      if (!agentData) {
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: 'Agent non trouvé',
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // STEP 1: Get the 100 most recent emails for this agent (not just unanalyzed)
+      const { data: allEmails, error: emailsError } = await supabase
+        .from('received_emails')
+        .select('id, subject, body_text, body_html, from_email, from_name, user_id, ai_analyzed')
+        .eq('user_id', user.id)
         .order('received_at', { ascending: false })
         .limit(limit);
 
@@ -355,84 +432,103 @@ serve(async (req) => {
         throw emailsError;
       }
 
-      console.log(`Found ${emails?.length || 0} unanalyzed emails`);
+      console.log(`Found ${allEmails?.length || 0} recent emails`);
 
-      if (!emails || emails.length === 0) {
+      // STEP 2: Filter to keep only property alert emails
+      const alertEmails: (EmailData & { source: string })[] = [];
+      const nonAlertEmails: EmailData[] = [];
+
+      for (const email of allEmails || []) {
+        const { isAlert, source } = isPropertyAlertEmail(email.from_email, email.subject);
+        if (isAlert) {
+          alertEmails.push({ ...email, source: source || 'Alerte' });
+        } else {
+          nonAlertEmails.push(email);
+        }
+      }
+
+      console.log(`Filtered: ${alertEmails.length} property alerts, ${nonAlertEmails.length} other emails`);
+
+      // Log alert sources found
+      const sourceCounts: Record<string, number> = {};
+      for (const email of alertEmails) {
+        sourceCounts[email.source] = (sourceCounts[email.source] || 0) + 1;
+      }
+      console.log('Alert sources:', sourceCounts);
+
+      // Only analyze unanalyzed alert emails
+      const unanalyzedAlerts = alertEmails.filter(e => !e.ai_analyzed);
+      console.log(`${unanalyzedAlerts.length} unanalyzed alerts to process`);
+
+      if (unanalyzedAlerts.length === 0) {
         return new Response(JSON.stringify({ 
           success: true, 
-          message: 'Aucun nouvel email à analyser',
+          message: 'Aucune nouvelle alerte à analyser',
           analyzed: 0,
-          matches: 0 
+          matches: 0,
+          total_alerts: alertEmails.length,
+          sources: sourceCounts,
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      // Get active clients for this agent
-      let clientsQuery = supabase
+      // STEP 3: Get ONLY this agent's clients
+      const { data: clientIds } = await supabase
+        .from('client_agents')
+        .select('client_id')
+        .eq('agent_id', agentData.id);
+      
+      const junctionIds = clientIds?.map(c => c.client_id) || [];
+      
+      const { data: primaryClients } = await supabase
         .from('clients')
-        .select('id, pieces, budget_max, region_recherche, type_bien, type_recherche, user_id, agent_id')
-        .eq('statut', 'actif');
-
-      const { data: agentData } = await supabase
-        .from('agents')
         .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (agentData) {
-        const { data: clientIds } = await supabase
-          .from('client_agents')
-          .select('client_id')
-          .eq('agent_id', agentData.id);
-        
-        const ids = clientIds?.map(c => c.client_id) || [];
-        
-        const { data: primaryClients } = await supabase
-          .from('clients')
-          .select('id')
-          .eq('agent_id', agentData.id);
-        
-        const primaryIds = primaryClients?.map(c => c.id) || [];
-        const allIds = [...new Set([...ids, ...primaryIds])];
-        
-        if (allIds.length > 0) {
-          clientsQuery = clientsQuery.in('id', allIds);
-        } else {
-          return new Response(JSON.stringify({ 
-            success: true, 
-            message: 'Aucun client actif assigné',
-            analyzed: 0,
-            matches: 0 
-          }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
+        .eq('agent_id', agentData.id);
+      
+      const primaryIds = primaryClients?.map(c => c.id) || [];
+      const allClientIds = [...new Set([...junctionIds, ...primaryIds])];
+      
+      if (allClientIds.length === 0) {
+        return new Response(JSON.stringify({ 
+          success: true, 
+          message: 'Aucun client actif assigné',
+          analyzed: 0,
+          matches: 0,
+          total_alerts: alertEmails.length,
+          sources: sourceCounts,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
 
-      const { data: clients, error: clientsError } = await clientsQuery;
+      const { data: clients, error: clientsError } = await supabase
+        .from('clients')
+        .select('id, pieces, budget_max, region_recherche, type_bien, type_recherche, user_id, agent_id')
+        .in('id', allClientIds)
+        .eq('statut', 'actif');
       
       if (clientsError) {
         console.error("Error fetching clients:", clientsError);
         throw clientsError;
       }
 
-      console.log(`Found ${clients?.length || 0} active clients to match against`);
+      console.log(`Found ${clients?.length || 0} active clients for agent ${agentData.id}`);
 
+      // STEP 4: Analyze each alert email
       let analyzedCount = 0;
       let matchesCount = 0;
 
-      for (const email of emails) {
-        console.log(`Analyzing email: ${email.subject} from ${email.from_email}`);
+      for (const email of unanalyzedAlerts) {
+        console.log(`Analyzing alert: ${email.subject} from ${email.from_email} (${email.source})`);
         
-        // Clean and prepare email content
         const cleanedContent = cleanEmailContent(email.body_text, email.body_html);
         
-        // Extract property info using AI
         const propertyInfo = await extractPropertyInfo(
           cleanedContent, 
           email.subject || '',
-          email.from_email || ''
+          email.from_email || '',
+          email.source
         );
 
         // Mark email as analyzed
@@ -446,19 +542,13 @@ serve(async (req) => {
 
         analyzedCount++;
 
-        // Skip if not a property offer
-        if (!propertyInfo.is_property_offer) {
-          console.log(`Email ${email.id} is not a property offer, skipping`);
-          continue;
-        }
+        console.log(`Extracted from ${email.source}:`, propertyInfo);
 
-        console.log(`Extracted property info:`, propertyInfo);
-
-        // Match against clients - LOWERED threshold to 15%
+        // Match against this agent's clients only
         for (const client of clients || []) {
           const { score, details, category } = calculateMatchScore(propertyInfo, client);
           
-          // Create match if score >= 15% (was 30%)
+          // Create match if score >= 15%
           if (score >= 15) {
             console.log(`Match found: client ${client.id} with score ${score} (${category})`);
             
@@ -467,7 +557,7 @@ serve(async (req) => {
               .upsert({
                 email_id: email.id,
                 client_id: client.id,
-                agent_id: agentData?.id || client.agent_id,
+                agent_id: agentData.id,
                 extracted_price: propertyInfo.price,
                 extracted_pieces: propertyInfo.pieces,
                 extracted_surface: propertyInfo.surface,
@@ -479,7 +569,7 @@ serve(async (req) => {
                 email_subject: email.subject,
                 email_from: email.from_email,
                 match_score: score,
-                match_details: { ...details, category, confidence: propertyInfo.confidence },
+                match_details: { ...details, category, confidence: propertyInfo.confidence, source: email.source },
                 status: 'pending',
                 processed_at: new Date().toISOString(),
               }, {
@@ -487,7 +577,7 @@ serve(async (req) => {
               });
 
             if (insertError) {
-              console.error(`Error inserting match:`, insertError);
+              console.error("Error inserting match:", insertError);
             } else {
               matchesCount++;
             }
@@ -497,14 +587,24 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({ 
         success: true,
-        message: `Analyse terminée`,
         analyzed: analyzedCount,
-        matches: matchesCount
+        matches: matchesCount,
+        total_alerts: alertEmails.length,
+        sources: sourceCounts,
+        message: `${analyzedCount} alerte(s) analysée(s), ${matchesCount} match(s) trouvé(s)`
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
 
-    } else if (action === 'get_matches') {
+    if (action === 'get_matches') {
+      // Get agent info
+      const { data: agentData } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
       let matchesQuery = supabase
         .from('ai_matches')
         .select(`
@@ -519,51 +619,69 @@ serve(async (req) => {
             profiles:user_id(prenom, nom, email)
           )
         `)
-        .order('match_score', { ascending: false })
         .order('created_at', { ascending: false });
-
-      const { data: agentData } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
 
       if (agentData) {
         matchesQuery = matchesQuery.eq('agent_id', agentData.id);
       }
 
-      const { data: matches, error: matchesError } = await matchesQuery;
+      const { data: matches, error: matchesError } = await matchesQuery.limit(100);
 
       if (matchesError) {
         console.error("Error fetching matches:", matchesError);
         throw matchesError;
       }
 
-      // Get unanalyzed email count
-      const { count: unanalyzedCount } = await supabase
+      // Get stats
+      let statsQuery = supabase
         .from('received_emails')
-        .select('id', { count: 'exact', head: true })
+        .select('id', { count: 'exact' })
         .eq('user_id', user.id)
         .eq('ai_analyzed', false);
+
+      const { count: unanalyzedCount } = await statsQuery;
+
+      // Count alert emails
+      const { data: recentEmails } = await supabase
+        .from('received_emails')
+        .select('from_email, subject')
+        .eq('user_id', user.id)
+        .order('received_at', { ascending: false })
+        .limit(100);
+
+      let alertCount = 0;
+      const sourceCounts: Record<string, number> = {};
+      for (const email of recentEmails || []) {
+        const { isAlert, source } = isPropertyAlertEmail(email.from_email, email.subject);
+        if (isAlert) {
+          alertCount++;
+          if (source) {
+            sourceCounts[source] = (sourceCounts[source] || 0) + 1;
+          }
+        }
+      }
 
       return new Response(JSON.stringify({ 
         success: true,
         matches: matches || [],
-        unanalyzed_count: unanalyzedCount || 0
+        unanalyzed_count: unanalyzedCount || 0,
+        alert_count: alertCount,
+        sources: sourceCounts,
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
 
-    } else if (action === 'update_status') {
-      if (!match_id) {
-        return new Response(JSON.stringify({ error: 'match_id required' }), {
+    if (action === 'update_status') {
+      const { status } = await req.json();
+      
+      if (!match_id || !status) {
+        return new Response(JSON.stringify({ error: 'match_id and status required' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      const { status } = await req.json();
-      
       const { error: updateError } = await supabase
         .from('ai_matches')
         .update({ status, updated_at: new Date().toISOString() })
@@ -576,52 +694,76 @@ serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
+    }
 
-    } else if (action === 'get_stats') {
+    if (action === 'get_stats') {
       const { data: agentData } = await supabase
         .from('agents')
         .select('id')
         .eq('user_id', user.id)
         .single();
 
-      let baseQuery = supabase.from('ai_matches').select('status');
-      if (agentData) {
-        baseQuery = baseQuery.eq('agent_id', agentData.id);
+      // Get email stats
+      const { data: recentEmails } = await supabase
+        .from('received_emails')
+        .select('from_email, subject, ai_analyzed')
+        .eq('user_id', user.id)
+        .order('received_at', { ascending: false })
+        .limit(100);
+
+      let totalAlerts = 0;
+      let analyzedAlerts = 0;
+      const sourceCounts: Record<string, number> = {};
+      
+      for (const email of recentEmails || []) {
+        const { isAlert, source } = isPropertyAlertEmail(email.from_email, email.subject);
+        if (isAlert) {
+          totalAlerts++;
+          if (email.ai_analyzed) analyzedAlerts++;
+          if (source) {
+            sourceCounts[source] = (sourceCounts[source] || 0) + 1;
+          }
+        }
       }
 
-      const { data: allMatches } = await baseQuery;
-      
-      const pending = allMatches?.filter(m => m.status === 'pending').length || 0;
-      const accepted = allMatches?.filter(m => m.status === 'accepted').length || 0;
-      const converted = allMatches?.filter(m => m.status === 'converted').length || 0;
+      // Get match stats
+      let matchStats = { pending: 0, accepted: 0, rejected: 0, converted: 0 };
+      if (agentData) {
+        const { data: matches } = await supabase
+          .from('ai_matches')
+          .select('status')
+          .eq('agent_id', agentData.id);
 
-      // Get unanalyzed email count
-      const { count: unanalyzedCount } = await supabase
-        .from('received_emails')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('ai_analyzed', false);
+        for (const m of matches || []) {
+          if (m.status === 'pending') matchStats.pending++;
+          else if (m.status === 'accepted') matchStats.accepted++;
+          else if (m.status === 'rejected') matchStats.rejected++;
+          else if (m.status === 'converted') matchStats.converted++;
+        }
+      }
 
       return new Response(JSON.stringify({ 
         success: true,
         stats: {
-          pending,
-          accepted,
-          converted,
-          unanalyzed: unanalyzedCount || 0,
+          total_emails: recentEmails?.length || 0,
+          total_alerts: totalAlerts,
+          analyzed_alerts: analyzedAlerts,
+          unanalyzed_alerts: totalAlerts - analyzedAlerts,
+          sources: sourceCounts,
+          matches: matchStats,
         }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    return new Response(JSON.stringify({ error: 'Invalid action' }), {
+    return new Response(JSON.stringify({ error: 'Unknown action' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in ai-matching function:', error);
+    console.error('AI Matching error:', error);
     return new Response(JSON.stringify({ 
       error: error instanceof Error ? error.message : 'Unknown error' 
     }), {

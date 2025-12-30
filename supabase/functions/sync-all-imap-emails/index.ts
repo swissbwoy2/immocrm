@@ -24,7 +24,6 @@ class SimpleImapClient {
   private encoder = new TextEncoder();
   private decoder = new TextDecoder();
   private tagCounter = 0;
-  private buffer = '';
 
   async connect(host: string, port: number): Promise<void> {
     console.log(`[IMAP] Connecting to ${host}:${port}...`);
@@ -158,7 +157,6 @@ class SimpleImapClient {
       try {
         const email = this.parseSingleFetch(fetchData, imapUser);
         if (email) {
-          // Always include emails, even with partial data
           emails.push(email);
         }
       } catch (e) {
@@ -218,8 +216,8 @@ class SimpleImapClient {
 
     // Parse headers
     if (headers) {
-      // From
-      const fromMatch = headers.match(/^From:\s*(.+?)(?:\r?\n(?![^\s])|\r?\n\r?\n|$)/mi);
+      // From - improved regex to handle folded headers
+      const fromMatch = headers.match(/^From:\s*([\s\S]+?)(?=\r?\n(?:[A-Za-z-]+:|$))/mi);
       if (fromMatch) {
         const fromValue = decodeHeaderValue(fromMatch[1].replace(/\r?\n\s+/g, ' ').trim());
         const parsed = parseEmailAddress(fromValue);
@@ -229,8 +227,8 @@ class SimpleImapClient {
         }
       }
 
-      // Subject
-      const subjectMatch = headers.match(/^Subject:\s*(.+?)(?:\r?\n(?![^\s])|\r?\n\r?\n|$)/mi);
+      // Subject - improved regex
+      const subjectMatch = headers.match(/^Subject:\s*([\s\S]+?)(?=\r?\n(?:[A-Za-z-]+:|$))/mi);
       if (subjectMatch) {
         email.subject = decodeHeaderValue(subjectMatch[1].replace(/\r?\n\s+/g, ' ').trim());
       }
@@ -270,13 +268,27 @@ class SimpleImapClient {
       email.body_html = parsedBody.html;
     }
 
-    // Fallback for empty from_email - use imapUser
-    if (!email.from_email) {
-      email.from_email = 'unknown@email.com';
+    // Fallback for empty from_email - try alternative extraction
+    if (!email.from_email || email.from_email === 'unknown@email.com') {
+      // Try to find email in raw data
+      const rawEmailMatch = data.match(/From:[^<]*<([^>]+@[^>]+)>/i);
+      if (rawEmailMatch) {
+        email.from_email = rawEmailMatch[1].toLowerCase().trim();
+      } else {
+        const simpleEmailMatch = data.match(/From:\s*([^\s<]+@[^\s>]+)/i);
+        if (simpleEmailMatch) {
+          email.from_email = simpleEmailMatch[1].toLowerCase().trim();
+        } else {
+          email.from_email = 'unknown@email.com';
+        }
+      }
     }
 
-    // Clean up text
-    email.body_text = email.body_text.substring(0, 10000);
+    // Clean up text - remove null characters
+    email.body_text = cleanNullChars(email.body_text.substring(0, 10000));
+    email.body_html = email.body_html ? cleanNullChars(email.body_html) : null;
+    email.subject = email.subject ? cleanNullChars(email.subject) : null;
+    email.from_name = email.from_name ? cleanNullChars(email.from_name) : null;
     
     return email;
   }
@@ -295,10 +307,19 @@ class SimpleImapClient {
   }
 }
 
+// Remove null characters and other problematic chars for PostgreSQL
+function cleanNullChars(str: string): string {
+  if (!str) return str;
+  return str
+    .replace(/\u0000/g, '')  // Remove null characters
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ''); // Remove other control chars
+}
+
 // Decode MIME header value (=?charset?encoding?text?=)
 function decodeHeaderValue(value: string): string {
   if (!value) return value;
   
+  // Handle multiple encoded words that may be split across lines
   const regex = /=\?([^?]+)\?([BQ])\?([^?]*)\?=/gi;
   
   let result = value.replace(regex, (match, charset, encoding, text) => {
@@ -319,9 +340,10 @@ function decodeHeaderValue(value: string): string {
     return text;
   });
   
+  // Remove whitespace between encoded words
   result = result.replace(/\?=\s*=\?/g, '');
   
-  return result.trim();
+  return cleanNullChars(result.trim());
 }
 
 function decodeUTF8Bytes(str: string): string {
@@ -360,18 +382,21 @@ function decodeQuotedPrintable(str: string): string {
 function parseEmailAddress(addr: string): { email: string | null; name: string | null } {
   addr = addr.trim();
   
+  // Format: "Name" <email@domain.com>
   const match1 = addr.match(/^"?([^"<]+)"?\s*<([^>]+)>/);
   if (match1) {
-    return { name: match1[1].trim(), email: match1[2].trim().toLowerCase() };
+    return { name: cleanNullChars(match1[1].trim()), email: cleanNullChars(match1[2].trim().toLowerCase()) };
   }
   
+  // Format: <email@domain.com>
   const match2 = addr.match(/<([^>]+)>/);
   if (match2) {
-    return { name: null, email: match2[1].trim().toLowerCase() };
+    return { name: null, email: cleanNullChars(match2[1].trim().toLowerCase()) };
   }
   
+  // Plain email
   if (addr.includes('@')) {
-    return { name: null, email: addr.toLowerCase() };
+    return { name: null, email: cleanNullChars(addr.toLowerCase()) };
   }
   
   return { name: null, email: null };
@@ -395,7 +420,7 @@ function parseBodyContent(body: string): { text: string; html: string | null } {
   if (body.includes('<html') || body.includes('<HTML') || 
       body.includes('<body') || body.includes('<BODY') ||
       body.includes('<!DOCTYPE html')) {
-    return { text: stripHtml(body), html: body };
+    return { text: cleanNullChars(stripHtml(body)), html: cleanNullChars(body) };
   }
   
   // Check for quoted-printable encoding
@@ -409,7 +434,7 @@ function parseBodyContent(body: string): { text: string; html: string | null } {
     decoded = decodeBase64UTF8(body);
   }
   
-  return { text: cleanText(decoded), html: null };
+  return { text: cleanNullChars(cleanText(decoded)), html: null };
 }
 
 function parseMultipart(body: string, boundary: string): { text: string; html: string | null } {
@@ -462,7 +487,7 @@ function parseMultipart(body: string, boundary: string): { text: string; html: s
     plainText = stripHtml(htmlText);
   }
   
-  return { text: plainText.trim(), html: htmlText || null };
+  return { text: cleanNullChars(plainText.trim()), html: htmlText ? cleanNullChars(htmlText) : null };
 }
 
 function stripHtml(html: string): string {
@@ -510,7 +535,8 @@ async function syncUserEmails(
     }
     
     const messageCount = await client.selectInbox();
-    const startMsg = Math.max(1, messageCount - 49);
+    // Fetch last 100 emails instead of 50
+    const startMsg = Math.max(1, messageCount - 99);
     const fetchedEmails = await client.fetchEmails(startMsg, messageCount, config.imap_user);
     
     await client.logout();
@@ -518,12 +544,12 @@ async function syncUserEmails(
     const emailsToInsert = fetchedEmails.map(email => ({
       user_id: config.user_id,
       message_id: `${config.imap_user}_${email.message_id}`,
-      from_email: email.from_email || 'unknown@email.com',
-      from_name: email.from_name,
-      to_email: email.to_email || config.imap_user,
-      subject: email.subject,
-      body_text: email.body_text?.substring(0, 10000) || null,
-      body_html: email.body_html,
+      from_email: cleanNullChars(email.from_email || 'unknown@email.com'),
+      from_name: email.from_name ? cleanNullChars(email.from_name) : null,
+      to_email: cleanNullChars(email.to_email || config.imap_user),
+      subject: email.subject ? cleanNullChars(email.subject) : null,
+      body_text: email.body_text ? cleanNullChars(email.body_text.substring(0, 10000)) : null,
+      body_html: email.body_html ? cleanNullChars(email.body_html) : null,
       received_at: email.received_at || new Date().toISOString(),
       is_read: email.is_read,
       is_starred: false,
@@ -532,15 +558,20 @@ async function syncUserEmails(
     }));
 
     if (emailsToInsert.length > 0) {
-      const { error: insertError } = await supabaseAdmin
-        .from('received_emails')
-        .upsert(emailsToInsert, {
-          onConflict: 'user_id,message_id',
-          ignoreDuplicates: true
-        });
+      // Insert in batches to avoid issues
+      const batchSize = 25;
+      for (let i = 0; i < emailsToInsert.length; i += batchSize) {
+        const batch = emailsToInsert.slice(i, i + batchSize);
+        const { error: insertError } = await supabaseAdmin
+          .from('received_emails')
+          .upsert(batch, {
+            onConflict: 'user_id,message_id',
+            ignoreDuplicates: true
+          });
 
-      if (insertError) {
-        console.error(`Error inserting emails for user ${config.user_id}:`, insertError);
+        if (insertError) {
+          console.error(`Error inserting batch ${i / batchSize + 1} for user ${config.user_id}:`, insertError);
+        }
       }
     }
 
@@ -549,6 +580,7 @@ async function syncUserEmails(
       .update({ last_sync_at: new Date().toISOString() })
       .eq('id', config.id);
 
+    console.log(`[SYNC] User ${config.user_id}: ${fetchedEmails.length} emails synced`);
     return { success: true, count: fetchedEmails.length };
     
   } catch (error: unknown) {

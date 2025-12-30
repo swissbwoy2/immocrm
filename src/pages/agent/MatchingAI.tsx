@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Sparkles, RefreshCw, Check, X, Send, User, MapPin, Home, Banknote, Mail, Clock, Filter, ChevronDown, ChevronUp, Eye, TrendingUp, Zap, AlertCircle } from 'lucide-react';
+import { Brain, Sparkles, RefreshCw, Check, X, Send, User, MapPin, Home, Banknote, Mail, Clock, Filter, ChevronDown, ChevronUp, Eye, TrendingUp, Zap, AlertCircle, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -53,7 +53,14 @@ const MatchingAI = () => {
   const [matches, setMatches] = useState<AIMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
-  const [stats, setStats] = useState({ pending: 0, accepted: 0, converted: 0, unanalyzed: 0 });
+  const [stats, setStats] = useState({ 
+    pending: 0, 
+    accepted: 0, 
+    converted: 0, 
+    unanalyzed: 0,
+    alertCount: 0,
+    sources: {} as Record<string, number>
+  });
   const [selectedMatch, setSelectedMatch] = useState<AIMatch | null>(null);
   const [emailContent, setEmailContent] = useState<string | null>(null);
   const [loadingEmail, setLoadingEmail] = useState(false);
@@ -82,7 +89,10 @@ const MatchingAI = () => {
       const accepted = response.data.matches?.filter((m: AIMatch) => m.status === 'accepted').length || 0;
       const converted = response.data.matches?.filter((m: AIMatch) => m.status === 'converted').length || 0;
       const unanalyzed = response.data.unanalyzed_count || 0;
-      setStats({ pending, accepted, converted, unanalyzed });
+      const alertCount = response.data.alert_count || 0;
+      const sources = response.data.sources || {};
+      
+      setStats({ pending, accepted, converted, unanalyzed, alertCount, sources });
     } catch (error) {
       console.error('Error loading matches:', error);
       toast.error('Erreur lors du chargement des matchs');
@@ -94,22 +104,31 @@ const MatchingAI = () => {
   const analyzeEmails = async () => {
     try {
       setAnalyzing(true);
-      toast.info('Analyse des emails en cours...', { duration: 10000 });
+      toast.info('Analyse des alertes immobilières en cours...', { duration: 15000 });
 
       const response = await supabase.functions.invoke('ai-matching', {
-        body: { action: 'analyze', limit: 20 },
+        body: { action: 'analyze', limit: 100 },
       });
 
       if (response.error) throw response.error;
 
-      const { analyzed, matches: matchesCount } = response.data;
+      const { analyzed, matches: matchesCount, total_alerts, sources } = response.data;
       
+      const sourcesList = Object.entries(sources || {})
+        .map(([name, count]) => `${name}: ${count}`)
+        .join(', ');
+
       if (matchesCount > 0) {
-        toast.success(`${matchesCount} nouveau(x) match(s) trouvé(s) sur ${analyzed} email(s) analysé(s)`);
+        toast.success(
+          `${matchesCount} match(s) trouvé(s) sur ${analyzed} alerte(s) analysée(s)`, 
+          { description: sourcesList ? `Sources: ${sourcesList}` : undefined }
+        );
       } else if (analyzed > 0) {
-        toast.info(`${analyzed} email(s) analysé(s), aucun match trouvé`);
+        toast.info(`${analyzed} alerte(s) analysée(s), aucun match trouvé`);
+      } else if (total_alerts > 0) {
+        toast.info(`${total_alerts} alertes détectées, toutes déjà analysées`);
       } else {
-        toast.info('Aucun nouvel email à analyser');
+        toast.warning('Aucune alerte immobilière détectée dans vos emails récents');
       }
 
       await loadMatches();
@@ -219,6 +238,25 @@ const MatchingAI = () => {
     }
   };
 
+  const getSourceBadge = (match: AIMatch) => {
+    const source = match.match_details?.source || match.extracted_regie;
+    if (!source) return null;
+    
+    const colorMap: Record<string, string> = {
+      'RealAdvisor': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      'Comparis': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+      'ImmoScout24': 'bg-green-500/20 text-green-400 border-green-500/30',
+      'Homegate': 'bg-red-500/20 text-red-400 border-red-500/30',
+      'Immobilier.ch': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+    };
+    
+    return (
+      <Badge className={colorMap[source] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'}>
+        {source}
+      </Badge>
+    );
+  };
+
   const filteredMatches = matches.filter(m => {
     if (filter === 'all') return true;
     return m.status === filter;
@@ -255,7 +293,9 @@ const MatchingAI = () => {
                   Matching AI
                   <Sparkles className="w-6 h-6 text-yellow-300 animate-pulse" />
                 </h1>
-                <p className="text-white/70 text-sm md:text-base">Analyse intelligente de vos emails immobiliers</p>
+                <p className="text-white/70 text-sm md:text-base">
+                  Analyse des alertes RealAdvisor, Comparis, Immoscout...
+                </p>
               </div>
             </div>
             
@@ -268,10 +308,22 @@ const MatchingAI = () => {
               {analyzing ? (
                 <><RefreshCw className="w-5 h-5 mr-2 animate-spin" />Analyse...</>
               ) : (
-                <><Zap className="w-5 h-5 mr-2" />Analyser {stats.unanalyzed > 0 && `(${stats.unanalyzed})`}</>
+                <><Zap className="w-5 h-5 mr-2" />Analyser les alertes</>
               )}
             </Button>
           </div>
+
+          {/* Sources detected */}
+          {Object.keys(stats.sources).length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="text-white/50 text-sm">Sources détectées:</span>
+              {Object.entries(stats.sources).map(([source, count]) => (
+                <Badge key={source} className="bg-white/20 text-white border-white/30">
+                  {source}: {count}
+                </Badge>
+              ))}
+            </div>
+          )}
         </motion.div>
 
         {/* Premium KPIs */}
@@ -305,12 +357,12 @@ const MatchingAI = () => {
           </motion.div>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
             <PremiumKPICard
-              title="Non analysés"
-              value={stats.unanalyzed}
-              icon={AlertCircle}
-              variant={stats.unanalyzed > 0 ? 'danger' : 'default'}
+              title="Alertes détectées"
+              value={stats.alertCount}
+              icon={BarChart3}
+              variant={stats.alertCount > 0 ? 'default' : 'danger'}
+              subtitle={stats.alertCount === 0 ? 'Aucune alerte' : undefined}
               delay={3}
-              onClick={stats.unanalyzed > 0 ? analyzeEmails : undefined}
             />
           </motion.div>
         </div>
@@ -363,14 +415,16 @@ const MatchingAI = () => {
             </div>
             <h3 className="text-lg font-semibold mb-2">Aucun match trouvé</h3>
             <p className="text-muted-foreground text-center mb-4 max-w-md">
-              {filter === 'pending' 
-                ? "Cliquez sur 'Analyser' pour trouver des correspondances entre vos emails et les critères de vos clients" 
-                : "Aucun match dans cette catégorie"}
+              {stats.alertCount === 0 
+                ? "Aucune alerte immobilière détectée (RealAdvisor, Comparis, etc.) dans vos 100 derniers emails" 
+                : filter === 'pending'
+                  ? "Cliquez sur 'Analyser les alertes' pour trouver des correspondances"
+                  : "Aucun match dans cette catégorie"}
             </p>
-            {filter === 'pending' && stats.unanalyzed > 0 && (
+            {stats.alertCount > 0 && (
               <Button onClick={analyzeEmails} disabled={analyzing} className="bg-gradient-to-r from-violet-600 to-indigo-600">
                 <Sparkles className="w-4 h-4 mr-2" />
-                Analyser {stats.unanalyzed} email(s)
+                Analyser {stats.alertCount} alerte(s)
               </Button>
             )}
           </motion.div>
@@ -413,6 +467,7 @@ const MatchingAI = () => {
                             <User className="w-4 h-4 text-violet-400" />
                             <span className="font-medium truncate">{clientName}</span>
                             {getStatusBadge(match.status)}
+                            {getSourceBadge(match)}
                             <Badge variant="outline" className="text-xs">
                               {getScoreLabel(match.match_score)}
                             </Badge>
@@ -423,68 +478,34 @@ const MatchingAI = () => {
                             <span className="truncate">{match.email_subject || 'Sans sujet'}</span>
                           </div>
 
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-3 text-sm">
                             {match.extracted_location && (
-                              <Badge variant="secondary" className="bg-violet-500/10 text-violet-300 border-violet-500/20">
-                                <MapPin className="w-3 h-3 mr-1" />
+                              <span className="flex items-center gap-1 text-muted-foreground">
+                                <MapPin className="w-3 h-3 text-violet-400" />
                                 {match.extracted_location}
-                              </Badge>
-                            )}
-                            {match.extracted_pieces && (
-                              <Badge variant="secondary" className="bg-blue-500/10 text-blue-300 border-blue-500/20">
-                                <Home className="w-3 h-3 mr-1" />
-                                {match.extracted_pieces} pièces
-                              </Badge>
+                              </span>
                             )}
                             {match.extracted_price && (
-                              <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/20">
-                                <Banknote className="w-3 h-3 mr-1" />
+                              <span className="flex items-center gap-1 text-muted-foreground">
+                                <Banknote className="w-3 h-3 text-emerald-400" />
                                 {match.extracted_price.toLocaleString()} CHF
-                              </Badge>
+                              </span>
                             )}
-                            {match.extracted_regie && (
-                              <Badge variant="outline" className="text-xs">
-                                {match.extracted_regie}
-                              </Badge>
+                            {match.extracted_pieces && (
+                              <span className="flex items-center gap-1 text-muted-foreground">
+                                <Home className="w-3 h-3 text-amber-400" />
+                                {match.extracted_pieces} pièces
+                              </span>
                             )}
                           </div>
                         </div>
 
                         {/* Actions */}
                         <div className="flex items-center gap-2">
-                          {match.status === 'pending' && (
-                            <>
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                className="text-red-400 border-red-500/30 hover:bg-red-500/10 hover:border-red-500/50"
-                                onClick={() => updateMatchStatus(match.id, 'rejected')}
-                              >
-                                <X className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                className="text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 hover:border-emerald-500/50"
-                                onClick={() => updateMatchStatus(match.id, 'accepted')}
-                              >
-                                <Check className="w-4 h-4" />
-                              </Button>
-                            </>
-                          )}
-                          {(match.status === 'pending' || match.status === 'accepted') && (
-                            <Button
-                              size="sm"
-                              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700"
-                              onClick={() => createOfferFromMatch(match)}
-                            >
-                              <Send className="w-4 h-4 mr-1" />
-                              <span className="hidden sm:inline">Créer offre</span>
-                            </Button>
-                          )}
                           <Button
-                            size="icon"
                             variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
                             onClick={() => toggleCardExpanded(match.id)}
                           >
                             {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -503,10 +524,10 @@ const MatchingAI = () => {
                           >
                             <div className="p-4 pt-0 border-t border-border/50 mt-2">
                               <div className="grid md:grid-cols-2 gap-4">
-                                {/* Extracted Property Info */}
+                                {/* Extracted info */}
                                 <div className="space-y-2">
-                                  <h4 className="text-sm font-medium text-violet-400">Bien extrait de l'email</h4>
-                                  <div className="bg-violet-500/5 rounded-lg p-3 space-y-1.5 text-sm border border-violet-500/10">
+                                  <h4 className="text-sm font-medium text-violet-400">Informations extraites</h4>
+                                  <div className="text-sm space-y-1">
                                     {match.extracted_address && (
                                       <p><span className="text-muted-foreground">Adresse:</span> {match.extracted_address}</p>
                                     )}
@@ -522,65 +543,98 @@ const MatchingAI = () => {
                                     {match.extracted_regie && (
                                       <p><span className="text-muted-foreground">Source:</span> {match.extracted_regie}</p>
                                     )}
-                                    <p><span className="text-muted-foreground">Email:</span> {match.email_from}</p>
                                   </div>
-                                  <Button variant="outline" size="sm" onClick={() => viewEmailContent(match)} className="mt-2">
-                                    <Eye className="w-4 h-4 mr-1" />
-                                    Voir l'email complet
-                                  </Button>
                                 </div>
 
-                                {/* Client Criteria */}
+                                {/* Client criteria */}
                                 <div className="space-y-2">
-                                  <h4 className="text-sm font-medium text-blue-400">Critères du client</h4>
-                                  <div className="bg-blue-500/5 rounded-lg p-3 space-y-1.5 text-sm border border-blue-500/10">
+                                  <h4 className="text-sm font-medium text-emerald-400">Critères client</h4>
+                                  <div className="text-sm space-y-1">
                                     {match.client?.region_recherche && (
                                       <p><span className="text-muted-foreground">Région:</span> {match.client.region_recherche}</p>
-                                    )}
-                                    {match.client?.pieces && (
-                                      <p><span className="text-muted-foreground">Pièces:</span> {match.client.pieces}</p>
                                     )}
                                     {match.client?.budget_max && (
                                       <p><span className="text-muted-foreground">Budget max:</span> {match.client.budget_max.toLocaleString()} CHF</p>
                                     )}
+                                    {match.client?.pieces && (
+                                      <p><span className="text-muted-foreground">Pièces:</span> {match.client.pieces}</p>
+                                    )}
                                     {match.client?.type_bien && (
                                       <p><span className="text-muted-foreground">Type:</span> {match.client.type_bien}</p>
-                                    )}
-                                    {match.client?.profiles?.email && (
-                                      <p><span className="text-muted-foreground">Email:</span> {match.client.profiles.email}</p>
                                     )}
                                   </div>
                                 </div>
                               </div>
 
-                              {/* Match Details */}
-                              <div className="mt-4">
-                                <h4 className="text-sm font-medium mb-2">Détails du score</h4>
-                                <div className="flex flex-wrap gap-2">
-                                  {match.match_details.price_match && (
-                                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                                      ✓ Prix compatible
-                                    </Badge>
-                                  )}
-                                  {match.match_details.pieces_match && (
-                                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                                      ✓ Pièces OK
-                                    </Badge>
-                                  )}
-                                  {match.match_details.location_match && (
-                                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                                      ✓ Région OK
-                                    </Badge>
-                                  )}
-                                  {match.match_details.type_match && (
-                                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                                      ✓ Type OK
-                                    </Badge>
-                                  )}
-                                  {match.match_details.category && (
-                                    <Badge variant="outline">{match.match_details.category}</Badge>
-                                  )}
+                              {/* Match details */}
+                              {match.match_details && (
+                                <div className="mt-4 p-3 rounded-lg bg-background/50">
+                                  <h4 className="text-sm font-medium mb-2">Détails du match</h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    {match.match_details.location_match && (
+                                      <Badge className="bg-emerald-500/20 text-emerald-400">
+                                        ✓ Localisation
+                                      </Badge>
+                                    )}
+                                    {match.match_details.price_match && (
+                                      <Badge className="bg-emerald-500/20 text-emerald-400">
+                                        ✓ Prix
+                                      </Badge>
+                                    )}
+                                    {match.match_details.pieces_match && (
+                                      <Badge className="bg-emerald-500/20 text-emerald-400">
+                                        ✓ Pièces
+                                      </Badge>
+                                    )}
+                                    {match.match_details.type_match && (
+                                      <Badge className="bg-emerald-500/20 text-emerald-400">
+                                        ✓ Type
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
+                              )}
+
+                              {/* Action buttons */}
+                              <div className="flex flex-wrap gap-2 mt-4">
+                                {match.status === 'pending' && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      className="bg-emerald-600 hover:bg-emerald-700"
+                                      onClick={() => updateMatchStatus(match.id, 'accepted')}
+                                    >
+                                      <Check className="w-4 h-4 mr-1" />
+                                      Accepter
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={() => updateMatchStatus(match.id, 'rejected')}
+                                    >
+                                      <X className="w-4 h-4 mr-1" />
+                                      Rejeter
+                                    </Button>
+                                  </>
+                                )}
+                                {(match.status === 'pending' || match.status === 'accepted') && (
+                                  <Button
+                                    size="sm"
+                                    className="bg-gradient-to-r from-violet-600 to-indigo-600"
+                                    onClick={() => createOfferFromMatch(match)}
+                                  >
+                                    <Send className="w-4 h-4 mr-1" />
+                                    Créer une offre
+                                  </Button>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => viewEmailContent(match)}
+                                >
+                                  <Eye className="w-4 h-4 mr-1" />
+                                  Voir l'email
+                                </Button>
                               </div>
                             </div>
                           </motion.div>
@@ -593,30 +647,32 @@ const MatchingAI = () => {
             </div>
           </AnimatePresence>
         )}
-
-        {/* Email Content Dialog */}
-        <Dialog open={!!selectedMatch} onOpenChange={() => setSelectedMatch(null)}>
-          <DialogContent className="max-w-2xl max-h-[80vh]">
-            <DialogHeader>
-              <DialogTitle>Contenu de l'email</DialogTitle>
-              <DialogDescription>{selectedMatch?.email_subject}</DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[60vh]">
-              {loadingEmail ? (
-                <div className="space-y-2 p-4">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-5/6" />
-                </div>
-              ) : (
-                <div className="p-4 bg-muted/50 rounded-lg whitespace-pre-wrap text-sm font-mono">
-                  {emailContent}
-                </div>
-              )}
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
       </div>
+
+      {/* Email content dialog */}
+      <Dialog open={!!selectedMatch} onOpenChange={() => setSelectedMatch(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Contenu de l'email</DialogTitle>
+            <DialogDescription>
+              {selectedMatch?.email_subject}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="h-[60vh]">
+            {loadingEmail ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ) : (
+              <pre className="whitespace-pre-wrap text-sm font-mono p-4 bg-muted rounded-lg">
+                {emailContent}
+              </pre>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
