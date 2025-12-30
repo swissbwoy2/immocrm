@@ -711,7 +711,7 @@ const MatchingAI = () => {
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-4 w-2/3" />
               </div>
-            ) : emailContent.includes('<') && emailContent.includes('>') ? (
+            ) : emailContent && emailContent.includes('<') && emailContent.includes('>') ? (
               <div 
                 className="prose prose-sm max-w-none dark:prose-invert p-4"
                 dangerouslySetInnerHTML={{ __html: emailContent }}
@@ -719,7 +719,7 @@ const MatchingAI = () => {
             ) : (
               <div className="p-4 bg-muted/50 rounded-lg">
                 <pre className="whitespace-pre-wrap text-sm font-sans leading-relaxed text-foreground">
-                  {emailContent}
+                  {emailContent || 'Contenu non disponible'}
                 </pre>
               </div>
             )}
