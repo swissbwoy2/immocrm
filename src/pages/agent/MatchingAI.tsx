@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Sparkles, RefreshCw, Check, X, Send, User, MapPin, Home, Banknote, Mail, Clock, Filter, ChevronDown, ChevronUp, Eye, TrendingUp, Zap, AlertCircle, BarChart3 } from 'lucide-react';
+import { Brain, Sparkles, RefreshCw, Check, X, Send, User, MapPin, Home, Banknote, Mail, Clock, Filter, ChevronDown, ChevronUp, ExternalLink, TrendingUp, Zap, AlertCircle, BarChart3, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,8 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
-import { EmailViewDialog } from '@/components/EmailViewDialog';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface AIMatch {
   id: string;
@@ -60,11 +60,10 @@ const MatchingAI = () => {
     alertCount: 0,
     sources: {} as Record<string, number>
   });
-  const [selectedMatch, setSelectedMatch] = useState<AIMatch | null>(null);
-  const [emailData, setEmailData] = useState<{ bodyHtml: string | null; bodyText: string | null }>({ bodyHtml: null, bodyText: null });
-  const [loadingEmail, setLoadingEmail] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('pending');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
+  const [propertyLinks, setPropertyLinks] = useState<{ url: string; label: string }[]>([]);
+  const [loadingLinks, setLoadingLinks] = useState<string | null>(null);
 
   useEffect(() => {
     loadMatches();
@@ -180,9 +179,70 @@ const MatchingAI = () => {
     });
   };
 
-  const viewEmailContent = async (match: AIMatch) => {
-    setSelectedMatch(match);
-    setLoadingEmail(true);
+  // Extract property links from email content
+  const extractPropertyLinks = (html: string | null, text: string | null): { url: string; label: string }[] => {
+    const content = (html || '') + ' ' + (text || '');
+    
+    // Decode quoted-printable
+    let decoded = content
+      .replace(/=\r?\n/g, '') // soft line breaks
+      .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+      .replace(/=3D/gi, '=');
+    
+    // Regex to extract URLs
+    const urlRegex = /https?:\/\/[^\s<>"'\]\\)]+/gi;
+    const allUrls = decoded.match(urlRegex) || [];
+    
+    // Property domains to look for
+    const propertyDomains = [
+      'comparis.ch', 
+      'immoscout24.ch', 
+      'realadvisor', 
+      'homegate.ch', 
+      'immobilier.ch',
+      'immostreet.ch',
+      'acheter-louer.ch',
+      'newhome.ch',
+      'propertymarket.ch'
+    ];
+    
+    // Filter for property URLs, excluding unsubscribe and tracking links
+    const propertyUrls = allUrls.filter(url => {
+      const isPropertyDomain = propertyDomains.some(domain => url.toLowerCase().includes(domain));
+      const isUnsubscribe = url.toLowerCase().includes('unsubscribe') || 
+                           url.toLowerCase().includes('email-preferences') ||
+                           url.toLowerCase().includes('autoversicherung') ||
+                           url.toLowerCase().includes('click.') ||
+                           url.toLowerCase().includes('/c/') && url.toLowerCase().includes('?e=');
+      // Look for property-like paths
+      const hasPropertyPath = url.includes('/wohnung/') || 
+                              url.includes('/appartement/') ||
+                              url.includes('/maison/') ||
+                              url.includes('/haus/') ||
+                              url.includes('/immobilie/') ||
+                              url.includes('/property/') ||
+                              url.includes('/annonce/') ||
+                              url.includes('/d/') ||
+                              url.includes('/listing/') ||
+                              url.includes('/detail/');
+      
+      return isPropertyDomain && !isUnsubscribe && (hasPropertyPath || !url.includes('/c/'));
+    });
+    
+    // Deduplicate and clean URLs
+    const uniqueUrls = [...new Set(propertyUrls.map(url => 
+      url.replace(/[&?]utm_[^&]+/g, '').replace(/[&?]ref=[^&]+/g, '').replace(/\)$/, '').replace(/\.$/, '')
+    ))];
+    
+    return uniqueUrls.slice(0, 10).map((url, index) => ({
+      url,
+      label: `Voir l'annonce ${index + 1}`
+    }));
+  };
+
+  const loadPropertyLinks = async (match: AIMatch) => {
+    setLoadingLinks(match.id);
+    setPropertyLinks([]);
     
     try {
       const { data, error } = await supabase
@@ -193,15 +253,17 @@ const MatchingAI = () => {
 
       if (error) throw error;
       
-      setEmailData({
-        bodyHtml: data.body_html || null,
-        bodyText: data.body_text || null
-      });
+      const links = extractPropertyLinks(data.body_html, data.body_text);
+      setPropertyLinks(links);
+      
+      if (links.length === 0) {
+        toast.info('Aucun lien d\'annonce trouvé dans cet email');
+      }
     } catch (error) {
       console.error('Error loading email:', error);
-      setEmailData({ bodyHtml: null, bodyText: null });
+      toast.error('Erreur lors du chargement des liens');
     } finally {
-      setLoadingEmail(false);
+      setLoadingLinks(null);
     }
   };
 
@@ -630,14 +692,51 @@ const MatchingAI = () => {
                                     Créer une offre
                                   </Button>
                                 )}
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => viewEmailContent(match)}
-                                >
-                                  <Eye className="w-4 h-4 mr-1" />
-                                  Voir l'email
-                                </Button>
+                                <Popover onOpenChange={(open) => open && loadPropertyLinks(match)}>
+                                  <PopoverTrigger asChild>
+                                    <Button size="sm" variant="outline">
+                                      {loadingLinks === match.id ? (
+                                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                      ) : (
+                                        <ExternalLink className="w-4 h-4 mr-1" />
+                                      )}
+                                      Voir les offres
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-80 p-0" align="start">
+                                    <div className="p-3 border-b border-border">
+                                      <h4 className="font-medium text-sm">Liens des annonces</h4>
+                                      <p className="text-xs text-muted-foreground">Cliquez pour ouvrir dans un nouvel onglet</p>
+                                    </div>
+                                    <div className="max-h-64 overflow-y-auto">
+                                      {loadingLinks === match.id ? (
+                                        <div className="p-4 flex items-center justify-center">
+                                          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                                        </div>
+                                      ) : propertyLinks.length === 0 ? (
+                                        <div className="p-4 text-center text-sm text-muted-foreground">
+                                          <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                          Aucun lien d'annonce trouvé
+                                        </div>
+                                      ) : (
+                                        <div className="p-2 space-y-1">
+                                          {propertyLinks.map((link, i) => (
+                                            <a
+                                              key={i}
+                                              href={link.url}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="flex items-center gap-2 p-2 rounded-md hover:bg-accent text-sm transition-colors"
+                                            >
+                                              <ExternalLink className="w-4 h-4 text-violet-400 flex-shrink-0" />
+                                              <span className="truncate">{link.label}</span>
+                                            </a>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
                               </div>
                             </div>
                           </motion.div>
@@ -652,15 +751,6 @@ const MatchingAI = () => {
         )}
       </div>
 
-      {/* Email content dialog */}
-      <EmailViewDialog
-        open={!!selectedMatch}
-        onOpenChange={(open) => !open && setSelectedMatch(null)}
-        subject={selectedMatch?.email_subject || null}
-        bodyHtml={emailData.bodyHtml}
-        bodyText={emailData.bodyText}
-        loading={loadingEmail}
-      />
     </div>
   );
 };
