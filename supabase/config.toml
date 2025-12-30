@@ -92,3 +92,9 @@ verify_jwt = true
 
 [functions.ai-matching]
 verify_jwt = true
+
+[functions.generate-brochure-pdf]
+verify_jwt = false
+
+[functions.generate-dossier-complet-pdf]
+verify_jwt = true
