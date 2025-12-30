@@ -181,6 +181,38 @@ const MatchingAI = () => {
     });
   };
 
+  // Decode quoted-printable content for display
+  const decodeEmailContent = (content: string): string => {
+    if (!content) return '';
+    
+    // Remove MIME headers if present at start
+    let decoded = content
+      .replace(/^[\s\S]*?Content-Transfer-Encoding:\s*\S+[\r\n]+/i, '')
+      .replace(/^Content-Type:[^\r\n]+[\r\n]+/gmi, '');
+    
+    // Decode quoted-printable
+    decoded = decoded
+      .replace(/=\r?\n/g, '') // soft line breaks
+      .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    
+    // Try to decode UTF-8 bytes
+    try {
+      const bytes = new Uint8Array(decoded.length);
+      for (let i = 0; i < decoded.length; i++) {
+        bytes[i] = decoded.charCodeAt(i);
+      }
+      decoded = new TextDecoder('utf-8').decode(bytes);
+    } catch (e) {
+      // Keep as is
+    }
+    
+    // Clean up
+    return decoded
+      .replace(/\r\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  };
+
   const viewEmailContent = async (match: AIMatch) => {
     setSelectedMatch(match);
     setLoadingEmail(true);
@@ -193,7 +225,16 @@ const MatchingAI = () => {
         .single();
 
       if (error) throw error;
-      setEmailContent(data.body_text || data.body_html || 'Contenu non disponible');
+      
+      // Prioritize HTML, then decode text content
+      let content = data.body_html || data.body_text || 'Contenu non disponible';
+      
+      // If content still has encoded chars, decode it
+      if (content.includes('=0A') || content.includes('=E2') || content.includes('=C3')) {
+        content = decodeEmailContent(content);
+      }
+      
+      setEmailContent(content);
     } catch (error) {
       console.error('Error loading email:', error);
       setEmailContent('Erreur lors du chargement du contenu');
@@ -651,24 +692,36 @@ const MatchingAI = () => {
 
       {/* Email content dialog */}
       <Dialog open={!!selectedMatch} onOpenChange={() => setSelectedMatch(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
+        <DialogContent className="max-w-3xl max-h-[85vh]">
           <DialogHeader>
-            <DialogTitle>Contenu de l'email</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Contenu de l'email
+            </DialogTitle>
+            <DialogDescription className="text-base font-medium">
               {selectedMatch?.email_subject}
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="h-[60vh]">
+          <ScrollArea className="h-[65vh]">
             {loadingEmail ? (
-              <div className="space-y-2">
+              <div className="space-y-3 p-4">
                 <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-5/6" />
+                <Skeleton className="h-4 w-4/5" />
                 <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-4 w-2/3" />
               </div>
+            ) : emailContent.includes('<') && emailContent.includes('>') ? (
+              <div 
+                className="prose prose-sm max-w-none dark:prose-invert p-4"
+                dangerouslySetInnerHTML={{ __html: emailContent }}
+              />
             ) : (
-              <pre className="whitespace-pre-wrap text-sm font-mono p-4 bg-muted rounded-lg">
-                {emailContent}
-              </pre>
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <pre className="whitespace-pre-wrap text-sm font-sans leading-relaxed text-foreground">
+                  {emailContent}
+                </pre>
+              </div>
             )}
           </ScrollArea>
         </DialogContent>
