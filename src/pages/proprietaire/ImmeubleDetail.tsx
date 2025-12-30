@@ -2,21 +2,30 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useCallback } from 'react';
 import { 
   Building2, ArrowLeft, Plus, MapPin, Calendar, Users, 
-  Wrench, FileText, Home, DoorOpen, AlertTriangle, Edit
+  Wrench, FileText, Home, DoorOpen, AlertTriangle, Edit,
+  Tag, UserPlus, Image, Eye, EyeOff, Download, Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { PremiumPageHeader, PremiumEmptyState } from '@/components/premium';
 import { PremiumLotCard } from '@/components/premium/PremiumLotCard';
 import { PremiumLocataireImmeuble } from '@/components/premium/PremiumLocataireImmeuble';
 import { PremiumTicketTechniqueCard } from '@/components/premium/PremiumTicketTechniqueCard';
 import { PremiumDocumentCard } from '@/components/premium/PremiumDocumentCard';
+import { PremiumCoProprietaireCard } from '@/components/premium/PremiumCoProprietaireCard';
+import { PremiumPhotoGallery } from '@/components/premium/PremiumPhotoGallery';
+import { PremiumInteretAcheteurCard } from '@/components/premium/PremiumInteretAcheteurCard';
 import { AddLotDialog } from '@/components/proprietaire/AddLotDialog';
 import { AddLocataireDialog } from '@/components/proprietaire/AddLocataireDialog';
 import { CreateTicketDialog } from '@/components/proprietaire/CreateTicketDialog';
 import { UploadDocumentDialog } from '@/components/proprietaire/UploadDocumentDialog';
+import { AddCoProprietaireDialog } from '@/components/proprietaire/AddCoProprietaireDialog';
+import { UploadPhotoDialog } from '@/components/proprietaire/UploadPhotoDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -39,6 +48,17 @@ interface Immeuble {
   statut: string | null;
   numero_parcelle: string | null;
   commune_rf: string | null;
+  // Vente fields
+  mode_exploitation: string | null;
+  nombre_pieces: number | null;
+  prix_vente_demande: number | null;
+  prix_vente_estime: number | null;
+  statut_vente: string | null;
+  description_commerciale: string | null;
+  points_forts: string[] | null;
+  publier_espace_acheteur: boolean | null;
+  accord_proprietaire_publication: boolean | null;
+  date_mise_en_vente: string | null;
 }
 
 interface Lot {
@@ -100,6 +120,60 @@ interface Document {
   taille: number | null;
 }
 
+interface CoProprietaire {
+  id: string;
+  nom: string;
+  prenom: string;
+  civilite: string | null;
+  email: string | null;
+  telephone: string | null;
+  type_lien: string;
+  quote_part: number | null;
+  signature_requise: boolean | null;
+  signature_obtenue: boolean | null;
+  regime_matrimonial: string | null;
+  etat_civil: string | null;
+  date_signature: string | null;
+}
+
+interface Photo {
+  id: string;
+  url: string;
+  legende: string | null;
+  ordre: number | null;
+  est_principale: boolean | null;
+  type_photo: string | null;
+}
+
+interface InteretAcheteur {
+  id: string;
+  client_id: string;
+  type_interet: string;
+  statut: string | null;
+  message: string | null;
+  date_visite: string | null;
+  created_at: string | null;
+  client?: {
+    user_id: string;
+    profile?: {
+      nom: string | null;
+      prenom: string | null;
+      email: string | null;
+      telephone: string | null;
+    };
+  };
+}
+
+const STATUT_VENTE_CONFIG = {
+  analyse: { label: 'En analyse', color: 'bg-blue-500/10 text-blue-600 border-blue-200' },
+  estimation: { label: 'Estimation en cours', color: 'bg-amber-500/10 text-amber-600 border-amber-200' },
+  pret: { label: 'Prêt à publier', color: 'bg-emerald-500/10 text-emerald-600 border-emerald-200' },
+  publie: { label: 'Publié', color: 'bg-green-500/10 text-green-600 border-green-200' },
+  sous_offre: { label: 'Sous offre', color: 'bg-purple-500/10 text-purple-600 border-purple-200' },
+  vendu: { label: 'Vendu', color: 'bg-gray-500/10 text-gray-600 border-gray-200' },
+  retire: { label: 'Retiré', color: 'bg-red-500/10 text-red-600 border-red-200' }
+};
+
 export default function ImmeubleDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -111,12 +185,18 @@ export default function ImmeubleDetail() {
   const [locataires, setLocataires] = useState<Locataire[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [coProprietaires, setCoProprietaires] = useState<CoProprietaire[]>([]);
+  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [interets, setInterets] = useState<InteretAcheteur[]>([]);
   
   const [showAddLotDialog, setShowAddLotDialog] = useState(false);
   const [showAddLocataireDialog, setShowAddLocataireDialog] = useState(false);
   const [showCreateTicketDialog, setShowCreateTicketDialog] = useState(false);
   const [showUploadDocumentDialog, setShowUploadDocumentDialog] = useState(false);
+  const [showAddCoProprietaireDialog, setShowAddCoProprietaireDialog] = useState(false);
+  const [showUploadPhotoDialog, setShowUploadPhotoDialog] = useState(false);
   const [selectedLotId, setSelectedLotId] = useState<string | null>(null);
+  const [updatingPublication, setUpdatingPublication] = useState(false);
 
   const formatCurrency = (value: number | null) => {
     if (value === null) return '-';
@@ -195,6 +275,39 @@ export default function ImmeubleDetail() {
 
       setDocuments(documentsData || []);
 
+      // Load co-proprietaires
+      const { data: coPropsData } = await supabase
+        .from('co_proprietaires')
+        .select('*')
+        .eq('immeuble_id', id)
+        .order('created_at', { ascending: true });
+
+      setCoProprietaires(coPropsData || []);
+
+      // Load photos
+      const { data: photosData } = await supabase
+        .from('photos_immeuble')
+        .select('*')
+        .eq('immeuble_id', id)
+        .order('ordre', { ascending: true });
+
+      setPhotos(photosData || []);
+
+      // Load interets acheteurs
+      const { data: interetsData } = await supabase
+        .from('interets_acheteur')
+        .select(`
+          *,
+          client:clients(
+            user_id,
+            profile:profiles(nom, prenom, email, telephone)
+          )
+        `)
+        .eq('immeuble_id', id)
+        .order('created_at', { ascending: false });
+
+      setInterets(interetsData || []);
+
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Erreur lors du chargement');
@@ -212,6 +325,115 @@ export default function ImmeubleDetail() {
     setShowAddLocataireDialog(true);
   };
 
+  const handleTogglePublication = async (publish: boolean) => {
+    if (!immeuble) return;
+
+    // Check if owner has given consent
+    if (publish && !immeuble.accord_proprietaire_publication) {
+      toast.error("L'accord du propriétaire est nécessaire pour publier");
+      return;
+    }
+
+    setUpdatingPublication(true);
+    try {
+      const { error } = await supabase
+        .from('immeubles')
+        .update({ 
+          publier_espace_acheteur: publish,
+          statut_vente: publish ? 'publie' : 'pret'
+        })
+        .eq('id', immeuble.id);
+
+      if (error) throw error;
+
+      setImmeuble(prev => prev ? { 
+        ...prev, 
+        publier_espace_acheteur: publish,
+        statut_vente: publish ? 'publie' : 'pret'
+      } : null);
+      
+      toast.success(publish ? 'Bien publié dans l\'espace acheteurs' : 'Bien retiré de l\'espace acheteurs');
+    } catch (error) {
+      console.error('Error updating publication status:', error);
+      toast.error('Erreur lors de la mise à jour');
+    } finally {
+      setUpdatingPublication(false);
+    }
+  };
+
+  const handleSetPrimaryPhoto = async (photoId: string) => {
+    try {
+      // First, unset all photos as primary
+      await supabase
+        .from('photos_immeuble')
+        .update({ est_principale: false })
+        .eq('immeuble_id', id);
+
+      // Then set the selected one as primary
+      await supabase
+        .from('photos_immeuble')
+        .update({ est_principale: true })
+        .eq('id', photoId);
+
+      toast.success('Photo principale mise à jour');
+      loadData();
+    } catch (error) {
+      console.error('Error setting primary photo:', error);
+      toast.error('Erreur lors de la mise à jour');
+    }
+  };
+
+  const handleDeletePhoto = async (photoId: string) => {
+    try {
+      const { error } = await supabase
+        .from('photos_immeuble')
+        .delete()
+        .eq('id', photoId);
+
+      if (error) throw error;
+
+      toast.success('Photo supprimée');
+      loadData();
+    } catch (error) {
+      console.error('Error deleting photo:', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const handleDeleteCoProprietaire = async (copropId: string) => {
+    try {
+      const { error } = await supabase
+        .from('co_proprietaires')
+        .delete()
+        .eq('id', copropId);
+
+      if (error) throw error;
+
+      toast.success('Co-propriétaire supprimé');
+      loadData();
+    } catch (error) {
+      console.error('Error deleting co-proprietaire:', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const handleUpdateInteretStatut = async (interetId: string, newStatut: string) => {
+    try {
+      const { error } = await supabase
+        .from('interets_acheteur')
+        .update({ statut: newStatut })
+        .eq('id', interetId);
+
+      if (error) throw error;
+
+      toast.success('Statut mis à jour');
+      loadData();
+    } catch (error) {
+      console.error('Error updating interet status:', error);
+      toast.error('Erreur lors de la mise à jour');
+    }
+  };
+
   const getStatutBadge = (statut: string | null) => {
     const config: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
       gere: { label: 'Géré', variant: 'default' },
@@ -222,6 +444,17 @@ export default function ImmeubleDetail() {
     const { label, variant } = config[statut || 'gere'] || config.gere;
     return <Badge variant={variant}>{label}</Badge>;
   };
+
+  const getStatutVenteBadge = (statut: string | null) => {
+    const config = STATUT_VENTE_CONFIG[statut as keyof typeof STATUT_VENTE_CONFIG] || STATUT_VENTE_CONFIG.analyse;
+    return (
+      <Badge variant="outline" className={config.color}>
+        {config.label}
+      </Badge>
+    );
+  };
+
+  const isVenteMode = immeuble?.mode_exploitation === 'vente' || immeuble?.mode_exploitation === 'les_deux';
 
   if (loading) {
     return (
@@ -251,6 +484,7 @@ export default function ImmeubleDetail() {
   const vacantLots = lots.length - occupiedLots;
   const activeLocataires = locataires.filter(l => l.statut === 'actif').length;
   const openTickets = tickets.filter(t => !['clos', 'annule', 'resolu'].includes(t.statut || '')).length;
+  const pendingInterets = interets.filter(i => i.statut === 'nouveau').length;
 
   return (
     <div className="p-4 md:p-8">
@@ -265,6 +499,7 @@ export default function ImmeubleDetail() {
         icon={Building2}
         action={
           <div className="flex items-center gap-2">
+            {isVenteMode && getStatutVenteBadge(immeuble.statut_vente)}
             {getStatutBadge(immeuble.statut)}
             <Button variant="outline" onClick={() => navigate(`/proprietaire/immeubles/${id}/edit`)}>
               <Edit className="w-4 h-4 mr-2" />
@@ -373,13 +608,25 @@ export default function ImmeubleDetail() {
                 <span className="ml-2 font-medium">{immeuble.numero_parcelle}</span>
               </div>
             )}
+            {immeuble.nombre_pieces && (
+              <div>
+                <span className="text-muted-foreground">Pièces:</span>
+                <span className="ml-2 font-medium">{immeuble.nombre_pieces}</span>
+              </div>
+            )}
+            {immeuble.mode_exploitation && (
+              <div>
+                <span className="text-muted-foreground">Mode:</span>
+                <span className="ml-2 font-medium capitalize">{immeuble.mode_exploitation.replace('_', ' ')}</span>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Tabs */}
       <Tabs defaultValue="lots" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className={`grid w-full ${isVenteMode ? 'grid-cols-7' : 'grid-cols-4'}`}>
           <TabsTrigger value="lots" className="flex items-center gap-2">
             <Home className="w-4 h-4" />
             <span className="hidden sm:inline">Lots</span>
@@ -400,6 +647,25 @@ export default function ImmeubleDetail() {
             <span className="hidden sm:inline">Documents</span>
             <Badge variant="secondary" className="ml-1">{documents.length}</Badge>
           </TabsTrigger>
+          {isVenteMode && (
+            <>
+              <TabsTrigger value="vente" className="flex items-center gap-2">
+                <Tag className="w-4 h-4" />
+                <span className="hidden sm:inline">Vente</span>
+                {pendingInterets > 0 && <Badge variant="default" className="ml-1">{pendingInterets}</Badge>}
+              </TabsTrigger>
+              <TabsTrigger value="coproprietaires" className="flex items-center gap-2">
+                <UserPlus className="w-4 h-4" />
+                <span className="hidden sm:inline">Co-prop</span>
+                <Badge variant="secondary" className="ml-1">{coProprietaires.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="photos" className="flex items-center gap-2">
+                <Image className="w-4 h-4" />
+                <span className="hidden sm:inline">Photos</span>
+                <Badge variant="secondary" className="ml-1">{photos.length}</Badge>
+              </TabsTrigger>
+            </>
+          )}
         </TabsList>
 
         {/* Lots Tab */}
@@ -538,6 +804,259 @@ export default function ImmeubleDetail() {
             </div>
           )}
         </TabsContent>
+
+        {/* Vente Tab */}
+        {isVenteMode && (
+          <TabsContent value="vente" className="space-y-6">
+            {/* Prix et statut */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Informations de vente</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Statut</span>
+                    {getStatutVenteBadge(immeuble.statut_vente)}
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Prix demandé</span>
+                    <span className="text-xl font-bold text-primary">
+                      {formatCurrency(immeuble.prix_vente_demande)}
+                    </span>
+                  </div>
+                  {immeuble.prix_vente_estime && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Estimation</span>
+                      <span className="font-medium">{formatCurrency(immeuble.prix_vente_estime)}</span>
+                    </div>
+                  )}
+                  {immeuble.date_mise_en_vente && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">En vente depuis</span>
+                      <span className="font-medium">
+                        {new Date(immeuble.date_mise_en_vente).toLocaleDateString('fr-CH')}
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Publication</CardTitle>
+                  <CardDescription>
+                    Publiez ce bien dans l'espace acheteurs
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-1">
+                      <Label htmlFor="publish-toggle" className="font-medium">
+                        {immeuble.publier_espace_acheteur ? (
+                          <span className="flex items-center gap-2 text-green-600">
+                            <Eye className="w-4 h-4" />
+                            Visible aux acheteurs
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            <EyeOff className="w-4 h-4" />
+                            Non publié
+                          </span>
+                        )}
+                      </Label>
+                      {!immeuble.accord_proprietaire_publication && (
+                        <p className="text-xs text-amber-600">
+                          ⚠️ L'accord du propriétaire est requis
+                        </p>
+                      )}
+                    </div>
+                    <Switch
+                      id="publish-toggle"
+                      checked={immeuble.publier_espace_acheteur || false}
+                      onCheckedChange={handleTogglePublication}
+                      disabled={updatingPublication || !immeuble.accord_proprietaire_publication}
+                    />
+                  </div>
+
+                  {immeuble.accord_proprietaire_publication && (
+                    <div className="flex items-center gap-2 text-sm text-green-600">
+                      <span className="w-2 h-2 rounded-full bg-green-500" />
+                      Accord du propriétaire obtenu
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Description commerciale */}
+            {immeuble.description_commerciale && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Description commerciale</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground whitespace-pre-wrap">
+                    {immeuble.description_commerciale}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Points forts */}
+            {immeuble.points_forts && immeuble.points_forts.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Points forts</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    {immeuble.points_forts.map((point, index) => (
+                      <Badge key={index} variant="secondary">
+                        {point}
+                      </Badge>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Intérêts acheteurs */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Heart className="w-5 h-5 text-primary" />
+                  Intérêts reçus
+                  {pendingInterets > 0 && (
+                    <Badge variant="default">{pendingInterets} nouveau(x)</Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {interets.length === 0 ? (
+                  <PremiumEmptyState
+                    icon={Heart}
+                    title="Aucun intérêt"
+                    description="Les manifestations d'intérêt des acheteurs apparaîtront ici."
+                  />
+                ) : (
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {interets.map((interet) => (
+                      <PremiumInteretAcheteurCard
+                        key={interet.id}
+                        interet={{
+                          id: interet.id,
+                          type_interet: interet.type_interet,
+                          statut: interet.statut || 'nouveau',
+                          message: interet.message,
+                          date_visite: interet.date_visite,
+                          notes_agent: null,
+                          created_at: interet.created_at || new Date().toISOString(),
+                          client: interet.client ? {
+                            nom: interet.client.profile?.nom || null,
+                            prenom: interet.client.profile?.prenom || null,
+                            email: interet.client.profile?.email || null,
+                            telephone: interet.client.profile?.telephone || null
+                          } : undefined
+                        }}
+                        onUpdateStatut={(newStatut) => handleUpdateInteretStatut(interet.id, newStatut)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {/* Co-propriétaires Tab */}
+        {isVenteMode && (
+          <TabsContent value="coproprietaires" className="space-y-4">
+            <div className="flex justify-end">
+              <Button onClick={() => setShowAddCoProprietaireDialog(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Ajouter un co-propriétaire
+              </Button>
+            </div>
+
+            {coProprietaires.length === 0 ? (
+              <PremiumEmptyState
+                icon={UserPlus}
+                title="Aucun co-propriétaire"
+                description="Ajoutez les co-propriétaires (conjoint, associé, héritier) si applicable."
+                action={
+                  <Button onClick={() => setShowAddCoProprietaireDialog(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Ajouter un co-propriétaire
+                  </Button>
+                }
+              />
+            ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {coProprietaires.map((coprop) => (
+                  <PremiumCoProprietaireCard
+                    key={coprop.id}
+                    coProprietaire={{
+                      id: coprop.id,
+                      civilite: coprop.civilite,
+                      prenom: coprop.prenom,
+                      nom: coprop.nom,
+                      email: coprop.email,
+                      telephone: coprop.telephone,
+                      type_lien: coprop.type_lien,
+                      quote_part: coprop.quote_part,
+                      regime_matrimonial: coprop.regime_matrimonial,
+                      etat_civil: coprop.etat_civil,
+                      signature_requise: coprop.signature_requise ?? false,
+                      signature_obtenue: coprop.signature_obtenue ?? false,
+                      date_signature: coprop.date_signature
+                    }}
+                    onDelete={() => handleDeleteCoProprietaire(coprop.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        )}
+
+        {/* Photos Tab */}
+        {isVenteMode && (
+          <TabsContent value="photos" className="space-y-4">
+            <div className="flex justify-end">
+              <Button onClick={() => setShowUploadPhotoDialog(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Ajouter des photos
+              </Button>
+            </div>
+
+            {photos.length === 0 ? (
+              <PremiumEmptyState
+                icon={Image}
+                title="Aucune photo"
+                description="Ajoutez des photos de qualité pour valoriser ce bien."
+                action={
+                  <Button onClick={() => setShowUploadPhotoDialog(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Ajouter des photos
+                  </Button>
+                }
+              />
+            ) : (
+              <PremiumPhotoGallery
+                photos={photos.map(p => ({
+                  id: p.id,
+                  url: p.url,
+                  legende: p.legende,
+                  ordre: p.ordre,
+                  est_principale: p.est_principale,
+                  type_photo: p.type_photo
+                }))}
+                onSetPrimary={handleSetPrimaryPhoto}
+                onDelete={handleDeletePhoto}
+              />
+            )}
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Dialogs */}
@@ -573,6 +1092,20 @@ export default function ImmeubleDetail() {
         open={showUploadDocumentDialog}
         onOpenChange={setShowUploadDocumentDialog}
         immeubleId={id}
+        onSuccess={loadData}
+      />
+
+      <AddCoProprietaireDialog
+        open={showAddCoProprietaireDialog}
+        onOpenChange={setShowAddCoProprietaireDialog}
+        immeubleId={id!}
+        onSuccess={loadData}
+      />
+
+      <UploadPhotoDialog
+        open={showUploadPhotoDialog}
+        onOpenChange={setShowUploadPhotoDialog}
+        immeubleId={id!}
         onSuccess={loadData}
       />
     </div>
