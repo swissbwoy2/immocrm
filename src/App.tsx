@@ -114,6 +114,7 @@ const AdminProjetDeveloppementDetail = lazy(() => import("./pages/admin/ProjetDe
 
 // Admin Proprietaires page
 const AdminProprietaires = lazy(() => import("./pages/admin/Proprietaires"));
+const AdminProprietaireDetail = lazy(() => import("./pages/admin/ProprietaireDetail"));
 
 // Proprietaire pages
 const ProprietaireDashboard = lazy(() => import("./pages/proprietaire/Dashboard"));
@@ -203,6 +204,7 @@ const App = () => (
               <Route path="/admin/leads" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminLeads /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/contacts" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminContacts /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/proprietaires" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminProprietaires /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/proprietaires/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminProprietaireDetail /></AppLayout></ProtectedRoute>} />
 
               {/* Agent Routes */}
               <Route path="/agent" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDashboard /></AppLayout></ProtectedRoute>} />
