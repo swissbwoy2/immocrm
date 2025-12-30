@@ -89,6 +89,7 @@ const ClientDocuments = lazy(() => import("./pages/client/Documents"));
 const ClientVisitesDeleguees = lazy(() => import("./pages/client/VisitesDeleguees"));
 const ClientNotifications = lazy(() => import("./pages/client/Notifications"));
 const ClientParametres = lazy(() => import("./pages/client/Parametres"));
+const ClientAnnonces = lazy(() => import("./pages/client/Annonces"));
 
 // Apporteur pages
 const ApporteurDashboard = lazy(() => import("./pages/apporteur/Dashboard"));
@@ -104,6 +105,8 @@ const ApporteurParametres = lazy(() => import("./pages/apporteur/Parametres"));
 const AdminApporteurs = lazy(() => import("./pages/admin/Apporteurs"));
 const AdminApporteurDetail = lazy(() => import("./pages/admin/ApporteurDetail"));
 const AdminReferrals = lazy(() => import("./pages/admin/Referrals"));
+const AdminBiensEnVente = lazy(() => import("./pages/admin/BiensEnVente"));
+const AdminInteretsAcheteurs = lazy(() => import("./pages/admin/InteretsAcheteurs"));
 
 // Proprietaire pages
 const ProprietaireDashboard = lazy(() => import("./pages/proprietaire/Dashboard"));
@@ -228,6 +231,7 @@ const App = () => (
               <Route path="/client/documents" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDocuments /></AppLayout></ProtectedRoute>} />
               <Route path="/client/notifications" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientNotifications /></AppLayout></ProtectedRoute>} />
               <Route path="/client/parametres" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientParametres /></AppLayout></ProtectedRoute>} />
+              <Route path="/client/annonces" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientAnnonces /></AppLayout></ProtectedRoute>} />
 
               {/* Apporteur Routes */}
               <Route path="/apporteur" element={<ProtectedRoute allowedRoles={['apporteur']}><AppLayout><ApporteurDashboard /></AppLayout></ProtectedRoute>} />
@@ -243,6 +247,8 @@ const App = () => (
               <Route path="/admin/apporteurs" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminApporteurs /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/apporteurs/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminApporteurDetail /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/referrals" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminReferrals /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/biens-vente" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminBiensEnVente /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/interets-acheteurs" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminInteretsAcheteurs /></AppLayout></ProtectedRoute>} />
 
               {/* Proprietaire Routes */}
               <Route path="/proprietaire" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireDashboard /></AppLayout></ProtectedRoute>} />

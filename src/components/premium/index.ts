@@ -37,3 +37,4 @@ export { PremiumOffreDetailsDialog } from './PremiumOffreDetailsDialog';
 export { PremiumCoProprietaireCard } from './PremiumCoProprietaireCard';
 export { PremiumPhotoGallery } from './PremiumPhotoGallery';
 export { PremiumInteretAcheteurCard } from './PremiumInteretAcheteurCard';
+export { PremiumAnnonceCard } from './PremiumAnnonceCard';
