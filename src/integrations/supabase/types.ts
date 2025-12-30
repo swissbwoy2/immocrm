@@ -1343,6 +1343,48 @@ export type Database = {
           },
         ]
       }
+      commentaires_developpement: {
+        Row: {
+          auteur_id: string
+          contenu: string
+          created_at: string | null
+          est_interne: boolean | null
+          id: string
+          projet_id: string
+        }
+        Insert: {
+          auteur_id: string
+          contenu: string
+          created_at?: string | null
+          est_interne?: boolean | null
+          id?: string
+          projet_id: string
+        }
+        Update: {
+          auteur_id?: string
+          contenu?: string
+          created_at?: string | null
+          est_interne?: boolean | null
+          id?: string
+          projet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commentaires_developpement_auteur_id_fkey"
+            columns: ["auteur_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commentaires_developpement_projet_id_fkey"
+            columns: ["projet_id"]
+            isOneToOne: false
+            referencedRelation: "projets_developpement"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           adresse: string | null
@@ -1862,6 +1904,57 @@ export type Database = {
             columns: ["offre_id"]
             isOneToOne: false
             referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents_developpement: {
+        Row: {
+          ajoute_par: string | null
+          created_at: string | null
+          fichier_url: string
+          id: string
+          nom_fichier: string
+          projet_id: string
+          taille_fichier: number | null
+          type_document: string
+          visibilite: string | null
+        }
+        Insert: {
+          ajoute_par?: string | null
+          created_at?: string | null
+          fichier_url: string
+          id?: string
+          nom_fichier: string
+          projet_id: string
+          taille_fichier?: number | null
+          type_document: string
+          visibilite?: string | null
+        }
+        Update: {
+          ajoute_par?: string | null
+          created_at?: string | null
+          fichier_url?: string
+          id?: string
+          nom_fichier?: string
+          projet_id?: string
+          taille_fichier?: number | null
+          type_document?: string
+          visibilite?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_developpement_ajoute_par_fkey"
+            columns: ["ajoute_par"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_developpement_projet_id_fkey"
+            columns: ["projet_id"]
+            isOneToOne: false
+            referencedRelation: "projets_developpement"
             referencedColumns: ["id"]
           },
         ]
@@ -2940,6 +3033,140 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      projets_developpement: {
+        Row: {
+          adresse: string | null
+          agent_id: string | null
+          architecte_id: string | null
+          batiment_existant: boolean | null
+          besoin_devis: boolean | null
+          budget_max: number | null
+          budget_min: number | null
+          budget_previsionnel: number | null
+          commune: string | null
+          cos: number | null
+          created_at: string | null
+          date_soumission: string | null
+          delai_realisation: string | null
+          ibus: number | null
+          id: string
+          immeuble_id: string | null
+          isus: number | null
+          nombre_unites: number | null
+          notes_internes: string | null
+          objectifs: string | null
+          ocus: number | null
+          parcelle_numero: string | null
+          proprietaire_id: string
+          service_souhaite: string | null
+          servitudes_connues: boolean | null
+          servitudes_details: string | null
+          statut: string | null
+          surface_terrain: number | null
+          type_construction_souhaitee: string | null
+          type_projet: string
+          updated_at: string | null
+          zone_affectation: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          agent_id?: string | null
+          architecte_id?: string | null
+          batiment_existant?: boolean | null
+          besoin_devis?: boolean | null
+          budget_max?: number | null
+          budget_min?: number | null
+          budget_previsionnel?: number | null
+          commune?: string | null
+          cos?: number | null
+          created_at?: string | null
+          date_soumission?: string | null
+          delai_realisation?: string | null
+          ibus?: number | null
+          id?: string
+          immeuble_id?: string | null
+          isus?: number | null
+          nombre_unites?: number | null
+          notes_internes?: string | null
+          objectifs?: string | null
+          ocus?: number | null
+          parcelle_numero?: string | null
+          proprietaire_id: string
+          service_souhaite?: string | null
+          servitudes_connues?: boolean | null
+          servitudes_details?: string | null
+          statut?: string | null
+          surface_terrain?: number | null
+          type_construction_souhaitee?: string | null
+          type_projet: string
+          updated_at?: string | null
+          zone_affectation?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          agent_id?: string | null
+          architecte_id?: string | null
+          batiment_existant?: boolean | null
+          besoin_devis?: boolean | null
+          budget_max?: number | null
+          budget_min?: number | null
+          budget_previsionnel?: number | null
+          commune?: string | null
+          cos?: number | null
+          created_at?: string | null
+          date_soumission?: string | null
+          delai_realisation?: string | null
+          ibus?: number | null
+          id?: string
+          immeuble_id?: string | null
+          isus?: number | null
+          nombre_unites?: number | null
+          notes_internes?: string | null
+          objectifs?: string | null
+          ocus?: number | null
+          parcelle_numero?: string | null
+          proprietaire_id?: string
+          service_souhaite?: string | null
+          servitudes_connues?: boolean | null
+          servitudes_details?: string | null
+          statut?: string | null
+          surface_terrain?: number | null
+          type_construction_souhaitee?: string | null
+          type_projet?: string
+          updated_at?: string | null
+          zone_affectation?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projets_developpement_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projets_developpement_architecte_id_fkey"
+            columns: ["architecte_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projets_developpement_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projets_developpement_proprietaire_id_fkey"
+            columns: ["proprietaire_id"]
+            isOneToOne: false
+            referencedRelation: "proprietaires"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       proprietaires: {
         Row: {
