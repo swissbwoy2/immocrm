@@ -30,9 +30,10 @@ interface ProjetDeveloppement {
   created_at?: string;
 }
 
-interface PremiumProjetCardProps {
+export interface PremiumProjetCardProps {
   projet: ProjetDeveloppement;
-  onView: () => void;
+  onView?: () => void;
+  onClick?: () => void;
   delay?: number;
 }
 
@@ -58,7 +59,8 @@ const statutLabels: Record<string, { label: string; variant: 'default' | 'second
   termine: { label: 'Terminé', variant: 'outline' }
 };
 
-export function PremiumProjetCard({ projet, onView, delay = 0 }: PremiumProjetCardProps) {
+export function PremiumProjetCard({ projet, onView, onClick, delay = 0 }: PremiumProjetCardProps) {
+  const handleClick = onClick || onView;
   const typeConfig = typeProjetLabels[projet.type_projet] || typeProjetLabels.etude_faisabilite;
   const statutConfig = statutLabels[projet.statut] || statutLabels.demande_recue;
   const TypeIcon = typeConfig.icon;
@@ -160,15 +162,17 @@ export function PremiumProjetCard({ projet, onView, delay = 0 }: PremiumProjetCa
               {format(new Date(projet.date_soumission || projet.created_at || new Date()), 'dd MMM yyyy', { locale: fr })}
             </span>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onView}
-            className="group/btn hover:bg-primary/10"
-          >
-            Voir détails
-            <ChevronRight className="w-4 h-4 ml-1 transition-transform group-hover/btn:translate-x-0.5" />
-          </Button>
+          {handleClick && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClick}
+              className="group/btn hover:bg-primary/10"
+            >
+              Voir détails
+              <ChevronRight className="w-4 h-4 ml-1 transition-transform group-hover/btn:translate-x-0.5" />
+            </Button>
+          )}
         </div>
       </div>
     </motion.div>

@@ -123,6 +123,8 @@ const ProprietaireCalendrier = lazy(() => import("./pages/proprietaire/Calendrie
 const ProprietaireMessagerie = lazy(() => import("./pages/proprietaire/Messagerie"));
 const ProprietaireNotifications = lazy(() => import("./pages/proprietaire/Notifications"));
 const ProprietaireParametres = lazy(() => import("./pages/proprietaire/Parametres"));
+const ProprietaireProjetsDeveloppement = lazy(() => import("./pages/proprietaire/ProjetsDeveloppement"));
+const ProprietaireProjetDetail = lazy(() => import("./pages/proprietaire/ProjetDetail"));
 
 // Optimized QueryClient with caching
 const queryClient = new QueryClient({
@@ -265,6 +267,8 @@ const App = () => (
               <Route path="/proprietaire/messagerie" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireMessagerie /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/notifications" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireNotifications /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/parametres" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireParametres /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/projets-developpement" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireProjetsDeveloppement /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/projets-developpement/:id" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireProjetDetail /></AppLayout></ProtectedRoute>} />
 
               {/* Public Routes */}
               <Route path="/download/:token" element={<DownloadFiles />} />
