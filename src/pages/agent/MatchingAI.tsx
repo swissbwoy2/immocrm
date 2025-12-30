@@ -6,12 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
+import { EmailViewDialog } from '@/components/EmailViewDialog';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 
 interface AIMatch {
@@ -62,7 +61,7 @@ const MatchingAI = () => {
     sources: {} as Record<string, number>
   });
   const [selectedMatch, setSelectedMatch] = useState<AIMatch | null>(null);
-  const [emailContent, setEmailContent] = useState<string | null>(null);
+  const [emailData, setEmailData] = useState<{ bodyHtml: string | null; bodyText: string | null }>({ bodyHtml: null, bodyText: null });
   const [loadingEmail, setLoadingEmail] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('pending');
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
@@ -181,38 +180,6 @@ const MatchingAI = () => {
     });
   };
 
-  // Decode quoted-printable content for display
-  const decodeEmailContent = (content: string): string => {
-    if (!content) return '';
-    
-    // Remove MIME headers if present at start
-    let decoded = content
-      .replace(/^[\s\S]*?Content-Transfer-Encoding:\s*\S+[\r\n]+/i, '')
-      .replace(/^Content-Type:[^\r\n]+[\r\n]+/gmi, '');
-    
-    // Decode quoted-printable
-    decoded = decoded
-      .replace(/=\r?\n/g, '') // soft line breaks
-      .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
-    
-    // Try to decode UTF-8 bytes
-    try {
-      const bytes = new Uint8Array(decoded.length);
-      for (let i = 0; i < decoded.length; i++) {
-        bytes[i] = decoded.charCodeAt(i);
-      }
-      decoded = new TextDecoder('utf-8').decode(bytes);
-    } catch (e) {
-      // Keep as is
-    }
-    
-    // Clean up
-    return decoded
-      .replace(/\r\n/g, '\n')
-      .replace(/\n{3,}/g, '\n\n')
-      .trim();
-  };
-
   const viewEmailContent = async (match: AIMatch) => {
     setSelectedMatch(match);
     setLoadingEmail(true);
@@ -226,18 +193,13 @@ const MatchingAI = () => {
 
       if (error) throw error;
       
-      // Prioritize HTML, then decode text content
-      let content = data.body_html || data.body_text || 'Contenu non disponible';
-      
-      // If content still has encoded chars, decode it
-      if (content.includes('=0A') || content.includes('=E2') || content.includes('=C3')) {
-        content = decodeEmailContent(content);
-      }
-      
-      setEmailContent(content);
+      setEmailData({
+        bodyHtml: data.body_html || null,
+        bodyText: data.body_text || null
+      });
     } catch (error) {
       console.error('Error loading email:', error);
-      setEmailContent('Erreur lors du chargement du contenu');
+      setEmailData({ bodyHtml: null, bodyText: null });
     } finally {
       setLoadingEmail(false);
     }
@@ -691,41 +653,14 @@ const MatchingAI = () => {
       </div>
 
       {/* Email content dialog */}
-      <Dialog open={!!selectedMatch} onOpenChange={() => setSelectedMatch(null)}>
-        <DialogContent className="max-w-3xl max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-primary" />
-              Contenu de l'email
-            </DialogTitle>
-            <DialogDescription className="text-base font-medium">
-              {selectedMatch?.email_subject}
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="h-[65vh]">
-            {loadingEmail ? (
-              <div className="space-y-3 p-4">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
-                <Skeleton className="h-4 w-4/5" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-2/3" />
-              </div>
-            ) : emailContent && emailContent.includes('<') && emailContent.includes('>') ? (
-              <div 
-                className="prose prose-sm max-w-none dark:prose-invert p-4"
-                dangerouslySetInnerHTML={{ __html: emailContent }}
-              />
-            ) : (
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <pre className="whitespace-pre-wrap text-sm font-sans leading-relaxed text-foreground">
-                  {emailContent || 'Contenu non disponible'}
-                </pre>
-              </div>
-            )}
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+      <EmailViewDialog
+        open={!!selectedMatch}
+        onOpenChange={(open) => !open && setSelectedMatch(null)}
+        subject={selectedMatch?.email_subject || null}
+        bodyHtml={emailData.bodyHtml}
+        bodyText={emailData.bodyText}
+        loading={loadingEmail}
+      />
     </div>
   );
 };
