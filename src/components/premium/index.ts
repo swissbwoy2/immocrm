@@ -34,3 +34,6 @@ export { PremiumPurchaseCapacityCard } from './PremiumPurchaseCapacityCard';
 export { PremiumCandidatesCard } from './PremiumCandidatesCard';
 export { PremiumDossierChecklistCard } from './PremiumDossierChecklistCard';
 export { PremiumOffreDetailsDialog } from './PremiumOffreDetailsDialog';
+export { PremiumCoProprietaireCard } from './PremiumCoProprietaireCard';
+export { PremiumPhotoGallery } from './PremiumPhotoGallery';
+export { PremiumInteretAcheteurCard } from './PremiumInteretAcheteurCard';

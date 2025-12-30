@@ -1272,6 +1272,77 @@ export type Database = {
           },
         ]
       }
+      co_proprietaires: {
+        Row: {
+          adresse: string | null
+          civilite: string | null
+          created_at: string | null
+          date_signature: string | null
+          email: string | null
+          etat_civil: string | null
+          id: string
+          immeuble_id: string
+          nom: string
+          prenom: string
+          quote_part: number | null
+          regime_matrimonial: string | null
+          signature_obtenue: boolean | null
+          signature_requise: boolean | null
+          telephone: string | null
+          type_lien: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          civilite?: string | null
+          created_at?: string | null
+          date_signature?: string | null
+          email?: string | null
+          etat_civil?: string | null
+          id?: string
+          immeuble_id: string
+          nom: string
+          prenom: string
+          quote_part?: number | null
+          regime_matrimonial?: string | null
+          signature_obtenue?: boolean | null
+          signature_requise?: boolean | null
+          telephone?: string | null
+          type_lien: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          civilite?: string | null
+          created_at?: string | null
+          date_signature?: string | null
+          email?: string | null
+          etat_civil?: string | null
+          id?: string
+          immeuble_id?: string
+          nom?: string
+          prenom?: string
+          quote_part?: number | null
+          regime_matrimonial?: string | null
+          signature_obtenue?: boolean | null
+          signature_requise?: boolean | null
+          telephone?: string | null
+          type_lien?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_proprietaires_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           adresse: string | null
@@ -1798,6 +1869,7 @@ export type Database = {
       documents_immeuble: {
         Row: {
           annee: number | null
+          confidentialite: string | null
           created_at: string | null
           date_document: string | null
           description: string | null
@@ -1817,6 +1889,7 @@ export type Database = {
         }
         Insert: {
           annee?: number | null
+          confidentialite?: string | null
           created_at?: string | null
           date_document?: string | null
           description?: string | null
@@ -1836,6 +1909,7 @@ export type Database = {
         }
         Update: {
           annee?: number | null
+          confidentialite?: string | null
           created_at?: string | null
           date_document?: string | null
           description?: string | null
@@ -2091,23 +2165,34 @@ export type Database = {
       }
       immeubles: {
         Row: {
+          accord_proprietaire_publication: boolean | null
           adresse: string
           annee_construction: number | null
           canton: string | null
           code_postal: string | null
           commune_rf: string | null
           created_at: string | null
+          date_accord_publication: string | null
           date_derniere_estimation: string | null
+          date_mise_en_vente: string | null
+          description_commerciale: string | null
           etat_locatif_annuel: number | null
           folio_rf: string | null
           id: string
+          mode_exploitation: string | null
           nb_unites: number | null
           nom: string
+          nombre_pieces: number | null
           notes: string | null
           numero_parcelle: string | null
           pays: string | null
+          points_forts: string[] | null
+          prix_vente_demande: number | null
+          prix_vente_estime: number | null
           proprietaire_id: string
+          publier_espace_acheteur: boolean | null
           statut: string | null
+          statut_vente: string | null
           surface_totale: number | null
           taux_vacance: number | null
           type_bien: string | null
@@ -2118,23 +2203,34 @@ export type Database = {
           ville: string | null
         }
         Insert: {
+          accord_proprietaire_publication?: boolean | null
           adresse: string
           annee_construction?: number | null
           canton?: string | null
           code_postal?: string | null
           commune_rf?: string | null
           created_at?: string | null
+          date_accord_publication?: string | null
           date_derniere_estimation?: string | null
+          date_mise_en_vente?: string | null
+          description_commerciale?: string | null
           etat_locatif_annuel?: number | null
           folio_rf?: string | null
           id?: string
+          mode_exploitation?: string | null
           nb_unites?: number | null
           nom: string
+          nombre_pieces?: number | null
           notes?: string | null
           numero_parcelle?: string | null
           pays?: string | null
+          points_forts?: string[] | null
+          prix_vente_demande?: number | null
+          prix_vente_estime?: number | null
           proprietaire_id: string
+          publier_espace_acheteur?: boolean | null
           statut?: string | null
+          statut_vente?: string | null
           surface_totale?: number | null
           taux_vacance?: number | null
           type_bien?: string | null
@@ -2145,23 +2241,34 @@ export type Database = {
           ville?: string | null
         }
         Update: {
+          accord_proprietaire_publication?: boolean | null
           adresse?: string
           annee_construction?: number | null
           canton?: string | null
           code_postal?: string | null
           commune_rf?: string | null
           created_at?: string | null
+          date_accord_publication?: string | null
           date_derniere_estimation?: string | null
+          date_mise_en_vente?: string | null
+          description_commerciale?: string | null
           etat_locatif_annuel?: number | null
           folio_rf?: string | null
           id?: string
+          mode_exploitation?: string | null
           nb_unites?: number | null
           nom?: string
+          nombre_pieces?: number | null
           notes?: string | null
           numero_parcelle?: string | null
           pays?: string | null
+          points_forts?: string[] | null
+          prix_vente_demande?: number | null
+          prix_vente_estime?: number | null
           proprietaire_id?: string
+          publier_espace_acheteur?: boolean | null
           statut?: string | null
+          statut_vente?: string | null
           surface_totale?: number | null
           taux_vacance?: number | null
           type_bien?: string | null
@@ -2177,6 +2284,60 @@ export type Database = {
             columns: ["proprietaire_id"]
             isOneToOne: false
             referencedRelation: "proprietaires"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      interets_acheteur: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          date_visite: string | null
+          id: string
+          immeuble_id: string
+          message: string | null
+          notes_agent: string | null
+          statut: string | null
+          type_interet: string
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          date_visite?: string | null
+          id?: string
+          immeuble_id: string
+          message?: string | null
+          notes_agent?: string | null
+          statut?: string | null
+          type_interet: string
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          date_visite?: string | null
+          id?: string
+          immeuble_id?: string
+          message?: string | null
+          notes_agent?: string | null
+          statut?: string | null
+          type_interet?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interets_acheteur_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interets_acheteur_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
             referencedColumns: ["id"]
           },
         ]
@@ -2639,6 +2800,98 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdf_exports_immeuble: {
+        Row: {
+          created_at: string | null
+          genere_par: string | null
+          id: string
+          immeuble_id: string
+          taille: number | null
+          type_export: string
+          url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          genere_par?: string | null
+          id?: string
+          immeuble_id: string
+          taille?: number | null
+          type_export: string
+          url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          genere_par?: string | null
+          id?: string
+          immeuble_id?: string
+          taille?: number | null
+          type_export?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdf_exports_immeuble_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      photos_immeuble: {
+        Row: {
+          created_at: string | null
+          est_principale: boolean | null
+          id: string
+          immeuble_id: string
+          legende: string | null
+          lot_id: string | null
+          ordre: number | null
+          type_photo: string | null
+          uploaded_by: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          est_principale?: boolean | null
+          id?: string
+          immeuble_id: string
+          legende?: string | null
+          lot_id?: string | null
+          ordre?: number | null
+          type_photo?: string | null
+          uploaded_by?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          est_principale?: boolean | null
+          id?: string
+          immeuble_id?: string
+          legende?: string | null
+          lot_id?: string | null
+          ordre?: number | null
+          type_photo?: string | null
+          uploaded_by?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photos_immeuble_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photos_immeuble_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "lots"
             referencedColumns: ["id"]
           },
         ]

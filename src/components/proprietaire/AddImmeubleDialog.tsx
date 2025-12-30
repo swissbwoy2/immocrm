@@ -38,13 +38,16 @@ const formSchema = z.object({
   canton: z.string().max(50).optional(),
   type_bien: z.string().optional(),
   nb_unites: z.coerce.number().int().positive().optional().or(z.literal('')),
+  nombre_pieces: z.coerce.number().positive().optional().or(z.literal('')),
   surface_totale: z.coerce.number().positive().optional().or(z.literal('')),
   annee_construction: z.coerce.number().int().min(1800).max(2100).optional().or(z.literal('')),
   valeur_estimee: z.coerce.number().positive().optional().or(z.literal('')),
   valeur_fiscale: z.coerce.number().positive().optional().or(z.literal('')),
+  prix_vente_demande: z.coerce.number().positive().optional().or(z.literal('')),
   numero_parcelle: z.string().max(50).optional(),
   commune_rf: z.string().max(100).optional(),
   statut: z.string().optional(),
+  mode_exploitation: z.string().optional(),
   notes: z.string().max(1000).optional()
 });
 
@@ -79,6 +82,12 @@ const STATUTS = [
   { value: 'vacant', label: 'Vacant' }
 ];
 
+const MODES_EXPLOITATION = [
+  { value: 'location', label: 'Location' },
+  { value: 'vente', label: 'Vente' },
+  { value: 'les_deux', label: 'Location et Vente' }
+];
+
 export function AddImmeubleDialog({
   open,
   onOpenChange,
@@ -97,13 +106,16 @@ export function AddImmeubleDialog({
       canton: '',
       type_bien: '',
       nb_unites: '',
+      nombre_pieces: '',
       surface_totale: '',
       annee_construction: '',
       valeur_estimee: '',
       valeur_fiscale: '',
+      prix_vente_demande: '',
       numero_parcelle: '',
       commune_rf: '',
       statut: 'gere',
+      mode_exploitation: 'location',
       notes: ''
     }
   });
@@ -120,13 +132,16 @@ export function AddImmeubleDialog({
         canton: values.canton || null,
         type_bien: values.type_bien || null,
         nb_unites: values.nb_unites ? Number(values.nb_unites) : null,
+        nombre_pieces: values.nombre_pieces ? Number(values.nombre_pieces) : null,
         surface_totale: values.surface_totale ? Number(values.surface_totale) : null,
         annee_construction: values.annee_construction ? Number(values.annee_construction) : null,
         valeur_estimee: values.valeur_estimee ? Number(values.valeur_estimee) : null,
         valeur_fiscale: values.valeur_fiscale ? Number(values.valeur_fiscale) : null,
+        prix_vente_demande: values.prix_vente_demande ? Number(values.prix_vente_demande) : null,
         numero_parcelle: values.numero_parcelle || null,
         commune_rf: values.commune_rf || null,
         statut: values.statut || 'gere',
+        mode_exploitation: values.mode_exploitation || 'location',
         notes: values.notes || null
       });
 
