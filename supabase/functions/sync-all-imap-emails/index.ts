@@ -194,64 +194,34 @@ class SimpleImapClient {
       email.is_read = flagsMatch[1].includes('\\Seen');
     }
 
-    // Extract HEADER.FIELDS section
-    const headerFieldsMatch = data.match(/BODY\[HEADER\.FIELDS[^\]]*\]\s*\{(\d+)\}/i);
-    let headers = '';
-    
-    if (headerFieldsMatch) {
-      const size = parseInt(headerFieldsMatch[1]);
-      const startIdx = data.indexOf(headerFieldsMatch[0]) + headerFieldsMatch[0].length;
-      const headerStart = data.indexOf('\n', startIdx) + 1;
-      headers = data.substring(headerStart, headerStart + size);
-    } else {
-      // Fallback: look for common headers directly
-      const fromIdx = data.indexOf('From:');
-      if (fromIdx >= 0) {
-        const endIdx = data.indexOf('\r\n\r\n', fromIdx);
-        if (endIdx > fromIdx) {
-          headers = data.substring(fromIdx, endIdx);
+    // === ROBUST FROM EXTRACTION ===
+    // Try multiple methods to extract From email
+    const fromEmail = this.extractFromEmail(data);
+    email.from_email = fromEmail.email;
+    email.from_name = fromEmail.name;
+
+    // === SUBJECT EXTRACTION ===
+    const subjectEmail = this.extractSubject(data);
+    email.subject = subjectEmail;
+
+    // === DATE EXTRACTION ===
+    const dateMatch = data.match(/^Date:\s*(.+?)(?:\r?\n|$)/mi);
+    if (dateMatch) {
+      try {
+        const dateStr = dateMatch[1].trim();
+        const parsedDate = new Date(dateStr);
+        if (!isNaN(parsedDate.getTime())) {
+          email.received_at = parsedDate.toISOString();
         }
+      } catch (e) {
+        // Keep default
       }
     }
 
-    // Parse headers
-    if (headers) {
-      // From - improved regex to handle folded headers
-      const fromMatch = headers.match(/^From:\s*([\s\S]+?)(?=\r?\n(?:[A-Za-z-]+:|$))/mi);
-      if (fromMatch) {
-        const fromValue = decodeHeaderValue(fromMatch[1].replace(/\r?\n\s+/g, ' ').trim());
-        const parsed = parseEmailAddress(fromValue);
-        if (parsed.email) {
-          email.from_email = parsed.email;
-          email.from_name = parsed.name;
-        }
-      }
-
-      // Subject - improved regex
-      const subjectMatch = headers.match(/^Subject:\s*([\s\S]+?)(?=\r?\n(?:[A-Za-z-]+:|$))/mi);
-      if (subjectMatch) {
-        email.subject = decodeHeaderValue(subjectMatch[1].replace(/\r?\n\s+/g, ' ').trim());
-      }
-
-      // Date
-      const dateMatch = headers.match(/^Date:\s*(.+?)(?:\r?\n|$)/mi);
-      if (dateMatch) {
-        try {
-          const dateStr = dateMatch[1].trim();
-          const parsedDate = new Date(dateStr);
-          if (!isNaN(parsedDate.getTime())) {
-            email.received_at = parsedDate.toISOString();
-          }
-        } catch (e) {
-          // Keep default
-        }
-      }
-
-      // Message-ID
-      const msgIdMatch = headers.match(/^Message-ID:\s*<([^>]+)>/mi);
-      if (msgIdMatch) {
-        email.message_id = msgIdMatch[1].substring(0, 100);
-      }
+    // Message-ID
+    const msgIdMatch = data.match(/^Message-ID:\s*<([^>]+)>/mi);
+    if (msgIdMatch) {
+      email.message_id = sanitizeForPostgres(msgIdMatch[1].substring(0, 100)) || email.message_id;
     }
 
     // Extract BODY[TEXT] section
@@ -268,29 +238,80 @@ class SimpleImapClient {
       email.body_html = parsedBody.html;
     }
 
-    // Fallback for empty from_email - try alternative extraction
-    if (!email.from_email || email.from_email === 'unknown@email.com') {
-      // Try to find email in raw data
-      const rawEmailMatch = data.match(/From:[^<]*<([^>]+@[^>]+)>/i);
-      if (rawEmailMatch) {
-        email.from_email = rawEmailMatch[1].toLowerCase().trim();
-      } else {
-        const simpleEmailMatch = data.match(/From:\s*([^\s<]+@[^\s>]+)/i);
-        if (simpleEmailMatch) {
-          email.from_email = simpleEmailMatch[1].toLowerCase().trim();
-        } else {
-          email.from_email = 'unknown@email.com';
-        }
+    // Sanitize all fields for PostgreSQL
+    email.from_email = sanitizeForPostgres(email.from_email) || 'unknown@email.com';
+    email.from_name = email.from_name ? sanitizeForPostgres(email.from_name) : null;
+    email.subject = email.subject ? sanitizeForPostgres(email.subject) : null;
+    email.body_text = sanitizeForPostgres(email.body_text.substring(0, 10000)) || '';
+    email.body_html = email.body_html ? sanitizeForPostgres(email.body_html) : null;
+    
+    return email;
+  }
+
+  // Robust extraction of From email address
+  private extractFromEmail(data: string): { email: string; name: string | null } {
+    // Method 1: Look for "From:" header line and extract email in angle brackets
+    const fromWithAngleBrackets = data.match(/From:[^<\r\n]*<([^>@]+@[^>]+)>/i);
+    if (fromWithAngleBrackets) {
+      const email = fromWithAngleBrackets[1].trim().toLowerCase();
+      // Try to extract name before <
+      const fullFromMatch = data.match(/From:\s*([^<]+)<[^>]+>/i);
+      let name = null;
+      if (fullFromMatch && fullFromMatch[1].trim()) {
+        name = decodeHeaderValue(fullFromMatch[1].trim().replace(/^"/, '').replace(/"$/, ''));
+      }
+      console.log(`[PARSE] Method 1 - From: ${email}, Name: ${name}`);
+      return { email, name };
+    }
+
+    // Method 2: From: email@domain.com (without angle brackets)
+    const fromDirect = data.match(/From:\s*([^\s<@]+@[^\s>\r\n]+)/i);
+    if (fromDirect) {
+      const email = fromDirect[1].trim().toLowerCase();
+      console.log(`[PARSE] Method 2 - From: ${email}`);
+      return { email, name: null };
+    }
+
+    // Method 3: Search in raw data for common email patterns from known sources
+    const knownSources = [
+      /mailer@immobilier\.ch/i,
+      /service@info\.comparis\.ch/i,
+      /bot@realadvisor\.com/i,
+      /[a-z0-9._-]+@[a-z0-9._-]+\.ch/i,
+      /[a-z0-9._-]+@[a-z0-9._-]+\.com/i,
+    ];
+    
+    for (const pattern of knownSources) {
+      const match = data.match(pattern);
+      if (match) {
+        const email = match[0].toLowerCase();
+        console.log(`[PARSE] Method 3 (pattern match) - From: ${email}`);
+        return { email, name: null };
       }
     }
 
-    // Clean up text - remove null characters
-    email.body_text = cleanNullChars(email.body_text.substring(0, 10000));
-    email.body_html = email.body_html ? cleanNullChars(email.body_html) : null;
-    email.subject = email.subject ? cleanNullChars(email.subject) : null;
-    email.from_name = email.from_name ? cleanNullChars(email.from_name) : null;
-    
-    return email;
+    // Method 4: Look for any email-like pattern after "From:"
+    const fromAny = data.match(/From:[\s\S]*?([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z]{2,})/i);
+    if (fromAny) {
+      const email = fromAny[1].trim().toLowerCase();
+      console.log(`[PARSE] Method 4 - From: ${email}`);
+      return { email, name: null };
+    }
+
+    console.log(`[PARSE] No From email found`);
+    return { email: 'unknown@email.com', name: null };
+  }
+
+  // Extract subject with proper decoding
+  private extractSubject(data: string): string | null {
+    // Look for Subject: header, handling multi-line (folded) headers
+    const subjectMatch = data.match(/^Subject:\s*([\s\S]+?)(?=\r?\n(?:[A-Za-z-]+:|$|\r?\n))/mi);
+    if (subjectMatch) {
+      // Unfold the header (join continuation lines)
+      const rawSubject = subjectMatch[1].replace(/\r?\n\s+/g, ' ').trim();
+      return decodeHeaderValue(rawSubject);
+    }
+    return null;
   }
 
   async logout(): Promise<void> {
@@ -313,6 +334,40 @@ function cleanNullChars(str: string): string {
   return str
     .replace(/\u0000/g, '')  // Remove null characters
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ''); // Remove other control chars
+}
+
+// Sanitize text for PostgreSQL - more robust version
+function sanitizeForPostgres(text: string | null): string | null {
+  if (!text) return null;
+  
+  let result = text;
+  
+  // Remove null characters (causes PostgreSQL errors)
+  result = result.replace(/\u0000/g, '');
+  
+  // Remove other problematic control characters
+  result = result.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  
+  // Replace common problematic Unicode characters
+  result = result.replace(/[\uFFFD\uFFFE\uFFFF]/g, '');
+  
+  // Remove any remaining non-printable characters except newlines and tabs
+  result = result.replace(/[^\x09\x0A\x0D\x20-\x7E\u00A0-\uFFFC]/g, (char) => {
+    // Keep accented characters and common international characters
+    const code = char.charCodeAt(0);
+    if (code >= 0x00A0 && code <= 0x024F) return char; // Latin Extended
+    if (code >= 0x0400 && code <= 0x04FF) return char; // Cyrillic
+    if (code >= 0x0600 && code <= 0x06FF) return char; // Arabic
+    if (code >= 0x4E00 && code <= 0x9FFF) return char; // CJK
+    return ''; // Remove other characters
+  });
+  
+  // Limit size to prevent huge text fields
+  if (result.length > 100000) {
+    result = result.substring(0, 100000);
+  }
+  
+  return result.trim() || null;
 }
 
 // Decode MIME header value (=?charset?encoding?text?=)
