@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Home, Search, Eye, FileText, Loader2, Building2, MapPin, Banknote } from 'lucide-react';
+import { Search, Eye, Loader2, Building2, MapPin, Banknote, CheckCircle, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PremiumTable, PremiumTableHeader, PremiumTableRow, TableBody, TableCell, TableHead, TableRow } from '@/components/premium';
+import { PremiumTable, PremiumTableHeader, PremiumTableRow, TableBody, TableCell, TableHead, TableRow, PremiumKPICard, PremiumPageHeader, PremiumEmptyState } from '@/components/premium';
 import { useNavigate } from 'react-router-dom';
 
 interface Immeuble {
@@ -74,12 +74,14 @@ export default function AdminBiensEnVente() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="flex items-center gap-3">
-        <div className="p-3 rounded-xl bg-primary/10"><Building2 className="h-6 w-6 text-primary" /></div>
-        <div><h1 className="text-2xl font-bold">Biens en vente</h1><p className="text-muted-foreground">Gérez tous les biens immobiliers en vente</p></div>
-      </div>
+      <PremiumPageHeader
+        icon={Building2}
+        title="Biens en vente"
+        subtitle="Gérez tous les biens immobiliers en vente"
+        badge="Commercialisation"
+      />
 
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
@@ -97,36 +99,65 @@ export default function AdminBiensEnVente() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card/80 backdrop-blur-xl rounded-xl p-4 border border-border/50"><p className="text-sm text-muted-foreground">Total</p><p className="text-2xl font-bold">{immeubles.length}</p></div>
-        <div className="bg-card/80 backdrop-blur-xl rounded-xl p-4 border border-border/50"><p className="text-sm text-muted-foreground">Publiés</p><p className="text-2xl font-bold text-primary">{immeubles.filter(i => i.publier_espace_acheteur).length}</p></div>
-        <div className="bg-card/80 backdrop-blur-xl rounded-xl p-4 border border-border/50"><p className="text-sm text-muted-foreground">Sous offre</p><p className="text-2xl font-bold text-orange-500">{immeubles.filter(i => i.statut_vente === 'sous_offre').length}</p></div>
-        <div className="bg-card/80 backdrop-blur-xl rounded-xl p-4 border border-border/50"><p className="text-sm text-muted-foreground">Vendus</p><p className="text-2xl font-bold text-green-500">{immeubles.filter(i => i.statut_vente === 'vendu').length}</p></div>
+        <PremiumKPICard
+          title="Total biens"
+          value={immeubles.length}
+          icon={Building2}
+          delay={0}
+        />
+        <PremiumKPICard
+          title="Publiés"
+          value={immeubles.filter(i => i.publier_espace_acheteur).length}
+          icon={Eye}
+          variant="success"
+          delay={50}
+        />
+        <PremiumKPICard
+          title="Sous offre"
+          value={immeubles.filter(i => i.statut_vente === 'sous_offre').length}
+          icon={Clock}
+          variant="warning"
+          delay={100}
+        />
+        <PremiumKPICard
+          title="Vendus"
+          value={immeubles.filter(i => i.statut_vente === 'vendu').length}
+          icon={CheckCircle}
+          variant="success"
+          delay={150}
+        />
       </div>
 
       {loading && <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
 
       {!loading && filteredImmeubles.length === 0 && (
-        <div className="text-center py-12"><Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" /><h3 className="font-semibold">Aucun bien en vente</h3></div>
+        <PremiumEmptyState
+          icon={Building2}
+          title="Aucun bien en vente"
+          description="Les biens immobiliers en vente apparaîtront ici"
+        />
       )}
 
       {!loading && filteredImmeubles.length > 0 && (
-        <PremiumTable>
-          <PremiumTableHeader><TableRow><TableHead>Bien</TableHead><TableHead>Localisation</TableHead><TableHead>Prix</TableHead><TableHead>Statut</TableHead><TableHead>Actions</TableHead></TableRow></PremiumTableHeader>
-          <TableBody>
-            {filteredImmeubles.map((immeuble) => {
-              const statut = getStatutLabel(immeuble.statut_vente);
-              return (
-                <PremiumTableRow key={immeuble.id}>
-                  <TableCell><p className="font-medium">{immeuble.nom}</p><p className="text-sm text-muted-foreground capitalize">{immeuble.type_bien} • {immeuble.surface_totale} m²</p></TableCell>
-                  <TableCell><div className="flex items-center gap-1.5 text-sm"><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{immeuble.ville}, {immeuble.canton}</div></TableCell>
-                  <TableCell><div className="flex items-center gap-1.5"><Banknote className="h-3.5 w-3.5 text-primary" />{formatPrice(immeuble.prix_vente_demande)}</div></TableCell>
-                  <TableCell><Badge variant={statut.variant}>{statut.label}</Badge></TableCell>
-                  <TableCell><div className="flex items-center gap-1"><Button variant="ghost" size="icon" onClick={() => navigate(`/proprietaire/immeubles/${immeuble.id}`)}><Eye className="h-4 w-4" /></Button></div></TableCell>
-                </PremiumTableRow>
-              );
-            })}
-          </TableBody>
-        </PremiumTable>
+        <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+          <PremiumTable>
+            <PremiumTableHeader><TableRow><TableHead>Bien</TableHead><TableHead>Localisation</TableHead><TableHead>Prix</TableHead><TableHead>Statut</TableHead><TableHead>Actions</TableHead></TableRow></PremiumTableHeader>
+            <TableBody>
+              {filteredImmeubles.map((immeuble) => {
+                const statut = getStatutLabel(immeuble.statut_vente);
+                return (
+                  <PremiumTableRow key={immeuble.id}>
+                    <TableCell><p className="font-medium">{immeuble.nom}</p><p className="text-sm text-muted-foreground capitalize">{immeuble.type_bien} • {immeuble.surface_totale} m²</p></TableCell>
+                    <TableCell><div className="flex items-center gap-1.5 text-sm"><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{immeuble.ville}, {immeuble.canton}</div></TableCell>
+                    <TableCell><div className="flex items-center gap-1.5"><Banknote className="h-3.5 w-3.5 text-primary" />{formatPrice(immeuble.prix_vente_demande)}</div></TableCell>
+                    <TableCell><Badge variant={statut.variant}>{statut.label}</Badge></TableCell>
+                    <TableCell><div className="flex items-center gap-1"><Button variant="ghost" size="icon" onClick={() => navigate(`/proprietaire/immeubles/${immeuble.id}`)}><Eye className="h-4 w-4" /></Button></div></TableCell>
+                  </PremiumTableRow>
+                );
+              })}
+            </TableBody>
+          </PremiumTable>
+        </div>
       )}
     </div>
   );

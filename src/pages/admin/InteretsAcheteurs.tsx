@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Heart, Search, Loader2, Calendar, MessageSquare, Eye, Phone, Mail } from 'lucide-react';
+import { Heart, Search, Loader2, Calendar, Eye, Bell, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PremiumTable, PremiumTableHeader, PremiumTableRow, TableBody, TableCell, TableHead, TableRow } from '@/components/premium';
+import { PremiumTable, PremiumTableHeader, PremiumTableRow, TableBody, TableCell, TableHead, TableRow, PremiumKPICard, PremiumPageHeader, PremiumEmptyState } from '@/components/premium';
 import { useNavigate } from 'react-router-dom';
 
 interface InteretAcheteur {
@@ -83,12 +83,14 @@ export default function AdminInteretsAcheteurs() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="flex items-center gap-3">
-        <div className="p-3 rounded-xl bg-primary/10"><Heart className="h-6 w-6 text-primary" /></div>
-        <div><h1 className="text-2xl font-bold">Intérêts acheteurs</h1><p className="text-muted-foreground">Gérez les demandes des acheteurs potentiels</p></div>
-      </div>
+      <PremiumPageHeader
+        icon={Heart}
+        title="Intérêts acheteurs"
+        subtitle="Gérez les demandes des acheteurs potentiels"
+        badge="Demandes"
+      />
 
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
@@ -106,45 +108,74 @@ export default function AdminInteretsAcheteurs() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-card/80 backdrop-blur-xl rounded-xl p-4 border border-border/50"><p className="text-sm text-muted-foreground">Total</p><p className="text-2xl font-bold">{interets.length}</p></div>
-        <div className="bg-card/80 backdrop-blur-xl rounded-xl p-4 border border-border/50"><p className="text-sm text-muted-foreground">Nouveaux</p><p className="text-2xl font-bold text-destructive">{interets.filter(i => i.statut === 'nouveau').length}</p></div>
-        <div className="bg-card/80 backdrop-blur-xl rounded-xl p-4 border border-border/50"><p className="text-sm text-muted-foreground">Demandes visites</p><p className="text-2xl font-bold text-primary">{interets.filter(i => i.type_interet === 'demande_visite').length}</p></div>
-        <div className="bg-card/80 backdrop-blur-xl rounded-xl p-4 border border-border/50"><p className="text-sm text-muted-foreground">Traités</p><p className="text-2xl font-bold text-green-500">{interets.filter(i => i.statut === 'traite').length}</p></div>
+        <PremiumKPICard
+          title="Total"
+          value={interets.length}
+          icon={Heart}
+          delay={0}
+        />
+        <PremiumKPICard
+          title="Nouveaux"
+          value={interets.filter(i => i.statut === 'nouveau').length}
+          icon={Bell}
+          variant="danger"
+          delay={50}
+        />
+        <PremiumKPICard
+          title="Demandes visites"
+          value={interets.filter(i => i.type_interet === 'demande_visite').length}
+          icon={Calendar}
+          variant="warning"
+          delay={100}
+        />
+        <PremiumKPICard
+          title="Traités"
+          value={interets.filter(i => i.statut === 'traite').length}
+          icon={CheckCircle}
+          variant="success"
+          delay={150}
+        />
       </div>
 
       {loading && <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
 
       {!loading && filteredInterets.length === 0 && (
-        <div className="text-center py-12"><Heart className="h-12 w-12 mx-auto text-muted-foreground mb-4" /><h3 className="font-semibold">Aucun intérêt</h3></div>
+        <PremiumEmptyState
+          icon={Heart}
+          title="Aucun intérêt acheteur"
+          description="Les demandes des acheteurs potentiels apparaîtront ici"
+        />
       )}
 
       {!loading && filteredInterets.length > 0 && (
-        <PremiumTable>
-          <PremiumTableHeader><TableRow><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Statut</TableHead><TableHead>Actions</TableHead></TableRow></PremiumTableHeader>
-          <TableBody>
-            {filteredInterets.map((interet) => {
-              const statutInfo = getStatutBadge(interet.statut);
-              return (
-                <PremiumTableRow key={interet.id}>
-                  <TableCell className="text-sm text-muted-foreground">{format(new Date(interet.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
-                  <TableCell><span className="text-sm">{getTypeLabel(interet.type_interet)}</span></TableCell>
-                  <TableCell>
-                    <Select value={interet.statut} onValueChange={(value) => updateStatut(interet.id, value)}>
-                      <SelectTrigger className="w-36"><Badge variant={statutInfo.variant}>{statutInfo.label}</Badge></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="nouveau">Nouveau</SelectItem>
-                        <SelectItem value="contacte">Contacté</SelectItem>
-                        <SelectItem value="visite_planifiee">Visite planifiée</SelectItem>
-                        <SelectItem value="traite">Traité</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell><Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button></TableCell>
-                </PremiumTableRow>
-              );
-            })}
-          </TableBody>
-        </PremiumTable>
+        <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+          <PremiumTable>
+            <PremiumTableHeader><TableRow><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Statut</TableHead><TableHead>Actions</TableHead></TableRow></PremiumTableHeader>
+            <TableBody>
+              {filteredInterets.map((interet) => {
+                const statutInfo = getStatutBadge(interet.statut);
+                return (
+                  <PremiumTableRow key={interet.id}>
+                    <TableCell className="text-sm text-muted-foreground">{format(new Date(interet.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}</TableCell>
+                    <TableCell><span className="text-sm">{getTypeLabel(interet.type_interet)}</span></TableCell>
+                    <TableCell>
+                      <Select value={interet.statut} onValueChange={(value) => updateStatut(interet.id, value)}>
+                        <SelectTrigger className="w-36"><Badge variant={statutInfo.variant}>{statutInfo.label}</Badge></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="nouveau">Nouveau</SelectItem>
+                          <SelectItem value="contacte">Contacté</SelectItem>
+                          <SelectItem value="visite_planifiee">Visite planifiée</SelectItem>
+                          <SelectItem value="traite">Traité</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell><Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button></TableCell>
+                  </PremiumTableRow>
+                );
+              })}
+            </TableBody>
+          </PremiumTable>
+        </div>
       )}
     </div>
   );
