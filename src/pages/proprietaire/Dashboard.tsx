@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Users, Wrench, TrendingUp, FileText, Plus, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Building2, Users, Wrench, TrendingUp, FileText, Plus, AlertTriangle, ArrowRight, HardHat } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,7 @@ import {
 import { PremiumProprietaireDashboardHeader } from '@/components/premium/PremiumProprietaireDashboardHeader';
 import { PremiumImmeubleCard } from '@/components/premium/PremiumImmeubleCard';
 import { PremiumTicketTechniqueCard } from '@/components/premium/PremiumTicketTechniqueCard';
+import { PremiumProjetCard } from '@/components/premium/PremiumProjetCard';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -29,13 +30,15 @@ export default function ProprietaireDashboard() {
   const [agent, setAgent] = useState<any>(null);
   const [immeubles, setImmeubles] = useState<any[]>([]);
   const [tickets, setTickets] = useState<any[]>([]);
+  const [projets, setProjets] = useState<any[]>([]);
   const [stats, setStats] = useState({
     totalImmeubles: 0,
     totalLots: 0,
     totalLocataires: 0,
     ticketsOuverts: 0,
     etatLocatifTotal: 0,
-    tauxVacanceMoyen: 0
+    tauxVacanceMoyen: 0,
+    projetsEnCours: 0
   });
 
   const loadData = useCallback(async () => {
@@ -150,6 +153,19 @@ export default function ProprietaireDashboard() {
       }
       setTickets(ticketsData);
 
+      // Load projets de développement
+      const { data: projetsData } = await supabase
+        .from('projets_developpement')
+        .select('*')
+        .eq('proprietaire_id', proprioData.id)
+        .order('created_at', { ascending: false })
+        .limit(3);
+      setProjets(projetsData || []);
+
+      const projetsEnCours = (projetsData || []).filter(
+        p => !['termine', 'projet_refuse'].includes(p.statut)
+      ).length;
+
       setStats({
         totalImmeubles: (immeublesData || []).length,
         totalLots,
@@ -158,7 +174,8 @@ export default function ProprietaireDashboard() {
         etatLocatifTotal,
         tauxVacanceMoyen: (immeublesData || []).length > 0 
           ? tauxVacanceSum / (immeublesData || []).length 
-          : 0
+          : 0,
+        projetsEnCours
       });
 
     } catch (error) {
@@ -234,7 +251,7 @@ export default function ProprietaireDashboard() {
         />
 
         {/* KPIs Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <PremiumKPICard
             title="Immeubles"
             value={stats.totalImmeubles}
@@ -252,6 +269,13 @@ export default function ProprietaireDashboard() {
             value={stats.totalLocataires}
             icon={Users}
             onClick={() => navigate('/proprietaire/locataires')}
+          />
+          <PremiumKPICard
+            title="Projets"
+            value={stats.projetsEnCours}
+            icon={HardHat}
+            variant={stats.projetsEnCours > 0 ? 'success' : 'default'}
+            onClick={() => navigate('/proprietaire/projets-developpement')}
           />
           <PremiumKPICard
             title="Tickets ouverts"
@@ -381,12 +405,49 @@ export default function ProprietaireDashboard() {
               )}
             </div>
 
+            {/* Projets de développement */}
+            {projets.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <HardHat className="w-4 h-4 text-primary" />
+                    Projets
+                  </h3>
+                  <Badge variant="secondary">{projets.length}</Badge>
+                </div>
+                <div className="space-y-3">
+                  {projets.slice(0, 2).map((projet) => (
+                    <PremiumProjetCard
+                      key={projet.id}
+                      projet={projet}
+                      onClick={() => navigate(`/proprietaire/projets-developpement/${projet.id}`)}
+                    />
+                  ))}
+                  <Button 
+                    variant="ghost" 
+                    className="w-full" 
+                    onClick={() => navigate('/proprietaire/projets-developpement')}
+                  >
+                    Voir tous les projets
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Quick Actions */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Actions rapides</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/proprietaire/projets-developpement')}
+                >
+                  <HardHat className="w-4 h-4 mr-2" />
+                  Nouveau projet
+                </Button>
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
