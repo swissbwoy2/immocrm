@@ -6,7 +6,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Simple IMAP client using Deno's native TLS
+interface ParsedEmail {
+  message_id: string;
+  from_email: string;
+  from_name: string | null;
+  to_email: string;
+  subject: string | null;
+  body_text: string;
+  body_html: string | null;
+  received_at: string | null;
+  is_read: boolean;
+}
+
+// Improved IMAP client with robust parsing
 class SimpleImapClient {
   private conn: Deno.TlsConn | null = null;
   private encoder = new TextEncoder();
@@ -15,189 +27,472 @@ class SimpleImapClient {
   private buffer = '';
 
   async connect(host: string, port: number): Promise<void> {
-    console.log(`Connecting to ${host}:${port}...`);
+    console.log(`[IMAP] Connecting to ${host}:${port}...`);
     this.conn = await Deno.connectTls({
       hostname: host,
       port: port,
     });
-    await this.readResponse();
-    console.log('Connected to IMAP server');
+    await this.readUntilTag('*');
+    console.log('[IMAP] Connected');
   }
 
-  private async readResponse(): Promise<string[]> {
-    const lines: string[] = [];
-    const buf = new Uint8Array(4096);
+  private async readUntilTag(expectedTag: string): Promise<string> {
+    const buf = new Uint8Array(65536);
+    let fullResponse = '';
+    let attempts = 0;
+    const maxAttempts = 500;
     
-    while (true) {
-      const n = await this.conn!.read(buf);
-      if (n === null) break;
+    while (attempts < maxAttempts) {
+      attempts++;
       
-      this.buffer += this.decoder.decode(buf.subarray(0, n));
-      
-      while (this.buffer.includes('\r\n')) {
-        const idx = this.buffer.indexOf('\r\n');
-        const line = this.buffer.substring(0, idx);
-        this.buffer = this.buffer.substring(idx + 2);
-        lines.push(line);
+      try {
+        const n = await this.conn!.read(buf);
+        if (n === null) break;
         
-        if (line.match(/^[A-Z]\d+ (OK|NO|BAD)/)) {
-          return lines;
+        const chunk = this.decoder.decode(buf.subarray(0, n));
+        fullResponse += chunk;
+        
+        if (expectedTag === '*' && fullResponse.includes('* OK')) {
+          return fullResponse;
         }
-        if (line.startsWith('* OK') && lines.length === 1) {
-          return lines;
+        
+        const tagPattern = new RegExp(`^${expectedTag} (OK|NO|BAD)`, 'm');
+        if (tagPattern.test(fullResponse)) {
+          return fullResponse;
         }
+        
+        if (fullResponse.length > 10 * 1024 * 1024) {
+          console.log('[IMAP] Response too large, stopping');
+          break;
+        }
+      } catch (e) {
+        console.error('[IMAP] Read error:', e);
+        break;
       }
-      
-      if (lines.length > 100) break;
     }
     
-    return lines;
+    return fullResponse;
   }
 
-  private async sendCommand(command: string): Promise<string[]> {
+  private async sendCommand(command: string): Promise<string> {
     const tag = `A${++this.tagCounter}`;
     const fullCommand = `${tag} ${command}\r\n`;
     await this.conn!.write(this.encoder.encode(fullCommand));
-    return await this.readResponse();
+    const response = await this.readUntilTag(tag);
+    console.log(`[IMAP] Command response: ${response.length} bytes`);
+    return response;
   }
 
   async login(user: string, password: string): Promise<boolean> {
     const response = await this.sendCommand(`LOGIN "${user}" "${password}"`);
-    return response.some(line => line.includes('OK'));
+    return response.includes(' OK ');
   }
 
   async selectInbox(): Promise<number> {
     const response = await this.sendCommand('SELECT INBOX');
     let messageCount = 0;
-    for (const line of response) {
-      const match = line.match(/\* (\d+) EXISTS/);
-      if (match) {
-        messageCount = parseInt(match[1]);
-      }
+    const match = response.match(/\* (\d+) EXISTS/);
+    if (match) {
+      messageCount = parseInt(match[1]);
     }
+    console.log(`[IMAP] INBOX: ${messageCount} messages`);
     return messageCount;
   }
 
-  async fetchEmails(start: number, end: number): Promise<any[]> {
-    const emails: any[] = [];
+  async fetchEmails(start: number, end: number, imapUser: string): Promise<ParsedEmail[]> {
+    const emails: ParsedEmail[] = [];
     
     if (start < 1) start = 1;
     if (end < start) return emails;
 
-    const response = await this.sendCommand(
-      `FETCH ${start}:${end} (FLAGS UID ENVELOPE BODY.PEEK[TEXT])`
-    );
+    const batchSize = 25;
+    let currentStart = end;
+    
+    while (currentStart >= start && emails.length < 100) {
+      const currentEnd = currentStart;
+      const batchStart = Math.max(start, currentStart - batchSize + 1);
+      
+      console.log(`[IMAP] Fetching ${batchStart}:${currentEnd}...`);
+      
+      const response = await this.sendCommand(
+        `FETCH ${batchStart}:${currentEnd} (UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID)] BODY.PEEK[TEXT])`
+      );
+      
+      const batchEmails = this.parseAllFetchResponses(response, imapUser);
+      console.log(`[IMAP] Parsed ${batchEmails.length} emails from batch`);
+      
+      emails.push(...batchEmails);
+      currentStart = batchStart - 1;
+      
+      if (emails.length >= 100) break;
+    }
 
-    let currentEmail: any = null;
-    let bodyText = '';
-    let inBody = false;
+    console.log(`[IMAP] Total: ${emails.length} emails`);
+    return emails;
+  }
 
-    for (const line of response) {
-      if (line.match(/^\* \d+ FETCH/)) {
-        if (currentEmail) {
-          currentEmail.body_text = bodyText.trim();
-          emails.push(currentEmail);
+  private parseAllFetchResponses(response: string, imapUser: string): ParsedEmail[] {
+    const emails: ParsedEmail[] = [];
+    
+    const fetchRegex = /\* (\d+) FETCH \(/g;
+    let match;
+    const fetchPositions: {start: number; msgNum: number}[] = [];
+    
+    while ((match = fetchRegex.exec(response)) !== null) {
+      fetchPositions.push({
+        start: match.index,
+        msgNum: parseInt(match[1])
+      });
+    }
+    
+    console.log(`[IMAP] Found ${fetchPositions.length} FETCH responses`);
+    
+    for (let i = 0; i < fetchPositions.length; i++) {
+      const startPos = fetchPositions[i].start;
+      const endPos = i < fetchPositions.length - 1 
+        ? fetchPositions[i + 1].start 
+        : response.length;
+      
+      const fetchData = response.substring(startPos, endPos);
+      
+      try {
+        const email = this.parseSingleFetch(fetchData, imapUser);
+        if (email) {
+          // Always include emails, even with partial data
+          emails.push(email);
         }
-        currentEmail = {
-          message_id: '',
-          from_email: '',
-          from_name: null,
-          subject: null,
-          body_text: '',
-          body_html: null,
-          received_at: null,
-          is_read: false,
-          flags: [],
-        };
-        bodyText = '';
-        inBody = false;
-        
-        const flagsMatch = line.match(/FLAGS \(([^)]*)\)/);
-        if (flagsMatch) {
-          currentEmail.flags = flagsMatch[1].split(' ').filter((f: string) => f);
-          currentEmail.is_read = currentEmail.flags.includes('\\Seen');
-        }
-        
-        const uidMatch = line.match(/UID (\d+)/);
-        if (uidMatch) {
-          currentEmail.message_id = uidMatch[1];
-        }
-        
-        const envelopeMatch = line.match(/ENVELOPE \(([^)]+(?:\([^)]*\))*[^)]*)\)/);
-        if (envelopeMatch) {
-          const envelope = envelopeMatch[1];
-          
-          const dateMatch = envelope.match(/^"([^"]+)"/);
-          if (dateMatch) {
-            try {
-              currentEmail.received_at = new Date(dateMatch[1]).toISOString();
-            } catch (e) {
-              currentEmail.received_at = new Date().toISOString();
-            }
-          }
-          
-          const subjectMatch = envelope.match(/"[^"]*"\s+"([^"]*)"/);
-          if (subjectMatch) {
-            currentEmail.subject = decodeImapString(subjectMatch[1]);
-          }
-          
-          const fromMatch = envelope.match(/\(\("([^"]*)" NIL "([^"]*)" "([^"]*)"\)\)/);
-          if (fromMatch) {
-            currentEmail.from_name = decodeImapString(fromMatch[1]) || null;
-            currentEmail.from_email = `${fromMatch[2]}@${fromMatch[3]}`;
-          } else {
-            const altFromMatch = envelope.match(/\(\(NIL NIL "([^"]*)" "([^"]*)"\)\)/);
-            if (altFromMatch) {
-              currentEmail.from_email = `${altFromMatch[1]}@${altFromMatch[2]}`;
-            }
-          }
-        }
-      } else if (line.includes('BODY[TEXT]')) {
-        inBody = true;
-      } else if (inBody && currentEmail) {
-        if (!line.match(/^[A-Z]\d+ /)) {
-          bodyText += line + '\n';
-        }
+      } catch (e) {
+        console.error(`[IMAP] Parse error for msg ${fetchPositions[i].msgNum}:`, e);
       }
     }
     
-    if (currentEmail) {
-      currentEmail.body_text = bodyText.trim();
-      emails.push(currentEmail);
+    return emails;
+  }
+
+  private parseSingleFetch(data: string, imapUser: string): ParsedEmail | null {
+    const email: ParsedEmail = {
+      message_id: '',
+      from_email: '',
+      from_name: null,
+      to_email: imapUser,
+      subject: null,
+      body_text: '',
+      body_html: null,
+      received_at: new Date().toISOString(),
+      is_read: false,
+    };
+
+    // Parse UID
+    const uidMatch = data.match(/UID\s+(\d+)/i);
+    if (uidMatch) {
+      email.message_id = `uid_${uidMatch[1]}`;
+    } else {
+      email.message_id = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
-    return emails;
+    // Parse FLAGS
+    const flagsMatch = data.match(/FLAGS\s*\(([^)]*)\)/i);
+    if (flagsMatch) {
+      email.is_read = flagsMatch[1].includes('\\Seen');
+    }
+
+    // Extract HEADER.FIELDS section
+    const headerFieldsMatch = data.match(/BODY\[HEADER\.FIELDS[^\]]*\]\s*\{(\d+)\}/i);
+    let headers = '';
+    
+    if (headerFieldsMatch) {
+      const size = parseInt(headerFieldsMatch[1]);
+      const startIdx = data.indexOf(headerFieldsMatch[0]) + headerFieldsMatch[0].length;
+      const headerStart = data.indexOf('\n', startIdx) + 1;
+      headers = data.substring(headerStart, headerStart + size);
+    } else {
+      // Fallback: look for common headers directly
+      const fromIdx = data.indexOf('From:');
+      if (fromIdx >= 0) {
+        const endIdx = data.indexOf('\r\n\r\n', fromIdx);
+        if (endIdx > fromIdx) {
+          headers = data.substring(fromIdx, endIdx);
+        }
+      }
+    }
+
+    // Parse headers
+    if (headers) {
+      // From
+      const fromMatch = headers.match(/^From:\s*(.+?)(?:\r?\n(?![^\s])|\r?\n\r?\n|$)/mi);
+      if (fromMatch) {
+        const fromValue = decodeHeaderValue(fromMatch[1].replace(/\r?\n\s+/g, ' ').trim());
+        const parsed = parseEmailAddress(fromValue);
+        if (parsed.email) {
+          email.from_email = parsed.email;
+          email.from_name = parsed.name;
+        }
+      }
+
+      // Subject
+      const subjectMatch = headers.match(/^Subject:\s*(.+?)(?:\r?\n(?![^\s])|\r?\n\r?\n|$)/mi);
+      if (subjectMatch) {
+        email.subject = decodeHeaderValue(subjectMatch[1].replace(/\r?\n\s+/g, ' ').trim());
+      }
+
+      // Date
+      const dateMatch = headers.match(/^Date:\s*(.+?)(?:\r?\n|$)/mi);
+      if (dateMatch) {
+        try {
+          const dateStr = dateMatch[1].trim();
+          const parsedDate = new Date(dateStr);
+          if (!isNaN(parsedDate.getTime())) {
+            email.received_at = parsedDate.toISOString();
+          }
+        } catch (e) {
+          // Keep default
+        }
+      }
+
+      // Message-ID
+      const msgIdMatch = headers.match(/^Message-ID:\s*<([^>]+)>/mi);
+      if (msgIdMatch) {
+        email.message_id = msgIdMatch[1].substring(0, 100);
+      }
+    }
+
+    // Extract BODY[TEXT] section
+    const textMatch = data.match(/BODY\[TEXT\]\s*\{(\d+)\}/i);
+    if (textMatch) {
+      const size = parseInt(textMatch[1]);
+      const startIdx = data.indexOf(textMatch[0]) + textMatch[0].length;
+      const textStart = data.indexOf('\n', startIdx) + 1;
+      const bodyContent = data.substring(textStart, textStart + Math.min(size, 50000));
+      
+      // Parse the body content
+      const parsedBody = parseBodyContent(bodyContent);
+      email.body_text = parsedBody.text;
+      email.body_html = parsedBody.html;
+    }
+
+    // Fallback for empty from_email - use imapUser
+    if (!email.from_email) {
+      email.from_email = 'unknown@email.com';
+    }
+
+    // Clean up text
+    email.body_text = email.body_text.substring(0, 10000);
+    
+    return email;
   }
 
   async logout(): Promise<void> {
     try {
       await this.sendCommand('LOGOUT');
     } catch (e) {
-      // Ignore errors on logout
+      // Ignore
     }
-    this.conn?.close();
+    try {
+      this.conn?.close();
+    } catch (e) {
+      // Ignore
+    }
   }
 }
 
-function decodeImapString(str: string): string {
-  if (!str) return str;
+// Decode MIME header value (=?charset?encoding?text?=)
+function decodeHeaderValue(value: string): string {
+  if (!value) return value;
   
-  const regex = /=\?([^?]+)\?([BQ])\?([^?]+)\?=/gi;
+  const regex = /=\?([^?]+)\?([BQ])\?([^?]*)\?=/gi;
   
-  return str.replace(regex, (match, charset, encoding, text) => {
+  let result = value.replace(regex, (match, charset, encoding, text) => {
     try {
       if (encoding.toUpperCase() === 'B') {
-        return atob(text);
+        return decodeBase64UTF8(text);
       } else if (encoding.toUpperCase() === 'Q') {
-        return text.replace(/_/g, ' ').replace(/=([0-9A-F]{2})/gi, (m: string, hex: string) => 
-          String.fromCharCode(parseInt(hex, 16))
-        );
+        const decoded = text
+          .replace(/_/g, ' ')
+          .replace(/=([0-9A-Fa-f]{2})/g, (_: string, hex: string) => 
+            String.fromCharCode(parseInt(hex, 16))
+          );
+        return decodeUTF8Bytes(decoded);
       }
     } catch (e) {
-      // Return original if decoding fails
+      console.error('[DECODE] Header decode error:', e);
     }
     return text;
   });
+  
+  result = result.replace(/\?=\s*=\?/g, '');
+  
+  return result.trim();
+}
+
+function decodeUTF8Bytes(str: string): string {
+  try {
+    const bytes = new Uint8Array(str.length);
+    for (let i = 0; i < str.length; i++) {
+      bytes[i] = str.charCodeAt(i);
+    }
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch (e) {
+    return str;
+  }
+}
+
+function decodeBase64UTF8(base64: string): string {
+  try {
+    const binary = atob(base64.replace(/\s/g, ''));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch (e) {
+    return base64;
+  }
+}
+
+function decodeQuotedPrintable(str: string): string {
+  let result = str.replace(/=\r?\n/g, '');
+  result = result.replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => 
+    String.fromCharCode(parseInt(hex, 16))
+  );
+  return decodeUTF8Bytes(result);
+}
+
+function parseEmailAddress(addr: string): { email: string | null; name: string | null } {
+  addr = addr.trim();
+  
+  const match1 = addr.match(/^"?([^"<]+)"?\s*<([^>]+)>/);
+  if (match1) {
+    return { name: match1[1].trim(), email: match1[2].trim().toLowerCase() };
+  }
+  
+  const match2 = addr.match(/<([^>]+)>/);
+  if (match2) {
+    return { name: null, email: match2[1].trim().toLowerCase() };
+  }
+  
+  if (addr.includes('@')) {
+    return { name: null, email: addr.toLowerCase() };
+  }
+  
+  return { name: null, email: null };
+}
+
+function parseBodyContent(body: string): { text: string; html: string | null } {
+  // Check if body starts with MIME boundary
+  const boundaryStartMatch = body.match(/^--([A-Za-z0-9_.=-]+)\r?\n/);
+  
+  if (boundaryStartMatch) {
+    return parseMultipart(body, boundaryStartMatch[1]);
+  }
+  
+  // Check for Content-Type in body
+  const boundaryMatch = body.match(/boundary="?([^"\s\r\n;]+)"?/i);
+  if (boundaryMatch) {
+    return parseMultipart(body, boundaryMatch[1]);
+  }
+  
+  // Check if it's HTML
+  if (body.includes('<html') || body.includes('<HTML') || 
+      body.includes('<body') || body.includes('<BODY') ||
+      body.includes('<!DOCTYPE html')) {
+    return { text: stripHtml(body), html: body };
+  }
+  
+  // Check for quoted-printable encoding
+  const encodingMatch = body.match(/Content-Transfer-Encoding:\s*(\S+)/i);
+  const encoding = encodingMatch ? encodingMatch[1].toLowerCase() : '';
+  
+  let decoded = body;
+  if (encoding === 'quoted-printable') {
+    decoded = decodeQuotedPrintable(body);
+  } else if (encoding === 'base64') {
+    decoded = decodeBase64UTF8(body);
+  }
+  
+  return { text: cleanText(decoded), html: null };
+}
+
+function parseMultipart(body: string, boundary: string): { text: string; html: string | null } {
+  let plainText = '';
+  let htmlText = '';
+  
+  const escapedBoundary = boundary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = body.split(new RegExp(`--${escapedBoundary}(?:--)?`));
+  
+  for (const part of parts) {
+    const trimmedPart = part.trim();
+    if (trimmedPart === '' || trimmedPart === '--') continue;
+    
+    const partContentTypeMatch = part.match(/Content-Type:\s*([^;\r\n]+)/i);
+    const partType = partContentTypeMatch ? partContentTypeMatch[1].toLowerCase().trim() : '';
+    
+    const partEncodingMatch = part.match(/Content-Transfer-Encoding:\s*(\S+)/i);
+    const partEncoding = partEncodingMatch ? partEncodingMatch[1].toLowerCase().trim() : '';
+    
+    let contentStart = part.indexOf('\r\n\r\n');
+    if (contentStart === -1) contentStart = part.indexOf('\n\n');
+    if (contentStart === -1) continue;
+    
+    let content = part.substring(contentStart + (part.charAt(contentStart + 1) === '\n' ? 2 : 4));
+    content = content.replace(/\r?\n--[A-Za-z0-9_.=-]+--?\s*$/g, '').trim();
+    
+    if (partEncoding === 'quoted-printable') {
+      content = decodeQuotedPrintable(content);
+    } else if (partEncoding === 'base64') {
+      content = decodeBase64UTF8(content);
+    }
+    
+    // Check for nested multipart
+    const nestedBoundaryMatch = part.match(/boundary="?([^"\s\r\n;]+)"?/i);
+    if (nestedBoundaryMatch && partType.includes('multipart')) {
+      const nested = parseMultipart(content, nestedBoundaryMatch[1]);
+      if (nested.text && !plainText) plainText = nested.text;
+      if (nested.html && !htmlText) htmlText = nested.html;
+      continue;
+    }
+    
+    if (partType.includes('text/plain') && !plainText) {
+      plainText = content;
+    } else if (partType.includes('text/html') && !htmlText) {
+      htmlText = content;
+    }
+  }
+  
+  if (!plainText && htmlText) {
+    plainText = stripHtml(htmlText);
+  }
+  
+  return { text: plainText.trim(), html: htmlText || null };
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\n\s*\n\s*\n/g, '\n\n')
+    .trim();
+}
+
+function cleanText(text: string): string {
+  return text
+    .replace(/Content-Type:[^\r\n]*\r?\n/gi, '')
+    .replace(/Content-Transfer-Encoding:[^\r\n]*\r?\n/gi, '')
+    .replace(/Content-Disposition:[^\r\n]*\r?\n/gi, '')
+    .replace(/--[A-Za-z0-9_.=-]+(?:--)?/g, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\n\s*\n\s*\n/g, '\n\n')
+    .trim();
 }
 
 async function syncUserEmails(
@@ -216,7 +511,7 @@ async function syncUserEmails(
     
     const messageCount = await client.selectInbox();
     const startMsg = Math.max(1, messageCount - 49);
-    const fetchedEmails = await client.fetchEmails(startMsg, messageCount);
+    const fetchedEmails = await client.fetchEmails(startMsg, messageCount, config.imap_user);
     
     await client.logout();
     
@@ -225,7 +520,7 @@ async function syncUserEmails(
       message_id: `${config.imap_user}_${email.message_id}`,
       from_email: email.from_email || 'unknown@email.com',
       from_name: email.from_name,
-      to_email: config.imap_user,
+      to_email: email.to_email || config.imap_user,
       subject: email.subject,
       body_text: email.body_text?.substring(0, 10000) || null,
       body_html: email.body_html,
@@ -271,13 +566,11 @@ serve(async (req) => {
   try {
     console.log('Starting automatic IMAP sync for all users...');
     
-    // Use service role to access all configurations
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get all active IMAP configurations
     const { data: configs, error: configError } = await supabaseAdmin
       .from('imap_configurations')
       .select('*')

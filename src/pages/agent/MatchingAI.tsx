@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Brain, Sparkles, RefreshCw, Check, X, Send, User, MapPin, Home, Banknote, ArrowRight, Mail, Clock, Filter, ChevronDown, ChevronUp, Eye } from 'lucide-react';
+import { Brain, Sparkles, RefreshCw, Check, X, Send, User, MapPin, Home, Banknote, Mail, Clock, Filter, ChevronDown, ChevronUp, Eye, TrendingUp, Zap, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -12,6 +11,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
+import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 
 interface AIMatch {
   id: string;
@@ -52,7 +53,7 @@ const MatchingAI = () => {
   const [matches, setMatches] = useState<AIMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
-  const [stats, setStats] = useState({ pending: 0, accepted: 0, converted: 0 });
+  const [stats, setStats] = useState({ pending: 0, accepted: 0, converted: 0, unanalyzed: 0 });
   const [selectedMatch, setSelectedMatch] = useState<AIMatch | null>(null);
   const [emailContent, setEmailContent] = useState<string | null>(null);
   const [loadingEmail, setLoadingEmail] = useState(false);
@@ -77,11 +78,11 @@ const MatchingAI = () => {
 
       setMatches(response.data.matches || []);
       
-      // Calculate stats
       const pending = response.data.matches?.filter((m: AIMatch) => m.status === 'pending').length || 0;
       const accepted = response.data.matches?.filter((m: AIMatch) => m.status === 'accepted').length || 0;
       const converted = response.data.matches?.filter((m: AIMatch) => m.status === 'converted').length || 0;
-      setStats({ pending, accepted, converted });
+      const unanalyzed = response.data.unanalyzed_count || 0;
+      setStats({ pending, accepted, converted, unanalyzed });
     } catch (error) {
       console.error('Error loading matches:', error);
       toast.error('Erreur lors du chargement des matchs');
@@ -132,7 +133,6 @@ const MatchingAI = () => {
       setMatches(prev => prev.map(m => m.id === matchId ? { ...m, status } : m));
       toast.success(status === 'accepted' ? 'Match accepté' : 'Match rejeté');
       
-      // Update stats
       const updatedMatches = matches.map(m => m.id === matchId ? { ...m, status } : m);
       const newPending = updatedMatches.filter(m => m.status === 'pending').length;
       const newAccepted = updatedMatches.filter(m => m.status === 'accepted').length;
@@ -144,11 +144,6 @@ const MatchingAI = () => {
   };
 
   const createOfferFromMatch = (match: AIMatch) => {
-    // Navigate to send offer page with pre-filled data
-    const clientName = match.client?.profiles ? 
-      `${match.client.profiles.prenom || ''} ${match.client.profiles.nom || ''}`.trim() : 
-      'Client';
-    
     navigate('/agent/envoyer-offre', {
       state: {
         prefilledData: {
@@ -191,31 +186,34 @@ const MatchingAI = () => {
   const toggleCardExpanded = (id: string) => {
     setExpandedCards(prev => {
       const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 70) return 'text-green-500 bg-green-500/10 border-green-500/20';
-    if (score >= 50) return 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20';
-    return 'text-orange-500 bg-orange-500/10 border-orange-500/20';
+  const getScoreGradient = (score: number) => {
+    if (score >= 70) return 'from-emerald-500 to-green-400';
+    if (score >= 40) return 'from-amber-500 to-yellow-400';
+    return 'from-orange-500 to-red-400';
+  };
+
+  const getScoreLabel = (score: number) => {
+    if (score >= 70) return 'Match parfait';
+    if (score >= 40) return 'Match probable';
+    return 'À vérifier';
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500/20">En attente</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">En attente</Badge>;
       case 'accepted':
-        return <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">Accepté</Badge>;
+        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Accepté</Badge>;
       case 'rejected':
-        return <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">Rejeté</Badge>;
+        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Rejeté</Badge>;
       case 'converted':
-        return <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500/20">Converti en offre</Badge>;
+        return <Badge className="bg-violet-500/20 text-violet-400 border-violet-500/30">Converti</Badge>;
       default:
         return null;
     }
@@ -227,135 +225,227 @@ const MatchingAI = () => {
   }).sort((a, b) => b.match_score - a.match_score);
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600">
-          <Brain className="w-8 h-8 text-white" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold">Matching AI</h1>
-          <p className="text-muted-foreground">Analyse intelligente de vos emails pour trouver des biens correspondant aux critères de vos clients</p>
-        </div>
+    <div className="relative min-h-screen">
+      {/* Background */}
+      <div className="fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-950/20 via-background to-indigo-950/20" />
+        <FloatingParticles count={20} />
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-blue-500/20">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-500/10"><Clock className="w-5 h-5 text-blue-500" /></div>
-            <div><p className="text-xs text-muted-foreground">En attente</p><p className="text-2xl font-bold">{stats.pending}</p></div>
-          </CardContent>
-        </Card>
-        <Card className="border-green-500/20">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-500/10"><Check className="w-5 h-5 text-green-500" /></div>
-            <div><p className="text-xs text-muted-foreground">Acceptés</p><p className="text-2xl font-bold">{stats.accepted}</p></div>
-          </CardContent>
-        </Card>
-        <Card className="border-purple-500/20">
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-purple-500/10"><Send className="w-5 h-5 text-purple-500" /></div>
-            <div><p className="text-xs text-muted-foreground">Convertis</p><p className="text-2xl font-bold">{stats.converted}</p></div>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border-indigo-500/20">
-          <CardContent className="p-4">
-            <Button onClick={analyzeEmails} disabled={analyzing} className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600">
-              {analyzing ? <><RefreshCw className="w-4 h-4 mr-2 animate-spin" />Analyse...</> : <><Sparkles className="w-4 h-4 mr-2" />Analyser les emails</>}
+      <div className="space-y-6 p-4 md:p-6">
+        {/* Premium Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-6 md:p-8"
+        >
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMtOS45NDEgMC0xOCA4LjA1OS0xOCAxOHM4LjA1OSAxOCAxOCAxOGM5LjkxIDAgMTctOC4wNTkgMTctMThzLTguMDktMTgtMTgtMTh6bTAgMzJjLTcuNzMyIDAtMTQtNi4yNjgtMTQtMTRzNi4yNjgtMTQgMTQtMTQgMTQgNi4yNjggMTQgMTQtNi4yNjggMTQtMTQgMTR6IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9Ii4wNSIvPjwvZz48L3N2Zz4=')] opacity-30" />
+          
+          <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <motion.div 
+                animate={{ rotate: [0, 360] }}
+                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                className="p-3 rounded-xl bg-white/10 backdrop-blur-sm"
+              >
+                <Brain className="w-8 h-8 text-white" />
+              </motion.div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
+                  Matching AI
+                  <Sparkles className="w-6 h-6 text-yellow-300 animate-pulse" />
+                </h1>
+                <p className="text-white/70 text-sm md:text-base">Analyse intelligente de vos emails immobiliers</p>
+              </div>
+            </div>
+            
+            <Button 
+              onClick={analyzeEmails} 
+              disabled={analyzing}
+              className="bg-white/20 hover:bg-white/30 text-white border-white/30 backdrop-blur-sm"
+              size="lg"
+            >
+              {analyzing ? (
+                <><RefreshCw className="w-5 h-5 mr-2 animate-spin" />Analyse...</>
+              ) : (
+                <><Zap className="w-5 h-5 mr-2" />Analyser {stats.unanalyzed > 0 && `(${stats.unanalyzed})`}</>
+              )}
             </Button>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </motion.div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-4">
-        <Filter className="w-4 h-4 text-muted-foreground" />
-        <Select value={filter} onValueChange={(v) => setFilter(v as any)}>
-          <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les matchs</SelectItem>
-            <SelectItem value="pending">En attente</SelectItem>
-            <SelectItem value="accepted">Acceptés</SelectItem>
-            <SelectItem value="rejected">Rejetés</SelectItem>
-          </SelectContent>
-        </Select>
-        <span className="text-sm text-muted-foreground">{filteredMatches.length} résultat(s)</span>
-      </div>
-
-      {/* Matches List */}
-      {loading ? (
-        <div className="grid gap-4">
-          {[1, 2, 3].map(i => (
-            <Card key={i}><CardContent className="p-6"><div className="flex gap-4"><Skeleton className="h-16 w-16 rounded-full" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-1/3" /><Skeleton className="h-4 w-2/3" /></div></div></CardContent></Card>
-          ))}
+        {/* Premium KPIs */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <PremiumKPICard
+              title="En attente"
+              value={stats.pending}
+              icon={Clock}
+              variant="warning"
+              delay={0}
+            />
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <PremiumKPICard
+              title="Acceptés"
+              value={stats.accepted}
+              icon={Check}
+              variant="success"
+              delay={1}
+            />
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <PremiumKPICard
+              title="Convertis"
+              value={stats.converted}
+              icon={TrendingUp}
+              variant="default"
+              delay={2}
+            />
+          </motion.div>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+            <PremiumKPICard
+              title="Non analysés"
+              value={stats.unanalyzed}
+              icon={AlertCircle}
+              variant={stats.unanalyzed > 0 ? 'danger' : 'default'}
+              delay={3}
+              onClick={stats.unanalyzed > 0 ? analyzeEmails : undefined}
+            />
+          </motion.div>
         </div>
-      ) : filteredMatches.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-16 flex flex-col items-center">
-            <Brain className="w-16 h-16 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Aucun match trouvé</h3>
-            <p className="text-muted-foreground text-center mb-4">{filter === 'pending' ? "Cliquez sur 'Analyser les emails' pour trouver des correspondances" : "Aucun match dans cette catégorie"}</p>
-            {filter === 'pending' && <Button onClick={analyzeEmails} disabled={analyzing}><Sparkles className="w-4 h-4 mr-2" />Analyser</Button>}
-          </CardContent>
-        </Card>
-      ) : (
-        <AnimatePresence>
-          <div className="grid gap-4">
-            {filteredMatches.map((match, index) => {
-              const isExpanded = expandedCards.has(match.id);
-              const clientName = match.client?.profiles 
-                ? `${match.client.profiles.prenom || ''} ${match.client.profiles.nom || ''}`.trim() 
-                : 'Client inconnu';
 
-              return (
-                <motion.div
-                  key={match.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-                    <CardContent className="p-0">
+        {/* Filters */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center gap-4 p-4 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50"
+        >
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <Select value={filter} onValueChange={(v) => setFilter(v as any)}>
+            <SelectTrigger className="w-48 bg-background/50">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les matchs</SelectItem>
+              <SelectItem value="pending">En attente</SelectItem>
+              <SelectItem value="accepted">Acceptés</SelectItem>
+              <SelectItem value="rejected">Rejetés</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground">{filteredMatches.length} résultat(s)</span>
+        </motion.div>
+
+        {/* Matches List */}
+        {loading ? (
+          <div className="grid gap-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="p-6 rounded-xl bg-card/50 backdrop-blur-sm border border-border/50">
+                <div className="flex gap-4">
+                  <Skeleton className="h-16 w-16 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-1/3" />
+                    <Skeleton className="h-4 w-2/3" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredMatches.length === 0 ? (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="py-16 flex flex-col items-center rounded-2xl bg-card/30 backdrop-blur-sm border border-dashed border-border/50"
+          >
+            <div className="p-4 rounded-full bg-violet-500/10 mb-4">
+              <Brain className="w-12 h-12 text-violet-400" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">Aucun match trouvé</h3>
+            <p className="text-muted-foreground text-center mb-4 max-w-md">
+              {filter === 'pending' 
+                ? "Cliquez sur 'Analyser' pour trouver des correspondances entre vos emails et les critères de vos clients" 
+                : "Aucun match dans cette catégorie"}
+            </p>
+            {filter === 'pending' && stats.unanalyzed > 0 && (
+              <Button onClick={analyzeEmails} disabled={analyzing} className="bg-gradient-to-r from-violet-600 to-indigo-600">
+                <Sparkles className="w-4 h-4 mr-2" />
+                Analyser {stats.unanalyzed} email(s)
+              </Button>
+            )}
+          </motion.div>
+        ) : (
+          <AnimatePresence>
+            <div className="grid gap-4">
+              {filteredMatches.map((match, index) => {
+                const isExpanded = expandedCards.has(match.id);
+                const clientName = match.client?.profiles 
+                  ? `${match.client.profiles.prenom || ''} ${match.client.profiles.nom || ''}`.trim() 
+                  : 'Client inconnu';
+
+                return (
+                  <motion.div
+                    key={match.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="group"
+                  >
+                    <div className={cn(
+                      "overflow-hidden rounded-xl bg-card/50 backdrop-blur-sm border border-border/50",
+                      "hover:border-violet-500/50 hover:shadow-lg hover:shadow-violet-500/10 transition-all duration-300"
+                    )}>
                       {/* Main row */}
                       <div className="p-4 flex items-center gap-4">
-                        {/* Score */}
-                        <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold border-2 ${getScoreColor(match.match_score)}`}>
-                          {match.match_score}%
+                        {/* Score circle */}
+                        <div className={cn(
+                          "w-16 h-16 rounded-full flex flex-col items-center justify-center",
+                          "bg-gradient-to-br shadow-lg",
+                          getScoreGradient(match.match_score)
+                        )}>
+                          <span className="text-xl font-bold text-white">{match.match_score}%</span>
                         </div>
 
                         {/* Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <User className="w-4 h-4 text-muted-foreground" />
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <User className="w-4 h-4 text-violet-400" />
                             <span className="font-medium truncate">{clientName}</span>
                             {getStatusBadge(match.status)}
+                            <Badge variant="outline" className="text-xs">
+                              {getScoreLabel(match.match_score)}
+                            </Badge>
                           </div>
                           
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                             <Mail className="w-3 h-3" />
                             <span className="truncate">{match.email_subject || 'Sans sujet'}</span>
                           </div>
 
-                          <div className="flex flex-wrap gap-2 text-xs">
+                          <div className="flex flex-wrap gap-2">
                             {match.extracted_location && (
-                              <span className="flex items-center gap-1 bg-muted px-2 py-0.5 rounded">
-                                <MapPin className="w-3 h-3" />
+                              <Badge variant="secondary" className="bg-violet-500/10 text-violet-300 border-violet-500/20">
+                                <MapPin className="w-3 h-3 mr-1" />
                                 {match.extracted_location}
-                              </span>
+                              </Badge>
                             )}
                             {match.extracted_pieces && (
-                              <span className="flex items-center gap-1 bg-muted px-2 py-0.5 rounded">
-                                <Home className="w-3 h-3" />
+                              <Badge variant="secondary" className="bg-blue-500/10 text-blue-300 border-blue-500/20">
+                                <Home className="w-3 h-3 mr-1" />
                                 {match.extracted_pieces} pièces
-                              </span>
+                              </Badge>
                             )}
                             {match.extracted_price && (
-                              <span className="flex items-center gap-1 bg-muted px-2 py-0.5 rounded">
-                                <Banknote className="w-3 h-3" />
+                              <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-300 border-emerald-500/20">
+                                <Banknote className="w-3 h-3 mr-1" />
                                 {match.extracted_price.toLocaleString()} CHF
-                              </span>
+                              </Badge>
+                            )}
+                            {match.extracted_regie && (
+                              <Badge variant="outline" className="text-xs">
+                                {match.extracted_regie}
+                              </Badge>
                             )}
                           </div>
                         </div>
@@ -365,17 +455,17 @@ const MatchingAI = () => {
                           {match.status === 'pending' && (
                             <>
                               <Button
-                                size="sm"
+                                size="icon"
                                 variant="outline"
-                                className="text-red-500 border-red-500/20 hover:bg-red-500/10"
+                                className="text-red-400 border-red-500/30 hover:bg-red-500/10 hover:border-red-500/50"
                                 onClick={() => updateMatchStatus(match.id, 'rejected')}
                               >
                                 <X className="w-4 h-4" />
                               </Button>
                               <Button
-                                size="sm"
+                                size="icon"
                                 variant="outline"
-                                className="text-green-500 border-green-500/20 hover:bg-green-500/10"
+                                className="text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 hover:border-emerald-500/50"
                                 onClick={() => updateMatchStatus(match.id, 'accepted')}
                               >
                                 <Check className="w-4 h-4" />
@@ -385,15 +475,15 @@ const MatchingAI = () => {
                           {(match.status === 'pending' || match.status === 'accepted') && (
                             <Button
                               size="sm"
-                              className="bg-gradient-to-r from-purple-500 to-indigo-500"
+                              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700"
                               onClick={() => createOfferFromMatch(match)}
                             >
                               <Send className="w-4 h-4 mr-1" />
-                              Créer offre
+                              <span className="hidden sm:inline">Créer offre</span>
                             </Button>
                           )}
                           <Button
-                            size="sm"
+                            size="icon"
                             variant="ghost"
                             onClick={() => toggleCardExpanded(match.id)}
                           >
@@ -411,12 +501,12 @@ const MatchingAI = () => {
                             exit={{ height: 0, opacity: 0 }}
                             className="overflow-hidden"
                           >
-                            <div className="p-4 pt-0 border-t border-border mt-2">
+                            <div className="p-4 pt-0 border-t border-border/50 mt-2">
                               <div className="grid md:grid-cols-2 gap-4">
                                 {/* Extracted Property Info */}
                                 <div className="space-y-2">
-                                  <h4 className="text-sm font-medium">Bien extrait de l'email</h4>
-                                  <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
+                                  <h4 className="text-sm font-medium text-violet-400">Bien extrait de l'email</h4>
+                                  <div className="bg-violet-500/5 rounded-lg p-3 space-y-1.5 text-sm border border-violet-500/10">
                                     {match.extracted_address && (
                                       <p><span className="text-muted-foreground">Adresse:</span> {match.extracted_address}</p>
                                     )}
@@ -430,11 +520,11 @@ const MatchingAI = () => {
                                       <p><span className="text-muted-foreground">Disponibilité:</span> {match.extracted_disponibilite}</p>
                                     )}
                                     {match.extracted_regie && (
-                                      <p><span className="text-muted-foreground">Régie:</span> {match.extracted_regie}</p>
+                                      <p><span className="text-muted-foreground">Source:</span> {match.extracted_regie}</p>
                                     )}
-                                    <p><span className="text-muted-foreground">Source:</span> {match.email_from}</p>
+                                    <p><span className="text-muted-foreground">Email:</span> {match.email_from}</p>
                                   </div>
-                                  <Button variant="outline" size="sm" onClick={() => viewEmailContent(match)}>
+                                  <Button variant="outline" size="sm" onClick={() => viewEmailContent(match)} className="mt-2">
                                     <Eye className="w-4 h-4 mr-1" />
                                     Voir l'email complet
                                   </Button>
@@ -442,8 +532,8 @@ const MatchingAI = () => {
 
                                 {/* Client Criteria */}
                                 <div className="space-y-2">
-                                  <h4 className="text-sm font-medium">Critères du client</h4>
-                                  <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
+                                  <h4 className="text-sm font-medium text-blue-400">Critères du client</h4>
+                                  <div className="bg-blue-500/5 rounded-lg p-3 space-y-1.5 text-sm border border-blue-500/10">
                                     {match.client?.region_recherche && (
                                       <p><span className="text-muted-foreground">Région:</span> {match.client.region_recherche}</p>
                                     )}
@@ -468,24 +558,27 @@ const MatchingAI = () => {
                                 <h4 className="text-sm font-medium mb-2">Détails du score</h4>
                                 <div className="flex flex-wrap gap-2">
                                   {match.match_details.price_match && (
-                                    <Badge variant="outline" className="bg-green-500/10 text-green-500">
+                                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
                                       ✓ Prix compatible
                                     </Badge>
                                   )}
                                   {match.match_details.pieces_match && (
-                                    <Badge variant="outline" className="bg-green-500/10 text-green-500">
+                                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
                                       ✓ Pièces OK
                                     </Badge>
                                   )}
                                   {match.match_details.location_match && (
-                                    <Badge variant="outline" className="bg-green-500/10 text-green-500">
+                                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
                                       ✓ Région OK
                                     </Badge>
                                   )}
                                   {match.match_details.type_match && (
-                                    <Badge variant="outline" className="bg-green-500/10 text-green-500">
+                                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
                                       ✓ Type OK
                                     </Badge>
+                                  )}
+                                  {match.match_details.category && (
+                                    <Badge variant="outline">{match.match_details.category}</Badge>
                                   )}
                                 </div>
                               </div>
@@ -493,37 +586,37 @@ const MatchingAI = () => {
                           </motion.div>
                         )}
                       </AnimatePresence>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              );
-            })}
-          </div>
-        </AnimatePresence>
-      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </AnimatePresence>
+        )}
 
-      {/* Email Content Dialog */}
-      <Dialog open={!!selectedMatch} onOpenChange={() => setSelectedMatch(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>Contenu de l'email</DialogTitle>
-            <DialogDescription>{selectedMatch?.email_subject}</DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[60vh]">
-            {loadingEmail ? (
-              <div className="space-y-2 p-4">
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-4 w-5/6" />
-              </div>
-            ) : (
-              <div className="p-4 bg-muted/50 rounded-lg whitespace-pre-wrap text-sm">
-                {emailContent}
-              </div>
-            )}
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+        {/* Email Content Dialog */}
+        <Dialog open={!!selectedMatch} onOpenChange={() => setSelectedMatch(null)}>
+          <DialogContent className="max-w-2xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle>Contenu de l'email</DialogTitle>
+              <DialogDescription>{selectedMatch?.email_subject}</DialogDescription>
+            </DialogHeader>
+            <ScrollArea className="max-h-[60vh]">
+              {loadingEmail ? (
+                <div className="space-y-2 p-4">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-5/6" />
+                </div>
+              ) : (
+                <div className="p-4 bg-muted/50 rounded-lg whitespace-pre-wrap text-sm font-mono">
+                  {emailContent}
+                </div>
+              )}
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   );
 };
