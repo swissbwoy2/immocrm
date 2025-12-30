@@ -98,3 +98,9 @@ verify_jwt = false
 
 [functions.generate-dossier-complet-pdf]
 verify_jwt = true
+
+[functions.invite-proprietaire]
+verify_jwt = false
+
+[functions.resend-proprietaire-invitation]
+verify_jwt = true
