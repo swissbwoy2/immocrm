@@ -16,6 +16,7 @@ interface ExtractedProperty {
   disponibilite: string | null;
   regie: string | null;
   is_property_offer: boolean;
+  confidence: 'high' | 'medium' | 'low';
 }
 
 interface Client {
@@ -29,36 +30,107 @@ interface Client {
   agent_id: string | null;
 }
 
-async function extractPropertyInfo(emailContent: string, subject: string): Promise<ExtractedProperty> {
+// Decode quoted-printable content
+function decodeQuotedPrintable(str: string): string {
+  let result = str.replace(/=\r?\n/g, '');
+  result = result.replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => 
+    String.fromCharCode(parseInt(hex, 16))
+  );
+  try {
+    const bytes = new Uint8Array(result.length);
+    for (let i = 0; i < result.length; i++) {
+      bytes[i] = result.charCodeAt(i);
+    }
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch (e) {
+    return result;
+  }
+}
+
+// Strip HTML tags and clean content
+function stripHtml(html: string): string {
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<\/tr>/gi, '\n')
+    .replace(/<\/td>/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\n\s*\n\s*\n/g, '\n\n')
+    .trim();
+}
+
+// Clean email content for AI analysis
+function cleanEmailContent(bodyText: string | null, bodyHtml: string | null): string {
+  let content = '';
+  
+  // Prefer HTML if available (more structured)
+  if (bodyHtml && bodyHtml.length > 100) {
+    content = stripHtml(bodyHtml);
+  } else if (bodyText) {
+    content = bodyText;
+  }
+  
+  // Decode quoted-printable if detected
+  if (content.includes('=C3') || content.includes('=E2') || content.includes('=20')) {
+    content = decodeQuotedPrintable(content);
+  }
+  
+  // Clean MIME headers/boundaries
+  content = content
+    .replace(/Content-Type:[^\r\n]*\r?\n/gi, '')
+    .replace(/Content-Transfer-Encoding:[^\r\n]*\r?\n/gi, '')
+    .replace(/--[A-Za-z0-9_.=-]+(?:--)?/g, '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  
+  return content.substring(0, 6000);
+}
+
+async function extractPropertyInfo(emailContent: string, subject: string, fromEmail: string): Promise<ExtractedProperty> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) {
     console.error("LOVABLE_API_KEY not configured");
-    return { price: null, pieces: null, surface: null, location: null, type_bien: null, address: null, disponibilite: null, regie: null, is_property_offer: false };
+    return { price: null, pieces: null, surface: null, location: null, type_bien: null, address: null, disponibilite: null, regie: null, is_property_offer: false, confidence: 'low' };
   }
 
-  const prompt = `Tu es un expert en extraction d'informations immobilières. Analyse cet email et extrait les informations sur le bien immobilier proposé.
+  const prompt = `Tu es un expert en extraction d'informations immobilières suisses. Analyse cet email et extrait les informations.
 
-SUJET DE L'EMAIL:
-${subject}
+ÉMETTEUR: ${fromEmail}
+SUJET: ${subject}
 
-CONTENU DE L'EMAIL:
-${emailContent.substring(0, 4000)}
+CONTENU:
+${emailContent}
 
 INSTRUCTIONS:
-1. Détermine d'abord si cet email contient une offre immobilière (appartement, maison, studio à louer ou vendre)
-2. Si oui, extrais les informations suivantes
+1. Les emails d'alertes immobilières (RealAdvisor, Immoscout, Homegate, Comparis, etc.) contiennent TOUJOURS des offres
+2. Extrais TOUTES les informations même partielles
+3. Pour la localisation, recherche: ville, code postal, canton, quartier
+4. Les prix sont en CHF (loyer mensuel pour location)
+5. "3.5 pièces" = 3.5, "4 pièces" = 4
 
-Réponds UNIQUEMENT avec un JSON valide dans ce format exact:
+Réponds UNIQUEMENT avec un JSON valide:
 {
   "is_property_offer": true/false,
-  "price": nombre ou null (loyer mensuel ou prix de vente en CHF),
-  "pieces": nombre ou null (nombre de pièces, ex: 3.5, 4, 2),
-  "surface": nombre ou null (surface en m²),
-  "location": "ville/localité" ou null,
-  "type_bien": "appartement" ou "maison" ou "studio" ou "villa" ou "duplex" ou "attique" ou null,
-  "address": "adresse complète si disponible" ou null,
-  "disponibilite": "date ou période de disponibilité" ou null,
-  "regie": "nom de la régie/agence immobilière" ou null
+  "confidence": "high"/"medium"/"low",
+  "price": nombre ou null,
+  "pieces": nombre ou null,
+  "surface": nombre ou null,
+  "location": "ville/région" ou null,
+  "type_bien": "appartement"/"maison"/"studio"/"villa"/"duplex"/"attique" ou null,
+  "address": "adresse complète" ou null,
+  "disponibilite": "date/période" ou null,
+  "regie": "nom régie/source" ou null
 }`;
 
   try {
@@ -71,23 +143,21 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format exact:
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "Tu es un assistant spécialisé dans l'extraction d'informations immobilières. Tu réponds uniquement en JSON valide." },
+          { role: "system", content: "Tu es un assistant spécialisé dans l'extraction d'informations immobilières suisses. Tu réponds uniquement en JSON valide. Pour les emails d'alertes (RealAdvisor, Immoscout, Homegate, Comparis), considère toujours is_property_offer=true." },
           { role: "user", content: prompt }
         ],
-        temperature: 0.1,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error("AI Gateway error:", response.status, errorText);
-      return { price: null, pieces: null, surface: null, location: null, type_bien: null, address: null, disponibilite: null, regie: null, is_property_offer: false };
+      return { price: null, pieces: null, surface: null, location: null, type_bien: null, address: null, disponibilite: null, regie: null, is_property_offer: false, confidence: 'low' };
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || "";
     
-    // Extract JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
@@ -99,18 +169,36 @@ Réponds UNIQUEMENT avec un JSON valide dans ce format exact:
         type_bien: parsed.type_bien,
         address: parsed.address,
         disponibilite: parsed.disponibilite,
-        regie: parsed.regie,
+        regie: parsed.regie || getRegieFromEmail(fromEmail),
         is_property_offer: parsed.is_property_offer === true,
+        confidence: parsed.confidence || 'medium',
       };
     }
   } catch (error) {
     console.error("Error extracting property info:", error);
   }
 
-  return { price: null, pieces: null, surface: null, location: null, type_bien: null, address: null, disponibilite: null, regie: null, is_property_offer: false };
+  return { price: null, pieces: null, surface: null, location: null, type_bien: null, address: null, disponibilite: null, regie: null, is_property_offer: false, confidence: 'low' };
 }
 
-function calculateMatchScore(property: ExtractedProperty, client: Client): { score: number; details: Record<string, any> } {
+function getRegieFromEmail(email: string): string | null {
+  const sources: Record<string, string> = {
+    'realadvisor': 'RealAdvisor',
+    'immoscout': 'ImmoScout24',
+    'homegate': 'Homegate',
+    'comparis': 'Comparis',
+    'immostreet': 'ImmoStreet',
+    'anibis': 'Anibis',
+  };
+  
+  const lowerEmail = email.toLowerCase();
+  for (const [key, name] of Object.entries(sources)) {
+    if (lowerEmail.includes(key)) return name;
+  }
+  return null;
+}
+
+function calculateMatchScore(property: ExtractedProperty, client: Client): { score: number; details: Record<string, any>; category: string } {
   let score = 0;
   const details: Record<string, any> = {
     price_match: false,
@@ -119,16 +207,52 @@ function calculateMatchScore(property: ExtractedProperty, client: Client): { sco
     type_match: false,
   };
 
-  // Price match (30 points max)
+  // Location match (35 points max) - Most important for partial matches
+  if (property.location && client.region_recherche) {
+    const propertyLocation = property.location.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const clientRegion = client.region_recherche.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
+    if (propertyLocation.includes(clientRegion) || clientRegion.includes(propertyLocation)) {
+      score += 35;
+      details.location_match = true;
+      details.location_info = `${property.location} correspond à ${client.region_recherche}`;
+    } else {
+      const regions: Record<string, string[]> = {
+        "lausanne": ["lausanne", "vaud", "lac leman", "leman", "ouest lausannois", "renens", "prilly", "crissier", "ecublens", "chavannes", "bussigny"],
+        "geneve": ["geneve", "geneva", "genf", "carouge", "lancy", "meyrin", "vernier", "onex"],
+        "vaud": ["vaud", "lausanne", "morges", "nyon", "yverdon", "vevey", "montreux", "renens", "pully", "lutry", "prilly", "ecublens", "crissier"],
+        "fribourg": ["fribourg", "bulle", "romont", "murten", "morat"],
+        "neuchatel": ["neuchatel", "la chaux-de-fonds", "le locle"],
+        "valais": ["valais", "sion", "sierre", "martigny", "monthey", "visp", "brig"],
+        "bern": ["bern", "berne", "biel", "bienne", "thun", "thoune"],
+        "zurich": ["zurich", "zürich", "winterthur", "dietikon"],
+      };
+      
+      for (const [region, cities] of Object.entries(regions)) {
+        const matchesProperty = cities.some(c => propertyLocation.includes(c));
+        const matchesClient = cities.some(c => clientRegion.includes(c)) || clientRegion.includes(region);
+        if (matchesProperty && matchesClient) {
+          score += 30;
+          details.location_match = true;
+          details.location_info = `${property.location} dans la région ${client.region_recherche}`;
+          break;
+        }
+      }
+    }
+  }
+
+  // Price match (25 points max)
   if (property.price !== null && client.budget_max !== null) {
     if (property.price <= client.budget_max) {
-      score += 30;
+      score += 25;
       details.price_match = true;
       details.price_info = `${property.price} CHF ≤ budget ${client.budget_max} CHF`;
-    } else if (property.price <= client.budget_max * 1.1) {
-      // Within 10% over budget
+    } else if (property.price <= client.budget_max * 1.15) {
       score += 15;
       details.price_info = `${property.price} CHF légèrement au-dessus du budget`;
+    } else if (property.price <= client.budget_max * 1.25) {
+      score += 8;
+      details.price_info = `${property.price} CHF au-dessus du budget`;
     }
   }
 
@@ -141,60 +265,26 @@ function calculateMatchScore(property: ExtractedProperty, client: Client): { sco
       details.pieces_info = `${property.pieces} pièces = recherche exacte`;
     } else if (diff <= 0.5) {
       score += 20;
+      details.pieces_match = true;
       details.pieces_info = `${property.pieces} pièces ≈ ${client.pieces} pièces recherchées`;
     } else if (diff <= 1) {
-      score += 10;
+      score += 12;
       details.pieces_info = `${property.pieces} pièces proche de ${client.pieces} pièces`;
     }
   }
 
-  // Location match (25 points max)
-  if (property.location && client.region_recherche) {
-    const propertyLocation = property.location.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const clientRegion = client.region_recherche.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    
-    // Check if location contains region or vice versa
-    if (propertyLocation.includes(clientRegion) || clientRegion.includes(propertyLocation)) {
-      score += 25;
-      details.location_match = true;
-      details.location_info = `${property.location} correspond à ${client.region_recherche}`;
-    } else {
-      // Check for common Swiss regions
-      const regions: Record<string, string[]> = {
-        "lausanne": ["lausanne", "vaud", "lac leman", "leman"],
-        "geneve": ["geneve", "geneva", "genf"],
-        "vaud": ["vaud", "lausanne", "morges", "nyon", "yverdon", "vevey", "montreux", "renens", "pully", "lutry"],
-        "fribourg": ["fribourg", "bulle", "romont"],
-        "neuchatel": ["neuchatel", "la chaux-de-fonds"],
-        "valais": ["valais", "sion", "sierre", "martigny", "monthey"],
-      };
-      
-      for (const [region, cities] of Object.entries(regions)) {
-        const matchesProperty = cities.some(c => propertyLocation.includes(c));
-        const matchesClient = cities.some(c => clientRegion.includes(c)) || clientRegion.includes(region);
-        if (matchesProperty && matchesClient) {
-          score += 20;
-          details.location_match = true;
-          details.location_info = `${property.location} dans la région ${client.region_recherche}`;
-          break;
-        }
-      }
-    }
-  }
-
-  // Type match (20 points max)
+  // Type match (15 points max)
   if (property.type_bien && client.type_bien) {
     const propertyType = property.type_bien.toLowerCase();
     const clientType = client.type_bien.toLowerCase();
     
     if (propertyType === clientType) {
-      score += 20;
+      score += 15;
       details.type_match = true;
       details.type_info = `Type ${property.type_bien} correspond`;
     } else {
-      // Similar types
       const similar: Record<string, string[]> = {
-        "appartement": ["appartement", "studio", "duplex", "attique"],
+        "appartement": ["appartement", "studio", "duplex", "attique", "loft"],
         "maison": ["maison", "villa", "chalet"],
       };
       for (const [main, types] of Object.entries(similar)) {
@@ -207,7 +297,15 @@ function calculateMatchScore(property: ExtractedProperty, client: Client): { sco
     }
   }
 
-  return { score, details };
+  // Determine category based on score
+  let category = 'À vérifier';
+  if (score >= 70) {
+    category = 'Match parfait';
+  } else if (score >= 40) {
+    category = 'Match probable';
+  }
+
+  return { score, details, category };
 }
 
 serve(async (req) => {
@@ -220,7 +318,6 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get auth user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'No authorization header' }), {
@@ -244,10 +341,10 @@ serve(async (req) => {
     console.log(`AI Matching action: ${action} by user: ${user.id}`);
 
     if (action === 'analyze') {
-      // Get unanalyzed emails for this user
+      // Get unanalyzed emails - include body_html for better extraction
       const { data: emails, error: emailsError } = await supabase
         .from('received_emails')
-        .select('id, subject, body_text, from_email, user_id')
+        .select('id, subject, body_text, body_html, from_email, from_name, user_id')
         .eq('user_id', user.id)
         .eq('ai_analyzed', false)
         .order('received_at', { ascending: false })
@@ -271,13 +368,12 @@ serve(async (req) => {
         });
       }
 
-      // Get active clients (for agents: their clients, for admins: all)
+      // Get active clients for this agent
       let clientsQuery = supabase
         .from('clients')
         .select('id, pieces, budget_max, region_recherche, type_bien, type_recherche, user_id, agent_id')
         .eq('statut', 'actif');
 
-      // Check if user is agent
       const { data: agentData } = await supabase
         .from('agents')
         .select('id')
@@ -285,7 +381,6 @@ serve(async (req) => {
         .single();
 
       if (agentData) {
-        // Get clients for this agent (primary + co-agent)
         const { data: clientIds } = await supabase
           .from('client_agents')
           .select('client_id')
@@ -293,7 +388,6 @@ serve(async (req) => {
         
         const ids = clientIds?.map(c => c.client_id) || [];
         
-        // Also get clients where agent is primary
         const { data: primaryClients } = await supabase
           .from('clients')
           .select('id')
@@ -329,12 +423,16 @@ serve(async (req) => {
       let matchesCount = 0;
 
       for (const email of emails) {
-        console.log(`Analyzing email: ${email.subject}`);
+        console.log(`Analyzing email: ${email.subject} from ${email.from_email}`);
+        
+        // Clean and prepare email content
+        const cleanedContent = cleanEmailContent(email.body_text, email.body_html);
         
         // Extract property info using AI
         const propertyInfo = await extractPropertyInfo(
-          email.body_text || '', 
-          email.subject || ''
+          cleanedContent, 
+          email.subject || '',
+          email.from_email || ''
         );
 
         // Mark email as analyzed
@@ -350,22 +448,19 @@ serve(async (req) => {
 
         // Skip if not a property offer
         if (!propertyInfo.is_property_offer) {
-          console.log(`Email ${email.id} is not a property offer, skipping matching`);
+          console.log(`Email ${email.id} is not a property offer, skipping`);
           continue;
         }
 
         console.log(`Extracted property info:`, propertyInfo);
 
-        // Match against clients
+        // Match against clients - LOWERED threshold to 15%
         for (const client of clients || []) {
-          // Skip if client is looking to buy but email is rental (or vice versa)
-          // For now, we match all types
+          const { score, details, category } = calculateMatchScore(propertyInfo, client);
           
-          const { score, details } = calculateMatchScore(propertyInfo, client);
-          
-          // Only create match if score is above threshold (30%)
-          if (score >= 30) {
-            console.log(`Match found: client ${client.id} with score ${score}`);
+          // Create match if score >= 15% (was 30%)
+          if (score >= 15) {
+            console.log(`Match found: client ${client.id} with score ${score} (${category})`);
             
             const { error: insertError } = await supabase
               .from('ai_matches')
@@ -384,7 +479,7 @@ serve(async (req) => {
                 email_subject: email.subject,
                 email_from: email.from_email,
                 match_score: score,
-                match_details: details,
+                match_details: { ...details, category, confidence: propertyInfo.confidence },
                 status: 'pending',
                 processed_at: new Date().toISOString(),
               }, {
@@ -410,7 +505,6 @@ serve(async (req) => {
       });
 
     } else if (action === 'get_matches') {
-      // Get matches for the user's clients
       let matchesQuery = supabase
         .from('ai_matches')
         .select(`
@@ -428,7 +522,6 @@ serve(async (req) => {
         .order('match_score', { ascending: false })
         .order('created_at', { ascending: false });
 
-      // Check if user is agent
       const { data: agentData } = await supabase
         .from('agents')
         .select('id')
@@ -446,9 +539,17 @@ serve(async (req) => {
         throw matchesError;
       }
 
+      // Get unanalyzed email count
+      const { count: unanalyzedCount } = await supabase
+        .from('received_emails')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('ai_analyzed', false);
+
       return new Response(JSON.stringify({ 
         success: true,
-        matches: matches || []
+        matches: matches || [],
+        unanalyzed_count: unanalyzedCount || 0
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -477,29 +578,37 @@ serve(async (req) => {
       });
 
     } else if (action === 'get_stats') {
-      // Check if user is agent
       const { data: agentData } = await supabase
         .from('agents')
         .select('id')
         .eq('user_id', user.id)
         .single();
 
-      let query = supabase.from('ai_matches').select('status', { count: 'exact' });
-      
+      let baseQuery = supabase.from('ai_matches').select('status');
       if (agentData) {
-        query = query.eq('agent_id', agentData.id);
+        baseQuery = baseQuery.eq('agent_id', agentData.id);
       }
 
-      const { data: pending } = await query.eq('status', 'pending');
-      const { data: accepted } = await supabase.from('ai_matches').select('id', { count: 'exact' }).eq('status', 'accepted');
-      const { data: converted } = await supabase.from('ai_matches').select('id', { count: 'exact' }).eq('status', 'converted');
+      const { data: allMatches } = await baseQuery;
+      
+      const pending = allMatches?.filter(m => m.status === 'pending').length || 0;
+      const accepted = allMatches?.filter(m => m.status === 'accepted').length || 0;
+      const converted = allMatches?.filter(m => m.status === 'converted').length || 0;
+
+      // Get unanalyzed email count
+      const { count: unanalyzedCount } = await supabase
+        .from('received_emails')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('ai_analyzed', false);
 
       return new Response(JSON.stringify({ 
         success: true,
         stats: {
-          pending: pending?.length || 0,
-          accepted: accepted?.length || 0,
-          converted: converted?.length || 0,
+          pending,
+          accepted,
+          converted,
+          unanalyzed: unanalyzedCount || 0,
         }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
