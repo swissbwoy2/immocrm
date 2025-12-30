@@ -64,7 +64,7 @@ export default function ClientAnnonces() {
 
       const { data: immeublesData, error } = await supabase
         .from('immeubles')
-        .select('id, nom, type_bien, ville, canton, surface_totale, nombre_pieces, prix_vente_demande, description_commerciale, points_forts, proprietaire_id')
+        .select('*')
         .eq('publier_espace_acheteur', true)
         .eq('statut_vente', 'publie')
         .order('created_at', { ascending: false });
@@ -75,20 +75,39 @@ export default function ClientAnnonces() {
         return;
       }
 
-      setImmeubles(immeublesData as Immeuble[]);
+      const mappedData: Immeuble[] = immeublesData.map((i: any) => ({
+        id: i.id,
+        nom: i.nom,
+        type_bien: i.type_bien,
+        ville: i.ville || '',
+        canton: i.canton || '',
+        surface_totale: i.surface_totale || 0,
+        nombre_pieces: i.nombre_pieces || 0,
+        prix_vente_demande: i.prix_vente_demande || 0,
+        description_commerciale: i.description_commerciale,
+        points_forts: i.points_forts,
+        proprietaire_id: i.proprietaire_id
+      }));
+      setImmeubles(mappedData);
 
-      const immeubleIds = immeublesData.map((i: any) => i.id);
+      const immeubleIds = mappedData.map(i => i.id);
       const { data: photosData } = await supabase
         .from('photos_immeuble')
-        .select('id, url, est_principale, immeuble_id')
-        .in('immeuble_id', immeubleIds)
-        .eq('niveau_confidentialite', 'public');
+        .select('*')
+        .in('immeuble_id', immeubleIds);
 
       if (photosData) {
         const photosByImmeuble: Record<string, Photo[]> = {};
-        photosData.forEach((photo: any) => {
-          if (!photosByImmeuble[photo.immeuble_id]) photosByImmeuble[photo.immeuble_id] = [];
-          photosByImmeuble[photo.immeuble_id].push(photo);
+        (photosData as any[]).forEach((photo) => {
+          if (photo.niveau_confidentialite === 'public') {
+            if (!photosByImmeuble[photo.immeuble_id]) photosByImmeuble[photo.immeuble_id] = [];
+            photosByImmeuble[photo.immeuble_id].push({
+              id: photo.id,
+              url: photo.url,
+              est_principale: photo.est_principale,
+              immeuble_id: photo.immeuble_id
+            });
+          }
         });
         setPhotos(photosByImmeuble);
       }

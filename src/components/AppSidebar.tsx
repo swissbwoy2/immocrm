@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -57,6 +57,8 @@ const getMenuForRole = (role: string) => {
 { name: 'Remplir PDF', icon: FilePen, path: '/admin/remplir-pdf', notifKey: null },
         { name: 'Remplir demande IA', icon: Brain, path: '/admin/remplir-demande-ia', notifKey: null },
         { name: 'Contacts', icon: Contact, path: '/admin/contacts', notifKey: null },
+        { name: 'Biens en vente', icon: Building2, path: '/admin/biens-vente', notifKey: null },
+        { name: 'Intérêts acheteurs', icon: Heart, path: '/admin/interets-acheteurs', notifKey: 'new_interet_acheteur' },
         { name: 'Rappels', icon: AlarmClock, path: '/admin/rappels', notifKey: null },
         { name: 'Notifications', icon: Bell, path: '/admin/notifications', notifKey: 'total' },
         { name: 'Paramètres', icon: Settings, path: '/admin/parametres', notifKey: null },
@@ -91,6 +93,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Mon dossier', icon: User, path: '/client/dossier', notifKey: null },
         { name: 'Mon contrat', icon: FileText, path: '/client/mon-contrat', notifKey: null },
         { name: 'Offres reçues', icon: Home, path: '/client/offres-recues', notifKey: 'new_offer' },
+        { name: 'Annonces', icon: Building2, path: '/client/annonces', notifKey: null },
         { name: 'Mes visites', icon: CalendarCheck, path: '/client/visites', notifKey: 'new_visit' },
         { name: 'Calendrier', icon: Calendar, path: '/client/calendrier', notifKey: 'visit_combined' },
         { name: 'Visites déléguées', icon: HandHeart, path: '/client/visites-deleguees', notifKey: null },
