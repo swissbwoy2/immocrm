@@ -18,13 +18,12 @@ interface ParsedEmail {
   is_read: boolean;
 }
 
-// Simple IMAP client with improved parsing
+// Optimized IMAP client - reduced batch size and body limits to prevent CPU timeout
 class SimpleImapClient {
   private conn: Deno.TlsConn | null = null;
   private encoder = new TextEncoder();
   private decoder = new TextDecoder();
   private tagCounter = 0;
-  private buffer = '';
 
   async connect(host: string, port: number): Promise<void> {
     console.log(`[IMAP] Connecting to ${host}:${port}...`);
@@ -36,12 +35,12 @@ class SimpleImapClient {
     console.log('[IMAP] Connected, greeting received');
   }
 
-  // Improved reading function that handles large responses
+  // Optimized reading with smaller buffer and stricter limits
   private async readUntilTag(expectedTag: string): Promise<string> {
-    const buf = new Uint8Array(65536); // 64KB buffer
+    const buf = new Uint8Array(32768); // Reduced to 32KB buffer
     let fullResponse = '';
     let attempts = 0;
-    const maxAttempts = 500; // Much higher limit
+    const maxAttempts = 300; // Reduced attempts
     
     while (attempts < maxAttempts) {
       attempts++;
@@ -64,9 +63,9 @@ class SimpleImapClient {
           return fullResponse;
         }
         
-        // Safeguard for very large responses (10MB max)
-        if (fullResponse.length > 10 * 1024 * 1024) {
-          console.log('[IMAP] Response too large, stopping read');
+        // Reduced max response size to 3MB to prevent memory issues
+        if (fullResponse.length > 3 * 1024 * 1024) {
+          console.log('[IMAP] Response size limit reached, stopping read');
           break;
         }
       } catch (e) {
@@ -83,7 +82,7 @@ class SimpleImapClient {
     const fullCommand = `${tag} ${command}\r\n`;
     const safeLog = command.startsWith('LOGIN') 
       ? `${tag} LOGIN ***` 
-      : `${tag} ${command.substring(0, 100)}`;
+      : `${tag} ${command.substring(0, 80)}...`;
     console.log(`[IMAP] >>> ${safeLog}`);
     await this.conn!.write(this.encoder.encode(fullCommand));
     const response = await this.readUntilTag(tag);
@@ -115,18 +114,22 @@ class SimpleImapClient {
     if (start < 1) start = 1;
     if (end < start) return emails;
 
-    // Fetch in smaller batches to avoid timeouts
-    const batchSize = 25;
-    let currentStart = end; // Start from most recent
+    // OPTIMIZATION: Reduced batch size from 25 to 10 to prevent CPU timeout
+    const batchSize = 10;
+    let currentStart = end;
     
-    while (currentStart >= start && emails.length < 100) {
+    // OPTIMIZATION: Reduced max emails to 50 per sync
+    const maxEmails = 50;
+    
+    while (currentStart >= start && emails.length < maxEmails) {
       const currentEnd = currentStart;
       const batchStart = Math.max(start, currentStart - batchSize + 1);
       
       console.log(`[IMAP] Fetching batch ${batchStart}:${currentEnd}...`);
       
+      // OPTIMIZATION: Limit body size to 20KB with BODY.PEEK[TEXT]<0.20000>
       const response = await this.sendCommand(
-        `FETCH ${batchStart}:${currentEnd} (UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID)] BODY.PEEK[TEXT])`
+        `FETCH ${batchStart}:${currentEnd} (UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID)] BODY.PEEK[TEXT]<0.20000>)`
       );
       
       // Parse the response to extract individual emails
@@ -137,8 +140,7 @@ class SimpleImapClient {
       
       currentStart = batchStart - 1;
       
-      // Safety limit
-      if (emails.length >= 100) break;
+      if (emails.length >= maxEmails) break;
     }
 
     console.log(`[IMAP] Total parsed: ${emails.length} emails`);
@@ -148,8 +150,6 @@ class SimpleImapClient {
   private parseAllFetchResponses(response: string, imapUser: string): ParsedEmail[] {
     const emails: ParsedEmail[] = [];
     
-    // Find all FETCH responses using a more robust method
-    // Each FETCH starts with "* NUMBER FETCH"
     const fetchRegex = /\* (\d+) FETCH \(/g;
     let match;
     const fetchPositions: {start: number; msgNum: number}[] = [];
@@ -177,7 +177,7 @@ class SimpleImapClient {
           emails.push(email);
         }
       } catch (e) {
-        console.error(`[IMAP] Parse error for msg ${fetchPositions[i].msgNum}:`, e);
+        // Silent error - don't log each parse error to save CPU
       }
     }
     
@@ -212,19 +212,15 @@ class SimpleImapClient {
     }
 
     // Extract HEADER.FIELDS section
-    // Format: BODY[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID)] {SIZE}\r\nHEADERS...
     const headerFieldsMatch = data.match(/BODY\[HEADER\.FIELDS[^\]]*\]\s*\{(\d+)\}/i);
     let headers = '';
     
     if (headerFieldsMatch) {
       const size = parseInt(headerFieldsMatch[1]);
       const startIdx = data.indexOf(headerFieldsMatch[0]) + headerFieldsMatch[0].length;
-      // Skip the \r\n after {SIZE}
       const headerStart = data.indexOf('\n', startIdx) + 1;
       headers = data.substring(headerStart, headerStart + size);
-      console.log(`[IMAP-DEBUG] Headers extracted (${headers.length}/${size} bytes)`);
     } else {
-      // Fallback: look for common headers directly
       const fromIdx = data.indexOf('From:');
       if (fromIdx >= 0) {
         const endIdx = data.indexOf('\r\n\r\n', fromIdx);
@@ -277,61 +273,45 @@ class SimpleImapClient {
         }
       }
 
-      // Message-ID for unique identification
+      // Message-ID
       const msgIdMatch = headers.match(/^Message-ID:\s*<([^>]+)>/mi);
       if (msgIdMatch) {
         email.message_id = msgIdMatch[1].substring(0, 100);
       }
     }
 
-    // Extract BODY[TEXT] section
-    const textMatch = data.match(/BODY\[TEXT\]\s*\{(\d+)\}/i);
+    // Extract BODY[TEXT] section - handle partial fetch format BODY[TEXT]<0>
+    const textMatch = data.match(/BODY\[TEXT\](?:<\d+>)?\s*\{(\d+)\}/i);
     if (textMatch) {
       const size = parseInt(textMatch[1]);
       const startIdx = data.indexOf(textMatch[0]) + textMatch[0].length;
       const textStart = data.indexOf('\n', startIdx) + 1;
-      const bodyContent = data.substring(textStart, textStart + Math.min(size, 50000));
+      // OPTIMIZATION: Limit body to 15KB max for parsing
+      const bodyContent = data.substring(textStart, textStart + Math.min(size, 15000));
       
-      // Check if body starts with MIME boundary (--BOUNDARY)
+      // Check if body starts with MIME boundary
       const boundaryStartMatch = bodyContent.match(/^--([A-Za-z0-9_.=-]+)\r?\n/);
       
       if (boundaryStartMatch) {
-        // Body starts with a MIME boundary - parse as multipart
         const boundary = boundaryStartMatch[1];
-        const { text, html } = parseMultipart(bodyContent, boundary);
+        const { text, html } = parseMultipartLight(bodyContent, boundary);
         email.body_text = text || cleanText(bodyContent);
         email.body_html = html;
       } else if (bodyContent.includes('<html') || bodyContent.includes('<HTML') || 
           bodyContent.includes('<body') || bodyContent.includes('<BODY') ||
           bodyContent.includes('<!DOCTYPE html')) {
-        // Direct HTML content
         email.body_html = bodyContent;
         email.body_text = stripHtml(bodyContent);
       } else if (bodyContent.includes('Content-Type:')) {
-        // Has Content-Type headers - try to find boundary or extract text part
         const boundaryMatch = bodyContent.match(/boundary="?([^"\s\r\n;]+)"?/i);
         if (boundaryMatch) {
-          const { text, html } = parseMultipart(bodyContent, boundaryMatch[1]);
+          const { text, html } = parseMultipartLight(bodyContent, boundaryMatch[1]);
           email.body_text = text || cleanText(bodyContent);
           email.body_html = html;
         } else {
-          // Try to extract text from the text/plain part
-          const textPartMatch = bodyContent.match(/Content-Type:\s*text\/plain[^]*?Content-Transfer-Encoding:\s*(\S+)?[^]*?\r?\n\r?\n([^]*?)(?=--[A-Za-z0-9_.=-]+|$)/i);
-          if (textPartMatch) {
-            const encoding = textPartMatch[1]?.toLowerCase() || '';
-            let content = textPartMatch[2];
-            if (encoding === 'quoted-printable') {
-              content = decodeQuotedPrintable(content);
-            } else if (encoding === 'base64') {
-              content = decodeBase64UTF8(content);
-            }
-            email.body_text = cleanText(content);
-          } else {
-            email.body_text = cleanText(bodyContent);
-          }
+          email.body_text = cleanText(bodyContent);
         }
       } else {
-        // Plain text - check for encoding in body
         const encodingMatch = bodyContent.match(/Content-Transfer-Encoding:\s*(\S+)/i);
         const encoding = encodingMatch ? encodingMatch[1].toLowerCase() : '';
         
@@ -339,15 +319,15 @@ class SimpleImapClient {
         if (encoding === 'quoted-printable') {
           decoded = decodeQuotedPrintable(bodyContent);
         } else if (encoding === 'base64') {
-          decoded = decodeBase64UTF8(bodyContent);
+          decoded = decodeBase64Safe(bodyContent);
         }
         
         email.body_text = cleanText(decoded);
       }
     }
 
-    // Clean up text
-    email.body_text = email.body_text.substring(0, 10000);
+    // OPTIMIZATION: Limit text to 8000 chars
+    email.body_text = email.body_text.substring(0, 8000);
     
     return email;
   }
@@ -366,7 +346,7 @@ class SimpleImapClient {
   }
 }
 
-// Decode MIME header value (=?charset?encoding?text?=)
+// Decode MIME header value
 function decodeHeaderValue(value: string): string {
   if (!value) return value;
   
@@ -375,7 +355,7 @@ function decodeHeaderValue(value: string): string {
   let result = value.replace(regex, (match, charset, encoding, text) => {
     try {
       if (encoding.toUpperCase() === 'B') {
-        return decodeBase64UTF8(text);
+        return decodeBase64Safe(text);
       } else if (encoding.toUpperCase() === 'Q') {
         const decoded = text
           .replace(/_/g, ' ')
@@ -385,12 +365,11 @@ function decodeHeaderValue(value: string): string {
         return decodeUTF8Bytes(decoded);
       }
     } catch (e) {
-      console.error('[DECODE] Header decode error:', e);
+      // Silent - don't log decode errors
     }
     return text;
   });
   
-  // Handle consecutive encoded words
   result = result.replace(/\?=\s*=\?/g, '');
   
   return result.trim();
@@ -411,19 +390,16 @@ function decodeUTF8Bytes(str: string): string {
 function parseEmailAddress(addr: string): { email: string | null; name: string | null } {
   addr = addr.trim();
   
-  // Format: "Name" <email> or Name <email>
   const match1 = addr.match(/^"?([^"<]+)"?\s*<([^>]+)>/);
   if (match1) {
     return { name: match1[1].trim(), email: match1[2].trim().toLowerCase() };
   }
   
-  // Format: <email>
   const match2 = addr.match(/<([^>]+)>/);
   if (match2) {
     return { name: null, email: match2[1].trim().toLowerCase() };
   }
   
-  // Just email
   if (addr.includes('@')) {
     return { name: null, email: addr.toLowerCase() };
   }
@@ -431,16 +407,19 @@ function parseEmailAddress(addr: string): { email: string | null; name: string |
   return { name: null, email: null };
 }
 
-function parseMultipart(body: string, boundary: string): { text: string; html: string | null } {
+// OPTIMIZATION: Lightweight multipart parser - no deep recursion, limited iterations
+function parseMultipartLight(body: string, boundary: string): { text: string; html: string | null } {
   let plainText = '';
   let htmlText = '';
   
   const escapedBoundary = boundary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const parts = body.split(new RegExp(`--${escapedBoundary}(?:--)?`));
   
-  console.log(`[MULTIPART] Parsing with boundary: ${boundary.substring(0, 20)}..., found ${parts.length} parts`);
+  // OPTIMIZATION: Only process first 5 parts max
+  const maxParts = Math.min(parts.length, 5);
   
-  for (const part of parts) {
+  for (let i = 0; i < maxParts; i++) {
+    const part = parts[i];
     const trimmedPart = part.trim();
     if (trimmedPart === '' || trimmedPart === '--') continue;
     
@@ -450,39 +429,31 @@ function parseMultipart(body: string, boundary: string): { text: string; html: s
     const partEncodingMatch = part.match(/Content-Transfer-Encoding:\s*(\S+)/i);
     const partEncoding = partEncodingMatch ? partEncodingMatch[1].toLowerCase().trim() : '';
     
-    // Find content after headers (double newline)
     let contentStart = part.indexOf('\r\n\r\n');
     if (contentStart === -1) contentStart = part.indexOf('\n\n');
     if (contentStart === -1) continue;
     
-    // Extract content and trim trailing whitespace/boundaries
     let content = part.substring(contentStart + (part.charAt(contentStart + 1) === '\n' ? 2 : 4));
-    
-    // Remove trailing boundary remnants
     content = content.replace(/\r?\n--[A-Za-z0-9_.=-]+--?\s*$/g, '').trim();
     
-    // Decode content based on encoding
+    // OPTIMIZATION: Limit content size before decoding
+    content = content.substring(0, 10000);
+    
     if (partEncoding === 'quoted-printable') {
       content = decodeQuotedPrintable(content);
     } else if (partEncoding === 'base64') {
-      content = decodeBase64UTF8(content);
+      content = decodeBase64Safe(content);
     }
     
-    // Check for nested multipart
-    const nestedBoundaryMatch = part.match(/boundary="?([^"\s\r\n;]+)"?/i);
-    if (nestedBoundaryMatch && partType.includes('multipart')) {
-      const nested = parseMultipart(content, nestedBoundaryMatch[1]);
-      if (nested.text && !plainText) plainText = nested.text;
-      if (nested.html && !htmlText) htmlText = nested.html;
+    // Skip nested multipart - too CPU intensive
+    if (partType.includes('multipart')) {
       continue;
     }
     
     if (partType.includes('text/plain') && !plainText) {
       plainText = content;
-      console.log(`[MULTIPART] Found text/plain: ${content.substring(0, 50)}...`);
     } else if (partType.includes('text/html') && !htmlText) {
       htmlText = content;
-      console.log(`[MULTIPART] Found text/html: ${content.substring(0, 50)}...`);
     }
   }
   
@@ -490,28 +461,38 @@ function parseMultipart(body: string, boundary: string): { text: string; html: s
     plainText = stripHtml(htmlText);
   }
   
-  // Final cleanup
-  plainText = plainText.trim();
-  
-  return { text: plainText, html: htmlText || null };
+  return { text: plainText.trim(), html: htmlText || null };
 }
 
 function decodeQuotedPrintable(str: string): string {
-  let result = str.replace(/=\r?\n/g, '');
-  result = result.replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => {
-    return String.fromCharCode(parseInt(hex, 16));
-  });
-  return decodeUTF8Bytes(result);
+  try {
+    let result = str.replace(/=\r?\n/g, '');
+    result = result.replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => {
+      return String.fromCharCode(parseInt(hex, 16));
+    });
+    return decodeUTF8Bytes(result);
+  } catch (e) {
+    return str;
+  }
 }
 
-function decodeBase64UTF8(str: string): string {
+// OPTIMIZATION: Silent Base64 decoder - no logging on errors
+function decodeBase64Safe(str: string): string {
   try {
+    // Clean the string first
     const cleaned = str.replace(/[\r\n\s]/g, '');
+    if (cleaned.length === 0) return '';
+    
+    // Validate base64 chars
+    if (!/^[A-Za-z0-9+/=]+$/.test(cleaned)) {
+      return str;
+    }
+    
     const decoded = atob(cleaned);
     return decodeUTF8Bytes(decoded);
   } catch (e) {
-    console.error('[DECODE] Base64 error:', e);
-    return str;
+    // Silent return - no logging to save CPU
+    return '';
   }
 }
 
@@ -540,8 +521,8 @@ function stripHtml(html: string): string {
 function cleanText(text: string): string {
   if (!text) return '';
   return text
-    .replace(/--[A-Za-z0-9_.=-]+--?/g, '') // Remove MIME boundaries
-    .replace(/Content-[A-Za-z-]+:.*(?:\r?\n(?:\s+.*)?)*\r?\n/gi, '') // Remove Content-* headers
+    .replace(/--[A-Za-z0-9_.=-]+--?/g, '')
+    .replace(/Content-[A-Za-z-]+:.*(?:\r?\n(?:\s+.*)?)*\r?\n/gi, '')
     .replace(/\r\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
@@ -611,9 +592,9 @@ serve(async (req) => {
         
         const messageCount = await client.selectInbox();
         
-        // Support for full_sync and custom count
-        const { full_sync = false, count = 50 } = body || {};
-        const emailsToFetch = full_sync ? Math.min(messageCount, 200) : Math.min(count, messageCount, 100);
+        // OPTIMIZATION: Reduced default count and max
+        const { full_sync = false, count = 30 } = body || {};
+        const emailsToFetch = full_sync ? Math.min(messageCount, 100) : Math.min(count, messageCount, 50);
         const startMsg = Math.max(1, messageCount - emailsToFetch + 1);
         
         console.log(`[IMAP] Fetching ${emailsToFetch} emails (full_sync: ${full_sync}, total: ${messageCount})`);
@@ -621,7 +602,7 @@ serve(async (req) => {
         
         await client.logout();
         
-        // Store emails with unique message_id
+        // Store emails
         const emailsToInsert = fetchedEmails
           .filter(email => email.from_email && email.from_email !== 'unknown@email.com')
           .map(email => ({
@@ -631,8 +612,8 @@ serve(async (req) => {
             from_name: email.from_name,
             to_email: email.to_email || imapConfig.imap_user,
             subject: email.subject,
-            body_text: email.body_text?.substring(0, 50000) || null,
-            body_html: email.body_html?.substring(0, 100000) || null,
+            body_text: email.body_text?.substring(0, 30000) || null,
+            body_html: email.body_html?.substring(0, 50000) || null,
             received_at: email.received_at || new Date().toISOString(),
             is_read: email.is_read,
             is_starred: false,
@@ -643,12 +624,7 @@ serve(async (req) => {
         console.log(`[IMAP] Inserting ${emailsToInsert.length} emails`);
         
         if (emailsToInsert.length > 0) {
-          // Log first email for debugging
-          console.log(`[IMAP] Sample email:`);
-          console.log(`  - Subject: ${emailsToInsert[0].subject}`);
-          console.log(`  - From: ${emailsToInsert[0].from_name} <${emailsToInsert[0].from_email}>`);
-          console.log(`  - Date: ${emailsToInsert[0].received_at}`);
-          console.log(`  - Body length: ${emailsToInsert[0].body_text?.length || 0}`);
+          console.log(`[IMAP] Sample: ${emailsToInsert[0].subject} from ${emailsToInsert[0].from_email}`);
           
           const { error: insertError } = await supabaseClient
             .from('received_emails')
@@ -659,8 +635,6 @@ serve(async (req) => {
 
           if (insertError) {
             console.error('[IMAP] Insert error:', insertError);
-          } else {
-            console.log(`[IMAP] Inserted/updated ${emailsToInsert.length} emails`);
           }
         }
 
@@ -674,7 +648,7 @@ serve(async (req) => {
           .select('*')
           .eq('user_id', user.id)
           .order('received_at', { ascending: false })
-          .limit(500);
+          .limit(200);
 
         return new Response(
           JSON.stringify({ 
