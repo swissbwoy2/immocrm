@@ -174,6 +174,107 @@ export type Database = {
           },
         ]
       }
+      ai_matches: {
+        Row: {
+          agent_id: string | null
+          client_id: string | null
+          converted_to_offre_id: string | null
+          created_at: string | null
+          email_from: string | null
+          email_id: string | null
+          email_subject: string | null
+          extracted_address: string | null
+          extracted_disponibilite: string | null
+          extracted_location: string | null
+          extracted_pieces: number | null
+          extracted_price: number | null
+          extracted_regie: string | null
+          extracted_surface: number | null
+          extracted_type_bien: string | null
+          id: string
+          match_details: Json | null
+          match_score: number | null
+          processed_at: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          client_id?: string | null
+          converted_to_offre_id?: string | null
+          created_at?: string | null
+          email_from?: string | null
+          email_id?: string | null
+          email_subject?: string | null
+          extracted_address?: string | null
+          extracted_disponibilite?: string | null
+          extracted_location?: string | null
+          extracted_pieces?: number | null
+          extracted_price?: number | null
+          extracted_regie?: string | null
+          extracted_surface?: number | null
+          extracted_type_bien?: string | null
+          id?: string
+          match_details?: Json | null
+          match_score?: number | null
+          processed_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          client_id?: string | null
+          converted_to_offre_id?: string | null
+          created_at?: string | null
+          email_from?: string | null
+          email_id?: string | null
+          email_subject?: string | null
+          extracted_address?: string | null
+          extracted_disponibilite?: string | null
+          extracted_location?: string | null
+          extracted_pieces?: number | null
+          extracted_price?: number | null
+          extracted_regie?: string | null
+          extracted_surface?: number | null
+          extracted_type_bien?: string | null
+          id?: string
+          match_details?: Json | null
+          match_score?: number | null
+          processed_at?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_matches_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_matches_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_matches_converted_to_offre_id_fkey"
+            columns: ["converted_to_offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_matches_email_id_fkey"
+            columns: ["email_id"]
+            isOneToOne: false
+            referencedRelation: "received_emails"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_config: {
         Row: {
           key: string
@@ -2657,6 +2758,8 @@ export type Database = {
       }
       received_emails: {
         Row: {
+          ai_analyzed: boolean | null
+          ai_analyzed_at: string | null
           attachments: Json | null
           body_html: string | null
           body_text: string | null
@@ -2674,6 +2777,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_analyzed?: boolean | null
+          ai_analyzed_at?: string | null
           attachments?: Json | null
           body_html?: string | null
           body_text?: string | null
@@ -2691,6 +2796,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_analyzed?: boolean | null
+          ai_analyzed_at?: string | null
           attachments?: Json | null
           body_html?: string | null
           body_text?: string | null
