@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { Settings, Bell, Lock, LogOut } from 'lucide-react';
+import { Settings, Bell, Lock, LogOut, Trash2 } from 'lucide-react';
 import { ChangePasswordCard } from '@/components/ChangePasswordCard';
+import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
 
 export default function ApporteurParametres() {
   const { signOut } = useAuth();
@@ -62,6 +63,22 @@ export default function ApporteurParametres() {
 
       {/* Sécurité */}
       <ChangePasswordCard />
+
+      {/* Supprimer le compte */}
+      <Card className="border-destructive/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <Trash2 className="h-5 w-5" />
+            Zone de danger
+          </CardTitle>
+          <CardDescription>
+            Supprimer définitivement votre compte et toutes vos données
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <DeleteAccountDialog userType="apporteur" />
+        </CardContent>
+      </Card>
 
       {/* Déconnexion */}
       <Card>

@@ -163,7 +163,7 @@ export default function MandatFormStep1({ data, onChange }: Props) {
         <div className="space-y-2 md:col-span-2 group">
           <Label htmlFor="adresse" className="flex items-center gap-2 text-sm font-medium">
             <MapPin className="h-4 w-4 text-primary/70" />
-            Adresse actuelle <span className="text-destructive">*</span>
+            Adresse actuelle <span className="text-muted-foreground text-xs">(optionnel)</span>
           </Label>
           <GoogleAddressAutocomplete
             value={data.adresse}
@@ -223,7 +223,7 @@ export default function MandatFormStep1({ data, onChange }: Props) {
         <div className="space-y-2 group">
           <Label htmlFor="nationalite" className="flex items-center gap-2 text-sm font-medium">
             <Globe className="h-4 w-4 text-primary/70" />
-            Nationalité <span className="text-destructive">*</span>
+            Nationalité <span className="text-muted-foreground text-xs">(optionnel)</span>
           </Label>
           <Select value={data.nationalite} onValueChange={(value) => onChange({ nationalite: value })}>
             <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm">
@@ -259,7 +259,7 @@ export default function MandatFormStep1({ data, onChange }: Props) {
         <div className="space-y-2 group">
           <Label htmlFor="etat_civil" className="flex items-center gap-2 text-sm font-medium">
             <Heart className="h-4 w-4 text-primary/70" />
-            État civil <span className="text-destructive">*</span>
+            État civil <span className="text-muted-foreground text-xs">(optionnel)</span>
           </Label>
           <Select value={data.etat_civil} onValueChange={(value) => onChange({ etat_civil: value })}>
             <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm">

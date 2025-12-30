@@ -5,12 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
-import { Camera, Save, Mail, Phone, User, Settings, Bell } from 'lucide-react';
+import { Camera, Save, Mail, Phone, User, Settings, Bell, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { EmailConfigurationDialog } from '@/components/EmailConfigurationDialog';
 import { ChangePasswordCard } from '@/components/ChangePasswordCard';
+import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
 
 export default function AgentParametres() {
   const { user } = useAuth();
@@ -313,6 +314,22 @@ export default function AgentParametres() {
 
           {/* Changer le mot de passe */}
           <ChangePasswordCard />
+
+          {/* Supprimer le compte */}
+          <Card className="border-destructive/50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <Trash2 className="w-5 h-5" />
+                Zone de danger
+              </CardTitle>
+              <CardDescription>
+                Supprimer définitivement votre compte et toutes vos données
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DeleteAccountDialog userType="agent" />
+            </CardContent>
+          </Card>
         </div>
       </div>
       

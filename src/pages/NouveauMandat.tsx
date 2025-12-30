@@ -58,15 +58,16 @@ export default function NouveauMandat() {
   const validateStep = (step: number): boolean => {
     switch (step) {
       case 0:
+        // Made optional: adresse, nationalite, etat_civil (Apple requirement 5.1.1)
         return !!(formData.email && formData.prenom && formData.nom && formData.telephone &&
-          formData.adresse && formData.date_naissance && formData.nationalite &&
-          formData.type_permis && formData.etat_civil);
+          formData.date_naissance && formData.type_permis);
       case 1:
         return !!(formData.gerance_actuelle && formData.contact_gerance &&
           formData.loyer_actuel >= 0 && formData.depuis_le && formData.pieces_actuel > 0 &&
           formData.motif_changement);
       case 2:
-        return !!(formData.profession && formData.employeur && formData.revenus_mensuels > 0);
+        // Made optional: profession, employeur, revenus_mensuels (Apple requirement 5.1.1)
+        return true;
       case 3:
         return true; // Candidats optionnels
       case 4:
