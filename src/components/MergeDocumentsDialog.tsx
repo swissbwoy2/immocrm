@@ -51,7 +51,7 @@ export function MergeDocumentsDialog({
   const [progress, setProgress] = useState({ current: 0, total: 0, status: '' });
   const [addSeparators, setAddSeparators] = useState(true);
   const [addCoverPage, setAddCoverPage] = useState(true);
-  const [useGroupedMode, setUseGroupedMode] = useState(candidates.length > 0);
+  const [useGroupedMode, setUseGroupedMode] = useState(true);
 
   // Documents groupés par personne
   const clientDocs = documents.filter(d => !d.candidate_id && isSupported(d));
@@ -71,7 +71,7 @@ export function MergeDocumentsDialog({
       const name = clientName?.replace(/\s+/g, '_') || 'Client';
       setFileName(`Dossier_complet_${name}_${date}.pdf`);
       setProgress({ current: 0, total: 0, status: '' });
-      setUseGroupedMode(candidates.length > 0);
+      setUseGroupedMode(true);
     }
   }, [open, clientName, candidates.length]);
 
@@ -305,8 +305,7 @@ export function MergeDocumentsDialog({
           </div>
 
           {/* Options de fusion */}
-          {candidates.length > 0 && (
-            <Card>
+          <Card>
               <CardContent className="pt-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="grouped-mode" className="cursor-pointer">Mode groupé par personne</Label>
@@ -338,10 +337,9 @@ export function MergeDocumentsDialog({
                 )}
               </CardContent>
             </Card>
-          )}
 
           {/* Liste des documents groupée */}
-          {useGroupedMode && candidates.length > 0 ? (
+          {useGroupedMode ? (
             <div className="space-y-4">
               {/* Documents du client */}
               <div className="border rounded-lg p-3">
