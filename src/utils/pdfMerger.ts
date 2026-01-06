@@ -57,7 +57,22 @@ export async function downloadFileAsBlob(doc: Document): Promise<Blob | null> {
       }
     }
 
-    // Sinon télécharger depuis le storage
+    // Si c'est une URL complète (http/https), télécharger via fetch
+    if (doc.url.startsWith('http')) {
+      try {
+        const response = await fetch(doc.url);
+        if (!response.ok) {
+          console.error(`Document "${doc.nom}": Erreur HTTP ${response.status}`);
+          return null;
+        }
+        return await response.blob();
+      } catch (fetchError) {
+        console.error(`Document "${doc.nom}": Erreur de téléchargement HTTP:`, fetchError);
+        return null;
+      }
+    }
+
+    // Sinon télécharger depuis le storage avec chemin relatif
     const { data, error } = await supabase.storage
       .from('client-documents')
       .download(doc.url);
