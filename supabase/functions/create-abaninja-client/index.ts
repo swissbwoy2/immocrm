@@ -141,7 +141,7 @@ serve(async (req) => {
       ]
     };
 
-    // Only add addresses if we could parse them properly
+    // Toujours fournir une adresse (AbaNinja l'exige)
     if (parsedAddress) {
       personPayload.addresses = [
         {
@@ -152,6 +152,18 @@ serve(async (req) => {
           country_code: "CH"
         }
       ];
+    } else {
+      // Fallback : utiliser l'adresse brute avec valeurs par défaut
+      personPayload.addresses = [
+        {
+          address: adresse || "Adresse à compléter",
+          city: "Lausanne",
+          zip_code: "1000",
+          state: "VD",
+          country_code: "CH"
+        }
+      ];
+      console.log('Using fallback address for client without valid postal code');
     }
 
     console.log('AbaNinja person payload:', JSON.stringify(personPayload));
