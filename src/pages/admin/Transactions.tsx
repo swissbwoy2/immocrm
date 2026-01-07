@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, Calendar, Trash2 } from "lucide-react";
+import { DollarSign, TrendingUp, Calendar, Trash2, CheckCircle2, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -91,6 +91,26 @@ const Transactions = () => {
     }
   };
 
+  const handleMarkCommissionPaid = async (transactionId: string) => {
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .update({ 
+          commission_payee: true, 
+          date_paiement_commission: new Date().toISOString() 
+        })
+        .eq('id', transactionId);
+      
+      if (error) throw error;
+      
+      toast.success('Commission marquée comme payée');
+      loadTransactions();
+    } catch (error) {
+      console.error('Erreur mise à jour:', error);
+      toast.error('Erreur lors de la mise à jour');
+    }
+  };
+
   const getClientName = (transaction: any) => {
     const profile = transaction.clients?.user_id ? profiles.get(transaction.clients.user_id) : null;
     return profile ? `${profile.prenom} ${profile.nom}` : "Client inconnu";
@@ -102,7 +122,10 @@ const Transactions = () => {
   };
 
   const transactionsConclues = transactions.filter(t => t.statut === 'conclue');
+  const transactionsPayees = transactions.filter(t => t.statut === 'conclue' && t.commission_payee);
+  const transactionsEnAttente = transactions.filter(t => t.statut === 'conclue' && !t.commission_payee);
   const totalCommissions = transactionsConclues.reduce((sum, t) => sum + (t.commission_totale || 0), 0);
+  const totalCommissionsPayees = transactionsPayees.reduce((sum, t) => sum + (t.commission_totale || 0), 0);
   const totalAgentPart = transactionsConclues.reduce((sum, t) => sum + (t.part_agent || 0), 0);
   const totalAgencyPart = transactionsConclues.reduce((sum, t) => sum + (t.part_agence || 0), 0);
 
@@ -122,7 +145,7 @@ const Transactions = () => {
             <p className="text-muted-foreground">Suivi des commissions et transactions - {transactionsConclues.length} affaire{transactionsConclues.length > 1 ? 's' : ''} conclue{transactionsConclues.length > 1 ? 's' : ''}</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
             <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '0ms' }}>
               <div className="flex items-center gap-3 md:gap-4">
                 <div className="p-2 md:p-3 bg-primary/10 rounded-lg group-hover:scale-110 transition-transform">
@@ -136,23 +159,36 @@ const Transactions = () => {
             </Card>
             <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '50ms' }}>
               <div className="flex items-center gap-3 md:gap-4">
+                <div className="p-2 md:p-3 bg-emerald-500/10 rounded-lg group-hover:scale-110 transition-transform">
+                  <CheckCircle2 className="h-5 w-5 md:h-6 md:w-6 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-xs md:text-sm text-muted-foreground">Payées</p>
+                  <p className="text-lg md:text-2xl font-bold text-emerald-600 group-hover:scale-105 transition-transform origin-left">CHF {totalCommissionsPayees.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">{transactionsPayees.length} transaction{transactionsPayees.length > 1 ? 's' : ''}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '100ms' }}>
+              <div className="flex items-center gap-3 md:gap-4">
+                <div className="p-2 md:p-3 bg-orange-500/10 rounded-lg group-hover:scale-110 transition-transform">
+                  <Clock className="h-5 w-5 md:h-6 md:w-6 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-xs md:text-sm text-muted-foreground">En attente</p>
+                  <p className="text-lg md:text-2xl font-bold text-orange-600 group-hover:scale-105 transition-transform origin-left">CHF {(totalCommissions - totalCommissionsPayees).toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">{transactionsEnAttente.length} transaction{transactionsEnAttente.length > 1 ? 's' : ''}</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '150ms' }}>
+              <div className="flex items-center gap-3 md:gap-4">
                 <div className="p-2 md:p-3 bg-success/10 rounded-lg group-hover:scale-110 transition-transform">
                   <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-success" />
                 </div>
                 <div>
                   <p className="text-xs md:text-sm text-muted-foreground">Part agents</p>
                   <p className="text-lg md:text-2xl font-bold group-hover:scale-105 transition-transform origin-left">CHF {totalAgentPart.toLocaleString()}</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '100ms' }}>
-              <div className="flex items-center gap-3 md:gap-4">
-                <div className="p-2 md:p-3 bg-secondary/10 rounded-lg group-hover:scale-110 transition-transform">
-                  <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-secondary-foreground" />
-                </div>
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">Part agence</p>
-                  <p className="text-lg md:text-2xl font-bold group-hover:scale-105 transition-transform origin-left">CHF {totalAgencyPart.toLocaleString()}</p>
                 </div>
               </div>
             </Card>
@@ -244,9 +280,47 @@ const Transactions = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Calendar className="h-4 w-4" />
-                        Conclue le {new Date(transaction.date_transaction).toLocaleDateString('fr-CH')}
+                      <div className="flex items-center justify-between pt-4 border-t">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Calendar className="h-4 w-4" />
+                          Conclue le {new Date(transaction.date_transaction).toLocaleDateString('fr-CH')}
+                        </div>
+                        
+                        {/* Commission payment status */}
+                        {transaction.commission_payee ? (
+                          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 text-sm">
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span>Payée le {new Date(transaction.date_paiement_commission).toLocaleDateString('fr-CH')}</span>
+                          </div>
+                        ) : (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm" className="text-orange-600 border-orange-300 hover:bg-orange-50">
+                                <Clock className="h-4 w-4 mr-2" />
+                                Marquer payée
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirmer le paiement</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Marquer la commission de <strong>CHF {transaction.commission_totale?.toLocaleString()}</strong> comme payée ? 
+                                  La date de paiement sera enregistrée à aujourd'hui.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleMarkCommissionPaid(transaction.id)}
+                                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                >
+                                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                                  Confirmer le paiement
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
                       </div>
                     </div>
                   </Card>

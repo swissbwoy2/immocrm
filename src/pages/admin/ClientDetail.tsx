@@ -725,7 +725,15 @@ export default function ClientDetail() {
     );
   }
 
-  const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
+  // Déterminer la date de fin du mandat si le client est relogé
+  const reloggedCandidatureForCalc = candidatures.find(c => 
+    ['signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(c.statut)
+  );
+  const mandatEndDate = reloggedCandidatureForCalc?.cles_remises_at || 
+                        reloggedCandidatureForCalc?.signature_effectuee_at || 
+                        reloggedCandidatureForCalc?.date_etat_lieux || null;
+  
+  const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at, mandatEndDate);
   const daysRemaining = 90 - daysElapsed;
   const progressPercentage = (daysElapsed / 90) * 100;
   const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);
