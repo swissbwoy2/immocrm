@@ -1,16 +1,18 @@
 // Fonctions de calcul pour ImmoCRM
 
 // Jours écoulés depuis inscription (retourne le nombre exact avec décimales)
-export function calculateDaysElapsed(dateInscription: string): number {
+// Si endDate est fourni, calcule jusqu'à cette date au lieu de maintenant (pour figer le compteur)
+export function calculateDaysElapsed(dateInscription: string, endDate?: string | null): number {
   const start = new Date(dateInscription);
-  const now = new Date();
-  const diffTime = Math.abs(now.getTime() - start.getTime());
+  const end = endDate ? new Date(endDate) : new Date();
+  const diffTime = Math.abs(end.getTime() - start.getTime());
   return diffTime / (1000 * 60 * 60 * 24); // Retourne le nombre exact, pas arrondi
 }
 
 // Jours restants sur le mandat (90 jours)
-export function calculateDaysRemaining(dateInscription: string): number {
-  const elapsed = calculateDaysElapsed(dateInscription);
+// Si endDate est fourni, utilise cette date pour calculer les jours restants (figé)
+export function calculateDaysRemaining(dateInscription: string, endDate?: string | null): number {
+  const elapsed = calculateDaysElapsed(dateInscription, endDate);
   return 90 - elapsed;
 }
 

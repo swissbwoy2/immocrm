@@ -3647,10 +3647,12 @@ export type Database = {
           adresse: string | null
           agent_id: string | null
           client_id: string | null
+          commission_payee: boolean | null
           commission_totale: number
           created_at: string | null
           date_debut_bail: string | null
           date_etat_lieux: string | null
+          date_paiement_commission: string | null
           date_transaction: string | null
           etage: string | null
           etat_lieux_confirme: boolean | null
@@ -3674,10 +3676,12 @@ export type Database = {
           adresse?: string | null
           agent_id?: string | null
           client_id?: string | null
+          commission_payee?: boolean | null
           commission_totale: number
           created_at?: string | null
           date_debut_bail?: string | null
           date_etat_lieux?: string | null
+          date_paiement_commission?: string | null
           date_transaction?: string | null
           etage?: string | null
           etat_lieux_confirme?: boolean | null
@@ -3701,10 +3705,12 @@ export type Database = {
           adresse?: string | null
           agent_id?: string | null
           client_id?: string | null
+          commission_payee?: boolean | null
           commission_totale?: number
           created_at?: string | null
           date_debut_bail?: string | null
           date_etat_lieux?: string | null
+          date_paiement_commission?: string | null
           date_transaction?: string | null
           etage?: string | null
           etat_lieux_confirme?: boolean | null
