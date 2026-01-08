@@ -76,6 +76,7 @@ const AgentRemplirDemande = lazy(() => import("./pages/agent/RemplirDemande"));
 const AgentContacts = lazy(() => import("./pages/agent/Contacts"));
 const AgentMatchingAI = lazy(() => import("./pages/agent/MatchingAI"));
 const AgentBiensEnVente = lazy(() => import("./pages/agent/BiensEnVente"));
+const AgentBienVenteDetail = lazy(() => import("./pages/agent/BienVenteDetail"));
 
 // Client pages
 const ClientDashboard = lazy(() => import("./pages/client/Dashboard"));
@@ -233,6 +234,7 @@ const App = () => (
               <Route path="/agent/contacts" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentContacts /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/matching-ai" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentMatchingAI /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/biens-vente" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentBiensEnVente /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/biens-vente/:id" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentBienVenteDetail /></AppLayout></ProtectedRoute>} />
 
               {/* Client Routes */}
               <Route path="/client" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDashboard /></AppLayout></ProtectedRoute>} />
