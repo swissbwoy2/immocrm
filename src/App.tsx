@@ -107,6 +107,7 @@ const AdminApporteurs = lazy(() => import("./pages/admin/Apporteurs"));
 const AdminApporteurDetail = lazy(() => import("./pages/admin/ApporteurDetail"));
 const AdminReferrals = lazy(() => import("./pages/admin/Referrals"));
 const AdminBiensEnVente = lazy(() => import("./pages/admin/BiensEnVente"));
+const AdminBienVenteDetail = lazy(() => import("./pages/admin/BienVenteDetail"));
 const AdminInteretsAcheteurs = lazy(() => import("./pages/admin/InteretsAcheteurs"));
 
 // Admin Projets Développement pages
@@ -206,8 +207,9 @@ const App = () => (
               <Route path="/admin/contacts" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminContacts /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/proprietaires" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminProprietaires /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/proprietaires/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminProprietaireDetail /></AppLayout></ProtectedRoute>} />
-
-              {/* Agent Routes */}
+              <Route path="/admin/biens-vente" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminBiensEnVente /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/biens-vente/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminBienVenteDetail /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/interets-acheteurs" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminInteretsAcheteurs /></AppLayout></ProtectedRoute>} />
               <Route path="/agent" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentDashboard /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/mes-clients" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentMesClients /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/clients/:id" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentClientDetail /></AppLayout></ProtectedRoute>} />
