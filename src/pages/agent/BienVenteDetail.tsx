@@ -548,7 +548,6 @@ export default function AgentBienVenteDetail() {
                         <span className="text-white text-xs truncate">{photo.type_photo || 'Photo'}</span>
                       </div>
                     </div>
-                    </div>
                   ))}
                 </div>
               ) : (
