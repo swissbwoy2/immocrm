@@ -405,7 +405,12 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess, isAdmin = fa
         prix_vente_demande: formData.prix_vente_demande,
         annee_construction: formData.annee_construction,
         description_commerciale: formData.description_commerciale,
-        points_forts: formData.points_forts,
+        points_forts: formData.points_forts
+          ? formData.points_forts
+              .split('\n')
+              .map(line => line.replace(/^[•\-\*]\s*/, '').trim())
+              .filter(line => line !== '')
+          : [],
         publier_espace_acheteur: formData.publier_espace_acheteur,
         // Extended fields - will work after types regenerate
         sous_type_bien: formData.sous_type_bien,
