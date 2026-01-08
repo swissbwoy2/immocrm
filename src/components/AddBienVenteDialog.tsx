@@ -348,34 +348,34 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess, isAdmin = fa
   };
 
   const handleSubmit = async () => {
+    // Validation des champs obligatoires
     if (!formData.nom || !formData.adresse) {
-      toast.error('Veuillez remplir les champs obligatoires');
+      toast.error('Veuillez remplir le nom et l\'adresse du bien');
+      return;
+    }
+
+    // Validation propriétaire
+    if (isNewProprietaire) {
+      if (!formData.nouveau_proprietaire_email || !formData.nouveau_proprietaire_prenom || !formData.nouveau_proprietaire_nom) {
+        toast.error('Email, prénom et nom du nouveau propriétaire sont requis');
+        return;
+      }
+    } else {
+      if (!formData.proprietaire_id) {
+        toast.error('Veuillez sélectionner un propriétaire existant');
+        return;
+      }
+    }
+
+    // Validation agent pour admin
+    if (isAdmin && !formData.agent_responsable_id) {
+      toast.error('Veuillez sélectionner un agent responsable');
       return;
     }
 
     setLoading(true);
     try {
-      let proprietaireId = formData.proprietaire_id;
-
-      // If new proprietaire, invite them first
-      if (isNewProprietaire && formData.nouveau_proprietaire_email) {
-        setInvitingProprietaire(true);
-        
-        const { data: inviteData, error: inviteError } = await supabase.functions.invoke('invite-proprietaire', {
-          body: {
-            email: formData.nouveau_proprietaire_email,
-            prenom: formData.nouveau_proprietaire_prenom,
-            nom: formData.nouveau_proprietaire_nom,
-            telephone: formData.nouveau_proprietaire_telephone,
-          }
-        });
-
-        if (inviteError) throw inviteError;
-        proprietaireId = inviteData.proprietaireId;
-        setInvitingProprietaire(false);
-      }
-
-      // Get agent ID - use selected agent for admin or current user's agent
+      // 1. Calculer l'agent responsable AVANT l'invitation
       let agentResponsableId: string | null = null;
       
       if (isAdmin && formData.agent_responsable_id) {
@@ -389,17 +389,55 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess, isAdmin = fa
         agentResponsableId = agentData?.id || null;
       }
 
-      // Create immeuble - use type assertion for new fields not yet in generated types
+      // 2. Gérer le propriétaire
+      let proprietaireId = formData.proprietaire_id;
+
+      if (isNewProprietaire && formData.nouveau_proprietaire_email) {
+        setInvitingProprietaire(true);
+        
+        const { data: inviteData, error: inviteError } = await supabase.functions.invoke('invite-proprietaire', {
+          body: {
+            email: formData.nouveau_proprietaire_email,
+            prenom: formData.nouveau_proprietaire_prenom,
+            nom: formData.nouveau_proprietaire_nom,
+            telephone: formData.nouveau_proprietaire_telephone,
+            agent_id: agentResponsableId, // Passer l'agent pour la RLS
+          }
+        });
+
+        setInvitingProprietaire(false);
+
+        if (inviteError) {
+          const errorMsg = inviteError.message || 'Erreur lors de l\'invitation du propriétaire';
+          console.error('Invite error:', inviteError);
+          toast.error(errorMsg);
+          setLoading(false);
+          return;
+        }
+
+        if (!inviteData?.proprietaireId) {
+          toast.error('L\'invitation n\'a pas renvoyé d\'ID propriétaire');
+          setLoading(false);
+          return;
+        }
+
+        proprietaireId = inviteData.proprietaireId;
+      }
+
+      // 3. Mapper type_bien pour compatibilité DB (villa -> maison)
+      const typeBienDB = formData.type_bien === 'villa' ? 'maison' : formData.type_bien;
+
+      // 4. Créer l'immeuble
       const immeubleData = {
         nom: formData.nom,
         adresse: formData.adresse,
         code_postal: formData.code_postal,
         ville: formData.ville,
         canton: formData.canton,
-        type_bien: formData.type_bien,
+        type_bien: typeBienDB,
         mode_exploitation: 'vente',
         statut_vente: 'brouillon',
-        proprietaire_id: proprietaireId || null,
+        proprietaire_id: proprietaireId,
         nombre_pieces: formData.nombre_pieces,
         surface_totale: formData.surface_totale,
         prix_vente_demande: formData.prix_vente_demande,
@@ -412,7 +450,6 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess, isAdmin = fa
               .filter(line => line !== '')
           : [],
         publier_espace_acheteur: formData.publier_espace_acheteur,
-        // Extended fields - will work after types regenerate
         sous_type_bien: formData.sous_type_bien,
         agent_responsable_id: agentResponsableId,
         etage: formData.etage,
@@ -478,7 +515,13 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess, isAdmin = fa
         .select()
         .single();
 
-      if (immeubleError) throw immeubleError;
+      if (immeubleError) {
+        console.error('Insert error:', immeubleError);
+        const errorDetail = (immeubleError as any).details || (immeubleError as any).hint || immeubleError.message;
+        toast.error(`Erreur: ${errorDetail}`);
+        setLoading(false);
+        return;
+      }
 
       // Upload photos if any
       if (photos.length > 0 && immeuble) {
@@ -516,9 +559,10 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess, isAdmin = fa
       setStep(0);
       onSuccess();
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating bien:', error);
-      toast.error('Erreur lors de la création');
+      const errorMsg = error?.message || error?.details || 'Erreur inconnue';
+      toast.error(`Erreur: ${errorMsg}`);
     } finally {
       setLoading(false);
       setInvitingProprietaire(false);
@@ -581,7 +625,7 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess, isAdmin = fa
                 </Select>
               </div>
               
-              {formData.type_bien === 'villa' && (
+              {(formData.type_bien === 'villa' || formData.type_bien === 'maison') && (
                 <div className="space-y-2">
                   <Label>Sous-type</Label>
                   <Select value={formData.sous_type_bien} onValueChange={(v) => updateFormData({ sous_type_bien: v })}>
