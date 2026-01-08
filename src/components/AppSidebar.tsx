@@ -71,6 +71,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Messagerie', icon: MessageSquare, path: '/agent/messagerie', notifKey: 'new_message' },
         { name: 'Calendrier', icon: Calendar, path: '/agent/calendrier', notifKey: 'visit_combined' },
         { name: 'Mes clients', icon: Users, path: '/agent/mes-clients', notifKey: 'client_assigned' },
+        { name: 'Biens en vente', icon: Building2, path: '/agent/biens-vente', notifKey: null },
         { name: 'Matching AI', icon: Brain, path: '/agent/matching-ai', notifKey: null },
         { name: 'Visites', icon: CalendarCheck, path: '/agent/visites', notifKey: 'new_visit' },
         { name: 'Candidatures', icon: FileCheck, path: '/agent/candidatures', notifKey: null },
