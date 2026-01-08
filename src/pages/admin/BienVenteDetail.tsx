@@ -9,10 +9,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { PremiumPageHeader, PremiumCard } from '@/components/premium';
+import { PremiumPageHeader, PremiumCard, PremiumPhotoGallery } from '@/components/premium';
+import { EstimationModule } from '@/components/biens-vente/EstimationModule';
+import { MarketAnalysisModule } from '@/components/biens-vente/MarketAnalysisModule';
+import { GenerateDocumentsSection } from '@/components/biens-vente/GenerateDocumentsSection';
+import { EditBienVenteDialog } from '@/components/biens-vente/EditBienVenteDialog';
 import { 
   ArrowLeft, Building2, MapPin, Ruler, Thermometer, Banknote, 
-  FileText, User, Send, Loader2, Eye, EyeOff
+  FileText, User, Send, Loader2, Eye, EyeOff, Edit, Camera, Files,
+  TrendingUp, Calculator, BarChart3, Handshake
 } from 'lucide-react';
 
 interface Immeuble {
@@ -41,7 +46,7 @@ interface Immeuble {
   prix_vente_demande: number;
   estimation_agent: number;
   description_commerciale: string;
-  points_forts: string;
+  points_forts: string[];
   statut_vente: string;
   publier_espace_acheteur: boolean;
   agent_responsable_id: string;
@@ -61,7 +66,38 @@ interface Immeuble {
   est_loue: boolean;
   locataire_actuel: string;
   loyer_actuel: number;
+  // Estimation fields
+  estimation_valeur_basse: number;
+  estimation_valeur_haute: number;
+  estimation_valeur_recommandee: number;
+  estimation_prix_m2: number;
+  estimation_date: string;
+  estimation_methode: string;
+  estimation_notes: string;
+  facteurs_positifs: string[];
+  facteurs_negatifs: string[];
+  potentiel_developpement: string;
+  score_sous_exploitation: number;
+  recommandation_commercialisation: string;
+  strategie_vente: string;
+  // Energy fields
+  classe_energetique: string;
+  indice_energetique: number;
+  niveau_bruit_jour: number;
+  niveau_bruit_nuit: number;
+  // Market fields
+  prix_m2_secteur: number;
+  duree_publication_moyenne: number;
+  tendance_marche: string;
   created_at: string;
+}
+
+interface Photo {
+  id: string;
+  url: string;
+  legende?: string;
+  type_photo?: string;
+  ordre: number;
 }
 
 interface Agent {
@@ -87,11 +123,13 @@ export default function BienVenteDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [immeuble, setImmeuble] = useState<Immeuble | null>(null);
+  const [photos, setPhotos] = useState<Photo[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
   const [proprietaire, setProprietaire] = useState<Proprietaire | null>(null);
   const [currentAgent, setCurrentAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -112,6 +150,17 @@ export default function BienVenteDetail() {
 
       if (error) throw error;
       setImmeuble(immeubleData as unknown as Immeuble);
+
+      // Load photos
+      const { data: photosData } = await supabase
+        .from('photos_immeuble')
+        .select('*')
+        .eq('immeuble_id', id)
+        .order('ordre', { ascending: true });
+
+      if (photosData) {
+        setPhotos(photosData as Photo[]);
+      }
 
       // Load agents
       const { data: agentsData } = await supabase
@@ -254,16 +303,22 @@ export default function BienVenteDetail() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/admin/biens-vente')}>
-          <ArrowLeft className="h-5 w-5" />
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/admin/biens-vente')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <PremiumPageHeader
+            icon={Building2}
+            title={immeuble.nom}
+            subtitle={`${immeuble.adresse}, ${immeuble.ville}`}
+            badge={immeuble.type_bien}
+          />
+        </div>
+        <Button onClick={() => setShowEditDialog(true)}>
+          <Edit className="w-4 h-4 mr-2" />
+          Modifier
         </Button>
-        <PremiumPageHeader
-          icon={Building2}
-          title={immeuble.nom}
-          subtitle={`${immeuble.adresse}, ${immeuble.ville}`}
-          badge={immeuble.type_bien}
-        />
       </div>
 
       {/* Quick Info */}
@@ -286,51 +341,117 @@ export default function BienVenteDetail() {
       </div>
 
       <Tabs defaultValue="fiche" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
-          <TabsTrigger value="fiche">Fiche technique</TabsTrigger>
-          <TabsTrigger value="commercial">Commercialisation</TabsTrigger>
-          <TabsTrigger value="offres">Offres</TabsTrigger>
-          <TabsTrigger value="acte">Acte de vente</TabsTrigger>
-          <TabsTrigger value="gestion">Gestion</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-9 h-auto gap-1">
+          <TabsTrigger value="fiche" className="flex items-center gap-1.5 text-xs">
+            <FileText className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Fiche</span>
+          </TabsTrigger>
+          <TabsTrigger value="estimation" className="flex items-center gap-1.5 text-xs">
+            <Calculator className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Estimation</span>
+          </TabsTrigger>
+          <TabsTrigger value="marche" className="flex items-center gap-1.5 text-xs">
+            <BarChart3 className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Marché</span>
+          </TabsTrigger>
+          <TabsTrigger value="commercial" className="flex items-center gap-1.5 text-xs">
+            <TrendingUp className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Commercial</span>
+          </TabsTrigger>
+          <TabsTrigger value="photos" className="flex items-center gap-1.5 text-xs">
+            <Camera className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Photos</span>
+          </TabsTrigger>
+          <TabsTrigger value="documents" className="flex items-center gap-1.5 text-xs">
+            <Files className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Documents</span>
+          </TabsTrigger>
+          <TabsTrigger value="offres" className="flex items-center gap-1.5 text-xs">
+            <Handshake className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Offres</span>
+          </TabsTrigger>
+          <TabsTrigger value="pdf" className="flex items-center gap-1.5 text-xs">
+            <FileText className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">PDF</span>
+          </TabsTrigger>
+          <TabsTrigger value="gestion" className="flex items-center gap-1.5 text-xs">
+            <User className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Gestion</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* Fiche Technique */}
         <TabsContent value="fiche" className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             <PremiumCard title="Identification" icon={MapPin}>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-muted-foreground">Adresse:</span> <span className="font-medium">{immeuble.adresse}</span></div>
-                <div><span className="text-muted-foreground">Ville:</span> <span className="font-medium">{immeuble.ville}</span></div>
-                <div><span className="text-muted-foreground">Code postal:</span> <span className="font-medium">{immeuble.code_postal}</span></div>
-                <div><span className="text-muted-foreground">Canton:</span> <span className="font-medium">{immeuble.canton}</span></div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Adresse:</span> <span className="font-medium">{immeuble.adresse}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Code postal:</span> <span className="font-medium">{immeuble.code_postal}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Ville:</span> <span className="font-medium">{immeuble.ville}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Canton:</span> <span className="font-medium">{immeuble.canton}</span></div>
               </div>
             </PremiumCard>
 
             <PremiumCard title="Description" icon={Ruler}>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-muted-foreground">Type:</span> <span className="font-medium">{immeuble.type_bien}</span></div>
-                <div><span className="text-muted-foreground">Surface:</span> <span className="font-medium">{immeuble.surface_totale} m²</span></div>
-                <div><span className="text-muted-foreground">Pièces:</span> <span className="font-medium">{immeuble.nombre_pieces || '-'}</span></div>
-                <div><span className="text-muted-foreground">Chambres:</span> <span className="font-medium">{immeuble.nb_chambres || '-'}</span></div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Type:</span> <span className="font-medium">{immeuble.type_bien}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Surface:</span> <span className="font-medium">{immeuble.surface_totale} m²</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Pièces:</span> <span className="font-medium">{immeuble.nombre_pieces || '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Chambres:</span> <span className="font-medium">{immeuble.nb_chambres || '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">SDB:</span> <span className="font-medium">{immeuble.nb_salles_eau || '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">WC:</span> <span className="font-medium">{immeuble.nb_wc || '-'}</span></div>
               </div>
             </PremiumCard>
 
             <PremiumCard title="Technique" icon={Thermometer}>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-muted-foreground">Année construction:</span> <span className="font-medium">{immeuble.annee_construction || '-'}</span></div>
-                <div><span className="text-muted-foreground">Rénovation:</span> <span className="font-medium">{immeuble.annee_renovation || '-'}</span></div>
-                <div><span className="text-muted-foreground">Chauffage:</span> <span className="font-medium">{immeuble.type_chauffage || '-'}</span></div>
-                <div><span className="text-muted-foreground">Combustible:</span> <span className="font-medium">{immeuble.combustible || '-'}</span></div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Construction:</span> <span className="font-medium">{immeuble.annee_construction || '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Rénovation:</span> <span className="font-medium">{immeuble.annee_renovation || '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Chauffage:</span> <span className="font-medium">{immeuble.type_chauffage || '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Combustible:</span> <span className="font-medium">{immeuble.combustible || '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Étage:</span> <span className="font-medium">{immeuble.etage ?? '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Nb étages:</span> <span className="font-medium">{immeuble.nb_etages_batiment || '-'}</span></div>
               </div>
             </PremiumCard>
 
-            <PremiumCard title="Finances" icon={Banknote}>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-muted-foreground">Charges PPE:</span> <span className="font-medium">{immeuble.charges_ppe ? `${immeuble.charges_ppe} CHF/mois` : '-'}</span></div>
-                <div><span className="text-muted-foreground">Fonds rénovation:</span> <span className="font-medium">{immeuble.fonds_renovation ? formatPrice(immeuble.fonds_renovation) : '-'}</span></div>
+            <PremiumCard title="Cadastre" icon={FileText}>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">RF Base:</span> <span className="font-medium">{immeuble.no_rf_base || '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">RF Feuillet:</span> <span className="font-medium">{immeuble.no_rf_feuillet || '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Zone:</span> <span className="font-medium">{immeuble.zone_construction || '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">N° ECA:</span> <span className="font-medium">{immeuble.no_eca || '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Volume ECA:</span> <span className="font-medium">{immeuble.volume_eca ? `${immeuble.volume_eca} m³` : '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Valeur ECA:</span> <span className="font-medium">{immeuble.valeur_eca ? formatPrice(immeuble.valeur_eca) : '-'}</span></div>
+              </div>
+            </PremiumCard>
+
+            <PremiumCard title="Stationnement" icon={Building2}>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Garages:</span> <span className="font-medium">{immeuble.nb_garages || 0}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Places int.:</span> <span className="font-medium">{immeuble.nb_places_int || 0}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Places ext.:</span> <span className="font-medium">{immeuble.nb_places_ext || 0}</span></div>
+              </div>
+            </PremiumCard>
+
+            <PremiumCard title="Charges PPE" icon={Banknote}>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Admin PPE:</span> <span className="font-medium">{immeuble.administrateur_ppe || '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Charges:</span> <span className="font-medium">{immeuble.charges_ppe ? `${immeuble.charges_ppe} CHF/mois` : '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Chauffage/EC:</span> <span className="font-medium">{immeuble.charges_chauffage_ec ? `${immeuble.charges_chauffage_ec} CHF/mois` : '-'}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Fonds rénov.:</span> <span className="font-medium">{immeuble.fonds_renovation ? formatPrice(immeuble.fonds_renovation) : '-'}</span></div>
               </div>
             </PremiumCard>
           </div>
+        </TabsContent>
+
+        {/* Estimation */}
+        <TabsContent value="estimation">
+          <EstimationModule immeuble={immeuble} onUpdate={loadData} />
+        </TabsContent>
+
+        {/* Marché */}
+        <TabsContent value="marche">
+          <MarketAnalysisModule immeuble={immeuble} onUpdate={loadData} />
         </TabsContent>
 
         {/* Commercialisation */}
@@ -405,10 +526,14 @@ export default function BienVenteDetail() {
                   <Label className="text-muted-foreground">Description</Label>
                   <p className="mt-1 whitespace-pre-wrap">{immeuble.description_commerciale || 'Aucune description'}</p>
                 </div>
-                {immeuble.points_forts && (
+                {immeuble.points_forts && Array.isArray(immeuble.points_forts) && immeuble.points_forts.length > 0 && (
                   <div>
                     <Label className="text-muted-foreground">Points forts</Label>
-                    <p className="mt-1 whitespace-pre-wrap">{immeuble.points_forts}</p>
+                    <ul className="mt-1 list-disc list-inside space-y-1">
+                      {immeuble.points_forts.map((point, i) => (
+                        <li key={i}>{point}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </CardContent>
@@ -416,30 +541,58 @@ export default function BienVenteDetail() {
           </div>
         </TabsContent>
 
+        {/* Photos */}
+        <TabsContent value="photos">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Camera className="h-5 w-5" />
+                Photos du bien ({photos.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {photos.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {photos.map((photo) => (
+                    <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden group">
+                      <img
+                        src={photo.url}
+                        alt={photo.legende || 'Photo'}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                        <span className="text-white text-xs truncate">{photo.type_photo || 'Photo'}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">Aucune photo</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Documents */}
+        <TabsContent value="documents">
+          <GenerateDocumentsSection immeuble={immeuble} />
+        </TabsContent>
+
         {/* Offres */}
-        <TabsContent value="offres" className="space-y-4">
+        <TabsContent value="offres">
           <Card>
             <CardHeader>
               <CardTitle>Offres d'achat</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">Aucune offre pour le moment</p>
-              {/* TODO: Implement offers list */}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Acte de vente */}
-        <TabsContent value="acte" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Acte de vente</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Aucun acte de vente pour le moment</p>
-              {/* TODO: Implement sale deed */}
-            </CardContent>
-          </Card>
+        {/* PDF Generation */}
+        <TabsContent value="pdf">
+          <GenerateDocumentsSection immeuble={immeuble} />
         </TabsContent>
 
         {/* Gestion */}
@@ -509,6 +662,13 @@ export default function BienVenteDetail() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <EditBienVenteDialog
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        immeuble={immeuble}
+        onSuccess={loadData}
+      />
     </div>
   );
 }
