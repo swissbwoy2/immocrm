@@ -212,7 +212,7 @@ export default function AgentBiensEnVente() {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          onClick={() => navigate(`/proprietaire/immeubles/${immeuble.id}`)}
+                          onClick={() => navigate(`/agent/biens-vente/${immeuble.id}`)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
