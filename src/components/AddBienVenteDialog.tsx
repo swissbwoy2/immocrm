@@ -51,10 +51,20 @@ interface Proprietaire {
   };
 }
 
+interface Agent {
+  id: string;
+  user_id: string;
+  profiles: {
+    prenom: string;
+    nom: string;
+  };
+}
+
 interface FormData {
   // Type et mandant
   type_bien: string;
   sous_type_bien: string;
+  agent_responsable_id: string;
   proprietaire_id: string;
   nouveau_proprietaire_email: string;
   nouveau_proprietaire_prenom: string;
@@ -146,6 +156,7 @@ interface FormData {
 const INITIAL_FORM_DATA: FormData = {
   type_bien: '',
   sous_type_bien: '',
+  agent_responsable_id: '',
   proprietaire_id: '',
   nouveau_proprietaire_email: '',
   nouveau_proprietaire_prenom: '',
@@ -265,15 +276,17 @@ interface AddBienVenteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  isAdmin?: boolean;
 }
 
-export function AddBienVenteDialog({ open, onOpenChange, onSuccess }: AddBienVenteDialogProps) {
+export function AddBienVenteDialog({ open, onOpenChange, onSuccess, isAdmin = false }: AddBienVenteDialogProps) {
   const { user } = useAuth();
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState<FormData>(INITIAL_FORM_DATA);
   const [photos, setPhotos] = useState<CapturedPhoto[]>([]);
   const [showPhotosDialog, setShowPhotosDialog] = useState(false);
   const [proprietaires, setProprietaires] = useState<Proprietaire[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(false);
   const [isNewProprietaire, setIsNewProprietaire] = useState(false);
   const [invitingProprietaire, setInvitingProprietaire] = useState(false);
@@ -281,8 +294,11 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess }: AddBienVen
   useEffect(() => {
     if (open) {
       loadProprietaires();
+      if (isAdmin) {
+        loadAgents();
+      }
     }
-  }, [open]);
+  }, [open, isAdmin]);
 
   const loadProprietaires = async () => {
     const { data } = await supabase
@@ -292,6 +308,18 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess }: AddBienVen
     
     if (data) {
       setProprietaires(data as unknown as Proprietaire[]);
+    }
+  };
+
+  const loadAgents = async () => {
+    const { data } = await supabase
+      .from('agents')
+      .select('id, user_id, profiles:user_id(prenom, nom)')
+      .eq('statut', 'actif')
+      .order('created_at', { ascending: false });
+    
+    if (data) {
+      setAgents(data as unknown as Agent[]);
     }
   };
 
@@ -347,12 +375,19 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess }: AddBienVen
         setInvitingProprietaire(false);
       }
 
-      // Get agent ID
-      const { data: agentData } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('user_id', user?.id)
-        .single();
+      // Get agent ID - use selected agent for admin or current user's agent
+      let agentResponsableId: string | null = null;
+      
+      if (isAdmin && formData.agent_responsable_id) {
+        agentResponsableId = formData.agent_responsable_id;
+      } else {
+        const { data: agentData } = await supabase
+          .from('agents')
+          .select('id')
+          .eq('user_id', user?.id)
+          .single();
+        agentResponsableId = agentData?.id || null;
+      }
 
       // Create immeuble - use type assertion for new fields not yet in generated types
       const immeubleData = {
@@ -374,7 +409,7 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess }: AddBienVen
         publier_espace_acheteur: formData.publier_espace_acheteur,
         // Extended fields - will work after types regenerate
         sous_type_bien: formData.sous_type_bien,
-        agent_responsable_id: agentData?.id || null,
+        agent_responsable_id: agentResponsableId,
         etage: formData.etage,
         nb_etages_batiment: formData.nb_etages_batiment,
         nb_chambres: formData.nb_chambres,
@@ -555,6 +590,22 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess }: AddBienVen
                 </div>
               )}
             </div>
+
+            {isAdmin && (
+              <div className="space-y-2">
+                <Label>Agent responsable *</Label>
+                <Select value={formData.agent_responsable_id} onValueChange={(v) => updateFormData({ agent_responsable_id: v })}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionner un agent" /></SelectTrigger>
+                  <SelectContent>
+                    {agents.map((agent) => (
+                      <SelectItem key={agent.id} value={agent.id}>
+                        {agent.profiles?.prenom} {agent.profiles?.nom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Propriétaire</Label>

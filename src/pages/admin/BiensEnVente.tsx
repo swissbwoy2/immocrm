@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Eye, Loader2, Building2, MapPin, Banknote, CheckCircle, Clock } from 'lucide-react';
+import { Search, Eye, Loader2, Building2, MapPin, Banknote, CheckCircle, Clock, Plus, UserCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PremiumTable, PremiumTableHeader, PremiumTableRow, TableBody, TableCell, TableHead, TableRow, PremiumKPICard, PremiumPageHeader, PremiumEmptyState } from '@/components/premium';
 import { useNavigate } from 'react-router-dom';
+import { AddBienVenteDialog } from '@/components/AddBienVenteDialog';
 
 interface Immeuble {
   id: string;
@@ -24,6 +25,14 @@ interface Immeuble {
   mode_exploitation: string;
   proprietaire_id: string;
   photo_principale?: string;
+  agent_responsable_id?: string;
+  agent?: {
+    id: string;
+    profiles: {
+      prenom: string;
+      nom: string;
+    };
+  };
 }
 
 export default function AdminBiensEnVente() {
@@ -32,6 +41,7 @@ export default function AdminBiensEnVente() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statutFilter, setStatutFilter] = useState<string>('all');
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
@@ -40,12 +50,17 @@ export default function AdminBiensEnVente() {
       setLoading(true);
       const { data, error } = await supabase
         .from('immeubles')
-        .select('id, nom, adresse, ville, canton, type_bien, surface_totale, nombre_pieces, prix_vente_demande, statut_vente, publier_espace_acheteur, mode_exploitation, proprietaire_id')
+        .select(`
+          id, nom, adresse, ville, canton, type_bien, surface_totale, nombre_pieces, 
+          prix_vente_demande, statut_vente, publier_espace_acheteur, mode_exploitation, 
+          proprietaire_id, agent_responsable_id,
+          agent:agent_responsable_id(id, profiles:user_id(prenom, nom))
+        `)
         .in('mode_exploitation', ['vente', 'les_deux'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setImmeubles((data as Immeuble[]) || []);
+      setImmeubles((data as unknown as Immeuble[]) || []);
     } catch (error) {
       console.error('Error loading biens:', error);
       toast.error('Erreur lors du chargement');
@@ -79,6 +94,12 @@ export default function AdminBiensEnVente() {
         title="Biens en vente"
         subtitle="Gérez tous les biens immobiliers en vente"
         badge="Commercialisation"
+        action={
+          <Button onClick={() => setShowAddDialog(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nouveau bien
+          </Button>
+        }
       />
 
       <div className="flex flex-col sm:flex-row gap-3 animate-fade-in" style={{ animationDelay: '100ms' }}>
@@ -135,23 +156,67 @@ export default function AdminBiensEnVente() {
           icon={Building2}
           title="Aucun bien en vente"
           description="Les biens immobiliers en vente apparaîtront ici"
+          action={
+            <Button onClick={() => setShowAddDialog(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Ajouter un bien
+            </Button>
+          }
         />
       )}
 
       {!loading && filteredImmeubles.length > 0 && (
         <div className="animate-fade-in" style={{ animationDelay: '200ms' }}>
           <PremiumTable>
-            <PremiumTableHeader><TableRow><TableHead>Bien</TableHead><TableHead>Localisation</TableHead><TableHead>Prix</TableHead><TableHead>Statut</TableHead><TableHead>Actions</TableHead></TableRow></PremiumTableHeader>
+            <PremiumTableHeader>
+              <TableRow>
+                <TableHead>Bien</TableHead>
+                <TableHead>Localisation</TableHead>
+                <TableHead>Agent</TableHead>
+                <TableHead>Prix</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </PremiumTableHeader>
             <TableBody>
               {filteredImmeubles.map((immeuble) => {
                 const statut = getStatutLabel(immeuble.statut_vente);
                 return (
                   <PremiumTableRow key={immeuble.id}>
-                    <TableCell><p className="font-medium">{immeuble.nom}</p><p className="text-sm text-muted-foreground capitalize">{immeuble.type_bien} • {immeuble.surface_totale} m²</p></TableCell>
-                    <TableCell><div className="flex items-center gap-1.5 text-sm"><MapPin className="h-3.5 w-3.5 text-muted-foreground" />{immeuble.ville}, {immeuble.canton}</div></TableCell>
-                    <TableCell><div className="flex items-center gap-1.5"><Banknote className="h-3.5 w-3.5 text-primary" />{formatPrice(immeuble.prix_vente_demande)}</div></TableCell>
+                    <TableCell>
+                      <p className="font-medium">{immeuble.nom}</p>
+                      <p className="text-sm text-muted-foreground capitalize">{immeuble.type_bien} • {immeuble.surface_totale} m²</p>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                        {immeuble.ville}, {immeuble.canton}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {immeuble.agent ? (
+                        <div className="flex items-center gap-1.5 text-sm">
+                          <UserCircle className="h-3.5 w-3.5 text-primary" />
+                          {immeuble.agent.profiles?.prenom} {immeuble.agent.profiles?.nom}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">Non assigné</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        <Banknote className="h-3.5 w-3.5 text-primary" />
+                        {formatPrice(immeuble.prix_vente_demande)}
+                      </div>
+                    </TableCell>
                     <TableCell><Badge variant={statut.variant}>{statut.label}</Badge></TableCell>
-                    <TableCell><div className="flex items-center gap-1"><Button variant="ghost" size="icon" onClick={() => navigate(`/proprietaire/immeubles/${immeuble.id}`)}><Eye className="h-4 w-4" /></Button></div></TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => navigate(`/admin/biens-vente/${immeuble.id}`)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </PremiumTableRow>
                 );
               })}
@@ -159,6 +224,13 @@ export default function AdminBiensEnVente() {
           </PremiumTable>
         </div>
       )}
+
+      <AddBienVenteDialog
+        open={showAddDialog}
+        onOpenChange={setShowAddDialog}
+        onSuccess={() => { loadData(); setShowAddDialog(false); }}
+        isAdmin={true}
+      />
     </div>
   );
 }
