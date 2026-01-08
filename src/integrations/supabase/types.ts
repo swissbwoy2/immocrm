@@ -38,6 +38,113 @@ export type Database = {
         }
         Relationships: []
       }
+      actes_vente: {
+        Row: {
+          acheteur_id: string | null
+          acheteur_nom: string | null
+          commission_agence: number | null
+          commission_payee: boolean | null
+          created_at: string
+          created_by: string | null
+          date_entree_jouissance: string | null
+          date_paiement_commission: string | null
+          date_signature_acte: string | null
+          documents: Json | null
+          frais_notaire: number | null
+          id: string
+          immeuble_id: string
+          notaire_adresse: string | null
+          notaire_id: string | null
+          notaire_nom: string | null
+          notaire_telephone: string | null
+          notes: string | null
+          offre_id: string | null
+          prix_vente_final: number
+          statut: string
+          taux_commission: number | null
+          updated_at: string
+        }
+        Insert: {
+          acheteur_id?: string | null
+          acheteur_nom?: string | null
+          commission_agence?: number | null
+          commission_payee?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          date_entree_jouissance?: string | null
+          date_paiement_commission?: string | null
+          date_signature_acte?: string | null
+          documents?: Json | null
+          frais_notaire?: number | null
+          id?: string
+          immeuble_id: string
+          notaire_adresse?: string | null
+          notaire_id?: string | null
+          notaire_nom?: string | null
+          notaire_telephone?: string | null
+          notes?: string | null
+          offre_id?: string | null
+          prix_vente_final: number
+          statut?: string
+          taux_commission?: number | null
+          updated_at?: string
+        }
+        Update: {
+          acheteur_id?: string | null
+          acheteur_nom?: string | null
+          commission_agence?: number | null
+          commission_payee?: boolean | null
+          created_at?: string
+          created_by?: string | null
+          date_entree_jouissance?: string | null
+          date_paiement_commission?: string | null
+          date_signature_acte?: string | null
+          documents?: Json | null
+          frais_notaire?: number | null
+          id?: string
+          immeuble_id?: string
+          notaire_adresse?: string | null
+          notaire_id?: string | null
+          notaire_nom?: string | null
+          notaire_telephone?: string | null
+          notes?: string | null
+          offre_id?: string | null
+          prix_vente_final?: number
+          statut?: string
+          taux_commission?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actes_vente_acheteur_id_fkey"
+            columns: ["acheteur_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actes_vente_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actes_vente_notaire_id_fkey"
+            columns: ["notaire_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actes_vente_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres_achat"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_badges: {
         Row: {
           agent_id: string
@@ -2259,21 +2366,67 @@ export type Database = {
       immeubles: {
         Row: {
           accord_proprietaire_publication: boolean | null
+          administrateur_ppe: string | null
           adresse: string
+          agent_responsable_id: string | null
           annee_construction: number | null
+          annee_renovation: number | null
           canton: string | null
+          caracteristiques_entourage: Json | null
+          caracteristiques_vue: Json | null
+          charges_chauffage_ec: number | null
+          charges_locataire: number | null
+          charges_ppe: number | null
           code_postal: string | null
+          combustible: string | null
           commune_rf: string | null
           created_at: string | null
           date_accord_publication: string | null
           date_derniere_estimation: string | null
           date_mise_en_vente: string | null
+          date_visite_initiale: string | null
           description_commerciale: string | null
+          distance_autoroute: number | null
+          distance_banque: number | null
+          distance_bus: number | null
+          distance_commerces: number | null
+          distance_ecole_primaire: number | null
+          distance_ecole_secondaire: number | null
+          distance_garderie: number | null
+          distance_gare: number | null
+          distance_gymnase: number | null
+          distance_poste: number | null
+          email_locataire: string | null
+          equipements_cuisine: Json | null
+          equipements_exterieur: Json | null
+          equipements_interieur: Json | null
+          equipements_securite: Json | null
+          est_apport_affaire: boolean | null
+          est_loue: boolean | null
+          etage: number | null
+          etat_bien: Json | null
           etat_locatif_annuel: number | null
+          exposition: Json | null
           folio_rf: string | null
+          fonds_renovation: number | null
+          frequence_rapport: string | null
+          hauteur_plafond: number | null
           id: string
+          locataire_actuel: string | null
+          lots_rf: string | null
+          loyer_actuel: number | null
           mode_exploitation: string | null
+          nb_chambres: number | null
+          nb_etages_batiment: number | null
+          nb_garages: number | null
+          nb_places_ext: number | null
+          nb_places_int: number | null
+          nb_salles_eau: number | null
           nb_unites: number | null
+          nb_wc: number | null
+          no_eca: string | null
+          no_rf_base: string | null
+          no_rf_feuillet: string | null
           nom: string
           nombre_pieces: number | null
           notes: string | null
@@ -2284,34 +2437,93 @@ export type Database = {
           prix_vente_estime: number | null
           proprietaire_id: string
           publier_espace_acheteur: boolean | null
+          sous_type_bien: string | null
           statut: string | null
           statut_vente: string | null
+          surface_au_sol_batiment: number | null
+          surface_au_sol_garage: number | null
+          surface_balcon: number | null
+          surface_jardin: number | null
+          surface_ppe: number | null
+          surface_terrasse: number | null
           surface_totale: number | null
           taux_vacance: number | null
+          tel_locataire: string | null
           type_bien: string | null
+          type_chauffage: string | null
+          type_sol: Json | null
           updated_at: string | null
           valeur_assurance: number | null
+          valeur_eca: number | null
           valeur_estimee: number | null
           valeur_fiscale: number | null
           ville: string | null
+          volume_eca: number | null
+          zone_construction: string | null
         }
         Insert: {
           accord_proprietaire_publication?: boolean | null
+          administrateur_ppe?: string | null
           adresse: string
+          agent_responsable_id?: string | null
           annee_construction?: number | null
+          annee_renovation?: number | null
           canton?: string | null
+          caracteristiques_entourage?: Json | null
+          caracteristiques_vue?: Json | null
+          charges_chauffage_ec?: number | null
+          charges_locataire?: number | null
+          charges_ppe?: number | null
           code_postal?: string | null
+          combustible?: string | null
           commune_rf?: string | null
           created_at?: string | null
           date_accord_publication?: string | null
           date_derniere_estimation?: string | null
           date_mise_en_vente?: string | null
+          date_visite_initiale?: string | null
           description_commerciale?: string | null
+          distance_autoroute?: number | null
+          distance_banque?: number | null
+          distance_bus?: number | null
+          distance_commerces?: number | null
+          distance_ecole_primaire?: number | null
+          distance_ecole_secondaire?: number | null
+          distance_garderie?: number | null
+          distance_gare?: number | null
+          distance_gymnase?: number | null
+          distance_poste?: number | null
+          email_locataire?: string | null
+          equipements_cuisine?: Json | null
+          equipements_exterieur?: Json | null
+          equipements_interieur?: Json | null
+          equipements_securite?: Json | null
+          est_apport_affaire?: boolean | null
+          est_loue?: boolean | null
+          etage?: number | null
+          etat_bien?: Json | null
           etat_locatif_annuel?: number | null
+          exposition?: Json | null
           folio_rf?: string | null
+          fonds_renovation?: number | null
+          frequence_rapport?: string | null
+          hauteur_plafond?: number | null
           id?: string
+          locataire_actuel?: string | null
+          lots_rf?: string | null
+          loyer_actuel?: number | null
           mode_exploitation?: string | null
+          nb_chambres?: number | null
+          nb_etages_batiment?: number | null
+          nb_garages?: number | null
+          nb_places_ext?: number | null
+          nb_places_int?: number | null
+          nb_salles_eau?: number | null
           nb_unites?: number | null
+          nb_wc?: number | null
+          no_eca?: string | null
+          no_rf_base?: string | null
+          no_rf_feuillet?: string | null
           nom: string
           nombre_pieces?: number | null
           notes?: string | null
@@ -2322,34 +2534,93 @@ export type Database = {
           prix_vente_estime?: number | null
           proprietaire_id: string
           publier_espace_acheteur?: boolean | null
+          sous_type_bien?: string | null
           statut?: string | null
           statut_vente?: string | null
+          surface_au_sol_batiment?: number | null
+          surface_au_sol_garage?: number | null
+          surface_balcon?: number | null
+          surface_jardin?: number | null
+          surface_ppe?: number | null
+          surface_terrasse?: number | null
           surface_totale?: number | null
           taux_vacance?: number | null
+          tel_locataire?: string | null
           type_bien?: string | null
+          type_chauffage?: string | null
+          type_sol?: Json | null
           updated_at?: string | null
           valeur_assurance?: number | null
+          valeur_eca?: number | null
           valeur_estimee?: number | null
           valeur_fiscale?: number | null
           ville?: string | null
+          volume_eca?: number | null
+          zone_construction?: string | null
         }
         Update: {
           accord_proprietaire_publication?: boolean | null
+          administrateur_ppe?: string | null
           adresse?: string
+          agent_responsable_id?: string | null
           annee_construction?: number | null
+          annee_renovation?: number | null
           canton?: string | null
+          caracteristiques_entourage?: Json | null
+          caracteristiques_vue?: Json | null
+          charges_chauffage_ec?: number | null
+          charges_locataire?: number | null
+          charges_ppe?: number | null
           code_postal?: string | null
+          combustible?: string | null
           commune_rf?: string | null
           created_at?: string | null
           date_accord_publication?: string | null
           date_derniere_estimation?: string | null
           date_mise_en_vente?: string | null
+          date_visite_initiale?: string | null
           description_commerciale?: string | null
+          distance_autoroute?: number | null
+          distance_banque?: number | null
+          distance_bus?: number | null
+          distance_commerces?: number | null
+          distance_ecole_primaire?: number | null
+          distance_ecole_secondaire?: number | null
+          distance_garderie?: number | null
+          distance_gare?: number | null
+          distance_gymnase?: number | null
+          distance_poste?: number | null
+          email_locataire?: string | null
+          equipements_cuisine?: Json | null
+          equipements_exterieur?: Json | null
+          equipements_interieur?: Json | null
+          equipements_securite?: Json | null
+          est_apport_affaire?: boolean | null
+          est_loue?: boolean | null
+          etage?: number | null
+          etat_bien?: Json | null
           etat_locatif_annuel?: number | null
+          exposition?: Json | null
           folio_rf?: string | null
+          fonds_renovation?: number | null
+          frequence_rapport?: string | null
+          hauteur_plafond?: number | null
           id?: string
+          locataire_actuel?: string | null
+          lots_rf?: string | null
+          loyer_actuel?: number | null
           mode_exploitation?: string | null
+          nb_chambres?: number | null
+          nb_etages_batiment?: number | null
+          nb_garages?: number | null
+          nb_places_ext?: number | null
+          nb_places_int?: number | null
+          nb_salles_eau?: number | null
           nb_unites?: number | null
+          nb_wc?: number | null
+          no_eca?: string | null
+          no_rf_base?: string | null
+          no_rf_feuillet?: string | null
           nom?: string
           nombre_pieces?: number | null
           notes?: string | null
@@ -2360,18 +2631,38 @@ export type Database = {
           prix_vente_estime?: number | null
           proprietaire_id?: string
           publier_espace_acheteur?: boolean | null
+          sous_type_bien?: string | null
           statut?: string | null
           statut_vente?: string | null
+          surface_au_sol_batiment?: number | null
+          surface_au_sol_garage?: number | null
+          surface_balcon?: number | null
+          surface_jardin?: number | null
+          surface_ppe?: number | null
+          surface_terrasse?: number | null
           surface_totale?: number | null
           taux_vacance?: number | null
+          tel_locataire?: string | null
           type_bien?: string | null
+          type_chauffage?: string | null
+          type_sol?: Json | null
           updated_at?: string | null
           valeur_assurance?: number | null
+          valeur_eca?: number | null
           valeur_estimee?: number | null
           valeur_fiscale?: number | null
           ville?: string | null
+          volume_eca?: number | null
+          zone_construction?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "immeubles_agent_responsable_id_fkey"
+            columns: ["agent_responsable_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "immeubles_proprietaire_id_fkey"
             columns: ["proprietaire_id"]
@@ -2893,6 +3184,84 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offres_achat: {
+        Row: {
+          acheteur_email: string | null
+          acheteur_id: string | null
+          acheteur_nom: string | null
+          acheteur_telephone: string | null
+          conditions: string | null
+          contre_offre_montant: number | null
+          created_at: string
+          created_by: string | null
+          date_acceptation: string | null
+          date_contre_offre: string | null
+          date_offre: string
+          date_validite: string | null
+          id: string
+          immeuble_id: string
+          montant_offre: number
+          notes_negociation: string | null
+          statut: string
+          updated_at: string
+        }
+        Insert: {
+          acheteur_email?: string | null
+          acheteur_id?: string | null
+          acheteur_nom?: string | null
+          acheteur_telephone?: string | null
+          conditions?: string | null
+          contre_offre_montant?: number | null
+          created_at?: string
+          created_by?: string | null
+          date_acceptation?: string | null
+          date_contre_offre?: string | null
+          date_offre?: string
+          date_validite?: string | null
+          id?: string
+          immeuble_id: string
+          montant_offre: number
+          notes_negociation?: string | null
+          statut?: string
+          updated_at?: string
+        }
+        Update: {
+          acheteur_email?: string | null
+          acheteur_id?: string | null
+          acheteur_nom?: string | null
+          acheteur_telephone?: string | null
+          conditions?: string | null
+          contre_offre_montant?: number | null
+          created_at?: string
+          created_by?: string | null
+          date_acceptation?: string | null
+          date_contre_offre?: string | null
+          date_offre?: string
+          date_validite?: string | null
+          id?: string
+          immeuble_id?: string
+          montant_offre?: number
+          notes_negociation?: string | null
+          statut?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offres_achat_acheteur_id_fkey"
+            columns: ["acheteur_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offres_achat_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
             referencedColumns: ["id"]
           },
         ]
