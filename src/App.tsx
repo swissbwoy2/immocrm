@@ -31,6 +31,11 @@ const DownloadFiles = lazy(() => import("./pages/DownloadFiles"));
 
 // Annonceur pages
 const AnnonceurDashboard = lazy(() => import("./pages/annonceur/Dashboard"));
+const AnnonceurMesAnnonces = lazy(() => import("./pages/annonceur/MesAnnonces"));
+const AnnonceurNouvelleAnnonce = lazy(() => import("./pages/annonceur/NouvelleAnnonce"));
+const AnnonceurMessages = lazy(() => import("./pages/annonceur/Messages"));
+const AnnonceurProfil = lazy(() => import("./pages/annonceur/Profil"));
+const AnnonceurParametres = lazy(() => import("./pages/annonceur/Parametres"));
 
 // Admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
@@ -196,6 +201,13 @@ const App = () => (
               
               {/* Annonceur Routes */}
               <Route path="/espace-annonceur" element={<AnnonceurDashboard />} />
+              <Route path="/espace-annonceur/mes-annonces" element={<AnnonceurMesAnnonces />} />
+              <Route path="/espace-annonceur/mes-annonces/:id" element={<AnnonceurNouvelleAnnonce />} />
+              <Route path="/espace-annonceur/nouvelle-annonce" element={<AnnonceurNouvelleAnnonce />} />
+              <Route path="/espace-annonceur/messages" element={<AnnonceurMessages />} />
+              <Route path="/espace-annonceur/messages/:conversationId" element={<AnnonceurMessages />} />
+              <Route path="/espace-annonceur/profil" element={<AnnonceurProfil />} />
+              <Route path="/espace-annonceur/parametres" element={<AnnonceurParametres />} />
 
               {/* Admin Routes */}
               <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminDashboard /></AppLayout></ProtectedRoute>} />
