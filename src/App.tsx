@@ -134,6 +134,11 @@ const AdminProjetDeveloppementDetail = lazy(() => import("./pages/admin/ProjetDe
 const AdminProprietaires = lazy(() => import("./pages/admin/Proprietaires"));
 const AdminProprietaireDetail = lazy(() => import("./pages/admin/ProprietaireDetail"));
 
+// Admin Annonces Publiques & Annonceurs pages
+const AdminAnnoncesPubliques = lazy(() => import("./pages/admin/AnnoncesPubliques"));
+const AdminAnnonceurs = lazy(() => import("./pages/admin/Annonceurs"));
+const AdminAnnonceurDetail = lazy(() => import("./pages/admin/AnnonceurDetail"));
+
 // Proprietaire pages
 const ProprietaireDashboard = lazy(() => import("./pages/proprietaire/Dashboard"));
 const ProprietaireMesImmeubles = lazy(() => import("./pages/proprietaire/MesImmeubles"));
@@ -303,6 +308,11 @@ const App = () => (
               {/* Admin Projets Développement Routes */}
               <Route path="/admin/projets-developpement" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminProjetsDeveloppement /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/projets-developpement/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminProjetDeveloppementDetail /></AppLayout></ProtectedRoute>} />
+
+              {/* Admin Annonces Publiques & Annonceurs Routes */}
+              <Route path="/admin/annonces-publiques" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAnnoncesPubliques /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/annonceurs" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAnnonceurs /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/annonceurs/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAnnonceurDetail /></AppLayout></ProtectedRoute>} />
 
               {/* Proprietaire Routes */}
               <Route path="/proprietaire" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireDashboard /></AppLayout></ProtectedRoute>} />
