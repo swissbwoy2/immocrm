@@ -20,6 +20,10 @@ const NouveauMandat = lazy(() => import("./pages/NouveauMandat"));
 const FirstLogin = lazy(() => import("./pages/FirstLogin"));
 
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+
+// Public portal pages
+const PublicAnnonces = lazy(() => import("./pages/public/Annonces"));
+const RechercheAnnonces = lazy(() => import("./pages/public/RechercheAnnonces"));
 const DownloadFiles = lazy(() => import("./pages/DownloadFiles"));
 
 // Admin pages
@@ -176,6 +180,10 @@ const App = () => (
               <Route path="/nouveau-mandat" element={<NouveauMandat />} />
               <Route path="/first-login" element={<FirstLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+
+              {/* Public Portal Routes */}
+              <Route path="/annonces" element={<PublicAnnonces />} />
+              <Route path="/annonces/recherche" element={<RechercheAnnonces />} />
 
               {/* Admin Routes */}
               <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminDashboard /></AppLayout></ProtectedRoute>} />

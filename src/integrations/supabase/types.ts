@@ -382,6 +382,432 @@ export type Database = {
           },
         ]
       }
+      annonces_publiques: {
+        Row: {
+          acces_pmr: boolean | null
+          adresse: string
+          adresse_complementaire: string | null
+          afficher_adresse_exacte: boolean | null
+          animaux_autorises: boolean | null
+          annee_construction: number | null
+          annee_renovation: number | null
+          annonceur_id: string
+          balcon: boolean | null
+          canton: string | null
+          categorie_id: string | null
+          charges_comprises: boolean | null
+          charges_mensuelles: number | null
+          classe_energetique: string | null
+          code_postal: string
+          created_at: string | null
+          date_debut_mise_avant: string | null
+          date_expiration: string | null
+          date_fin_mise_avant: string | null
+          date_moderation: string | null
+          date_publication: string | null
+          date_soumission: string | null
+          depot_garantie: number | null
+          description: string | null
+          description_courte: string | null
+          disponible_des: string | null
+          disponible_immediatement: boolean | null
+          duree_bail_min: number | null
+          duree_publication: number | null
+          email_contact: string | null
+          emissions_co2: number | null
+          equipements: Json | null
+          est_mise_en_avant: boolean | null
+          etage: number | null
+          etat_bien: string | null
+          external_id: string | null
+          fumeurs_acceptes: boolean | null
+          horaires_contact: string | null
+          id: string
+          indice_energetique: number | null
+          jardin: boolean | null
+          latitude: number | null
+          longitude: number | null
+          meta_description: string | null
+          meta_title: string | null
+          modere_par: string | null
+          motif_refus: string | null
+          mots_cles: string[] | null
+          nb_chambres: number | null
+          nb_contacts: number | null
+          nb_etages_immeuble: number | null
+          nb_favoris: number | null
+          nb_mois_garantie: number | null
+          nb_partages: number | null
+          nb_places_parking: number | null
+          nb_salles_bain: number | null
+          nb_vues: number | null
+          nb_vues_uniques: number | null
+          nb_wc: number | null
+          nom_contact: string | null
+          nombre_pieces: number | null
+          parking_inclus: boolean | null
+          pays: string | null
+          piscine: boolean | null
+          points_forts: string[] | null
+          position_mise_avant: number | null
+          prix: number
+          prix_affichage: string | null
+          prix_au_m2: number | null
+          quartier: string | null
+          reference: string | null
+          renouvellements: number | null
+          slug: string | null
+          source: string | null
+          source_energie: string | null
+          sous_type: string | null
+          statut: string | null
+          surface_balcon: number | null
+          surface_habitable: number | null
+          surface_jardin: number | null
+          surface_terrain: number | null
+          surface_terrasse: number | null
+          surface_utile: number | null
+          telephone_contact: string | null
+          terrasse: boolean | null
+          titre: string
+          type_chauffage: string | null
+          type_parking: string | null
+          type_transaction: string
+          updated_at: string | null
+          ville: string
+          whatsapp_contact: string | null
+        }
+        Insert: {
+          acces_pmr?: boolean | null
+          adresse: string
+          adresse_complementaire?: string | null
+          afficher_adresse_exacte?: boolean | null
+          animaux_autorises?: boolean | null
+          annee_construction?: number | null
+          annee_renovation?: number | null
+          annonceur_id: string
+          balcon?: boolean | null
+          canton?: string | null
+          categorie_id?: string | null
+          charges_comprises?: boolean | null
+          charges_mensuelles?: number | null
+          classe_energetique?: string | null
+          code_postal: string
+          created_at?: string | null
+          date_debut_mise_avant?: string | null
+          date_expiration?: string | null
+          date_fin_mise_avant?: string | null
+          date_moderation?: string | null
+          date_publication?: string | null
+          date_soumission?: string | null
+          depot_garantie?: number | null
+          description?: string | null
+          description_courte?: string | null
+          disponible_des?: string | null
+          disponible_immediatement?: boolean | null
+          duree_bail_min?: number | null
+          duree_publication?: number | null
+          email_contact?: string | null
+          emissions_co2?: number | null
+          equipements?: Json | null
+          est_mise_en_avant?: boolean | null
+          etage?: number | null
+          etat_bien?: string | null
+          external_id?: string | null
+          fumeurs_acceptes?: boolean | null
+          horaires_contact?: string | null
+          id?: string
+          indice_energetique?: number | null
+          jardin?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          meta_description?: string | null
+          meta_title?: string | null
+          modere_par?: string | null
+          motif_refus?: string | null
+          mots_cles?: string[] | null
+          nb_chambres?: number | null
+          nb_contacts?: number | null
+          nb_etages_immeuble?: number | null
+          nb_favoris?: number | null
+          nb_mois_garantie?: number | null
+          nb_partages?: number | null
+          nb_places_parking?: number | null
+          nb_salles_bain?: number | null
+          nb_vues?: number | null
+          nb_vues_uniques?: number | null
+          nb_wc?: number | null
+          nom_contact?: string | null
+          nombre_pieces?: number | null
+          parking_inclus?: boolean | null
+          pays?: string | null
+          piscine?: boolean | null
+          points_forts?: string[] | null
+          position_mise_avant?: number | null
+          prix: number
+          prix_affichage?: string | null
+          prix_au_m2?: number | null
+          quartier?: string | null
+          reference?: string | null
+          renouvellements?: number | null
+          slug?: string | null
+          source?: string | null
+          source_energie?: string | null
+          sous_type?: string | null
+          statut?: string | null
+          surface_balcon?: number | null
+          surface_habitable?: number | null
+          surface_jardin?: number | null
+          surface_terrain?: number | null
+          surface_terrasse?: number | null
+          surface_utile?: number | null
+          telephone_contact?: string | null
+          terrasse?: boolean | null
+          titre: string
+          type_chauffage?: string | null
+          type_parking?: string | null
+          type_transaction: string
+          updated_at?: string | null
+          ville: string
+          whatsapp_contact?: string | null
+        }
+        Update: {
+          acces_pmr?: boolean | null
+          adresse?: string
+          adresse_complementaire?: string | null
+          afficher_adresse_exacte?: boolean | null
+          animaux_autorises?: boolean | null
+          annee_construction?: number | null
+          annee_renovation?: number | null
+          annonceur_id?: string
+          balcon?: boolean | null
+          canton?: string | null
+          categorie_id?: string | null
+          charges_comprises?: boolean | null
+          charges_mensuelles?: number | null
+          classe_energetique?: string | null
+          code_postal?: string
+          created_at?: string | null
+          date_debut_mise_avant?: string | null
+          date_expiration?: string | null
+          date_fin_mise_avant?: string | null
+          date_moderation?: string | null
+          date_publication?: string | null
+          date_soumission?: string | null
+          depot_garantie?: number | null
+          description?: string | null
+          description_courte?: string | null
+          disponible_des?: string | null
+          disponible_immediatement?: boolean | null
+          duree_bail_min?: number | null
+          duree_publication?: number | null
+          email_contact?: string | null
+          emissions_co2?: number | null
+          equipements?: Json | null
+          est_mise_en_avant?: boolean | null
+          etage?: number | null
+          etat_bien?: string | null
+          external_id?: string | null
+          fumeurs_acceptes?: boolean | null
+          horaires_contact?: string | null
+          id?: string
+          indice_energetique?: number | null
+          jardin?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          meta_description?: string | null
+          meta_title?: string | null
+          modere_par?: string | null
+          motif_refus?: string | null
+          mots_cles?: string[] | null
+          nb_chambres?: number | null
+          nb_contacts?: number | null
+          nb_etages_immeuble?: number | null
+          nb_favoris?: number | null
+          nb_mois_garantie?: number | null
+          nb_partages?: number | null
+          nb_places_parking?: number | null
+          nb_salles_bain?: number | null
+          nb_vues?: number | null
+          nb_vues_uniques?: number | null
+          nb_wc?: number | null
+          nom_contact?: string | null
+          nombre_pieces?: number | null
+          parking_inclus?: boolean | null
+          pays?: string | null
+          piscine?: boolean | null
+          points_forts?: string[] | null
+          position_mise_avant?: number | null
+          prix?: number
+          prix_affichage?: string | null
+          prix_au_m2?: number | null
+          quartier?: string | null
+          reference?: string | null
+          renouvellements?: number | null
+          slug?: string | null
+          source?: string | null
+          source_energie?: string | null
+          sous_type?: string | null
+          statut?: string | null
+          surface_balcon?: number | null
+          surface_habitable?: number | null
+          surface_jardin?: number | null
+          surface_terrain?: number | null
+          surface_terrasse?: number | null
+          surface_utile?: number | null
+          telephone_contact?: string | null
+          terrasse?: boolean | null
+          titre?: string
+          type_chauffage?: string | null
+          type_parking?: string | null
+          type_transaction?: string
+          updated_at?: string | null
+          ville?: string
+          whatsapp_contact?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "annonces_publiques_annonceur_id_fkey"
+            columns: ["annonceur_id"]
+            isOneToOne: false
+            referencedRelation: "annonceurs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "annonces_publiques_categorie_id_fkey"
+            columns: ["categorie_id"]
+            isOneToOne: false
+            referencedRelation: "categories_annonces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      annonceurs: {
+        Row: {
+          adresse: string | null
+          canton: string | null
+          civilite: string | null
+          code_postal: string | null
+          created_at: string | null
+          credits_annonces: number | null
+          date_expiration_abonnement: string | null
+          date_naissance: string | null
+          date_verification: string | null
+          derniere_connexion: string | null
+          email: string
+          est_verifie: boolean | null
+          id: string
+          langue_preferee: string | null
+          logo_url: string | null
+          motif_suspension: string | null
+          nb_annonces_actives: number | null
+          nb_annonces_publiees: number | null
+          nb_avis: number | null
+          nb_contacts_recus: number | null
+          nb_vues_totales: number | null
+          nom: string
+          nom_entreprise: string | null
+          note_moyenne: number | null
+          notifications_email: boolean | null
+          notifications_sms: boolean | null
+          numero_registre_commerce: string | null
+          pays: string | null
+          prenom: string | null
+          site_web: string | null
+          statut: string | null
+          telephone: string | null
+          telephone_secondaire: string | null
+          type_abonnement: string | null
+          type_annonceur: string
+          updated_at: string | null
+          user_id: string | null
+          verifie_par: string | null
+          ville: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          canton?: string | null
+          civilite?: string | null
+          code_postal?: string | null
+          created_at?: string | null
+          credits_annonces?: number | null
+          date_expiration_abonnement?: string | null
+          date_naissance?: string | null
+          date_verification?: string | null
+          derniere_connexion?: string | null
+          email: string
+          est_verifie?: boolean | null
+          id?: string
+          langue_preferee?: string | null
+          logo_url?: string | null
+          motif_suspension?: string | null
+          nb_annonces_actives?: number | null
+          nb_annonces_publiees?: number | null
+          nb_avis?: number | null
+          nb_contacts_recus?: number | null
+          nb_vues_totales?: number | null
+          nom: string
+          nom_entreprise?: string | null
+          note_moyenne?: number | null
+          notifications_email?: boolean | null
+          notifications_sms?: boolean | null
+          numero_registre_commerce?: string | null
+          pays?: string | null
+          prenom?: string | null
+          site_web?: string | null
+          statut?: string | null
+          telephone?: string | null
+          telephone_secondaire?: string | null
+          type_abonnement?: string | null
+          type_annonceur: string
+          updated_at?: string | null
+          user_id?: string | null
+          verifie_par?: string | null
+          ville?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          canton?: string | null
+          civilite?: string | null
+          code_postal?: string | null
+          created_at?: string | null
+          credits_annonces?: number | null
+          date_expiration_abonnement?: string | null
+          date_naissance?: string | null
+          date_verification?: string | null
+          derniere_connexion?: string | null
+          email?: string
+          est_verifie?: boolean | null
+          id?: string
+          langue_preferee?: string | null
+          logo_url?: string | null
+          motif_suspension?: string | null
+          nb_annonces_actives?: number | null
+          nb_annonces_publiees?: number | null
+          nb_avis?: number | null
+          nb_contacts_recus?: number | null
+          nb_vues_totales?: number | null
+          nom?: string
+          nom_entreprise?: string | null
+          note_moyenne?: number | null
+          notifications_email?: boolean | null
+          notifications_sms?: boolean | null
+          numero_registre_commerce?: string | null
+          pays?: string | null
+          prenom?: string | null
+          site_web?: string | null
+          statut?: string | null
+          telephone?: string | null
+          telephone_secondaire?: string | null
+          type_abonnement?: string | null
+          type_annonceur?: string
+          updated_at?: string | null
+          user_id?: string | null
+          verifie_par?: string | null
+          ville?: string | null
+        }
+        Relationships: []
+      }
       app_config: {
         Row: {
           key: string
@@ -566,6 +992,80 @@ export type Database = {
             columns: ["immeuble_id"]
             isOneToOne: false
             referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      avis_annonceurs: {
+        Row: {
+          annonceur_id: string
+          auteur_id: string
+          commentaire: string
+          created_at: string | null
+          date_moderation: string | null
+          date_reponse: string | null
+          id: string
+          ip_address: string | null
+          modere_par: string | null
+          motif_refus: string | null
+          note_communication: number | null
+          note_globale: number
+          note_professionnalisme: number | null
+          note_reactivite: number | null
+          reponse_annonceur: string | null
+          statut: string | null
+          titre: string | null
+          transaction_verifiee: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          annonceur_id: string
+          auteur_id: string
+          commentaire: string
+          created_at?: string | null
+          date_moderation?: string | null
+          date_reponse?: string | null
+          id?: string
+          ip_address?: string | null
+          modere_par?: string | null
+          motif_refus?: string | null
+          note_communication?: number | null
+          note_globale: number
+          note_professionnalisme?: number | null
+          note_reactivite?: number | null
+          reponse_annonceur?: string | null
+          statut?: string | null
+          titre?: string | null
+          transaction_verifiee?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          annonceur_id?: string
+          auteur_id?: string
+          commentaire?: string
+          created_at?: string | null
+          date_moderation?: string | null
+          date_reponse?: string | null
+          id?: string
+          ip_address?: string | null
+          modere_par?: string | null
+          motif_refus?: string | null
+          note_communication?: number | null
+          note_globale?: number
+          note_professionnalisme?: number | null
+          note_reactivite?: number | null
+          reponse_annonceur?: string | null
+          statut?: string | null
+          titre?: string | null
+          transaction_verifiee?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avis_annonceurs_annonceur_id_fkey"
+            columns: ["annonceur_id"]
+            isOneToOne: false
+            referencedRelation: "annonceurs"
             referencedColumns: ["id"]
           },
         ]
@@ -952,6 +1452,53 @@ export type Database = {
             columns: ["lot_id"]
             isOneToOne: false
             referencedRelation: "lots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categories_annonces: {
+        Row: {
+          couleur: string | null
+          created_at: string | null
+          description: string | null
+          est_active: boolean | null
+          icone: string | null
+          id: string
+          nom: string
+          ordre: number | null
+          parent_id: string | null
+          slug: string
+        }
+        Insert: {
+          couleur?: string | null
+          created_at?: string | null
+          description?: string | null
+          est_active?: boolean | null
+          icone?: string | null
+          id?: string
+          nom: string
+          ordre?: number | null
+          parent_id?: string | null
+          slug: string
+        }
+        Update: {
+          couleur?: string | null
+          created_at?: string | null
+          description?: string | null
+          est_active?: boolean | null
+          icone?: string | null
+          id?: string
+          nom?: string
+          ordre?: number | null
+          parent_id?: string | null
+          slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_annonces_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories_annonces"
             referencedColumns: ["id"]
           },
         ]
@@ -1637,6 +2184,53 @@ export type Database = {
         }
         Relationships: []
       }
+      conversations_annonces: {
+        Row: {
+          annonce_id: string | null
+          archive_par_1: boolean | null
+          archive_par_2: boolean | null
+          bloque_par_1: boolean | null
+          bloque_par_2: boolean | null
+          created_at: string | null
+          dernier_message_at: string | null
+          id: string
+          participant_1_id: string
+          participant_2_id: string
+        }
+        Insert: {
+          annonce_id?: string | null
+          archive_par_1?: boolean | null
+          archive_par_2?: boolean | null
+          bloque_par_1?: boolean | null
+          bloque_par_2?: boolean | null
+          created_at?: string | null
+          dernier_message_at?: string | null
+          id?: string
+          participant_1_id: string
+          participant_2_id: string
+        }
+        Update: {
+          annonce_id?: string | null
+          archive_par_1?: boolean | null
+          archive_par_2?: boolean | null
+          bloque_par_1?: boolean | null
+          bloque_par_2?: boolean | null
+          created_at?: string | null
+          dernier_message_at?: string | null
+          id?: string
+          participant_1_id?: string
+          participant_2_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_annonces_annonce_id_fkey"
+            columns: ["annonce_id"]
+            isOneToOne: false
+            referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       default_agent_goals: {
         Row: {
           created_at: string | null
@@ -2237,6 +2831,41 @@ export type Database = {
           variables?: Json | null
         }
         Relationships: []
+      }
+      favoris_annonces: {
+        Row: {
+          alerte_prix: boolean | null
+          annonce_id: string
+          created_at: string | null
+          id: string
+          note_personnelle: string | null
+          user_id: string
+        }
+        Insert: {
+          alerte_prix?: boolean | null
+          annonce_id: string
+          created_at?: string | null
+          id?: string
+          note_personnelle?: string | null
+          user_id: string
+        }
+        Update: {
+          alerte_prix?: boolean | null
+          annonce_id?: string
+          created_at?: string | null
+          id?: string
+          note_personnelle?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favoris_annonces_annonce_id_fkey"
+            columns: ["annonce_id"]
+            isOneToOne: false
+            referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       hypotheques: {
         Row: {
@@ -3168,6 +3797,53 @@ export type Database = {
           },
         ]
       }
+      messages_annonces: {
+        Row: {
+          contenu: string
+          conversation_id: string
+          created_at: string | null
+          date_lecture: string | null
+          expediteur_id: string
+          id: string
+          lu: boolean | null
+          piece_jointe_nom: string | null
+          piece_jointe_url: string | null
+          supprime: boolean | null
+        }
+        Insert: {
+          contenu: string
+          conversation_id: string
+          created_at?: string | null
+          date_lecture?: string | null
+          expediteur_id: string
+          id?: string
+          lu?: boolean | null
+          piece_jointe_nom?: string | null
+          piece_jointe_url?: string | null
+          supprime?: boolean | null
+        }
+        Update: {
+          contenu?: string
+          conversation_id?: string
+          created_at?: string | null
+          date_lecture?: string | null
+          expediteur_id?: string
+          id?: string
+          lu?: boolean | null
+          piece_jointe_nom?: string | null
+          piece_jointe_url?: string | null
+          supprime?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_annonces_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations_annonces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -3386,6 +4062,78 @@ export type Database = {
           },
         ]
       }
+      paiements_annonces: {
+        Row: {
+          annonce_id: string | null
+          annonceur_id: string
+          created_at: string | null
+          date_paiement: string | null
+          description: string | null
+          devise: string | null
+          duree_jours: number | null
+          facture_url: string | null
+          id: string
+          methode_paiement: string | null
+          montant: number
+          nb_credits: number | null
+          numero_facture: string | null
+          reference_externe: string | null
+          statut_paiement: string | null
+          type_paiement: string
+        }
+        Insert: {
+          annonce_id?: string | null
+          annonceur_id: string
+          created_at?: string | null
+          date_paiement?: string | null
+          description?: string | null
+          devise?: string | null
+          duree_jours?: number | null
+          facture_url?: string | null
+          id?: string
+          methode_paiement?: string | null
+          montant: number
+          nb_credits?: number | null
+          numero_facture?: string | null
+          reference_externe?: string | null
+          statut_paiement?: string | null
+          type_paiement: string
+        }
+        Update: {
+          annonce_id?: string | null
+          annonceur_id?: string
+          created_at?: string | null
+          date_paiement?: string | null
+          description?: string | null
+          devise?: string | null
+          duree_jours?: number | null
+          facture_url?: string | null
+          id?: string
+          methode_paiement?: string | null
+          montant?: number
+          nb_credits?: number | null
+          numero_facture?: string | null
+          reference_externe?: string | null
+          statut_paiement?: string | null
+          type_paiement?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paiements_annonces_annonce_id_fkey"
+            columns: ["annonce_id"]
+            isOneToOne: false
+            referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paiements_annonces_annonceur_id_fkey"
+            columns: ["annonceur_id"]
+            isOneToOne: false
+            referencedRelation: "annonceurs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdf_exports_immeuble: {
         Row: {
           created_at: string | null
@@ -3420,6 +4168,59 @@ export type Database = {
             columns: ["immeuble_id"]
             isOneToOne: false
             referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      photos_annonces_publiques: {
+        Row: {
+          annonce_id: string
+          created_at: string | null
+          est_principale: boolean | null
+          hauteur: number | null
+          id: string
+          largeur: number | null
+          legende: string | null
+          ordre: number | null
+          taille_octets: number | null
+          type_media: string | null
+          url: string
+          url_thumbnail: string | null
+        }
+        Insert: {
+          annonce_id: string
+          created_at?: string | null
+          est_principale?: boolean | null
+          hauteur?: number | null
+          id?: string
+          largeur?: number | null
+          legende?: string | null
+          ordre?: number | null
+          taille_octets?: number | null
+          type_media?: string | null
+          url: string
+          url_thumbnail?: string | null
+        }
+        Update: {
+          annonce_id?: string
+          created_at?: string | null
+          est_principale?: boolean | null
+          hauteur?: number | null
+          id?: string
+          largeur?: number | null
+          legende?: string | null
+          ordre?: number | null
+          taille_octets?: number | null
+          type_media?: string | null
+          url?: string
+          url_thumbnail?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photos_annonces_publiques_annonce_id_fkey"
+            columns: ["annonce_id"]
+            isOneToOne: false
+            referencedRelation: "annonces_publiques"
             referencedColumns: ["id"]
           },
         ]
@@ -3785,6 +4586,92 @@ export type Database = {
         }
         Relationships: []
       }
+      recherches_sauvegardees: {
+        Row: {
+          alerte_active: boolean | null
+          canton: string | null
+          categorie_id: string | null
+          code_postal: string | null
+          created_at: string | null
+          derniere_alerte: string | null
+          equipements_requis: string[] | null
+          frequence_alerte: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          nom: string
+          pieces_max: number | null
+          pieces_min: number | null
+          prix_max: number | null
+          prix_min: number | null
+          rayon_km: number | null
+          surface_max: number | null
+          surface_min: number | null
+          type_transaction: string | null
+          updated_at: string | null
+          user_id: string
+          ville: string | null
+        }
+        Insert: {
+          alerte_active?: boolean | null
+          canton?: string | null
+          categorie_id?: string | null
+          code_postal?: string | null
+          created_at?: string | null
+          derniere_alerte?: string | null
+          equipements_requis?: string[] | null
+          frequence_alerte?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          nom: string
+          pieces_max?: number | null
+          pieces_min?: number | null
+          prix_max?: number | null
+          prix_min?: number | null
+          rayon_km?: number | null
+          surface_max?: number | null
+          surface_min?: number | null
+          type_transaction?: string | null
+          updated_at?: string | null
+          user_id: string
+          ville?: string | null
+        }
+        Update: {
+          alerte_active?: boolean | null
+          canton?: string | null
+          categorie_id?: string | null
+          code_postal?: string | null
+          created_at?: string | null
+          derniere_alerte?: string | null
+          equipements_requis?: string[] | null
+          frequence_alerte?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          nom?: string
+          pieces_max?: number | null
+          pieces_min?: number | null
+          prix_max?: number | null
+          prix_min?: number | null
+          rayon_km?: number | null
+          surface_max?: number | null
+          surface_min?: number | null
+          type_transaction?: string | null
+          updated_at?: string | null
+          user_id?: string
+          ville?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recherches_sauvegardees_categorie_id_fkey"
+            columns: ["categorie_id"]
+            isOneToOne: false
+            referencedRelation: "categories_annonces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       referrals: {
         Row: {
           apporteur_id: string | null
@@ -4017,6 +4904,69 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      signalements_annonces: {
+        Row: {
+          action_prise: string | null
+          annonce_id: string | null
+          annonceur_id: string | null
+          created_at: string | null
+          date_traitement: string | null
+          description: string
+          id: string
+          notes_internes: string | null
+          preuves_urls: string[] | null
+          signale_par: string
+          statut: string | null
+          traite_par: string | null
+          type_signalement: string
+        }
+        Insert: {
+          action_prise?: string | null
+          annonce_id?: string | null
+          annonceur_id?: string | null
+          created_at?: string | null
+          date_traitement?: string | null
+          description: string
+          id?: string
+          notes_internes?: string | null
+          preuves_urls?: string[] | null
+          signale_par: string
+          statut?: string | null
+          traite_par?: string | null
+          type_signalement: string
+        }
+        Update: {
+          action_prise?: string | null
+          annonce_id?: string | null
+          annonceur_id?: string | null
+          created_at?: string | null
+          date_traitement?: string | null
+          description?: string
+          id?: string
+          notes_internes?: string | null
+          preuves_urls?: string[] | null
+          signale_par?: string
+          statut?: string | null
+          traite_par?: string | null
+          type_signalement?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signalements_annonces_annonce_id_fkey"
+            columns: ["annonce_id"]
+            isOneToOne: false
+            referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signalements_annonces_annonceur_id_fkey"
+            columns: ["annonceur_id"]
+            isOneToOne: false
+            referencedRelation: "annonceurs"
             referencedColumns: ["id"]
           },
         ]
@@ -4506,6 +5456,47 @@ export type Database = {
           },
         ]
       }
+      vues_annonces: {
+        Row: {
+          annonce_id: string
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          referrer: string | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          annonce_id: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          annonce_id?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          referrer?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vues_annonces_annonce_id_fkey"
+            columns: ["annonce_id"]
+            isOneToOne: false
+            referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -4576,11 +5567,130 @@ export type Database = {
         Returns: boolean
       }
       mark_inactive_users_offline: { Args: never; Returns: number }
+      search_annonces_radius: {
+        Args: {
+          category_id?: string
+          lat: number
+          lng: number
+          max_pieces?: number
+          max_price?: number
+          min_pieces?: number
+          min_price?: number
+          radius_km: number
+          transaction_type?: string
+        }
+        Returns: {
+          acces_pmr: boolean | null
+          adresse: string
+          adresse_complementaire: string | null
+          afficher_adresse_exacte: boolean | null
+          animaux_autorises: boolean | null
+          annee_construction: number | null
+          annee_renovation: number | null
+          annonceur_id: string
+          balcon: boolean | null
+          canton: string | null
+          categorie_id: string | null
+          charges_comprises: boolean | null
+          charges_mensuelles: number | null
+          classe_energetique: string | null
+          code_postal: string
+          created_at: string | null
+          date_debut_mise_avant: string | null
+          date_expiration: string | null
+          date_fin_mise_avant: string | null
+          date_moderation: string | null
+          date_publication: string | null
+          date_soumission: string | null
+          depot_garantie: number | null
+          description: string | null
+          description_courte: string | null
+          disponible_des: string | null
+          disponible_immediatement: boolean | null
+          duree_bail_min: number | null
+          duree_publication: number | null
+          email_contact: string | null
+          emissions_co2: number | null
+          equipements: Json | null
+          est_mise_en_avant: boolean | null
+          etage: number | null
+          etat_bien: string | null
+          external_id: string | null
+          fumeurs_acceptes: boolean | null
+          horaires_contact: string | null
+          id: string
+          indice_energetique: number | null
+          jardin: boolean | null
+          latitude: number | null
+          longitude: number | null
+          meta_description: string | null
+          meta_title: string | null
+          modere_par: string | null
+          motif_refus: string | null
+          mots_cles: string[] | null
+          nb_chambres: number | null
+          nb_contacts: number | null
+          nb_etages_immeuble: number | null
+          nb_favoris: number | null
+          nb_mois_garantie: number | null
+          nb_partages: number | null
+          nb_places_parking: number | null
+          nb_salles_bain: number | null
+          nb_vues: number | null
+          nb_vues_uniques: number | null
+          nb_wc: number | null
+          nom_contact: string | null
+          nombre_pieces: number | null
+          parking_inclus: boolean | null
+          pays: string | null
+          piscine: boolean | null
+          points_forts: string[] | null
+          position_mise_avant: number | null
+          prix: number
+          prix_affichage: string | null
+          prix_au_m2: number | null
+          quartier: string | null
+          reference: string | null
+          renouvellements: number | null
+          slug: string | null
+          source: string | null
+          source_energie: string | null
+          sous_type: string | null
+          statut: string | null
+          surface_balcon: number | null
+          surface_habitable: number | null
+          surface_jardin: number | null
+          surface_terrain: number | null
+          surface_terrasse: number | null
+          surface_utile: number | null
+          telephone_contact: string | null
+          terrasse: boolean | null
+          titre: string
+          type_chauffage: string | null
+          type_parking: string | null
+          type_transaction: string
+          updated_at: string | null
+          ville: string
+          whatsapp_contact: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "annonces_publiques"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       set_user_offline: { Args: never; Returns: undefined }
       update_user_presence: { Args: never; Returns: undefined }
     }
     Enums: {
-      app_role: "admin" | "agent" | "client" | "apporteur" | "proprietaire"
+      app_role:
+        | "admin"
+        | "agent"
+        | "client"
+        | "apporteur"
+        | "proprietaire"
+        | "annonceur"
       contact_type:
         | "proprietaire"
         | "gerant_regie"
@@ -4717,7 +5827,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "agent", "client", "apporteur", "proprietaire"],
+      app_role: [
+        "admin",
+        "agent",
+        "client",
+        "apporteur",
+        "proprietaire",
+        "annonceur",
+      ],
       contact_type: [
         "proprietaire",
         "gerant_regie",
