@@ -68,8 +68,8 @@ export default function AnnonceurDashboard() {
           annonces_publiques(titre),
           messages_annonces(id, lu, created_at)
         `)
-        .eq('annonceur_id', annonceur.id)
-        .order('updated_at', { ascending: false })
+        .eq('participant_1_id', annonceur.id)
+        .order('dernier_message_at', { ascending: false })
         .limit(5);
       
       if (error) throw error;
@@ -133,7 +133,7 @@ export default function AnnonceurDashboard() {
             title="Annonces publiées"
             value={stats.publiees}
             icon={Building2}
-            trend={{ value: stats.enAttente, label: 'en attente' }}
+            subtitle={stats.enAttente > 0 ? `${stats.enAttente} en attente` : undefined}
           />
           <PremiumKPICard
             title="Vues totales"
@@ -149,7 +149,7 @@ export default function AnnonceurDashboard() {
             title="Messages"
             value={stats.totalContacts}
             icon={MessageCircle}
-            trend={stats.messagesNonLus > 0 ? { value: stats.messagesNonLus, label: 'non lus' } : undefined}
+            subtitle={stats.messagesNonLus > 0 ? `${stats.messagesNonLus} non lus` : undefined}
           />
         </div>
 
@@ -260,7 +260,7 @@ export default function AnnonceurDashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {conversations.map((conv) => {
+                {conversations.map((conv: any) => {
                   const unread = conv.messages_annonces?.filter((m: any) => !m.lu).length || 0;
                   return (
                     <Link
@@ -269,7 +269,7 @@ export default function AnnonceurDashboard() {
                       className="block p-3 rounded-lg hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <p className="font-medium truncate">{conv.nom_acheteur}</p>
+                        <p className="font-medium truncate">Contact</p>
                         {unread > 0 && (
                           <Badge variant="destructive" className="h-5 px-1.5 text-xs">
                             {unread}

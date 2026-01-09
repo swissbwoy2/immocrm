@@ -50,11 +50,12 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
         .select(`
           messages_annonces(id, lu)
         `)
-        .eq('annonceur_id', annonceur.id);
+        .eq('participant_1_id', annonceur.id);
       
-      return data?.reduce((sum, c) => 
+      const count = data?.reduce((sum: number, c: any) => 
         sum + (c.messages_annonces?.filter((m: any) => !m.lu).length || 0), 0
       ) || 0;
+      return count;
     },
     enabled: !!annonceur
   });

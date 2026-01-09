@@ -24,7 +24,13 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 // Public portal pages
 const PublicAnnonces = lazy(() => import("./pages/public/Annonces"));
 const RechercheAnnonces = lazy(() => import("./pages/public/RechercheAnnonces"));
+const AnnonceDetail = lazy(() => import("./pages/public/AnnonceDetail"));
+const InscriptionAnnonceur = lazy(() => import("./pages/public/InscriptionAnnonceur"));
+const ConnexionAnnonceur = lazy(() => import("./pages/public/ConnexionAnnonceur"));
 const DownloadFiles = lazy(() => import("./pages/DownloadFiles"));
+
+// Annonceur pages
+const AnnonceurDashboard = lazy(() => import("./pages/annonceur/Dashboard"));
 
 // Admin pages
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
@@ -184,6 +190,12 @@ const App = () => (
               {/* Public Portal Routes */}
               <Route path="/annonces" element={<PublicAnnonces />} />
               <Route path="/annonces/recherche" element={<RechercheAnnonces />} />
+              <Route path="/annonces/:slug" element={<AnnonceDetail />} />
+              <Route path="/inscription-annonceur" element={<InscriptionAnnonceur />} />
+              <Route path="/connexion-annonceur" element={<ConnexionAnnonceur />} />
+              
+              {/* Annonceur Routes */}
+              <Route path="/espace-annonceur" element={<AnnonceurDashboard />} />
 
               {/* Admin Routes */}
               <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminDashboard /></AppLayout></ProtectedRoute>} />
