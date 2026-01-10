@@ -23,7 +23,7 @@ export function LandingFooter() {
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
       <div className="container mx-auto px-4 py-16 md:py-20 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-10 mb-12 md:mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8 md:gap-10 mb-12 md:mb-16">
           {/* Logo & Description */}
           <div className="md:col-span-2">
             <Link to="/" className="inline-block mb-2 group relative">
@@ -55,6 +55,34 @@ export function LandingFooter() {
                 <span>🇨🇭 Application fièrement Suisse</span>
               </div>
             </div>
+          </div>
+
+          {/* Portail Annonces */}
+          <div>
+            <h4 className="font-semibold text-foreground mb-5">Portail Annonces</h4>
+            <ul className="space-y-3">
+              {[
+                { to: "/annonces", label: "Toutes les annonces" },
+                { to: "/annonces/recherche?type=location", label: "Louer un bien" },
+                { to: "/annonces/recherche?type=vente", label: "Acheter un bien" },
+                { to: "/inscription-annonceur", label: "Devenir annonceur" },
+              ].map((link) => (
+                <li key={link.to}>
+                  <Link
+                    to={link.to}
+                    className="text-muted-foreground hover:text-primary transition-colors text-sm inline-flex items-center gap-1 group"
+                  >
+                    <span className="relative">
+                      {link.label}
+                      <span className="absolute bottom-0 left-0 w-0 h-px bg-primary group-hover:w-full transition-all duration-300" />
+                    </span>
+                    <span className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-primary">
+                      →
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
 
           {/* Quick Links */}
