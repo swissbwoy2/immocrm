@@ -31,7 +31,7 @@ interface StepEquipementsProps {
 const parkingTypes = [
   { value: 'interieur', label: 'Intérieur' },
   { value: 'exterieur', label: 'Extérieur' },
-  { value: 'souterrain', label: 'Souterrain' },
+  { value: 'couvert', label: 'Couvert / Souterrain' },
   { value: 'box', label: 'Box fermé' },
 ];
 
