@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -10,6 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { MapPin } from 'lucide-react';
+import { GoogleAddressAutocomplete, type AddressComponents } from '@/components/GoogleAddressAutocomplete';
 import type { AnnonceFormData } from '@/pages/annonceur/NouvelleAnnonce';
 
 interface StepLocalisationProps {
@@ -27,6 +27,15 @@ const cantons = [
 ];
 
 export function StepLocalisation({ formData, updateFormData }: StepLocalisationProps) {
+  const handleAddressChange = (address: AddressComponents) => {
+    updateFormData({
+      adresse: address.fullAddress,
+      code_postal: address.postalCode || formData.code_postal,
+      ville: address.city || formData.ville,
+      canton: address.canton || formData.canton,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-muted-foreground mb-4">
@@ -36,11 +45,12 @@ export function StepLocalisation({ formData, updateFormData }: StepLocalisationP
 
       <div className="space-y-2">
         <Label htmlFor="adresse">Adresse *</Label>
-        <Input
-          id="adresse"
-          placeholder="Rue et numéro"
+        <GoogleAddressAutocomplete
           value={formData.adresse}
-          onChange={(e) => updateFormData({ adresse: e.target.value })}
+          onChange={handleAddressChange}
+          onInputChange={(value) => updateFormData({ adresse: value })}
+          placeholder="Rechercher une adresse..."
+          restrictToSwitzerland={true}
         />
       </div>
 
