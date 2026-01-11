@@ -113,7 +113,7 @@ serve(async (req) => {
     <p>À bientôt,<br><strong>L'équipe Immo-Rama</strong></p>
   </div>
   <div class="footer">
-    <p>Immo-Rama SA • Chemin de l'Esparcette 5, 1023 Crissier • Suisse</p>
+    <p>Immo-rama.ch • Chemin de l'Esparcette 5, 1023 Crissier • Suisse</p>
     <p>Cet email vous a été envoyé car ${senderName} a souhaité vous recommander nos services.</p>
   </div>
 </body>

@@ -459,7 +459,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
   // Footer on each page
   const pages = pdfDoc.getPages();
   pages.forEach((p, index) => {
-    p.drawText(sanitizeText(`IMMO-RAMA SA - Mandat de recherche - Page ${index + 1}/${pages.length}`), {
+    p.drawText(sanitizeText(`Immo-rama.ch - Mandat de recherche - Page ${index + 1}/${pages.length}`), {
       x: margin,
       y: 30,
       size: 8,
@@ -619,7 +619,7 @@ const handler = async (req: Request): Promise<Response> => {
               <p>Cordialement,<br><strong>L'equipe IMMO-RAMA</strong></p>
             </div>
             <div class="footer">
-              <p>IMMO-RAMA SA | Lausanne, Suisse</p>
+              <p>Immo-rama.ch | Crissier, Suisse</p>
               <p>${new Date().getFullYear()} Tous droits reserves</p>
             </div>
           </div>

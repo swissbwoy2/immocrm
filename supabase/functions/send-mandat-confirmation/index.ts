@@ -59,7 +59,7 @@ serve(async (req) => {
 <body>
   <div class="container">
     <div class="header">
-      <h1>🏠 IMMO-RAMA</h1>
+      <h1>🏠 Immo-rama.ch</h1>
       <p style="margin: 10px 0 0 0; opacity: 0.9;">Confirmation de votre demande de mandat</p>
     </div>
     
@@ -134,14 +134,14 @@ serve(async (req) => {
       
       <p>Pour toute question, n'hésitez pas à nous contacter.</p>
       
-      <p>Cordialement,<br><strong>L'équipe IMMO-RAMA</strong></p>
+      <p>Cordialement,<br><strong>L'équipe Immo-rama.ch</strong></p>
     </div>
     
     <div class="footer">
-      <p>IMMO-RAMA SA<br>
+      <p>Immo-rama.ch<br>
       Chemin de l'Esparcette 5, 1023 Crissier<br>
       Tél: 021 625 95 05 | Email: info@immo-rama.ch</p>
-      <p>© ${new Date().getFullYear()} IMMO-RAMA SA - Tous droits réservés</p>
+      <p>© ${new Date().getFullYear()} Immo-rama.ch - Tous droits réservés</p>
     </div>
   </div>
 </body>
@@ -149,9 +149,9 @@ serve(async (req) => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: `IMMO-RAMA <${fromEmail}>`,
+      from: `Immo-rama.ch <${fromEmail}>`,
       to: [data.email],
-      subject: `✅ Confirmation de votre demande de mandat - IMMO-RAMA`,
+      subject: `✅ Confirmation de votre demande de mandat - Immo-rama.ch`,
       html: emailHtml,
     });
 

@@ -89,17 +89,21 @@ export function PublicFooter() {
           <div>
             <h4 className="font-semibold mb-4">Contact</h4>
             <ul className="space-y-3 text-sm">
-              <li className="flex items-center gap-2 text-sidebar-foreground/70">
-                <MapPin className="h-4 w-4 shrink-0" />
-                <span>Genève, Suisse</span>
+              <li className="flex items-start gap-2 text-sidebar-foreground/70">
+                <MapPin className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>Chemin de l'Esparcette 5<br />1023 Crissier</span>
               </li>
               <li className="flex items-center gap-2 text-sidebar-foreground/70">
                 <Phone className="h-4 w-4 shrink-0" />
-                <span>+41 22 XXX XX XX</span>
+                <a href="tel:+41216259505" className="hover:text-sidebar-foreground transition-colors">
+                  021 625 95 05
+                </a>
               </li>
               <li className="flex items-center gap-2 text-sidebar-foreground/70">
                 <Mail className="h-4 w-4 shrink-0" />
-                <span>contact@immo-rama.ch</span>
+                <a href="mailto:info@immo-rama.ch" className="hover:text-sidebar-foreground transition-colors">
+                  info@immo-rama.ch
+                </a>
               </li>
             </ul>
           </div>

@@ -88,7 +88,7 @@ serve(async (req) => {
               
               <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
               <p style="font-size: 12px; color: #666; text-align: center;">
-                Immo-Rama SA - Votre partenaire immobilier
+                Immo-rama.ch - Votre partenaire immobilier
               </p>
             </body>
             </html>

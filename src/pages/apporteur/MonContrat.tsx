@@ -372,7 +372,7 @@ export default function MonContrat() {
               <p>Demeurant à : {formData.adresse || '[Adresse]'}, {formData.code_postal || '[CP]'} {formData.ville || '[Ville]'}</p>
               <p>Désigné ci-après « l'apporteur d'affaires », d'une part et</p>
               
-              <p className="mt-4"><strong>Immo-Rama Crissier, Ramazani</strong></p>
+              <p className="mt-4"><strong>Immo-rama.ch</strong></p>
               <p>Chemin de l'Esparcette 5, 1023 Crissier</p>
               <p>Désigné ci-après « la société », d'autre part.</p>
 
@@ -638,7 +638,7 @@ export default function MonContrat() {
             <p>Demeurant à : {formData.adresse}, {formData.code_postal} {formData.ville}</p>
             <p>Désigné ci-après « l'apporteur d'affaires », d'une part et</p>
             
-            <p className="mt-4"><strong>Immo-Rama Crissier, Ramazani</strong></p>
+            <p className="mt-4"><strong>Immo-rama.ch</strong></p>
             <p>Chemin de l'Esparcette 5, 1023 Crissier</p>
             <p>Désigné ci-après « la société », d'autre part.</p>
 
