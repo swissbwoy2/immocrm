@@ -198,6 +198,18 @@ export default function NouvelleAnnonce() {
     enabled: !!user?.id,
   });
 
+  // Fetch categories to map sous_type to categorie_id
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories-annonces'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories_annonces')
+        .select('id, slug');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   // Fetch existing annonce in edit mode
   const { data: existingAnnonce, isLoading: loadingAnnonce } = useQuery({
     queryKey: ['annonce-edit', annonceId],
@@ -312,9 +324,13 @@ export default function NouvelleAnnonce() {
         throw new Error('Profil annonceur non trouvé');
       }
 
+      // Map sous_type to categorie_id
+      const matchingCategory = categories.find(c => c.slug === formData.sous_type);
+
       const annonceData = {
         type_transaction: formData.type_transaction,
         sous_type: formData.sous_type || null,
+        categorie_id: matchingCategory?.id || null,
         adresse: formData.adresse,
         adresse_complementaire: formData.adresse_complementaire,
         code_postal: formData.code_postal,
