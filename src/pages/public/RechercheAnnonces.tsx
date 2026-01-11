@@ -24,7 +24,7 @@ export default function RechercheAnnonces() {
   const navigate = useNavigate();
 
   // View state
-  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [hoveredAnnonceId, setHoveredAnnonceId] = useState<string | null>(null);
 

@@ -13,6 +13,8 @@ export interface AddressComponents {
   city: string;
   canton: string;
   country: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 interface GoogleAddressAutocompleteProps {
@@ -157,6 +159,8 @@ export function GoogleAddressAutocomplete({
           city: "",
           canton: "",
           country: "",
+          latitude: null,
+          longitude: null,
         });
         return;
       }
@@ -164,7 +168,7 @@ export function GoogleAddressAutocomplete({
       placesServiceRef.current.getDetails(
         {
           placeId,
-          fields: ["address_components", "formatted_address"],
+          fields: ["address_components", "formatted_address", "geometry"],
           sessionToken: sessionTokenRef.current || undefined,
         },
         (place, status) => {
@@ -181,6 +185,10 @@ export function GoogleAddressAutocomplete({
               return comp?.long_name || "";
             };
 
+            // Extract coordinates from geometry
+            const lat = place.geometry?.location?.lat() || null;
+            const lng = place.geometry?.location?.lng() || null;
+
             resolve({
               fullAddress: place.formatted_address || inputValue,
               street: getComponent(["route"]),
@@ -189,6 +197,8 @@ export function GoogleAddressAutocomplete({
               city: getComponent(["locality", "political"]),
               canton: getComponent(["administrative_area_level_1"]),
               country: getComponent(["country"]),
+              latitude: lat,
+              longitude: lng,
             });
           } else {
             resolve({
@@ -199,6 +209,8 @@ export function GoogleAddressAutocomplete({
               city: "",
               canton: "",
               country: "",
+              latitude: null,
+              longitude: null,
             });
           }
         }

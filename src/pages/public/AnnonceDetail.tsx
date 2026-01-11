@@ -18,6 +18,7 @@ import { PublicHeader } from '@/components/public/PublicHeader';
 import { PublicFooter } from '@/components/public/PublicFooter';
 import { PublicAnnonceCard } from '@/components/public/PublicAnnonceCard';
 import { ContactAnnonceDialog } from '@/components/public/ContactAnnonceDialog';
+import { AnnonceLocationMap } from '@/components/public/AnnonceLocationMap';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -385,6 +386,21 @@ export default function AnnonceDetail() {
                     <p key={index} className="mb-3">{paragraph}</p>
                   )) || <p>Aucune description disponible.</p>}
                 </div>
+              </div>
+
+              {/* Location Map */}
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Emplacement</h2>
+                <AnnonceLocationMap
+                  latitude={annonce.latitude}
+                  longitude={annonce.longitude}
+                  address={annonce.adresse}
+                  ville={annonce.ville}
+                  code_postal={annonce.code_postal}
+                  afficher_adresse_exacte={annonce.afficher_adresse_exacte ?? true}
+                  prix={annonce.prix}
+                  type_transaction={annonce.type_transaction}
+                />
               </div>
 
               {/* Detailed Features */}
