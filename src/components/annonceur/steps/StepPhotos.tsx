@@ -49,10 +49,12 @@ export function StepPhotos({ formData, updateFormData }: StepPhotosProps) {
           continue;
         }
 
-        // Upload to Supabase Storage
+        // Upload to Supabase Storage with user ID for RLS compliance
+        const { data: { user } } = await supabase.auth.getUser();
+        const userId = user?.id || 'anonymous';
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `annonces/${fileName}`;
+        const filePath = `annonces/${userId}/${fileName}`;
 
         const { error: uploadError, data } = await supabase.storage
           .from('public-files')
@@ -123,10 +125,12 @@ export function StepPhotos({ formData, updateFormData }: StepPhotosProps) {
 
       setUploading(true);
 
-      // Upload to Supabase Storage
+      // Upload to Supabase Storage with user ID for RLS compliance
+      const { data: { user } } = await supabase.auth.getUser();
+      const userId = user?.id || 'anonymous';
       const fileExt = file.name.split('.').pop() || 'jpeg';
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `annonces/${fileName}`;
+      const filePath = `annonces/${userId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('public-files')
