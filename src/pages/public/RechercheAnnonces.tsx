@@ -90,7 +90,8 @@ export default function RechercheAnnonces() {
       if (category) {
         const cat = categories.find(c => c.slug === category);
         if (cat) {
-          query = query.eq('categorie_id', cat.id);
+          // Filtrer par categorie_id OU par sous_type (pour les anciennes annonces sans categorie_id)
+          query = query.or(`categorie_id.eq.${cat.id},sous_type.eq.${category}`);
         }
       }
       if (prixMin) {
