@@ -407,7 +407,28 @@ export default function AnnonceDetail() {
               <div>
                 <h2 className="text-xl font-semibold mb-4">Caractéristiques</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {annonce.etage !== null && (
+                  {/* Type de bien */}
+                  {annonce.sous_type && (
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                      <Building2 className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Type de bien</p>
+                        <p className="font-medium capitalize">{annonce.sous_type.replace(/_/g, ' ')}</p>
+                      </div>
+                    </div>
+                  )}
+                  {/* État du bien */}
+                  {annonce.etat_bien && (
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                      <Home className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">État du bien</p>
+                        <p className="font-medium capitalize">{annonce.etat_bien.replace(/_/g, ' ')}</p>
+                      </div>
+                    </div>
+                  )}
+                  {/* Étage */}
+                  {annonce.etage !== null && annonce.etage !== undefined && (
                     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                       <Building2 className="h-5 w-5 text-primary" />
                       <div>
@@ -416,6 +437,17 @@ export default function AnnonceDetail() {
                       </div>
                     </div>
                   )}
+                  {/* Nombre d'étages immeuble */}
+                  {annonce.nb_etages_immeuble && (
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                      <Building2 className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Étages dans l'immeuble</p>
+                        <p className="font-medium">{annonce.nb_etages_immeuble} étages</p>
+                      </div>
+                    </div>
+                  )}
+                  {/* Année de construction */}
                   {annonce.annee_construction && (
                     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                       <Calendar className="h-5 w-5 text-primary" />
@@ -425,6 +457,27 @@ export default function AnnonceDetail() {
                       </div>
                     </div>
                   )}
+                  {/* Année de rénovation */}
+                  {annonce.annee_renovation && (
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                      <Calendar className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Dernière rénovation</p>
+                        <p className="font-medium">{annonce.annee_renovation}</p>
+                      </div>
+                    </div>
+                  )}
+                  {/* WC */}
+                  {annonce.nb_wc && annonce.nb_wc > 0 && (
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                      <Bath className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">WC séparés</p>
+                        <p className="font-medium">{annonce.nb_wc}</p>
+                      </div>
+                    </div>
+                  )}
+                  {/* Classe énergétique */}
                   {annonce.classe_energetique && (
                     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                       <Thermometer className="h-5 w-5 text-primary" />
@@ -434,17 +487,84 @@ export default function AnnonceDetail() {
                       </div>
                     </div>
                   )}
+                  {/* Type de chauffage */}
                   {annonce.type_chauffage && (
                     <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                       <Thermometer className="h-5 w-5 text-primary" />
                       <div>
                         <p className="text-sm text-muted-foreground">Type de chauffage</p>
-                        <p className="font-medium">{annonce.type_chauffage}</p>
+                        <p className="font-medium capitalize">{annonce.type_chauffage.replace(/_/g, ' ')}</p>
+                      </div>
+                    </div>
+                  )}
+                  {/* Source d'énergie */}
+                  {annonce.source_energie && (
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                      <Thermometer className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Source d'énergie</p>
+                        <p className="font-medium capitalize">{annonce.source_energie.replace(/_/g, ' ')}</p>
+                      </div>
+                    </div>
+                  )}
+                  {/* Parking */}
+                  {annonce.parking_inclus && (
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                      <Car className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Parking</p>
+                        <p className="font-medium">
+                          {annonce.nb_places_parking || 1} place{(annonce.nb_places_parking || 1) > 1 ? 's' : ''}
+                          {annonce.type_parking && ` (${annonce.type_parking.replace(/_/g, ' ')})`}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {/* Accès PMR */}
+                  {annonce.acces_pmr && (
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                      <Check className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="text-sm text-muted-foreground">Accessibilité</p>
+                        <p className="font-medium">Accès PMR</p>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
+
+              {/* Espaces extérieurs */}
+              {(annonce.balcon || annonce.terrasse || annonce.jardin || annonce.piscine) && (
+                <div>
+                  <h2 className="text-xl font-semibold mb-4">Espaces extérieurs</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {annonce.balcon && (
+                      <Badge variant="secondary" className="px-3 py-1.5">
+                        <Home className="h-3 w-3 mr-1" />
+                        Balcon{annonce.surface_balcon ? ` (${annonce.surface_balcon} m²)` : ''}
+                      </Badge>
+                    )}
+                    {annonce.terrasse && (
+                      <Badge variant="secondary" className="px-3 py-1.5">
+                        <Trees className="h-3 w-3 mr-1" />
+                        Terrasse{annonce.surface_terrasse ? ` (${annonce.surface_terrasse} m²)` : ''}
+                      </Badge>
+                    )}
+                    {annonce.jardin && (
+                      <Badge variant="secondary" className="px-3 py-1.5">
+                        <Trees className="h-3 w-3 mr-1" />
+                        Jardin{annonce.surface_jardin ? ` (${annonce.surface_jardin} m²)` : ''}
+                      </Badge>
+                    )}
+                    {annonce.piscine && (
+                      <Badge variant="secondary" className="px-3 py-1.5">
+                        <Waves className="h-3 w-3 mr-1" />
+                        Piscine
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Equipments */}
               {annonce.equipements && Object.keys(annonce.equipements as Record<string, boolean>).length > 0 && (
@@ -484,10 +604,25 @@ export default function AnnonceDetail() {
                 <div>
                   <h2 className="text-xl font-semibold mb-4">Conditions de location</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {annonce.depot_garantie && (
+                    {/* Garantie */}
+                    {annonce.nb_mois_garantie && (
                       <div className="p-3 bg-muted/50 rounded-lg">
                         <p className="text-sm text-muted-foreground">Dépôt de garantie</p>
-                        <p className="font-medium">{annonce.nb_mois_garantie || 3} mois de loyer</p>
+                        <p className="font-medium">{annonce.nb_mois_garantie} mois de loyer</p>
+                      </div>
+                    )}
+                    {/* Charges */}
+                    {annonce.charges_mensuelles && (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Charges mensuelles</p>
+                        <p className="font-medium">{annonce.charges_mensuelles} CHF{annonce.charges_comprises ? ' (incluses)' : ''}</p>
+                      </div>
+                    )}
+                    {/* Disponibilité */}
+                    {annonce.disponible_immediatement && !annonce.disponible_des && (
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-sm text-muted-foreground">Disponibilité</p>
+                        <p className="font-medium text-success">Immédiate</p>
                       </div>
                     )}
                     {annonce.disponible_des && (
@@ -498,18 +633,23 @@ export default function AnnonceDetail() {
                         </p>
                       </div>
                     )}
-                    {annonce.animaux_autorises !== null && (
+                    {/* Durée bail minimum */}
+                    {annonce.duree_bail_min && (
                       <div className="p-3 bg-muted/50 rounded-lg">
-                        <p className="text-sm text-muted-foreground">Animaux</p>
-                        <p className="font-medium">{annonce.animaux_autorises ? 'Autorisés' : 'Non autorisés'}</p>
+                        <p className="text-sm text-muted-foreground">Durée minimale du bail</p>
+                        <p className="font-medium">{annonce.duree_bail_min} mois</p>
                       </div>
                     )}
-                    {annonce.fumeurs_acceptes !== null && (
-                      <div className="p-3 bg-muted/50 rounded-lg">
-                        <p className="text-sm text-muted-foreground">Fumeurs</p>
-                        <p className="font-medium">{annonce.fumeurs_acceptes ? 'Acceptés' : 'Non acceptés'}</p>
-                      </div>
-                    )}
+                    {/* Animaux */}
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Animaux</p>
+                      <p className="font-medium">{annonce.animaux_autorises ? '✓ Autorisés' : '✗ Non autorisés'}</p>
+                    </div>
+                    {/* Fumeurs */}
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <p className="text-sm text-muted-foreground">Fumeurs</p>
+                      <p className="font-medium">{annonce.fumeurs_acceptes ? '✓ Acceptés' : '✗ Non acceptés'}</p>
+                    </div>
                   </div>
                 </div>
               )}
