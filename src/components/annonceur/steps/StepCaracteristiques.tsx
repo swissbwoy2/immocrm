@@ -17,10 +17,10 @@ interface StepCaracteristiquesProps {
 
 const etats = [
   { value: 'neuf', label: 'Neuf' },
-  { value: 'excellent', label: 'Excellent état' },
-  { value: 'bon', label: 'Bon état' },
+  { value: 'recent', label: 'Récent / Excellent état' },
+  { value: 'bon_etat', label: 'Bon état' },
+  { value: 'a_rafraichir', label: 'À rafraîchir' },
   { value: 'a_renover', label: 'À rénover' },
-  { value: 'a_restaurer', label: 'À restaurer' },
 ];
 
 export function StepCaracteristiques({ formData, updateFormData }: StepCaracteristiquesProps) {
