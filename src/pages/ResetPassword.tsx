@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Lock, Eye, EyeOff } from 'lucide-react';
+import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import logoImmorama from '@/assets/logo-immo-rama-new.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,14 +18,46 @@ export default function ResetPassword() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isTokenValid, setIsTokenValid] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if we have a valid session from the reset link
-    const checkSession = async () => {
+    let mounted = true;
+
+    // Listen for auth state changes to detect PASSWORD_RECOVERY event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+
+      console.log('Auth event:', event, 'Session:', !!session);
+
+      if (event === 'PASSWORD_RECOVERY') {
+        // Token is valid, show the form
+        setIsTokenValid(true);
+        setIsInitializing(false);
+      } else if (event === 'SIGNED_IN' && session) {
+        // Session established (might be after PASSWORD_RECOVERY)
+        setIsTokenValid(true);
+        setIsInitializing(false);
+      }
+    });
+
+    // Also check if we already have a session (user refreshed the page)
+    const checkExistingSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      if (session && mounted) {
+        setIsTokenValid(true);
+        setIsInitializing(false);
+      }
+    };
+    
+    // Small delay to let onAuthStateChange fire first
+    setTimeout(checkExistingSession, 500);
+
+    // Timeout after 10 seconds if token is not validated
+    const timeout = setTimeout(() => {
+      if (mounted && !isTokenValid) {
         toast({
           title: 'Lien invalide',
           description: 'Le lien de réinitialisation est invalide ou a expiré.',
@@ -33,9 +65,14 @@ export default function ResetPassword() {
         });
         navigate(redirectPath);
       }
+    }, 10000);
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      clearTimeout(timeout);
     };
-    checkSession();
-  }, [navigate, toast, redirectPath]);
+  }, [navigate, toast, redirectPath, isTokenValid]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +121,18 @@ export default function ResetPassword() {
       setLoading(false);
     }
   };
+
+  // Show loader while initializing
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Vérification du lien...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
