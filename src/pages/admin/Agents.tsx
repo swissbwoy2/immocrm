@@ -15,7 +15,7 @@ interface AgentWithProfile {
   id: string;
   user_id: string;
   statut: string;
-  nombre_clients_assignes: number;
+  clients_count: number;
   profiles: {
     nom: string;
     prenom: string;
@@ -47,9 +47,10 @@ const Agents = () => {
 
   const fetchAgents = async () => {
     try {
+      // Récupérer les agents avec le count réel des clients
       const { data: agentsData, error } = await supabase
         .from('agents')
-        .select('id, user_id, statut, nombre_clients_assignes');
+        .select('id, user_id, statut, clients(count)');
 
       if (error) throw error;
 
@@ -63,6 +64,8 @@ const Agents = () => {
 
       const mergedData = agentsData?.map(agent => ({
         ...agent,
+        // Extraire le count réel depuis la requête agrégée
+        clients_count: (agent.clients as any)?.[0]?.count || 0,
         profiles: profilesData?.find(p => p.id === agent.user_id) || {
           nom: '',
           prenom: '',
@@ -209,7 +212,7 @@ const Agents = () => {
     total: agents.length,
     actifs: agents.filter(a => a.profiles.actif).length,
     enAttente: agents.filter(a => a.statut === 'en_attente').length,
-    totalClients: agents.reduce((sum, a) => sum + (a.nombre_clients_assignes || 0), 0),
+    totalClients: agents.reduce((sum, a) => sum + (a.clients_count || 0), 0),
   };
 
   if (loading) {
@@ -370,7 +373,7 @@ const Agents = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <Users className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
-                            <span>{agent.nombre_clients_assignes} client{agent.nombre_clients_assignes > 1 ? 's' : ''}</span>
+                            <span>{agent.clients_count} client{agent.clients_count > 1 ? 's' : ''}</span>
                           </div>
                         </div>
                       </div>
