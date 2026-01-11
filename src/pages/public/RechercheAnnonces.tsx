@@ -12,12 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { PublicAnnonceCard } from '@/components/public/PublicAnnonceCard';
+import { PublicAnnoncesMap } from '@/components/public/PublicAnnoncesMap';
 import { cn } from '@/lib/utils';
 
 export default function RechercheAnnonces() {
@@ -27,6 +26,7 @@ export default function RechercheAnnonces() {
   // View state
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [hoveredAnnonceId, setHoveredAnnonceId] = useState<string | null>(null);
 
   // Filter state from URL
   const transactionType = searchParams.get('type') || '';
@@ -473,12 +473,13 @@ export default function RechercheAnnonces() {
               : "grid grid-cols-1 lg:grid-cols-2 gap-6"
           )}>
             {viewMode === 'map' && (
-              <div className="lg:col-span-1 h-[500px] lg:h-[calc(100vh-280px)] bg-muted rounded-xl flex items-center justify-center sticky top-40">
-                <div className="text-center text-muted-foreground">
-                  <MapIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Carte interactive</p>
-                  <p className="text-sm">(Intégration Google Maps)</p>
-                </div>
+              <div className="lg:col-span-1 h-[500px] lg:h-[calc(100vh-280px)] rounded-xl sticky top-40">
+                <PublicAnnoncesMap 
+                  annonces={annonces}
+                  onAnnonceClick={(id, slug) => navigate(`/annonces/${slug || id}`)}
+                  hoveredAnnonceId={hoveredAnnonceId}
+                  onMarkerHover={setHoveredAnnonceId}
+                />
               </div>
             )}
             <div className={cn(viewMode === 'map' && "lg:col-span-1")}>
@@ -488,11 +489,19 @@ export default function RechercheAnnonces() {
                   : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
               )}>
                 {annonces.map((annonce) => (
-                  <PublicAnnonceCard 
-                    key={annonce.id} 
-                    annonce={annonce} 
-                    compact={viewMode === 'map'}
-                  />
+                  <div
+                    key={annonce.id}
+                    onMouseEnter={() => viewMode === 'map' && setHoveredAnnonceId(annonce.id)}
+                    onMouseLeave={() => viewMode === 'map' && setHoveredAnnonceId(null)}
+                    className={cn(
+                      viewMode === 'map' && hoveredAnnonceId === annonce.id && 'ring-2 ring-primary rounded-xl'
+                    )}
+                  >
+                    <PublicAnnonceCard 
+                      annonce={annonce} 
+                      compact={viewMode === 'map'}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
