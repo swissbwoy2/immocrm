@@ -301,10 +301,10 @@ export function PublicAnnoncesMap({
     );
   }
 
-  // No geocoded annonces
-  if (annoncesWithCoords.length === 0) {
+  // No geocoded annonces - still show the map with search area
+  if (annoncesWithCoords.length === 0 && !searchCenter) {
     return (
-      <div className="h-full w-full bg-muted rounded-xl flex items-center justify-center">
+      <div className="h-full w-full bg-muted flex items-center justify-center">
         <div className="text-center text-muted-foreground p-4">
           <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
           <p className="font-medium">Aucune annonce géolocalisée</p>
@@ -315,6 +315,6 @@ export function PublicAnnoncesMap({
   }
 
   return (
-    <div ref={mapRef} className="h-full w-full rounded-xl overflow-hidden" />
+    <div ref={mapRef} className="h-full w-full" />
   );
 }
