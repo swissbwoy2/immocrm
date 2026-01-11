@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   Plus, Eye, Heart, MessageCircle, Building2, 
-  TrendingUp, Clock, CheckCircle, AlertCircle, BarChart3
+  TrendingUp, Clock, CheckCircle, AlertCircle, BarChart3, ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -216,24 +216,40 @@ export default function AnnonceurDashboard() {
                             {annonce.ville} • {annonce.prix?.toLocaleString('fr-CH')} CHF
                           </p>
                         </div>
-                        <div className="text-right">
-                          <Badge variant={
-                            annonce.statut === 'publie' ? 'default' :
-                            annonce.statut === 'en_attente' ? 'secondary' :
-                            'outline'
-                          }>
-                            {annonce.statut === 'publie' ? 'Publiée' :
-                             annonce.statut === 'en_attente' ? 'En attente' :
-                             annonce.statut === 'brouillon' ? 'Brouillon' :
-                             annonce.statut}
-                          </Badge>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Eye className="h-3 w-3" />{annonce.nb_vues || 0}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Heart className="h-3 w-3" />{annonce.nb_favoris || 0}
-                            </span>
+                        <div className="flex items-center gap-2">
+                          {annonce.statut === 'publie' && annonce.slug && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.open(`/annonces/${annonce.slug}`, '_blank');
+                              }}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <div className="text-right">
+                            <Badge variant={
+                              annonce.statut === 'publie' ? 'default' :
+                              annonce.statut === 'en_attente' ? 'secondary' :
+                              'outline'
+                            }>
+                              {annonce.statut === 'publie' ? 'Publiée' :
+                               annonce.statut === 'en_attente' ? 'En attente' :
+                               annonce.statut === 'brouillon' ? 'Brouillon' :
+                               annonce.statut}
+                            </Badge>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Eye className="h-3 w-3" />{annonce.nb_vues || 0}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Heart className="h-3 w-3" />{annonce.nb_favoris || 0}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </Link>

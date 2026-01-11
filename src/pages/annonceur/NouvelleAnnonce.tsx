@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -178,6 +178,8 @@ const steps = [
 export default function NouvelleAnnonce() {
   const { user, session } = useAuth();
   const navigate = useNavigate();
+  const { id: annonceId } = useParams();
+  const isEditMode = !!annonceId;
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<AnnonceFormData>(initialFormData);
 
@@ -191,19 +193,100 @@ export default function NouvelleAnnonce() {
         .eq('user_id', user?.id)
         .single();
       if (error) throw error;
-      
-      // Pre-fill contact info
-      setFormData(prev => ({
-        ...prev,
-        nom_contact: `${data.prenom || ''} ${data.nom}`.trim(),
-        telephone_contact: data.telephone || '',
-        email_contact: data.email,
-      }));
-      
       return data;
     },
     enabled: !!user?.id,
   });
+
+  // Fetch existing annonce in edit mode
+  const { data: existingAnnonce, isLoading: loadingAnnonce } = useQuery({
+    queryKey: ['annonce-edit', annonceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('annonces_publiques')
+        .select('*, photos_annonces_publiques(*)')
+        .eq('id', annonceId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!annonceId,
+  });
+
+  // Pre-fill form with existing annonce data or annonceur contact info
+  useEffect(() => {
+    if (existingAnnonce) {
+      setFormData({
+        type_transaction: existingAnnonce.type_transaction as 'location' | 'vente' || 'location',
+        sous_type: existingAnnonce.sous_type || 'appartement',
+        adresse: existingAnnonce.adresse || '',
+        adresse_complementaire: existingAnnonce.adresse_complementaire || '',
+        code_postal: existingAnnonce.code_postal || '',
+        ville: existingAnnonce.ville || '',
+        canton: existingAnnonce.canton || '',
+        latitude: existingAnnonce.latitude,
+        longitude: existingAnnonce.longitude,
+        afficher_adresse_exacte: existingAnnonce.afficher_adresse_exacte ?? true,
+        surface_habitable: existingAnnonce.surface_habitable,
+        surface_terrain: existingAnnonce.surface_terrain,
+        nombre_pieces: existingAnnonce.nombre_pieces,
+        nb_chambres: existingAnnonce.nb_chambres,
+        nb_salles_bain: existingAnnonce.nb_salles_bain,
+        nb_wc: existingAnnonce.nb_wc,
+        etage: existingAnnonce.etage,
+        nb_etages_immeuble: existingAnnonce.nb_etages_immeuble,
+        annee_construction: existingAnnonce.annee_construction,
+        annee_renovation: existingAnnonce.annee_renovation,
+        etat_bien: existingAnnonce.etat_bien || '',
+        prix: existingAnnonce.prix,
+        charges_mensuelles: existingAnnonce.charges_mensuelles,
+        charges_comprises: existingAnnonce.charges_comprises ?? false,
+        depot_garantie: existingAnnonce.depot_garantie,
+        nb_mois_garantie: existingAnnonce.nb_mois_garantie || 3,
+        balcon: existingAnnonce.balcon ?? false,
+        terrasse: existingAnnonce.terrasse ?? false,
+        jardin: existingAnnonce.jardin ?? false,
+        piscine: existingAnnonce.piscine ?? false,
+        parking_inclus: existingAnnonce.parking_inclus ?? false,
+        nb_places_parking: existingAnnonce.nb_places_parking,
+        type_parking: existingAnnonce.type_parking || '',
+        acces_pmr: existingAnnonce.acces_pmr ?? false,
+        equipements: (existingAnnonce.equipements as Record<string, boolean>) || {},
+        classe_energetique: existingAnnonce.classe_energetique || '',
+        indice_energetique: existingAnnonce.indice_energetique,
+        emissions_co2: existingAnnonce.emissions_co2,
+        type_chauffage: existingAnnonce.type_chauffage || '',
+        source_energie: existingAnnonce.source_energie || '',
+        titre: existingAnnonce.titre || '',
+        description_courte: existingAnnonce.description_courte || '',
+        description: existingAnnonce.description || '',
+        points_forts: (existingAnnonce.points_forts as string[]) || [],
+        mots_cles: (existingAnnonce.mots_cles as string[]) || [],
+        photos: (existingAnnonce.photos_annonces_publiques || []).map((p: any) => ({
+          url: p.url,
+          est_principale: p.est_principale,
+        })),
+        nom_contact: existingAnnonce.nom_contact || '',
+        telephone_contact: existingAnnonce.telephone_contact || '',
+        email_contact: existingAnnonce.email_contact || '',
+        whatsapp_contact: existingAnnonce.whatsapp_contact || '',
+        horaires_contact: existingAnnonce.horaires_contact || '',
+        disponible_immediatement: existingAnnonce.disponible_immediatement ?? true,
+        disponible_des: existingAnnonce.disponible_des || '',
+        animaux_autorises: existingAnnonce.animaux_autorises ?? false,
+        fumeurs_acceptes: existingAnnonce.fumeurs_acceptes ?? false,
+        duree_bail_min: existingAnnonce.duree_bail_min,
+      });
+    } else if (annonceur && !isEditMode) {
+      // Pre-fill contact info for new annonce
+      setFormData(prev => ({
+        ...prev,
+        nom_contact: `${annonceur.prenom || ''} ${annonceur.nom}`.trim(),
+        telephone_contact: annonceur.telephone || '',
+        email_contact: annonceur.email,
+      }));
+    }
+  }, [existingAnnonce, annonceur, isEditMode]);
 
   // Generate slug from title
   const generateSlug = (titre: string) => {
@@ -229,101 +312,147 @@ export default function NouvelleAnnonce() {
         throw new Error('Profil annonceur non trouvé');
       }
 
-      const slug = generateSlug(formData.titre);
-      const reference = `REF-${Date.now().toString(36).toUpperCase()}`;
+      const annonceData = {
+        type_transaction: formData.type_transaction,
+        sous_type: formData.sous_type || null,
+        adresse: formData.adresse,
+        adresse_complementaire: formData.adresse_complementaire,
+        code_postal: formData.code_postal,
+        ville: formData.ville,
+        canton: formData.canton,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+        afficher_adresse_exacte: formData.afficher_adresse_exacte,
+        surface_habitable: formData.surface_habitable,
+        surface_terrain: formData.surface_terrain,
+        nombre_pieces: formData.nombre_pieces,
+        nb_chambres: formData.nb_chambres,
+        nb_salles_bain: formData.nb_salles_bain,
+        nb_wc: formData.nb_wc,
+        etage: formData.etage,
+        nb_etages_immeuble: formData.nb_etages_immeuble,
+        annee_construction: formData.annee_construction,
+        annee_renovation: formData.annee_renovation,
+        etat_bien: formData.etat_bien || null,
+        prix: formData.prix,
+        charges_mensuelles: formData.charges_mensuelles,
+        charges_comprises: formData.charges_comprises,
+        depot_garantie: formData.depot_garantie,
+        nb_mois_garantie: formData.nb_mois_garantie,
+        balcon: formData.balcon,
+        terrasse: formData.terrasse,
+        jardin: formData.jardin,
+        piscine: formData.piscine,
+        parking_inclus: formData.parking_inclus,
+        nb_places_parking: formData.nb_places_parking,
+        type_parking: formData.type_parking || null,
+        acces_pmr: formData.acces_pmr,
+        equipements: formData.equipements,
+        classe_energetique: formData.classe_energetique || null,
+        indice_energetique: formData.indice_energetique,
+        emissions_co2: formData.emissions_co2,
+        type_chauffage: formData.type_chauffage,
+        source_energie: formData.source_energie,
+        titre: formData.titre,
+        description_courte: formData.description_courte,
+        description: formData.description,
+        points_forts: formData.points_forts,
+        mots_cles: formData.mots_cles,
+        nom_contact: formData.nom_contact,
+        telephone_contact: formData.telephone_contact,
+        email_contact: formData.email_contact,
+        whatsapp_contact: formData.whatsapp_contact,
+        horaires_contact: formData.horaires_contact,
+        disponible_immediatement: formData.disponible_immediatement,
+        disponible_des: formData.disponible_des || null,
+        animaux_autorises: formData.animaux_autorises,
+        fumeurs_acceptes: formData.fumeurs_acceptes,
+        duree_bail_min: formData.duree_bail_min,
+      };
 
-      const { data: annonce, error: annonceError } = await supabase
-        .from('annonces_publiques')
-        .insert({
-          annonceur_id: annonceur.id,
-          statut: status,
-          slug,
-          reference,
-          type_transaction: formData.type_transaction,
-          sous_type: formData.sous_type || null,
-          adresse: formData.adresse,
-          adresse_complementaire: formData.adresse_complementaire,
-          code_postal: formData.code_postal,
-          ville: formData.ville,
-          canton: formData.canton,
-          latitude: formData.latitude,
-          longitude: formData.longitude,
-          afficher_adresse_exacte: formData.afficher_adresse_exacte,
-          surface_habitable: formData.surface_habitable,
-          surface_terrain: formData.surface_terrain,
-          nombre_pieces: formData.nombre_pieces,
-          nb_chambres: formData.nb_chambres,
-          nb_salles_bain: formData.nb_salles_bain,
-          nb_wc: formData.nb_wc,
-          etage: formData.etage,
-          nb_etages_immeuble: formData.nb_etages_immeuble,
-          annee_construction: formData.annee_construction,
-          annee_renovation: formData.annee_renovation,
-          etat_bien: formData.etat_bien || null,
-          prix: formData.prix,
-          charges_mensuelles: formData.charges_mensuelles,
-          charges_comprises: formData.charges_comprises,
-          depot_garantie: formData.depot_garantie,
-          nb_mois_garantie: formData.nb_mois_garantie,
-          balcon: formData.balcon,
-          terrasse: formData.terrasse,
-          jardin: formData.jardin,
-          piscine: formData.piscine,
-          parking_inclus: formData.parking_inclus,
-          nb_places_parking: formData.nb_places_parking,
-          type_parking: formData.type_parking || null,
-          acces_pmr: formData.acces_pmr,
-          equipements: formData.equipements,
-          classe_energetique: formData.classe_energetique || null,
-          indice_energetique: formData.indice_energetique,
-          emissions_co2: formData.emissions_co2,
-          type_chauffage: formData.type_chauffage,
-          source_energie: formData.source_energie,
-          titre: formData.titre,
-          description_courte: formData.description_courte,
-          description: formData.description,
-          points_forts: formData.points_forts,
-          mots_cles: formData.mots_cles,
-          nom_contact: formData.nom_contact,
-          telephone_contact: formData.telephone_contact,
-          email_contact: formData.email_contact,
-          whatsapp_contact: formData.whatsapp_contact,
-          horaires_contact: formData.horaires_contact,
-          disponible_immediatement: formData.disponible_immediatement,
-          disponible_des: formData.disponible_des || null,
-          animaux_autorises: formData.animaux_autorises,
-          fumeurs_acceptes: formData.fumeurs_acceptes,
-          duree_bail_min: formData.duree_bail_min,
-          date_soumission: status === 'en_attente' ? new Date().toISOString() : null,
-        })
-        .select()
-        .single();
+      let annonce;
+      
+      if (isEditMode && annonceId) {
+        // Update existing annonce
+        const { data, error: updateError } = await supabase
+          .from('annonces_publiques')
+          .update({
+            ...annonceData,
+            statut: status,
+            date_soumission: status === 'en_attente' ? new Date().toISOString() : existingAnnonce?.date_soumission,
+          })
+          .eq('id', annonceId)
+          .select()
+          .single();
 
-      if (annonceError) throw annonceError;
+        if (updateError) throw updateError;
+        annonce = data;
 
-      // Save photos
-      if (formData.photos.length > 0) {
-        const photosToInsert = formData.photos.map((photo, index) => ({
-          annonce_id: annonce.id,
-          url: photo.url,
-          est_principale: photo.est_principale,
-          ordre: index,
-        }));
-
-        const { error: photosError } = await supabase
+        // Update photos - delete old ones and insert new
+        await supabase
           .from('photos_annonces_publiques')
-          .insert(photosToInsert);
+          .delete()
+          .eq('annonce_id', annonceId);
 
-        if (photosError) throw photosError;
+        if (formData.photos.length > 0) {
+          const photosToInsert = formData.photos.map((photo, index) => ({
+            annonce_id: annonceId,
+            url: photo.url,
+            est_principale: photo.est_principale,
+            ordre: index,
+          }));
+
+          const { error: photosError } = await supabase
+            .from('photos_annonces_publiques')
+            .insert(photosToInsert);
+
+          if (photosError) throw photosError;
+        }
+      } else {
+        // Create new annonce
+        const slug = generateSlug(formData.titre);
+        const reference = `REF-${Date.now().toString(36).toUpperCase()}`;
+
+        const { data, error: insertError } = await supabase
+          .from('annonces_publiques')
+          .insert({
+            ...annonceData,
+            annonceur_id: annonceur.id,
+            statut: status,
+            slug,
+            reference,
+            date_soumission: status === 'en_attente' ? new Date().toISOString() : null,
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        annonce = data;
+
+        // Save photos
+        if (formData.photos.length > 0) {
+          const photosToInsert = formData.photos.map((photo, index) => ({
+            annonce_id: annonce.id,
+            url: photo.url,
+            est_principale: photo.est_principale,
+            ordre: index,
+          }));
+
+          const { error: photosError } = await supabase
+            .from('photos_annonces_publiques')
+            .insert(photosToInsert);
+
+          if (photosError) throw photosError;
+        }
       }
 
       return annonce;
     },
     onSuccess: (_, status) => {
       if (status === 'brouillon') {
-        toast.success('Annonce enregistrée en brouillon');
+        toast.success(isEditMode ? 'Annonce mise à jour en brouillon' : 'Annonce enregistrée en brouillon');
       } else {
-        toast.success('Annonce soumise pour modération');
+        toast.success(isEditMode ? 'Annonce mise à jour et soumise' : 'Annonce soumise pour modération');
       }
       navigate('/espace-annonceur/mes-annonces');
     },
@@ -338,8 +467,8 @@ export default function NouvelleAnnonce() {
     },
   });
 
-  // Show loader while fetching annonceur
-  if (annonceurLoading) {
+  // Show loader while fetching annonceur or annonce
+  if (annonceurLoading || loadingAnnonce) {
     return (
       <AnnonceurLayout>
         <div className="flex items-center justify-center py-20">
@@ -399,7 +528,7 @@ export default function NouvelleAnnonce() {
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold">Nouvelle annonce</h1>
+          <h1 className="text-2xl font-bold">{isEditMode ? 'Modifier l\'annonce' : 'Nouvelle annonce'}</h1>
           <p className="text-muted-foreground">
             Étape {currentStep} sur {steps.length} : {steps[currentStep - 1].title}
           </p>
