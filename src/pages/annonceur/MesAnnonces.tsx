@@ -47,19 +47,19 @@ import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const statusColors: Record<string, string> = {
-  publiee: 'bg-green-500/20 text-green-700 border-green-500/30',
+  publie: 'bg-green-500/20 text-green-700 border-green-500/30',
   en_attente: 'bg-amber-500/20 text-amber-700 border-amber-500/30',
   brouillon: 'bg-gray-500/20 text-gray-700 border-gray-500/30',
-  refusee: 'bg-red-500/20 text-red-700 border-red-500/30',
-  expiree: 'bg-purple-500/20 text-purple-700 border-purple-500/30',
+  refuse: 'bg-red-500/20 text-red-700 border-red-500/30',
+  expire: 'bg-purple-500/20 text-purple-700 border-purple-500/30',
 };
 
 const statusLabels: Record<string, string> = {
-  publiee: 'Publiée',
+  publie: 'Publiée',
   en_attente: 'En attente',
   brouillon: 'Brouillon',
-  refusee: 'Refusée',
-  expiree: 'Expirée',
+  refuse: 'Refusée',
+  expire: 'Expirée',
 };
 
 export default function MesAnnonces() {
@@ -202,11 +202,11 @@ export default function MesAnnonces() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous les statuts</SelectItem>
-              <SelectItem value="publiee">Publiées</SelectItem>
+              <SelectItem value="publie">Publiées</SelectItem>
               <SelectItem value="en_attente">En attente</SelectItem>
               <SelectItem value="brouillon">Brouillons</SelectItem>
-              <SelectItem value="refusee">Refusées</SelectItem>
-              <SelectItem value="expiree">Expirées</SelectItem>
+              <SelectItem value="refuse">Refusées</SelectItem>
+              <SelectItem value="expire">Expirées</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -321,7 +321,7 @@ export default function MesAnnonces() {
                               <Pencil className="h-4 w-4 mr-2" />
                               Modifier
                             </DropdownMenuItem>
-                            {annonce.statut === 'publiee' && annonce.slug && (
+                            {annonce.statut === 'publie' && annonce.slug && (
                               <DropdownMenuItem 
                                 onClick={() => window.open(`/annonces/${annonce.slug}`, '_blank')}
                               >
