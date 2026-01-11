@@ -42,7 +42,7 @@ export function useGoogleMapsLoader() {
     // Start loading
     globalLoadingPromise = new Promise<void>((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&language=fr&region=CH`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry,marker&language=fr&region=CH`;
       script.async = true;
       script.defer = true;
 
