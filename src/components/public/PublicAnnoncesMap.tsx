@@ -22,6 +22,8 @@ interface PublicAnnoncesMapProps {
   onAnnonceClick?: (annonceId: string, slug: string | null) => void;
   hoveredAnnonceId?: string | null;
   onMarkerHover?: (annonceId: string | null) => void;
+  searchCenter?: { lat: number; lng: number } | null;
+  radiusKm?: number;
 }
 
 const formatPrice = (prix: number, type: string): string => {
@@ -35,13 +37,16 @@ export function PublicAnnoncesMap({
   annonces, 
   onAnnonceClick,
   hoveredAnnonceId,
-  onMarkerHover
+  onMarkerHover,
+  searchCenter,
+  radiusKm = 20
 }: PublicAnnoncesMapProps) {
   const { isLoaded, isLoading, isFallback } = useGoogleMapsLoader();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<Map<string, google.maps.marker.AdvancedMarkerElement | google.maps.Marker>>(new Map());
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const circleRef = useRef<google.maps.Circle | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
   // Filter annonces with valid coordinates
@@ -69,11 +74,47 @@ export function PublicAnnoncesMap({
     setMapReady(true);
 
     return () => {
+      if (circleRef.current) {
+        circleRef.current.setMap(null);
+        circleRef.current = null;
+      }
       mapInstanceRef.current = null;
       infoWindowRef.current = null;
       setMapReady(false);
     };
   }, [isLoaded]);
+
+  // Draw search radius circle
+  useEffect(() => {
+    if (!mapReady || !mapInstanceRef.current) return;
+
+    // Remove existing circle
+    if (circleRef.current) {
+      circleRef.current.setMap(null);
+      circleRef.current = null;
+    }
+
+    // Draw new circle if we have a search center
+    if (searchCenter) {
+      circleRef.current = new google.maps.Circle({
+        map: mapInstanceRef.current,
+        center: searchCenter,
+        radius: radiusKm * 1000, // Convert km to meters
+        strokeColor: 'hsl(221.2, 83.2%, 53.3%)',
+        strokeOpacity: 0.4,
+        strokeWeight: 2,
+        fillColor: 'hsl(221.2, 83.2%, 53.3%)',
+        fillOpacity: 0.08,
+        clickable: false,
+      });
+
+      // Center map on search location if no annonces
+      if (annonces.length === 0) {
+        mapInstanceRef.current.setCenter(searchCenter);
+        mapInstanceRef.current.setZoom(11);
+      }
+    }
+  }, [mapReady, searchCenter, radiusKm, annonces.length]);
 
   // Create price marker element
   const createMarkerElement = useCallback((annonce: Annonce, isHovered: boolean) => {
