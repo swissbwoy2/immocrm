@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   LayoutDashboard, Building2, Plus, MessageCircle, User,
-  Settings, LogOut, Menu, X, ChevronRight, Bell
+  Settings, LogOut, Menu, X, ChevronRight, Bell, Loader2, AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -18,13 +18,17 @@ interface AnnonceurLayoutProps {
 }
 
 export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
-  const { user, signOut } = useAuth();
+  const { user, session, loading: authLoading, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Verify user is an annonceur
-  const { data: annonceur, isLoading, error } = useQuery({
+  // Wait for auth to initialize first
+  const isAuthReady = !authLoading;
+  const isAuthenticated = isAuthReady && !!user && !!session;
+
+  // Verify user is an annonceur (only if authenticated)
+  const { data: annonceur, isLoading: annonceurLoading, error } = useQuery({
     queryKey: ['annonceur-check', user?.id],
     queryFn: async () => {
       if (!user) return null;
@@ -37,7 +41,7 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
       if (error) throw error;
       return data;
     },
-    enabled: !!user
+    enabled: isAuthenticated
   });
 
   // Fetch unread messages count
@@ -60,15 +64,55 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
     enabled: !!annonceur
   });
 
-  useEffect(() => {
-    if (!isLoading && !user) {
-      navigate('/connexion-annonceur');
-    }
-    if (!isLoading && error) {
-      toast.error('Accès non autorisé');
-      navigate('/connexion-annonceur');
-    }
-  }, [user, isLoading, error, navigate]);
+  // Show auth loading state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Redirect if not authenticated
+  if (!isAuthenticated) {
+    navigate('/connexion-annonceur', { replace: true });
+    return null;
+  }
+
+  // Show annonceur loading state
+  if (annonceurLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-center">
+          <img src={logoImmoRama} alt="Loading..." className="h-12 mx-auto mb-4" />
+          <p className="text-muted-foreground">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if annonceur profile not found
+  if (error || !annonceur) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <AlertCircle className="h-12 w-12 mx-auto text-destructive mb-4" />
+          <h2 className="text-xl font-bold mb-2">Profil annonceur introuvable</h2>
+          <p className="text-muted-foreground mb-4">
+            Votre compte n'est pas associé à un profil annonceur. Veuillez vous inscrire ou contacter le support.
+          </p>
+          <div className="flex flex-col gap-2">
+            <Button onClick={() => navigate('/inscription-annonceur')}>
+              Créer un compte annonceur
+            </Button>
+            <Button variant="outline" onClick={() => signOut()}>
+              Se déconnecter
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const navItems = [
     { href: '/espace-annonceur', icon: LayoutDashboard, label: 'Tableau de bord' },
@@ -84,16 +128,6 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
     navigate('/annonces');
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-pulse text-center">
-          <img src={logoImmoRama} alt="Loading..." className="h-12 mx-auto mb-4" />
-          <p className="text-muted-foreground">Chargement...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-background">
