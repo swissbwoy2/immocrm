@@ -33,6 +33,8 @@ export function StepLocalisation({ formData, updateFormData }: StepLocalisationP
       code_postal: address.postalCode || formData.code_postal,
       ville: address.city || formData.ville,
       canton: address.canton || formData.canton,
+      latitude: address.latitude,
+      longitude: address.longitude,
     });
   };
 
