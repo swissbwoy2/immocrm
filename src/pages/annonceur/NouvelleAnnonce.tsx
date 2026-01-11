@@ -205,40 +205,6 @@ export default function NouvelleAnnonce() {
     enabled: !!user?.id,
   });
 
-  // Show loader while fetching annonceur
-  if (annonceurLoading) {
-    return (
-      <AnnonceurLayout>
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2">Chargement...</span>
-        </div>
-      </AnnonceurLayout>
-    );
-  }
-
-  // Show error if annonceur not found
-  if (annonceurError || !annonceur) {
-    return (
-      <AnnonceurLayout>
-        <div className="text-center py-20">
-          <AlertCircle className="h-12 w-12 mx-auto text-destructive mb-4" />
-          <h2 className="text-xl font-bold mb-2">Profil annonceur introuvable</h2>
-          <p className="text-muted-foreground mb-4">
-            Impossible de créer une annonce sans profil annonceur valide.
-          </p>
-          <Button onClick={() => navigate('/espace-annonceur')}>
-            Retour au tableau de bord
-          </Button>
-        </div>
-      </AnnonceurLayout>
-    );
-  }
-
-  const updateFormData = (updates: Partial<AnnonceFormData>) => {
-    setFormData(prev => ({ ...prev, ...updates }));
-  };
-
   // Generate slug from title
   const generateSlug = (titre: string) => {
     return titre
@@ -250,7 +216,7 @@ export default function NouvelleAnnonce() {
       + '-' + Date.now().toString(36);
   };
 
-  // Save mutation
+  // Save mutation - MUST be before any conditional returns
   const saveMutation = useMutation({
     mutationFn: async (status: 'brouillon' | 'en_attente') => {
       // Critical validation - ensure session is valid
@@ -371,6 +337,40 @@ export default function NouvelleAnnonce() {
       }
     },
   });
+
+  // Show loader while fetching annonceur
+  if (annonceurLoading) {
+    return (
+      <AnnonceurLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Chargement...</span>
+        </div>
+      </AnnonceurLayout>
+    );
+  }
+
+  // Show error if annonceur not found
+  if (annonceurError || !annonceur) {
+    return (
+      <AnnonceurLayout>
+        <div className="text-center py-20">
+          <AlertCircle className="h-12 w-12 mx-auto text-destructive mb-4" />
+          <h2 className="text-xl font-bold mb-2">Profil annonceur introuvable</h2>
+          <p className="text-muted-foreground mb-4">
+            Impossible de créer une annonce sans profil annonceur valide.
+          </p>
+          <Button onClick={() => navigate('/espace-annonceur')}>
+            Retour au tableau de bord
+          </Button>
+        </div>
+      </AnnonceurLayout>
+    );
+  }
+
+  const updateFormData = (updates: Partial<AnnonceFormData>) => {
+    setFormData(prev => ({ ...prev, ...updates }));
+  };
 
   const progress = (currentStep / steps.length) * 100;
   const CurrentStepComponent = steps[currentStep - 1].component;
