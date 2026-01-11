@@ -6,12 +6,13 @@ import {
   Upload, 
   X, 
   Star,
-  GripVertical,
+  Camera,
   AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useNativeCamera } from '@/hooks/useNativeCamera';
 import type { AnnonceFormData } from '@/pages/annonceur/NouvelleAnnonce';
 
 interface StepPhotosProps {
@@ -22,6 +23,7 @@ interface StepPhotosProps {
 export function StepPhotos({ formData, updateFormData }: StepPhotosProps) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const { takePhoto, pickFromGallery, isNative, loading: cameraLoading } = useNativeCamera();
 
   const handleFileUpload = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -108,12 +110,86 @@ export function StepPhotos({ formData, updateFormData }: StepPhotosProps) {
     handleFileUpload(e.dataTransfer.files);
   }, [handleFileUpload]);
 
+  // Handle native camera/gallery photo
+  const handleNativePhoto = async (fromCamera: boolean) => {
+    if (formData.photos.length >= 10) {
+      toast.error('Vous avez atteint le maximum de 10 photos');
+      return;
+    }
+
+    try {
+      const file = fromCamera ? await takePhoto() : await pickFromGallery();
+      if (!file) return;
+
+      setUploading(true);
+
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop() || 'jpeg';
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `annonces/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('public-files')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        toast.error('Erreur lors de l\'upload de la photo');
+        return;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('public-files')
+        .getPublicUrl(filePath);
+
+      const newPhoto = {
+        url: publicUrl,
+        est_principale: formData.photos.length === 0,
+      };
+
+      updateFormData({ photos: [...formData.photos, newPhoto] });
+      toast.success('Photo ajoutée');
+    } catch (error) {
+      console.error('Native photo error:', error);
+      toast.error('Erreur lors de la capture');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-muted-foreground mb-4">
         <ImageIcon className="h-5 w-5" />
         <span>Photos du bien (max 10)</span>
       </div>
+
+      {/* Native Camera Buttons (Mobile) */}
+      {isNative && (
+        <div className="flex gap-3 mb-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={() => handleNativePhoto(true)}
+            disabled={uploading || cameraLoading || formData.photos.length >= 10}
+          >
+            <Camera className="h-4 w-4 mr-2" />
+            Prendre une photo
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1"
+            onClick={() => handleNativePhoto(false)}
+            disabled={uploading || cameraLoading || formData.photos.length >= 10}
+          >
+            <ImageIcon className="h-4 w-4 mr-2" />
+            Galerie
+          </Button>
+        </div>
+      )}
 
       {/* Upload Zone */}
       <div
@@ -123,12 +199,12 @@ export function StepPhotos({ formData, updateFormData }: StepPhotosProps) {
         className={cn(
           "border-2 border-dashed rounded-lg p-8 text-center transition-colors",
           dragOver ? "border-primary bg-primary/5" : "border-border",
-          uploading && "opacity-50 pointer-events-none"
+          (uploading || cameraLoading) && "opacity-50 pointer-events-none"
         )}
       >
         <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
         <p className="font-medium mb-2">
-          Glissez-déposez vos photos ici
+          {isNative ? 'Ou glissez-déposez vos photos ici' : 'Glissez-déposez vos photos ici'}
         </p>
         <p className="text-sm text-muted-foreground mb-4">
           ou cliquez pour sélectionner des fichiers
@@ -146,9 +222,9 @@ export function StepPhotos({ formData, updateFormData }: StepPhotosProps) {
           type="button"
           variant="outline"
           onClick={() => document.getElementById('photo-upload')?.click()}
-          disabled={uploading || formData.photos.length >= 10}
+          disabled={uploading || cameraLoading || formData.photos.length >= 10}
         >
-          {uploading ? 'Upload en cours...' : 'Sélectionner des photos'}
+          {uploading || cameraLoading ? 'Upload en cours...' : 'Sélectionner des photos'}
         </Button>
         <p className="text-xs text-muted-foreground mt-4">
           Formats acceptés : JPG, PNG, WebP (max 5MB par image)
