@@ -393,24 +393,249 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
   addText('SWIFT-BIC: RAIFCH22 | BANQUE RAIFFEISEN DU GROS DE VAUD', margin, yPosition, 10);
   yPosition -= 30;
   
-  // Dispositions du mandat (résumé)
+  // Dispositions complètes du mandat selon le type
   checkNewPage();
-  addText('DISPOSITIONS DU MANDAT', margin, yPosition, 12, helveticaBold);
-  yPosition -= 20;
   
-  const dispositions = [
-    '- Commission: 1 mois de loyer brut a la signature du bail',
-    '- Commission minimale: CHF 500.- (hors TVA)',
-    '- Validite du mandat: 3 mois, renouvelable',
-    '- En cas de non-renouvellement, la caution est restituee sous 30 jours',
-    '- Resiliation: par lettre recommandee au moins 30 jours avant echeance',
-  ];
+  // Helper function for wrapped text
+  const addWrappedText = (text: string, x: number, maxWidth: number, fontSize: number): number => {
+    const safeText = sanitizeText(text);
+    const words = safeText.split(' ');
+    let currentLine = '';
+    let linesDrawn = 0;
+    
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const textWidth = helveticaFont.widthOfTextAtSize(testLine, fontSize);
+      
+      if (textWidth > maxWidth && currentLine) {
+        page.drawText(currentLine, { x, y: yPosition, size: fontSize, font: helveticaFont, color: rgb(0, 0, 0) });
+        yPosition -= lineHeight;
+        linesDrawn++;
+        currentLine = word;
+        checkNewPage();
+      } else {
+        currentLine = testLine;
+      }
+    }
+    
+    if (currentLine) {
+      page.drawText(currentLine, { x, y: yPosition, size: fontSize, font: helveticaFont, color: rgb(0, 0, 0) });
+      yPosition -= lineHeight;
+      linesDrawn++;
+    }
+    
+    return linesDrawn;
+  };
   
-  for (const disp of dispositions) {
-    addText(disp, margin, yPosition, 9);
+  const maxTextWidth = pageWidth - 2 * margin;
+  
+  if (isPurchase) {
+    // ACHAT - 5 articles officiels
+    addText('DISPOSITIONS DU MANDAT DE RECHERCHE - ACHAT', margin, yPosition, 12, helveticaBold);
+    yPosition -= 25;
+    
+    // Article 1
+    addText('1. MANDAT', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
     yPosition -= lineHeight;
+    addWrappedText(
+      "Le mandant charge le mandataire de lui presenter le bien immobilier correspondant a ses criteres de recherche, a savoir: tout bien immobilier a acheter.",
+      margin, maxTextWidth, 9
+    );
+    yPosition -= 5;
+    addWrappedText(
+      "Le present mandat est un mandat exclusif. En consequence, le mandant s'engage a ne pas conclure d'autre mandat de meme objet pendant la duree du present mandat.",
+      margin, maxTextWidth, 9
+    );
+    yPosition -= 10;
+    
+    // Article 2
+    checkNewPage();
+    addText('2. DUREE', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    yPosition -= lineHeight;
+    addWrappedText(
+      "Le present contrat est conclu pour une duree de 6 mois a compter de sa date de signature. En l'absence de resiliation, par lettre recommandee, au moins 30 jours avant son echeance, le present contrat est repute renouvele par reconduction tacite, a chaque fois pour 3 mois supplementaires.",
+      margin, maxTextWidth, 9
+    );
+    yPosition -= 10;
+    
+    // Article 3
+    checkNewPage();
+    addText('3. HONORAIRES', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    yPosition -= lineHeight;
+    addWrappedText(
+      "Le mandant s'engage a payer au mandataire, a la conclusion de l'acte de vente chez un notaire, le montant correspondant a 1% du prix de vente defini entre les parties.",
+      margin, maxTextWidth, 9
+    );
+    yPosition -= 5;
+    addWrappedText(
+      "Un acompte de CHF 2'500.- est du pour activer vos recherches, et sera deduit de la commission en cas de reussite ou rembourse totalement en cas d'echec.",
+      margin, maxTextWidth, 9
+    );
+    yPosition -= 5;
+    addWrappedText(
+      "En toute confidentialite le mandataire s'engage egalement a communiquer au mandant toutes les informations necessaires pour au bon deroulement de cette mission.",
+      margin, maxTextWidth, 9
+    );
+    yPosition -= 5;
+    addWrappedText(
+      "Si le mandant se porte acquereur, par ses propres moyens ou par tout autre moyen, d'un bien presente par le mandataire, la commission est integralement due au mandataire.",
+      margin, maxTextWidth, 9
+    );
+    yPosition -= 10;
+    
+    // Article 4
+    checkNewPage();
+    addText('4. MODIFICATION DU CONTRAT', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    yPosition -= lineHeight;
+    addWrappedText(
+      "Le present contrat constitue l'integralite de l'accord passe par le Mandant et le Mandataire. Il ne pourra etre modifie si ce n'est par un accord ecrit subsequent entre les parties.",
+      margin, maxTextWidth, 9
+    );
+    yPosition -= 10;
+    
+    // Article 5
+    checkNewPage();
+    addText('5. ELECTION DE FOR ET DE DROIT', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    yPosition -= lineHeight;
+    addWrappedText(
+      "En cas de litige relatif a l'interpretation ou a l'execution du present contrat, les parties acceptent la competence exclusive des tribunaux genevois, sous reserve d'un recours au Tribunal Federal. Le droit suisse est applicable, sous reserve des dispositions prevues dans le present contrat.",
+      margin, maxTextWidth, 9
+    );
+    yPosition -= 15;
+    
+  } else {
+    // LOCATION - 11 articles officiels
+    addText('DISPOSITIONS DU MANDAT DE RECHERCHE - LOCATION', margin, yPosition, 12, helveticaBold);
+    yPosition -= 25;
+    
+    // Article 1
+    addText('1.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addWrappedText(
+      "Les chercheurs de logement (chercheurs) chargent Immo-Rama de leur entremettre des offres de logement ou locaux commerciaux pour la location. A ce propos, Immo-Rama transmet aux chercheurs les informations necessaires pour qu'ils puissent prendre contact, ou alors c'est Immo-Rama qui contacte les offreurs. Si le chercheur a d'ailleurs rempli des criteres de recherche, Immo-Rama lui transmet de nouvelles offres qui correspondent aux criteres de recherche.",
+      margin + 20, maxTextWidth - 20, 9
+    );
+    yPosition -= 8;
+    
+    // Article 2
+    checkNewPage();
+    addText('2.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addWrappedText(
+      "Au cas ou un contrat de bail serait conclu avec un objet ou un offreur propose par Immo-Rama, une commission d'agence est due. Les chercheurs doivent egalement payer une commission lorsqu'un contrat a ete conclu avec l'offreur fourni concernant un autre objet que celui indique par Immo-Rama. La commission depend du prix du loyer brut.",
+      margin + 20, maxTextWidth - 20, 9
+    );
+    yPosition -= 8;
+    
+    // Article 2.1
+    checkNewPage();
+    addText('2.1', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addWrappedText(
+      "La commission est de 1 mois de loyer brut (loyer avec les charges) a la signature du contrat de bail. Une caution a hauteur de CHF 300.- doit etre versee pour l'activation de votre dossier. Elle sera comptabilisee en cas de reussite et deductible. Le mandat de recherche est valable 3 mois, passe ce delai, le mandat est renouvelable ou prend fin.",
+      margin + 25, maxTextWidth - 25, 9
+    );
+    yPosition -= 8;
+    
+    // Article 2.2
+    checkNewPage();
+    addText('2.2', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addWrappedText(
+      "La commission minimale est de CHF 500.-. La commission ne comprend pas la TVA.",
+      margin + 25, maxTextWidth - 25, 9
+    );
+    yPosition -= 8;
+    
+    // Article 2.3
+    checkNewPage();
+    addText('2.3', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addWrappedText(
+      "En cas de resiliation du mandat avant terme, l'acompte ne sera pas remboursee, ni entierement, ni partiellement.",
+      margin + 25, maxTextWidth - 25, 9
+    );
+    yPosition -= 8;
+    
+    // Article 3
+    checkNewPage();
+    addText('3.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addWrappedText(
+      "Les chercheurs s'engagent a declarer immediatement a Immo-Rama toute conclusion de contrat par oral ou par ecrit ainsi que des prolongations ou renouvellements de contrat et des modifications apportees a leur mandat de recherche.",
+      margin + 20, maxTextWidth - 20, 9
+    );
+    yPosition -= 8;
+    
+    // Article 4
+    checkNewPage();
+    addText('4.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addWrappedText(
+      "Lorsque les chercheurs connaissent les adresses proposees par Immo-Rama d'une autre source, ils doivent le faire savoir a Immo-Rama dans un delai de 24 heures.",
+      margin + 20, maxTextWidth - 20, 9
+    );
+    yPosition -= 8;
+    
+    // Article 5
+    checkNewPage();
+    addText('5.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addWrappedText(
+      "Immo-Rama se reserve le droit de demander des securites, des references ou des preuves de la part des chercheurs ou de refuser des chercheurs potentiels sans donner de raisons.",
+      margin + 20, maxTextWidth - 20, 9
+    );
+    yPosition -= 8;
+    
+    // Article 6
+    checkNewPage();
+    addText('6.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addWrappedText(
+      "Les informations donnees par Immo-Rama aux chercheurs ne peuvent etre remises a des tierces personnes.",
+      margin + 20, maxTextWidth - 20, 9
+    );
+    yPosition -= 8;
+    
+    // Article 7
+    checkNewPage();
+    addText('7.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addWrappedText(
+      "Lorsqu'Immo-Rama est informee de la conclusion d'un contrat de location, il annule le mandat de recherche.",
+      margin + 20, maxTextWidth - 20, 9
+    );
+    yPosition -= 8;
+    
+    // Article 8
+    checkNewPage();
+    addText('8.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addWrappedText(
+      "Si un client sous contrat confirme par ecrit ou verbalement que son dossier de candidature pour un logement peut etre transmis a la gerance en charge, Immo-Rama aura droit a une commission.",
+      margin + 20, maxTextWidth - 20, 9
+    );
+    yPosition -= 8;
+    
+    // Article 9
+    checkNewPage();
+    addText('9. Position de Immo-Rama', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    yPosition -= lineHeight;
+    addWrappedText(
+      "Immo-Rama ne peut assurer aucune garantie de succes quant a la conclusion d'un contrat. Les contrats sont passes directement entre les chercheurs et les offreurs.",
+      margin + 20, maxTextWidth - 20, 9
+    );
+    yPosition -= 8;
+    
+    // Article 10
+    checkNewPage();
+    addText('10.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addWrappedText(
+      "Les chercheurs autorisent Immo-Rama a transmettre les donnees indiquees ainsi que les resultats des demandes concernant la solvabilite et la reference a des offreurs potentiels.",
+      margin + 25, maxTextWidth - 25, 9
+    );
+    yPosition -= 8;
+    
+    // Article 11
+    checkNewPage();
+    addText('11.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addWrappedText(
+      "La juridiction competente est Berne (Suisse). Le Code des obligations suisse (CO) fait foi.",
+      margin + 25, maxTextWidth - 25, 9
+    );
+    yPosition -= 15;
   }
-  yPosition -= 20;
+  
+  yPosition -= 10;
   
   // Code promo
   if (data.code_promo) {
