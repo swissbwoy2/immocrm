@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { PublicHeader } from '@/components/public/PublicHeader';
 import { PublicFooter } from '@/components/public/PublicFooter';
@@ -16,6 +17,9 @@ export default function ConnexionAnnonceur() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
 
   const loginMutation = useMutation({
     mutationFn: async () => {
@@ -68,6 +72,28 @@ export default function ConnexionAnnonceur() {
     loginMutation.mutate();
   };
 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmail) {
+      toast.error('Veuillez entrer votre email');
+      return;
+    }
+    setResetLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/reset-password?from=annonceur`,
+      });
+      if (error) throw error;
+      toast.success(`Un email de réinitialisation a été envoyé à ${resetEmail}`);
+      setResetDialogOpen(false);
+      setResetEmail('');
+    } catch (error: any) {
+      toast.error(error.message || "Impossible d'envoyer l'email de réinitialisation");
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
       <PublicHeader />
@@ -102,9 +128,13 @@ export default function ConnexionAnnonceur() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="password">Mot de passe</Label>
-                    <Link to="/reset-password" className="text-sm text-primary hover:underline">
+                    <button
+                      type="button"
+                      onClick={() => setResetDialogOpen(true)}
+                      className="text-sm text-primary hover:underline"
+                    >
                       Mot de passe oublié ?
-                    </Link>
+                    </button>
                   </div>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -146,6 +176,44 @@ export default function ConnexionAnnonceur() {
                   Créer un compte
                 </Link>
               </div>
+
+              <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Réinitialiser le mot de passe</DialogTitle>
+                    <DialogDescription>
+                      Entrez votre email pour recevoir un lien de réinitialisation.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleResetPassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="reset-email"
+                          type="email"
+                          placeholder="votre@email.com"
+                          value={resetEmail}
+                          onChange={(e) => setResetEmail(e.target.value)}
+                          className="pl-10"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <Button type="submit" className="w-full" disabled={resetLoading}>
+                      {resetLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Envoi en cours...
+                        </>
+                      ) : (
+                        'Envoyer le lien de réinitialisation'
+                      )}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </Card>
 
             <p className="text-center text-sm text-muted-foreground mt-6">
