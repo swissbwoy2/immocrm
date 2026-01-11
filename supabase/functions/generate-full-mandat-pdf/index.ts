@@ -309,7 +309,7 @@ const handler = async (req: Request): Promise<Response> => {
     };
     
     // ===== HEADER =====
-    addText('IMMO-RAMA SA', margin, yPosition, 20, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addText('Immo-rama.ch', margin, yPosition, 20, helveticaBold, rgb(0.1, 0.2, 0.4));
     yPosition -= 25;
     addText('MANDAT DE RECHERCHE EXCLUSIF', margin, yPosition, 14, helveticaBold);
     yPosition -= 18;
@@ -903,7 +903,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Footer on each page
     const pages = pdfDoc.getPages();
     pages.forEach((p, index) => {
-      p.drawText(sanitizeText(`IMMO-RAMA SA - Mandat de recherche complet - Page ${index + 1}/${pages.length}`), {
+      p.drawText(sanitizeText(`Immo-rama.ch - Mandat de recherche complet - Page ${index + 1}/${pages.length}`), {
         x: margin,
         y: 30,
         size: 8,

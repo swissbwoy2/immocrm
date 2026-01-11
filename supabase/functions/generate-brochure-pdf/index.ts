@@ -127,7 +127,7 @@ const handler = async (req: Request): Promise<Response> => {
     let y = pageHeight - margin;
 
     // Header
-    page.drawText('IMMO-RAMA', {
+    page.drawText('Immo-rama.ch', {
       x: margin,
       y: y,
       size: 28,
