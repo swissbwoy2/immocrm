@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 import logoImmorama from '@/assets/logo-immo-rama-new.png';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,9 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function ResetPassword() {
+  const [searchParams] = useSearchParams();
+  const fromAnnonceur = searchParams.get('from') === 'annonceur';
+  const redirectPath = fromAnnonceur ? '/connexion-annonceur' : '/login';
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -28,11 +31,11 @@ export default function ResetPassword() {
           description: 'Le lien de réinitialisation est invalide ou a expiré.',
           variant: 'destructive',
         });
-        navigate('/login');
+        navigate(redirectPath);
       }
     };
     checkSession();
-  }, [navigate, toast]);
+  }, [navigate, toast, redirectPath]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +73,7 @@ export default function ResetPassword() {
 
       // Sign out and redirect to login
       await supabase.auth.signOut();
-      navigate('/login');
+      navigate(redirectPath);
     } catch (error: any) {
       toast({
         title: 'Erreur',
@@ -154,7 +157,7 @@ export default function ResetPassword() {
               variant="link" 
               className="w-full text-sm text-muted-foreground" 
               type="button"
-              onClick={() => navigate('/login')}
+              onClick={() => navigate(redirectPath)}
             >
               Retour à la connexion
             </Button>
