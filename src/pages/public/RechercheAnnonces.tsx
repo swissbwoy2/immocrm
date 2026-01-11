@@ -520,104 +520,126 @@ export default function RechercheAnnonces() {
         </div>
       </div>
 
-      {/* Results */}
-      <div className="container mx-auto px-4 py-6">
-        {/* Results header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-xl font-semibold">
-              {annonces.length} annonce{annonces.length !== 1 ? 's' : ''} trouvée{annonces.length !== 1 ? 's' : ''}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {transactionType === 'location' ? 'Biens à louer' : transactionType === 'vente' ? 'Biens à vendre' : 'Tous les biens'}
-              {searchLocation && ` à ${searchLocation}`}
-            </p>
-          </div>
-
-          {/* Sort */}
-          <Select 
-            value={sortBy} 
-            onValueChange={(v) => {
-              const params = new URLSearchParams(searchParams);
-              if (v === 'date') {
-                params.delete('tri');
-              } else {
-                params.set('tri', v);
-              }
-              setSearchParams(params);
-            }}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Trier par" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="date">Plus récentes</SelectItem>
-              <SelectItem value="prix_asc">Prix croissant</SelectItem>
-              <SelectItem value="prix_desc">Prix décroissant</SelectItem>
-              <SelectItem value="surface">Surface</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Results grid */}
-        {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-muted animate-pulse rounded-xl h-80" />
-            ))}
-          </div>
-        ) : annonces.length > 0 ? (
-          <div className={cn(
-            viewMode === 'list' 
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-              : "grid grid-cols-1 lg:grid-cols-2 gap-6"
-          )}>
-            {viewMode === 'map' && (
-              <div className="lg:col-span-1 h-[500px] lg:h-[calc(100vh-280px)] rounded-xl sticky top-40">
-                <PublicAnnoncesMap 
-                  annonces={annonces}
-                  onAnnonceClick={(id, slug) => navigate(`/annonces/${slug || id}`)}
-                  hoveredAnnonceId={hoveredAnnonceId}
-                  onMarkerHover={setHoveredAnnonceId}
-                  searchCenter={searchCoords}
-                  radiusKm={radiusKm}
-                />
+      {/* Split View Layout - Flatfox Style */}
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-160px)]">
+        {/* Left Panel - List */}
+        <div className={cn(
+          "flex-1 overflow-hidden flex flex-col",
+          viewMode === 'list' ? 'lg:w-full' : 'lg:w-[55%] xl:w-[50%]'
+        )}>
+          {/* Results header */}
+          <div className="px-4 lg:px-6 py-4 border-b bg-background/95 backdrop-blur-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-lg font-semibold">
+                  {annonces.length} annonce{annonces.length !== 1 ? 's' : ''} trouvée{annonces.length !== 1 ? 's' : ''}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {transactionType === 'location' ? 'Biens à louer' : transactionType === 'vente' ? 'Biens à vendre' : 'Tous les biens'}
+                  {searchLocation && ` • Rayon ${radiusKm}km autour de ${searchLocation}`}
+                </p>
               </div>
-            )}
-            <div className={cn(viewMode === 'map' && "lg:col-span-1")}>
+
+              {/* Sort */}
+              <Select 
+                value={sortBy} 
+                onValueChange={(v) => {
+                  const params = new URLSearchParams(searchParams);
+                  if (v === 'date') {
+                    params.delete('tri');
+                  } else {
+                    params.set('tri', v);
+                  }
+                  setSearchParams(params);
+                }}
+              >
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Trier par" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date">Plus récentes</SelectItem>
+                  <SelectItem value="prix_asc">Prix croissant</SelectItem>
+                  <SelectItem value="prix_desc">Prix décroissant</SelectItem>
+                  <SelectItem value="surface">Surface</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Scrollable list */}
+          <div className="flex-1 overflow-y-auto px-4 lg:px-6 py-4">
+            {isLoading ? (
+              <div className="grid grid-cols-1 gap-4">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="bg-muted animate-pulse rounded-xl h-48" />
+                ))}
+              </div>
+            ) : annonces.length > 0 ? (
               <div className={cn(
-                viewMode === 'map' 
-                  ? "space-y-4 max-h-[calc(100vh-280px)] overflow-y-auto pr-2"
-                  : "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                viewMode === 'list' 
+                  ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"
+                  : "space-y-4"
               )}>
-                {annonces.map((annonce) => (
+                {annonces.map((annonce, index) => (
                   <div
                     key={annonce.id}
                     onMouseEnter={() => viewMode === 'map' && setHoveredAnnonceId(annonce.id)}
                     onMouseLeave={() => viewMode === 'map' && setHoveredAnnonceId(null)}
                     className={cn(
-                      viewMode === 'map' && hoveredAnnonceId === annonce.id && 'ring-2 ring-primary rounded-xl'
+                      "transition-all duration-200",
+                      viewMode === 'map' && hoveredAnnonceId === annonce.id && 'ring-2 ring-primary rounded-xl shadow-lg scale-[1.01]',
+                      "animate-fade-in"
                     )}
+                    style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <PublicAnnonceCard 
                       annonce={annonce} 
-                      compact={viewMode === 'map'}
+                      featured={annonce.est_mise_en_avant}
+                      compact={false}
                     />
                   </div>
                 ))}
               </div>
-            </div>
+            ) : (
+              <div className="text-center py-16">
+                <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
+                <h2 className="text-xl font-semibold mb-2">Aucune annonce trouvée</h2>
+                <p className="text-muted-foreground mb-6">
+                  Essayez de modifier vos critères ou d'élargir le rayon de recherche
+                </p>
+                <Button variant="outline" onClick={clearFilters}>
+                  Effacer les filtres
+                </Button>
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="text-center py-16">
-            <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
-            <h2 className="text-xl font-semibold mb-2">Aucune annonce trouvée</h2>
-            <p className="text-muted-foreground mb-6">
-              Essayez de modifier vos critères de recherche
-            </p>
-            <Button variant="outline" onClick={clearFilters}>
-              Effacer les filtres
-            </Button>
+        </div>
+
+        {/* Right Panel - Map (Desktop Only in map mode) */}
+        {viewMode === 'map' && (
+          <div className="hidden lg:block lg:w-[45%] xl:w-[50%] h-full border-l bg-muted/30">
+            <PublicAnnoncesMap 
+              annonces={annonces}
+              onAnnonceClick={(id, slug) => navigate(`/annonces/${slug || id}`)}
+              hoveredAnnonceId={hoveredAnnonceId}
+              onMarkerHover={setHoveredAnnonceId}
+              searchCenter={searchCoords}
+              radiusKm={radiusKm}
+            />
+          </div>
+        )}
+
+        {/* Mobile Map (Only visible on mobile when map mode is selected) */}
+        {viewMode === 'map' && (
+          <div className="lg:hidden h-[50vh] border-t">
+            <PublicAnnoncesMap 
+              annonces={annonces}
+              onAnnonceClick={(id, slug) => navigate(`/annonces/${slug || id}`)}
+              hoveredAnnonceId={hoveredAnnonceId}
+              onMarkerHover={setHoveredAnnonceId}
+              searchCenter={searchCoords}
+              radiusKm={radiusKm}
+            />
           </div>
         )}
       </div>
