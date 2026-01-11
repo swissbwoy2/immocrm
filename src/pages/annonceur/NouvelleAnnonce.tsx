@@ -176,7 +176,7 @@ const steps = [
 ];
 
 export default function NouvelleAnnonce() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<AnnonceFormData>(initialFormData);
@@ -253,6 +253,11 @@ export default function NouvelleAnnonce() {
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async (status: 'brouillon' | 'en_attente') => {
+      // Critical validation - ensure session is valid
+      if (!session || !user) {
+        throw new Error('Session expirée. Veuillez vous reconnecter.');
+      }
+
       // Critical validation - ensure annonceur exists
       if (!annonceur?.id) {
         throw new Error('Profil annonceur non trouvé');
@@ -356,9 +361,14 @@ export default function NouvelleAnnonce() {
       }
       navigate('/espace-annonceur/mes-annonces');
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error('Error saving annonce:', error);
-      toast.error('Erreur lors de l\'enregistrement');
+      if (error.message.includes('Session expirée')) {
+        toast.error(error.message);
+        navigate('/connexion-annonceur');
+      } else {
+        toast.error(error.message || 'Erreur lors de l\'enregistrement');
+      }
     },
   });
 

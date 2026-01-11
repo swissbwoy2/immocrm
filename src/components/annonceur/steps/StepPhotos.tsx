@@ -38,6 +38,14 @@ export function StepPhotos({ formData, updateFormData }: StepPhotosProps) {
     const newPhotos: Array<{ url: string; est_principale: boolean }> = [];
 
     try {
+      // Check authentication BEFORE uploading
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        window.location.href = '/connexion-annonceur';
+        return;
+      }
+
       for (const file of Array.from(files)) {
         // Validate file
         if (!file.type.startsWith('image/')) {
@@ -50,11 +58,9 @@ export function StepPhotos({ formData, updateFormData }: StepPhotosProps) {
         }
 
         // Upload to Supabase Storage with user ID for RLS compliance
-        const { data: { user } } = await supabase.auth.getUser();
-        const userId = user?.id || 'anonymous';
         const fileExt = file.name.split('.').pop();
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `annonces/${userId}/${fileName}`;
+        const filePath = `annonces/${user.id}/${fileName}`;
 
         const { error: uploadError, data } = await supabase.storage
           .from('public-files')
@@ -120,17 +126,23 @@ export function StepPhotos({ formData, updateFormData }: StepPhotosProps) {
     }
 
     try {
+      // Check authentication BEFORE uploading
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        window.location.href = '/connexion-annonceur';
+        return;
+      }
+
       const file = fromCamera ? await takePhoto() : await pickFromGallery();
       if (!file) return;
 
       setUploading(true);
 
       // Upload to Supabase Storage with user ID for RLS compliance
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id || 'anonymous';
       const fileExt = file.name.split('.').pop() || 'jpeg';
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-      const filePath = `annonces/${userId}/${fileName}`;
+      const filePath = `annonces/${user.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('public-files')

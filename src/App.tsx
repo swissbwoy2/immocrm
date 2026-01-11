@@ -204,7 +204,7 @@ const App = () => (
               <Route path="/inscription-annonceur" element={<InscriptionAnnonceur />} />
               <Route path="/connexion-annonceur" element={<ConnexionAnnonceur />} />
               
-              {/* Annonceur Routes */}
+              {/* Annonceur Routes - Protected */}
               <Route path="/espace-annonceur" element={<AnnonceurDashboard />} />
               <Route path="/espace-annonceur/mes-annonces" element={<AnnonceurMesAnnonces />} />
               <Route path="/espace-annonceur/mes-annonces/:id" element={<AnnonceurNouvelleAnnonce />} />
