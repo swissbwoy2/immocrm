@@ -115,8 +115,8 @@ const AnnoncesPubliques = () => {
       setStats({
         total: allAnnonces.length,
         enAttente: allAnnonces.filter(a => a.statut === 'en_attente').length,
-        publiees: allAnnonces.filter(a => a.statut === 'publiee').length,
-        refusees: allAnnonces.filter(a => a.statut === 'refusee').length
+        publiees: allAnnonces.filter(a => a.statut === 'publie').length,
+        refusees: allAnnonces.filter(a => a.statut === 'refuse').length
       });
     } catch (error: any) {
       toast.error('Erreur lors du chargement des annonces');
@@ -132,7 +132,7 @@ const AnnoncesPubliques = () => {
       const { error } = await supabase
         .from('annonces_publiques')
         .update({
-          statut: 'publiee',
+          statut: 'publie',
           date_publication: new Date().toISOString(),
           date_moderation: new Date().toISOString()
         })
@@ -161,7 +161,7 @@ const AnnoncesPubliques = () => {
       const { error } = await supabase
         .from('annonces_publiques')
         .update({
-          statut: 'refusee',
+          statut: 'refuse',
           motif_refus: motifRefus,
           date_moderation: new Date().toISOString()
         })
@@ -184,15 +184,15 @@ const AnnoncesPubliques = () => {
 
   const getStatutBadge = (statut: string) => {
     switch (statut) {
-      case 'publiee':
+      case 'publie':
         return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Publiée</Badge>;
       case 'en_attente':
         return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30">En attente</Badge>;
-      case 'refusee':
+      case 'refuse':
         return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Refusée</Badge>;
       case 'brouillon':
         return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">Brouillon</Badge>;
-      case 'expiree':
+      case 'expire':
         return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">Expirée</Badge>;
       default:
         return <Badge variant="outline">{statut}</Badge>;
@@ -266,10 +266,10 @@ const AnnoncesPubliques = () => {
           <SelectContent>
             <SelectItem value="all">Tous les statuts</SelectItem>
             <SelectItem value="en_attente">En attente</SelectItem>
-            <SelectItem value="publiee">Publiées</SelectItem>
-            <SelectItem value="refusee">Refusées</SelectItem>
+            <SelectItem value="publie">Publiées</SelectItem>
+            <SelectItem value="refuse">Refusées</SelectItem>
             <SelectItem value="brouillon">Brouillons</SelectItem>
-            <SelectItem value="expiree">Expirées</SelectItem>
+            <SelectItem value="expire">Expirées</SelectItem>
           </SelectContent>
         </Select>
       </div>
