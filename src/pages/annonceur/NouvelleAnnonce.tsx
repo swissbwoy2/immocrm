@@ -7,7 +7,7 @@ import { AnnonceurLayout } from '@/components/annonceur/AnnonceurLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { ChevronLeft, ChevronRight, Save, Send } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Save, Send, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -182,7 +182,7 @@ export default function NouvelleAnnonce() {
   const [formData, setFormData] = useState<AnnonceFormData>(initialFormData);
 
   // Fetch annonceur
-  const { data: annonceur } = useQuery({
+  const { data: annonceur, isLoading: annonceurLoading, error: annonceurError } = useQuery({
     queryKey: ['annonceur', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -205,6 +205,36 @@ export default function NouvelleAnnonce() {
     enabled: !!user?.id,
   });
 
+  // Show loader while fetching annonceur
+  if (annonceurLoading) {
+    return (
+      <AnnonceurLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Chargement...</span>
+        </div>
+      </AnnonceurLayout>
+    );
+  }
+
+  // Show error if annonceur not found
+  if (annonceurError || !annonceur) {
+    return (
+      <AnnonceurLayout>
+        <div className="text-center py-20">
+          <AlertCircle className="h-12 w-12 mx-auto text-destructive mb-4" />
+          <h2 className="text-xl font-bold mb-2">Profil annonceur introuvable</h2>
+          <p className="text-muted-foreground mb-4">
+            Impossible de créer une annonce sans profil annonceur valide.
+          </p>
+          <Button onClick={() => navigate('/espace-annonceur')}>
+            Retour au tableau de bord
+          </Button>
+        </div>
+      </AnnonceurLayout>
+    );
+  }
+
   const updateFormData = (updates: Partial<AnnonceFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
   };
@@ -223,13 +253,18 @@ export default function NouvelleAnnonce() {
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async (status: 'brouillon' | 'en_attente') => {
+      // Critical validation - ensure annonceur exists
+      if (!annonceur?.id) {
+        throw new Error('Profil annonceur non trouvé');
+      }
+
       const slug = generateSlug(formData.titre);
       const reference = `REF-${Date.now().toString(36).toUpperCase()}`;
 
       const { data: annonce, error: annonceError } = await supabase
         .from('annonces_publiques')
         .insert({
-          annonceur_id: annonceur?.id,
+          annonceur_id: annonceur.id,
           statut: status,
           slug,
           reference,
