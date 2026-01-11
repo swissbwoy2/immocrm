@@ -1,10 +1,11 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useGoogleMapsLoader } from '@/hooks/useGoogleMapsLoader';
 import { 
   Search, MapPin, Filter, List, Map as MapIcon, 
-  ChevronDown, X, SlidersHorizontal, Building2
+  ChevronDown, X, SlidersHorizontal, Building2, Circle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,11 +23,16 @@ import { cn } from '@/lib/utils';
 export default function RechercheAnnonces() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { isLoaded: mapsLoaded } = useGoogleMapsLoader();
 
   // View state
   const [viewMode, setViewMode] = useState<'list' | 'map'>('map');
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [hoveredAnnonceId, setHoveredAnnonceId] = useState<string | null>(null);
+  
+  // Geocoded search coordinates for radius search
+  const [searchCoords, setSearchCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [isGeocoding, setIsGeocoding] = useState(false);
 
   // Filter state from URL
   const transactionType = searchParams.get('type') || '';
@@ -37,6 +43,7 @@ export default function RechercheAnnonces() {
   const piecesMin = searchParams.get('pieces_min') || '';
   const piecesMax = searchParams.get('pieces_max') || '';
   const surfaceMin = searchParams.get('surface_min') || '';
+  const radiusKm = parseInt(searchParams.get('rayon') || '20');
   const sortBy = searchParams.get('tri') || 'date';
 
   // Local filter state for UI
@@ -49,7 +56,32 @@ export default function RechercheAnnonces() {
     pieces_min: piecesMin,
     pieces_max: piecesMax,
     surface_min: surfaceMin,
+    rayon: radiusKm.toString(),
   });
+
+  // Geocode the search location when it changes
+  useEffect(() => {
+    if (!searchLocation || !mapsLoaded || !window.google?.maps) {
+      setSearchCoords(null);
+      return;
+    }
+
+    setIsGeocoding(true);
+    const geocoder = new google.maps.Geocoder();
+    
+    geocoder.geocode(
+      { address: `${searchLocation}, Suisse`, region: 'CH' },
+      (results, status) => {
+        setIsGeocoding(false);
+        if (status === 'OK' && results?.[0]) {
+          const location = results[0].geometry.location;
+          setSearchCoords({ lat: location.lat(), lng: location.lng() });
+        } else {
+          setSearchCoords(null);
+        }
+      }
+    );
+  }, [searchLocation, mapsLoaded]);
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -66,10 +98,49 @@ export default function RechercheAnnonces() {
     }
   });
 
-  // Fetch listings with filters
+  // Fetch listings with filters - use radius search when coordinates are available
   const { data: annonces = [], isLoading } = useQuery({
-    queryKey: ['search-annonces', transactionType, searchLocation, category, prixMin, prixMax, piecesMin, piecesMax, surfaceMin, sortBy],
+    queryKey: ['search-annonces', transactionType, searchLocation, searchCoords, radiusKm, category, prixMin, prixMax, piecesMin, piecesMax, surfaceMin, sortBy],
     queryFn: async () => {
+      // If we have geocoded coordinates, use radius search
+      if (searchCoords) {
+        const { data: radiusData, error: radiusError } = await supabase.rpc('search_annonces_radius', {
+          lat: searchCoords.lat,
+          lng: searchCoords.lng,
+          radius_km: radiusKm,
+          transaction_type: transactionType || null,
+          category_id: category ? categories.find(c => c.slug === category)?.id || null : null,
+          min_price: prixMin ? parseInt(prixMin) : null,
+          max_price: prixMax ? parseInt(prixMax) : null,
+          min_pieces: piecesMin ? parseFloat(piecesMin) : null,
+          max_pieces: piecesMax ? parseFloat(piecesMax) : null
+        });
+
+        if (radiusError) throw radiusError;
+
+        // Fetch related data for the results
+        if (radiusData && radiusData.length > 0) {
+          const ids = radiusData.map((a: any) => a.id);
+          const { data: fullData, error: fullError } = await supabase
+            .from('annonces_publiques')
+            .select(`
+              *,
+              annonceurs(nom, nom_entreprise, type_annonceur, logo_url, note_moyenne),
+              categories_annonces(nom, slug, icone),
+              photos_annonces_publiques(url, est_principale)
+            `)
+            .in('id', ids);
+
+          if (fullError) throw fullError;
+          
+          // Sort by distance (preserve order from RPC)
+          const sortedData = ids.map((id: string) => fullData?.find((a: any) => a.id === id)).filter(Boolean);
+          return sortedData || [];
+        }
+        return [];
+      }
+
+      // Fallback to standard query when no coordinates
       let query = supabase
         .from('annonces_publiques')
         .select(`
@@ -90,7 +161,6 @@ export default function RechercheAnnonces() {
       if (category) {
         const cat = categories.find(c => c.slug === category);
         if (cat) {
-          // Filtrer par categorie_id OU par sous_type (pour les anciennes annonces sans categorie_id)
           query = query.or(`categorie_id.eq.${cat.id},sous_type.eq.${category}`);
         }
       }
@@ -131,7 +201,7 @@ export default function RechercheAnnonces() {
       if (error) throw error;
       return data || [];
     },
-    enabled: categories.length > 0 || !category
+    enabled: (categories.length > 0 || !category) && !isGeocoding
   });
 
   const applyFilters = () => {
@@ -144,6 +214,7 @@ export default function RechercheAnnonces() {
     if (localFilters.pieces_min) params.set('pieces_min', localFilters.pieces_min);
     if (localFilters.pieces_max) params.set('pieces_max', localFilters.pieces_max);
     if (localFilters.surface_min) params.set('surface_min', localFilters.surface_min);
+    if (localFilters.rayon && localFilters.rayon !== '20') params.set('rayon', localFilters.rayon);
     if (sortBy !== 'date') params.set('tri', sortBy);
     
     setSearchParams(params);
@@ -160,7 +231,9 @@ export default function RechercheAnnonces() {
       pieces_min: '',
       pieces_max: '',
       surface_min: '',
+      rayon: '20',
     });
+    setSearchCoords(null);
     setSearchParams(new URLSearchParams());
   };
 
@@ -310,6 +383,32 @@ export default function RechercheAnnonces() {
                         />
                         <span className="text-sm text-muted-foreground shrink-0">m²</span>
                       </div>
+                    </div>
+
+                    {/* Search Radius */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <Circle className="h-4 w-4" />
+                        Rayon de recherche
+                      </Label>
+                      <Select 
+                        value={localFilters.rayon} 
+                        onValueChange={(v) => setLocalFilters(prev => ({ ...prev, rayon: v }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="5">5 km</SelectItem>
+                          <SelectItem value="10">10 km</SelectItem>
+                          <SelectItem value="20">20 km (recommandé)</SelectItem>
+                          <SelectItem value="50">50 km</SelectItem>
+                          <SelectItem value="100">100 km</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Les annonces seront affichées dans ce rayon autour du lieu recherché
+                      </p>
                     </div>
 
                     {/* Actions */}
@@ -480,6 +579,8 @@ export default function RechercheAnnonces() {
                   onAnnonceClick={(id, slug) => navigate(`/annonces/${slug || id}`)}
                   hoveredAnnonceId={hoveredAnnonceId}
                   onMarkerHover={setHoveredAnnonceId}
+                  searchCenter={searchCoords}
+                  radiusKm={radiusKm}
                 />
               </div>
             )}
