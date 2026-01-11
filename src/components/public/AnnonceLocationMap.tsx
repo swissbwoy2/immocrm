@@ -28,7 +28,7 @@ export function AnnonceLocationMap({
   const { isLoaded, isLoading, isFallback } = useGoogleMapsLoader();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
+  const markerRef = useRef<google.maps.marker.AdvancedMarkerElement | google.maps.Marker | null>(null);
   const [geocodedPosition, setGeocodedPosition] = useState<{ lat: number; lng: number } | null>(null);
 
   const fullAddress = `${address}, ${code_postal} ${ville}, Suisse`;
@@ -72,23 +72,51 @@ export function AnnonceLocationMap({
 
     // Create marker only if showing exact address
     if (afficher_adresse_exacte) {
-      const markerContent = document.createElement('div');
-      markerContent.innerHTML = `
-        <div class="bg-primary text-primary-foreground px-3 py-2 rounded-lg shadow-lg font-semibold text-sm flex items-center gap-2">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-            <circle cx="12" cy="10" r="3"></circle>
-          </svg>
-          ${prix ? `CHF ${new Intl.NumberFormat('fr-CH', { maximumFractionDigits: 0 }).format(prix)}${type_transaction === 'location' ? '/mois' : ''}` : 'Emplacement'}
-        </div>
-      `;
+      const priceLabel = prix 
+        ? `CHF ${new Intl.NumberFormat('fr-CH', { maximumFractionDigits: 0 }).format(prix)}${type_transaction === 'location' ? '/mois' : ''}` 
+        : 'Emplacement';
 
-      markerRef.current = new google.maps.marker.AdvancedMarkerElement({
-        map,
-        position: geocodedPosition,
-        content: markerContent,
-        title: address,
-      });
+      // Check if AdvancedMarkerElement is available, otherwise use classic Marker
+      if (google.maps.marker?.AdvancedMarkerElement) {
+        const markerContent = document.createElement('div');
+        markerContent.innerHTML = `
+          <div class="bg-primary text-primary-foreground px-3 py-2 rounded-lg shadow-lg font-semibold text-sm flex items-center gap-2">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            ${priceLabel}
+          </div>
+        `;
+
+        markerRef.current = new google.maps.marker.AdvancedMarkerElement({
+          map,
+          position: geocodedPosition,
+          content: markerContent,
+          title: address,
+        });
+      } else {
+        // Fallback to classic Marker
+        markerRef.current = new google.maps.Marker({
+          map,
+          position: geocodedPosition,
+          title: address,
+          label: {
+            text: priceLabel,
+            color: '#ffffff',
+            fontWeight: 'bold',
+            fontSize: '12px',
+          },
+          icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: '#3b82f6',
+            fillOpacity: 1,
+            strokeColor: '#1d4ed8',
+            strokeWeight: 2,
+          },
+        });
+      }
     } else {
       // Show approximate area with a circle
       new google.maps.Circle({
@@ -105,7 +133,11 @@ export function AnnonceLocationMap({
 
     return () => {
       if (markerRef.current) {
-        markerRef.current.map = null;
+        if ('setMap' in markerRef.current) {
+          (markerRef.current as google.maps.Marker).setMap(null);
+        } else {
+          (markerRef.current as google.maps.marker.AdvancedMarkerElement).map = null;
+        }
         markerRef.current = null;
       }
       mapInstanceRef.current = null;

@@ -40,7 +40,7 @@ export function PublicAnnoncesMap({
   const { isLoaded, isLoading, isFallback } = useGoogleMapsLoader();
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<Map<string, google.maps.marker.AdvancedMarkerElement>>(new Map());
+  const markersRef = useRef<Map<string, google.maps.marker.AdvancedMarkerElement | google.maps.Marker>>(new Map());
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
@@ -103,7 +103,11 @@ export function PublicAnnoncesMap({
       if (!currentAnnonceIds.has(id)) {
         const marker = markersRef.current.get(id);
         if (marker) {
-          marker.map = null;
+          if ('setMap' in marker) {
+            (marker as google.maps.Marker).setMap(null);
+          } else {
+            (marker as google.maps.marker.AdvancedMarkerElement).map = null;
+          }
           markersRef.current.delete(id);
         }
       }
@@ -115,24 +119,18 @@ export function PublicAnnoncesMap({
       const existingMarker = markersRef.current.get(annonce.id);
 
       if (existingMarker) {
-        // Update existing marker content
-        existingMarker.content = createMarkerElement(annonce, isHovered);
-        if (isHovered) {
-          existingMarker.zIndex = 1000;
+        // Update existing marker - handle both types
+        if ('content' in existingMarker) {
+          (existingMarker as google.maps.marker.AdvancedMarkerElement).content = createMarkerElement(annonce, isHovered);
+          (existingMarker as google.maps.marker.AdvancedMarkerElement).zIndex = isHovered ? 1000 : 1;
         } else {
-          existingMarker.zIndex = 1;
+          (existingMarker as google.maps.Marker).setZIndex(isHovered ? 1000 : 1);
         }
       } else {
-        // Create new marker
-        const marker = new google.maps.marker.AdvancedMarkerElement({
-          map,
-          position: { lat: annonce.latitude!, lng: annonce.longitude! },
-          content: createMarkerElement(annonce, isHovered),
-          title: annonce.titre,
-        });
-
-        // Click handler
-        marker.addListener('click', () => {
+        // Create new marker - check if AdvancedMarkerElement is available
+        const position = { lat: annonce.latitude!, lng: annonce.longitude! };
+        
+        const showInfoWindow = () => {
           const photo = annonce.photos_annonces_publiques?.find(p => p.est_principale)?.url 
             || annonce.photos_annonces_publiques?.[0]?.url;
 
@@ -154,9 +152,8 @@ export function PublicAnnoncesMap({
 
           if (infoWindowRef.current) {
             infoWindowRef.current.setContent(infoContent);
-            infoWindowRef.current.open(map, marker);
+            infoWindowRef.current.open(map, markersRef.current.get(annonce.id));
 
-            // Add click listener to info window content after it's rendered
             google.maps.event.addListenerOnce(infoWindowRef.current, 'domready', () => {
               const infoEl = document.getElementById(`info-${annonce.id}`);
               if (infoEl) {
@@ -166,17 +163,54 @@ export function PublicAnnoncesMap({
               }
             });
           }
-        });
+        };
 
-        // Hover handlers
-        marker.content?.addEventListener?.('mouseenter', () => {
-          onMarkerHover?.(annonce.id);
-        });
-        marker.content?.addEventListener?.('mouseleave', () => {
-          onMarkerHover?.(null);
-        });
+        if (google.maps.marker?.AdvancedMarkerElement) {
+          const marker = new google.maps.marker.AdvancedMarkerElement({
+            map,
+            position,
+            content: createMarkerElement(annonce, isHovered),
+            title: annonce.titre,
+          });
 
-        markersRef.current.set(annonce.id, marker);
+          marker.addListener('click', showInfoWindow);
+
+          marker.content?.addEventListener?.('mouseenter', () => {
+            onMarkerHover?.(annonce.id);
+          });
+          marker.content?.addEventListener?.('mouseleave', () => {
+            onMarkerHover?.(null);
+          });
+
+          markersRef.current.set(annonce.id, marker);
+        } else {
+          // Fallback to classic Marker
+          const marker = new google.maps.Marker({
+            map,
+            position,
+            title: annonce.titre,
+            label: {
+              text: `CHF ${formatPrice(annonce.prix, annonce.type_transaction)}`,
+              color: '#ffffff',
+              fontWeight: 'bold',
+              fontSize: '11px',
+            },
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 10,
+              fillColor: isHovered ? '#3b82f6' : '#1f2937',
+              fillOpacity: 1,
+              strokeColor: '#ffffff',
+              strokeWeight: 2,
+            },
+          });
+
+          marker.addListener('click', showInfoWindow);
+          marker.addListener('mouseover', () => onMarkerHover?.(annonce.id));
+          marker.addListener('mouseout', () => onMarkerHover?.(null));
+
+          markersRef.current.set(annonce.id, marker);
+        }
       }
     });
 
