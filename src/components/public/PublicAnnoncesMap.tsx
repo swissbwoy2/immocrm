@@ -48,30 +48,37 @@ export function PublicAnnoncesMap({
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const circleRef = useRef<google.maps.Circle | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const [mapError, setMapError] = useState(false);
 
   // Filter annonces with valid coordinates
   const annoncesWithCoords = annonces.filter(
     a => a.latitude !== null && a.longitude !== null
   );
 
-  // Initialize map
+  // Initialize map with error handling
   useEffect(() => {
     if (!isLoaded || !mapRef.current || mapInstanceRef.current) return;
 
-    const map = new google.maps.Map(mapRef.current, {
-      center: { lat: 46.8, lng: 7.0 }, // Suisse romande center
-      zoom: 9,
-      mapId: 'public-annonces-map',
-      disableDefaultUI: false,
-      zoomControl: true,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: true,
-    });
+    try {
+      const map = new google.maps.Map(mapRef.current, {
+        center: { lat: 46.8, lng: 7.0 }, // Suisse romande center
+        zoom: 9,
+        mapId: 'public-annonces-map',
+        disableDefaultUI: false,
+        zoomControl: true,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: true,
+      });
 
-    mapInstanceRef.current = map;
-    infoWindowRef.current = new google.maps.InfoWindow();
-    setMapReady(true);
+      mapInstanceRef.current = map;
+      infoWindowRef.current = new google.maps.InfoWindow();
+      setMapReady(true);
+      setMapError(false);
+    } catch (error) {
+      console.error('Error initializing Google Map:', error);
+      setMapError(true);
+    }
 
     return () => {
       if (circleRef.current) {
@@ -286,8 +293,8 @@ export function PublicAnnoncesMap({
     );
   }
 
-  // Fallback state
-  if (isFallback || !isLoaded) {
+  // Fallback or error state
+  if (isFallback || !isLoaded || mapError) {
     return (
       <div className="h-full w-full bg-muted rounded-xl flex items-center justify-center">
         <div className="text-center text-muted-foreground p-4">
