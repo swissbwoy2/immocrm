@@ -80,15 +80,34 @@ export default function Login() {
     setResendLoading(true);
 
     try {
-      const { error } = await supabase.functions.invoke('invite-client', {
-        body: { email: resendEmail }
+      // Vérifier si le profil existe et a un compte activé
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, telephone, actif')
+        .eq('email', resendEmail)
+        .maybeSingle();
+
+      if (!profile) {
+        // Pas de profil existant → doit passer par le formulaire mandat
+        toast({
+          title: 'Compte non trouvé',
+          description: 'Aucun compte n\'existe avec cet email. Veuillez créer votre dossier via "Activer vos recherches".',
+          variant: 'destructive',
+        });
+        setResendLoading(false);
+        return;
+      }
+
+      // Profil existe → envoyer un email de réinitialisation de mot de passe
+      const { error } = await supabase.auth.resetPasswordForEmail(resendEmail, {
+        redirectTo: `${window.location.origin}/first-login`,
       });
 
       if (error) throw error;
 
       toast({
-        title: 'Invitation envoyée',
-        description: `Un email d'invitation a été envoyé à ${resendEmail}. Vérifiez votre boîte de réception.`,
+        title: 'Email envoyé',
+        description: `Un lien de connexion a été envoyé à ${resendEmail}. Vérifiez votre boîte de réception.`,
       });
 
       setDialogOpen(false);
@@ -96,7 +115,7 @@ export default function Login() {
     } catch (error: any) {
       toast({
         title: 'Erreur',
-        description: error.message || "Impossible d'envoyer l'invitation",
+        description: error.message || "Impossible d'envoyer l'email",
         variant: 'destructive',
       });
     } finally {

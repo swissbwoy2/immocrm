@@ -845,6 +845,13 @@ const Clients = () => {
                         {profile.prenom} {profile.nom}
                       </h3>
                       <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                        {/* Badge Profil Incomplet - priorité haute */}
+                        {(!client.type_permis || !profile.telephone || !client.budget_max) && (
+                          <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30 text-[10px] animate-pulse-soft">
+                            <UserX className="w-2.5 h-2.5 mr-0.5" />
+                            Profil incomplet
+                          </Badge>
+                        )}
                        {!profile.actif && (
                           <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30 text-[10px] animate-pulse-soft">
                             <Mail className="w-2.5 h-2.5 mr-0.5" />
