@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { AdminStatsSection } from '@/components/stats/AdminStatsSection';
 import { RecommendationStats } from '@/components/stats/RecommendationStats';
 import { PremiumKPICard } from '@/components/premium';
+import { AgencyProjectionSection } from '@/components/admin/AgencyProjectionSection';
 
 const adminMenu = [
   { name: 'Tableau de bord', icon: Users, path: '/admin' },
@@ -32,6 +33,7 @@ export default function AdminDashboard() {
   const [clients, setClients] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [offres, setOffres] = useState<any[]>([]);
+  const [clientAgents, setClientAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -86,6 +88,14 @@ export default function AdminDashboard() {
       })) || [];
       
       setClients(transformedClients);
+
+      // Load client_agents pour les splits de commission
+      const { data: clientAgentsData, error: clientAgentsError } = await supabase
+        .from('client_agents')
+        .select('client_id, agent_id, commission_split, is_primary');
+
+      if (clientAgentsError) throw clientAgentsError;
+      setClientAgents(clientAgentsData || []);
 
       // Load transactions
       const { data: transactionsData, error: transactionsError } = await supabase
@@ -188,6 +198,37 @@ export default function AdminDashboard() {
 
   const clientsSansAgent = clients.filter(c => !c.agentId).length;
 
+  // Calcul de la projection financière de l'agence
+  const clientsActifsPourProjection = clients.filter(c => {
+    const dateAjout = c.dateInscription;
+    return c.statut !== 'reloge' && calculateDaysElapsed(dateAjout) <= 90;
+  });
+
+  const agencyProjections = clientsActifsPourProjection.map(client => {
+    // Chercher le split dans client_agents, sinon utiliser celui du client, sinon 45% par défaut
+    const clientAgent = clientAgents.find(ca => ca.client_id === client.id && ca.is_primary);
+    const splitAgent = clientAgent?.commission_split || client.commission_split || 45;
+    const budgetMax = client.budgetMax || 0;
+    const partAgence = Math.round(budgetMax * ((100 - splitAgent) / 100));
+    
+    // Trouver le nom de l'agent
+    const agent = agents.find(a => a.id === client.agentId);
+    const agentName = agent ? `${agent.prenom} ${agent.nom}` : 'Non assigné';
+    
+    // Nom du client depuis le profil (on utilise les données disponibles)
+    const clientName = `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client';
+    
+    return {
+      clientId: client.id,
+      clientName,
+      agentName,
+      budgetMax,
+      commissionSplit: splitAgent,
+      partAgence,
+    };
+  });
+
+  const totalCommissionAgence = agencyProjections.reduce((sum, p) => sum + p.partAgence, 0);
 
   return (
     <PullToRefresh onRefresh={loadData} className="flex-1 overflow-y-auto">
@@ -319,6 +360,14 @@ export default function AdminDashboard() {
               <RecommendationStats />
             </CardContent>
           </Card>
+        </div>
+
+        {/* Projection financière agence */}
+        <div className="mb-8 animate-fade-in" style={{ animationDelay: '475ms' }}>
+          <AgencyProjectionSection 
+            projections={agencyProjections}
+            totalCommissionAgence={totalCommissionAgence}
+          />
         </div>
 
         {/* Répartition des agents avec effets modernes */}
