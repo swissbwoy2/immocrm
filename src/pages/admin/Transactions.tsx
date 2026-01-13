@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, Calendar, Trash2, CheckCircle2, Clock } from "lucide-react";
+import { DollarSign, TrendingUp, Calendar as CalendarIcon, Trash2, CheckCircle2, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +20,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 
 const Transactions = () => {
   const navigate = useNavigate();
@@ -25,6 +37,8 @@ const Transactions = () => {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState<string | null>(null);
+  const [selectedPaymentDate, setSelectedPaymentDate] = useState<Date>(new Date());
 
   useEffect(() => {
     if (!user || userRole !== 'admin') {
@@ -91,19 +105,20 @@ const Transactions = () => {
     }
   };
 
-  const handleMarkCommissionPaid = async (transactionId: string) => {
+  const handleMarkCommissionPaid = async (transactionId: string, paymentDate: Date) => {
     try {
       const { error } = await supabase
         .from('transactions')
         .update({ 
           commission_payee: true, 
-          date_paiement_commission: new Date().toISOString() 
+          date_paiement_commission: paymentDate.toISOString() 
         })
         .eq('id', transactionId);
       
       if (error) throw error;
       
       toast.success('Commission marquée comme payée');
+      setPaymentDialogOpen(null);
       loadTransactions();
     } catch (error) {
       console.error('Erreur mise à jour:', error);
@@ -282,7 +297,7 @@ const Transactions = () => {
 
                       <div className="flex items-center justify-between pt-4 border-t">
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
+                          <CalendarIcon className="h-4 w-4" />
                           Conclue le {new Date(transaction.date_transaction).toLocaleDateString('fr-CH')}
                         </div>
                         
@@ -293,33 +308,76 @@ const Transactions = () => {
                             <span>Payée le {new Date(transaction.date_paiement_commission).toLocaleDateString('fr-CH')}</span>
                           </div>
                         ) : (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="text-orange-600 border-orange-300 hover:bg-orange-50">
-                                <Clock className="h-4 w-4 mr-2" />
-                                Marquer payée
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Confirmer le paiement</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Marquer la commission de <strong>CHF {transaction.commission_totale?.toLocaleString()}</strong> comme payée ? 
-                                  La date de paiement sera enregistrée à aujourd'hui.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleMarkCommissionPaid(transaction.id)}
-                                  className="bg-emerald-600 text-white hover:bg-emerald-700"
-                                >
-                                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                                  Confirmer le paiement
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                              onClick={() => {
+                                setSelectedPaymentDate(new Date());
+                                setPaymentDialogOpen(transaction.id);
+                              }}
+                            >
+                              <Clock className="h-4 w-4 mr-2" />
+                              Marquer payée
+                            </Button>
+                            
+                            <Dialog 
+                              open={paymentDialogOpen === transaction.id} 
+                              onOpenChange={(open) => {
+                                if (!open) setPaymentDialogOpen(null);
+                              }}
+                            >
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Confirmer le paiement</DialogTitle>
+                                  <DialogDescription>
+                                    Marquer la commission de <strong>CHF {transaction.commission_totale?.toLocaleString()}</strong> comme payée.
+                                  </DialogDescription>
+                                </DialogHeader>
+                                
+                                <div className="space-y-4 py-4">
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-medium">Date du paiement</label>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button variant="outline" className="w-full justify-start text-left font-normal">
+                                          <CalendarIcon className="mr-2 h-4 w-4" />
+                                          {format(selectedPaymentDate, "dd MMMM yyyy", { locale: fr })}
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                          mode="single"
+                                          selected={selectedPaymentDate}
+                                          onSelect={(date) => date && setSelectedPaymentDate(date)}
+                                          disabled={(date) => date > new Date()}
+                                          locale={fr}
+                                          initialFocus
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
+                                    <p className="text-xs text-muted-foreground">
+                                      Sélectionnez la date exacte à laquelle le paiement a été effectué
+                                    </p>
+                                  </div>
+                                </div>
+                                
+                                <DialogFooter>
+                                  <Button variant="outline" onClick={() => setPaymentDialogOpen(null)}>
+                                    Annuler
+                                  </Button>
+                                  <Button 
+                                    onClick={() => handleMarkCommissionPaid(transaction.id, selectedPaymentDate)}
+                                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                  >
+                                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                                    Confirmer
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                          </>
                         )}
                       </div>
                     </div>
