@@ -299,6 +299,7 @@ const MesClients = () => {
           typeBien: client.type_bien,
           typeRecherche: client.type_recherche || 'Louer',
           apportPersonnel: client.apport_personnel,
+          statut: client.statut, // Ajout du statut pour filtrer les relogés
           garant: garant ? { 
             nom: garant.nom, 
             prenom: garant.prenom, 
@@ -380,9 +381,11 @@ const MesClients = () => {
     return matchSearch && matchRegion && matchPieces && matchTypeRecherche;
   });
 
-  // Compteurs par type
-  const clientsLocation = allClients.filter(c => c.typeRecherche !== 'Acheter').length;
-  const clientsAchat = allClients.filter(c => c.typeRecherche === 'Acheter').length;
+  // Compteurs par type (exclure les clients relogés des statistiques actives)
+  // Note: Les clients relogés restent visibles dans la liste mais ne comptent pas dans les KPIs
+  const clientsActifsOnly = allClients.filter(c => c.statut !== 'reloge');
+  const clientsLocation = clientsActifsOnly.filter(c => c.typeRecherche !== 'Acheter').length;
+  const clientsAchat = clientsActifsOnly.filter(c => c.typeRecherche === 'Acheter').length;
 
   const sortedClients = [...filteredClients].sort((a, b) => {
     const dateA = new Date(a.dateInscription || 0).getTime();
@@ -424,7 +427,7 @@ const MesClients = () => {
         <div className="p-4 md:p-8">
           <PremiumPageHeader
             title="Mes Clients"
-            subtitle={`${allClients.length} clients assignés`}
+            subtitle={`${clientsActifsOnly.length} clients actifs`}
             icon={Users}
             badge="Portfolio"
           />
