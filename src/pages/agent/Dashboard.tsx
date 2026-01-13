@@ -204,23 +204,27 @@ export default function AgentDashboard() {
     );
   }
 
-  // Les clients sont déjà filtrés par RLS
-  const clientsActifs = clients.filter(c => {
+  // Exclure les clients relogés (mandats terminés) de tous les calculs
+  const clientsNonReloge = clients.filter(c => c.statut !== 'reloge');
+  
+  // Les clients actifs (non relogés + dans les 90 jours)
+  const clientsActifs = clientsNonReloge.filter(c => {
     const dateAjout = c.date_ajout || c.created_at;
     return calculateDaysElapsed(dateAjout) <= 90;
   }).length;
   
-  // Clients par type
-  const clientsLocation = clients.filter(c => c.type_recherche !== 'Acheter').length;
-  const clientsAchat = clients.filter(c => c.type_recherche === 'Acheter').length;
+  // Clients par type (exclure les relogés)
+  const clientsLocation = clientsNonReloge.filter(c => c.type_recherche !== 'Acheter').length;
+  const clientsAchat = clientsNonReloge.filter(c => c.type_recherche === 'Acheter').length;
   
-  const deadlinesCritiques = clients.filter(c => {
+  const deadlinesCritiques = clientsNonReloge.filter(c => {
     const dateAjout = c.date_ajout || c.created_at;
     return calculateDaysElapsed(dateAjout) >= 90;
   }).length;
 
-  // Filtrer uniquement les clients des 3 derniers mois pour la projection financière
-  const clientsActifs3Mois = clients.filter(c => {
+  // Filtrer uniquement les clients actifs des 3 derniers mois pour la projection financière
+  // IMPORTANT: Exclure les clients relogés pour ne pas fausser les projections
+  const clientsActifs3Mois = clientsNonReloge.filter(c => {
     const dateAjout = c.date_ajout || c.created_at;
     return calculateDaysElapsed(dateAjout) <= 90;
   });

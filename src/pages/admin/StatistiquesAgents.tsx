@@ -59,11 +59,12 @@ export default function StatistiquesAgents() {
 
       const agentStats: AgentStats[] = await Promise.all(
         agentsData.map(async (agent: any) => {
-          // Count clients via client_agents
+          // Count clients via client_agents - EXCLURE les clients relogés (mandats terminés)
           const { count: clientsCount } = await supabase
             .from('client_agents')
-            .select('*', { count: 'exact', head: true })
-            .eq('agent_id', agent.id);
+            .select('*, clients!inner(statut)', { count: 'exact', head: true })
+            .eq('agent_id', agent.id)
+            .neq('clients.statut', 'reloge');
 
           // Get transactions
           let transactionsQuery = supabase
