@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, Calendar as CalendarIcon, Trash2, CheckCircle2, Clock } from "lucide-react";
+import { DollarSign, TrendingUp, Calendar as CalendarIcon, Trash2, CheckCircle2, Clock, Building2, Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { calculateDaysElapsed } from "@/utils/calculations";
+import { AgencyProjectionSection } from "@/components/admin/AgencyProjectionSection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +38,9 @@ const Transactions = () => {
   const { user, userRole } = useAuth();
   const [transactions, setTransactions] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Map<string, any>>(new Map());
+  const [clients, setClients] = useState<any[]>([]);
+  const [agents, setAgents] = useState<any[]>([]);
+  const [clientAgents, setClientAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState<string | null>(null);
   const [selectedPaymentDate, setSelectedPaymentDate] = useState<Date>(new Date());
@@ -47,6 +52,7 @@ const Transactions = () => {
     }
     
     loadTransactions();
+    loadClientsAndAgents();
   }, [user?.id, userRole]);
 
   const loadTransactions = async () => {
@@ -85,6 +91,49 @@ const Transactions = () => {
       console.error('Erreur chargement transactions:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadClientsAndAgents = async () => {
+    try {
+      // Charger les clients
+      const { data: clientsData } = await supabase
+        .from('clients')
+        .select('id, user_id, nom, prenom, budget_max, statut, agent_id, commission_split, date_ajout, created_at');
+      
+      setClients(clientsData || []);
+
+      // Charger les agents avec leurs profils
+      const { data: agentsData } = await supabase
+        .from('agents')
+        .select('id, user_id');
+      
+      if (agentsData && agentsData.length > 0) {
+        const agentUserIds = agentsData.map(a => a.user_id);
+        const { data: agentProfiles } = await supabase
+          .from('profiles')
+          .select('id, prenom, nom')
+          .in('id', agentUserIds);
+        
+        const agentsWithProfiles = agentsData.map(agent => {
+          const profile = agentProfiles?.find(p => p.id === agent.user_id);
+          return {
+            ...agent,
+            prenom: profile?.prenom || '',
+            nom: profile?.nom || '',
+          };
+        });
+        setAgents(agentsWithProfiles);
+      }
+
+      // Charger les client_agents
+      const { data: clientAgentsData } = await supabase
+        .from('client_agents')
+        .select('client_id, agent_id, commission_split, is_primary');
+      
+      setClientAgents(clientAgentsData || []);
+    } catch (error) {
+      console.error('Erreur chargement clients/agents:', error);
     }
   };
 
@@ -144,6 +193,37 @@ const Transactions = () => {
   const totalAgentPart = transactionsConclues.reduce((sum, t) => sum + (t.part_agent || 0), 0);
   const totalAgencyPart = transactionsConclues.reduce((sum, t) => sum + (t.part_agence || 0), 0);
 
+  // Calcul de la projection financière de l'agence (clients actifs non relogés)
+  const clientsActifsPourProjection = clients.filter(c => {
+    const dateAjout = c.date_ajout || c.created_at;
+    return c.statut !== 'reloge' && calculateDaysElapsed(dateAjout) <= 90;
+  });
+
+  const agencyProjections = clientsActifsPourProjection.map(client => {
+    const clientAgent = clientAgents.find(ca => ca.client_id === client.id && ca.is_primary);
+    const splitAgent = clientAgent?.commission_split || client.commission_split || 45;
+    const budgetMax = client.budget_max || 0;
+    const partAgence = Math.round(budgetMax * ((100 - splitAgent) / 100));
+    
+    const agent = agents.find(a => a.id === client.agent_id);
+    const agentName = agent ? `${agent.prenom} ${agent.nom}` : 'Non assigné';
+    const clientName = `${client.prenom || ''} ${client.nom || ''}`.trim() || 'Client';
+    
+    return {
+      clientId: client.id,
+      clientName,
+      agentName,
+      budgetMax,
+      commissionSplit: splitAgent,
+      partAgence,
+    };
+  });
+
+  const totalCommissionAgence = agencyProjections.reduce((sum, p) => sum + p.partAgence, 0);
+  const tauxConversion = totalCommissionAgence > 0 
+    ? Math.round((totalAgencyPart / totalCommissionAgence) * 100) 
+    : 0;
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -160,14 +240,14 @@ const Transactions = () => {
             <p className="text-muted-foreground">Suivi des commissions et transactions - {transactionsConclues.length} affaire{transactionsConclues.length > 1 ? 's' : ''} conclue{transactionsConclues.length > 1 ? 's' : ''}</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mb-6 md:mb-8">
             <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '0ms' }}>
               <div className="flex items-center gap-3 md:gap-4">
                 <div className="p-2 md:p-3 bg-primary/10 rounded-lg group-hover:scale-110 transition-transform">
                   <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">Commissions totales</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Commissions réalisées</p>
                   <p className="text-lg md:text-2xl font-bold group-hover:scale-105 transition-transform origin-left">CHF {totalCommissions.toLocaleString()}</p>
                 </div>
               </div>
@@ -198,15 +278,36 @@ const Transactions = () => {
             </Card>
             <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '150ms' }}>
               <div className="flex items-center gap-3 md:gap-4">
-                <div className="p-2 md:p-3 bg-success/10 rounded-lg group-hover:scale-110 transition-transform">
-                  <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-success" />
+                <div className="p-2 md:p-3 bg-blue-500/10 rounded-lg group-hover:scale-110 transition-transform">
+                  <Building2 className="h-5 w-5 md:h-6 md:w-6 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">Part agents</p>
-                  <p className="text-lg md:text-2xl font-bold group-hover:scale-105 transition-transform origin-left">CHF {totalAgentPart.toLocaleString()}</p>
+                  <p className="text-xs md:text-sm text-muted-foreground">Potentiel agence</p>
+                  <p className="text-lg md:text-2xl font-bold text-blue-600 group-hover:scale-105 transition-transform origin-left">CHF {totalCommissionAgence.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">{clientsActifsPourProjection.length} mandat{clientsActifsPourProjection.length > 1 ? 's' : ''} actif{clientsActifsPourProjection.length > 1 ? 's' : ''}</p>
                 </div>
               </div>
             </Card>
+            <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '200ms' }}>
+              <div className="flex items-center gap-3 md:gap-4">
+                <div className="p-2 md:p-3 bg-violet-500/10 rounded-lg group-hover:scale-110 transition-transform">
+                  <Target className="h-5 w-5 md:h-6 md:w-6 text-violet-500" />
+                </div>
+                <div>
+                  <p className="text-xs md:text-sm text-muted-foreground">Taux conversion</p>
+                  <p className="text-lg md:text-2xl font-bold text-violet-600 group-hover:scale-105 transition-transform origin-left">{tauxConversion}%</p>
+                  <p className="text-xs text-muted-foreground">réalisé / potentiel</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Section Projection détaillée */}
+          <div className="mb-8">
+            <AgencyProjectionSection 
+              projections={agencyProjections}
+              totalCommissionAgence={totalCommissionAgence}
+            />
           </div>
 
           <div className="grid gap-4">
