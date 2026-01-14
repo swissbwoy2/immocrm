@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Cookie } from 'lucide-react';
-import { initTikTokPixel } from '@/lib/tiktok-pixel';
+import { grantTikTokConsent } from '@/lib/tiktok-pixel';
 
 const COOKIE_CONSENT_KEY = 'cookie-consent';
 
@@ -20,8 +20,8 @@ export function CookieConsentBanner() {
   const handleAccept = () => {
     localStorage.setItem(COOKIE_CONSENT_KEY, 'accepted');
     setShowBanner(false);
-    // Initialize TikTok Pixel immediately after consent
-    initTikTokPixel();
+    // Grant TikTok Pixel consent (pixel is already loaded with holdConsent)
+    grantTikTokConsent();
   };
 
   const handleDecline = () => {

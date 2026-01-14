@@ -7,9 +7,16 @@ declare global {
 
 export const TIKTOK_PIXEL_ID = 'D5JTFAJC77U6R4DE28Q0';
 
-export function initTikTokPixel() {
+export function initTikTokPixel(withConsent: boolean = false) {
   if (typeof window === 'undefined') return;
-  if (window.ttq) return; // Already initialized
+  
+  // If already initialized, just handle consent
+  if (window.ttq && window.ttq._i && window.ttq._i[TIKTOK_PIXEL_ID]) {
+    if (withConsent) {
+      window.ttq.grantConsent();
+    }
+    return;
+  }
   
   const w = window as any;
   const d = document;
@@ -51,7 +58,19 @@ export function initTikTokPixel() {
   };
   
   ttq.load(TIKTOK_PIXEL_ID);
+  
+  // Block data collection by default for GDPR compliance
+  if (!withConsent) {
+    ttq.holdConsent();
+  }
+  
   ttq.page();
+}
+
+export function grantTikTokConsent() {
+  if (typeof window !== 'undefined' && window.ttq) {
+    window.ttq.grantConsent();
+  }
 }
 
 export function trackTikTokPageView() {
