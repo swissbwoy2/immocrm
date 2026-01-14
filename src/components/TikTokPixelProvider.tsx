@@ -11,12 +11,11 @@ interface TikTokPixelProviderProps {
 export function TikTokPixelProvider({ children }: TikTokPixelProviderProps) {
   const location = useLocation();
 
-  // Initialize pixel on mount if consent already given
+  // Always initialize pixel on mount (TikTok will detect it)
+  // Use holdConsent if no consent given yet
   useEffect(() => {
     const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
-    if (consent === 'accepted') {
-      initTikTokPixel();
-    }
+    initTikTokPixel(consent === 'accepted');
   }, []);
 
   // Track page views on route change
