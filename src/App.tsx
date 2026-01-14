@@ -8,6 +8,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { PageLoader } from "./components/PageLoader";
 import { ScrollToTop } from "./components/ScrollToTop";
+import { TikTokPixelProvider } from "./components/TikTokPixelProvider";
 import { useAppVersionCheck } from "./hooks/useAppVersionCheck";
 
 // Eager load critical pages
@@ -186,10 +187,11 @@ const App = () => (
           v7_relativeSplatPath: true,
         }}
       >
-        <AuthProvider>
-          <AppContent />
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
+        <TikTokPixelProvider>
+          <AuthProvider>
+            <AppContent />
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
               <Route path="/" element={<Landing />} />
               
               <Route path="/login" element={<Login />} />
@@ -336,9 +338,10 @@ const App = () => (
               <Route path="/download/:token" element={<DownloadFiles />} />
 
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </AuthProvider>
+              </Routes>
+            </Suspense>
+          </AuthProvider>
+        </TikTokPixelProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
