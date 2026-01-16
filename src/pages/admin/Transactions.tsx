@@ -97,30 +97,58 @@ const Transactions = () => {
   const loadClientsAndAgents = async () => {
     try {
       // Charger les clients
-      const { data: clientsData } = await supabase
+      const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
-        .select('id, user_id, budget_max, statut, agent_id, commission_split, date_ajout, created_at');
-      
-      // Charger les profils des clients pour avoir leurs noms
-      if (clientsData && clientsData.length > 0) {
-        const clientUserIds = clientsData.map(c => c.user_id).filter(Boolean);
-        const { data: clientProfiles } = await supabase
-          .from('profiles')
-          .select('id, prenom, nom')
-          .in('id', clientUserIds);
-        
-        const clientsWithProfiles = clientsData.map(client => {
-          const profile = clientProfiles?.find(p => p.id === client.user_id);
-          return {
-            ...client,
-            prenom: profile?.prenom || '',
-            nom: profile?.nom || '',
-          };
-        });
-        setClients(clientsWithProfiles);
-      } else {
-        setClients([]);
+        .select('id, user_id, demande_mandat_id, budget_max, statut, agent_id, commission_split, date_ajout, created_at');
+
+      if (clientsError) {
+        console.error('Erreur chargement clients:', clientsError);
       }
+
+      // Charger les profils des clients pour avoir leurs noms
+      const clientUserIds = (clientsData || []).map(c => c.user_id).filter(Boolean);
+      const { data: clientProfiles, error: clientProfilesError } = clientUserIds.length > 0
+        ? await supabase
+            .from('profiles')
+            .select('id, prenom, nom')
+            .in('id', clientUserIds)
+        : { data: [], error: null };
+
+      if (clientProfilesError) {
+        console.warn('Impossible de charger les profils clients (RLS / permissions):', clientProfilesError);
+      }
+
+      // Fallback: récupérer les noms depuis la demande de mandat liée
+      const demandeIds = (clientsData || [])
+        .map(c => c.demande_mandat_id)
+        .filter(Boolean) as string[];
+
+      const { data: demandesData, error: demandesError } = demandeIds.length > 0
+        ? await supabase
+            .from('demandes_mandat')
+            .select('id, prenom, nom')
+            .in('id', demandeIds)
+        : { data: [], error: null };
+
+      if (demandesError) {
+        console.warn('Impossible de charger les demandes de mandat (fallback noms):', demandesError);
+      }
+
+      const profilesMap = new Map((clientProfiles || []).map(p => [p.id, p]));
+      const demandesMap = new Map((demandesData || []).map(d => [d.id, d]));
+
+      const clientsWithNames = (clientsData || []).map(client => {
+        const profile = profilesMap.get(client.user_id);
+        const demande = client.demande_mandat_id ? demandesMap.get(client.demande_mandat_id) : undefined;
+
+        return {
+          ...client,
+          prenom: profile?.prenom || demande?.prenom || '',
+          nom: profile?.nom || demande?.nom || '',
+        };
+      });
+
+      setClients(clientsWithNames);
 
       // Charger les agents avec leurs profils
       const { data: agentsData } = await supabase
