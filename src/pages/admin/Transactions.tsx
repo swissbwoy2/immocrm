@@ -99,9 +99,28 @@ const Transactions = () => {
       // Charger les clients
       const { data: clientsData } = await supabase
         .from('clients')
-        .select('id, user_id, nom, prenom, budget_max, statut, agent_id, commission_split, date_ajout, created_at');
+        .select('id, user_id, budget_max, statut, agent_id, commission_split, date_ajout, created_at');
       
-      setClients(clientsData || []);
+      // Charger les profils des clients pour avoir leurs noms
+      if (clientsData && clientsData.length > 0) {
+        const clientUserIds = clientsData.map(c => c.user_id).filter(Boolean);
+        const { data: clientProfiles } = await supabase
+          .from('profiles')
+          .select('id, prenom, nom')
+          .in('id', clientUserIds);
+        
+        const clientsWithProfiles = clientsData.map(client => {
+          const profile = clientProfiles?.find(p => p.id === client.user_id);
+          return {
+            ...client,
+            prenom: profile?.prenom || '',
+            nom: profile?.nom || '',
+          };
+        });
+        setClients(clientsWithProfiles);
+      } else {
+        setClients([]);
+      }
 
       // Charger les agents avec leurs profils
       const { data: agentsData } = await supabase

@@ -78,14 +78,29 @@ export default function AdminDashboard() {
 
       if (clientsError) throw clientsError;
       
-      const transformedClients = clientsData?.map(client => ({
-        ...client,
-        // Utiliser date_ajout pour le calcul du mandat (se remet à jour lors des renouvellements)
-        dateInscription: client.date_ajout || client.created_at,
-        agentId: client.agent_id,
-        budgetMax: client.budget_max || 0,
-        notificationJ60Envoyee: false,
-      })) || [];
+      // Charger les profils des clients pour avoir leurs noms
+      const clientUserIds = clientsData?.map(c => c.user_id).filter(Boolean) || [];
+      const { data: clientProfilesData } = await supabase
+        .from('profiles')
+        .select('id, nom, prenom')
+        .in('id', clientUserIds);
+      
+      const clientProfilesMap = new Map(clientProfilesData?.map(p => [p.id, p]) || []);
+      
+      const transformedClients = clientsData?.map(client => {
+        const profile = clientProfilesMap.get(client.user_id);
+        return {
+          ...client,
+          // Nom et prénom depuis le profil
+          prenom: profile?.prenom || '',
+          nom: profile?.nom || '',
+          // Utiliser date_ajout pour le calcul du mandat (se remet à jour lors des renouvellements)
+          dateInscription: client.date_ajout || client.created_at,
+          agentId: client.agent_id,
+          budgetMax: client.budget_max || 0,
+          notificationJ60Envoyee: false,
+        };
+      }) || [];
       
       setClients(transformedClients);
 
