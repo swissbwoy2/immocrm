@@ -77,23 +77,46 @@ export default function AdminDashboard() {
         .select('*');
 
       if (clientsError) throw clientsError;
-      
+
       // Charger les profils des clients pour avoir leurs noms
       const clientUserIds = clientsData?.map(c => c.user_id).filter(Boolean) || [];
-      const { data: clientProfilesData } = await supabase
+      const { data: clientProfilesData, error: clientProfilesError } = await supabase
         .from('profiles')
         .select('id, nom, prenom')
         .in('id', clientUserIds);
-      
+
+      if (clientProfilesError) {
+        console.warn('Impossible de charger les profils clients (RLS / permissions):', clientProfilesError);
+      }
+
+      // Fallback: récupérer les noms depuis la demande de mandat liée (si le profil est incomplet / inaccessible)
+      const clientDemandeIds = clientsData
+        ?.map(c => c.demande_mandat_id)
+        .filter(Boolean) as string[] | undefined;
+
+      const { data: demandesData, error: demandesError } = clientDemandeIds && clientDemandeIds.length > 0
+        ? await supabase
+            .from('demandes_mandat')
+            .select('id, prenom, nom')
+            .in('id', clientDemandeIds)
+        : { data: [], error: null };
+
+      if (demandesError) {
+        console.warn('Impossible de charger les demandes de mandat (fallback noms):', demandesError);
+      }
+
       const clientProfilesMap = new Map(clientProfilesData?.map(p => [p.id, p]) || []);
-      
+      const demandesMap = new Map((demandesData || []).map(d => [d.id, d]));
+
       const transformedClients = clientsData?.map(client => {
         const profile = clientProfilesMap.get(client.user_id);
+        const demande = client.demande_mandat_id ? demandesMap.get(client.demande_mandat_id) : undefined;
+
         return {
           ...client,
-          // Nom et prénom depuis le profil
-          prenom: profile?.prenom || '',
-          nom: profile?.nom || '',
+          // Nom et prénom depuis le profil, sinon fallback depuis la demande mandat
+          prenom: profile?.prenom || demande?.prenom || '',
+          nom: profile?.nom || demande?.nom || '',
           // Utiliser date_ajout pour le calcul du mandat (se remet à jour lors des renouvellements)
           dateInscription: client.date_ajout || client.created_at,
           agentId: client.agent_id,
@@ -101,7 +124,7 @@ export default function AdminDashboard() {
           notificationJ60Envoyee: false,
         };
       }) || [];
-      
+
       setClients(transformedClients);
 
       // Load client_agents pour les splits de commission
