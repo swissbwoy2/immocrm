@@ -33,17 +33,16 @@ export function VendeurCTASection() {
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     try {
-      // Store in database - using demandes_mandat table for seller leads
-      const { error } = await supabase.from('demandes_mandat').insert({
-        adresse: data.localisation,
-        budget_max: parseInt(data.prix_souhaite.replace(/\D/g, '')) || 0,
-        nom: data.nom.split(' ')[0] || data.nom,
-        prenom: data.nom.split(' ').slice(1).join(' ') || '',
+      // Store in leads table for seller prospects
+      const { error } = await supabase.from('leads').insert({
         email: data.email,
+        prenom: data.nom.split(' ')[0] || data.nom,
+        nom: data.nom.split(' ').slice(1).join(' ') || '',
         telephone: data.telephone,
-        souhaits_particuliers: `Type: ${data.type_bien} | Surface: ${data.surface}m² | Demande vendeur via landing page`,
+        localite: data.localisation,
+        budget: data.prix_souhaite,
         source: 'landing_vendeur',
-        statut: 'nouveau',
+        notes: `Type: ${data.type_bien} | Surface: ${data.surface}m² | Prix souhaité: ${data.prix_souhaite} CHF`,
       });
 
       if (error) throw error;
