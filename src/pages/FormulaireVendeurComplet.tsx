@@ -6,7 +6,8 @@ import { z } from 'zod';
 import { 
   ArrowLeft, Send, Home, MapPinned, Ruler, Banknote, User, 
   Mail, Phone, Loader2, CheckCircle, Building2, Calendar,
-  Bed, Bath, Car, Trees, Sun, Mountain
+  Bed, Bath, Car, Trees, Sun, Mountain, Landmark, Map, Zap,
+  DollarSign, Percent, Store, Factory
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,11 +15,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { VendeurFloatingNav } from '@/components/landing/vendeur/VendeurFloatingNav';
 import { VendeurFooter } from '@/components/landing/vendeur/VendeurFooter';
 import { GoogleAddressAutocomplete, AddressComponents } from '@/components/GoogleAddressAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const formSchema = z.object({
   // Infos bien (pré-remplies)
@@ -29,12 +32,33 @@ const formSchema = z.object({
   surface: z.string().min(1, 'Indiquez la surface'),
   prix_souhaite: z.string().min(1, 'Indiquez le prix souhaité'),
   
-  // Détails supplémentaires
+  // Détails appartement/villa standard
   nombre_pieces: z.string().optional(),
   nombre_chambres: z.string().optional(),
   nombre_sdb: z.string().optional(),
   etage: z.string().optional(),
   annee_construction: z.string().optional(),
+  
+  // Villa: question multi-logements
+  est_multi_logements: z.enum(['non', 'oui_2', 'oui_3plus']).optional(),
+  surface_terrain: z.string().optional(),
+  
+  // Immeuble / Multi-logements
+  nb_logements: z.string().optional(),
+  revenus_locatifs: z.string().optional(),
+  charges_annuelles: z.string().optional(),
+  taux_occupation: z.string().optional(),
+  etat_general: z.string().optional(),
+  
+  // Terrain
+  zone_affectation: z.string().optional(),
+  terrain_viabilise: z.boolean().optional(),
+  constructibilite: z.string().optional(),
+  acces_route: z.boolean().optional(),
+  
+  // Commercial
+  usage_actuel: z.string().optional(),
+  loyer_actuel: z.string().optional(),
   
   // Équipements
   balcon: z.boolean().optional(),
@@ -45,6 +69,7 @@ const formSchema = z.object({
   cave: z.boolean().optional(),
   ascenseur: z.boolean().optional(),
   vue_degagee: z.boolean().optional(),
+  piscine: z.boolean().optional(),
   
   // Motivations
   delai_vente: z.string().optional(),
@@ -99,12 +124,26 @@ export default function FormulaireVendeurComplet() {
       cave: false,
       ascenseur: false,
       vue_degagee: false,
+      piscine: false,
+      terrain_viabilise: false,
+      acces_route: false,
+      est_multi_logements: 'non',
     },
   });
+
+  const typeBien = watch('type_bien');
+  const estMultiLogements = watch('est_multi_logements');
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // Reset type-specific fields when type changes
+  useEffect(() => {
+    if (typeBien !== 'villa') {
+      setValue('est_multi_logements', 'non');
+    }
+  }, [typeBien, setValue]);
 
   const handleAddressChange = (components: AddressComponents | null) => {
     if (components) {
@@ -127,22 +166,61 @@ export default function FormulaireVendeurComplet() {
       if (data.cave) equipements.push('Cave');
       if (data.ascenseur) equipements.push('Ascenseur');
       if (data.vue_degagee) equipements.push('Vue dégagée');
+      if (data.piscine) equipements.push('Piscine');
 
-      // Build detailed notes
-      const notes = [
+      // Build detailed notes based on property type
+      const notes: string[] = [
         `Type: ${data.type_bien}`,
         `Surface: ${data.surface}m²`,
         `Prix souhaité: ${data.prix_souhaite} CHF`,
-        data.nombre_pieces ? `Pièces: ${data.nombre_pieces}` : null,
-        data.nombre_chambres ? `Chambres: ${data.nombre_chambres}` : null,
-        data.nombre_sdb ? `Salles de bain: ${data.nombre_sdb}` : null,
-        data.etage ? `Étage: ${data.etage}` : null,
-        data.annee_construction ? `Année: ${data.annee_construction}` : null,
-        equipements.length > 0 ? `Équipements: ${equipements.join(', ')}` : null,
-        data.delai_vente ? `Délai souhaité: ${data.delai_vente}` : null,
-        data.motif_vente ? `Motif: ${data.motif_vente}` : null,
-        data.description ? `Description: ${data.description}` : null,
-      ].filter(Boolean).join(' | ');
+      ];
+
+      // Standard details (appartement, villa simple)
+      if (['appartement', 'villa'].includes(data.type_bien) && data.est_multi_logements !== 'oui_3plus') {
+        if (data.nombre_pieces) notes.push(`Pièces: ${data.nombre_pieces}`);
+        if (data.nombre_chambres) notes.push(`Chambres: ${data.nombre_chambres}`);
+        if (data.nombre_sdb) notes.push(`Salles de bain: ${data.nombre_sdb}`);
+        if (data.etage) notes.push(`Étage: ${data.etage}`);
+        if (data.annee_construction) notes.push(`Année: ${data.annee_construction}`);
+      }
+
+      // Villa specific
+      if (data.type_bien === 'villa') {
+        if (data.surface_terrain) notes.push(`Terrain: ${data.surface_terrain}m²`);
+        if (data.est_multi_logements === 'oui_2') notes.push('Type: 2 logements');
+        if (data.est_multi_logements === 'oui_3plus') notes.push('Type: 3+ logements');
+      }
+
+      // Immeuble / Multi-logements
+      if (data.type_bien === 'immeuble' || data.est_multi_logements === 'oui_3plus') {
+        if (data.nb_logements) notes.push(`Logements: ${data.nb_logements}`);
+        if (data.revenus_locatifs) notes.push(`Revenus locatifs: ${data.revenus_locatifs} CHF/an`);
+        if (data.charges_annuelles) notes.push(`Charges: ${data.charges_annuelles} CHF/an`);
+        if (data.taux_occupation) notes.push(`Occupation: ${data.taux_occupation}%`);
+        if (data.etat_general) notes.push(`État: ${data.etat_general}`);
+        if (data.annee_construction) notes.push(`Année: ${data.annee_construction}`);
+      }
+
+      // Terrain
+      if (data.type_bien === 'terrain') {
+        if (data.zone_affectation) notes.push(`Zone: ${data.zone_affectation}`);
+        if (data.terrain_viabilise) notes.push('Viabilisé: Oui');
+        if (data.constructibilite) notes.push(`Constructibilité: ${data.constructibilite}`);
+        if (data.acces_route) notes.push('Accès route: Oui');
+      }
+
+      // Commercial
+      if (data.type_bien === 'commercial') {
+        if (data.usage_actuel) notes.push(`Usage: ${data.usage_actuel}`);
+        if (data.loyer_actuel) notes.push(`Loyer actuel: ${data.loyer_actuel} CHF/mois`);
+        if (data.annee_construction) notes.push(`Année: ${data.annee_construction}`);
+      }
+
+      // Equipment & general
+      if (equipements.length > 0) notes.push(`Équipements: ${equipements.join(', ')}`);
+      if (data.delai_vente) notes.push(`Délai souhaité: ${data.delai_vente}`);
+      if (data.motif_vente) notes.push(`Motif: ${data.motif_vente}`);
+      if (data.description) notes.push(`Description: ${data.description}`);
 
       const { error } = await supabase.from('leads').insert({
         email: data.email,
@@ -152,7 +230,7 @@ export default function FormulaireVendeurComplet() {
         localite: data.ville || data.adresse,
         budget: data.prix_souhaite,
         source: 'formulaire_vendeur_complet',
-        notes: notes,
+        notes: notes.join(' | '),
       });
 
       if (error) throw error;
@@ -168,16 +246,59 @@ export default function FormulaireVendeurComplet() {
     }
   };
 
-  const equipmentItems = [
-    { key: 'balcon', label: 'Balcon', icon: Sun },
-    { key: 'terrasse', label: 'Terrasse', icon: Sun },
-    { key: 'jardin', label: 'Jardin', icon: Trees },
-    { key: 'garage', label: 'Garage', icon: Car },
-    { key: 'parking', label: 'Parking', icon: Car },
-    { key: 'cave', label: 'Cave', icon: Building2 },
-    { key: 'ascenseur', label: 'Ascenseur', icon: Building2 },
-    { key: 'vue_degagee', label: 'Vue dégagée', icon: Mountain },
-  ];
+  // Equipment items based on property type
+  const getEquipmentItems = () => {
+    const common = [
+      { key: 'parking', label: 'Parking', icon: Car },
+      { key: 'cave', label: 'Cave', icon: Building2 },
+    ];
+
+    if (typeBien === 'terrain') {
+      return []; // No equipment for land
+    }
+
+    if (typeBien === 'commercial') {
+      return [
+        { key: 'parking', label: 'Places de parking', icon: Car },
+        { key: 'ascenseur', label: 'Ascenseur', icon: Building2 },
+      ];
+    }
+
+    if (typeBien === 'immeuble') {
+      return [
+        { key: 'parking', label: 'Parking commun', icon: Car },
+        { key: 'cave', label: 'Caves', icon: Building2 },
+        { key: 'ascenseur', label: 'Ascenseur', icon: Building2 },
+        { key: 'jardin', label: 'Espaces verts', icon: Trees },
+      ];
+    }
+
+    if (typeBien === 'villa') {
+      return [
+        { key: 'terrasse', label: 'Terrasse', icon: Sun },
+        { key: 'jardin', label: 'Jardin', icon: Trees },
+        { key: 'garage', label: 'Garage', icon: Car },
+        { key: 'parking', label: 'Parking', icon: Car },
+        { key: 'piscine', label: 'Piscine', icon: Sun },
+        { key: 'cave', label: 'Cave', icon: Building2 },
+        { key: 'vue_degagee', label: 'Vue dégagée', icon: Mountain },
+      ];
+    }
+
+    // Appartement
+    return [
+      { key: 'balcon', label: 'Balcon', icon: Sun },
+      { key: 'terrasse', label: 'Terrasse', icon: Sun },
+      { key: 'garage', label: 'Garage', icon: Car },
+      { key: 'parking', label: 'Parking', icon: Car },
+      { key: 'cave', label: 'Cave', icon: Building2 },
+      { key: 'ascenseur', label: 'Ascenseur', icon: Building2 },
+      { key: 'vue_degagee', label: 'Vue dégagée', icon: Mountain },
+    ];
+  };
+
+  // Check if should show rendement fields
+  const showRendementFields = typeBien === 'immeuble' || estMultiLogements === 'oui_3plus';
 
   if (isSuccess) {
     return (
@@ -238,7 +359,7 @@ export default function FormulaireVendeurComplet() {
 
             {/* Form */}
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
-              {/* Section 1: Infos de base (pré-remplies) */}
+              {/* Section 1: Infos de base */}
               <div className="p-6 rounded-2xl bg-card border border-border/50">
                 <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
                   <Home className="w-5 h-5 text-primary" />
@@ -253,7 +374,7 @@ export default function FormulaireVendeurComplet() {
                       value={watch('type_bien')} 
                       onValueChange={(value) => setValue('type_bien', value)}
                     >
-                      <SelectTrigger className={errors.type_bien ? 'border-red-500' : ''}>
+                      <SelectTrigger className={errors.type_bien ? 'border-destructive' : ''}>
                         <SelectValue placeholder="Sélectionnez..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -267,6 +388,39 @@ export default function FormulaireVendeurComplet() {
                     </Select>
                   </div>
 
+                  {/* Villa sub-question */}
+                  <AnimatePresence mode="wait">
+                    {typeBien === 'villa' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border/30"
+                      >
+                        <Label className="text-base">Votre bien comprend-il plusieurs logements séparés ?</Label>
+                        <RadioGroup
+                          value={watch('est_multi_logements') || 'non'}
+                          onValueChange={(value: 'non' | 'oui_2' | 'oui_3plus') => setValue('est_multi_logements', value)}
+                          className="grid grid-cols-1 md:grid-cols-3 gap-3"
+                        >
+                          <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
+                            <RadioGroupItem value="non" id="non" />
+                            <Label htmlFor="non" className="cursor-pointer">Non, maison individuelle</Label>
+                          </div>
+                          <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
+                            <RadioGroupItem value="oui_2" id="oui_2" />
+                            <Label htmlFor="oui_2" className="cursor-pointer">Oui, 2 logements</Label>
+                          </div>
+                          <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
+                            <RadioGroupItem value="oui_3plus" id="oui_3plus" />
+                            <Label htmlFor="oui_3plus" className="cursor-pointer">Oui, 3+ logements</Label>
+                          </div>
+                        </RadioGroup>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
                   {/* Adresse */}
                   <div className="space-y-2">
                     <Label className="flex items-center gap-2">
@@ -278,10 +432,10 @@ export default function FormulaireVendeurComplet() {
                       onChange={handleAddressChange}
                       onInputChange={(val) => setValue('adresse', val)}
                       placeholder="Entrez l'adresse complète"
-                      className={errors.adresse ? 'border-red-500' : ''}
+                      className={errors.adresse ? 'border-destructive' : ''}
                       restrictToSwitzerland
                     />
-                    {errors.adresse && <p className="text-sm text-red-500">{errors.adresse.message}</p>}
+                    {errors.adresse && <p className="text-sm text-destructive">{errors.adresse.message}</p>}
                   </div>
 
                   {/* NPA / Ville (auto-filled) */}
@@ -301,12 +455,12 @@ export default function FormulaireVendeurComplet() {
                     <div className="space-y-2">
                       <Label className="flex items-center gap-2">
                         <Ruler className="w-4 h-4 text-muted-foreground" />
-                        Surface (m²) *
+                        {typeBien === 'terrain' ? 'Surface du terrain (m²) *' : 'Surface habitable (m²) *'}
                       </Label>
                       <Input 
                         {...register('surface')}
-                        placeholder="Ex: 120"
-                        className={errors.surface ? 'border-red-500' : ''}
+                        placeholder={typeBien === 'terrain' ? 'Ex: 800' : 'Ex: 120'}
+                        className={errors.surface ? 'border-destructive' : ''}
                       />
                     </div>
                     <div className="space-y-2">
@@ -316,79 +470,267 @@ export default function FormulaireVendeurComplet() {
                       </Label>
                       <Input 
                         {...register('prix_souhaite')}
-                        placeholder="Ex: 800'000"
-                        className={errors.prix_souhaite ? 'border-red-500' : ''}
+                        placeholder={typeBien === 'terrain' ? "Ex: 500'000" : "Ex: 800'000"}
+                        className={errors.prix_souhaite ? 'border-destructive' : ''}
                       />
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Section 2: Détails */}
-              <div className="p-6 rounded-2xl bg-card border border-border/50">
-                <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-primary" />
-                  Détails du bien
-                </h2>
-                
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Home className="w-4 h-4 text-muted-foreground" />
-                      Nombre de pièces
-                    </Label>
-                    <Input {...register('nombre_pieces')} placeholder="Ex: 4.5" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Bed className="w-4 h-4 text-muted-foreground" />
-                      Chambres
-                    </Label>
-                    <Input {...register('nombre_chambres')} placeholder="Ex: 3" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Bath className="w-4 h-4 text-muted-foreground" />
-                      Salles de bain
-                    </Label>
-                    <Input {...register('nombre_sdb')} placeholder="Ex: 2" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Étage</Label>
-                    <Input {...register('etage')} placeholder="Ex: 3ème" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      Année construction
-                    </Label>
-                    <Input {...register('annee_construction')} placeholder="Ex: 2010" />
-                  </div>
-                </div>
-              </div>
+              {/* Section 2: Détails - Adapté selon le type */}
+              <AnimatePresence mode="wait">
+                {typeBien && typeBien !== 'autre' && (
+                  <motion.div
+                    key={`details-${typeBien}-${estMultiLogements}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                    className="p-6 rounded-2xl bg-card border border-border/50"
+                  >
+                    {/* TERRAIN Section */}
+                    {typeBien === 'terrain' && (
+                      <>
+                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                          <Map className="w-5 h-5 text-primary" />
+                          Caractéristiques du terrain
+                        </h2>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Zone d'affectation</Label>
+                            <Select onValueChange={(value) => setValue('zone_affectation', value)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionnez..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="habitation">Zone d'habitation</SelectItem>
+                                <SelectItem value="mixte">Zone mixte</SelectItem>
+                                <SelectItem value="agricole">Zone agricole</SelectItem>
+                                <SelectItem value="industrielle">Zone industrielle</SelectItem>
+                                <SelectItem value="autre">Autre</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Constructibilité (COS/CUS)</Label>
+                            <Input {...register('constructibilite')} placeholder="Ex: 0.4 / 1.2" />
+                          </div>
+                          <div className="flex items-center space-x-3 p-4 rounded-lg border border-border">
+                            <Checkbox
+                              id="terrain_viabilise"
+                              checked={watch('terrain_viabilise')}
+                              onCheckedChange={(checked) => setValue('terrain_viabilise', checked as boolean)}
+                            />
+                            <Label htmlFor="terrain_viabilise" className="flex items-center gap-2 cursor-pointer">
+                              <Zap className="w-4 h-4 text-muted-foreground" />
+                              Terrain viabilisé (eau, électricité, égouts)
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-3 p-4 rounded-lg border border-border">
+                            <Checkbox
+                              id="acces_route"
+                              checked={watch('acces_route')}
+                              onCheckedChange={(checked) => setValue('acces_route', checked as boolean)}
+                            />
+                            <Label htmlFor="acces_route" className="flex items-center gap-2 cursor-pointer">
+                              <Car className="w-4 h-4 text-muted-foreground" />
+                              Accès route direct
+                            </Label>
+                          </div>
+                        </div>
+                      </>
+                    )}
 
-              {/* Section 3: Équipements */}
-              <div className="p-6 rounded-2xl bg-card border border-border/50">
-                <h2 className="text-xl font-semibold mb-6">Équipements</h2>
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {equipmentItems.map((item) => (
-                    <div key={item.key} className="flex items-center space-x-3">
-                      <Checkbox
-                        id={item.key}
-                        checked={watch(item.key as keyof FormData) as boolean}
-                        onCheckedChange={(checked) => 
-                          setValue(item.key as keyof FormData, checked as boolean)
-                        }
-                      />
-                      <Label htmlFor={item.key} className="flex items-center gap-2 cursor-pointer">
-                        <item.icon className="w-4 h-4 text-muted-foreground" />
-                        {item.label}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                    {/* IMMEUBLE / MULTI-LOGEMENTS Section */}
+                    {showRendementFields && (
+                      <>
+                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                          <Landmark className="w-5 h-5 text-primary" />
+                          Données de rendement
+                        </h2>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <Building2 className="w-4 h-4 text-muted-foreground" />
+                              Nombre de logements
+                            </Label>
+                            <Input {...register('nb_logements')} placeholder="Ex: 6" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <DollarSign className="w-4 h-4 text-muted-foreground" />
+                              Revenus locatifs annuels (CHF)
+                            </Label>
+                            <Input {...register('revenus_locatifs')} placeholder="Ex: 120'000" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <Banknote className="w-4 h-4 text-muted-foreground" />
+                              Charges annuelles (CHF)
+                            </Label>
+                            <Input {...register('charges_annuelles')} placeholder="Ex: 15'000" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <Percent className="w-4 h-4 text-muted-foreground" />
+                              Taux d'occupation (%)
+                            </Label>
+                            <Input {...register('taux_occupation')} placeholder="Ex: 95" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>État général</Label>
+                            <Select onValueChange={(value) => setValue('etat_general', value)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionnez..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="neuf">Neuf / Rénové récemment</SelectItem>
+                                <SelectItem value="bon">Bon état</SelectItem>
+                                <SelectItem value="moyen">État moyen</SelectItem>
+                                <SelectItem value="a_renover">À rénover</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-muted-foreground" />
+                              Année construction
+                            </Label>
+                            <Input {...register('annee_construction')} placeholder="Ex: 1985" />
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* COMMERCIAL Section */}
+                    {typeBien === 'commercial' && (
+                      <>
+                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                          <Store className="w-5 h-5 text-primary" />
+                          Détails du local
+                        </h2>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label>Usage actuel</Label>
+                            <Select onValueChange={(value) => setValue('usage_actuel', value)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Sélectionnez..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="commerce">Commerce / Boutique</SelectItem>
+                                <SelectItem value="bureau">Bureau</SelectItem>
+                                <SelectItem value="atelier">Atelier / Dépôt</SelectItem>
+                                <SelectItem value="restaurant">Restaurant / Café</SelectItem>
+                                <SelectItem value="vacant">Vacant</SelectItem>
+                                <SelectItem value="autre">Autre</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <DollarSign className="w-4 h-4 text-muted-foreground" />
+                              Loyer actuel (CHF/mois)
+                            </Label>
+                            <Input {...register('loyer_actuel')} placeholder="Ex: 3'500" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-muted-foreground" />
+                              Année construction
+                            </Label>
+                            <Input {...register('annee_construction')} placeholder="Ex: 2000" />
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* APPARTEMENT / VILLA SIMPLE Section */}
+                    {(typeBien === 'appartement' || (typeBien === 'villa' && !showRendementFields)) && (
+                      <>
+                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                          <Building2 className="w-5 h-5 text-primary" />
+                          Détails du bien
+                        </h2>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <Home className="w-4 h-4 text-muted-foreground" />
+                              Nombre de pièces
+                            </Label>
+                            <Input {...register('nombre_pieces')} placeholder="Ex: 4.5" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <Bed className="w-4 h-4 text-muted-foreground" />
+                              Chambres
+                            </Label>
+                            <Input {...register('nombre_chambres')} placeholder="Ex: 3" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <Bath className="w-4 h-4 text-muted-foreground" />
+                              Salles de bain
+                            </Label>
+                            <Input {...register('nombre_sdb')} placeholder="Ex: 2" />
+                          </div>
+                          {typeBien === 'appartement' && (
+                            <div className="space-y-2">
+                              <Label>Étage</Label>
+                              <Input {...register('etage')} placeholder="Ex: 3ème" />
+                            </div>
+                          )}
+                          {typeBien === 'villa' && (
+                            <div className="space-y-2">
+                              <Label className="flex items-center gap-2">
+                                <Trees className="w-4 h-4 text-muted-foreground" />
+                                Surface terrain (m²)
+                              </Label>
+                              <Input {...register('surface_terrain')} placeholder="Ex: 500" />
+                            </div>
+                          )}
+                          <div className="space-y-2">
+                            <Label className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4 text-muted-foreground" />
+                              Année construction
+                            </Label>
+                            <Input {...register('annee_construction')} placeholder="Ex: 2010" />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Section 3: Équipements - Only for relevant types */}
+              {typeBien && typeBien !== 'terrain' && typeBien !== 'autre' && getEquipmentItems().length > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="p-6 rounded-2xl bg-card border border-border/50"
+                >
+                  <h2 className="text-xl font-semibold mb-6">Équipements</h2>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {getEquipmentItems().map((item) => (
+                      <div key={item.key} className="flex items-center space-x-3">
+                        <Checkbox
+                          id={item.key}
+                          checked={watch(item.key as keyof FormData) as boolean}
+                          onCheckedChange={(checked) => 
+                            setValue(item.key as keyof FormData, checked as boolean)
+                          }
+                        />
+                        <Label htmlFor={item.key} className="flex items-center gap-2 cursor-pointer">
+                          <item.icon className="w-4 h-4 text-muted-foreground" />
+                          {item.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
 
               {/* Section 4: Motivations */}
               <div className="p-6 rounded-2xl bg-card border border-border/50">
@@ -451,9 +793,9 @@ export default function FormulaireVendeurComplet() {
                     <Input 
                       {...register('nom')}
                       placeholder="Prénom Nom"
-                      className={errors.nom ? 'border-red-500' : ''}
+                      className={errors.nom ? 'border-destructive' : ''}
                     />
-                    {errors.nom && <p className="text-sm text-red-500">{errors.nom.message}</p>}
+                    {errors.nom && <p className="text-sm text-destructive">{errors.nom.message}</p>}
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
@@ -466,9 +808,9 @@ export default function FormulaireVendeurComplet() {
                         {...register('email')}
                         type="email"
                         placeholder="votre@email.ch"
-                        className={errors.email ? 'border-red-500' : ''}
+                        className={errors.email ? 'border-destructive' : ''}
                       />
-                      {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
+                      {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label className="flex items-center gap-2">
@@ -479,9 +821,9 @@ export default function FormulaireVendeurComplet() {
                         {...register('telephone')}
                         type="tel"
                         placeholder="079 xxx xx xx"
-                        className={errors.telephone ? 'border-red-500' : ''}
+                        className={errors.telephone ? 'border-destructive' : ''}
                       />
-                      {errors.telephone && <p className="text-sm text-red-500">{errors.telephone.message}</p>}
+                      {errors.telephone && <p className="text-sm text-destructive">{errors.telephone.message}</p>}
                     </div>
                   </div>
                 </div>
