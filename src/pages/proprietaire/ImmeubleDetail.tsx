@@ -65,6 +65,11 @@ interface Immeuble {
   publier_espace_acheteur: boolean | null;
   accord_proprietaire_publication: boolean | null;
   date_mise_en_vente: string | null;
+  // Prix vendeur/commercial (commission = prix_commercial - prix_vendeur)
+  prix_vendeur: number | null;
+  prix_commercial: number | null;
+  commission_agence_prevue: number | null;
+  places_parc_incluses: boolean | null;
   // Estimation fields (from DB)
   estimation_valeur_basse: number | null;
   estimation_valeur_haute: number | null;
@@ -937,6 +942,8 @@ export default function ImmeubleDetail() {
               facteursPositifs={immeuble.facteurs_positifs || []}
               facteursNegatifs={immeuble.facteurs_negatifs || []}
               potentielDeveloppement={immeuble.potentiel_developpement}
+              prixVendeur={immeuble.prix_vendeur}
+              prixCommercial={immeuble.prix_commercial}
               onUpdate={loadData}
             />
 
@@ -996,7 +1003,10 @@ export default function ImmeubleDetail() {
               <CardContent>
                 <OffresAchatSection 
                   immeubleId={immeuble.id} 
-                  prixDemande={immeuble.prix_vente_demande}
+                  prixDemande={immeuble.prix_commercial || immeuble.prix_vente_demande}
+                  prixVendeur={immeuble.prix_vendeur}
+                  prixCommercial={immeuble.prix_commercial}
+                  isAgent={false}
                 />
               </CardContent>
             </Card>
@@ -1005,8 +1015,9 @@ export default function ImmeubleDetail() {
             {(immeuble.statut_vente === 'sous_offre' || immeuble.statut_vente === 'vendu') && (
               <NotaireSection
                 statut={immeuble.statut_vente === 'vendu' ? 'acte_signe' : 'en_attente'}
-                prixVenteFinal={immeuble.prix_vente_demande}
-                commissionAgence={immeuble.prix_vente_demande ? immeuble.prix_vente_demande * 0.01 : null}
+                prixVenteFinal={immeuble.prix_commercial || immeuble.prix_vente_demande}
+                prixVendeur={immeuble.prix_vendeur}
+                commissionAgence={immeuble.commission_agence_prevue || (immeuble.prix_vente_demande ? immeuble.prix_vente_demande * 0.01 : null)}
                 tauxCommission={1}
               />
             )}

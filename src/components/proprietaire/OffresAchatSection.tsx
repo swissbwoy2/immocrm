@@ -34,6 +34,9 @@ interface OffreAchatData {
 interface OffresAchatSectionProps {
   immeubleId: string;
   prixDemande?: number | null;
+  prixVendeur?: number | null;
+  prixCommercial?: number | null;
+  isAgent?: boolean;
 }
 
 const STATUT_CONFIG = {
@@ -45,7 +48,13 @@ const STATUT_CONFIG = {
   expiree: { label: 'Expirée', color: 'bg-gray-500/10 text-gray-600 border-gray-200' },
 };
 
-export function OffresAchatSection({ immeubleId, prixDemande }: OffresAchatSectionProps) {
+export function OffresAchatSection({ 
+  immeubleId, 
+  prixDemande, 
+  prixVendeur, 
+  prixCommercial,
+  isAgent = false 
+}: OffresAchatSectionProps) {
   const [offres, setOffres] = useState<OffreAchatData[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
@@ -182,7 +191,11 @@ export function OffresAchatSection({ immeubleId, prixDemande }: OffresAchatSecti
               key={offre.id}
               offre={offre}
               prixDemande={prixDemande}
+              prixVendeur={prixVendeur}
+              prixCommercial={prixCommercial}
               onUpdateStatut={handleUpdateStatut}
+              isAgent={isAgent}
+              isProprietaire={!isAgent}
             />
           ))}
         </div>
