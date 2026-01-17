@@ -1,19 +1,19 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Calculator, CheckCircle, AlertTriangle, ArrowRight, Sparkles, Info } from 'lucide-react';
+import { Calculator, CheckCircle, AlertTriangle, ArrowRight, Sparkles, Info, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { Link } from 'react-router-dom';
+import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 
+// Optimized order: qualified permits first
 const permitTypes = [
   { value: 'suisse', label: 'Nationalité suisse' },
   { value: 'C', label: 'Permis C (établissement)' },
   { value: 'B', label: 'Permis B (séjour)' },
-  { value: 'L', label: 'Permis L (courte durée)' },
   { value: 'G', label: 'Permis G (frontalier)' },
+  { value: 'L', label: 'Permis L (courte durée)' },
   { value: 'F', label: 'Permis F (admission provisoire)' },
   { value: 'N', label: 'Permis N (requérant d\'asile)' },
 ];
@@ -79,7 +79,7 @@ export function BudgetCalculatorSection() {
   const [revenus, setRevenus] = useState<string>('');
   const [budget, setBudget] = useState<string>('');
   const [permit, setPermit] = useState<string>('');
-  const [hasPoursuites, setHasPoursuites] = useState(false);
+  const [confirmNoPoursuites, setConfirmNoPoursuites] = useState(true); // Positive framing, pre-checked
   const [showResult, setShowResult] = useState(false);
 
   const result = useMemo(() => {
@@ -94,6 +94,7 @@ export function BudgetCalculatorSection() {
     const isBudgetOk = budgetNum <= budgetPossible;
     // Seuls les permis stables (suisse, C, B) sont considérés comme solvables
     const isPermitStable = ['suisse', 'C', 'B'].includes(permit);
+    const hasPoursuites = !confirmNoPoursuites;
     // Pour être solvable : budget OK, pas de poursuites ET permis stable (ou pas encore sélectionné)
     const isSolvable = isBudgetOk && !hasPoursuites && (isPermitStable || !permit);
 
@@ -115,7 +116,7 @@ export function BudgetCalculatorSection() {
       isPermitStable,
       budgetDiff: budgetPossible - budgetNum,
     };
-  }, [revenus, budget, permit, hasPoursuites]);
+  }, [revenus, budget, permit, confirmNoPoursuites]);
 
   const handleCalculate = () => {
     if (revenus) {
@@ -257,15 +258,23 @@ export function BudgetCalculatorSection() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between py-2">
-                    <Label htmlFor="poursuites" className="text-sm font-medium cursor-pointer">
-                      Avez-vous des poursuites en cours ?
-                    </Label>
-                    <Switch
-                      id="poursuites"
-                      checked={hasPoursuites}
-                      onCheckedChange={(v) => { setHasPoursuites(v); setShowResult(false); }}
+                  {/* Positive framing for debt confirmation */}
+                  <div className="flex items-start space-x-3 py-3 px-4 rounded-xl bg-green-500/5 border border-green-500/20">
+                    <Checkbox 
+                      id="no-poursuites-calc" 
+                      checked={confirmNoPoursuites}
+                      onCheckedChange={(checked) => { setConfirmNoPoursuites(checked as boolean); setShowResult(false); }}
+                      className="mt-0.5"
                     />
+                    <div className="space-y-1">
+                      <Label htmlFor="no-poursuites-calc" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4 text-green-500" />
+                        Je confirme n'avoir aucune poursuite
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Ni actes de défaut de bien en cours
+                      </p>
+                    </div>
                   </div>
 
                   {/* Premium calculate button */}
@@ -349,25 +358,46 @@ export function BudgetCalculatorSection() {
 
                       {/* Status */}
                       {result.isSolvable ? (
-                        <div className="relative overflow-hidden flex items-start gap-3 p-4 rounded-xl bg-success/10 border border-success/20 group/status">
-                          {/* Shine effect */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-success/10 to-transparent -translate-x-full group-hover/status:translate-x-full transition-transform duration-1000" />
-                          <CheckCircle className="h-5 w-5 text-success flex-shrink-0 mt-0.5 animate-bounce" style={{ animationDuration: '2s' }} />
-                          <div className="relative">
-                            <p className="font-medium text-success">Ton profil est solide !</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Avec nos experts, tu as toutes les chances de trouver rapidement.
-                            </p>
+                        <div className="space-y-4">
+                          <div className="relative overflow-hidden flex items-start gap-3 p-4 rounded-xl bg-success/10 border border-success/20 group/status">
+                            {/* Shine effect */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-success/10 to-transparent -translate-x-full group-hover/status:translate-x-full transition-transform duration-1000" />
+                            <CheckCircle className="h-5 w-5 text-success flex-shrink-0 mt-0.5 animate-bounce" style={{ animationDuration: '2s' }} />
+                            <div className="relative">
+                              <p className="font-medium text-success">Ton profil est solide !</p>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                Avec nos experts, tu as toutes les chances de trouver rapidement.
+                              </p>
+                            </div>
                           </div>
+                          
+                          {/* CTA to form */}
+                          <Button asChild className="w-full group">
+                            <a href="#quickform">
+                              <Sparkles className="mr-2 h-4 w-4" />
+                              Recevoir ma shortlist gratuite
+                              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                            </a>
+                          </Button>
                         </div>
                       ) : (
-                        <div className="space-y-2">
-                          {result.problems.map((problem, i) => (
-                            <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-warning/10 border border-warning/20">
-                              <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
-                              <p className="text-sm text-muted-foreground">{problem}</p>
-                            </div>
-                          ))}
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            {result.problems.map((problem, i) => (
+                              <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-warning/10 border border-warning/20">
+                                <AlertTriangle className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
+                                <p className="text-sm text-muted-foreground">{problem}</p>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* CTA to form even for warnings */}
+                          <Button asChild variant="outline" className="w-full group">
+                            <a href="#quickform">
+                              Parler à un expert
+                              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                            </a>
+                          </Button>
                         </div>
                       )}
 

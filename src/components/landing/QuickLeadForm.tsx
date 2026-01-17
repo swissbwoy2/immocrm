@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Mail, MapPin, Wallet, ArrowRight, ArrowLeft, CheckCircle, Loader2, User, Phone, XCircle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Mail, MapPin, Wallet, ArrowRight, ArrowLeft, CheckCircle, Loader2, User, Phone, XCircle, Clock, ShieldCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -17,44 +18,45 @@ const budgetOptions = [
   { value: '> 4000', label: 'Plus de 4\'000 CHF' },
 ];
 
+// Optimized order: qualified permits first
 const permisOptions = [
   { value: 'Suisse', label: 'Nationalité Suisse' },
-  { value: 'C', label: 'Permis C' },
-  { value: 'B', label: 'Permis B' },
+  { value: 'C', label: 'Permis C (établissement)' },
+  { value: 'B', label: 'Permis B (séjour)' },
+  { value: 'G', label: 'Permis G (frontalier)' },
   { value: 'Autre', label: 'Autre permis' },
 ];
 
-type FormStep = 'info' | 'search' | 'qualification' | 'garant';
+type FormStep = 'qualification' | 'info' | 'garant';
 
 export function QuickLeadForm() {
-  const [step, setStep] = useState<FormStep>('info');
+  // Step order changed: qualification FIRST, then personal info
+  const [step, setStep] = useState<FormStep>('qualification');
   
-  // Step 1 - Personal info
+  // Step 1 - Qualification (now first)
+  const [statutEmploi, setStatutEmploi] = useState<string>('salarie'); // Pre-selected as employee
+  const [permisNationalite, setPermisNationalite] = useState('');
+  const [confirmNoPoursuites, setConfirmNoPoursuites] = useState(true); // Positive framing, pre-checked
+  const [aGarant, setAGarant] = useState<string>('');
+  
+  // Step 2 - Personal info (reduced fields)
   const [prenom, setPrenom] = useState('');
-  const [nom, setNom] = useState('');
   const [email, setEmail] = useState('');
   const [telephone, setTelephone] = useState('');
-  
-  // Step 2 - Search criteria
   const [localite, setLocalite] = useState('');
   const [budget, setBudget] = useState('');
-  
-  // Step 3 - Qualification
-  const [statutEmploi, setStatutEmploi] = useState<string>('');
-  const [permisNationalite, setPermisNationalite] = useState('');
-  const [poursuites, setPoursuites] = useState<string>('');
-  const [aGarant, setAGarant] = useState<string>('');
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<'qualified' | 'not_qualified' | null>(null);
 
-  const isStep1Valid = prenom.trim() && nom.trim() && email.trim() && telephone.trim();
-  const isStep3Valid = statutEmploi && permisNationalite && poursuites !== '';
+  // Validation for each step
+  const isQualificationValid = statutEmploi && permisNationalite;
+  const isInfoValid = prenom.trim() && email.trim() && telephone.trim();
 
   const calculateQualification = () => {
     const isSalarie = statutEmploi === 'salarie';
     const hasValidPermis = ['B', 'C', 'Suisse'].includes(permisNationalite);
-    const hasPoursuites = poursuites === 'oui';
+    const hasPoursuites = !confirmNoPoursuites;
     const hasGarant = aGarant === 'oui';
     
     return isSalarie && hasValidPermis && (!hasPoursuites || (hasPoursuites && hasGarant));
@@ -71,13 +73,13 @@ export function QuickLeadForm() {
         .insert({
           email,
           prenom: prenom.trim(),
-          nom: nom.trim(),
+          nom: '', // Not collected anymore
           telephone: telephone.trim(),
           localite: localite || null,
           budget: budget || null,
           statut_emploi: statutEmploi,
           permis_nationalite: permisNationalite,
-          poursuites: poursuites === 'oui',
+          poursuites: !confirmNoPoursuites,
           a_garant: aGarant === 'oui',
           is_qualified: isQualified,
           source: 'landing_quickform'
@@ -90,13 +92,13 @@ export function QuickLeadForm() {
         body: { 
           email, 
           prenom: prenom.trim(),
-          nom: nom.trim(),
+          nom: '',
           telephone: telephone.trim(),
           localite: localite || null, 
           budget: budget || null,
           statut_emploi: statutEmploi,
           permis_nationalite: permisNationalite,
-          poursuites: poursuites === 'oui',
+          poursuites: !confirmNoPoursuites,
           a_garant: aGarant === 'oui',
           is_qualified: isQualified
         }
@@ -112,30 +114,40 @@ export function QuickLeadForm() {
   };
 
   const handleNext = () => {
-    if (step === 'info' && isStep1Valid) {
-      setStep('search');
-    } else if (step === 'search') {
-      setStep('qualification');
-    } else if (step === 'qualification' && isStep3Valid) {
-      if (poursuites === 'oui') {
+    if (step === 'qualification' && isQualificationValid) {
+      // Check if they have poursuites
+      if (!confirmNoPoursuites) {
         setStep('garant');
       } else {
-        handleSubmit();
+        setStep('info');
       }
-    } else if (step === 'garant' && aGarant !== '') {
+    } else if (step === 'garant') {
+      if (aGarant === 'non') {
+        // Not qualified - show message immediately
+        setSubmitResult('not_qualified');
+      } else if (aGarant === 'oui') {
+        setStep('info');
+      }
+    } else if (step === 'info' && isInfoValid) {
       handleSubmit();
     }
   };
 
   const handleBack = () => {
-    if (step === 'search') setStep('info');
-    else if (step === 'qualification') setStep('search');
-    else if (step === 'garant') setStep('qualification');
+    if (step === 'info') {
+      if (!confirmNoPoursuites) {
+        setStep('garant');
+      } else {
+        setStep('qualification');
+      }
+    } else if (step === 'garant') {
+      setStep('qualification');
+    }
   };
 
   if (submitResult === 'qualified') {
     return (
-      <section className="py-8 md:py-12 bg-gradient-to-b from-primary/5 to-background">
+      <section id="quickform" className="py-8 md:py-12 bg-gradient-to-b from-primary/5 to-background">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 mb-4 animate-fade-in">
@@ -155,14 +167,14 @@ export function QuickLeadForm() {
 
   if (submitResult === 'not_qualified') {
     return (
-      <section className="py-8 md:py-12 bg-gradient-to-b from-primary/5 to-background">
+      <section id="quickform" className="py-8 md:py-12 bg-gradient-to-b from-primary/5 to-background">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-500/20 mb-4 animate-fade-in">
               <XCircle className="h-8 w-8 text-orange-500" />
             </div>
             <h3 className="text-xl md:text-2xl font-bold text-foreground mb-2 animate-fade-in">
-              Merci pour ton intérêt, {prenom}
+              Merci pour ton intérêt{prenom ? `, ${prenom}` : ''}
             </h3>
             <p className="text-muted-foreground animate-fade-in" style={{ animationDelay: '100ms' }}>
               Malheureusement, ton profil ne correspond pas à nos critères actuels pour bénéficier de notre service de shortlist. Pour être éligible, il faut être salarié(e), avoir un permis B, C ou la nationalité suisse, et ne pas avoir de poursuites (sauf si tu as un garant solvable).
@@ -177,7 +189,7 @@ export function QuickLeadForm() {
   }
 
   return (
-    <section className="py-8 md:py-12 bg-gradient-to-b from-primary/5 to-background relative overflow-hidden">
+    <section id="quickform" className="py-8 md:py-12 bg-gradient-to-b from-primary/5 to-background relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.08)_0%,transparent_50%)]" />
       
       <div className="container mx-auto px-4 relative z-10">
@@ -185,27 +197,117 @@ export function QuickLeadForm() {
           {/* Header */}
           <div className="text-center mb-6 animate-fade-in">
             <h3 className="text-xl md:text-2xl font-bold text-foreground mb-2">
-              Reçois une shortlist personnalisée 📬
+              Reçois ta shortlist personnalisée 📬
             </h3>
             <p className="text-sm text-muted-foreground">
               Gratuit • Sans engagement • Réponse sous 24h
             </p>
+            
+            {/* Time indicator */}
+            <div className="inline-flex items-center gap-2 mt-3 text-xs text-primary bg-primary/10 rounded-full px-3 py-1.5">
+              <Clock className="h-3 w-3" />
+              <span>Réponds en 30 secondes</span>
+            </div>
+            
             {/* Progress indicators */}
             <div className="flex justify-center gap-2 mt-4">
-              {['info', 'search', 'qualification'].map((s, i) => (
-                <div 
-                  key={s}
-                  className={`h-2 w-12 rounded-full transition-colors ${
-                    ['info', 'search', 'qualification', 'garant'].indexOf(step) >= i 
-                      ? 'bg-primary' 
-                      : 'bg-muted'
-                  }`}
-                />
-              ))}
+              {['qualification', 'info'].map((s, i) => {
+                const stepIndex = step === 'garant' ? 0.5 : ['qualification', 'info'].indexOf(step);
+                return (
+                  <div 
+                    key={s}
+                    className={`h-2 w-16 rounded-full transition-colors ${
+                      stepIndex >= i ? 'bg-primary' : 'bg-muted'
+                    }`}
+                  />
+                );
+              })}
             </div>
           </div>
 
-          {/* Step 1: Personal Info */}
+          {/* Step 1: Qualification (NOW FIRST) */}
+          {step === 'qualification' && (
+            <div className="space-y-5 animate-fade-in">
+              {/* Employment status */}
+              <div className="space-y-3">
+                <Label className="text-base font-medium">Es-tu salarié(e) ?</Label>
+                <RadioGroup value={statutEmploi} onValueChange={setStatutEmploi} className="flex gap-4">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="salarie" id="salarie" />
+                    <Label htmlFor="salarie" className="cursor-pointer">Oui, salarié(e)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="autre" id="autre" />
+                    <Label htmlFor="autre" className="cursor-pointer">Non</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Permit/Nationality - Optimized order */}
+              <div className="space-y-3">
+                <Label className="text-base font-medium">Quel est ton permis ou nationalité ?</Label>
+                <Select value={permisNationalite} onValueChange={setPermisNationalite}>
+                  <SelectTrigger className="h-12 bg-background/80 border-border/50 focus:border-primary">
+                    <SelectValue placeholder="Sélectionne ton permis/nationalité" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {permisOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Poursuites - POSITIVE FRAMING with pre-checked checkbox */}
+              <div className="space-y-3 p-4 rounded-xl bg-green-500/5 border border-green-500/20">
+                <div className="flex items-start space-x-3">
+                  <Checkbox 
+                    id="no-poursuites" 
+                    checked={confirmNoPoursuites}
+                    onCheckedChange={(checked) => setConfirmNoPoursuites(checked as boolean)}
+                    className="mt-1"
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="no-poursuites" className="text-base font-medium cursor-pointer flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-green-500" />
+                      Je confirme n'avoir aucune poursuite
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Ni actes de défaut de bien en cours
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step Garant (only if poursuites) */}
+          {step === 'garant' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  Tu as indiqué avoir des poursuites ou actes de défaut de bien. Pour pouvoir bénéficier de notre service, il te faut un garant solvable.
+                </p>
+              </div>
+              <div className="space-y-3">
+                <Label className="text-base font-medium">As-tu un garant solvable ?</Label>
+                <RadioGroup value={aGarant} onValueChange={setAGarant} className="flex gap-4">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="oui" id="garant-oui" />
+                    <Label htmlFor="garant-oui" className="cursor-pointer">Oui</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="non" id="garant-non" />
+                    <Label htmlFor="garant-non" className="cursor-pointer">Non</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Personal Info (REDUCED - now second) */}
           {step === 'info' && (
             <div className="space-y-4 animate-fade-in">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -221,19 +323,6 @@ export function QuickLeadForm() {
                   />
                 </div>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="text"
-                    placeholder="Nom *"
-                    value={nom}
-                    onChange={(e) => setNom(e.target.value)}
-                    className="pl-10 h-12 bg-background/80 border-border/50 focus:border-primary"
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="email"
@@ -244,24 +333,18 @@ export function QuickLeadForm() {
                     required
                   />
                 </div>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="tel"
-                    placeholder="Téléphone *"
-                    value={telephone}
-                    onChange={(e) => setTelephone(e.target.value)}
-                    className="pl-10 h-12 bg-background/80 border-border/50 focus:border-primary"
-                    required
-                  />
-                </div>
               </div>
-            </div>
-          )}
-
-          {/* Step 2: Search Criteria */}
-          {step === 'search' && (
-            <div className="space-y-4 animate-fade-in">
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="tel"
+                  placeholder="Téléphone * (pour te recontacter sous 24h)"
+                  value={telephone}
+                  onChange={(e) => setTelephone(e.target.value)}
+                  className="pl-10 h-12 bg-background/80 border-border/50 focus:border-primary"
+                  required
+                />
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="relative">
                   <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
@@ -292,85 +375,9 @@ export function QuickLeadForm() {
             </div>
           )}
 
-          {/* Step 3: Qualification */}
-          {step === 'qualification' && (
-            <div className="space-y-6 animate-fade-in">
-              {/* Employment status */}
-              <div className="space-y-3">
-                <Label className="text-base font-medium">Es-tu salarié(e) ? *</Label>
-                <RadioGroup value={statutEmploi} onValueChange={setStatutEmploi} className="flex gap-4">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="salarie" id="salarie" />
-                    <Label htmlFor="salarie" className="cursor-pointer">Oui, salarié(e)</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="autre" id="autre" />
-                    <Label htmlFor="autre" className="cursor-pointer">Non</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-
-              {/* Permit/Nationality */}
-              <div className="space-y-3">
-                <Label className="text-base font-medium">Quel est ton permis ou nationalité ? *</Label>
-                <Select value={permisNationalite} onValueChange={setPermisNationalite}>
-                  <SelectTrigger className="h-12 bg-background/80 border-border/50 focus:border-primary">
-                    <SelectValue placeholder="Sélectionne ton permis/nationalité" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {permisOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Poursuites */}
-              <div className="space-y-3">
-                <Label className="text-base font-medium">As-tu des poursuites ou actes de défaut de bien ? *</Label>
-                <RadioGroup value={poursuites} onValueChange={setPoursuites} className="flex gap-4">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="non" id="poursuites-non" />
-                    <Label htmlFor="poursuites-non" className="cursor-pointer">Non</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="oui" id="poursuites-oui" />
-                    <Label htmlFor="poursuites-oui" className="cursor-pointer">Oui</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Garant (only if poursuites = oui) */}
-          {step === 'garant' && (
-            <div className="space-y-6 animate-fade-in">
-              <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  Tu as indiqué avoir des poursuites ou actes de défaut de bien. Pour pouvoir bénéficier de notre service, il te faut un garant solvable.
-                </p>
-              </div>
-              <div className="space-y-3">
-                <Label className="text-base font-medium">As-tu un garant solvable ? *</Label>
-                <RadioGroup value={aGarant} onValueChange={setAGarant} className="flex gap-4">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="oui" id="garant-oui" />
-                    <Label htmlFor="garant-oui" className="cursor-pointer">Oui</Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="non" id="garant-non" />
-                    <Label htmlFor="garant-non" className="cursor-pointer">Non</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </div>
-          )}
-
           {/* Navigation buttons */}
           <div className="flex justify-between mt-6">
-            {step !== 'info' ? (
+            {step !== 'qualification' ? (
               <Button
                 type="button"
                 variant="outline"
@@ -389,9 +396,9 @@ export function QuickLeadForm() {
               size="lg"
               disabled={
                 isSubmitting || 
-                (step === 'info' && !isStep1Valid) ||
-                (step === 'qualification' && !isStep3Valid) ||
-                (step === 'garant' && aGarant === '')
+                (step === 'qualification' && !isQualificationValid) ||
+                (step === 'garant' && aGarant === '') ||
+                (step === 'info' && !isInfoValid)
               }
               onClick={handleNext}
               className="group px-8 py-6 text-base font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
@@ -401,12 +408,7 @@ export function QuickLeadForm() {
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   Envoi en cours...
                 </>
-              ) : step === 'qualification' && poursuites !== 'oui' ? (
-                <>
-                  Recevoir ma shortlist
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </>
-              ) : step === 'garant' ? (
+              ) : step === 'info' ? (
                 <>
                   Recevoir ma shortlist
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
