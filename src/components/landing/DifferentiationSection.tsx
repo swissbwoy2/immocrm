@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { CheckCircle, X, Shield, Search, Users, Filter, Calendar, FileText, MessageSquare, Brain, Eye, Sparkles, ArrowRight, Crown, ChevronDown, ChevronUp } from "lucide-react";
+import { CheckCircle, X, Shield, Search, Users, Filter, Calendar, FileText, MessageSquare, Brain, Eye, Sparkles, ArrowRight, Crown, ChevronDown, ChevronUp, Home, Handshake, Landmark, PiggyBank, Key } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { useSearchType } from "@/contexts/SearchTypeContext";
 
-// Short comparison data - 4 key points
-const shortComparisonData = [{
+// Short comparison data - LOCATION (4 key points)
+const shortComparisonDataLocation = [{
   aspect: "Tu visites moins, mais mieux",
   logisorama: "On identifie les opportunités réalistes selon ton profil. Chaque proposition est ciblée.",
   solo: "Tu postules sans savoir si tu as une chance.",
@@ -27,8 +28,8 @@ const shortComparisonData = [{
   icon: Shield
 }];
 
-// Full comparison data for expanded view
-const fullComparisonData = [{
+// Full comparison data for expanded view - LOCATION
+const fullComparisonDataLocation = [{
   aspect: "Accès aux biens",
   logisorama: "Profite de notre Réseau Privilégié : régies partenaires + proprios privés.",
   solo: "Tu vois que les annonces publiques, déjà consultées par des centaines.",
@@ -55,11 +56,77 @@ const fullComparisonData = [{
   icon: Brain
 }];
 
+// Short comparison data - ACHAT (4 key points)
+const shortComparisonDataAchat = [{
+  aspect: "Accès off-market",
+  logisorama: "Biens exclusifs avant publication, réseau de vendeurs privés.",
+  solo: "Que les annonces publiques, déjà vues par tout le monde.",
+  icon: Key
+}, {
+  aspect: "Négociation experte",
+  logisorama: "On négocie le prix pour toi avec notre expertise du marché.",
+  solo: "Tu fais face seul aux vendeurs, sans savoir les prix réels.",
+  icon: Handshake
+}, {
+  aspect: "Financement optimisé",
+  logisorama: "Partenaires bancaires pour les meilleurs taux hypothécaires.",
+  solo: "Tu démarches seul les banques, sans pouvoir de négociation.",
+  icon: Landmark
+}, {
+  aspect: "Zéro commission acheteur",
+  logisorama: "Le vendeur finance notre service. Tu ne paies rien.",
+  solo: "Tu paies 3-5% de commission à l'agence.",
+  icon: PiggyBank
+}];
+
+// Full comparison data for expanded view - ACHAT
+const fullComparisonDataAchat = [{
+  aspect: "Évaluation du bien",
+  logisorama: "Analyse complète : état, charges, potentiel, risques cachés.",
+  solo: "Tu te fies à la description du vendeur, souvent incomplète.",
+  icon: Search
+}, {
+  aspect: "Accompagnement notarial",
+  logisorama: "On t'accompagne jusqu'à la signature chez le notaire.",
+  solo: "Tu découvres les documents le jour de la signature.",
+  icon: FileText
+}, {
+  aspect: "Coordination des visites",
+  logisorama: "Visites organisées selon tes disponibilités, avec briefing.",
+  solo: "Tu t'adaptes aux horaires des vendeurs, sans préparation.",
+  icon: Calendar
+}, {
+  aspect: "Suivi personnalisé",
+  logisorama: "Un conseiller dédié qui connaît ton projet en détail.",
+  solo: "Tu gères seul avec des interlocuteurs différents à chaque fois.",
+  icon: Users
+}, {
+  aspect: "Sérénité totale",
+  logisorama: "De la recherche à la remise des clés, on gère tout.",
+  solo: "Stress, paperasse, délais... tout repose sur toi.",
+  icon: Home
+}];
+
 export function DifferentiationSection() {
   const [showMore, setShowMore] = useState(false);
+  const { isAchat } = useSearchType();
   
-  // Display short data, optionally add full data when expanded
-  const displayData = showMore ? [...shortComparisonData, ...fullComparisonData] : shortComparisonData;
+  // Select data based on search type
+  const shortData = isAchat ? shortComparisonDataAchat : shortComparisonDataLocation;
+  const fullData = isAchat ? fullComparisonDataAchat : fullComparisonDataLocation;
+  const displayData = showMore ? [...shortData, ...fullData] : shortData;
+  
+  // Dynamic content
+  const content = {
+    subtitle: isAchat 
+      ? "Nous travaillons POUR toi, en collaboration avec les vendeurs et notaires."
+      : "Nous travaillons POUR toi, en collaboration avec les régies et les propriétaires.",
+    cta: isAchat ? "Trouver mon bien !" : "Je me lance !",
+    ctaLink: isAchat ? "#quickform" : "/nouveau-mandat",
+    guarantee: isAchat 
+      ? "Accompagnement jusqu'au notaire • 0% commission acheteur"
+      : "90 jours pour trouver • Remboursement intégral si échec",
+  };
   
   return <section className="py-24 md:py-32 relative overflow-hidden">
       {/* Premium animated background */}
@@ -104,7 +171,9 @@ export function DifferentiationSection() {
           </h2>
 
           <p className="text-base md:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            Nous travaillons <strong className="text-white">POUR toi</strong>, en collaboration avec les régies et les propriétaires.
+            {content.subtitle.split('POUR toi')[0]}
+            <strong className="text-white">POUR toi</strong>
+            {content.subtitle.split('POUR toi')[1]}
           </p>
         </div>
 
@@ -269,17 +338,28 @@ export function DifferentiationSection() {
                   Avec Immo-rama.ch, l'immobilier devient accessible et une équipe expérimentée défend tes intérêts.
                 </p>
 
-                <Link to="/nouveau-mandat">
-                  <Button size="lg" className="relative group/btn font-bold text-sm sm:text-base md:text-lg px-6 sm:px-10 py-5 sm:py-7 bg-gradient-to-r from-primary via-blue-500 to-violet-500 hover:from-primary/90 hover:via-blue-500/90 hover:to-violet-500/90 border-0 shadow-2xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-primary/50 w-full sm:w-auto">
-                    <span className="relative z-10 flex items-center justify-center gap-2">
-                      Je me lance ! 🚀
-                      <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover/btn:translate-x-1 transition-transform" />
-                    </span>
-                  </Button>
-                </Link>
+                {isAchat ? (
+                  <a href={content.ctaLink}>
+                    <Button size="lg" className="relative group/btn font-bold text-sm sm:text-base md:text-lg px-6 sm:px-10 py-5 sm:py-7 bg-gradient-to-r from-primary via-blue-500 to-violet-500 hover:from-primary/90 hover:via-blue-500/90 hover:to-violet-500/90 border-0 shadow-2xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-primary/50 w-full sm:w-auto">
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        {content.cta} 🏠
+                        <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover/btn:translate-x-1 transition-transform" />
+                      </span>
+                    </Button>
+                  </a>
+                ) : (
+                  <Link to={content.ctaLink}>
+                    <Button size="lg" className="relative group/btn font-bold text-sm sm:text-base md:text-lg px-6 sm:px-10 py-5 sm:py-7 bg-gradient-to-r from-primary via-blue-500 to-violet-500 hover:from-primary/90 hover:via-blue-500/90 hover:to-violet-500/90 border-0 shadow-2xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-primary/50 w-full sm:w-auto">
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        {content.cta} 🚀
+                        <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover/btn:translate-x-1 transition-transform" />
+                      </span>
+                    </Button>
+                  </Link>
+                )}
 
                 <p className="mt-4 sm:mt-6 text-xs sm:text-sm text-slate-400">
-                  90 jours pour trouver • Remboursement intégral si échec
+                  {content.guarantee}
                 </p>
               </div>
             </div>
