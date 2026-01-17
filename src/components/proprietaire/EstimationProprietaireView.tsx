@@ -25,6 +25,8 @@ interface EstimationProprietaireViewProps {
   facteursPositifs?: string[];
   facteursNegatifs?: string[];
   potentielDeveloppement?: string | null;
+  prixVendeur?: number | null;
+  prixCommercial?: number | null;
   onUpdate: () => void;
 }
 
@@ -48,6 +50,8 @@ export function EstimationProprietaireView({
   facteursPositifs = [],
   facteursNegatifs = [],
   potentielDeveloppement,
+  prixVendeur,
+  prixCommercial,
   onUpdate,
 }: EstimationProprietaireViewProps) {
   const [showRevisionForm, setShowRevisionForm] = useState(false);
@@ -194,6 +198,36 @@ export function EstimationProprietaireView({
                 <p className="text-2xl font-bold">{formatCurrency(prixM2Secteur)}/m²</p>
               </div>
             </div>
+
+            {/* Prix vendeur / commercial */}
+            {(prixVendeur || prixCommercial) && (
+              <div className="mt-6 p-4 rounded-lg border border-primary/20 bg-primary/5">
+                <h4 className="font-semibold mb-3 text-sm">Stratégie de prix définie</h4>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="p-3 bg-background rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">Votre prix net souhaité</p>
+                    <p className="text-xl font-bold text-primary">{formatCurrency(prixVendeur)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Ce montant reste confidentiel</p>
+                  </div>
+                  <div className="p-3 bg-background rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">Prix affiché aux acheteurs</p>
+                    <p className="text-xl font-bold">{formatCurrency(prixCommercial)}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Prix commercial public</p>
+                  </div>
+                  {prixVendeur && prixCommercial && (
+                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                      <p className="text-xs text-emerald-700 mb-1">Honoraires agence</p>
+                      <p className="text-xl font-bold text-emerald-700">
+                        {formatCurrency(prixCommercial - prixVendeur)}
+                      </p>
+                      <p className="text-xs text-emerald-600 mt-1">
+                        Inclus dans le prix commercial
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

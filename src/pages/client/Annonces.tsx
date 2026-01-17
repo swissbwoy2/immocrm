@@ -24,6 +24,8 @@ interface Immeuble {
   surface_totale: number;
   nombre_pieces: number;
   prix_vente_demande: number;
+  prix_commercial?: number | null;
+  places_parc_incluses?: boolean;
   description_commerciale?: string;
   points_forts?: string[];
   proprietaire_id: string;
@@ -113,7 +115,10 @@ export default function ClientAnnonces() {
         canton: i.canton || '',
         surface_totale: i.surface_totale || 0,
         nombre_pieces: i.nombre_pieces || 0,
-        prix_vente_demande: i.prix_vente_demande || 0,
+        // Use prix_commercial if available, otherwise fall back to prix_vente_demande
+        prix_vente_demande: i.prix_commercial || i.prix_vente_demande || 0,
+        prix_commercial: i.prix_commercial,
+        places_parc_incluses: i.places_parc_incluses,
         description_commerciale: i.description_commerciale,
         points_forts: i.points_forts,
         proprietaire_id: i.proprietaire_id,
