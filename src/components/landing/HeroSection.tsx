@@ -115,7 +115,7 @@ export function HeroSection() {
               <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               <Crown className="h-5 w-5 text-amber-500 animate-pulse" />
               <span className="text-sm md:text-base font-semibold text-amber-500 relative z-10">
-                ⭐ N°1 en Suisse romande du House Hunting
+                ⭐ Chasseur immobilier N°1 en Suisse romande
               </span>
             </div>
           </div>
