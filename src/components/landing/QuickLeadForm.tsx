@@ -5,17 +5,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Mail, MapPin, Wallet, ArrowRight, ArrowLeft, CheckCircle, Loader2, User, Phone, XCircle, Clock, ShieldCheck } from 'lucide-react';
+import { Mail, MapPin, Wallet, ArrowRight, ArrowLeft, CheckCircle, Loader2, User, Phone, XCircle, Clock, ShieldCheck, Home, Building } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useSearchType } from '@/contexts/SearchTypeContext';
 
-const budgetOptions = [
+// Budget options for RENTAL
+const budgetOptionsLocation = [
   { value: '< 1500', label: 'Moins de 1\'500 CHF' },
   { value: '1500-2000', label: '1\'500 - 2\'000 CHF' },
   { value: '2000-2500', label: '2\'000 - 2\'500 CHF' },
   { value: '2500-3000', label: '2\'500 - 3\'000 CHF' },
   { value: '3000-4000', label: '3\'000 - 4\'000 CHF' },
   { value: '> 4000', label: 'Plus de 4\'000 CHF' },
+];
+
+// Budget options for PURCHASE
+const budgetOptionsAchat = [
+  { value: '< 500000', label: 'Moins de 500\'000 CHF' },
+  { value: '500000-750000', label: '500\'000 - 750\'000 CHF' },
+  { value: '750000-1000000', label: '750\'000 - 1\'000\'000 CHF' },
+  { value: '1000000-1500000', label: '1\'000\'000 - 1\'500\'000 CHF' },
+  { value: '1500000-2000000', label: '1\'500\'000 - 2\'000\'000 CHF' },
+  { value: '> 2000000', label: 'Plus de 2\'000\'000 CHF' },
 ];
 
 // Optimized order: qualified permits first
@@ -27,19 +39,42 @@ const permisOptions = [
   { value: 'Autre', label: 'Autre permis' },
 ];
 
+// Property types for purchase
+const typeBienOptions = [
+  { value: 'appartement', label: 'Appartement' },
+  { value: 'maison', label: 'Maison / Villa' },
+  { value: 'immeuble', label: 'Immeuble de rendement' },
+  { value: 'terrain', label: 'Terrain' },
+];
+
+// Apport personnel options
+const apportOptions = [
+  { value: '< 100000', label: 'Moins de 100\'000 CHF' },
+  { value: '100000-200000', label: '100\'000 - 200\'000 CHF' },
+  { value: '200000-500000', label: '200\'000 - 500\'000 CHF' },
+  { value: '> 500000', label: 'Plus de 500\'000 CHF' },
+];
+
 type FormStep = 'qualification' | 'info' | 'garant';
 
 export function QuickLeadForm() {
+  const { searchType, isAchat } = useSearchType();
+  
   // Step order changed: qualification FIRST, then personal info
   const [step, setStep] = useState<FormStep>('qualification');
   
-  // Step 1 - Qualification (now first)
-  const [statutEmploi, setStatutEmploi] = useState<string>('salarie'); // Pre-selected as employee
+  // Step 1 - Qualification LOCATION
+  const [statutEmploi, setStatutEmploi] = useState<string>('salarie');
   const [permisNationalite, setPermisNationalite] = useState('');
-  const [confirmNoPoursuites, setConfirmNoPoursuites] = useState(true); // Positive framing, pre-checked
+  const [confirmNoPoursuites, setConfirmNoPoursuites] = useState(true);
   const [aGarant, setAGarant] = useState<string>('');
   
-  // Step 2 - Personal info (reduced fields)
+  // Step 1 - Qualification ACHAT
+  const [accordBancaire, setAccordBancaire] = useState<string>('');
+  const [apportPersonnel, setApportPersonnel] = useState('');
+  const [typeBien, setTypeBien] = useState('');
+  
+  // Step 2 - Personal info
   const [prenom, setPrenom] = useState('');
   const [email, setEmail] = useState('');
   const [telephone, setTelephone] = useState('');
@@ -50,16 +85,26 @@ export function QuickLeadForm() {
   const [submitResult, setSubmitResult] = useState<'qualified' | 'not_qualified' | null>(null);
 
   // Validation for each step
-  const isQualificationValid = statutEmploi && permisNationalite;
+  const isQualificationValidLocation = statutEmploi && permisNationalite;
+  const isQualificationValidAchat = accordBancaire && apportPersonnel;
+  const isQualificationValid = isAchat ? isQualificationValidAchat : isQualificationValidLocation;
   const isInfoValid = prenom.trim() && email.trim() && telephone.trim();
 
   const calculateQualification = () => {
-    const isSalarie = statutEmploi === 'salarie';
-    const hasValidPermis = ['B', 'C', 'Suisse'].includes(permisNationalite);
-    const hasPoursuites = !confirmNoPoursuites;
-    const hasGarant = aGarant === 'oui';
-    
-    return isSalarie && hasValidPermis && (!hasPoursuites || (hasPoursuites && hasGarant));
+    if (isAchat) {
+      // For purchase: need bank agreement or significant apport
+      const hasAccord = accordBancaire === 'oui';
+      const hasGoodApport = ['200000-500000', '> 500000'].includes(apportPersonnel);
+      return hasAccord || hasGoodApport;
+    } else {
+      // For rental
+      const isSalarie = statutEmploi === 'salarie';
+      const hasValidPermis = ['B', 'C', 'Suisse'].includes(permisNationalite);
+      const hasPoursuites = !confirmNoPoursuites;
+      const hasGarant = aGarant === 'oui';
+      
+      return isSalarie && hasValidPermis && (!hasPoursuites || (hasPoursuites && hasGarant));
+    }
   };
 
   const handleSubmit = async () => {
@@ -73,16 +118,20 @@ export function QuickLeadForm() {
         .insert({
           email,
           prenom: prenom.trim(),
-          nom: '', // Not collected anymore
+          nom: '',
           telephone: telephone.trim(),
           localite: localite || null,
           budget: budget || null,
-          statut_emploi: statutEmploi,
-          permis_nationalite: permisNationalite,
-          poursuites: !confirmNoPoursuites,
-          a_garant: aGarant === 'oui',
+          statut_emploi: isAchat ? null : statutEmploi,
+          permis_nationalite: isAchat ? null : permisNationalite,
+          poursuites: isAchat ? null : !confirmNoPoursuites,
+          a_garant: isAchat ? null : (aGarant === 'oui'),
           is_qualified: isQualified,
-          source: 'landing_quickform'
+          source: isAchat ? 'landing_quickform_achat' : 'landing_quickform',
+          type_recherche: isAchat ? 'achat' : 'location',
+          accord_bancaire: isAchat ? (accordBancaire === 'oui') : null,
+          apport_personnel: isAchat ? apportPersonnel : null,
+          type_bien: isAchat ? typeBien : null,
         });
 
       if (error) throw error;
@@ -96,11 +145,12 @@ export function QuickLeadForm() {
           telephone: telephone.trim(),
           localite: localite || null, 
           budget: budget || null,
-          statut_emploi: statutEmploi,
-          permis_nationalite: permisNationalite,
-          poursuites: !confirmNoPoursuites,
-          a_garant: aGarant === 'oui',
-          is_qualified: isQualified
+          statut_emploi: isAchat ? null : statutEmploi,
+          permis_nationalite: isAchat ? null : permisNationalite,
+          poursuites: isAchat ? null : !confirmNoPoursuites,
+          a_garant: isAchat ? null : (aGarant === 'oui'),
+          is_qualified: isQualified,
+          type_recherche: isAchat ? 'achat' : 'location',
         }
       }).catch((err) => console.error('Email notification error:', err));
 
@@ -115,15 +165,13 @@ export function QuickLeadForm() {
 
   const handleNext = () => {
     if (step === 'qualification' && isQualificationValid) {
-      // Check if they have poursuites
-      if (!confirmNoPoursuites) {
+      if (!isAchat && !confirmNoPoursuites) {
         setStep('garant');
       } else {
         setStep('info');
       }
     } else if (step === 'garant') {
       if (aGarant === 'non') {
-        // Not qualified - show message immediately
         setSubmitResult('not_qualified');
       } else if (aGarant === 'oui') {
         setStep('info');
@@ -135,7 +183,7 @@ export function QuickLeadForm() {
 
   const handleBack = () => {
     if (step === 'info') {
-      if (!confirmNoPoursuites) {
+      if (!isAchat && !confirmNoPoursuites) {
         setStep('garant');
       } else {
         setStep('qualification');
@@ -144,6 +192,8 @@ export function QuickLeadForm() {
       setStep('qualification');
     }
   };
+
+  const budgetOptions = isAchat ? budgetOptionsAchat : budgetOptionsLocation;
 
   if (submitResult === 'qualified') {
     return (
@@ -157,7 +207,10 @@ export function QuickLeadForm() {
               Félicitations {prenom} ! 🎉
             </h3>
             <p className="text-muted-foreground animate-fade-in" style={{ animationDelay: '100ms' }}>
-              Ton profil est qualifié ! Notre équipe analyse ta demande et te contactera sous 24h avec une sélection personnalisée de biens correspondant à tes critères.
+              {isAchat 
+                ? "Ton profil est qualifié ! Notre équipe analyse ta demande et te contactera sous 24h avec une sélection de biens correspondant à tes critères d'achat."
+                : "Ton profil est qualifié ! Notre équipe analyse ta demande et te contactera sous 24h avec une sélection personnalisée de biens correspondant à tes critères."
+              }
             </p>
           </div>
         </div>
@@ -177,7 +230,10 @@ export function QuickLeadForm() {
               Merci pour ton intérêt{prenom ? `, ${prenom}` : ''}
             </h3>
             <p className="text-muted-foreground animate-fade-in" style={{ animationDelay: '100ms' }}>
-              Malheureusement, ton profil ne correspond pas à nos critères actuels pour bénéficier de notre service de shortlist. Pour être éligible, il faut être salarié(e), avoir un permis B, C ou la nationalité suisse, et ne pas avoir de poursuites (sauf si tu as un garant solvable).
+              {isAchat 
+                ? "Pour bénéficier de notre service d'accompagnement à l'achat, il faut avoir un accord de principe bancaire ou un apport personnel conséquent (200k+ CHF). N'hésite pas à nous recontacter quand tu auras ces éléments !"
+                : "Malheureusement, ton profil ne correspond pas à nos critères actuels pour bénéficier de notre service de shortlist. Pour être éligible, il faut être salarié(e), avoir un permis B, C ou la nationalité suisse, et ne pas avoir de poursuites (sauf si tu as un garant solvable)."
+              }
             </p>
             <p className="text-muted-foreground mt-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
               N'hésite pas à nous recontacter si ta situation évolue !
@@ -197,7 +253,7 @@ export function QuickLeadForm() {
           {/* Header */}
           <div className="text-center mb-6 animate-fade-in">
             <h3 className="text-xl md:text-2xl font-bold text-foreground mb-2">
-              Reçois ta shortlist personnalisée 📬
+              {isAchat ? 'Reçois ta sélection de biens à acheter 🏡' : 'Reçois ta shortlist personnalisée 📬'}
             </h3>
             <p className="text-sm text-muted-foreground">
               Gratuit • Sans engagement • Réponse sous 24h
@@ -225,8 +281,8 @@ export function QuickLeadForm() {
             </div>
           </div>
 
-          {/* Step 1: Qualification (NOW FIRST) */}
-          {step === 'qualification' && (
+          {/* Step 1: Qualification LOCATION */}
+          {step === 'qualification' && !isAchat && (
             <div className="space-y-5 animate-fade-in">
               {/* Employment status */}
               <div className="space-y-3">
@@ -243,7 +299,7 @@ export function QuickLeadForm() {
                 </RadioGroup>
               </div>
 
-              {/* Permit/Nationality - Optimized order */}
+              {/* Permit/Nationality */}
               <div className="space-y-3">
                 <Label className="text-base font-medium">Quel est ton permis ou nationalité ?</Label>
                 <Select value={permisNationalite} onValueChange={setPermisNationalite}>
@@ -260,7 +316,7 @@ export function QuickLeadForm() {
                 </Select>
               </div>
 
-              {/* Poursuites - POSITIVE FRAMING with pre-checked checkbox */}
+              {/* Poursuites - POSITIVE FRAMING */}
               <div className="space-y-3 p-4 rounded-xl bg-green-500/5 border border-green-500/20">
                 <div className="flex items-start space-x-3">
                   <Checkbox 
@@ -283,7 +339,78 @@ export function QuickLeadForm() {
             </div>
           )}
 
-          {/* Step Garant (only if poursuites) */}
+          {/* Step 1: Qualification ACHAT */}
+          {step === 'qualification' && isAchat && (
+            <div className="space-y-5 animate-fade-in">
+              {/* Accord bancaire */}
+              <div className="space-y-3">
+                <Label className="text-base font-medium">As-tu obtenu un accord de principe bancaire ?</Label>
+                <RadioGroup value={accordBancaire} onValueChange={setAccordBancaire} className="flex gap-4">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="oui" id="accord-oui" />
+                    <Label htmlFor="accord-oui" className="cursor-pointer">Oui</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="non" id="accord-non" />
+                    <Label htmlFor="accord-non" className="cursor-pointer">Non / Pas encore</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Apport personnel */}
+              <div className="space-y-3">
+                <Label className="text-base font-medium">Quel est ton apport personnel disponible ?</Label>
+                <Select value={apportPersonnel} onValueChange={setApportPersonnel}>
+                  <SelectTrigger className="h-12 bg-background/80 border-border/50 focus:border-primary">
+                    <SelectValue placeholder="Sélectionne ton apport" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {apportOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Type de bien */}
+              <div className="space-y-3">
+                <Label className="text-base font-medium">Quel type de bien recherches-tu ?</Label>
+                <Select value={typeBien} onValueChange={setTypeBien}>
+                  <SelectTrigger className="h-12 bg-background/80 border-border/50 focus:border-primary">
+                    <SelectValue placeholder="Sélectionne le type de bien" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {typeBienOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        <div className="flex items-center gap-2">
+                          {option.value === 'appartement' && <Building className="h-4 w-4" />}
+                          {option.value === 'maison' && <Home className="h-4 w-4" />}
+                          {option.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Info box for achat */}
+              <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="h-5 w-5 text-primary mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">0% de commission pour l'acheteur</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      La commission est payée par le vendeur. Tu ne paies rien de plus que le prix du bien.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step Garant (only for location with poursuites) */}
           {step === 'garant' && (
             <div className="space-y-6 animate-fade-in">
               <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-lg">
@@ -307,7 +434,7 @@ export function QuickLeadForm() {
             </div>
           )}
 
-          {/* Step 2: Personal Info (REDUCED - now second) */}
+          {/* Step 2: Personal Info */}
           {step === 'info' && (
             <div className="space-y-4 animate-fade-in">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -360,7 +487,7 @@ export function QuickLeadForm() {
                   <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                   <Select value={budget} onValueChange={setBudget}>
                     <SelectTrigger className="pl-10 h-12 bg-background/80 border-border/50 focus:border-primary">
-                      <SelectValue placeholder="Budget mensuel" />
+                      <SelectValue placeholder={isAchat ? "Budget d'achat" : "Budget mensuel"} />
                     </SelectTrigger>
                     <SelectContent>
                       {budgetOptions.map((option) => (
@@ -410,8 +537,8 @@ export function QuickLeadForm() {
                 </>
               ) : step === 'info' ? (
                 <>
-                  Recevoir ma shortlist
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  <CheckCircle className="mr-2 h-5 w-5" />
+                  {isAchat ? 'Recevoir ma sélection' : 'Recevoir ma shortlist'}
                 </>
               ) : (
                 <>
@@ -422,9 +549,12 @@ export function QuickLeadForm() {
             </Button>
           </div>
 
-          {/* Trust micro-copy */}
-          <p className="text-center text-xs text-muted-foreground mt-4 animate-fade-in">
-            🔒 Tes données restent confidentielles • Pas de spam
+          {/* Privacy notice */}
+          <p className="text-xs text-center text-muted-foreground mt-4">
+            🔒 Tes données sont protégées et ne seront jamais partagées.{' '}
+            <a href="/politique-confidentialite" className="underline hover:text-foreground">
+              Politique de confidentialité
+            </a>
           </p>
         </div>
       </div>

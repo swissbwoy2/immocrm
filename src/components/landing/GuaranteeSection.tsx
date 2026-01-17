@@ -1,6 +1,8 @@
-import { Shield, Wallet, CheckCircle, RefreshCcw, Sparkles, Star, Crown, ArrowRight } from 'lucide-react';
+import { Shield, Wallet, CheckCircle, RefreshCcw, Sparkles, Star, Crown, ArrowRight, FileCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { useSearchType } from '@/contexts/SearchTypeContext';
+
 // Animated number component
 function AnimatedValue({ value, suffix = '' }: { value: string; suffix?: string }) {
   const [isVisible, setIsVisible] = useState(false);
@@ -18,7 +20,9 @@ function AnimatedValue({ value, suffix = '' }: { value: string; suffix?: string 
 }
 
 export function GuaranteeSection() {
-  const pricingItems = [
+  const { isAchat } = useSearchType();
+
+  const pricingItemsLocation = [
     {
       icon: Wallet,
       label: 'Acompte',
@@ -44,6 +48,35 @@ export function GuaranteeSection() {
       glowColor: 'rgba(245, 158, 11, 0.3)',
     },
   ];
+
+  const pricingItemsAchat = [
+    {
+      icon: Wallet,
+      label: 'Acompte',
+      value: '2\'500 CHF',
+      description: 'Déduit du succès',
+      gradient: 'from-blue-500 to-cyan-500',
+      glowColor: 'rgba(59, 130, 246, 0.3)',
+    },
+    {
+      icon: CheckCircle,
+      label: 'Succès',
+      value: '0% pour toi',
+      description: 'Commission payée par le vendeur',
+      gradient: 'from-green-500 to-emerald-500',
+      glowColor: 'rgba(34, 197, 94, 0.3)',
+    },
+    {
+      icon: FileCheck,
+      label: 'Accompagnement',
+      value: 'Jusqu\'au notaire',
+      description: 'Négociation & signature incluses',
+      gradient: 'from-amber-500 to-orange-500',
+      glowColor: 'rgba(245, 158, 11, 0.3)',
+    },
+  ];
+
+  const pricingItems = isAchat ? pricingItemsAchat : pricingItemsLocation;
 
   return (
     <section className="py-20 relative overflow-hidden bg-gradient-to-b from-background via-primary/5 to-background">
@@ -88,10 +121,16 @@ export function GuaranteeSection() {
               <span className="text-primary font-medium relative z-10">💰 Tarification transparente</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              Tellement confiant qu'on te <span className="gradient-text-animated">rembourse</span>
+              {isAchat 
+                ? 'Achète sans payer de commission 🏡'
+                : <>Tellement confiant qu'on te <span className="gradient-text-animated">rembourse</span></>
+              }
             </h2>
             <p className="text-muted-foreground text-lg">
-              Échec après 3 mois ? Remboursement intégral ! 💪
+              {isAchat 
+                ? 'La commission est payée par le vendeur. Tu ne paies que le prix du bien.'
+                : 'Échec après 3 mois ? Remboursement intégral ! 💪'
+              }
             </p>
           </div>
 
@@ -163,16 +202,26 @@ export function GuaranteeSection() {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-foreground mb-2 flex items-center gap-2">
-                      🛡️ GARANTIE SÉRÉNITÉ
+                      🛡️ {isAchat ? 'ACCOMPAGNEMENT COMPLET' : 'GARANTIE SÉRÉNITÉ'}
                     </h3>
                     <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
-                      Après ta shortlist personnalisée, tu peux nous confier ta recherche pendant <strong className="text-foreground">90 jours</strong>.
-                      <br />
-                      Pas de bail signé ? <strong className="text-foreground">Remboursement intégral. Sans condition.</strong>
+                      {isAchat ? (
+                        <>
+                          De la recherche à la signature chez le notaire, on t'accompagne à chaque étape.
+                          <br />
+                          <strong className="text-foreground">Négociation, vérifications, financement : tout est géré.</strong>
+                        </>
+                      ) : (
+                        <>
+                          Après ta shortlist personnalisée, tu peux nous confier ta recherche pendant <strong className="text-foreground">90 jours</strong>.
+                          <br />
+                          Pas de bail signé ? <strong className="text-foreground">Remboursement intégral. Sans condition.</strong>
+                        </>
+                      )}
                     </p>
                     <Button asChild variant="outline" size="sm" className="border-primary/30 hover:bg-primary/10 group/btn">
                       <a href="/nouveau-mandat">
-                        Découvrir le mandat 90 jours
+                        {isAchat ? 'Démarrer ma recherche d\'achat' : 'Découvrir le mandat 90 jours'}
                         <ArrowRight className="ml-2 h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
                       </a>
                     </Button>
@@ -207,13 +256,16 @@ export function GuaranteeSection() {
               <div className="flex items-center gap-3">
                 <Crown className="h-6 w-6 text-amber-500 relative z-10 animate-pulse" />
                 <span className="text-lg md:text-xl font-bold text-primary relative z-10">
-                  Garantie 100% remboursé 🎯
+                  {isAchat ? '0% commission acheteur 🎯' : 'Garantie 100% remboursé 🎯'}
                 </span>
                 <Sparkles className="h-5 w-5 text-amber-500 relative z-10 animate-pulse" style={{ animationDelay: '0.5s' }} />
               </div>
               
               <p className="text-sm text-muted-foreground relative z-10">
-                ✓ Zéro condition cachée • ✓ Remboursement sous 7 jours
+                {isAchat 
+                  ? '✓ Commission vendeur • ✓ Accompagnement notarial • ✓ Négociation incluse'
+                  : '✓ Zéro condition cachée • ✓ Remboursement sous 7 jours'
+                }
               </p>
             </div>
           </div>

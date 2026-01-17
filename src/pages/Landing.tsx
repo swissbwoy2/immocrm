@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { SearchTypeProvider } from '@/contexts/SearchTypeContext';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { HeroSection } from '@/components/landing/HeroSection';
@@ -46,72 +47,74 @@ export default function Landing() {
   }, [user, userRole, loading, navigate]);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Floating Navigation */}
-      <FloatingNav />
-      
-      {/* Top banner */}
-      <div 
-        className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-white/10"
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
-      >
-        <div className="container mx-auto px-4 py-2 text-center">
-          <p className="text-xs sm:text-sm text-slate-300">
-            Un logiciel propulsé par{' '}
-            <a 
-              href="https://www.immo-rama.ch" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-primary hover:text-primary/80 font-semibold transition-colors"
+    <SearchTypeProvider>
+      <div className="min-h-screen bg-background">
+        {/* Floating Navigation */}
+        <FloatingNav />
+        
+        {/* Top banner */}
+        <div 
+          className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-white/10"
+          style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+        >
+          <div className="container mx-auto px-4 py-2 text-center">
+            <p className="text-xs sm:text-sm text-slate-300">
+              Un logiciel propulsé par{' '}
+              <a 
+                href="https://www.immo-rama.ch" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 font-semibold transition-colors"
+              >
+                Immo-rama.ch
+              </a>
+            </p>
+          </div>
+        </div>
+        
+        {/* OPTIMIZED SECTION ORDER - Form visible without scroll */}
+        <HeroSection />
+        <SocialProofBar />
+        <QuickLeadForm />
+        <GuaranteeSection />
+        <BenefitsSection />
+        <HowItWorks />
+        <BudgetCalculatorSection />
+        <DifferentiationSection />
+        <FAQSection />
+        <CoverageSection />
+        <StatsSection />
+        <ProptechSection />
+        <EntreprisesRHSection />
+        <ApporteurSection />
+        <LandingFooter />
+
+        {/* Floating CTA - Activer ma recherche */}
+        <div 
+          className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 animate-fade-in"
+          style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+        >
+          <div className="relative group">
+            {/* Animated glow */}
+            <div className="absolute -inset-1.5 bg-primary/30 rounded-full blur-lg opacity-70 group-hover:opacity-100 transition-opacity animate-pulse" />
+            
+            <Button 
+              asChild 
+              size="lg" 
+              className="relative shadow-xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 text-sm md:text-base px-5 md:px-8 hover:scale-105 bg-gradient-to-r from-primary to-primary/90"
             >
-              Immo-rama.ch
-            </a>
-          </p>
+              <Link to="/nouveau-mandat">
+                <span className="hidden sm:inline">🚀 Activer ma recherche</span>
+                <span className="sm:hidden">🚀 Démarrer</span>
+                <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </Button>
+          </div>
         </div>
-      </div>
-      
-      {/* OPTIMIZED SECTION ORDER - Form visible without scroll */}
-      <HeroSection />
-      <SocialProofBar />
-      <QuickLeadForm />
-      <GuaranteeSection />
-      <BenefitsSection />
-      <HowItWorks />
-      <BudgetCalculatorSection />
-      <DifferentiationSection />
-      <FAQSection />
-      <CoverageSection />
-      <StatsSection />
-      <ProptechSection />
-      <EntreprisesRHSection />
-      <ApporteurSection />
-      <LandingFooter />
 
-      {/* Floating CTA - Activer ma recherche */}
-      <div 
-        className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 animate-fade-in"
-        style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
-      >
-        <div className="relative group">
-          {/* Animated glow */}
-          <div className="absolute -inset-1.5 bg-primary/30 rounded-full blur-lg opacity-70 group-hover:opacity-100 transition-opacity animate-pulse" />
-          
-          <Button 
-            asChild 
-            size="lg" 
-            className="relative shadow-xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 text-sm md:text-base px-5 md:px-8 hover:scale-105 bg-gradient-to-r from-primary to-primary/90"
-          >
-            <Link to="/nouveau-mandat">
-              <span className="hidden sm:inline">🚀 Activer ma recherche</span>
-              <span className="sm:hidden">🚀 Démarrer</span>
-              <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-          </Button>
-        </div>
+        {/* Cookie Consent Banner */}
+        <CookieConsentBanner />
       </div>
-
-      {/* Cookie Consent Banner */}
-      <CookieConsentBanner />
-    </div>
+    </SearchTypeProvider>
   );
 }

@@ -1,6 +1,7 @@
-import { User, MessageSquare, Eye, CalendarCheck, FileText, Crown, Sparkles } from 'lucide-react';
+import { User, MessageSquare, Eye, CalendarCheck, FileText, Crown, Sparkles, Home, Building, Key, Briefcase } from 'lucide-react';
+import { useSearchType } from '@/contexts/SearchTypeContext';
 
-const benefits = [
+const benefitsLocation = [
   {
     icon: User,
     title: 'Un agent dédié qui gère tout',
@@ -33,7 +34,43 @@ const benefits = [
   },
 ];
 
+const benefitsAchat = [
+  {
+    icon: User,
+    title: 'Un conseiller dédié à ton projet',
+    description: 'Il recherche les biens correspondant à tes critères et négocie en ton nom.',
+  },
+  {
+    icon: Building,
+    title: 'Accès aux biens off-market',
+    description: 'Des biens exclusifs avant qu\'ils ne soient publiés sur les portails immobiliers.',
+  },
+  {
+    icon: Eye,
+    title: 'Analyse complète de chaque bien',
+    description: 'Vérification technique, juridique et financière avant toute proposition.',
+  },
+  {
+    icon: Briefcase,
+    title: 'Négociation professionnelle',
+    description: 'On négocie le meilleur prix pour toi. Notre expérience est ton avantage.',
+  },
+  {
+    icon: FileText,
+    title: 'Accompagnement jusqu\'au notaire',
+    description: 'De l\'offre d\'achat à la signature de l\'acte, on gère toute la paperasse.',
+  },
+  {
+    icon: Key,
+    title: '0% de commission pour l\'acheteur',
+    description: 'La commission est payée par le vendeur. Tu paies uniquement le prix du bien.',
+  },
+];
+
 export function BenefitsSection() {
+  const { isAchat } = useSearchType();
+  const benefits = isAchat ? benefitsAchat : benefitsLocation;
+
   return (
     <section className="py-12 md:py-24 relative overflow-hidden">
       {/* Subtle gradient background */}
@@ -75,10 +112,15 @@ export function BenefitsSection() {
           
           <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 md:mb-6">
             Tout ce qu'il te faut pour{' '}
-            <span className="text-primary">décrocher ton appart'</span>
+            <span className="text-primary">
+              {isAchat ? 'trouver ton bien idéal' : 'décrocher ton appart\''}
+            </span>
           </h2>
           <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
-            ✨ Le coup de pouce que tout le monde mérite dans sa recherche d'appartement.
+            {isAchat 
+              ? '🏡 L\'accompagnement premium pour devenir propriétaire sereinement.'
+              : '✨ Le coup de pouce que tout le monde mérite dans sa recherche d\'appartement.'
+            }
           </p>
         </div>
 
