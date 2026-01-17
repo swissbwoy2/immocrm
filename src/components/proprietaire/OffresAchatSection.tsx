@@ -9,7 +9,7 @@ import { Handshake, Filter, TrendingUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-interface OffreAchat {
+interface OffreAchatData {
   id: string;
   immeuble_id: string;
   acheteur_nom: string | null;
@@ -28,7 +28,7 @@ interface OffreAchat {
       email: string | null;
       telephone: string | null;
     };
-  };
+  } | null;
 }
 
 interface OffresAchatSectionProps {
@@ -46,7 +46,7 @@ const STATUT_CONFIG = {
 };
 
 export function OffresAchatSection({ immeubleId, prixDemande }: OffresAchatSectionProps) {
-  const [offres, setOffres] = useState<OffreAchat[]>([]);
+  const [offres, setOffres] = useState<OffreAchatData[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
 
