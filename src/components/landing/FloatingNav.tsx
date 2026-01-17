@@ -3,9 +3,11 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { LogIn, Rocket, Building2, Home } from 'lucide-react';
 import logo from '@/assets/logo-immo-rama-new.png';
+import { useSearchType } from '@/contexts/SearchTypeContext';
 
 export function FloatingNav() {
   const [isVisible, setIsVisible] = useState(false);
+  const { isAchat } = useSearchType();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -86,7 +88,9 @@ export function FloatingNav() {
               >
                 <Link to="/nouveau-mandat">
                   <Rocket className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden xs:inline">Activer ma recherche</span>
+                  <span className="hidden xs:inline">
+                    {isAchat ? 'Trouver mon bien' : 'Activer ma recherche'}
+                  </span>
                   <span className="xs:hidden">Démarrer</span>
                 </Link>
               </Button>

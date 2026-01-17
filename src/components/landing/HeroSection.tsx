@@ -1,10 +1,49 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Star, Rocket, CheckCircle, ShieldCheck, Users, Crown } from "lucide-react";
+import { ArrowRight, Sparkles, Star, Rocket, CheckCircle, ShieldCheck, Users, Crown, Home, Key } from "lucide-react";
 import logoImmoRama from "@/assets/logo-immo-rama-new.png";
 import { FloatingParticles } from "@/components/messaging/FloatingParticles";
+import { useSearchType } from "@/contexts/SearchTypeContext";
 
 export function HeroSection() {
+  const { searchType, setSearchType, isLocation, isAchat } = useSearchType();
+
+  // Content based on search type
+  const content = {
+    location: {
+      headline: "Tu n'es plus seul face à la",
+      headlineAccent: "pénurie de logements !",
+      subheadline: "Délègue ta recherche à",
+      subheadlineAccent: "des experts dévoués qui connaissent parfaitement ta région",
+      techLine: "🏠 On te trouve ton appart' aujourd'hui !",
+      promise: "90 jours ou remboursé intégralement",
+      cta: "Activer ma recherche",
+      ctaLink: "/nouveau-mandat",
+      acompte: "Acompte 300 CHF",
+      garantie: "90 jours garantis",
+      refund: "Remboursé si échec",
+      familiesText: "+500 familles accompagnées",
+      legalMention: "🇨🇭 Service premium • Mandat de 90 jours • Transparence totale",
+    },
+    achat: {
+      headline: "Trouve ton bien idéal",
+      headlineAccent: "avant qu'il soit sur le marché",
+      subheadline: "Accès exclusif à",
+      subheadlineAccent: "des biens off-market dans ta région",
+      techLine: "🏡 0% de commission pour l'acheteur !",
+      promise: "Accompagnement jusqu'à la signature notariale",
+      cta: "Trouver mon bien",
+      ctaLink: "/nouveau-mandat",
+      acompte: "Acompte 2'500 CHF",
+      garantie: "Accompagnement complet",
+      refund: "Commission vendeur",
+      familiesText: "+150 biens vendus",
+      legalMention: "🇨🇭 Service premium • Accompagnement notarial • Commission vendeur",
+    },
+  };
+
+  const c = isAchat ? content.achat : content.location;
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Animated mesh gradient background */}
@@ -99,12 +138,40 @@ export function HeroSection() {
             <span className="text-lg md:text-xl font-semibold text-primary tracking-wide">L'immobilier accessible</span>
           </div>
 
+          {/* TYPE SELECTOR - Je loue / J'achète */}
+          <div className="animate-fade-in mb-6 w-full max-w-md" style={{ animationDelay: "85ms" }}>
+            <div className="flex rounded-xl border-2 border-primary/30 bg-background/80 backdrop-blur-sm p-1 gap-1">
+              <button
+                onClick={() => setSearchType('location')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
+                  isLocation || !searchType
+                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-primary/10'
+                }`}
+              >
+                <Key className="h-5 w-5" />
+                <span>Je cherche à louer</span>
+              </button>
+              <button
+                onClick={() => setSearchType('achat')}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
+                  isAchat
+                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-primary/10'
+                }`}
+              >
+                <Home className="h-5 w-5" />
+                <span>Je cherche à acheter</span>
+              </button>
+            </div>
+          </div>
+
           {/* Pain point headline - Punchy & Catchy */}
           <h1 
             className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 animate-fade-in text-foreground" 
             style={{ animationDelay: "100ms" }}
           >
-            Tu n'es plus seul face à la <span className="text-primary">pénurie de logements !</span>
+            {c.headline} <span className="text-primary">{c.headlineAccent}</span>
           </h1>
 
           {/* Solution headline - Dynamic */}
@@ -112,9 +179,9 @@ export function HeroSection() {
             className="text-xl md:text-2xl font-semibold mb-3 animate-fade-in text-foreground" 
             style={{ animationDelay: "125ms" }}
           >
-            Délègue ta recherche à{" "}
+            {c.subheadline}{" "}
             <span className="gradient-text-animated bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text">
-              des experts dévoués qui connaissent parfaitement ta région
+              {c.subheadlineAccent}
             </span>
           </p>
 
@@ -123,7 +190,7 @@ export function HeroSection() {
             className="text-base md:text-lg text-primary font-medium mb-4 animate-fade-in" 
             style={{ animationDelay: "140ms" }}
           >
-            🏠 On te trouve ton appart' aujourd'hui !
+            {c.techLine}
           </p>
 
           {/* Empathic subheadline - Tutoiement + Mission */}
@@ -131,7 +198,7 @@ export function HeroSection() {
             className="text-base md:text-lg text-muted-foreground mb-6 max-w-2xl animate-fade-in leading-relaxed" 
             style={{ animationDelay: "150ms" }}
           >
-            Nos experts cherchent, sélectionnent et contactent les régies pour toi, afin de{" "}
+            Nos experts cherchent, sélectionnent et contactent {isAchat ? 'les vendeurs' : 'les régies'} pour toi, afin de{" "}
             <strong className="text-foreground">maximiser tes chances de trouver plus vite et mieux</strong>.
           </p>
 
@@ -145,7 +212,7 @@ export function HeroSection() {
               <div className="flex items-center justify-center gap-2 md:gap-3 relative z-10">
                 <ShieldCheck className="h-6 w-6 md:h-8 md:w-8 text-green-500 flex-shrink-0" />
                 <span className="text-lg md:text-2xl font-bold text-foreground">
-                  90 jours ou remboursé intégralement
+                  {c.promise}
                 </span>
               </div>
             </div>
@@ -153,19 +220,19 @@ export function HeroSection() {
 
           {/* Double CTA Strategy */}
           <div className="flex flex-col items-center gap-4 animate-fade-in" style={{ animationDelay: "300ms" }}>
-            {/* PRIMARY CTA - Activer ma recherche → /nouveau-mandat */}
+            {/* PRIMARY CTA */}
             <Button 
               asChild 
               size="lg" 
               className="group text-lg md:text-2xl px-10 md:px-14 py-7 md:py-9 shadow-2xl shadow-primary/40 hover:shadow-primary/60 transition-all duration-300 relative overflow-hidden bg-gradient-to-r from-primary via-primary to-primary/90 hover:scale-105 animate-pulse-glow"
             >
-              <Link to="/nouveau-mandat">
+              <Link to={c.ctaLink}>
                 {/* Shine effect on button */}
                 <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
                 {/* Glow ring */}
                 <div className="absolute inset-0 rounded-md ring-2 ring-primary/50 ring-offset-2 ring-offset-background animate-pulse opacity-75" />
                 <Rocket className="mr-3 h-6 w-6 md:h-7 md:w-7 relative z-10" />
-                <span className="relative z-10 font-bold">Activer ma recherche</span>
+                <span className="relative z-10 font-bold">{c.cta}</span>
                 <ArrowRight className="ml-3 h-6 w-6 md:h-7 md:w-7 group-hover:translate-x-2 transition-transform relative z-10" />
               </Link>
             </Button>
@@ -187,15 +254,15 @@ export function HeroSection() {
             <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground mt-2">
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                Acompte 300 CHF
+                {c.acompte}
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                90 jours garantis
+                {c.garantie}
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                Remboursé si échec
+                {c.refund}
               </span>
             </div>
           </div>
@@ -224,7 +291,7 @@ export function HeroSection() {
               <div className="inline-flex items-center gap-2 glass-morphism rounded-full px-4 py-2 border border-border/40">
                 <Users className="h-4 w-4 text-primary" />
                 <span className="text-sm text-muted-foreground">
-                  <span className="text-primary font-medium">+500 familles accompagnées</span> avec succès
+                  <span className="text-primary font-medium">{c.familiesText}</span> avec succès
                 </span>
               </div>
             </div>
@@ -232,7 +299,7 @@ export function HeroSection() {
             {/* Legal mention */}
             <div className="mt-4 inline-flex items-center gap-2 text-xs text-muted-foreground">
               <ShieldCheck className="h-4 w-4 text-green-500" />
-              <span>🇨🇭 Service premium • Mandat de 90 jours • Transparence totale</span>
+              <span>{c.legalMention}</span>
             </div>
           </div>
         </div>
