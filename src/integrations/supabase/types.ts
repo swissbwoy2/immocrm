@@ -3011,6 +3011,7 @@ export type Database = {
           classification_batiment: string | null
           code_postal: string | null
           combustible: string | null
+          commission_agence_prevue: number | null
           commune_rf: string | null
           created_at: string | null
           date_accord_publication: string | null
@@ -3086,11 +3087,14 @@ export type Database = {
           notes: string | null
           numero_parcelle: string | null
           pays: string | null
+          places_parc_incluses: boolean | null
           points_forts: string[] | null
           potentiel_developpement: string | null
           potentiel_solaire_aptitude: string | null
           potentiel_solaire_exposition: number | null
+          prix_commercial: number | null
           prix_m2_secteur: number | null
+          prix_vendeur: number | null
           prix_vente_demande: number | null
           prix_vente_estime: number | null
           proprietaire_id: string
@@ -3148,6 +3152,7 @@ export type Database = {
           classification_batiment?: string | null
           code_postal?: string | null
           combustible?: string | null
+          commission_agence_prevue?: number | null
           commune_rf?: string | null
           created_at?: string | null
           date_accord_publication?: string | null
@@ -3223,11 +3228,14 @@ export type Database = {
           notes?: string | null
           numero_parcelle?: string | null
           pays?: string | null
+          places_parc_incluses?: boolean | null
           points_forts?: string[] | null
           potentiel_developpement?: string | null
           potentiel_solaire_aptitude?: string | null
           potentiel_solaire_exposition?: number | null
+          prix_commercial?: number | null
           prix_m2_secteur?: number | null
+          prix_vendeur?: number | null
           prix_vente_demande?: number | null
           prix_vente_estime?: number | null
           proprietaire_id: string
@@ -3285,6 +3293,7 @@ export type Database = {
           classification_batiment?: string | null
           code_postal?: string | null
           combustible?: string | null
+          commission_agence_prevue?: number | null
           commune_rf?: string | null
           created_at?: string | null
           date_accord_publication?: string | null
@@ -3360,11 +3369,14 @@ export type Database = {
           notes?: string | null
           numero_parcelle?: string | null
           pays?: string | null
+          places_parc_incluses?: boolean | null
           points_forts?: string[] | null
           potentiel_developpement?: string | null
           potentiel_solaire_aptitude?: string | null
           potentiel_solaire_exposition?: number | null
+          prix_commercial?: number | null
           prix_m2_secteur?: number | null
+          prix_vendeur?: number | null
           prix_vente_demande?: number | null
           prix_vente_estime?: number | null
           proprietaire_id?: string
@@ -5086,6 +5098,7 @@ export type Database = {
           adresse: string | null
           agent_id: string | null
           client_id: string | null
+          commission_mode: string | null
           commission_payee: boolean | null
           commission_totale: number
           created_at: string | null
@@ -5102,6 +5115,8 @@ export type Database = {
           part_agence: number
           part_agent: number
           pieces: number | null
+          prix_vendeur_transaction: number | null
+          prix_vente_final: number | null
           regie_contact: string | null
           regie_email: string | null
           regie_nom: string | null
@@ -5109,12 +5124,14 @@ export type Database = {
           statut: string | null
           surface: number | null
           type_bien: string | null
+          type_transaction: string | null
           updated_at: string | null
         }
         Insert: {
           adresse?: string | null
           agent_id?: string | null
           client_id?: string | null
+          commission_mode?: string | null
           commission_payee?: boolean | null
           commission_totale: number
           created_at?: string | null
@@ -5131,6 +5148,8 @@ export type Database = {
           part_agence: number
           part_agent: number
           pieces?: number | null
+          prix_vendeur_transaction?: number | null
+          prix_vente_final?: number | null
           regie_contact?: string | null
           regie_email?: string | null
           regie_nom?: string | null
@@ -5138,12 +5157,14 @@ export type Database = {
           statut?: string | null
           surface?: number | null
           type_bien?: string | null
+          type_transaction?: string | null
           updated_at?: string | null
         }
         Update: {
           adresse?: string | null
           agent_id?: string | null
           client_id?: string | null
+          commission_mode?: string | null
           commission_payee?: boolean | null
           commission_totale?: number
           created_at?: string | null
@@ -5160,6 +5181,8 @@ export type Database = {
           part_agence?: number
           part_agent?: number
           pieces?: number | null
+          prix_vendeur_transaction?: number | null
+          prix_vente_final?: number | null
           regie_contact?: string | null
           regie_email?: string | null
           regie_nom?: string | null
@@ -5167,6 +5190,7 @@ export type Database = {
           statut?: string | null
           surface?: number | null
           type_bien?: string | null
+          type_transaction?: string | null
           updated_at?: string | null
         }
         Relationships: [
