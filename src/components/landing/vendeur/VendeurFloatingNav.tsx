@@ -33,9 +33,9 @@ export function VendeurFloatingNav() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link 
-              to="/" 
+              to="/vendre-mon-bien" 
               className="flex items-center gap-2"
-              aria-label="Retour à l'accueil Immo-Rama"
+              aria-label="Retour à la page vendeur Immo-Rama"
             >
               <img 
                 src={logo} 
@@ -46,18 +46,6 @@ export function VendeurFloatingNav() {
 
             {/* Boutons */}
             <div className="flex items-center gap-2 sm:gap-3">
-              <Button
-                asChild 
-                variant="ghost" 
-                size="sm"
-                className="text-muted-foreground hover:text-foreground hidden md:inline-flex"
-              >
-                <Link to="/">
-                  <Home className="h-4 w-4 mr-2" />
-                  <span>Accueil</span>
-                </Link>
-              </Button>
-
               <Button
                 asChild 
                 variant={isVendrePage ? "secondary" : "ghost"}
