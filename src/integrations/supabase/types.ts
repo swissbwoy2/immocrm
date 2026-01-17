@@ -5456,6 +5456,79 @@ export type Database = {
           },
         ]
       }
+      visites_vente: {
+        Row: {
+          acheteur_email: string | null
+          acheteur_nom: string | null
+          acheteur_telephone: string | null
+          agent_id: string | null
+          created_at: string | null
+          date_visite: string
+          feedback_acheteur: string | null
+          id: string
+          immeuble_id: string
+          interet_acheteur_id: string | null
+          note_interet: number | null
+          notes_visite: string | null
+          statut: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          acheteur_email?: string | null
+          acheteur_nom?: string | null
+          acheteur_telephone?: string | null
+          agent_id?: string | null
+          created_at?: string | null
+          date_visite: string
+          feedback_acheteur?: string | null
+          id?: string
+          immeuble_id: string
+          interet_acheteur_id?: string | null
+          note_interet?: number | null
+          notes_visite?: string | null
+          statut?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          acheteur_email?: string | null
+          acheteur_nom?: string | null
+          acheteur_telephone?: string | null
+          agent_id?: string | null
+          created_at?: string | null
+          date_visite?: string
+          feedback_acheteur?: string | null
+          id?: string
+          immeuble_id?: string
+          interet_acheteur_id?: string | null
+          note_interet?: number | null
+          notes_visite?: string | null
+          statut?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visites_vente_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visites_vente_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visites_vente_interet_acheteur_id_fkey"
+            columns: ["interet_acheteur_id"]
+            isOneToOne: false
+            referencedRelation: "interets_acheteur"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vues_annonces: {
         Row: {
           annonce_id: string
