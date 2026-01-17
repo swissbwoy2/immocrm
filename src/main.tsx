@@ -4,11 +4,10 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import App from "./App.tsx";
 import "./index.css";
 
-// Register Service Worker with auto-update
+// Register Service Worker with aggressive auto-update
 const updateSW = registerSW({
   onNeedRefresh() {
-    console.log('New version available, updating...');
-    // Force immediate update without user prompt
+    console.log('New version available, forcing update...');
     updateSW(true);
   },
   onOfflineReady() {
@@ -16,11 +15,24 @@ const updateSW = registerSW({
   },
   onRegisteredSW(swUrl, registration) {
     console.log('Service Worker registered:', swUrl);
-    // Check for updates every 5 minutes
+    
+    // If there's a waiting SW, force it to activate immediately
+    if (registration?.waiting) {
+      console.log('Found waiting SW, forcing activation...');
+      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+    
+    // Listen for new SW waiting
+    registration?.addEventListener('waiting', () => {
+      console.log('New SW waiting, forcing activation...');
+      registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
+    });
+    
+    // Check for updates every 2 minutes (more aggressive)
     if (registration) {
       setInterval(() => {
         registration.update();
-      }, 5 * 60 * 1000);
+      }, 2 * 60 * 1000);
     }
   },
   onRegisterError(error) {
