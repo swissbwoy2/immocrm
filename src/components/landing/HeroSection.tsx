@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Sparkles, Star, Home, CheckCircle, ShieldCheck, Users, Crown } from "lucide-react";
+import { ArrowRight, Sparkles, Star, Rocket, CheckCircle, ShieldCheck, Users, Crown } from "lucide-react";
 import logoImmoRama from "@/assets/logo-immo-rama-new.png";
 import { FloatingParticles } from "@/components/messaging/FloatingParticles";
 
@@ -151,35 +151,51 @@ export function HeroSection() {
             </div>
           </div>
 
-          {/* Primary CTA - Single clear action */}
-          <div className="flex flex-col items-center gap-3 animate-fade-in" style={{ animationDelay: "300ms" }}>
+          {/* Double CTA Strategy */}
+          <div className="flex flex-col items-center gap-4 animate-fade-in" style={{ animationDelay: "300ms" }}>
+            {/* PRIMARY CTA - Activer ma recherche → /nouveau-mandat */}
             <Button 
               asChild 
               size="lg" 
-              className="group text-base md:text-xl px-8 md:px-12 py-6 md:py-8 shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 glow-breathe relative overflow-hidden bg-gradient-to-r from-primary to-primary/90 hover:scale-105"
+              className="group text-lg md:text-2xl px-10 md:px-14 py-7 md:py-9 shadow-2xl shadow-primary/40 hover:shadow-primary/60 transition-all duration-300 relative overflow-hidden bg-gradient-to-r from-primary via-primary to-primary/90 hover:scale-105 animate-pulse-glow"
+            >
+              <Link to="/nouveau-mandat">
+                {/* Shine effect on button */}
+                <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                {/* Glow ring */}
+                <div className="absolute inset-0 rounded-md ring-2 ring-primary/50 ring-offset-2 ring-offset-background animate-pulse opacity-75" />
+                <Rocket className="mr-3 h-6 w-6 md:h-7 md:w-7 relative z-10" />
+                <span className="relative z-10 font-bold">Activer ma recherche</span>
+                <ArrowRight className="ml-3 h-6 w-6 md:h-7 md:w-7 group-hover:translate-x-2 transition-transform relative z-10" />
+              </Link>
+            </Button>
+
+            {/* Secondary CTA - Shortlist gratuite */}
+            <Button 
+              asChild 
+              variant="outline"
+              size="lg" 
+              className="group text-sm md:text-base px-6 md:px-8 py-4 md:py-5 border-2 border-primary/40 hover:border-primary hover:bg-primary/5 transition-all duration-300"
             >
               <a href="#quickform">
-                {/* Shine effect on button */}
-                <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-                <Sparkles className="mr-2 h-5 w-5 md:h-6 md:w-6 relative z-10" />
-                <span className="relative z-10">Je veux mon appart' maintenant</span>
-                <ArrowRight className="ml-2 h-5 w-5 md:h-6 md:w-6 group-hover:translate-x-2 transition-transform relative z-10" />
+                <Sparkles className="mr-2 h-4 w-4 md:h-5 md:w-5 text-primary" />
+                <span>Ou recevoir une shortlist gratuite</span>
               </a>
             </Button>
 
-            {/* Micro-copy trust signals - Lower friction */}
-            <div className="flex flex-wrap items-center justify-center gap-2 md:gap-3 text-xs md:text-sm text-muted-foreground">
+            {/* Micro-copy trust signals */}
+            <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground mt-2">
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                Shortlist gratuite
+                Acompte 300 CHF
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                Sans engagement
+                90 jours garantis
               </span>
               <span className="flex items-center gap-1">
                 <CheckCircle className="h-3 w-3 md:h-4 md:w-4 text-green-500" />
-                Réponse sous 24h
+                Remboursé si échec
               </span>
             </div>
           </div>
