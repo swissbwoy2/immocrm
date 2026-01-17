@@ -233,7 +233,7 @@ export default function FormulaireVendeurComplet() {
       });
 
       const results = await Promise.all(uploadPromises);
-      const validPhotos = results.filter((p): p is PhotoData => p !== null);
+      const validPhotos = results.filter((p): p is { url: string; file: File } => p !== null);
       
       if (validPhotos.length > 0) {
         setPhotos(prev => [...prev, ...validPhotos]);
