@@ -73,9 +73,9 @@ const shortComparisonDataAchat = [{
   solo: "Tu démarches seul les banques, sans pouvoir de négociation.",
   icon: Landmark
 }, {
-  aspect: "Zéro commission acheteur",
-  logisorama: "Le vendeur finance notre service. Tu ne paies rien.",
-  solo: "Tu paies 3-5% de commission à l'agence.",
+  aspect: "Commission transparente",
+  logisorama: "1% du prix d'achat, acompte de 2'500 CHF déduit. Remboursé après 6 mois.",
+  solo: "Tu paies 3-5% de commission à l'agence, sans garantie.",
   icon: PiggyBank
 }];
 
@@ -124,7 +124,7 @@ export function DifferentiationSection() {
     cta: isAchat ? "Trouver mon bien !" : "Je me lance !",
     ctaLink: isAchat ? "#quickform" : "/nouveau-mandat",
     guarantee: isAchat 
-      ? "Accompagnement jusqu'au notaire • 0% commission acheteur"
+      ? "Commission 1% • Acompte 2'500 CHF déduit • Remboursé après 6 mois"
       : "90 jours pour trouver • Remboursement intégral si échec",
   };
   

@@ -54,23 +54,23 @@ export function GuaranteeSection() {
       icon: Wallet,
       label: 'Acompte',
       value: '2\'500 CHF',
-      description: 'Déduit du succès',
+      description: 'Déduit de la commission finale',
       gradient: 'from-blue-500 to-cyan-500',
       glowColor: 'rgba(59, 130, 246, 0.3)',
     },
     {
       icon: CheckCircle,
-      label: 'Succès',
-      value: '0% pour toi',
-      description: 'Commission payée par le vendeur',
+      label: 'Commission',
+      value: '1% du prix',
+      description: 'De l\'achat, acompte déduit',
       gradient: 'from-green-500 to-emerald-500',
       glowColor: 'rgba(34, 197, 94, 0.3)',
     },
     {
-      icon: FileCheck,
-      label: 'Accompagnement',
-      value: 'Jusqu\'au notaire',
-      description: 'Négociation & signature incluses',
+      icon: RefreshCcw,
+      label: 'Échec après 6 mois ?',
+      value: 'Remboursement',
+      description: 'Intégral des 2\'500 CHF',
       gradient: 'from-amber-500 to-orange-500',
       glowColor: 'rgba(245, 158, 11, 0.3)',
     },
@@ -122,13 +122,13 @@ export function GuaranteeSection() {
             </div>
             <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
               {isAchat 
-                ? 'Achète sans payer de commission 🏡'
+                ? 'Commission transparente de 1% 🏡'
                 : <>Tellement confiant qu'on te <span className="gradient-text-animated">rembourse</span></>
               }
             </h2>
             <p className="text-muted-foreground text-lg">
               {isAchat 
-                ? 'La commission est payée par le vendeur. Tu ne paies que le prix du bien.'
+                ? 'Acompte de 2\'500 CHF déduit de ta commission finale. Remboursé après 6 mois sans succès.'
                 : 'Échec après 3 mois ? Remboursement intégral ! 💪'
               }
             </p>
@@ -207,9 +207,9 @@ export function GuaranteeSection() {
                     <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
                       {isAchat ? (
                         <>
-                          De la recherche à la signature chez le notaire, on t'accompagne à chaque étape.
+                          Mandat de <strong className="text-foreground">6 mois</strong> : on cherche activement ton bien idéal.
                           <br />
-                          <strong className="text-foreground">Négociation, vérifications, financement : tout est géré.</strong>
+                          <strong className="text-foreground">Pas de bien trouvé ? Acompte de 2'500 CHF intégralement remboursé.</strong>
                         </>
                       ) : (
                         <>
@@ -256,14 +256,14 @@ export function GuaranteeSection() {
               <div className="flex items-center gap-3">
                 <Crown className="h-6 w-6 text-amber-500 relative z-10 animate-pulse" />
                 <span className="text-lg md:text-xl font-bold text-primary relative z-10">
-                  {isAchat ? '0% commission acheteur 🎯' : 'Garantie 100% remboursé 🎯'}
+                  {isAchat ? 'Garantie remboursement 6 mois 🎯' : 'Garantie 100% remboursé 🎯'}
                 </span>
                 <Sparkles className="h-5 w-5 text-amber-500 relative z-10 animate-pulse" style={{ animationDelay: '0.5s' }} />
               </div>
               
               <p className="text-sm text-muted-foreground relative z-10">
                 {isAchat 
-                  ? '✓ Commission vendeur • ✓ Accompagnement notarial • ✓ Négociation incluse'
+                  ? '✓ Commission 1% • ✓ Acompte déduit • ✓ Remboursé si échec après 6 mois'
                   : '✓ Zéro condition cachée • ✓ Remboursement sous 7 jours'
                 }
               </p>
