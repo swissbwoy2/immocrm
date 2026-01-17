@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { FloatingNav } from '@/components/landing/FloatingNav';
-import { LandingFooter } from '@/components/landing/LandingFooter';
+import { VendeurFooter } from '@/components/landing/vendeur/VendeurFooter';
 import { VendeurHeroSection } from '@/components/landing/vendeur/VendeurHeroSection';
 import { VendeurMatchingSection } from '@/components/landing/vendeur/VendeurMatchingSection';
 import { VendeurZeroCommissionSection } from '@/components/landing/vendeur/VendeurZeroCommissionSection';
@@ -31,7 +31,7 @@ export default function VendreMonBien() {
         <VendeurCTASection />
       </main>
 
-      <LandingFooter />
+      <VendeurFooter />
     </div>
   );
 }

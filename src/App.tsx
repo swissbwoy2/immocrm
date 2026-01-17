@@ -19,6 +19,7 @@ import Landing from "./pages/Landing";
 // Lazy load all other pages
 const NouveauMandat = lazy(() => import("./pages/NouveauMandat"));
 const VendreMonBien = lazy(() => import("./pages/VendreMonBien"));
+const FormulaireVendeurComplet = lazy(() => import("./pages/FormulaireVendeurComplet"));
 const FirstLogin = lazy(() => import("./pages/FirstLogin"));
 
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -198,6 +199,7 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/nouveau-mandat" element={<NouveauMandat />} />
               <Route path="/vendre-mon-bien" element={<VendreMonBien />} />
+              <Route path="/formulaire-vendeur" element={<FormulaireVendeurComplet />} />
               <Route path="/first-login" element={<FirstLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
 
