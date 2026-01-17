@@ -70,17 +70,15 @@ export default function Landing() {
         </div>
       </div>
       
-      {/* OPTIMIZED SECTION ORDER */}
+      {/* OPTIMIZED SECTION ORDER - Form visible without scroll */}
       <HeroSection />
       <SocialProofBar />
-      <div id="quickform">
-        <QuickLeadForm />
-      </div>
-      <BudgetCalculatorSection />
-      <DifferentiationSection />
-      <HowItWorks />
+      <QuickLeadForm />
       <GuaranteeSection />
       <BenefitsSection />
+      <HowItWorks />
+      <BudgetCalculatorSection />
+      <DifferentiationSection />
       <FAQSection />
       <CoverageSection />
       <StatsSection />
@@ -89,7 +87,7 @@ export default function Landing() {
       <ApporteurSection />
       <LandingFooter />
 
-      {/* Floating CTA - harmonized with dashboard style */}
+      {/* Floating CTA - Scroll to form */}
       <div 
         className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 animate-fade-in"
         style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
@@ -103,11 +101,11 @@ export default function Landing() {
             size="lg" 
             className="relative shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 text-sm md:text-base px-4 md:px-6 hover:scale-105"
           >
-            <Link to="/nouveau-mandat">
-              <span className="hidden sm:inline">👉 Démarre ta recherche</span>
-              <span className="sm:hidden">👉 Démarrer</span>
+            <a href="#quickform">
+              <span className="hidden sm:inline">📬 Recevoir ma shortlist gratuite</span>
+              <span className="sm:hidden">📬 Shortlist</span>
               <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
+            </a>
           </Button>
         </div>
       </div>

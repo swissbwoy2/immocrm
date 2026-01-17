@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogIn, Rocket, Building2 } from 'lucide-react';
+import { LogIn, Sparkles, Building2 } from 'lucide-react';
 import logo from '@/assets/logo-immo-rama-new.png';
 
 export function FloatingNav() {
@@ -72,11 +72,11 @@ export function FloatingNav() {
                 size="sm"
                 className="shadow-md shadow-primary/20"
               >
-                <Link to="/nouveau-mandat">
-                  <Rocket className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden xs:inline">Activer ma recherche</span>
-                  <span className="xs:hidden">Activer</span>
-                </Link>
+                <a href="#quickform">
+                  <Sparkles className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden xs:inline">Recevoir ma shortlist</span>
+                  <span className="xs:hidden">Shortlist</span>
+                </a>
               </Button>
             </div>
           </div>
