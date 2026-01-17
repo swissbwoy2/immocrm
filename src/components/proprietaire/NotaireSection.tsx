@@ -17,6 +17,7 @@ interface NotaireSectionProps {
   dateSignaturePrevue?: string | null;
   dateEntreeJouissance?: string | null;
   prixVenteFinal?: number | null;
+  prixVendeur?: number | null;  // Prix net demandé par le vendeur
   commissionAgence?: number | null;
   tauxCommission?: number | null;
   statut: string;
@@ -31,6 +32,7 @@ export function NotaireSection({
   dateSignaturePrevue,
   dateEntreeJouissance,
   prixVenteFinal,
+  prixVendeur,
   commissionAgence,
   tauxCommission,
   statut,
@@ -84,16 +86,24 @@ export function NotaireSection({
               <p className="text-3xl font-bold text-primary">{formatCurrency(prixVenteFinal)}</p>
             </div>
             <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-1">Commission agence</p>
+              <p className="text-sm text-muted-foreground mb-1">Honoraires agence</p>
               <p className="text-2xl font-bold">{formatCurrency(commissionAgence)}</p>
               {tauxCommission && (
                 <p className="text-xs text-muted-foreground">({tauxCommission}%)</p>
               )}
+              {!tauxCommission && prixVendeur && prixVenteFinal && (
+                <p className="text-xs text-muted-foreground">
+                  (inclus dans le prix)
+                </p>
+              )}
             </div>
-            <div className="text-center p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-1">Net vendeur estimé</p>
+            <div className="text-center p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+              <p className="text-sm text-emerald-700 mb-1 font-medium">Net vendeur garanti</p>
               <p className="text-2xl font-bold text-emerald-600">
-                {formatCurrency((prixVenteFinal || 0) - (commissionAgence || 0))}
+                {prixVendeur ? formatCurrency(prixVendeur) : formatCurrency((prixVenteFinal || 0) - (commissionAgence || 0))}
+              </p>
+              <p className="text-xs text-emerald-600 mt-1">
+                Montant que vous recevrez
               </p>
             </div>
           </div>

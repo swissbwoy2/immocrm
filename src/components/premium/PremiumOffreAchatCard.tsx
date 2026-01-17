@@ -32,8 +32,11 @@ export interface OffreAchatCardData {
 interface PremiumOffreAchatCardProps {
   offre: OffreAchatCardData;
   prixDemande?: number | null;
+  prixVendeur?: number | null;      // Prix net vendeur (pour calcul marge - agents only)
+  prixCommercial?: number | null;   // Prix affiché aux acheteurs
   onUpdateStatut?: (offreId: string, statut: string) => void;
   isProprietaire?: boolean;
+  isAgent?: boolean;                // Afficher les infos de marge
 }
 
 const STATUT_CONFIG = {
@@ -47,9 +50,12 @@ const STATUT_CONFIG = {
 
 export function PremiumOffreAchatCard({ 
   offre, 
-  prixDemande, 
+  prixDemande,
+  prixVendeur,
+  prixCommercial,
   onUpdateStatut,
-  isProprietaire = true 
+  isProprietaire = true,
+  isAgent = false
 }: PremiumOffreAchatCardProps) {
   const config = STATUT_CONFIG[offre.statut as keyof typeof STATUT_CONFIG] || STATUT_CONFIG.nouvelle;
   const StatusIcon = config.icon;
@@ -58,11 +64,23 @@ export function PremiumOffreAchatCard({
     return new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF', maximumFractionDigits: 0 }).format(value);
   };
 
-  const acheteurName = offre.client?.profile 
-    ? `${offre.client.profile.prenom || ''} ${offre.client.profile.nom || ''}`.trim() || 'Acheteur anonyme'
-    : offre.acheteur_nom || 'Acheteur anonyme';
+  // Pour propriétaire: anonymiser le nom de l'acheteur
+  const acheteurName = isProprietaire && !isAgent
+    ? (offre.client?.profile 
+        ? `${(offre.client.profile.prenom || '')[0] || ''}. ${(offre.client.profile.nom || '')[0] || ''}.` 
+        : 'Acheteur')
+    : (offre.client?.profile 
+        ? `${offre.client.profile.prenom || ''} ${offre.client.profile.nom || ''}`.trim() || 'Acheteur anonyme'
+        : offre.acheteur_nom || 'Acheteur anonyme');
 
   const ecartPrix = prixDemande ? ((offre.montant_offre - prixDemande) / prixDemande) * 100 : null;
+  
+  // Calcul marge pour agents (offre - prix vendeur)
+  const margeAgence = prixVendeur ? offre.montant_offre - prixVendeur : null;
+  const commissionPrevue = prixVendeur && prixCommercial ? prixCommercial - prixVendeur : null;
+  const pourcentageMarge = margeAgence && commissionPrevue && commissionPrevue > 0
+    ? (margeAgence / commissionPrevue) * 100
+    : null;
   
   const joursRestants = offre.date_validite 
     ? differenceInDays(new Date(offre.date_validite), new Date()) 
@@ -70,6 +88,16 @@ export function PremiumOffreAchatCard({
 
   const isExpiringSoon = joursRestants !== null && joursRestants >= 0 && joursRestants <= 3;
   const isExpired = joursRestants !== null && joursRestants < 0;
+  
+  // Évaluation de l'offre pour les agents
+  const getOffreEvaluation = () => {
+    if (!margeAgence) return null;
+    if (margeAgence >= (commissionPrevue || 0)) return { label: 'Excellente', color: 'text-emerald-600 bg-emerald-50' };
+    if (margeAgence > 0) return { label: 'Acceptable', color: 'text-amber-600 bg-amber-50' };
+    return { label: 'Insuffisante', color: 'text-red-600 bg-red-50' };
+  };
+  
+  const offreEval = getOffreEvaluation();
 
   return (
     <Card className={cn(
@@ -113,6 +141,11 @@ export function PremiumOffreAchatCard({
                 <div className="flex items-center gap-2 mb-1">
                   <User className="h-4 w-4 text-muted-foreground" />
                   <span className="font-medium">{acheteurName}</span>
+                  {isAgent && offreEval && (
+                    <Badge className={cn("text-xs", offreEval.color)}>
+                      {offreEval.label}
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
@@ -139,6 +172,41 @@ export function PremiumOffreAchatCard({
                 {config.label}
               </Badge>
             </div>
+
+            {/* Section marge pour agents */}
+            {isAgent && prixVendeur && (
+              <div className={cn(
+                "p-3 rounded-lg border",
+                margeAgence && margeAgence > 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"
+              )}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Marge potentielle</p>
+                    <p className={cn(
+                      "text-lg font-bold",
+                      margeAgence && margeAgence > 0 ? "text-emerald-600" : "text-red-600"
+                    )}>
+                      {formatCurrency(margeAgence || 0)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Prix vendeur</p>
+                    <p className="font-medium">{formatCurrency(prixVendeur)}</p>
+                  </div>
+                  {pourcentageMarge !== null && (
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">% commission</p>
+                      <p className={cn(
+                        "font-medium",
+                        pourcentageMarge >= 100 ? "text-emerald-600" : pourcentageMarge > 0 ? "text-amber-600" : "text-red-600"
+                      )}>
+                        {pourcentageMarge.toFixed(0)}%
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {offre.conditions && (
               <div className="p-3 bg-muted/50 rounded-lg">

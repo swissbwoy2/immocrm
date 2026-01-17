@@ -169,19 +169,25 @@ export default function ConclureAffaire() {
       
       let montantTotal: number;
       let commissionTotale: number;
+      let commissionMode: string;
       
       if (isAchat) {
         const prixVente = parseFloat(formData.prixVente);
+        // Mode marge: commission = prix vente - prix vendeur (si disponible)
+        // Sinon fallback sur taux
         const tauxCommission = parseFloat(formData.tauxCommission) / 100;
         montantTotal = prixVente;
         commissionTotale = Math.round(prixVente * tauxCommission);
+        commissionMode = 'marge'; // Commission sur différence de prix
       } else {
         const loyerMensuel = parseFloat(formData.loyerMensuel);
         montantTotal = loyerMensuel * 12; // Loyer annuel
         commissionTotale = loyerMensuel; // 1 mois de loyer
+        commissionMode = 'pourcentage';
       }
 
-      const splitAgent = client.commission_split || 50;
+      // Split 45% agent / 55% agence
+      const splitAgent = isAchat ? 45 : (client.commission_split || 50);
       const partAgent = Math.round(commissionTotale * (splitAgent / 100));
       const partAgence = commissionTotale - partAgent;
 
@@ -197,6 +203,10 @@ export default function ConclureAffaire() {
           part_agence: partAgence,
           statut: 'conclue',
           date_transaction: formData.dateConclusion,
+          // Type de transaction
+          type_transaction: isAchat ? 'vente' : 'location',
+          commission_mode: commissionMode,
+          prix_vente_final: isAchat ? montantTotal : null,
           // Nouvelles colonnes
           adresse: formData.adresse,
           surface: formData.surface ? parseFloat(formData.surface) : null,

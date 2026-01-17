@@ -145,9 +145,12 @@ interface FormData {
   distance_poste: number | null;
   distance_commerces: number | null;
   
-  // Prix et publication
+  // Prix et publication - NOUVEAU: Double prix vendeur/commercial
   prix_vente_demande: number | null;
   estimation_agent: number | null;
+  prix_vendeur: number | null;      // Prix net souhaité par vendeur (caché aux acheteurs)
+  prix_commercial: number | null;    // Prix affiché aux acheteurs
+  places_parc_incluses: boolean;     // Si places de parc incluses dans le prix
   description_commerciale: string;
   points_forts: string;
   publier_espace_acheteur: boolean;
@@ -198,6 +201,9 @@ const INITIAL_FORM_DATA: FormData = {
   administrateur_ppe: '',
   charges_ppe: null,
   charges_chauffage_ec: null,
+  prix_vendeur: null,
+  prix_commercial: null,
+  places_parc_incluses: true,
   fonds_renovation: null,
   est_loue: false,
   locataire_actuel: '',
@@ -427,7 +433,12 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess, isAdmin = fa
       // 3. Mapper type_bien pour compatibilité DB (villa -> maison)
       const typeBienDB = formData.type_bien === 'villa' ? 'maison' : formData.type_bien;
 
-      // 4. Créer l'immeuble
+      // 4. Créer l'immeuble avec les nouveaux champs de prix
+      const prixVenteFinal = formData.prix_commercial || formData.prix_vente_demande;
+      const commissionPrevue = formData.prix_vendeur && formData.prix_commercial 
+        ? formData.prix_commercial - formData.prix_vendeur 
+        : null;
+
       const immeubleData = {
         nom: formData.nom,
         adresse: formData.adresse,
@@ -440,7 +451,11 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess, isAdmin = fa
         proprietaire_id: proprietaireId,
         nombre_pieces: formData.nombre_pieces,
         surface_totale: formData.surface_totale,
-        prix_vente_demande: formData.prix_vente_demande,
+        prix_vente_demande: prixVenteFinal,
+        prix_vendeur: formData.prix_vendeur,
+        prix_commercial: formData.prix_commercial,
+        commission_agence_prevue: commissionPrevue,
+        places_parc_incluses: formData.places_parc_incluses,
         annee_construction: formData.annee_construction,
         description_commerciale: formData.description_commerciale,
         points_forts: formData.points_forts
@@ -1330,15 +1345,98 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess, isAdmin = fa
         );
 
       case 8: // Publication
+        const commissionPrevue = formData.prix_vendeur && formData.prix_commercial 
+          ? formData.prix_commercial - formData.prix_vendeur 
+          : null;
+        const partAgent = commissionPrevue ? Math.round(commissionPrevue * 0.45) : null;
+        const partAgence = commissionPrevue ? Math.round(commissionPrevue * 0.55) : null;
+        const isValidCommission = !formData.prix_vendeur || !formData.prix_commercial || formData.prix_commercial >= formData.prix_vendeur;
+
         return (
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+            {/* Section Prix Vendeur / Commercial */}
+            <Card className="border-primary/20">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Banknote className="h-4 w-4" />
+                  Stratégie de prix
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      Prix vendeur (CHF) *
+                      <Badge variant="outline" className="text-xs">Caché</Badge>
+                    </Label>
+                    <Input 
+                      type="number"
+                      value={formData.prix_vendeur || ''}
+                      onChange={(e) => updateFormData({ prix_vendeur: e.target.value ? parseFloat(e.target.value) : null })}
+                      placeholder="1'000'000"
+                    />
+                    <p className="text-xs text-muted-foreground">Net souhaité par le vendeur</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      Prix commercial (CHF) *
+                      <Badge variant="default" className="text-xs">Affiché</Badge>
+                    </Label>
+                    <Input 
+                      type="number"
+                      value={formData.prix_commercial || ''}
+                      onChange={(e) => updateFormData({ prix_commercial: e.target.value ? parseFloat(e.target.value) : null })}
+                      placeholder="1'050'000"
+                    />
+                    <p className="text-xs text-muted-foreground">Prix visible par les acheteurs</p>
+                  </div>
+                </div>
+
+                {/* Preview commission */}
+                {formData.prix_vendeur && formData.prix_commercial && (
+                  <div className={`p-4 rounded-lg border ${isValidCommission ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                    {isValidCommission ? (
+                      <>
+                        <p className="text-sm font-medium text-emerald-700 mb-2">
+                          Commission prévue: {new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF', maximumFractionDigits: 0 }).format(commissionPrevue || 0)}
+                        </p>
+                        <div className="flex gap-4 text-xs text-emerald-600">
+                          <span>Agent (45%): {new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF', maximumFractionDigits: 0 }).format(partAgent || 0)}</span>
+                          <span>Agence (55%): {new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF', maximumFractionDigits: 0 }).format(partAgence || 0)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-sm font-medium text-red-700">
+                        ⚠️ Le prix commercial doit être supérieur au prix vendeur
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Places de parc */}
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-sm">Places de parc incluses</p>
+                    <p className="text-xs text-muted-foreground">Dans le prix commercial</p>
+                  </div>
+                  <Switch
+                    checked={formData.places_parc_incluses}
+                    onCheckedChange={(c) => updateFormData({ places_parc_incluses: c })}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Prix de référence (ancien champ) */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Prix de vente demandé (CHF) *</Label>
+                <Label>Prix de vente affiché (CHF)</Label>
                 <Input 
                   type="number"
-                  value={formData.prix_vente_demande || ''}
+                  value={formData.prix_vente_demande || formData.prix_commercial || ''}
                   onChange={(e) => updateFormData({ prix_vente_demande: e.target.value ? parseFloat(e.target.value) : null })}
+                  placeholder="Sera défini automatiquement"
+                  disabled={!!formData.prix_commercial}
                 />
               </div>
               <div className="space-y-2">
