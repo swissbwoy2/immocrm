@@ -7,7 +7,8 @@ import {
   ArrowLeft, Send, Home, MapPinned, Ruler, Banknote, User, 
   Mail, Phone, Loader2, CheckCircle, Building2, Calendar,
   Bed, Bath, Car, Trees, Sun, Mountain, Landmark, Map, Zap,
-  DollarSign, Percent, Store, Factory
+  DollarSign, Percent, Store, Factory, Camera, Upload, X, Image,
+  ChevronLeft, ChevronRight, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ import { GoogleAddressAutocomplete, AddressComponents } from '@/components/Googl
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNativeCamera } from '@/hooks/useNativeCamera';
 
 const formSchema = z.object({
   // Infos bien (pré-remplies)
@@ -96,15 +98,36 @@ interface LocationState {
   telephone?: string;
 }
 
+interface PhotoData {
+  url: string;
+  file?: File;
+}
+
+// Stepper steps definition
+const STEPS = [
+  { id: 1, title: 'Bien', icon: Home, description: 'Type et localisation' },
+  { id: 2, title: 'Détails', icon: FileText, description: 'Caractéristiques' },
+  { id: 3, title: 'Photos', icon: Camera, description: 'Images du bien' },
+  { id: 4, title: 'Contact', icon: User, description: 'Vos coordonnées' },
+];
+
 export default function FormulaireVendeurComplet() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  
+  // Photo upload states
+  const [photos, setPhotos] = useState<PhotoData[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  
+  const { takePhoto, pickFromGallery, isNative, loading: cameraLoading } = useNativeCamera();
   
   const prefilledData = (location.state as LocationState) || {};
   
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, setValue, watch, formState: { errors }, trigger } = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       type_bien: prefilledData.type_bien || '',
@@ -138,6 +161,11 @@ export default function FormulaireVendeurComplet() {
     window.scrollTo(0, 0);
   }, []);
 
+  // Scroll to top when step changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStep]);
+
   // Reset type-specific fields when type changes
   useEffect(() => {
     if (typeBien !== 'villa') {
@@ -150,6 +178,125 @@ export default function FormulaireVendeurComplet() {
       setValue('adresse', components.fullAddress);
       setValue('npa', components.postalCode || '');
       setValue('ville', components.city || '');
+    }
+  };
+
+  // Photo upload functions
+  const uploadPhoto = async (file: File): Promise<string | null> => {
+    try {
+      const timestamp = Date.now();
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `${timestamp}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const filePath = `leads/vendeurs/${fileName}`;
+
+      const { error } = await supabase.storage
+        .from('public-files')
+        .upload(filePath, file, { contentType: file.type });
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from('public-files')
+        .getPublicUrl(filePath);
+
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Upload error:', error);
+      return null;
+    }
+  };
+
+  const handleFileUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const remainingSlots = 5 - photos.length;
+    if (remainingSlots <= 0) {
+      toast.error('Maximum 5 photos autorisées');
+      return;
+    }
+
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
+    setUploading(true);
+
+    try {
+      const uploadPromises = filesToUpload.map(async (file) => {
+        if (!file.type.startsWith('image/')) {
+          toast.error(`${file.name} n'est pas une image valide`);
+          return null;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`${file.name} dépasse 10 MB`);
+          return null;
+        }
+        const url = await uploadPhoto(file);
+        return url ? { url, file } : null;
+      });
+
+      const results = await Promise.all(uploadPromises);
+      const validPhotos = results.filter((p): p is PhotoData => p !== null);
+      
+      if (validPhotos.length > 0) {
+        setPhotos(prev => [...prev, ...validPhotos]);
+        toast.success(`${validPhotos.length} photo(s) ajoutée(s)`);
+      }
+    } catch (error) {
+      console.error('Error uploading photos:', error);
+      toast.error('Erreur lors de l\'upload');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleNativePhoto = async (fromCamera: boolean) => {
+    try {
+      const file = fromCamera ? await takePhoto() : await pickFromGallery();
+      if (file) {
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        await handleFileUpload(dataTransfer.files);
+      }
+    } catch (error) {
+      console.error('Native photo error:', error);
+      toast.error('Erreur lors de la capture');
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    handleFileUpload(e.dataTransfer.files);
+  };
+
+  // Step validation
+  const validateStep = async (step: number): Promise<boolean> => {
+    switch (step) {
+      case 1:
+        return await trigger(['type_bien', 'adresse', 'surface', 'prix_souhaite']);
+      case 2:
+        return true; // Details are optional
+      case 3:
+        return true; // Photos are optional
+      case 4:
+        return await trigger(['nom', 'email', 'telephone']);
+      default:
+        return true;
+    }
+  };
+
+  const goToNextStep = async () => {
+    const isValid = await validateStep(currentStep);
+    if (isValid && currentStep < 4) {
+      setCurrentStep(prev => prev + 1);
+    }
+  };
+
+  const goToPrevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(prev => prev - 1);
     }
   };
 
@@ -192,7 +339,8 @@ export default function FormulaireVendeurComplet() {
       }
 
       // Immeuble / Multi-logements
-      if (data.type_bien === 'immeuble' || data.est_multi_logements === 'oui_3plus') {
+      const showRendementFields = data.type_bien === 'immeuble' || data.est_multi_logements === 'oui_3plus';
+      if (showRendementFields) {
         if (data.nb_logements) notes.push(`Logements: ${data.nb_logements}`);
         if (data.revenus_locatifs) notes.push(`Revenus locatifs: ${data.revenus_locatifs} CHF/an`);
         if (data.charges_annuelles) notes.push(`Charges: ${data.charges_annuelles} CHF/an`);
@@ -221,6 +369,11 @@ export default function FormulaireVendeurComplet() {
       if (data.delai_vente) notes.push(`Délai souhaité: ${data.delai_vente}`);
       if (data.motif_vente) notes.push(`Motif: ${data.motif_vente}`);
       if (data.description) notes.push(`Description: ${data.description}`);
+      
+      // Add photos URLs
+      if (photos.length > 0) {
+        notes.push(`Photos: ${photos.map(p => p.url).join(', ')}`);
+      }
 
       const { error } = await supabase.from('leads').insert({
         email: data.email,
@@ -248,11 +401,6 @@ export default function FormulaireVendeurComplet() {
 
   // Equipment items based on property type
   const getEquipmentItems = () => {
-    const common = [
-      { key: 'parking', label: 'Parking', icon: Car },
-      { key: 'cave', label: 'Cave', icon: Building2 },
-    ];
-
     if (typeBien === 'terrain') {
       return []; // No equipment for land
     }
@@ -330,6 +478,614 @@ export default function FormulaireVendeurComplet() {
     );
   }
 
+  // Render step content
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 1:
+        return (
+          <motion.div
+            key="step1"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="p-6 rounded-2xl bg-card border border-border/50"
+          >
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              <Home className="w-5 h-5 text-primary" />
+              Informations principales
+            </h2>
+            
+            <div className="space-y-4">
+              {/* Type de bien */}
+              <div className="space-y-2">
+                <Label>Type de bien *</Label>
+                <Select 
+                  value={watch('type_bien')} 
+                  onValueChange={(value) => setValue('type_bien', value)}
+                >
+                  <SelectTrigger className={errors.type_bien ? 'border-destructive' : ''}>
+                    <SelectValue placeholder="Sélectionnez..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="appartement">Appartement</SelectItem>
+                    <SelectItem value="villa">Villa / Maison</SelectItem>
+                    <SelectItem value="immeuble">Immeuble de rapport</SelectItem>
+                    <SelectItem value="terrain">Terrain</SelectItem>
+                    <SelectItem value="commercial">Local commercial</SelectItem>
+                    <SelectItem value="autre">Autre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Villa sub-question */}
+              <AnimatePresence mode="wait">
+                {typeBien === 'villa' && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border/30"
+                  >
+                    <Label className="text-base">Votre bien comprend-il plusieurs logements séparés ?</Label>
+                    <RadioGroup
+                      value={watch('est_multi_logements') || 'non'}
+                      onValueChange={(value: 'non' | 'oui_2' | 'oui_3plus') => setValue('est_multi_logements', value)}
+                      className="grid grid-cols-1 md:grid-cols-3 gap-3"
+                    >
+                      <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
+                        <RadioGroupItem value="non" id="non" />
+                        <Label htmlFor="non" className="cursor-pointer">Non, maison individuelle</Label>
+                      </div>
+                      <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
+                        <RadioGroupItem value="oui_2" id="oui_2" />
+                        <Label htmlFor="oui_2" className="cursor-pointer">Oui, 2 logements</Label>
+                      </div>
+                      <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
+                        <RadioGroupItem value="oui_3plus" id="oui_3plus" />
+                        <Label htmlFor="oui_3plus" className="cursor-pointer">Oui, 3+ logements</Label>
+                      </div>
+                    </RadioGroup>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Adresse */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <MapPinned className="w-4 h-4 text-muted-foreground" />
+                  Adresse du bien *
+                </Label>
+                <GoogleAddressAutocomplete
+                  value={watch('adresse')}
+                  onChange={handleAddressChange}
+                  onInputChange={(val) => setValue('adresse', val)}
+                  placeholder="Entrez l'adresse complète"
+                  className={errors.adresse ? 'border-destructive' : ''}
+                  restrictToSwitzerland
+                />
+                {errors.adresse && <p className="text-sm text-destructive">{errors.adresse.message}</p>}
+              </div>
+
+              {/* NPA / Ville (auto-filled) */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>NPA</Label>
+                  <Input {...register('npa')} placeholder="Auto" readOnly className="bg-muted/50" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Ville</Label>
+                  <Input {...register('ville')} placeholder="Auto" readOnly className="bg-muted/50" />
+                </div>
+              </div>
+
+              {/* Surface & Prix */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Ruler className="w-4 h-4 text-muted-foreground" />
+                    {typeBien === 'terrain' ? 'Surface du terrain (m²) *' : 'Surface habitable (m²) *'}
+                  </Label>
+                  <Input 
+                    {...register('surface')}
+                    placeholder={typeBien === 'terrain' ? 'Ex: 800' : 'Ex: 120'}
+                    className={errors.surface ? 'border-destructive' : ''}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Banknote className="w-4 h-4 text-muted-foreground" />
+                    Prix souhaité (CHF) *
+                  </Label>
+                  <Input 
+                    {...register('prix_souhaite')}
+                    placeholder={typeBien === 'terrain' ? "Ex: 500'000" : "Ex: 800'000"}
+                    className={errors.prix_souhaite ? 'border-destructive' : ''}
+                  />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+
+      case 2:
+        return (
+          <motion.div
+            key="step2"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-6"
+          >
+            {/* Details based on property type */}
+            {typeBien && typeBien !== 'autre' && (
+              <div className="p-6 rounded-2xl bg-card border border-border/50">
+                {/* TERRAIN Section */}
+                {typeBien === 'terrain' && (
+                  <>
+                    <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                      <Map className="w-5 h-5 text-primary" />
+                      Caractéristiques du terrain
+                    </h2>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Zone d'affectation</Label>
+                        <Select onValueChange={(value) => setValue('zone_affectation', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionnez..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="habitation">Zone d'habitation</SelectItem>
+                            <SelectItem value="mixte">Zone mixte</SelectItem>
+                            <SelectItem value="agricole">Zone agricole</SelectItem>
+                            <SelectItem value="industrielle">Zone industrielle</SelectItem>
+                            <SelectItem value="autre">Autre</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Constructibilité (COS/CUS)</Label>
+                        <Input {...register('constructibilite')} placeholder="Ex: 0.4 / 1.2" />
+                      </div>
+                      <div className="flex items-center space-x-3 p-4 rounded-lg border border-border">
+                        <Checkbox
+                          id="terrain_viabilise"
+                          checked={watch('terrain_viabilise')}
+                          onCheckedChange={(checked) => setValue('terrain_viabilise', checked as boolean)}
+                        />
+                        <Label htmlFor="terrain_viabilise" className="flex items-center gap-2 cursor-pointer">
+                          <Zap className="w-4 h-4 text-muted-foreground" />
+                          Terrain viabilisé (eau, électricité, égouts)
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-3 p-4 rounded-lg border border-border">
+                        <Checkbox
+                          id="acces_route"
+                          checked={watch('acces_route')}
+                          onCheckedChange={(checked) => setValue('acces_route', checked as boolean)}
+                        />
+                        <Label htmlFor="acces_route" className="flex items-center gap-2 cursor-pointer">
+                          <Car className="w-4 h-4 text-muted-foreground" />
+                          Accès route direct
+                        </Label>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* IMMEUBLE / MULTI-LOGEMENTS Section */}
+                {showRendementFields && (
+                  <>
+                    <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                      <Landmark className="w-5 h-5 text-primary" />
+                      Données de rendement
+                    </h2>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Building2 className="w-4 h-4 text-muted-foreground" />
+                          Nombre de logements
+                        </Label>
+                        <Input {...register('nb_logements')} placeholder="Ex: 6" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <DollarSign className="w-4 h-4 text-muted-foreground" />
+                          Revenus locatifs annuels (CHF)
+                        </Label>
+                        <Input {...register('revenus_locatifs')} placeholder="Ex: 120'000" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Banknote className="w-4 h-4 text-muted-foreground" />
+                          Charges annuelles (CHF)
+                        </Label>
+                        <Input {...register('charges_annuelles')} placeholder="Ex: 15'000" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Percent className="w-4 h-4 text-muted-foreground" />
+                          Taux d'occupation (%)
+                        </Label>
+                        <Input {...register('taux_occupation')} placeholder="Ex: 95" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>État général</Label>
+                        <Select onValueChange={(value) => setValue('etat_general', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionnez..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="neuf">Neuf / Rénové récemment</SelectItem>
+                            <SelectItem value="bon">Bon état</SelectItem>
+                            <SelectItem value="moyen">État moyen</SelectItem>
+                            <SelectItem value="a_renover">À rénover</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-muted-foreground" />
+                          Année construction
+                        </Label>
+                        <Input {...register('annee_construction')} placeholder="Ex: 1985" />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* COMMERCIAL Section */}
+                {typeBien === 'commercial' && (
+                  <>
+                    <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                      <Store className="w-5 h-5 text-primary" />
+                      Détails du local
+                    </h2>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Usage actuel</Label>
+                        <Select onValueChange={(value) => setValue('usage_actuel', value)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionnez..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="commerce">Commerce / Boutique</SelectItem>
+                            <SelectItem value="bureau">Bureau</SelectItem>
+                            <SelectItem value="atelier">Atelier / Dépôt</SelectItem>
+                            <SelectItem value="restaurant">Restaurant / Café</SelectItem>
+                            <SelectItem value="vacant">Vacant</SelectItem>
+                            <SelectItem value="autre">Autre</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <DollarSign className="w-4 h-4 text-muted-foreground" />
+                          Loyer actuel (CHF/mois)
+                        </Label>
+                        <Input {...register('loyer_actuel')} placeholder="Ex: 3'500" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-muted-foreground" />
+                          Année construction
+                        </Label>
+                        <Input {...register('annee_construction')} placeholder="Ex: 2000" />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* APPARTEMENT / VILLA SIMPLE Section */}
+                {(typeBien === 'appartement' || (typeBien === 'villa' && !showRendementFields)) && (
+                  <>
+                    <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-primary" />
+                      Détails du bien
+                    </h2>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Home className="w-4 h-4 text-muted-foreground" />
+                          Nombre de pièces
+                        </Label>
+                        <Input {...register('nombre_pieces')} placeholder="Ex: 4.5" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Bed className="w-4 h-4 text-muted-foreground" />
+                          Chambres
+                        </Label>
+                        <Input {...register('nombre_chambres')} placeholder="Ex: 3" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Bath className="w-4 h-4 text-muted-foreground" />
+                          Salles de bain
+                        </Label>
+                        <Input {...register('nombre_sdb')} placeholder="Ex: 2" />
+                      </div>
+                      {typeBien === 'appartement' && (
+                        <div className="space-y-2">
+                          <Label>Étage</Label>
+                          <Input {...register('etage')} placeholder="Ex: 3ème" />
+                        </div>
+                      )}
+                      {typeBien === 'villa' && (
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <Trees className="w-4 h-4 text-muted-foreground" />
+                            Surface terrain (m²)
+                          </Label>
+                          <Input {...register('surface_terrain')} placeholder="Ex: 500" />
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-muted-foreground" />
+                          Année construction
+                        </Label>
+                        <Input {...register('annee_construction')} placeholder="Ex: 2010" />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Équipements */}
+            {typeBien && typeBien !== 'terrain' && typeBien !== 'autre' && getEquipmentItems().length > 0 && (
+              <div className="p-6 rounded-2xl bg-card border border-border/50">
+                <h2 className="text-xl font-semibold mb-6">Équipements</h2>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {getEquipmentItems().map((item) => (
+                    <div key={item.key} className="flex items-center space-x-3">
+                      <Checkbox
+                        id={item.key}
+                        checked={watch(item.key as keyof FormData) as boolean}
+                        onCheckedChange={(checked) => 
+                          setValue(item.key as keyof FormData, checked as boolean)
+                        }
+                      />
+                      <Label htmlFor={item.key} className="flex items-center gap-2 cursor-pointer">
+                        <item.icon className="w-4 h-4 text-muted-foreground" />
+                        {item.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Motivations */}
+            <div className="p-6 rounded-2xl bg-card border border-border/50">
+              <h2 className="text-xl font-semibold mb-6">Vos motivations</h2>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Délai de vente souhaité</Label>
+                    <Select onValueChange={(value) => setValue('delai_vente', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionnez..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="urgent">Urgent (- de 3 mois)</SelectItem>
+                        <SelectItem value="3-6mois">3 à 6 mois</SelectItem>
+                        <SelectItem value="6-12mois">6 à 12 mois</SelectItem>
+                        <SelectItem value="flexible">Flexible</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Motif de vente</Label>
+                    <Select onValueChange={(value) => setValue('motif_vente', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionnez..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="demenagement">Déménagement</SelectItem>
+                        <SelectItem value="succession">Succession</SelectItem>
+                        <SelectItem value="investissement">Réinvestissement</SelectItem>
+                        <SelectItem value="changement">Changement de vie</SelectItem>
+                        <SelectItem value="autre">Autre</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Description libre (optionnel)</Label>
+                  <Textarea 
+                    {...register('description')}
+                    placeholder="Points forts de votre bien, travaux récents, particularités..."
+                    rows={4}
+                  />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+
+      case 3:
+        return (
+          <motion.div
+            key="step3"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="p-6 rounded-2xl bg-card border border-border/50"
+          >
+            <h2 className="text-xl font-semibold mb-2 flex items-center gap-2">
+              <Camera className="w-5 h-5 text-primary" />
+              Photos du bien
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Ajoutez jusqu'à 5 photos pour enrichir votre dossier (optionnel)
+            </p>
+
+            {/* Native camera buttons */}
+            {isNative && (
+              <div className="flex gap-3 mb-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleNativePhoto(true)}
+                  disabled={cameraLoading || uploading || photos.length >= 5}
+                  className="flex-1"
+                >
+                  <Camera className="w-4 h-4 mr-2" />
+                  Prendre une photo
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleNativePhoto(false)}
+                  disabled={cameraLoading || uploading || photos.length >= 5}
+                  className="flex-1"
+                >
+                  <Image className="w-4 h-4 mr-2" />
+                  Galerie
+                </Button>
+              </div>
+            )}
+
+            {/* Drag and drop zone */}
+            <div
+              className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all ${
+                dragOver 
+                  ? 'border-primary bg-primary/10' 
+                  : 'border-border hover:border-primary/50'
+              } ${photos.length >= 5 ? 'opacity-50 pointer-events-none' : ''}`}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+            >
+              {uploading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Upload en cours...</p>
+                </div>
+              ) : (
+                <>
+                  <Upload className="w-10 h-10 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-foreground font-medium mb-1">
+                    Glissez vos photos ici
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    ou cliquez pour sélectionner (max 5 photos, 10 MB chacune)
+                  </p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onChange={(e) => handleFileUpload(e.target.files)}
+                    disabled={photos.length >= 5}
+                  />
+                  <Button type="button" variant="outline" size="sm" className="pointer-events-none">
+                    Parcourir
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {/* Photo grid */}
+            {photos.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
+                {photos.map((photo, index) => (
+                  <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border border-border">
+                    <img
+                      src={photo.url}
+                      alt={`Photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(index)}
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    {index === 0 && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-primary/90 text-primary-foreground text-xs py-1 text-center">
+                        Principale
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="text-xs text-muted-foreground mt-4">
+              💡 Conseil : Prenez des photos lumineuses de chaque pièce, de l'extérieur et des points forts du bien.
+            </p>
+          </motion.div>
+        );
+
+      case 4:
+        return (
+          <motion.div
+            key="step4"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="p-6 rounded-2xl bg-card border border-border/50"
+          >
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              <User className="w-5 h-5 text-primary" />
+              Vos coordonnées
+            </h2>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nom complet *</Label>
+                <Input 
+                  {...register('nom')}
+                  placeholder="Prénom Nom"
+                  className={errors.nom ? 'border-destructive' : ''}
+                />
+                {errors.nom && <p className="text-sm text-destructive">{errors.nom.message}</p>}
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-muted-foreground" />
+                    Email *
+                  </Label>
+                  <Input 
+                    {...register('email')}
+                    type="email"
+                    placeholder="votre@email.ch"
+                    className={errors.email ? 'border-destructive' : ''}
+                  />
+                  {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-muted-foreground" />
+                    Téléphone *
+                  </Label>
+                  <Input 
+                    {...register('telephone')}
+                    type="tel"
+                    placeholder="079 xxx xx xx"
+                    className={errors.telephone ? 'border-destructive' : ''}
+                  />
+                  {errors.telephone && <p className="text-sm text-destructive">{errors.telephone.message}</p>}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <VendeurFloatingNav />
@@ -348,7 +1104,7 @@ export default function FormulaireVendeurComplet() {
             </Button>
 
             {/* Header */}
-            <div className="text-center mb-10">
+            <div className="text-center mb-8">
               <h1 className="text-3xl md:text-4xl font-bold mb-4">
                 Complétez les informations de votre bien
               </h1>
@@ -357,498 +1113,113 @@ export default function FormulaireVendeurComplet() {
               </p>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-10">
-              {/* Section 1: Infos de base */}
-              <div className="p-6 rounded-2xl bg-card border border-border/50">
-                <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                  <Home className="w-5 h-5 text-primary" />
-                  Informations principales
-                </h2>
-                
-                <div className="space-y-4">
-                  {/* Type de bien */}
-                  <div className="space-y-2">
-                    <Label>Type de bien *</Label>
-                    <Select 
-                      value={watch('type_bien')} 
-                      onValueChange={(value) => setValue('type_bien', value)}
-                    >
-                      <SelectTrigger className={errors.type_bien ? 'border-destructive' : ''}>
-                        <SelectValue placeholder="Sélectionnez..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="appartement">Appartement</SelectItem>
-                        <SelectItem value="villa">Villa / Maison</SelectItem>
-                        <SelectItem value="immeuble">Immeuble de rapport</SelectItem>
-                        <SelectItem value="terrain">Terrain</SelectItem>
-                        <SelectItem value="commercial">Local commercial</SelectItem>
-                        <SelectItem value="autre">Autre</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Villa sub-question */}
-                  <AnimatePresence mode="wait">
-                    {typeBien === 'villa' && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.2 }}
-                        className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border/30"
-                      >
-                        <Label className="text-base">Votre bien comprend-il plusieurs logements séparés ?</Label>
-                        <RadioGroup
-                          value={watch('est_multi_logements') || 'non'}
-                          onValueChange={(value: 'non' | 'oui_2' | 'oui_3plus') => setValue('est_multi_logements', value)}
-                          className="grid grid-cols-1 md:grid-cols-3 gap-3"
+            {/* Stepper */}
+            <div className="mb-10">
+              <div className="flex items-center justify-between">
+                {STEPS.map((step, index) => {
+                  const isActive = currentStep === step.id;
+                  const isCompleted = currentStep > step.id;
+                  const StepIcon = step.icon;
+                  
+                  return (
+                    <div key={step.id} className="flex-1 flex items-center">
+                      <div className="flex flex-col items-center w-full">
+                        <div
+                          className={`
+                            relative w-12 h-12 rounded-full flex items-center justify-center
+                            transition-all duration-300 border-2
+                            ${isCompleted 
+                              ? 'bg-emerald-500 border-emerald-500 text-white' 
+                              : isActive 
+                                ? 'bg-primary border-primary text-primary-foreground' 
+                                : 'bg-muted border-border text-muted-foreground'
+                            }
+                          `}
                         >
-                          <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
-                            <RadioGroupItem value="non" id="non" />
-                            <Label htmlFor="non" className="cursor-pointer">Non, maison individuelle</Label>
-                          </div>
-                          <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
-                            <RadioGroupItem value="oui_2" id="oui_2" />
-                            <Label htmlFor="oui_2" className="cursor-pointer">Oui, 2 logements</Label>
-                          </div>
-                          <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
-                            <RadioGroupItem value="oui_3plus" id="oui_3plus" />
-                            <Label htmlFor="oui_3plus" className="cursor-pointer">Oui, 3+ logements</Label>
-                          </div>
-                        </RadioGroup>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Adresse */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <MapPinned className="w-4 h-4 text-muted-foreground" />
-                      Adresse du bien *
-                    </Label>
-                    <GoogleAddressAutocomplete
-                      value={watch('adresse')}
-                      onChange={handleAddressChange}
-                      onInputChange={(val) => setValue('adresse', val)}
-                      placeholder="Entrez l'adresse complète"
-                      className={errors.adresse ? 'border-destructive' : ''}
-                      restrictToSwitzerland
-                    />
-                    {errors.adresse && <p className="text-sm text-destructive">{errors.adresse.message}</p>}
-                  </div>
-
-                  {/* NPA / Ville (auto-filled) */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>NPA</Label>
-                      <Input {...register('npa')} placeholder="Auto" readOnly className="bg-muted/50" />
+                          {isCompleted ? (
+                            <CheckCircle className="w-6 h-6" />
+                          ) : (
+                            <StepIcon className="w-5 h-5" />
+                          )}
+                        </div>
+                        <div className="mt-2 text-center hidden sm:block">
+                          <p className={`text-sm font-medium ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
+                            {step.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{step.description}</p>
+                        </div>
+                      </div>
+                      {index < STEPS.length - 1 && (
+                        <div 
+                          className={`h-0.5 flex-1 mx-2 transition-colors ${
+                            currentStep > step.id ? 'bg-emerald-500' : 'bg-border'
+                          }`}
+                        />
+                      )}
                     </div>
-                    <div className="space-y-2">
-                      <Label>Ville</Label>
-                      <Input {...register('ville')} placeholder="Auto" readOnly className="bg-muted/50" />
-                    </div>
-                  </div>
-
-                  {/* Surface & Prix */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Ruler className="w-4 h-4 text-muted-foreground" />
-                        {typeBien === 'terrain' ? 'Surface du terrain (m²) *' : 'Surface habitable (m²) *'}
-                      </Label>
-                      <Input 
-                        {...register('surface')}
-                        placeholder={typeBien === 'terrain' ? 'Ex: 800' : 'Ex: 120'}
-                        className={errors.surface ? 'border-destructive' : ''}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Banknote className="w-4 h-4 text-muted-foreground" />
-                        Prix souhaité (CHF) *
-                      </Label>
-                      <Input 
-                        {...register('prix_souhaite')}
-                        placeholder={typeBien === 'terrain' ? "Ex: 500'000" : "Ex: 800'000"}
-                        className={errors.prix_souhaite ? 'border-destructive' : ''}
-                      />
-                    </div>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
+              
+              {/* Mobile step indicator */}
+              <div className="sm:hidden text-center mt-4">
+                <p className="text-sm font-medium text-primary">
+                  Étape {currentStep} : {STEPS[currentStep - 1].title}
+                </p>
+                <p className="text-xs text-muted-foreground">{STEPS[currentStep - 1].description}</p>
+              </div>
+            </div>
 
-              {/* Section 2: Détails - Adapté selon le type */}
+            {/* Form */}
+            <form onSubmit={handleSubmit(onSubmit)}>
               <AnimatePresence mode="wait">
-                {typeBien && typeBien !== 'autre' && (
-                  <motion.div
-                    key={`details-${typeBien}-${estMultiLogements}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="p-6 rounded-2xl bg-card border border-border/50"
-                  >
-                    {/* TERRAIN Section */}
-                    {typeBien === 'terrain' && (
-                      <>
-                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                          <Map className="w-5 h-5 text-primary" />
-                          Caractéristiques du terrain
-                        </h2>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Zone d'affectation</Label>
-                            <Select onValueChange={(value) => setValue('zone_affectation', value)}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Sélectionnez..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="habitation">Zone d'habitation</SelectItem>
-                                <SelectItem value="mixte">Zone mixte</SelectItem>
-                                <SelectItem value="agricole">Zone agricole</SelectItem>
-                                <SelectItem value="industrielle">Zone industrielle</SelectItem>
-                                <SelectItem value="autre">Autre</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Constructibilité (COS/CUS)</Label>
-                            <Input {...register('constructibilite')} placeholder="Ex: 0.4 / 1.2" />
-                          </div>
-                          <div className="flex items-center space-x-3 p-4 rounded-lg border border-border">
-                            <Checkbox
-                              id="terrain_viabilise"
-                              checked={watch('terrain_viabilise')}
-                              onCheckedChange={(checked) => setValue('terrain_viabilise', checked as boolean)}
-                            />
-                            <Label htmlFor="terrain_viabilise" className="flex items-center gap-2 cursor-pointer">
-                              <Zap className="w-4 h-4 text-muted-foreground" />
-                              Terrain viabilisé (eau, électricité, égouts)
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-3 p-4 rounded-lg border border-border">
-                            <Checkbox
-                              id="acces_route"
-                              checked={watch('acces_route')}
-                              onCheckedChange={(checked) => setValue('acces_route', checked as boolean)}
-                            />
-                            <Label htmlFor="acces_route" className="flex items-center gap-2 cursor-pointer">
-                              <Car className="w-4 h-4 text-muted-foreground" />
-                              Accès route direct
-                            </Label>
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {/* IMMEUBLE / MULTI-LOGEMENTS Section */}
-                    {showRendementFields && (
-                      <>
-                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                          <Landmark className="w-5 h-5 text-primary" />
-                          Données de rendement
-                        </h2>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <Building2 className="w-4 h-4 text-muted-foreground" />
-                              Nombre de logements
-                            </Label>
-                            <Input {...register('nb_logements')} placeholder="Ex: 6" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <DollarSign className="w-4 h-4 text-muted-foreground" />
-                              Revenus locatifs annuels (CHF)
-                            </Label>
-                            <Input {...register('revenus_locatifs')} placeholder="Ex: 120'000" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <Banknote className="w-4 h-4 text-muted-foreground" />
-                              Charges annuelles (CHF)
-                            </Label>
-                            <Input {...register('charges_annuelles')} placeholder="Ex: 15'000" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <Percent className="w-4 h-4 text-muted-foreground" />
-                              Taux d'occupation (%)
-                            </Label>
-                            <Input {...register('taux_occupation')} placeholder="Ex: 95" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>État général</Label>
-                            <Select onValueChange={(value) => setValue('etat_general', value)}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Sélectionnez..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="neuf">Neuf / Rénové récemment</SelectItem>
-                                <SelectItem value="bon">Bon état</SelectItem>
-                                <SelectItem value="moyen">État moyen</SelectItem>
-                                <SelectItem value="a_renover">À rénover</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-muted-foreground" />
-                              Année construction
-                            </Label>
-                            <Input {...register('annee_construction')} placeholder="Ex: 1985" />
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {/* COMMERCIAL Section */}
-                    {typeBien === 'commercial' && (
-                      <>
-                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                          <Store className="w-5 h-5 text-primary" />
-                          Détails du local
-                        </h2>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <Label>Usage actuel</Label>
-                            <Select onValueChange={(value) => setValue('usage_actuel', value)}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Sélectionnez..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="commerce">Commerce / Boutique</SelectItem>
-                                <SelectItem value="bureau">Bureau</SelectItem>
-                                <SelectItem value="atelier">Atelier / Dépôt</SelectItem>
-                                <SelectItem value="restaurant">Restaurant / Café</SelectItem>
-                                <SelectItem value="vacant">Vacant</SelectItem>
-                                <SelectItem value="autre">Autre</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <DollarSign className="w-4 h-4 text-muted-foreground" />
-                              Loyer actuel (CHF/mois)
-                            </Label>
-                            <Input {...register('loyer_actuel')} placeholder="Ex: 3'500" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-muted-foreground" />
-                              Année construction
-                            </Label>
-                            <Input {...register('annee_construction')} placeholder="Ex: 2000" />
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {/* APPARTEMENT / VILLA SIMPLE Section */}
-                    {(typeBien === 'appartement' || (typeBien === 'villa' && !showRendementFields)) && (
-                      <>
-                        <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                          <Building2 className="w-5 h-5 text-primary" />
-                          Détails du bien
-                        </h2>
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <Home className="w-4 h-4 text-muted-foreground" />
-                              Nombre de pièces
-                            </Label>
-                            <Input {...register('nombre_pieces')} placeholder="Ex: 4.5" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <Bed className="w-4 h-4 text-muted-foreground" />
-                              Chambres
-                            </Label>
-                            <Input {...register('nombre_chambres')} placeholder="Ex: 3" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <Bath className="w-4 h-4 text-muted-foreground" />
-                              Salles de bain
-                            </Label>
-                            <Input {...register('nombre_sdb')} placeholder="Ex: 2" />
-                          </div>
-                          {typeBien === 'appartement' && (
-                            <div className="space-y-2">
-                              <Label>Étage</Label>
-                              <Input {...register('etage')} placeholder="Ex: 3ème" />
-                            </div>
-                          )}
-                          {typeBien === 'villa' && (
-                            <div className="space-y-2">
-                              <Label className="flex items-center gap-2">
-                                <Trees className="w-4 h-4 text-muted-foreground" />
-                                Surface terrain (m²)
-                              </Label>
-                              <Input {...register('surface_terrain')} placeholder="Ex: 500" />
-                            </div>
-                          )}
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-muted-foreground" />
-                              Année construction
-                            </Label>
-                            <Input {...register('annee_construction')} placeholder="Ex: 2010" />
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </motion.div>
-                )}
+                {renderStepContent()}
               </AnimatePresence>
 
-              {/* Section 3: Équipements - Only for relevant types */}
-              {typeBien && typeBien !== 'terrain' && typeBien !== 'autre' && getEquipmentItems().length > 0 && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="p-6 rounded-2xl bg-card border border-border/50"
+              {/* Navigation buttons */}
+              <div className="flex justify-between mt-8 gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={goToPrevStep}
+                  disabled={currentStep === 1}
+                  className="flex-1 sm:flex-none"
                 >
-                  <h2 className="text-xl font-semibold mb-6">Équipements</h2>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {getEquipmentItems().map((item) => (
-                      <div key={item.key} className="flex items-center space-x-3">
-                        <Checkbox
-                          id={item.key}
-                          checked={watch(item.key as keyof FormData) as boolean}
-                          onCheckedChange={(checked) => 
-                            setValue(item.key as keyof FormData, checked as boolean)
-                          }
-                        />
-                        <Label htmlFor={item.key} className="flex items-center gap-2 cursor-pointer">
-                          <item.icon className="w-4 h-4 text-muted-foreground" />
-                          {item.label}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
+                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  Précédent
+                </Button>
 
-              {/* Section 4: Motivations */}
-              <div className="p-6 rounded-2xl bg-card border border-border/50">
-                <h2 className="text-xl font-semibold mb-6">Vos motivations</h2>
-                
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Délai de vente souhaité</Label>
-                      <Select onValueChange={(value) => setValue('delai_vente', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="urgent">Urgent (- de 3 mois)</SelectItem>
-                          <SelectItem value="3-6mois">3 à 6 mois</SelectItem>
-                          <SelectItem value="6-12mois">6 à 12 mois</SelectItem>
-                          <SelectItem value="flexible">Flexible</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Motif de vente</Label>
-                      <Select onValueChange={(value) => setValue('motif_vente', value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="demenagement">Déménagement</SelectItem>
-                          <SelectItem value="succession">Succession</SelectItem>
-                          <SelectItem value="investissement">Réinvestissement</SelectItem>
-                          <SelectItem value="changement">Changement de vie</SelectItem>
-                          <SelectItem value="autre">Autre</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Description libre (optionnel)</Label>
-                    <Textarea 
-                      {...register('description')}
-                      placeholder="Points forts de votre bien, travaux récents, particularités..."
-                      rows={4}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 5: Coordonnées */}
-              <div className="p-6 rounded-2xl bg-card border border-border/50">
-                <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                  <User className="w-5 h-5 text-primary" />
-                  Vos coordonnées
-                </h2>
-                
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Nom complet *</Label>
-                    <Input 
-                      {...register('nom')}
-                      placeholder="Prénom Nom"
-                      className={errors.nom ? 'border-destructive' : ''}
-                    />
-                    {errors.nom && <p className="text-sm text-destructive">{errors.nom.message}</p>}
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Mail className="w-4 h-4 text-muted-foreground" />
-                        Email *
-                      </Label>
-                      <Input 
-                        {...register('email')}
-                        type="email"
-                        placeholder="votre@email.ch"
-                        className={errors.email ? 'border-destructive' : ''}
-                      />
-                      {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-muted-foreground" />
-                        Téléphone *
-                      </Label>
-                      <Input 
-                        {...register('telephone')}
-                        type="tel"
-                        placeholder="079 xxx xx xx"
-                        className={errors.telephone ? 'border-destructive' : ''}
-                      />
-                      {errors.telephone && <p className="text-sm text-destructive">{errors.telephone.message}</p>}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Submit */}
-              <Button 
-                type="submit" 
-                className="w-full h-14 text-lg bg-gradient-to-r from-primary to-accent hover:opacity-90"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Envoi en cours...
-                  </>
+                {currentStep < 4 ? (
+                  <Button
+                    type="button"
+                    onClick={goToNextStep}
+                    className="flex-1 sm:flex-none"
+                  >
+                    Suivant
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
                 ) : (
-                  <>
-                    <Send className="w-5 h-5 mr-2" />
-                    Soumettre mon bien
-                  </>
+                  <Button 
+                    type="submit" 
+                    className="flex-1 sm:flex-none bg-gradient-to-r from-primary to-accent hover:opacity-90"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Envoi...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-5 h-5 mr-2" />
+                        Soumettre mon bien
+                      </>
+                    )}
+                  </Button>
                 )}
-              </Button>
+              </div>
 
-              <p className="text-xs text-center text-muted-foreground">
+              <p className="text-xs text-center text-muted-foreground mt-6">
                 En soumettant ce formulaire, vous acceptez d'être contacté par notre équipe. 
                 Aucune donnée n'est partagée avec des tiers.
               </p>
