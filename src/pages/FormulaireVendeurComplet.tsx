@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FloatingNav } from '@/components/landing/FloatingNav';
+import { VendeurFloatingNav } from '@/components/landing/vendeur/VendeurFloatingNav';
 import { VendeurFooter } from '@/components/landing/vendeur/VendeurFooter';
 import { GoogleAddressAutocomplete, AddressComponents } from '@/components/GoogleAddressAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
@@ -182,7 +182,7 @@ export default function FormulaireVendeurComplet() {
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-background">
-        <FloatingNav />
+        <VendeurFloatingNav />
         <main className="pt-32 pb-24">
           <div className="container mx-auto px-4">
             <div className="max-w-2xl mx-auto text-center">
@@ -211,7 +211,7 @@ export default function FormulaireVendeurComplet() {
 
   return (
     <div className="min-h-screen bg-background">
-      <FloatingNav />
+      <VendeurFloatingNav />
       
       <main className="pt-28 pb-24">
         <div className="container mx-auto px-4">

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { FloatingNav } from '@/components/landing/FloatingNav';
+import { VendeurFloatingNav } from '@/components/landing/vendeur/VendeurFloatingNav';
 import { VendeurFooter } from '@/components/landing/vendeur/VendeurFooter';
 import { VendeurHeroSection } from '@/components/landing/vendeur/VendeurHeroSection';
 import { VendeurMatchingSection } from '@/components/landing/vendeur/VendeurMatchingSection';
@@ -18,7 +18,7 @@ export default function VendreMonBien() {
 
   return (
     <div className="min-h-screen bg-background">
-      <FloatingNav />
+      <VendeurFloatingNav />
       
       <main>
         <VendeurHeroSection />
