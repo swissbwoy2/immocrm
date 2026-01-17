@@ -87,25 +87,25 @@ export default function Landing() {
       <ApporteurSection />
       <LandingFooter />
 
-      {/* Floating CTA - Scroll to form */}
+      {/* Floating CTA - Activer ma recherche */}
       <div 
         className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 animate-fade-in"
         style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
       >
         <div className="relative group">
-          {/* Subtle glow */}
-          <div className="absolute -inset-1 bg-primary/20 rounded-full blur-lg opacity-60 group-hover:opacity-100 transition-opacity" />
+          {/* Animated glow */}
+          <div className="absolute -inset-1.5 bg-primary/30 rounded-full blur-lg opacity-70 group-hover:opacity-100 transition-opacity animate-pulse" />
           
           <Button 
             asChild 
             size="lg" 
-            className="relative shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 text-sm md:text-base px-4 md:px-6 hover:scale-105"
+            className="relative shadow-xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 text-sm md:text-base px-5 md:px-8 hover:scale-105 bg-gradient-to-r from-primary to-primary/90"
           >
-            <a href="#quickform">
-              <span className="hidden sm:inline">📬 Recevoir ma shortlist gratuite</span>
-              <span className="sm:hidden">📬 Shortlist</span>
+            <Link to="/nouveau-mandat">
+              <span className="hidden sm:inline">🚀 Activer ma recherche</span>
+              <span className="sm:hidden">🚀 Démarrer</span>
               <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5 group-hover:translate-x-1 transition-transform" />
-            </a>
+            </Link>
           </Button>
         </div>
       </div>
