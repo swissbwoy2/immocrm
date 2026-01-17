@@ -9,7 +9,7 @@ import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
-interface OffreAchat {
+export interface OffreAchatCardData {
   id: string;
   acheteur_nom: string | null;
   montant_offre: number;
@@ -17,7 +17,7 @@ interface OffreAchat {
   date_validite: string | null;
   statut: string;
   conditions: string | null;
-  notes: string | null;
+  notes?: string | null;
   client?: {
     user_id: string;
     profile?: {
@@ -26,11 +26,11 @@ interface OffreAchat {
       email: string | null;
       telephone: string | null;
     };
-  };
+  } | null;
 }
 
 interface PremiumOffreAchatCardProps {
-  offre: OffreAchat;
+  offre: OffreAchatCardData;
   prixDemande?: number | null;
   onUpdateStatut?: (offreId: string, statut: string) => void;
   isProprietaire?: boolean;

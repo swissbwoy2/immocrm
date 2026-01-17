@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { 
   Building2, ArrowLeft, Plus, MapPin, Calendar, Users, 
   Wrench, FileText, Home, DoorOpen, AlertTriangle, Edit,
-  Tag, UserPlus, Image, Eye, EyeOff, Download, Heart
+  Tag, UserPlus, Image, Eye, EyeOff, Download, Heart, Handshake, Scale
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -26,6 +26,11 @@ import { CreateTicketDialog } from '@/components/proprietaire/CreateTicketDialog
 import { UploadDocumentDialog } from '@/components/proprietaire/UploadDocumentDialog';
 import { AddCoProprietaireDialog } from '@/components/proprietaire/AddCoProprietaireDialog';
 import { UploadPhotoDialog } from '@/components/proprietaire/UploadPhotoDialog';
+import { VenteWorkflowTimeline } from '@/components/proprietaire/VenteWorkflowTimeline';
+import { EstimationProprietaireView } from '@/components/proprietaire/EstimationProprietaireView';
+import { OffresAchatSection } from '@/components/proprietaire/OffresAchatSection';
+import { VisitesVenteSection } from '@/components/proprietaire/VisitesVenteSection';
+import { NotaireSection } from '@/components/proprietaire/NotaireSection';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -40,6 +45,7 @@ interface Immeuble {
   type_bien: string | null;
   nb_unites: number | null;
   surface_totale: number | null;
+  surface_habitable: number | null;
   annee_construction: number | null;
   valeur_estimee: number | null;
   valeur_fiscale: number | null;
@@ -59,6 +65,14 @@ interface Immeuble {
   publier_espace_acheteur: boolean | null;
   accord_proprietaire_publication: boolean | null;
   date_mise_en_vente: string | null;
+  // Estimation fields (from DB)
+  estimation_valeur_basse: number | null;
+  estimation_valeur_haute: number | null;
+  estimation_valeur_recommandee: number | null;
+  prix_m2_secteur: number | null;
+  facteurs_positifs: string[] | null;
+  facteurs_negatifs: string[] | null;
+  potentiel_developpement: string | null;
 }
 
 interface Lot {
@@ -215,7 +229,7 @@ export default function ImmeubleDetail() {
         .single();
 
       if (immeubleError) throw immeubleError;
-      setImmeuble(immeubleData);
+      setImmeuble(immeubleData as unknown as Immeuble);
 
       // Load lots with locataires
       const { data: lotsData, error: lotsError } = await supabase
@@ -808,6 +822,28 @@ export default function ImmeubleDetail() {
         {/* Vente Tab */}
         {isVenteMode && (
           <TabsContent value="vente" className="space-y-6">
+            {/* Timeline du workflow de vente */}
+            <Card className="overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
+                <CardTitle className="text-lg">Progression de la vente</CardTitle>
+                <CardDescription>Suivez l'avancement de la transaction</CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <VenteWorkflowTimeline
+                  currentStep={immeuble.statut_vente || 'analyse'}
+                  dossierComplet={!!immeuble.description_commerciale}
+                  estimationValidee={immeuble.statut_vente === 'pret' || immeuble.statut_vente === 'publie'}
+                  estPublie={immeuble.publier_espace_acheteur || false}
+                  nbVisites={0}
+                  nbOffres={0}
+                  offreAcceptee={immeuble.statut_vente === 'sous_offre'}
+                  notairePlanifie={false}
+                  signatureEffectuee={immeuble.statut_vente === 'vendu'}
+                  entreeFaite={false}
+                />
+              </CardContent>
+            </Card>
+
             {/* Prix et statut */}
             <div className="grid md:grid-cols-2 gap-6">
               <Card>
@@ -889,6 +925,21 @@ export default function ImmeubleDetail() {
               </Card>
             </div>
 
+            {/* Estimation du propriétaire */}
+            <EstimationProprietaireView
+              immeubleId={immeuble.id}
+              prixEstimeBas={immeuble.estimation_valeur_basse}
+              prixEstimeHaut={immeuble.estimation_valeur_haute}
+              prixRecommande={immeuble.estimation_valeur_recommandee}
+              prixM2Secteur={immeuble.prix_m2_secteur}
+              surfaceHabitable={immeuble.surface_habitable}
+              statutEstimation={immeuble.statut_vente === 'estimation' ? 'proposee' : immeuble.statut_vente === 'pret' ? 'validee' : 'en_attente'}
+              facteursPositifs={immeuble.facteurs_positifs || []}
+              facteursNegatifs={immeuble.facteurs_negatifs || []}
+              potentielDeveloppement={immeuble.potentiel_developpement}
+              onUpdate={loadData}
+            />
+
             {/* Description commerciale */}
             {immeuble.description_commerciale && (
               <Card>
@@ -919,6 +970,45 @@ export default function ImmeubleDetail() {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Section Visites */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="w-5 h-5 text-primary" />
+                  Visites programmées
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <VisitesVenteSection immeubleId={immeuble.id} />
+              </CardContent>
+            </Card>
+
+            {/* Section Offres */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Handshake className="w-5 h-5 text-primary" />
+                  Offres d'achat
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <OffresAchatSection 
+                  immeubleId={immeuble.id} 
+                  prixDemande={immeuble.prix_vente_demande}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Section Notaire - visible si sous offre ou vendu */}
+            {(immeuble.statut_vente === 'sous_offre' || immeuble.statut_vente === 'vendu') && (
+              <NotaireSection
+                statut={immeuble.statut_vente === 'vendu' ? 'acte_signe' : 'en_attente'}
+                prixVenteFinal={immeuble.prix_vente_demande}
+                commissionAgence={immeuble.prix_vente_demande ? immeuble.prix_vente_demande * 0.01 : null}
+                tauxCommission={1}
+              />
             )}
 
             {/* Intérêts acheteurs */}
