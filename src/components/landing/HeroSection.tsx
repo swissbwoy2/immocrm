@@ -237,7 +237,7 @@ export function HeroSection() {
               </Link>
             </Button>
 
-            {/* Secondary CTA - Shortlist gratuite */}
+            {/* Secondary CTA - Test gratuit */}
             <Button 
               asChild 
               variant="outline"
@@ -246,7 +246,7 @@ export function HeroSection() {
             >
               <a href="#quickform">
                 <Sparkles className="mr-2 h-4 w-4 md:h-5 md:w-5 text-primary" />
-                <span>Ou recevoir une shortlist gratuite</span>
+                <span>Tester le service gratuitement pendant 24h</span>
               </a>
             </Button>
 
