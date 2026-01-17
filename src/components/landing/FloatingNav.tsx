@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogIn, Rocket, Building2 } from 'lucide-react';
+import { LogIn, Rocket, Building2, Home } from 'lucide-react';
 import logo from '@/assets/logo-immo-rama-new.png';
 
 export function FloatingNav() {
@@ -52,6 +52,18 @@ export function FloatingNav() {
                 <Link to="/annonces">
                   <Building2 className="h-4 w-4 mr-2" />
                   <span>Annonces</span>
+                </Link>
+              </Button>
+
+              <Button
+                asChild 
+                variant="ghost" 
+                size="sm"
+                className="text-muted-foreground hover:text-foreground hidden md:inline-flex"
+              >
+                <Link to="/vendre-mon-bien">
+                  <Home className="h-4 w-4 mr-2" />
+                  <span>Vendre</span>
                 </Link>
               </Button>
               
