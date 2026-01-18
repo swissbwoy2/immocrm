@@ -91,7 +91,7 @@ const AddProprietaireDialog = ({ open, onOpenChange, onSuccess }: AddProprietair
           code_postal: formData.code_postal || undefined,
           ville: formData.ville || undefined,
           canton: formData.canton || undefined,
-          agent_id: formData.agent_id || undefined,
+          agent_id: formData.agent_id && formData.agent_id !== 'none' ? formData.agent_id : undefined,
         },
       });
 
@@ -254,7 +254,7 @@ const AddProprietaireDialog = ({ open, onOpenChange, onSuccess }: AddProprietair
                 <SelectValue placeholder="Aucun agent" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Aucun agent</SelectItem>
+                <SelectItem value="none">Aucun agent</SelectItem>
                 {agents.map((agent) => (
                   <SelectItem key={agent.id} value={agent.id}>
                     {agent.profiles.prenom} {agent.profiles.nom}

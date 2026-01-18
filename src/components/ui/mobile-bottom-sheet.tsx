@@ -157,15 +157,22 @@ export function MobileBottomSheet({
 
 // Hook to detect mobile and use bottom sheet vs dialog
 export function useIsMobileSheet() {
-  const [isMobile, setIsMobile] = React.useState(false);
+  const [isMobile, setIsMobile] = React.useState(() => {
+    // Safe initialization for SSR/hydration
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 768 || 'ontouchstart' in window;
+    }
+    return false;
+  });
 
   React.useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768 || "ontouchstart" in window);
+      setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
     };
+    // Re-check on mount in case initial value was wrong
     checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   return isMobile;
