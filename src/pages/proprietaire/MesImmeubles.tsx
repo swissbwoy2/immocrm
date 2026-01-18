@@ -140,13 +140,13 @@ export default function MesImmeubles() {
   return (
     <div className="p-4 md:p-8">
       <PremiumPageHeader
-        title="Mes immeubles"
+        title="Mes biens"
         subtitle={`${immeubles.length} bien${immeubles.length > 1 ? 's' : ''} dans votre patrimoine`}
         icon={Building2}
         action={
           <Button onClick={() => navigate('/proprietaire/immeubles/nouveau')}>
             <Plus className="w-4 h-4 mr-2" />
-            Ajouter un immeuble
+            Ajouter un bien
           </Button>
         }
       />
@@ -203,17 +203,17 @@ export default function MesImmeubles() {
       {filteredImmeubles.length === 0 ? (
         <PremiumEmptyState
           icon={Building2}
-          title={searchTerm || statutFilter !== 'all' ? "Aucun résultat" : "Aucun immeuble"}
+          title={searchTerm || statutFilter !== 'all' ? "Aucun résultat" : "Aucun bien enregistré"}
           description={
             searchTerm || statutFilter !== 'all'
-              ? "Aucun immeuble ne correspond à vos critères de recherche."
-              : "Commencez par ajouter votre premier bien immobilier."
+              ? "Aucun bien ne correspond à vos critères de recherche."
+              : "Vous souhaitez vendre ou louer ? Complétez les informations de votre propriété pour démarrer."
           }
           action={
             !searchTerm && statutFilter === 'all' ? (
               <Button onClick={() => navigate('/proprietaire/immeubles/nouveau')}>
                 <Plus className="w-4 h-4 mr-2" />
-                Ajouter un immeuble
+                Ajouter mon bien
               </Button>
             ) : undefined
           }

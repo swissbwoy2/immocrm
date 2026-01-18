@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Users, Wrench, TrendingUp, FileText, Plus, AlertTriangle, ArrowRight, HardHat } from 'lucide-react';
+import { Building2, Users, Wrench, TrendingUp, FileText, Plus, AlertTriangle, ArrowRight, HardHat, Tag } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -312,12 +312,38 @@ export default function ProprietaireDashboard() {
 
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-3 gap-6">
+          {/* Vente Section - visible if properties in sale mode */}
+          {immeubles.filter(i => i.mode_exploitation === 'vente' || i.mode_exploitation === 'les_deux').length > 0 && (
+            <div className="lg:col-span-3 mb-2">
+              <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/20 dark:to-background dark:border-emerald-800/30">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                      <Tag className="w-5 h-5" />
+                      Vente de votre bien
+                    </CardTitle>
+                    <Button variant="outline" size="sm" onClick={() => navigate('/proprietaire/vente')}>
+                      Suivre ma vente
+                      <ArrowRight className="w-4 h-4 ml-1" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">
+                    Vous avez {immeubles.filter(i => i.mode_exploitation === 'vente' || i.mode_exploitation === 'les_deux').length} bien(s) en cours de vente. 
+                    Consultez l'avancement et les offres reçues.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           {/* Immeubles */}
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-primary" />
-                Mes immeubles
+                Mes biens
               </h2>
               <Button variant="outline" size="sm" onClick={() => navigate('/proprietaire/immeubles')}>
                 Voir tout

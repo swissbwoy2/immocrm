@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -123,7 +123,8 @@ const getMenuForRole = (role: string) => {
         { name: 'Tableau de bord', icon: LayoutDashboard, path: '/proprietaire', notifKey: null },
         { name: 'Messagerie', icon: MessageSquare, path: '/proprietaire/messagerie', notifKey: 'new_message' },
         { name: 'Calendrier', icon: Calendar, path: '/proprietaire/calendrier', notifKey: null },
-        { name: 'Mes immeubles', icon: Home, path: '/proprietaire/immeubles', notifKey: null },
+        { name: 'Mes biens', icon: Home, path: '/proprietaire/immeubles', notifKey: null },
+        { name: 'Vendre mon bien', icon: Tag, path: '/proprietaire/vente', notifKey: null },
         { name: 'Projets de développement', icon: HardHat, path: '/proprietaire/projets-developpement', notifKey: 'projet_statut_change' },
         { name: 'Locataires', icon: Users, path: '/proprietaire/locataires', notifKey: null },
         { name: 'Comptabilité', icon: DollarSign, path: '/proprietaire/comptabilite', notifKey: null },
