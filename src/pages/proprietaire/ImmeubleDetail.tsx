@@ -32,6 +32,7 @@ import { OffresAchatSection } from '@/components/proprietaire/OffresAchatSection
 import { VisitesVenteSection } from '@/components/proprietaire/VisitesVenteSection';
 import { NotaireSection } from '@/components/proprietaire/NotaireSection';
 import { DocumentChecklistVente } from '@/components/proprietaire/DocumentChecklistVente';
+import { VenteProjectionFinanciere } from '@/components/proprietaire/VenteProjectionFinanciere';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -79,6 +80,11 @@ interface Immeuble {
   facteurs_positifs: string[] | null;
   facteurs_negatifs: string[] | null;
   potentiel_developpement: string | null;
+  // Financial projection fields
+  commission_mode: string | null;
+  date_acquisition: string | null;
+  prix_acquisition: number | null;
+  travaux_plus_value: number | null;
 }
 
 interface Lot {
@@ -868,6 +874,18 @@ export default function ImmeubleDetail() {
                 />
               </CardContent>
             </Card>
+
+            {/* Projection financière */}
+            <VenteProjectionFinanciere
+              canton={immeuble.canton}
+              prixVendeur={immeuble.prix_vendeur}
+              prixCommercial={immeuble.prix_commercial}
+              prixVenteDemande={immeuble.prix_vente_demande}
+              dateAcquisition={immeuble.date_acquisition}
+              prixAcquisition={immeuble.prix_acquisition}
+              travauxPlusValue={immeuble.travaux_plus_value}
+              commissionMode={(immeuble.commission_mode as 'net_vendeur' | 'commission_classique') || 'net_vendeur'}
+            />
 
             {/* Prix et statut */}
             <div className="grid md:grid-cols-2 gap-6">
