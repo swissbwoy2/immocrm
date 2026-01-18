@@ -3129,9 +3129,11 @@ export type Database = {
           code_postal: string | null
           combustible: string | null
           commission_agence_prevue: number | null
+          commission_mode: string | null
           commune_rf: string | null
           created_at: string | null
           date_accord_publication: string | null
+          date_acquisition: string | null
           date_derniere_estimation: string | null
           date_mise_en_vente: string | null
           date_visite_initiale: string | null
@@ -3210,6 +3212,7 @@ export type Database = {
           potentiel_developpement: string | null
           potentiel_solaire_aptitude: string | null
           potentiel_solaire_exposition: number | null
+          prix_acquisition: number | null
           prix_commercial: number | null
           prix_m2_secteur: number | null
           prix_vendeur: number | null
@@ -3238,6 +3241,7 @@ export type Database = {
           taux_vacance: number | null
           tel_locataire: string | null
           tendance_marche: string | null
+          travaux_plus_value: number | null
           type_bien: string | null
           type_chauffage: string | null
           type_sol: Json | null
@@ -3271,9 +3275,11 @@ export type Database = {
           code_postal?: string | null
           combustible?: string | null
           commission_agence_prevue?: number | null
+          commission_mode?: string | null
           commune_rf?: string | null
           created_at?: string | null
           date_accord_publication?: string | null
+          date_acquisition?: string | null
           date_derniere_estimation?: string | null
           date_mise_en_vente?: string | null
           date_visite_initiale?: string | null
@@ -3352,6 +3358,7 @@ export type Database = {
           potentiel_developpement?: string | null
           potentiel_solaire_aptitude?: string | null
           potentiel_solaire_exposition?: number | null
+          prix_acquisition?: number | null
           prix_commercial?: number | null
           prix_m2_secteur?: number | null
           prix_vendeur?: number | null
@@ -3380,6 +3387,7 @@ export type Database = {
           taux_vacance?: number | null
           tel_locataire?: string | null
           tendance_marche?: string | null
+          travaux_plus_value?: number | null
           type_bien?: string | null
           type_chauffage?: string | null
           type_sol?: Json | null
@@ -3413,9 +3421,11 @@ export type Database = {
           code_postal?: string | null
           combustible?: string | null
           commission_agence_prevue?: number | null
+          commission_mode?: string | null
           commune_rf?: string | null
           created_at?: string | null
           date_accord_publication?: string | null
+          date_acquisition?: string | null
           date_derniere_estimation?: string | null
           date_mise_en_vente?: string | null
           date_visite_initiale?: string | null
@@ -3494,6 +3504,7 @@ export type Database = {
           potentiel_developpement?: string | null
           potentiel_solaire_aptitude?: string | null
           potentiel_solaire_exposition?: number | null
+          prix_acquisition?: number | null
           prix_commercial?: number | null
           prix_m2_secteur?: number | null
           prix_vendeur?: number | null
@@ -3522,6 +3533,7 @@ export type Database = {
           taux_vacance?: number | null
           tel_locataire?: string | null
           tendance_marche?: string | null
+          travaux_plus_value?: number | null
           type_bien?: string | null
           type_chauffage?: string | null
           type_sol?: Json | null
