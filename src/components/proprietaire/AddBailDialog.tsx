@@ -103,7 +103,7 @@ export function AddBailDialog({ open, onClose, onSuccess }: AddBailDialogProps) 
 
       const { error } = await supabase.from('baux').insert({
         lot_id: lotId,
-        locataire_id: locataireId || null,
+        locataire_id: locataireId && locataireId !== 'none' ? locataireId : null,
         date_debut: dateDebut,
         date_fin: dateFin || null,
         loyer_initial: loyer,
@@ -195,7 +195,7 @@ export function AddBailDialog({ open, onClose, onSuccess }: AddBailDialogProps) 
                 <SelectValue placeholder="Sélectionner un locataire" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Aucun</SelectItem>
+                <SelectItem value="none">Aucun</SelectItem>
                 {locataires.map((loc) => (
                   <SelectItem key={loc.id} value={loc.id}>
                     {loc.prenom} {loc.nom}

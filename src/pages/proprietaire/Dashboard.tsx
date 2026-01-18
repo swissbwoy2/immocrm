@@ -15,6 +15,7 @@ import { PremiumImmeubleCard } from '@/components/premium/PremiumImmeubleCard';
 import { PremiumTicketTechniqueCard } from '@/components/premium/PremiumTicketTechniqueCard';
 import { PremiumProjetCard } from '@/components/premium/PremiumProjetCard';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
+import { AddImmeubleDialog } from '@/components/proprietaire/AddImmeubleDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -40,6 +41,7 @@ export default function ProprietaireDashboard() {
     tauxVacanceMoyen: 0,
     projetsEnCours: 0
   });
+  const [showAddImmeubleDialog, setShowAddImmeubleDialog] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -357,7 +359,7 @@ export default function ProprietaireDashboard() {
                 title="Aucun immeuble"
                 description="Vous n'avez pas encore d'immeuble enregistré."
                 action={
-                  <Button onClick={() => navigate('/proprietaire/immeubles/nouveau')}>
+                <Button onClick={() => setShowAddImmeubleDialog(true)}>
                     <Plus className="w-4 h-4 mr-2" />
                     Ajouter un immeuble
                   </Button>
@@ -477,7 +479,7 @@ export default function ProprietaireDashboard() {
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
-                  onClick={() => navigate('/proprietaire/immeubles/nouveau')}
+                  onClick={() => setShowAddImmeubleDialog(true)}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Ajouter un immeuble
@@ -503,6 +505,19 @@ export default function ProprietaireDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Dialog pour ajouter un bien */}
+      {proprietaire && (
+        <AddImmeubleDialog
+          open={showAddImmeubleDialog}
+          onOpenChange={setShowAddImmeubleDialog}
+          proprietaireId={proprietaire.id}
+          onSuccess={() => {
+            setShowAddImmeubleDialog(false);
+            loadData();
+          }}
+        />
+      )}
     </PullToRefresh>
   );
 }

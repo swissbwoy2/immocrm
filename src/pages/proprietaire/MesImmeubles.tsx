@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { PremiumPageHeader, PremiumEmptyState } from '@/components/premium';
 import { PremiumImmeubleCard } from '@/components/premium/PremiumImmeubleCard';
+import { AddImmeubleDialog } from '@/components/proprietaire/AddImmeubleDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -28,6 +29,7 @@ export default function MesImmeubles() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statutFilter, setStatutFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   // Stats per immeuble
   const [immeublesStats, setImmeublesStats] = useState<Record<string, { lots: number; locataires: number; tickets: number }>>({});
@@ -144,7 +146,7 @@ export default function MesImmeubles() {
         subtitle={`${immeubles.length} bien${immeubles.length > 1 ? 's' : ''} dans votre patrimoine`}
         icon={Building2}
         action={
-          <Button onClick={() => navigate('/proprietaire/immeubles/nouveau')}>
+          <Button onClick={() => setShowAddDialog(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Ajouter un bien
           </Button>
@@ -211,7 +213,7 @@ export default function MesImmeubles() {
           }
           action={
             !searchTerm && statutFilter === 'all' ? (
-              <Button onClick={() => navigate('/proprietaire/immeubles/nouveau')}>
+              <Button onClick={() => setShowAddDialog(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Ajouter mon bien
               </Button>
@@ -265,6 +267,19 @@ export default function MesImmeubles() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Dialog pour ajouter un bien */}
+      {proprietaireId && (
+        <AddImmeubleDialog
+          open={showAddDialog}
+          onOpenChange={setShowAddDialog}
+          proprietaireId={proprietaireId}
+          onSuccess={() => {
+            setShowAddDialog(false);
+            loadData();
+          }}
+        />
       )}
     </div>
   );

@@ -216,7 +216,7 @@ export default function Locataires() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les immeubles</SelectItem>
-                {immeubles.map(imm => (
+                {immeubles.filter(imm => imm.id).map(imm => (
                   <SelectItem key={imm.id} value={imm.id}>{imm.nom}</SelectItem>
                 ))}
               </SelectContent>
