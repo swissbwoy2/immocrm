@@ -16,17 +16,19 @@ interface AddCeduleDialogProps {
   onClose: () => void;
   onSuccess: () => void;
   hypothequeId?: string;
+  preselectedImmeubleId?: string;
+  preselectedHypothequeId?: string;
 }
 
-export function AddCeduleDialog({ open, onClose, onSuccess, hypothequeId }: AddCeduleDialogProps) {
+export function AddCeduleDialog({ open, onClose, onSuccess, hypothequeId, preselectedImmeubleId, preselectedHypothequeId }: AddCeduleDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [immeubles, setImmeubles] = useState<any[]>([]);
   const [hypotheques, setHypotheques] = useState<any[]>([]);
   
   // Form state
-  const [immeubleId, setImmeubleId] = useState('');
-  const [selectedHypothequeId, setSelectedHypothequeId] = useState(hypothequeId || '');
+  const [immeubleId, setImmeubleId] = useState(preselectedImmeubleId || '');
+  const [selectedHypothequeId, setSelectedHypothequeId] = useState(preselectedHypothequeId || hypothequeId || '');
   const [numeroCedule, setNumeroCedule] = useState('');
   const [typeCedule, setTypeCedule] = useState('registre');
   const [rang, setRang] = useState('1');
@@ -42,10 +44,13 @@ export function AddCeduleDialog({ open, onClose, onSuccess, hypothequeId }: AddC
   }, [open, user]);
 
   useEffect(() => {
-    if (hypothequeId) {
-      setSelectedHypothequeId(hypothequeId);
+    if (preselectedHypothequeId || hypothequeId) {
+      setSelectedHypothequeId(preselectedHypothequeId || hypothequeId || '');
     }
-  }, [hypothequeId]);
+    if (preselectedImmeubleId) {
+      setImmeubleId(preselectedImmeubleId);
+    }
+  }, [hypothequeId, preselectedHypothequeId, preselectedImmeubleId]);
 
   const loadData = async () => {
     try {
@@ -116,8 +121,8 @@ export function AddCeduleDialog({ open, onClose, onSuccess, hypothequeId }: AddC
   };
 
   const resetForm = () => {
-    setImmeubleId('');
-    setSelectedHypothequeId(hypothequeId || '');
+    setImmeubleId(preselectedImmeubleId || '');
+    setSelectedHypothequeId(preselectedHypothequeId || hypothequeId || '');
     setNumeroCedule('');
     setTypeCedule('registre');
     setRang('1');

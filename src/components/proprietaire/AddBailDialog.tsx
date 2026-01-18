@@ -71,12 +71,16 @@ export function AddBailDialog({ open, onClose, onSuccess }: AddBailDialogProps) 
           .order('reference');
         setLots(lotsData || []);
 
-        // Get locataires
-        const { data: locatairesData } = await supabase
-          .from('locataires_immeuble')
-          .select('id, nom, prenom')
-          .in('immeuble_id', immeubleIds as string[]);
-        setLocataires(locatairesData || []);
+        // Get locataires from the lots
+        const lotIds = (lotsData || []).map(l => l.id);
+        if (lotIds.length > 0) {
+          const { data: locatairesData } = await supabase
+            .from('locataires_immeuble')
+            .select('id, nom, prenom, lot_id')
+            .in('lot_id', lotIds)
+            .order('nom');
+          setLocataires(locatairesData || []);
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
