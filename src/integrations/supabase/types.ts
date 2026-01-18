@@ -3202,6 +3202,7 @@ export type Database = {
           nom: string
           nombre_pieces: number | null
           notes: string | null
+          numero_feuillet: string | null
           numero_parcelle: string | null
           pays: string | null
           places_parc_incluses: boolean | null
@@ -3343,6 +3344,7 @@ export type Database = {
           nom: string
           nombre_pieces?: number | null
           notes?: string | null
+          numero_feuillet?: string | null
           numero_parcelle?: string | null
           pays?: string | null
           places_parc_incluses?: boolean | null
@@ -3484,6 +3486,7 @@ export type Database = {
           nom?: string
           nombre_pieces?: number | null
           notes?: string | null
+          numero_feuillet?: string | null
           numero_parcelle?: string | null
           pays?: string | null
           places_parc_incluses?: boolean | null
