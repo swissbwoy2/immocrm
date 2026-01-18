@@ -161,7 +161,9 @@ const ProprietaireParametres = lazy(() => import("./pages/proprietaire/Parametre
 const ProprietaireProjetsDeveloppement = lazy(() => import("./pages/proprietaire/ProjetsDeveloppement"));
 const ProprietaireProjetDetail = lazy(() => import("./pages/proprietaire/ProjetDetail"));
 const ProprietaireVendreMonBien = lazy(() => import("./pages/proprietaire/VendreMonBienProprietaire"));
-
+const ProprietaireBailDetail = lazy(() => import("./pages/proprietaire/BailDetail"));
+const ProprietaireHypothequeDetail = lazy(() => import("./pages/proprietaire/HypothequeDetail"));
+const ProprietaireAssuranceDetail = lazy(() => import("./pages/proprietaire/AssuranceDetail"));
 // Optimized QueryClient with caching
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -331,8 +333,11 @@ const App = () => (
               <Route path="/proprietaire/tickets" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireTickets /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/documents" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireDocuments /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/baux" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireBaux /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/baux/:id" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireBailDetail /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/hypotheques" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireHypotheques /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/hypotheques/:id" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireHypothequeDetail /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/assurances" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireAssurances /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/assurances/:id" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireAssuranceDetail /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/calendrier" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireCalendrier /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/messagerie" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireMessagerie /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/notifications" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireNotifications /></AppLayout></ProtectedRoute>} />
