@@ -44,19 +44,43 @@ interface FormData {
 }
 
 const DOCUMENT_TYPES = [
-  { value: 'bail', label: 'Bail' },
-  { value: 'contrat', label: 'Contrat' },
-  { value: 'registre_foncier', label: 'Registre foncier' },
-  { value: 'plan', label: 'Plan' },
-  { value: 'hypotheque', label: 'Hypothèque' },
-  { value: 'assurance', label: 'Assurance' },
-  { value: 'decompte_charges', label: 'Décompte charges' },
-  { value: 'facture', label: 'Facture' },
-  { value: 'rapport_technique', label: 'Rapport technique' },
-  { value: 'pv_assemblee', label: 'PV assemblée' },
-  { value: 'correspondance', label: 'Correspondance' },
-  { value: 'photo', label: 'Photo' },
-  { value: 'autre', label: 'Autre' },
+  // Documents légaux
+  { value: 'registre_foncier', label: 'Extrait registre foncier', category: 'legal' },
+  { value: 'rau', label: 'Règlement administration (RAU)', category: 'legal' },
+  
+  // Assemblées
+  { value: 'pv_assemblee', label: 'PV assemblée générale', category: 'assemblee' },
+  
+  // Charges et comptabilité
+  { value: 'decompte_charges', label: 'Décompte charges', category: 'charges' },
+  { value: 'etat_locatif', label: 'État locatif', category: 'charges' },
+  
+  // Assurances
+  { value: 'assurance', label: 'Assurance', category: 'assurance' },
+  { value: 'police_eca', label: 'Police ECA détaillée', category: 'assurance' },
+  
+  // Documents techniques
+  { value: 'plan', label: 'Plan', category: 'technique' },
+  { value: 'plans_m2', label: 'Plans avec surfaces (m²)', category: 'technique' },
+  { value: 'cecb', label: 'CECB (certificat énergétique)', category: 'technique' },
+  { value: 'rapport_technique', label: 'Rapport technique', category: 'technique' },
+  
+  // Travaux
+  { value: 'tableau_travaux', label: 'Tableau des travaux', category: 'travaux' },
+  { value: 'facture', label: 'Facture travaux', category: 'travaux' },
+  
+  // Baux et locataires
+  { value: 'bail', label: 'Bail', category: 'location' },
+  { value: 'contrat', label: 'Contrat', category: 'location' },
+  
+  // Hypothèques
+  { value: 'hypotheque', label: 'Hypothèque', category: 'finance' },
+  { value: 'cedule', label: 'Cédule hypothécaire', category: 'finance' },
+  
+  // Autres
+  { value: 'correspondance', label: 'Correspondance', category: 'autre' },
+  { value: 'photo', label: 'Photo', category: 'autre' },
+  { value: 'autre', label: 'Autre', category: 'autre' },
 ];
 
 export function UploadDocumentDialog({
