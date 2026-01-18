@@ -31,6 +31,7 @@ import { EstimationProprietaireView } from '@/components/proprietaire/Estimation
 import { OffresAchatSection } from '@/components/proprietaire/OffresAchatSection';
 import { VisitesVenteSection } from '@/components/proprietaire/VisitesVenteSection';
 import { NotaireSection } from '@/components/proprietaire/NotaireSection';
+import { DocumentChecklistVente } from '@/components/proprietaire/DocumentChecklistVente';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -216,6 +217,12 @@ export default function ImmeubleDetail() {
   const [showUploadPhotoDialog, setShowUploadPhotoDialog] = useState(false);
   const [selectedLotId, setSelectedLotId] = useState<string | null>(null);
   const [updatingPublication, setUpdatingPublication] = useState(false);
+  const [preselectedDocType, setPreselectedDocType] = useState<string>('autre');
+
+  const handleUploadFromChecklist = (docType: string, _label: string) => {
+    setPreselectedDocType(docType);
+    setShowUploadDocumentDialog(true);
+  };
 
   const formatCurrency = (value: number | null) => {
     if (value === null) return '-';
@@ -791,7 +798,20 @@ export default function ImmeubleDetail() {
           )}
         </TabsContent>
 
-        <TabsContent value="documents" className="space-y-4">
+        <TabsContent value="documents" className="space-y-6">
+          {/* Checklist des documents requis pour la vente */}
+          {isVenteMode && (
+            <DocumentChecklistVente
+              typeBien={immeuble?.type_bien || null}
+              uploadedDocuments={documents.map(d => ({
+                id: d.id,
+                type_document: d.type_document,
+                nom: d.nom,
+              }))}
+              onUploadClick={handleUploadFromChecklist}
+            />
+          )}
+
           <div className="flex justify-end">
             <Button onClick={() => setShowUploadDocumentDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
