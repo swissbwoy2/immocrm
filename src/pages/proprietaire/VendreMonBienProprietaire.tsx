@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PremiumPageHeader, PremiumEmptyState } from '@/components/premium';
 import { VenteWorkflowTimeline } from '@/components/proprietaire/VenteWorkflowTimeline';
+import { AddImmeubleDialog } from '@/components/proprietaire/AddImmeubleDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -18,6 +19,7 @@ export default function VendreMonBienProprietaire() {
   const [proprietaire, setProprietaire] = useState<any>(null);
   const [biensEnVente, setBiensEnVente] = useState<any[]>([]);
   const [agent, setAgent] = useState<any>(null);
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -163,7 +165,7 @@ export default function VendreMonBienProprietaire() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button size="lg" onClick={() => navigate('/proprietaire/immeubles/nouveau')}>
+                <Button size="lg" onClick={() => setShowAddDialog(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Ajouter mon bien
                 </Button>
@@ -292,6 +294,19 @@ export default function VendreMonBienProprietaire() {
             </Card>
           ))}
         </div>
+      )}
+
+      {/* Dialog pour ajouter un bien */}
+      {proprietaire && (
+        <AddImmeubleDialog
+          open={showAddDialog}
+          onOpenChange={setShowAddDialog}
+          proprietaireId={proprietaire.id}
+          onSuccess={() => {
+            setShowAddDialog(false);
+            loadData();
+          }}
+        />
       )}
     </div>
   );
