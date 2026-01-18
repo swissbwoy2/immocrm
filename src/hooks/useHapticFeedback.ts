@@ -8,63 +8,99 @@ export function useHapticFeedback() {
   // Light tap - for buttons, toggles
   const tapLight = useCallback(async () => {
     if (isNative) {
-      await Haptics.impact({ style: ImpactStyle.Light });
+      try {
+        await Haptics.impact({ style: ImpactStyle.Light });
+      } catch {
+        // Haptics not available, ignore silently
+      }
     }
   }, [isNative]);
 
   // Medium tap - for important actions
   const tapMedium = useCallback(async () => {
     if (isNative) {
-      await Haptics.impact({ style: ImpactStyle.Medium });
+      try {
+        await Haptics.impact({ style: ImpactStyle.Medium });
+      } catch {
+        // Haptics not available, ignore silently
+      }
     }
   }, [isNative]);
 
   // Heavy tap - for destructive actions, confirmations
   const tapHeavy = useCallback(async () => {
     if (isNative) {
-      await Haptics.impact({ style: ImpactStyle.Heavy });
+      try {
+        await Haptics.impact({ style: ImpactStyle.Heavy });
+      } catch {
+        // Haptics not available, ignore silently
+      }
     }
   }, [isNative]);
 
   // Success notification
   const notifySuccess = useCallback(async () => {
     if (isNative) {
-      await Haptics.notification({ type: NotificationType.Success });
+      try {
+        await Haptics.notification({ type: NotificationType.Success });
+      } catch {
+        // Haptics not available, ignore silently
+      }
     }
   }, [isNative]);
 
   // Error notification
   const notifyError = useCallback(async () => {
     if (isNative) {
-      await Haptics.notification({ type: NotificationType.Error });
+      try {
+        await Haptics.notification({ type: NotificationType.Error });
+      } catch {
+        // Haptics not available, ignore silently
+      }
     }
   }, [isNative]);
 
   // Warning notification
   const notifyWarning = useCallback(async () => {
     if (isNative) {
-      await Haptics.notification({ type: NotificationType.Warning });
+      try {
+        await Haptics.notification({ type: NotificationType.Warning });
+      } catch {
+        // Haptics not available, ignore silently
+      }
     }
   }, [isNative]);
 
   // Selection changed - for pickers, sliders
   const selectionChanged = useCallback(async () => {
     if (isNative) {
-      await Haptics.selectionChanged();
+      try {
+        await Haptics.selectionChanged();
+      } catch {
+        // Haptics not available, ignore silently
+      }
     }
   }, [isNative]);
 
   // Start selection - for drag gestures
   const selectionStart = useCallback(async () => {
     if (isNative) {
-      await Haptics.selectionStart();
+      try {
+        await Haptics.selectionStart();
+      } catch {
+        // Haptics not available, ignore silently
+      }
     }
   }, [isNative]);
 
   // End selection - for drag gestures
   const selectionEnd = useCallback(async () => {
     if (isNative) {
-      await Haptics.selectionEnd();
+      try {
+        await Haptics.selectionEnd();
+      } catch {
+        // Haptics not available, ignore silently
+      }
     }
   }, [isNative]);
 
