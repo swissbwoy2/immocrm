@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Shield, Calendar, AlertTriangle, Edit, FileText, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Shield, Calendar, AlertTriangle, Edit, FileText, CheckCircle, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { UploadDocumentDialog } from '@/components/proprietaire/UploadDocumentDialog';
 
 const formatCurrency = (value: number | null) => {
   if (!value) return 'CHF 0';
@@ -44,6 +45,7 @@ export default function AssuranceDetail() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [assurance, setAssurance] = useState<any>(null);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
 
   useEffect(() => {
     if (id && user) loadAssurance();
@@ -305,14 +307,20 @@ export default function AssuranceDetail() {
               <div className="text-center py-8 text-muted-foreground">
                 <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>Aucun document pour le moment</p>
-                <Button className="mt-4" variant="outline">
-                  Ajouter un document
+                <Button className="mt-4" variant="outline" onClick={() => setShowUploadDialog(true)}>
+                  <Plus className="w-4 h-4 mr-2" /> Ajouter un document
                 </Button>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
+      <UploadDocumentDialog
+        open={showUploadDialog}
+        onOpenChange={setShowUploadDialog}
+        immeubleId={assurance?.immeuble?.id}
+        onSuccess={loadAssurance}
+      />
     </div>
   );
 }

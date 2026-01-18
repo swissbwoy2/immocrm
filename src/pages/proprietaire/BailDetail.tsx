@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, User, Calendar, Wallet, AlertTriangle, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileText, User, Calendar, Wallet, AlertTriangle, Edit, Download, Plus, Trash2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { format, differenceInDays } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { GenerateBailDialog } from '@/components/proprietaire/GenerateBailDialog';
+import { UploadDocumentDialog } from '@/components/proprietaire/UploadDocumentDialog';
 
 const getStatutConfig = (statut: string | null) => {
   switch (statut) {
@@ -31,6 +33,9 @@ export default function BailDetail() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [bail, setBail] = useState<any>(null);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [showGenerateDialog, setShowGenerateDialog] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
 
   useEffect(() => {
     if (id && user) loadBail();
@@ -42,7 +47,7 @@ export default function BailDetail() {
         .from('baux')
         .select(`
           *,
-          lot:lots(id, reference, designation, immeuble:immeubles(id, nom, adresse)),
+          lot:lots(id, reference, designation, immeuble_id, immeuble:immeubles(id, nom, adresse)),
           locataire:locataires_immeuble(id, nom, prenom, email, telephone, civilite)
         `)
         .eq('id', id)
@@ -50,12 +55,45 @@ export default function BailDetail() {
 
       if (error) throw error;
       setBail(data);
+
+      // Load documents linked to this lot
+      if (data?.lot?.id) {
+        const { data: docs } = await supabase
+          .from('documents_immeuble')
+          .select('*')
+          .eq('lot_id', data.lot.id)
+          .order('created_at', { ascending: false });
+        setDocuments(docs || []);
+      }
     } catch (error) {
       console.error('Error loading bail:', error);
       toast.error('Erreur lors du chargement');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDeleteDocument = async (docId: string) => {
+    if (!confirm('Supprimer ce document ?')) return;
+    try {
+      const { error } = await supabase
+        .from('documents_immeuble')
+        .delete()
+        .eq('id', docId);
+      if (error) throw error;
+      toast.success('Document supprimé');
+      loadBail();
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const formatFileSize = (bytes: number | null) => {
+    if (!bytes) return '-';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   if (loading) {
@@ -103,6 +141,9 @@ export default function BailDetail() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowGenerateDialog(true)}>
+            <Download className="w-4 h-4 mr-2" /> Générer contrat
+          </Button>
           <Button variant="outline" size="sm">
             <Edit className="w-4 h-4 mr-2" /> Modifier
           </Button>
@@ -317,16 +358,63 @@ export default function BailDetail() {
 
         <TabsContent value="documents">
           <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>Aucun document pour le moment</p>
-              <Button className="mt-4" variant="outline">
-                Ajouter un document
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Documents</CardTitle>
+              <Button size="sm" onClick={() => setShowUploadDialog(true)}>
+                <Plus className="w-4 h-4 mr-2" /> Ajouter
               </Button>
+            </CardHeader>
+            <CardContent>
+              {documents.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>Aucun document pour le moment</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {documents.map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-8 h-8 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">{doc.nom}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {doc.type_document} • {formatFileSize(doc.taille)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" asChild>
+                          <a href={doc.url} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteDocument(doc.id)}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialogs */}
+      <GenerateBailDialog
+        open={showGenerateDialog}
+        onOpenChange={setShowGenerateDialog}
+        bail={bail}
+        onSuccess={loadBail}
+      />
+      <UploadDocumentDialog
+        open={showUploadDialog}
+        onOpenChange={setShowUploadDialog}
+        immeubleId={bail?.lot?.immeuble_id}
+        onSuccess={loadBail}
+      />
     </div>
   );
 }
