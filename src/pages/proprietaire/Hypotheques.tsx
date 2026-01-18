@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PremiumPageHeader, PremiumEmptyState } from '@/components/premium';
 import { PremiumHypothequeCard } from '@/components/premium/PremiumHypothequeCard';
+import { AddHypothequeDialog } from '@/components/proprietaire/AddHypothequeDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -19,6 +20,7 @@ export default function Hypotheques() {
   const [immeubles, setImmeubles] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [immeubleFilter, setImmeubleFilter] = useState('all');
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -51,7 +53,8 @@ export default function Hypotheques() {
 
   return (
     <div className="p-4 md:p-8">
-      <PremiumPageHeader title="Hypothèques" subtitle={`${hypotheques.length} financement(s)`} icon={Landmark} action={<Button onClick={() => navigate('/proprietaire/hypotheques/nouveau')}><Plus className="w-4 h-4 mr-2" />Nouvelle hypothèque</Button>} />
+      <PremiumPageHeader title="Hypothèques" subtitle={`${hypotheques.length} financement(s)`} icon={Landmark} action={<Button onClick={() => setShowAddDialog(true)}><Plus className="w-4 h-4 mr-2" />Nouvelle hypothèque</Button>} />
+      <AddHypothequeDialog open={showAddDialog} onClose={() => setShowAddDialog(false)} onSuccess={loadData} />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Dette totale</p><p className="text-2xl font-bold text-destructive">{new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF', maximumFractionDigits: 0 }).format(totalDette)}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Valeur des biens</p><p className="text-2xl font-bold text-primary">{new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF', maximumFractionDigits: 0 }).format(totalValeur)}</p></CardContent></Card>

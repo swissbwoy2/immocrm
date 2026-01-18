@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PremiumPageHeader, PremiumEmptyState } from '@/components/premium';
 import { PremiumAssuranceCard } from '@/components/premium/PremiumAssuranceCard';
+import { AddAssuranceDialog } from '@/components/proprietaire/AddAssuranceDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -21,6 +22,7 @@ export default function Assurances() {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [immeubleFilter, setImmeubleFilter] = useState('all');
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -54,7 +56,8 @@ export default function Assurances() {
 
   return (
     <div className="p-4 md:p-8">
-      <PremiumPageHeader title="Assurances" subtitle={`${assurances.length} police(s)`} icon={Shield} action={<Button onClick={() => navigate('/proprietaire/assurances/nouveau')}><Plus className="w-4 h-4 mr-2" />Nouvelle assurance</Button>} />
+      <PremiumPageHeader title="Assurances" subtitle={`${assurances.length} police(s)`} icon={Shield} action={<Button onClick={() => setShowAddDialog(true)}><Plus className="w-4 h-4 mr-2" />Nouvelle assurance</Button>} />
+      <AddAssuranceDialog open={showAddDialog} onClose={() => setShowAddDialog(false)} onSuccess={loadData} />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Polices actives</p><p className="text-2xl font-bold">{assurances.length}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Primes annuelles</p><p className="text-2xl font-bold text-primary">{new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF', maximumFractionDigits: 0 }).format(totalPrimes)}</p></CardContent></Card>
