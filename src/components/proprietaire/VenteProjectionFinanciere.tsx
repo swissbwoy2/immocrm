@@ -125,8 +125,8 @@ export function VenteProjectionFinanciere({
     return commissionResult.sellerReceives - prixAcquisition;
   }, [commissionResult.sellerReceives, prixAcquisition]);
   
-  // Estimate notary fees (1.5% average in Switzerland)
-  const fraisNotaireEstimes = Math.round(prixVenteEstime * 0.015);
+  // Estimate notary fees (5% in Switzerland)
+  const fraisNotaireEstimes = Math.round(prixVenteEstime * 0.05);
   
   // Calculate tax
   const taxResult: TaxCalculationResult | null = useMemo(() => {
@@ -447,7 +447,7 @@ export function VenteProjectionFinanciere({
         <div className="space-y-2">
           <h4 className="text-sm font-medium">Autres frais estimés</h4>
           <div className="flex justify-between items-center p-2 rounded bg-muted/30">
-            <span className="text-sm text-muted-foreground">Frais de notaire (~1.5%)</span>
+            <span className="text-sm text-muted-foreground">Frais de notaire (~5%)</span>
             <span className="text-destructive">-{formatCurrency(fraisNotaireEstimes)}</span>
           </div>
         </div>
