@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Landmark, Calendar, Percent, TrendingDown, Edit, Plus, FileText } from 'lucide-react';
+import { ArrowLeft, Landmark, Calendar, Percent, TrendingDown, Edit, Plus, FileText, ExternalLink, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { AddCeduleDialog } from '@/components/proprietaire/AddCeduleDialog';
+import { UploadDocumentDialog } from '@/components/proprietaire/UploadDocumentDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -43,7 +44,9 @@ export default function HypothequeDetail() {
   const [loading, setLoading] = useState(true);
   const [hypotheque, setHypotheque] = useState<any>(null);
   const [cedules, setCedules] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [showAddCedule, setShowAddCedule] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
 
   useEffect(() => {
     if (id && user) loadData();
@@ -355,16 +358,25 @@ export default function HypothequeDetail() {
 
         <TabsContent value="documents">
           <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Documents</CardTitle>
+              <Button size="sm" onClick={() => setShowUploadDialog(true)}>
+                <Plus className="w-4 h-4 mr-2" /> Ajouter
+              </Button>
+            </CardHeader>
             <CardContent className="p-8 text-center text-muted-foreground">
               <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>Aucun document pour le moment</p>
-              <Button className="mt-4" variant="outline">
-                Ajouter un document
-              </Button>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+      <UploadDocumentDialog
+        open={showUploadDialog}
+        onOpenChange={setShowUploadDialog}
+        immeubleId={hypotheque?.immeuble?.id}
+        onSuccess={loadData}
+      />
     </div>
   );
 }

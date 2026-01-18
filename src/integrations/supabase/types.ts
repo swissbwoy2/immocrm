@@ -1072,87 +1072,144 @@ export type Database = {
       }
       baux: {
         Row: {
+          ancien_locataire_charges: number | null
+          ancien_locataire_depuis: string | null
+          ancien_locataire_loyer_net: number | null
+          ancien_locataire_nom: string | null
           autres_charges: number | null
           clauses_particulieres: string | null
+          contrat_pdf_url: string | null
           created_at: string | null
           date_debut: string
           date_derniere_indexation: string | null
           date_fin: string | null
           date_signature: string | null
           date_versement_garantie: string | null
+          destination_locaux: string | null
           document_url: string | null
           duree_initiale: string | null
+          egid: string | null
+          etage: string | null
+          ewid: string | null
           id: string
           indice_reference: string | null
+          ispc_base: string | null
+          ispc_date: string | null
+          ispc_valeur: number | null
           lieu_signature: string | null
           locataire_id: string | null
           lot_id: string
           loyer_actuel: number | null
           loyer_initial: number | null
           montant_garantie: number | null
+          motif_hausse: string | null
           motif_resiliation: string | null
+          nombre_occupants: number | null
+          nombre_pieces: number | null
+          notification_pdf_url: string | null
+          periodicite_paiement: string | null
           preavis_mois: number | null
           provisions_chauffage: number | null
           provisions_eau: number | null
           statut: string | null
+          surface_objet: number | null
+          taux_hypothecaire_reference: number | null
           total_mensuel: number | null
           type_garantie: string | null
           updated_at: string | null
           valeur_indice_reference: number | null
         }
         Insert: {
+          ancien_locataire_charges?: number | null
+          ancien_locataire_depuis?: string | null
+          ancien_locataire_loyer_net?: number | null
+          ancien_locataire_nom?: string | null
           autres_charges?: number | null
           clauses_particulieres?: string | null
+          contrat_pdf_url?: string | null
           created_at?: string | null
           date_debut: string
           date_derniere_indexation?: string | null
           date_fin?: string | null
           date_signature?: string | null
           date_versement_garantie?: string | null
+          destination_locaux?: string | null
           document_url?: string | null
           duree_initiale?: string | null
+          egid?: string | null
+          etage?: string | null
+          ewid?: string | null
           id?: string
           indice_reference?: string | null
+          ispc_base?: string | null
+          ispc_date?: string | null
+          ispc_valeur?: number | null
           lieu_signature?: string | null
           locataire_id?: string | null
           lot_id: string
           loyer_actuel?: number | null
           loyer_initial?: number | null
           montant_garantie?: number | null
+          motif_hausse?: string | null
           motif_resiliation?: string | null
+          nombre_occupants?: number | null
+          nombre_pieces?: number | null
+          notification_pdf_url?: string | null
+          periodicite_paiement?: string | null
           preavis_mois?: number | null
           provisions_chauffage?: number | null
           provisions_eau?: number | null
           statut?: string | null
+          surface_objet?: number | null
+          taux_hypothecaire_reference?: number | null
           total_mensuel?: number | null
           type_garantie?: string | null
           updated_at?: string | null
           valeur_indice_reference?: number | null
         }
         Update: {
+          ancien_locataire_charges?: number | null
+          ancien_locataire_depuis?: string | null
+          ancien_locataire_loyer_net?: number | null
+          ancien_locataire_nom?: string | null
           autres_charges?: number | null
           clauses_particulieres?: string | null
+          contrat_pdf_url?: string | null
           created_at?: string | null
           date_debut?: string
           date_derniere_indexation?: string | null
           date_fin?: string | null
           date_signature?: string | null
           date_versement_garantie?: string | null
+          destination_locaux?: string | null
           document_url?: string | null
           duree_initiale?: string | null
+          egid?: string | null
+          etage?: string | null
+          ewid?: string | null
           id?: string
           indice_reference?: string | null
+          ispc_base?: string | null
+          ispc_date?: string | null
+          ispc_valeur?: number | null
           lieu_signature?: string | null
           locataire_id?: string | null
           lot_id?: string
           loyer_actuel?: number | null
           loyer_initial?: number | null
           montant_garantie?: number | null
+          motif_hausse?: string | null
           motif_resiliation?: string | null
+          nombre_occupants?: number | null
+          nombre_pieces?: number | null
+          notification_pdf_url?: string | null
+          periodicite_paiement?: string | null
           preavis_mois?: number | null
           provisions_chauffage?: number | null
           provisions_eau?: number | null
           statut?: string | null
+          surface_objet?: number | null
+          taux_hypothecaire_reference?: number | null
           total_mensuel?: number | null
           type_garantie?: string | null
           updated_at?: string | null

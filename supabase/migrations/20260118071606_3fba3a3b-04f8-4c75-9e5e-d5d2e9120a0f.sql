@@ -1,0 +1,20 @@
+-- Add Swiss lease fields to baux table
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS ancien_locataire_nom TEXT;
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS ancien_locataire_loyer_net NUMERIC;
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS ancien_locataire_charges NUMERIC;
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS ancien_locataire_depuis DATE;
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS taux_hypothecaire_reference NUMERIC DEFAULT 1.25;
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS ispc_valeur NUMERIC;
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS ispc_date DATE;
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS ispc_base TEXT DEFAULT '2020';
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS nombre_occupants INTEGER;
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS destination_locaux TEXT DEFAULT 'Habitation';
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS periodicite_paiement TEXT DEFAULT 'mensuel';
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS egid TEXT;
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS ewid TEXT;
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS contrat_pdf_url TEXT;
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS notification_pdf_url TEXT;
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS surface_objet NUMERIC;
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS etage TEXT;
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS nombre_pieces NUMERIC;
+ALTER TABLE public.baux ADD COLUMN IF NOT EXISTS motif_hausse TEXT;
