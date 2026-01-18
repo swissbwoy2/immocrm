@@ -1503,6 +1503,66 @@ export type Database = {
           },
         ]
       }
+      cedules_hypothecaires: {
+        Row: {
+          created_at: string | null
+          date_creation: string | null
+          hypotheque_id: string | null
+          id: string
+          immeuble_id: string
+          lieu_depot: string | null
+          montant: number
+          notes: string | null
+          numero_cedule: string | null
+          rang: number | null
+          type_cedule: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date_creation?: string | null
+          hypotheque_id?: string | null
+          id?: string
+          immeuble_id: string
+          lieu_depot?: string | null
+          montant: number
+          notes?: string | null
+          numero_cedule?: string | null
+          rang?: number | null
+          type_cedule?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date_creation?: string | null
+          hypotheque_id?: string | null
+          id?: string
+          immeuble_id?: string
+          lieu_depot?: string | null
+          montant?: number
+          notes?: string | null
+          numero_cedule?: string | null
+          rang?: number | null
+          type_cedule?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cedules_hypothecaires_hypotheque_id_fkey"
+            columns: ["hypotheque_id"]
+            isOneToOne: false
+            referencedRelation: "hypotheques"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cedules_hypothecaires_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_agents: {
         Row: {
           agent_id: string

@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Calendar, Plus, Filter } from 'lucide-react';
+import { Calendar, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PremiumPageHeader } from '@/components/premium';
 import { PremiumCalendarView } from '@/components/calendar/PremiumCalendarView';
 import { PremiumProprietaireDayEvents } from '@/components/calendar/PremiumProprietaireDayEvents';
+import { AddCalendarEventDialog } from '@/components/proprietaire/AddCalendarEventDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -26,6 +27,7 @@ export default function Calendrier() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showAddEventDialog, setShowAddEventDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [proprietaireId, setProprietaireId] = useState<string | null>(null);
   const [immeubleIds, setImmeubleIds] = useState<string[]>([]);
@@ -337,6 +339,13 @@ export default function Calendrier() {
         title="Calendrier"
         subtitle="Échéances et rendez-vous"
         icon={Calendar}
+        action={<Button onClick={() => setShowAddEventDialog(true)}><Plus className="w-4 h-4 mr-2" />Nouvel événement</Button>}
+      />
+      <AddCalendarEventDialog 
+        open={showAddEventDialog} 
+        onClose={() => setShowAddEventDialog(false)} 
+        onSuccess={() => { loadCalendarEvents(user!.id); }} 
+        initialDate={selectedDate}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

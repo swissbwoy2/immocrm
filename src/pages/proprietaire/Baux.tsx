@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PremiumPageHeader, PremiumEmptyState } from '@/components/premium';
 import { PremiumBailCard } from '@/components/premium/PremiumBailCard';
+import { AddBailDialog } from '@/components/proprietaire/AddBailDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -21,6 +22,7 @@ export default function Baux() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statutFilter, setStatutFilter] = useState('all');
   const [immeubleFilter, setImmeubleFilter] = useState('all');
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -57,7 +59,8 @@ export default function Baux() {
 
   return (
     <div className="p-4 md:p-8">
-      <PremiumPageHeader title="Baux" subtitle={`${baux.length} contrat(s)`} icon={FileText} action={<Button onClick={() => navigate('/proprietaire/baux/nouveau')}><Plus className="w-4 h-4 mr-2" />Nouveau bail</Button>} />
+      <PremiumPageHeader title="Baux" subtitle={`${baux.length} contrat(s)`} icon={FileText} action={<Button onClick={() => setShowAddDialog(true)}><Plus className="w-4 h-4 mr-2" />Nouveau bail</Button>} />
+      <AddBailDialog open={showAddDialog} onClose={() => setShowAddDialog(false)} onSuccess={loadData} />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Baux actifs</p><p className="text-2xl font-bold">{activeBaux}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">Loyers mensuels</p><p className="text-2xl font-bold text-primary">{new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF', maximumFractionDigits: 0 }).format(totalLoyer)}</p></CardContent></Card>
