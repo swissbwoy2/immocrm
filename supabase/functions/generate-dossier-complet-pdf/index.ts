@@ -19,6 +19,8 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
 function sanitizeText(text: string | null | undefined): string {
   if (!text) return '';
   return text
+    // Remove newlines and carriage returns first (WinAnsi cannot encode these)
+    .replace(/[\r\n]+/g, ' ')
     .replace(/[\u2018\u2019]/g, "'")
     .replace(/[\u201C\u201D]/g, '"')
     .replace(/\u2026/g, '...')
@@ -44,7 +46,10 @@ function sanitizeText(text: string | null | undefined): string {
         '•': '-', '·': '-',
       };
       return replacements[char] || '';
-    });
+    })
+    // Clean up multiple spaces
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function formatCurrency(amount: number | null): string {
