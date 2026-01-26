@@ -83,18 +83,20 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch immeuble data
+    // Fetch immeuble data with proprietaire and agent
     const { data: immeuble, error: immeubleError } = await supabase
       .from('immeubles')
       .select(`
         *,
         proprietaire:proprietaires(
           id,
+          user_id,
           agent_id,
-          agents:agents(
+          profiles:user_id(prenom, nom, email, telephone),
+          agents:agent_id(
             id,
             user_id,
-            profiles:profiles(prenom, nom, email, telephone)
+            profiles:user_id(prenom, nom, email, telephone)
           )
         )
       `)
@@ -195,10 +197,15 @@ const handler = async (req: Request): Promise<Response> => {
       borderWidth: 1,
     });
 
+    // Calculate price per m2
+    const prixM2 = immeuble.surface_totale && immeuble.prix_vente_demande 
+      ? Math.round(immeuble.prix_vente_demande / immeuble.surface_totale)
+      : null;
+
     const features = [
       { label: 'Surface', value: immeuble.surface_totale ? `${immeuble.surface_totale} m2` : 'N/A' },
       { label: 'Pieces', value: immeuble.nombre_pieces ? `${immeuble.nombre_pieces} pieces` : 'N/A' },
-      { label: 'Etages', value: immeuble.nombre_etages ? `${immeuble.nombre_etages} etages` : 'N/A' },
+      { label: 'Prix / m2', value: prixM2 ? `CHF ${prixM2.toLocaleString('fr-CH')}/m2` : 'N/A' },
       { label: 'Annee', value: immeuble.annee_construction ? `${immeuble.annee_construction}` : 'N/A' },
     ];
 
@@ -222,6 +229,103 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     y -= 140;
+
+    // Energy class indicator
+    if (immeuble.classe_energetique) {
+      page.drawText('CLASSE ENERGETIQUE', {
+        x: margin,
+        y: y,
+        size: 12,
+        font: helveticaBold,
+        color: rgb(0.2, 0.4, 0.6),
+      });
+      
+      const energyColors: Record<string, [number, number, number]> = {
+        'A': [0.2, 0.7, 0.3],
+        'B': [0.4, 0.8, 0.3],
+        'C': [0.6, 0.8, 0.2],
+        'D': [0.9, 0.8, 0.2],
+        'E': [0.9, 0.6, 0.2],
+        'F': [0.9, 0.4, 0.2],
+        'G': [0.8, 0.2, 0.2],
+      };
+      const energyColor = energyColors[immeuble.classe_energetique.toUpperCase()] || [0.5, 0.5, 0.5];
+      
+      page.drawRectangle({
+        x: margin + 150,
+        y: y - 8,
+        width: 30,
+        height: 25,
+        color: rgb(energyColor[0], energyColor[1], energyColor[2]),
+      });
+      
+      page.drawText(sanitizeText(immeuble.classe_energetique.toUpperCase()), {
+        x: margin + 158,
+        y: y - 2,
+        size: 16,
+        font: helveticaBold,
+        color: rgb(1, 1, 1),
+      });
+      
+      if (immeuble.indice_energetique) {
+        page.drawText(sanitizeText(`${immeuble.indice_energetique} kWh/m2/an`), {
+          x: margin + 190,
+          y: y - 2,
+          size: 10,
+          font: helvetica,
+          color: rgb(0.3, 0.3, 0.3),
+        });
+      }
+      
+      y -= 50;
+    }
+
+    // Technical details section
+    page.drawText('DETAILS TECHNIQUES', {
+      x: margin,
+      y: y,
+      size: 14,
+      font: helveticaBold,
+      color: rgb(0.2, 0.4, 0.6),
+    });
+    y -= 25;
+
+    const technicalDetails = [
+      { label: 'Chambres', value: immeuble.nb_chambres?.toString() || 'N/A' },
+      { label: 'Salles de bain', value: immeuble.nb_salles_eau?.toString() || 'N/A' },
+      { label: 'WC', value: immeuble.nb_wc?.toString() || 'N/A' },
+      { label: 'Etage', value: immeuble.etage !== null ? immeuble.etage.toString() : 'N/A' },
+      { label: 'Etages batiment', value: immeuble.nb_etages_batiment?.toString() || 'N/A' },
+      { label: 'Chauffage', value: immeuble.type_chauffage || 'N/A' },
+      { label: 'Garages', value: immeuble.nb_garages?.toString() || '0' },
+      { label: 'Places int.', value: immeuble.nb_places_int?.toString() || '0' },
+      { label: 'Places ext.', value: immeuble.nb_places_ext?.toString() || '0' },
+    ];
+
+    const colWidth = (pageWidth - 2 * margin) / 3;
+    technicalDetails.forEach((detail, index) => {
+      const col = index % 3;
+      const row = Math.floor(index / 3);
+      const detailX = margin + col * colWidth;
+      const detailY = y - row * 22;
+
+      page.drawText(sanitizeText(detail.label + ':'), {
+        x: detailX,
+        y: detailY,
+        size: 9,
+        font: helvetica,
+        color: rgb(0.5, 0.5, 0.5),
+      });
+      page.drawText(sanitizeText(detail.value), {
+        x: detailX + 70,
+        y: detailY,
+        size: 10,
+        font: helveticaBold,
+        color: rgb(0.1, 0.1, 0.1),
+      });
+    });
+
+    y -= Math.ceil(technicalDetails.length / 3) * 22 + 20;
 
     // Description
     if (immeuble.description_commerciale || immeuble.description) {
@@ -304,6 +408,54 @@ const handler = async (req: Request): Promise<Response> => {
         y -= 18;
       }
       y -= 20;
+    }
+
+    // Rental information (if rented)
+    if (immeuble.est_loue) {
+      if (y < margin + 100) {
+        page = pdfDoc.addPage([pageWidth, pageHeight]);
+        y = pageHeight - margin;
+      }
+
+      page.drawRectangle({
+        x: margin,
+        y: y - 80,
+        width: pageWidth - 2 * margin,
+        height: 80,
+        color: rgb(0.95, 0.95, 0.98),
+        borderColor: rgb(0.7, 0.7, 0.8),
+        borderWidth: 1,
+      });
+
+      page.drawText('BIEN ACTUELLEMENT LOUE', {
+        x: margin + 15,
+        y: y - 20,
+        size: 12,
+        font: helveticaBold,
+        color: rgb(0.2, 0.4, 0.6),
+      });
+
+      if (immeuble.loyer_actuel) {
+        page.drawText(sanitizeText(`Loyer actuel: CHF ${immeuble.loyer_actuel.toLocaleString('fr-CH')}/mois`), {
+          x: margin + 15,
+          y: y - 45,
+          size: 11,
+          font: helvetica,
+          color: rgb(0.2, 0.2, 0.2),
+        });
+      }
+
+      if (immeuble.locataire_actuel) {
+        page.drawText(sanitizeText(`Locataire: ${immeuble.locataire_actuel}`), {
+          x: margin + 15,
+          y: y - 65,
+          size: 10,
+          font: helvetica,
+          color: rgb(0.4, 0.4, 0.4),
+        });
+      }
+
+      y -= 100;
     }
 
     // Agent contact section

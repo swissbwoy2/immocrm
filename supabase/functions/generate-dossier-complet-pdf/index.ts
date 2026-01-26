@@ -132,11 +132,11 @@ const handler = async (req: Request): Promise<Response> => {
         *,
         proprietaire:proprietaires(
           *,
-          profiles:profiles(prenom, nom, email, telephone),
-          agents:agents(
+          profiles:user_id(prenom, nom, email, telephone),
+          agents:agent_id(
             id,
             user_id,
-            profiles:profiles(prenom, nom, email, telephone)
+            profiles:user_id(prenom, nom, email, telephone)
           )
         )
       `)

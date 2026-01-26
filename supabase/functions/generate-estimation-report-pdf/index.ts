@@ -538,7 +538,136 @@ const handler = async (req: Request): Promise<Response> => {
       y = drawWrappedText(page, immeuble.estimation_notes, margin, y, contentWidth, helvetica, 11, textColor);
     }
 
-    // ============ PAGE 5: DISCLAIMER ============
+    // ============ PAGE 5: FINANCIAL PROJECTION ============
+    page = pdfDoc.addPage([pageWidth, pageHeight]);
+    y = pageHeight - margin;
+
+    page.drawText('PROJECTION FINANCIERE', {
+      x: margin,
+      y: y,
+      size: 20,
+      font: helveticaBold,
+      color: primaryColor,
+    });
+    y -= 40;
+
+    const salePrice = immeuble.estimation_valeur_recommandee || immeuble.prix_vente_demande || 0;
+    
+    // Notary fees (5%)
+    const notaryFees = Math.round(salePrice * 0.05);
+    
+    // Commission based on model
+    const commissionModel = immeuble.modele_commission || 'classique';
+    let agencyCommission = 0;
+    let commissionLabel = '';
+    if (commissionModel === 'net_vendeur' && immeuble.prix_vendeur) {
+      agencyCommission = salePrice - immeuble.prix_vendeur;
+      commissionLabel = 'Commission agence (Net Vendeur)';
+    } else {
+      agencyCommission = Math.round(salePrice * 0.03);
+      commissionLabel = 'Commission agence (3%)';
+    }
+
+    // Capital gains tax estimate (simplified - using 10% as average)
+    const acquisitionDate = immeuble.date_acquisition ? new Date(immeuble.date_acquisition) : null;
+    const acquisitionPrice = immeuble.prix_acquisition || 0;
+    const capitalGain = salePrice - acquisitionPrice - (immeuble.travaux_plus_value || 0);
+    const estimatedTax = capitalGain > 0 ? Math.round(capitalGain * 0.10) : 0;
+    
+    // Net revenue
+    const netRevenue = salePrice - notaryFees - agencyCommission - estimatedTax;
+
+    page.drawText('Estimation des frais et revenus', {
+      x: margin,
+      y: y,
+      size: 14,
+      font: helveticaBold,
+      color: primaryColor,
+    });
+    y -= 30;
+
+    // Table header
+    page.drawRectangle({
+      x: margin,
+      y: y - 25,
+      width: contentWidth,
+      height: 25,
+      color: rgb(0.95, 0.97, 0.99),
+    });
+    page.drawText('Description', { x: margin + 10, y: y - 18, size: 10, font: helveticaBold, color: textColor });
+    page.drawText('Montant CHF', { x: pageWidth - margin - 100, y: y - 18, size: 10, font: helveticaBold, color: textColor });
+    y -= 25;
+
+    const financialLines = [
+      { label: 'Prix de vente estime', value: salePrice, isPositive: true },
+      { label: 'Frais de notaire (5%)', value: -notaryFees, isPositive: false },
+      { label: commissionLabel, value: -agencyCommission, isPositive: false },
+      { label: 'Impot sur le gain estime*', value: -estimatedTax, isPositive: false },
+    ];
+
+    financialLines.forEach((line, index) => {
+      const rowY = y - (index * 25);
+      if (index % 2 === 0) {
+        page.drawRectangle({
+          x: margin,
+          y: rowY - 20,
+          width: contentWidth,
+          height: 25,
+          color: rgb(0.98, 0.98, 0.98),
+        });
+      }
+      page.drawText(sanitizeText(line.label), { x: margin + 10, y: rowY - 13, size: 10, font: helvetica, color: textColor });
+      const valueText = (line.isPositive ? '+' : '') + line.value.toLocaleString('fr-CH');
+      page.drawText(sanitizeText(valueText), { 
+        x: pageWidth - margin - 100, 
+        y: rowY - 13, 
+        size: 10, 
+        font: helveticaBold, 
+        color: line.isPositive ? accentColor : warningColor 
+      });
+    });
+
+    y -= financialLines.length * 25 + 10;
+
+    // Net result
+    page.drawRectangle({
+      x: margin,
+      y: y - 30,
+      width: contentWidth,
+      height: 35,
+      color: rgb(0.9, 0.95, 0.9),
+      borderColor: accentColor,
+      borderWidth: 2,
+    });
+    page.drawText('REVENU NET ESTIME', { x: margin + 10, y: y - 20, size: 12, font: helveticaBold, color: textColor });
+    page.drawText(sanitizeText(`CHF ${netRevenue.toLocaleString('fr-CH')}`), { 
+      x: pageWidth - margin - 120, 
+      y: y - 20, 
+      size: 14, 
+      font: helveticaBold, 
+      color: accentColor 
+    });
+
+    y -= 60;
+
+    // Disclaimer
+    page.drawText('* L\'impot sur le gain immobilier est une estimation basee sur un taux moyen.', {
+      x: margin,
+      y: y,
+      size: 9,
+      font: helvetica,
+      color: mutedColor,
+    });
+    y -= 14;
+    page.drawText('  Le montant reel depend du canton, de la duree de possession et d\'autres facteurs.', {
+      x: margin,
+      y: y,
+      size: 9,
+      font: helvetica,
+      color: mutedColor,
+    });
+
+    // ============ PAGE 6: DISCLAIMER ============
     page = pdfDoc.addPage([pageWidth, pageHeight]);
     y = pageHeight - margin;
 

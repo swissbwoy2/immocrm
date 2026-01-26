@@ -125,6 +125,7 @@ export default function BienVenteDetail() {
   const [immeuble, setImmeuble] = useState<Immeuble | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [allProprietaires, setAllProprietaires] = useState<Proprietaire[]>([]);
   const [proprietaire, setProprietaire] = useState<Proprietaire | null>(null);
   const [currentAgent, setCurrentAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
@@ -175,16 +176,19 @@ export default function BienVenteDetail() {
         setCurrentAgent(current as unknown as Agent || null);
       }
 
-      // Load proprietaire if exists
-      if (immeubleData?.proprietaire_id) {
-        const { data: propData } = await supabase
-          .from('proprietaires')
-          .select('id, user_id, profiles:user_id(prenom, nom, email)')
-          .eq('id', immeubleData.proprietaire_id)
-          .single();
+      // Load all proprietaires for selection
+      const { data: allPropsData } = await supabase
+        .from('proprietaires')
+        .select('id, user_id, profiles:user_id(prenom, nom, email)')
+        .order('created_at', { ascending: false });
 
-        if (propData) {
-          setProprietaire(propData as unknown as Proprietaire);
+      if (allPropsData) {
+        setAllProprietaires(allPropsData as unknown as Proprietaire[]);
+        
+        // Find current proprietaire if exists
+        if (immeubleData?.proprietaire_id) {
+          const currentProp = allPropsData.find(p => p.id === immeubleData.proprietaire_id);
+          setProprietaire(currentProp as unknown as Proprietaire || null);
         }
       }
     } catch (error) {
@@ -213,6 +217,30 @@ export default function BienVenteDetail() {
       toast.success('Agent assigné avec succès');
     } catch (error) {
       console.error('Error assigning agent:', error);
+      toast.error('Erreur lors de l\'assignation');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAssignProprietaire = async (proprietaireId: string) => {
+    if (!immeuble) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('immeubles')
+        .update({ proprietaire_id: proprietaireId })
+        .eq('id', immeuble.id);
+
+      if (error) throw error;
+
+      const newProp = allProprietaires.find(p => p.id === proprietaireId);
+      setProprietaire(newProp || null);
+      setImmeuble(prev => prev ? { ...prev, proprietaire_id: proprietaireId } : null);
+      toast.success('Propriétaire assigné avec succès');
+    } catch (error) {
+      console.error('Error assigning proprietaire:', error);
       toast.error('Erreur lors de l\'assignation');
     } finally {
       setSaving(false);
@@ -639,7 +667,7 @@ export default function BienVenteDetail() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5" />
-                  Propriétaire
+                  Propriétaire / Mandant
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -651,6 +679,25 @@ export default function BienVenteDetail() {
                 ) : (
                   <p className="text-muted-foreground">Aucun propriétaire associé</p>
                 )}
+                <div className="space-y-2">
+                  <Label>Associer / Changer le propriétaire</Label>
+                  <Select 
+                    value={immeuble.proprietaire_id || ''} 
+                    onValueChange={handleAssignProprietaire}
+                    disabled={saving}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner un propriétaire" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allProprietaires.map((prop) => (
+                        <SelectItem key={prop.id} value={prop.id}>
+                          {prop.profiles?.prenom} {prop.profiles?.nom} - {prop.profiles?.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 {proprietaire && (
                   <Button variant="outline" className="w-full">
                     <Send className="mr-2 h-4 w-4" />
