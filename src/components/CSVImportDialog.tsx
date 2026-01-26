@@ -102,6 +102,42 @@ function normalizeHeader(header: string): string {
     .trim();
 }
 
+// Parse various date formats, return null if invalid
+function parseDate(value: string): string | null {
+  if (!value || value.trim() === '' || value === '-') return null;
+  
+  // Already in ISO format (YYYY-MM-DD)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  
+  // Format DD/MM/YYYY or DD.MM.YYYY
+  const dmyMatch = value.match(/^(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})$/);
+  if (dmyMatch) {
+    const [_, d, m, y] = dmyMatch;
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  }
+  
+  // Try to extract any date with regex (day month year in French)
+  const frenchMonths: Record<string, string> = {
+    'janvier': '01', 'fevrier': '02', 'mars': '03', 'avril': '04',
+    'mai': '05', 'juin': '06', 'juillet': '07', 'aout': '08',
+    'septembre': '09', 'octobre': '10', 'novembre': '11', 'decembre': '12'
+  };
+  
+  const normalizedValue = value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const frMatch = normalizedValue.match(/(\d{1,2})\s*(janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre)\s*(\d{4})/);
+  if (frMatch) {
+    const [_, day, month, year] = frMatch;
+    const monthNum = frenchMonths[month];
+    if (monthNum) {
+      return `${year}-${monthNum}-${day.padStart(2, '0')}`;
+    }
+  }
+  
+  // Date contains text that can't be parsed → return null
+  console.log(`Could not parse date: "${value}"`);
+  return null;
+}
+
 // Parse Swiss currency format: "3'674,70" or "900.-" or "1650"
 function parseSwissCurrency(value: string): number | undefined {
   if (!value || value === '-' || value === '') return undefined;
@@ -294,7 +330,7 @@ function parseCSV(csvText: string): ParsedCSVData {
       
       clients.push({
         dateInscription: row['date_inscription'] || new Date().toISOString().split('T')[0],
-        dateNaissance: row['date_naissance'] || undefined,
+        dateNaissance: parseDate(row['date_naissance']),
         nationalite: row['nationalite'] || undefined,
         typePermis: row['type_permis'] || undefined,
         adresse: row['adresse'] || undefined,
@@ -302,12 +338,12 @@ function parseCSV(csvText: string): ParsedCSVData {
         geranceActuelle: row['gerance_actuelle'] || undefined,
         contactGerance: row['contact_gerance'] || undefined,
         loyerActuel: parseSwissCurrency(row['loyer_actuel']),
-        depuisLe: row['depuis_le'] || undefined,
+        depuisLe: parseDate(row['depuis_le']),
         nombrePiecesActuel: row['pieces_actuel'] ? parseInt(row['pieces_actuel']) : undefined,
         motifChangement: row['motif_changement'] || undefined,
         profession: row['profession'] || undefined,
         employeur: row['employeur'] || undefined,
-        dateEngagement: row['date_engagement'] || undefined,
+        dateEngagement: parseDate(row['date_engagement']),
         revenuMensuel: parseSwissCurrency(row['revenus_mensuels']),
         montantCharges: parseSwissCurrency(row['montant_charges_extra']),
         chargesExtraordinaires: parseFrenchBoolean(row['charges_extraordinaires']),
@@ -439,20 +475,20 @@ export function CSVImportDialog({ open, onOpenChange, onImportComplete, currentA
             situation_familiale: client.etatCivil || null,
             gerance_actuelle: client.geranceActuelle || null,
             contact_gerance: client.contactGerance || null,
-            loyer_actuel: client.loyerActuel || null,
-            depuis_le: client.depuisLe || null,
-            pieces_actuel: client.nombrePiecesActuel || null,
-            motif_changement: client.motifChangement || null,
-            profession: client.profession || null,
-            employeur: client.employeur || null,
-            date_engagement: client.dateEngagement || null,
-            revenus_mensuels: client.revenuMensuel || 0,
-            charges_mensuelles: client.montantCharges || 0,
-            charges_extraordinaires: client.chargesExtraordinaires || null,
-            montant_charges_extra: client.montantCharges || null,
-            poursuites: client.poursuites || false,
-            curatelle: client.curatelle || false,
-            budget_max: client.budgetMax || 0,
+            loyer_actuel: client.loyerActuel ?? null,
+            depuis_le: client.depuisLe ?? null,
+            pieces_actuel: client.nombrePiecesActuel ?? null,
+            motif_changement: client.motifChangement ?? null,
+            profession: client.profession ?? null,
+            employeur: client.employeur ?? null,
+            date_engagement: client.dateEngagement ?? null,
+            revenus_mensuels: client.revenuMensuel ?? null,
+            charges_mensuelles: client.montantCharges ?? null,
+            charges_extraordinaires: client.chargesExtraordinaires ?? null,
+            montant_charges_extra: client.montantCharges ?? null,
+            poursuites: client.poursuites ?? false,
+            curatelle: client.curatelle ?? false,
+            budget_max: client.budgetMax ?? null,
             pieces: client.nombrePiecesSouhaite ? parseInt(client.nombrePiecesSouhaite) : null,
             region_recherche: client.regions?.join(', ') || null,
             type_bien: client.typeBien || null,
