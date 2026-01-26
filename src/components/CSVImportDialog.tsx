@@ -94,9 +94,10 @@ function normalizeHeader(header: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // Remove accents
-    .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-') // Normalize different hyphens to regular hyphen
+    .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D\u2011]/g, '-') // Normalize different hyphens including non-breaking hyphen U+2011
     .replace(/[''`]/g, "'") // Normalize quotes
     .replace(/\s+/g, '_') // Spaces to underscores
+    .replace(/[()]/g, '') // Remove parentheses
     .replace(/[^a-z0-9_-]/g, '') // Remove other special chars
     .trim();
 }
@@ -126,6 +127,8 @@ function mapHeaderToField(header: string): string {
     // Email variations
     'e-mail': 'email',
     'email': 'email',
+    'e_mail': 'email',
+    'mail': 'email',
     
     // Name variations
     'prenom': 'prenom',
@@ -134,6 +137,8 @@ function mapHeaderToField(header: string): string {
     
     // Phone
     'telephone': 'telephone',
+    'tel': 'telephone',
+    'mobile': 'telephone',
     
     // Date and address
     'date_et_heure_de_lenvoi': 'date_inscription',
@@ -143,58 +148,110 @@ function mapHeaderToField(header: string): string {
     // Identity
     'nationalite': 'nationalite',
     'type_de_permis_de_sejour': 'type_permis',
+    'type_de_permis': 'type_permis',
+    'permis': 'type_permis',
     'etat_civile': 'etat_civil',
+    'etat_civil': 'etat_civil',
     
-    // Current housing
+    // Current housing - multiple variations for gérance with/without parentheses
     'gerance_ou_proprietaire_actuelle': 'gerance_actuelle',
+    'gerance_ou_proprietaire_actuel': 'gerance_actuelle',
+    'gerance_ou_proprietaire_actuellele': 'gerance_actuelle', // for actuel(le) without parentheses
     'contact_gerance': 'contact_gerance',
+    'contact_de_la_gerance': 'contact_gerance',
     'loyer_brut_actuel': 'loyer_actuel',
+    'loyer_actuel': 'loyer_actuel',
     'depuis_le': 'depuis_le',
     'nombre_de_pieces_actuel': 'pieces_actuel',
+    'nombre_de_pieces': 'pieces_actuel',
     
     // Charges and debts
     'avez-vous_des_charges_extraordinaires_leasing_credit_pension_alimentaire_etc': 'charges_extraordinaires',
+    'charges_extraordinaires': 'charges_extraordinaires',
     'si_oui_montant__echeance': 'montant_charges_extra',
+    'montant_charges': 'montant_charges_extra',
     'avez-vous_des_poursuites_ou_actes_de_defaut_de_biens_': 'poursuites',
+    'poursuites': 'poursuites',
     'etes-vous_sous_curatelle_': 'curatelle',
+    'curatelle': 'curatelle',
     
     // Reason for moving
     'motif_du_changement_de_domicile_': 'motif_changement',
+    'motif_du_changement': 'motif_changement',
+    'motif_changement': 'motif_changement',
     
     // Employment
     'profession': 'profession',
     'employeur': 'employeur',
     'revenu_mensuel_net': 'revenus_mensuels',
+    'revenus_mensuels': 'revenus_mensuels',
+    'revenu_mensuel': 'revenus_mensuels',
     'date_dengagement_au_poste': 'date_engagement',
+    'date_dengagement': 'date_engagement',
     
     // Housing usage
     'utilisation_du_logement_a_titre': 'utilisation_logement',
+    'utilisation_logement': 'utilisation_logement',
     'avez-vous_des_animaux_': 'animaux',
+    'animaux': 'animaux',
     'jouez-vous_dun_instrument_de_musique_': 'instrument_musique',
+    'instrument_musique': 'instrument_musique',
     'avez-vous_un_ou_plusieurs_vehicules_': 'vehicules',
+    'vehicules': 'vehicules',
     'si_oui_veuillez_indiquer_le_numero_de_plaques_': 'numero_plaques',
+    'numero_plaques': 'numero_plaques',
     
     // Discovery
     'comment_avez-vous_decouvert_notre_agence_': 'decouverte_agence',
+    'decouverte_agence': 'decouverte_agence',
     
     // Search criteria
     'selectionnez_ce_qui_correspond': 'type_recherche',
+    'type_recherche': 'type_recherche',
     'combien_de_personnes_occuperaient_lappartement_': 'nombre_occupants',
+    'nombre_occupants': 'nombre_occupants',
     'type_dobjet': 'type_bien',
+    'type_bien': 'type_bien',
     'nb_de_pcs': 'pieces',
+    'pieces': 'pieces',
+    'nombre_de_pieces_souhaite': 'pieces',
     'region': 'region_recherche',
+    'region_recherche': 'region_recherche',
     'budget_maximum_le_loyer_brut_ne_devant_pas_depasser_le_tiers_du_salaire': 'budget_max',
+    'budget_max': 'budget_max',
+    'budget_maximum': 'budget_max',
     'souhait_particulier_concernant_letage_le_quartier_la_vue_': 'souhaits_particuliers',
+    'souhaits_particuliers': 'souhaits_particuliers',
     
     // Promo code
     'code_promo': 'code_promo',
+    
+    // Signature and approval (from Wix forms)
+    'lu__approuve': 'lu_approuve',
+    'lu_approuve': 'lu_approuve',
+    'signature': 'signature',
   };
   
-  return mappings[normalized] || normalized;
+  // Direct match
+  if (mappings[normalized]) {
+    return mappings[normalized];
+  }
+  
+  // Partial match fallback - check if normalized contains a known key or vice versa
+  for (const [key, value] of Object.entries(mappings)) {
+    if (normalized.includes(key) || key.includes(normalized)) {
+      console.log(`Partial match: "${normalized}" → "${value}"`);
+      return value;
+    }
+  }
+  
+  return normalized;
 }
 
 function parseCSV(csvText: string): ParsedCSVData {
-  const lines = csvText.split('\n').filter(line => line.trim());
+  // Remove BOM (Byte Order Mark) if present - common in Excel/Windows CSV files
+  const cleanText = csvText.replace(/^\uFEFF/, '');
+  const lines = cleanText.split('\n').filter(line => line.trim());
   const clients: ParsedClient[] = [];
   const users: ParsedUser[] = [];
   const errors: string[] = [];
