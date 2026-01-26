@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ClientCandidate, CANDIDATE_TYPE_LABELS } from '@/hooks/useClientCandidates';
 import { RequestDocumentsDialog } from './RequestDocumentsDialog';
-
+import { getStoragePath } from '@/lib/documentUtils';
 interface Document {
   id: string;
   nom: string;
@@ -183,9 +183,11 @@ export function CandidateDocumentsSection({
 
     try {
       if (!documentToDelete.url.startsWith('data:')) {
+        // Extract relative path from full URL if needed
+        const storagePath = getStoragePath(documentToDelete.url);
         await supabase.storage
           .from('client-documents')
-          .remove([documentToDelete.url]);
+          .remove([storagePath]);
       }
 
       const { error } = await supabase
@@ -212,9 +214,11 @@ export function CandidateDocumentsSection({
       if (doc.url.startsWith('data:')) {
         setPreviewUrl(doc.url);
       } else {
+        // Extract relative path from full URL if needed
+        const storagePath = getStoragePath(doc.url);
         const { data, error } = await supabase.storage
           .from('client-documents')
-          .createSignedUrl(doc.url, 3600);
+          .createSignedUrl(storagePath, 3600);
 
         if (error) throw error;
         setPreviewUrl(data.signedUrl);
@@ -234,9 +238,11 @@ export function CandidateDocumentsSection({
         link.download = doc.nom;
         link.click();
       } else {
+        // Extract relative path from full URL if needed
+        const storagePath = getStoragePath(doc.url);
         const { data, error } = await supabase.storage
           .from('client-documents')
-          .createSignedUrl(doc.url, 60);
+          .createSignedUrl(storagePath, 60);
 
         if (error) throw error;
         window.open(data.signedUrl, '_blank');
