@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Check, MapPin, X, Loader2 } from 'lucide-react';
-import { useGoogleMapsLoader } from '@/hooks/useGoogleMapsLoader';
+import { Check, MapPin, X, Loader2, RefreshCw, AlertTriangle, Copy } from 'lucide-react';
+import { useGoogleMapsLoader, LoaderError } from '@/hooks/useGoogleMapsLoader';
 
 interface PlacePrediction {
   place_id: string;
@@ -25,6 +26,16 @@ interface GooglePlacesAutocompleteProps {
   types?: string[]; // e.g., ['(regions)', 'locality', 'sublocality']
   restrictToSwitzerland?: boolean;
 }
+
+// Error messages for user feedback
+const ERROR_MESSAGES: Record<LoaderError, string> = {
+  token_error: "Impossible de récupérer la configuration",
+  token_timeout: "Délai dépassé (configuration)",
+  script_error: "Google Maps bloqué ou indisponible",
+  script_timeout: "Délai dépassé (chargement)",
+  auth_failure: "Clé API non autorisée pour ce domaine",
+  places_missing: "Service de recherche indisponible",
+};
 
 // Map Google Places types to icons
 function getPlaceTypeIcon(types: string[]): string {
@@ -56,22 +67,25 @@ export function GooglePlacesAutocomplete({
   types = ['locality', 'sublocality', 'postal_code', 'administrative_area_level_1', 'administrative_area_level_2'],
   restrictToSwitzerland = true,
 }: GooglePlacesAutocompleteProps) {
-  const { isLoaded, isLoading: mapsLoading, isFallback } = useGoogleMapsLoader();
+  const { isLoaded, isLoading: mapsLoading, isFallback, error, retry, getDiagnostic } = useGoogleMapsLoader();
   
   const [inputValue, setInputValue] = useState('');
   const [suggestions, setSuggestions] = useState<PlacePrediction[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isSearching, setIsSearching] = useState(false);
+  const [copiedDiagnostic, setCopiedDiagnostic] = useState(false);
   
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingInputRef = useRef<string>("");
 
   // Determine if we're in manual mode (fallback or not loaded)
   const isManualMode = isFallback || (!isLoaded && !mapsLoading);
+  const errorMessage = error ? ERROR_MESSAGES[error] || "Erreur inconnue" : null;
 
   // Parse selected regions from comma-separated value
   const selectedRegions = value ? value.split(',').map(r => r.trim()).filter(Boolean) : [];
@@ -81,6 +95,12 @@ export function GooglePlacesAutocomplete({
     if (isLoaded && window.google?.maps?.places) {
       autocompleteServiceRef.current = new google.maps.places.AutocompleteService();
       sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+      
+      // Auto-fetch predictions if user already typed something while loading
+      if (pendingInputRef.current.length >= 2) {
+        console.log('[GooglePlacesAutocomplete] Auto-fetching predictions for pending input');
+        fetchPredictions(pendingInputRef.current);
+      }
     }
   }, [isLoaded]);
 
@@ -143,6 +163,7 @@ export function GooglePlacesAutocomplete({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
+    pendingInputRef.current = newValue;
 
     // In manual mode, just update the input - no autocomplete
     if (isManualMode) {
@@ -163,6 +184,7 @@ export function GooglePlacesAutocomplete({
   // Handle selection
   const handleSelect = (prediction: PlacePrediction) => {
     const name = prediction.structured_formatting.main_text;
+    pendingInputRef.current = "";
 
     // Reset session token after selection
     if (window.google?.maps?.places) {
@@ -199,6 +221,7 @@ export function GooglePlacesAutocomplete({
     } else {
       onChange(trimmedValue);
     }
+    pendingInputRef.current = "";
   };
 
   // Remove a selected region (multi-select mode)
@@ -304,7 +327,24 @@ export function GooglePlacesAutocomplete({
   const handleClearAll = () => {
     onChange('');
     setInputValue('');
+    pendingInputRef.current = "";
     inputRef.current?.focus();
+  };
+
+  const handleRetry = () => {
+    setCopiedDiagnostic(false);
+    retry();
+  };
+
+  const handleCopyDiagnostic = async () => {
+    try {
+      const diagnostic = getDiagnostic();
+      await navigator.clipboard.writeText(diagnostic);
+      setCopiedDiagnostic(true);
+      setTimeout(() => setCopiedDiagnostic(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy diagnostic:', err);
+    }
   };
 
   return (
@@ -322,7 +362,7 @@ export function GooglePlacesAutocomplete({
             <Badge
               key={`${region}-${index}`}
               variant="default"
-              className="flex items-center gap-1 text-xs bg-green-100 text-green-800 border-green-200 hover:bg-green-200"
+              className="flex items-center gap-1 text-xs bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
             >
               <MapPin className="h-3 w-3" />
               {region}
@@ -371,13 +411,8 @@ export function GooglePlacesAutocomplete({
 
         {/* Status indicators */}
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-          {isManualMode && (
-            <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
-              Manuel
-            </Badge>
-          )}
           {!multiSelect && value && !isManualMode && (
-            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+            <Badge variant="outline" className="text-xs bg-primary/5 text-primary border-primary/20">
               <Check className="h-3 w-3 mr-1" />
               OK
             </Badge>
@@ -442,12 +477,60 @@ export function GooglePlacesAutocomplete({
         </div>
       )}
 
-      {/* Manual mode helper */}
-      {isManualMode && inputValue.length > 0 && (
-        <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-lg p-3">
-          <p className="text-xs text-muted-foreground">
-            Appuyez sur Entrée pour ajouter "{inputValue}"
-          </p>
+      {/* Manual mode helper with diagnostic */}
+      {isManualMode && (
+        <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                Mode manuel activé
+              </p>
+              {errorMessage && (
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                  Raison : {errorMessage}
+                </p>
+              )}
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                {inputValue.length > 0 
+                  ? `Appuyez sur Entrée pour ajouter "${inputValue}"`
+                  : "Tapez une localité et appuyez sur Entrée"
+                }
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              className="h-7 text-xs"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Réessayer
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleCopyDiagnostic}
+              className="h-7 text-xs"
+            >
+              {copiedDiagnostic ? (
+                <>
+                  <Check className="h-3 w-3 mr-1" />
+                  Copié
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3 w-3 mr-1" />
+                  Diagnostic
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       )}
     </div>

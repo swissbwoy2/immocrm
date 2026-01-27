@@ -1,9 +1,10 @@
 import * as React from "react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
-import { MapPin, Loader2 } from "lucide-react";
-import { useGoogleMapsLoader } from "@/hooks/useGoogleMapsLoader";
+import { MapPin, Loader2, RefreshCw, AlertTriangle, Copy, Check } from "lucide-react";
+import { useGoogleMapsLoader, LoaderError, LoaderStage } from "@/hooks/useGoogleMapsLoader";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 export interface AddressComponents {
   fullAddress: string;
@@ -36,6 +37,16 @@ interface PlacePrediction {
   };
 }
 
+// Error messages for user feedback
+const ERROR_MESSAGES: Record<LoaderError, string> = {
+  token_error: "Impossible de récupérer la configuration",
+  token_timeout: "Délai dépassé (configuration)",
+  script_error: "Google Maps bloqué ou indisponible",
+  script_timeout: "Délai dépassé (chargement)",
+  auth_failure: "Clé API non autorisée pour ce domaine",
+  places_missing: "Service de recherche indisponible",
+};
+
 export function GoogleAddressAutocomplete({
   value,
   onChange,
@@ -45,12 +56,13 @@ export function GoogleAddressAutocomplete({
   disabled = false,
   restrictToSwitzerland = true,
 }: GoogleAddressAutocompleteProps) {
-  const { isLoaded, isLoading: mapsLoading, isFallback } = useGoogleMapsLoader();
+  const { isLoaded, isLoading: mapsLoading, isFallback, error, stage, retry, getDiagnostic } = useGoogleMapsLoader();
   const [inputValue, setInputValue] = useState(value || "");
   const [suggestions, setSuggestions] = useState<PlacePrediction[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [isSearching, setIsSearching] = useState(false);
+  const [copiedDiagnostic, setCopiedDiagnostic] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -58,6 +70,7 @@ export function GoogleAddressAutocomplete({
   const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingInputRef = useRef<string>("");
 
   // Initialize services
   useEffect(() => {
@@ -69,6 +82,12 @@ export function GoogleAddressAutocomplete({
       placesServiceRef.current = new google.maps.places.PlacesService(dummyDiv);
       
       sessionTokenRef.current = new google.maps.places.AutocompleteSessionToken();
+      
+      // Auto-fetch predictions if user already typed something while loading
+      if (pendingInputRef.current.length >= 3) {
+        console.log('[GoogleAddressAutocomplete] Auto-fetching predictions for pending input');
+        fetchPredictions(pendingInputRef.current);
+      }
     }
   }, [isLoaded, isFallback]);
 
@@ -130,6 +149,7 @@ export function GoogleAddressAutocomplete({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setInputValue(newValue);
+    pendingInputRef.current = newValue;
     onInputChange?.(newValue);
     setSelectedIndex(-1);
 
@@ -138,7 +158,7 @@ export function GoogleAddressAutocomplete({
       clearTimeout(debounceTimerRef.current);
     }
 
-    if (newValue.length >= 3) {
+    if (newValue.length >= 3 && isLoaded && !isFallback) {
       debounceTimerRef.current = setTimeout(() => {
         fetchPredictions(newValue);
       }, 300);
@@ -220,6 +240,7 @@ export function GoogleAddressAutocomplete({
 
   const handleSelect = async (prediction: PlacePrediction) => {
     setInputValue(prediction.description);
+    pendingInputRef.current = "";
     setSuggestions([]);
     setIsOpen(false);
     setSelectedIndex(-1);
@@ -263,6 +284,22 @@ export function GoogleAddressAutocomplete({
     }, 200);
   };
 
+  const handleRetry = () => {
+    setCopiedDiagnostic(false);
+    retry();
+  };
+
+  const handleCopyDiagnostic = async () => {
+    try {
+      const diagnostic = getDiagnostic();
+      await navigator.clipboard.writeText(diagnostic);
+      setCopiedDiagnostic(true);
+      setTimeout(() => setCopiedDiagnostic(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy diagnostic:', err);
+    }
+  };
+
   // Cleanup debounce timer
   useEffect(() => {
     return () => {
@@ -273,11 +310,15 @@ export function GoogleAddressAutocomplete({
   }, []);
 
   const showFallbackMode = isFallback || (!isLoaded && !mapsLoading);
+  const errorMessage = error ? ERROR_MESSAGES[error] || "Erreur inconnue" : null;
 
   return (
     <div ref={containerRef} className="relative w-full">
       <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <MapPin className={cn(
+          "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4",
+          showFallbackMode ? "text-amber-500" : "text-muted-foreground"
+        )} />
         <Input
           ref={inputRef}
           type="text"
@@ -288,7 +329,7 @@ export function GoogleAddressAutocomplete({
           onFocus={() => {
             if (suggestions.length > 0) setIsOpen(true);
           }}
-          placeholder={placeholder}
+          placeholder={showFallbackMode ? "Saisie manuelle de l'adresse..." : placeholder}
           disabled={disabled}
           className={cn("pl-10 pr-10", className)}
         />
@@ -324,19 +365,57 @@ export function GoogleAddressAutocomplete({
         </div>
       )}
 
-      {/* Fallback mode helper with retry button */}
+      {/* Fallback mode with diagnostic info */}
       {showFallbackMode && (
-        <div className="flex items-center gap-2 mt-1">
-          <p className="text-xs text-muted-foreground">
-            Mode manuel - entrez l'adresse complète avec le code postal
-          </p>
-          <button 
-            type="button"
-            onClick={() => window.location.reload()}
-            className="text-xs text-primary underline hover:no-underline"
-          >
-            Réessayer
-          </button>
+        <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-md">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                Mode manuel activé
+              </p>
+              {errorMessage && (
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+                  Raison : {errorMessage}
+                </p>
+              )}
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                Entrez l'adresse complète avec le code postal manuellement.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2 mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              className="h-7 text-xs bg-white dark:bg-gray-800"
+            >
+              <RefreshCw className="h-3 w-3 mr-1" />
+              Réessayer
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleCopyDiagnostic}
+              className="h-7 text-xs"
+            >
+              {copiedDiagnostic ? (
+                <>
+                  <Check className="h-3 w-3 mr-1" />
+                  Copié
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3 w-3 mr-1" />
+                  Copier diagnostic
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       )}
     </div>
