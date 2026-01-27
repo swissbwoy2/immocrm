@@ -1,131 +1,198 @@
 
-# Plan : Ajouter les créneaux horaires avec heure de fin dans la création d'offres
+# Plan : Modifier les offres existantes avec gestion des heures de fin de visite
 
-## Analyse
+## Analyse du problème
 
-Le formulaire d'envoi d'offres (`EnvoyerOffre.tsx`) permet de proposer jusqu'à 3 dates de visite, mais chaque créneau n'a qu'une heure de début. Il faut ajouter une heure de fin pour chaque créneau.
+Actuellement :
+- Le `EditOffreDialog` permet de modifier uniquement les informations du bien (adresse, prix, etc.)
+- Les visites liées à une offre sont affichées en lecture seule dans `PremiumAgentOffreDetailsDialog`
+- La nouvelle colonne `date_visite_fin` existe en base mais les visites existantes n'ont pas d'heure de fin
 
-## Fichiers à modifier
+## Solution
 
-### 1. `src/hooks/useDraftManager.ts`
+Enrichir le `EditOffreDialog` pour :
+1. Charger les visites associées à l'offre
+2. Afficher et permettre la modification des dates/heures de début ET de fin
+3. Sauvegarder les modifications des visites en base
 
-**Modifier la structure des données pour supporter les heures de fin**
+## Fichier à modifier
 
-| Avant | Après |
-|-------|-------|
-| `datesVisite: ["", "", ""]` | `datesVisite: ["", "", ""]` + `datesVisiteFin: ["", "", ""]` |
+### `src/components/EditOffreDialog.tsx`
+
+#### 1. Ajouter l'état pour les visites
 
 ```typescript
-export interface OfferFormData {
-  // ... existing fields
-  datesVisite: string[];
-  datesVisiteFin: string[]; // NOUVEAU
+interface VisiteData {
+  id: string;
+  date_visite: string;
+  date_visite_fin: string | null;
+  statut: string;
 }
 
-export const initialFormData: OfferFormData = {
-  // ... existing fields
-  datesVisite: ["", "", ""],
-  datesVisiteFin: ["", "", ""], // NOUVEAU
-};
+const [visites, setVisites] = useState<VisiteData[]>([]);
 ```
 
-### 2. `src/pages/agent/EnvoyerOffre.tsx`
-
-**2.1 Ajouter l'input heure de fin pour chaque créneau**
-
-Modifier la section des dates de visite (lignes 543-551) :
+#### 2. Charger les visites dans le useEffect
 
 ```typescript
-{[0, 1, 2].map((index) => (
-  <div key={index} className="grid grid-cols-2 gap-2">
-    <div>
-      <Label className="text-xs text-muted-foreground">Début</Label>
-      <Input 
-        type="datetime-local"
-        value={formData.datesVisite[index]}
-        onChange={(e) => handleDateVisiteChange(index, e.target.value)}
-      />
-    </div>
-    <div>
-      <Label className="text-xs text-muted-foreground">Fin</Label>
-      <Input 
-        type="time"
-        value={formData.datesVisiteFin[index]}
-        onChange={(e) => handleDateVisiteFinChange(index, e.target.value)}
-      />
-    </div>
-  </div>
-))}
-```
-
-**2.2 Ajouter le handler pour l'heure de fin**
-
-```typescript
-const handleDateVisiteFinChange = (index: number, value: string) => {
-  const newDates = [...formData.datesVisiteFin];
-  newDates[index] = value;
-  setFormData({ ...formData, datesVisiteFin: newDates });
-};
-```
-
-**2.3 Modifier l'insertion des visites (lignes 310-327)**
-
-La table `visites` a une colonne `date_visite_fin` (si elle existe) ou il faudra l'ajouter :
-
-```typescript
-for (let i = 0; i < validDates.length; i++) {
-  const dateStr = validDates[i];
-  const localDate = new Date(dateStr);
-  const isoWithTimezone = localDate.toISOString();
-  
-  // Calculer l'heure de fin
-  let endDate = null;
-  const endTime = formData.datesVisiteFin[i];
-  if (endTime) {
-    const dateOnly = dateStr.split('T')[0]; // Extraire la date
-    endDate = new Date(`${dateOnly}T${endTime}`).toISOString();
+useEffect(() => {
+  if (offre) {
+    // ... existing formData setup ...
+    
+    // Load associated visits
+    loadVisites();
   }
+}, [offre]);
+
+const loadVisites = async () => {
+  if (!offre?.id) return;
   
-  await supabase
+  const { data } = await supabase
     .from('visites')
-    .insert({
-      offre_id: offre.id,
-      client_id: clientId,
-      agent_id: agent.id,
-      date_visite: isoWithTimezone,
-      date_visite_fin: endDate, // NOUVEAU
-      adresse: formData.localisation,
-      statut: 'planifiee',
-      source: 'proposee_agent',
-      notes: formData.commentaires,
-    });
-}
+    .select('id, date_visite, date_visite_fin, statut')
+    .eq('offre_id', offre.id)
+    .order('date_visite', { ascending: true });
+    
+  if (data) {
+    setVisites(data.map(v => ({
+      id: v.id,
+      date_visite: v.date_visite ? formatDateTimeLocal(v.date_visite) : '',
+      date_visite_fin: v.date_visite_fin ? extractTime(v.date_visite_fin) : '',
+      statut: v.statut
+    })));
+  }
+};
 ```
 
-### 3. Vérification de la base de données
+#### 3. Ajouter les handlers pour modifier les visites
 
-Vérifier si la table `visites` a une colonne `date_visite_fin`. Si non, ajouter une migration :
+```typescript
+const handleVisiteDateChange = (index: number, value: string) => {
+  const updated = [...visites];
+  updated[index].date_visite = value;
+  setVisites(updated);
+};
 
-```sql
-ALTER TABLE visites ADD COLUMN date_visite_fin TIMESTAMPTZ;
+const handleVisiteEndTimeChange = (index: number, value: string) => {
+  const updated = [...visites];
+  updated[index].date_visite_fin = value;
+  setVisites(updated);
+};
 ```
 
----
+#### 4. Ajouter la section visites dans le JSX
+
+```typescript
+{/* Section Visites */}
+{visites.length > 0 && (
+  <div className="space-y-4 pt-4 border-t">
+    <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-2">
+      <Calendar className="h-4 w-4" />
+      Créneaux de visite
+    </h4>
+    
+    {visites.map((visite, index) => (
+      <div key={visite.id} className="grid grid-cols-2 gap-3 p-3 bg-muted/30 rounded-lg">
+        <div className="space-y-2">
+          <Label className="text-xs">Début</Label>
+          <Input
+            type="datetime-local"
+            value={visite.date_visite}
+            onChange={(e) => handleVisiteDateChange(index, e.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs">Heure de fin</Label>
+          <Input
+            type="time"
+            value={visite.date_visite_fin || ''}
+            onChange={(e) => handleVisiteEndTimeChange(index, e.target.value)}
+          />
+        </div>
+        <Badge variant="outline" className="w-fit">
+          {visite.statut}
+        </Badge>
+      </div>
+    ))}
+  </div>
+)}
+```
+
+#### 5. Mettre à jour handleSubmit pour sauvegarder les visites
+
+```typescript
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!offre?.id) return;
+
+  setLoading(true);
+  try {
+    // Update offer (existing code)
+    const { data, error } = await supabase
+      .from('offres')
+      .update(updateData)
+      .eq('id', offre.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Update visites
+    for (const visite of visites) {
+      let endDate = null;
+      if (visite.date_visite_fin && visite.date_visite) {
+        const dateOnly = visite.date_visite.split('T')[0];
+        endDate = new Date(`${dateOnly}T${visite.date_visite_fin}`).toISOString();
+      }
+      
+      await supabase
+        .from('visites')
+        .update({
+          date_visite: new Date(visite.date_visite).toISOString(),
+          date_visite_fin: endDate
+        })
+        .eq('id', visite.id);
+    }
+
+    toast.success('Offre et visites modifiées avec succès');
+    onSuccess({ ...offre, ...data });
+    onOpenChange(false);
+  } catch (error) {
+    // error handling
+  }
+};
+```
+
+## Fonctions utilitaires à ajouter
+
+```typescript
+// Convert ISO date to datetime-local format
+const formatDateTimeLocal = (isoDate: string): string => {
+  const date = new Date(isoDate);
+  return date.toISOString().slice(0, 16);
+};
+
+// Extract time from ISO date
+const extractTime = (isoDate: string): string => {
+  const date = new Date(isoDate);
+  return date.toTimeString().slice(0, 5);
+};
+```
 
 ## Résumé des modifications
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/hooks/useDraftManager.ts` | Ajouter `datesVisiteFin` dans l'interface et les valeurs par défaut |
-| `src/pages/agent/EnvoyerOffre.tsx` | Ajouter inputs heure de fin + modifier l'insertion |
-| Base de données (si nécessaire) | Ajouter colonne `date_visite_fin` à la table `visites` |
-
----
+| `src/components/EditOffreDialog.tsx` | Charger les visites, afficher les inputs début/fin, sauvegarder les modifications |
 
 ## Résultat attendu
 
-Lors de la création d'une offre, l'agent pourra définir pour chaque créneau de visite :
-- **Début** : 15/02/2025 à 12:00
-- **Fin** : 14:00
+Quand un agent clique sur "Modifier" une offre :
+1. Le dialogue affiche les informations du bien (comme avant)
+2. En dessous, une nouvelle section "Créneaux de visite" affiche les visites associées
+3. Pour chaque visite, l'agent peut modifier :
+   - La date et heure de début (datetime-local)
+   - L'heure de fin (time)
+4. Les modifications sont enregistrées en cliquant sur "Enregistrer"
 
-Le créneau sera enregistré avec les deux horaires et affiché correctement côté client.
+Cela permet de corriger les visites existantes qui n'ont pas d'heure de fin.
