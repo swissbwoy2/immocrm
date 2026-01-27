@@ -64,6 +64,7 @@ const getDefaultFormData = (initialDate?: Date): EventFormData => ({
   description: '',
   event_date: initialDate || new Date(),
   event_time: '09:00',
+  end_time: '10:00',
   priority: 'normale',
   all_day: false,
 });
@@ -85,12 +86,14 @@ export function EventForm({
   useEffect(() => {
     if (mode === 'edit' && editingEvent) {
       const eventDate = new Date(editingEvent.event_date);
+      const endDate = editingEvent.end_date ? new Date(editingEvent.end_date) : null;
       setFormData({
         event_type: editingEvent.event_type || 'rappel',
         title: editingEvent.title || '',
         description: editingEvent.description || '',
         event_date: eventDate,
         event_time: format(eventDate, 'HH:mm'),
+        end_time: endDate ? format(endDate, 'HH:mm') : '10:00',
         priority: editingEvent.priority || 'normale',
         all_day: editingEvent.all_day || false,
         client_id: editingEvent.client_id || undefined,
@@ -194,15 +197,26 @@ export function EventForm({
             </div>
 
             {!formData.all_day && (
-              <div className="w-28">
-                <Label>Heure</Label>
-                <Input
-                  type="time"
-                  className="mt-1"
-                  value={formData.event_time}
-                  onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
-                />
-              </div>
+              <>
+                <div className="w-28">
+                  <Label>Début</Label>
+                  <Input
+                    type="time"
+                    className="mt-1"
+                    value={formData.event_time}
+                    onChange={(e) => setFormData({ ...formData, event_time: e.target.value })}
+                  />
+                </div>
+                <div className="w-28">
+                  <Label>Fin</Label>
+                  <Input
+                    type="time"
+                    className="mt-1"
+                    value={formData.end_time || '10:00'}
+                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
+                  />
+                </div>
+              </>
             )}
           </div>
 

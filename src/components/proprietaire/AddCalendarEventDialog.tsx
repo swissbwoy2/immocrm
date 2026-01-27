@@ -45,6 +45,7 @@ export function AddCalendarEventDialog({ open, onClose, onSuccess, initialDate }
   const [description, setDescription] = useState('');
   const [eventDate, setEventDate] = useState(format(initialDate || new Date(), 'yyyy-MM-dd'));
   const [eventTime, setEventTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('10:00');
   const [allDay, setAllDay] = useState(true);
   const [priority, setPriority] = useState('normale');
 
@@ -62,6 +63,7 @@ export function AddCalendarEventDialog({ open, onClose, onSuccess, initialDate }
       setDescription('');
       setEventDate(format(initialDate || new Date(), 'yyyy-MM-dd'));
       setEventTime('09:00');
+      setEndTime('10:00');
       setAllDay(true);
       setPriority('normale');
     }
@@ -80,10 +82,21 @@ export function AddCalendarEventDialog({ open, onClose, onSuccess, initialDate }
 
     setLoading(true);
     try {
+      // Validate end time is after start time
+      if (!allDay && endTime && endTime <= eventTime) {
+        toast.error("L'heure de fin doit être après l'heure de début");
+        setLoading(false);
+        return;
+      }
+
       // Combine date and time if not all day
       let fullEventDate = eventDate;
+      let fullEndDate = null;
       if (!allDay && eventTime) {
         fullEventDate = `${eventDate}T${eventTime}:00`;
+        if (endTime) {
+          fullEndDate = `${eventDate}T${endTime}:00`;
+        }
       }
 
       const { error } = await supabase.from('calendar_events').insert({
@@ -92,6 +105,7 @@ export function AddCalendarEventDialog({ open, onClose, onSuccess, initialDate }
         title: title.trim(),
         description: description.trim() || null,
         event_date: fullEventDate,
+        end_date: fullEndDate,
         all_day: allDay,
         priority,
         status: 'planifie',
@@ -162,19 +176,20 @@ export function AddCalendarEventDialog({ open, onClose, onSuccess, initialDate }
           </div>
 
           {/* Date et heure */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="eventDate">Date *</Label>
-              <Input
-                type="date"
-                id="eventDate"
-                value={eventDate}
-                onChange={(e) => setEventDate(e.target.value)}
-              />
-            </div>
-            {!allDay && (
+          <div className="grid gap-2">
+            <Label htmlFor="eventDate">Date *</Label>
+            <Input
+              type="date"
+              id="eventDate"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+            />
+          </div>
+          
+          {!allDay && (
+            <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="eventTime">Heure</Label>
+                <Label htmlFor="eventTime">Début</Label>
                 <Input
                   type="time"
                   id="eventTime"
@@ -182,8 +197,17 @@ export function AddCalendarEventDialog({ open, onClose, onSuccess, initialDate }
                   onChange={(e) => setEventTime(e.target.value)}
                 />
               </div>
-            )}
-          </div>
+              <div className="grid gap-2">
+                <Label htmlFor="endTime">Fin</Label>
+                <Input
+                  type="time"
+                  id="endTime"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Journée entière */}
           <div className="flex items-center justify-between p-3 border rounded-lg">
