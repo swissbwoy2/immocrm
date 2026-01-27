@@ -129,6 +129,12 @@ const EnvoyerOffre = () => {
     setFormData({ ...formData, datesVisite: newDates });
   };
 
+  const handleDateVisiteFinChange = (index: number, value: string) => {
+    const newDates = [...formData.datesVisiteFin];
+    newDates[index] = value;
+    setFormData({ ...formData, datesVisiteFin: newDates });
+  };
+
   const handleSubmit = async () => {
     if (isSubmitting) return; // Protection double-clic
     
@@ -307,10 +313,21 @@ const EnvoyerOffre = () => {
       // Create visits if dates are provided
       const validDates = formData.datesVisite.filter(d => d);
       if (validDates.length > 0 && offre) {
-        for (const dateStr of validDates) {
+        for (let i = 0; i < formData.datesVisite.length; i++) {
+          const dateStr = formData.datesVisite[i];
+          if (!dateStr) continue;
+          
           // Convert local datetime to ISO string with timezone
           const localDate = new Date(dateStr);
           const isoWithTimezone = localDate.toISOString();
+          
+          // Calculate end date if end time is provided
+          let endDate: string | null = null;
+          const endTime = formData.datesVisiteFin[i];
+          if (endTime) {
+            const dateOnly = dateStr.split('T')[0]; // Extract date part
+            endDate = new Date(`${dateOnly}T${endTime}`).toISOString();
+          }
           
           await supabase
             .from('visites')
@@ -319,6 +336,7 @@ const EnvoyerOffre = () => {
               client_id: clientId,
               agent_id: agent.id,
               date_visite: isoWithTimezone,
+              date_visite_fin: endDate,
               adresse: formData.localisation,
               statut: 'planifiee',
               source: 'proposee_agent',
@@ -541,12 +559,25 @@ const EnvoyerOffre = () => {
             <Card className="p-6 space-y-4">
               <h3 className="font-semibold">Dates de visite proposées</h3>
               {[0, 1, 2].map((index) => (
-                <Input 
-                  key={index}
-                  type="datetime-local"
-                  value={formData.datesVisite[index]}
-                  onChange={(e) => handleDateVisiteChange(index, e.target.value)}
-                />
+                <div key={index} className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Début</Label>
+                    <Input 
+                      type="datetime-local"
+                      value={formData.datesVisite[index]}
+                      onChange={(e) => handleDateVisiteChange(index, e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Heure de fin</Label>
+                    <Input 
+                      type="time"
+                      value={formData.datesVisiteFin[index]}
+                      onChange={(e) => handleDateVisiteFinChange(index, e.target.value)}
+                      disabled={!formData.datesVisite[index]}
+                    />
+                  </div>
+                </div>
               ))}
             </Card>
 
