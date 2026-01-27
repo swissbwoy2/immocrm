@@ -5543,6 +5543,7 @@ export type Database = {
           client_id: string | null
           created_at: string | null
           date_visite: string
+          date_visite_fin: string | null
           est_deleguee: boolean | null
           feedback_agent: string | null
           id: string
@@ -5560,6 +5561,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string | null
           date_visite: string
+          date_visite_fin?: string | null
           est_deleguee?: boolean | null
           feedback_agent?: string | null
           id?: string
@@ -5577,6 +5579,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string | null
           date_visite?: string
+          date_visite_fin?: string | null
           est_deleguee?: boolean | null
           feedback_agent?: string | null
           id?: string

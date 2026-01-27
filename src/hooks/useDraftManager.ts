@@ -23,6 +23,7 @@ export interface OfferFormData {
   commentaires: string;
   lienAnnonce: string;
   datesVisite: string[];
+  datesVisiteFin: string[];
 }
 
 export interface Draft {
@@ -54,6 +55,7 @@ export const initialFormData: OfferFormData = {
   commentaires: "",
   lienAnnonce: "",
   datesVisite: ["", "", ""],
+  datesVisiteFin: ["", "", ""],
 };
 
 export function useDraftManager() {
