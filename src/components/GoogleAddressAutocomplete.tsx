@@ -324,11 +324,20 @@ export function GoogleAddressAutocomplete({
         </div>
       )}
 
-      {/* Fallback mode helper */}
-      {showFallbackMode && inputValue.length > 0 && (
-        <p className="text-xs text-muted-foreground mt-1">
-          Mode manuel - entrez l'adresse complète avec le code postal
-        </p>
+      {/* Fallback mode helper with retry button */}
+      {showFallbackMode && (
+        <div className="flex items-center gap-2 mt-1">
+          <p className="text-xs text-muted-foreground">
+            Mode manuel - entrez l'adresse complète avec le code postal
+          </p>
+          <button 
+            type="button"
+            onClick={() => window.location.reload()}
+            className="text-xs text-primary underline hover:no-underline"
+          >
+            Réessayer
+          </button>
+        </div>
       )}
     </div>
   );
