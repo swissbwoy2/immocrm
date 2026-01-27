@@ -1,146 +1,131 @@
 
-# Plan : Ajouter les créneaux horaires avec heure de fin au calendrier
+# Plan : Ajouter les créneaux horaires avec heure de fin dans la création d'offres
 
-## Analyse du problème
+## Analyse
 
-Actuellement, lors de la création d'un événement, vous pouvez seulement définir **une heure de début** (ex: 12:00). Il n'y a pas de possibilité de définir un créneau complet (ex: 12:00 à 14:00).
+Le formulaire d'envoi d'offres (`EnvoyerOffre.tsx`) permet de proposer jusqu'à 3 dates de visite, mais chaque créneau n'a qu'une heure de début. Il faut ajouter une heure de fin pour chaque créneau.
 
-## Ce qui existe déjà
+## Fichiers à modifier
 
-| Élément | État |
-|---------|------|
-| Colonne `end_date` en base de données | Existe (TIMESTAMPTZ) |
-| Interface `EventFormData` avec `end_time` | Existe mais non utilisé |
-| Input heure de fin dans le formulaire | Manquant |
+### 1. `src/hooks/useDraftManager.ts`
 
-## Solution technique
+**Modifier la structure des données pour supporter les heures de fin**
 
-### Fichiers à modifier
+| Avant | Après |
+|-------|-------|
+| `datesVisite: ["", "", ""]` | `datesVisite: ["", "", ""]` + `datesVisiteFin: ["", "", ""]` |
 
-#### 1. `src/components/calendar/EventForm.tsx`
-Formulaire utilisé par les admins et agents
-
-**Modifications :**
-- Ajouter un input `end_time` à côté de l'input `event_time`
-- Ajouter la logique pour combiner `end_date` + `end_time` en TIMESTAMPTZ
-- Validation : l'heure de fin doit être après l'heure de début (si même jour)
-
-```
-Date *         |  Heure début  |  Heure fin
-[Calendrier]   |  [12:00]      |  [14:00]
-```
-
-#### 2. `src/components/proprietaire/AddCalendarEventDialog.tsx`
-Formulaire utilisé par les propriétaires
-
-**Modifications :**
-- Ajouter un state `endTime` 
-- Ajouter un input heure de fin quand `allDay` est désactivé
-- Calculer et envoyer `end_date` lors de l'insertion
-
----
-
-## Détail des modifications
-
-### EventForm.tsx
-
-1. **Initialiser `end_time`** dans `getDefaultFormData` :
 ```typescript
-end_time: '10:00', // 1h après event_time par défaut
+export interface OfferFormData {
+  // ... existing fields
+  datesVisite: string[];
+  datesVisiteFin: string[]; // NOUVEAU
+}
+
+export const initialFormData: OfferFormData = {
+  // ... existing fields
+  datesVisite: ["", "", ""],
+  datesVisiteFin: ["", "", ""], // NOUVEAU
+};
 ```
 
-2. **Ajouter l'input heure de fin** après l'input heure de début :
+### 2. `src/pages/agent/EnvoyerOffre.tsx`
+
+**2.1 Ajouter l'input heure de fin pour chaque créneau**
+
+Modifier la section des dates de visite (lignes 543-551) :
+
 ```typescript
-{!formData.all_day && (
-  <>
-    <div className="w-28">
-      <Label>Début</Label>
-      <Input type="time" value={formData.event_time} ... />
-    </div>
-    <div className="w-28">
-      <Label>Fin</Label>
-      <Input type="time" value={formData.end_time} ... />
-    </div>
-  </>
-)}
-```
-
-3. **Pré-remplir lors de l'édition** : extraire l'heure de `end_date` si présente
-
-### AddCalendarEventDialog.tsx
-
-1. **Ajouter les states** :
-```typescript
-const [endTime, setEndTime] = useState('10:00');
-```
-
-2. **Modifier le reset du formulaire** pour inclure `endTime`
-
-3. **Ajouter l'input dans le JSX** :
-```typescript
-{!allDay && (
-  <div className="grid grid-cols-2 gap-2">
+{[0, 1, 2].map((index) => (
+  <div key={index} className="grid grid-cols-2 gap-2">
     <div>
-      <Label>Début</Label>
-      <Input type="time" value={eventTime} onChange={...} />
+      <Label className="text-xs text-muted-foreground">Début</Label>
+      <Input 
+        type="datetime-local"
+        value={formData.datesVisite[index]}
+        onChange={(e) => handleDateVisiteChange(index, e.target.value)}
+      />
     </div>
     <div>
-      <Label>Fin</Label>
-      <Input type="time" value={endTime} onChange={...} />
+      <Label className="text-xs text-muted-foreground">Fin</Label>
+      <Input 
+        type="time"
+        value={formData.datesVisiteFin[index]}
+        onChange={(e) => handleDateVisiteFinChange(index, e.target.value)}
+      />
     </div>
   </div>
-)}
+))}
 ```
 
-4. **Calculer `end_date`** dans handleSubmit :
+**2.2 Ajouter le handler pour l'heure de fin**
+
 ```typescript
-let fullEndDate = null;
-if (!allDay && endTime) {
-  fullEndDate = `${eventDate}T${endTime}:00`;
-}
-
-const { error } = await supabase.from('calendar_events').insert({
-  ...
-  end_date: fullEndDate,
-});
+const handleDateVisiteFinChange = (index: number, value: string) => {
+  const newDates = [...formData.datesVisiteFin];
+  newDates[index] = value;
+  setFormData({ ...formData, datesVisiteFin: newDates });
+};
 ```
 
----
+**2.3 Modifier l'insertion des visites (lignes 310-327)**
 
-## Validation
+La table `visites` a une colonne `date_visite_fin` (si elle existe) ou il faudra l'ajouter :
 
-- L'heure de fin doit être >= heure de début
-- Si l'heure de fin est avant l'heure de début, afficher une erreur :
 ```typescript
-if (endTime <= eventTime) {
-  toast.error("L'heure de fin doit être après l'heure de début");
-  return;
+for (let i = 0; i < validDates.length; i++) {
+  const dateStr = validDates[i];
+  const localDate = new Date(dateStr);
+  const isoWithTimezone = localDate.toISOString();
+  
+  // Calculer l'heure de fin
+  let endDate = null;
+  const endTime = formData.datesVisiteFin[i];
+  if (endTime) {
+    const dateOnly = dateStr.split('T')[0]; // Extraire la date
+    endDate = new Date(`${dateOnly}T${endTime}`).toISOString();
+  }
+  
+  await supabase
+    .from('visites')
+    .insert({
+      offre_id: offre.id,
+      client_id: clientId,
+      agent_id: agent.id,
+      date_visite: isoWithTimezone,
+      date_visite_fin: endDate, // NOUVEAU
+      adresse: formData.localisation,
+      statut: 'planifiee',
+      source: 'proposee_agent',
+      notes: formData.commentaires,
+    });
 }
+```
+
+### 3. Vérification de la base de données
+
+Vérifier si la table `visites` a une colonne `date_visite_fin`. Si non, ajouter une migration :
+
+```sql
+ALTER TABLE visites ADD COLUMN date_visite_fin TIMESTAMPTZ;
 ```
 
 ---
 
-## Affichage dans le calendrier
-
-Les événements avec un créneau s'afficheront comme :
-- **Avant** : `12:00 - Réunion client`  
-- **Après** : `12:00 - 14:00 - Réunion client`
-
----
-
-## Résumé
+## Résumé des modifications
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/components/calendar/EventForm.tsx` | Ajouter input heure de fin + logique |
-| `src/components/proprietaire/AddCalendarEventDialog.tsx` | Ajouter input heure de fin + envoi `end_date` |
+| `src/hooks/useDraftManager.ts` | Ajouter `datesVisiteFin` dans l'interface et les valeurs par défaut |
+| `src/pages/agent/EnvoyerOffre.tsx` | Ajouter inputs heure de fin + modifier l'insertion |
+| Base de données (si nécessaire) | Ajouter colonne `date_visite_fin` à la table `visites` |
 
 ---
 
 ## Résultat attendu
 
-Après modification, vous pourrez créer des événements avec un créneau horaire complet :
-- Début : 12:00
-- Fin : 14:00
+Lors de la création d'une offre, l'agent pourra définir pour chaque créneau de visite :
+- **Début** : 15/02/2025 à 12:00
+- **Fin** : 14:00
 
-L'événement sera affiché avec la plage horaire complète dans le calendrier.
+Le créneau sera enregistré avec les deux horaires et affiché correctement côté client.
