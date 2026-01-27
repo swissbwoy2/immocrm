@@ -1,144 +1,146 @@
 
-# Plan : Corriger l'import CSV - Validation des dates et meilleur mapping
+# Plan : Ajouter les créneaux horaires avec heure de fin au calendrier
 
-## Problèmes identifiés
+## Analyse du problème
 
-### 1. Erreur de type DATE
-```
-invalid input syntax for type date: "1 novembre 2019 si je ne me trompe trompe pas"
-```
+Actuellement, lors de la création d'un événement, vous pouvez seulement définir **une heure de début** (ex: 12:00). Il n'y a pas de possibilité de définir un créneau complet (ex: 12:00 à 14:00).
 
-Les colonnes dans la base de données sont de type `date` (format `YYYY-MM-DD`) :
-- `date_naissance`
-- `depuis_le`  
-- `date_engagement`
+## Ce qui existe déjà
 
-Mais le CSV contient du texte libre qui ne peut pas être converti.
-
-### 2. Valeurs 0 ou "non renseigné"
-Le code actuel fait :
-```typescript
-revenus_mensuels: client.revenuMensuel || 0,
-budget_max: client.budgetMax || 0,
-```
-
-Si le mapping échoue, ces valeurs deviennent 0 au lieu de null.
-
----
+| Élément | État |
+|---------|------|
+| Colonne `end_date` en base de données | Existe (TIMESTAMPTZ) |
+| Interface `EventFormData` avec `end_time` | Existe mais non utilisé |
+| Input heure de fin dans le formulaire | Manquant |
 
 ## Solution technique
 
-### Fichier : `src/components/CSVImportDialog.tsx`
+### Fichiers à modifier
 
-#### 1. Ajouter une fonction de parsing de date robuste
+#### 1. `src/components/calendar/EventForm.tsx`
+Formulaire utilisé par les admins et agents
 
-```typescript
-// Parse various date formats, return null if invalid
-function parseDate(value: string): string | null {
-  if (!value || value.trim() === '' || value === '-') return null;
-  
-  // Already in ISO format (YYYY-MM-DD)
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  
-  // Format DD/MM/YYYY or DD.MM.YYYY
-  const dmyMatch = value.match(/^(\d{1,2})[\/\.](\d{1,2})[\/\.](\d{4})$/);
-  if (dmyMatch) {
-    const [_, d, m, y] = dmyMatch;
-    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-  }
-  
-  // Try to extract any date with regex (day month year in French)
-  const frenchMonths: Record<string, string> = {
-    'janvier': '01', 'février': '02', 'mars': '03', 'avril': '04',
-    'mai': '05', 'juin': '06', 'juillet': '07', 'août': '08',
-    'septembre': '09', 'octobre': '10', 'novembre': '11', 'décembre': '12'
-  };
-  
-  const frMatch = value.toLowerCase().match(/(\d{1,2})\s*(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\s*(\d{4})/);
-  if (frMatch) {
-    const [_, day, month, year] = frMatch;
-    const monthNum = frenchMonths[month];
-    if (monthNum) {
-      return `${year}-${monthNum}-${day.padStart(2, '0')}`;
-    }
-  }
-  
-  // Date contains text that can't be parsed → return null (store raw text in notes instead)
-  console.log(`Could not parse date: "${value}"`);
-  return null;
-}
+**Modifications :**
+- Ajouter un input `end_time` à côté de l'input `event_time`
+- Ajouter la logique pour combiner `end_date` + `end_time` en TIMESTAMPTZ
+- Validation : l'heure de fin doit être après l'heure de début (si même jour)
+
+```
+Date *         |  Heure début  |  Heure fin
+[Calendrier]   |  [12:00]      |  [14:00]
 ```
 
-#### 2. Mettre à jour parseCSV pour utiliser parseDate
+#### 2. `src/components/proprietaire/AddCalendarEventDialog.tsx`
+Formulaire utilisé par les propriétaires
 
+**Modifications :**
+- Ajouter un state `endTime` 
+- Ajouter un input heure de fin quand `allDay` est désactivé
+- Calculer et envoyer `end_date` lors de l'insertion
+
+---
+
+## Détail des modifications
+
+### EventForm.tsx
+
+1. **Initialiser `end_time`** dans `getDefaultFormData` :
 ```typescript
-clients.push({
-  // ...
-  dateNaissance: parseDate(row['date_naissance']),
-  depuisLe: parseDate(row['depuis_le']),
-  dateEngagement: parseDate(row['date_engagement']),
-  // ...
+end_time: '10:00', // 1h après event_time par défaut
+```
+
+2. **Ajouter l'input heure de fin** après l'input heure de début :
+```typescript
+{!formData.all_day && (
+  <>
+    <div className="w-28">
+      <Label>Début</Label>
+      <Input type="time" value={formData.event_time} ... />
+    </div>
+    <div className="w-28">
+      <Label>Fin</Label>
+      <Input type="time" value={formData.end_time} ... />
+    </div>
+  </>
+)}
+```
+
+3. **Pré-remplir lors de l'édition** : extraire l'heure de `end_date` si présente
+
+### AddCalendarEventDialog.tsx
+
+1. **Ajouter les states** :
+```typescript
+const [endTime, setEndTime] = useState('10:00');
+```
+
+2. **Modifier le reset du formulaire** pour inclure `endTime`
+
+3. **Ajouter l'input dans le JSX** :
+```typescript
+{!allDay && (
+  <div className="grid grid-cols-2 gap-2">
+    <div>
+      <Label>Début</Label>
+      <Input type="time" value={eventTime} onChange={...} />
+    </div>
+    <div>
+      <Label>Fin</Label>
+      <Input type="time" value={endTime} onChange={...} />
+    </div>
+  </div>
+)}
+```
+
+4. **Calculer `end_date`** dans handleSubmit :
+```typescript
+let fullEndDate = null;
+if (!allDay && endTime) {
+  fullEndDate = `${eventDate}T${endTime}:00`;
+}
+
+const { error } = await supabase.from('calendar_events').insert({
+  ...
+  end_date: fullEndDate,
 });
 ```
 
-#### 3. Corriger handleImport pour éviter les 0
+---
 
+## Validation
+
+- L'heure de fin doit être >= heure de début
+- Si l'heure de fin est avant l'heure de début, afficher une erreur :
 ```typescript
-client: {
-  // Utiliser null au lieu de 0 pour les champs numériques
-  revenus_mensuels: client.revenuMensuel ?? null,
-  budget_max: client.budgetMax ?? null,
-  charges_mensuelles: client.montantCharges ?? null,
-  // Les dates doivent être validées
-  depuis_le: client.depuisLe || null,
-  date_naissance: client.dateNaissance || null,
-  date_engagement: client.dateEngagement || null,
+if (endTime <= eventTime) {
+  toast.error("L'heure de fin doit être après l'heure de début");
+  return;
 }
 ```
 
-#### 4. Ajouter les mappings manquants
+---
 
-Vérifier quels en-têtes du CSV ne sont pas encore mappés en analysant les logs :
+## Affichage dans le calendrier
 
-```typescript
-const mappings: Record<string, string> = {
-  // ... existing mappings ...
-  
-  // Ajouter les variations très longues
-  'linscription_doit_etre_accompagnee_dun_extrait_de_loffice_des_poursuites': 'ignore',
-  'lien_de_paiement': 'ignore',
-  'liens_de_paiement': 'ignore',
-  'lien_de_paiement_de_lacompte_pour_un_logement_a_louer': 'ignore',
-  'lien_de_paiement_de_lacompte_pour_un_logement_a_acheter': 'ignore',
-};
-```
+Les événements avec un créneau s'afficheront comme :
+- **Avant** : `12:00 - Réunion client`  
+- **Après** : `12:00 - 14:00 - Réunion client`
 
 ---
 
-## Résumé des modifications
+## Résumé
 
-| Modification | Impact |
-|--------------|--------|
-| Fonction `parseDate()` | Extrait les dates françaises ("1 novembre 2019") en format ISO |
-| Texte invalide → null | Les dates non-parsables deviennent null au lieu de crasher |
-| Utiliser `??` au lieu de `||` | Les valeurs 0 légitimes seront conservées |
-| Ignorer les colonnes inutiles | "Lien de paiement", "L'inscription doit être accompagnée..." → ignorées |
+| Fichier | Modification |
+|---------|-------------|
+| `src/components/calendar/EventForm.tsx` | Ajouter input heure de fin + logique |
+| `src/components/proprietaire/AddCalendarEventDialog.tsx` | Ajouter input heure de fin + envoi `end_date` |
 
 ---
 
-## Fichiers à modifier
+## Résultat attendu
 
-1. `src/components/CSVImportDialog.tsx`
-   - Ajouter fonction `parseDate()`
-   - Modifier le mapping pour utiliser parseDate sur les champs date
-   - Utiliser `??` au lieu de `||` pour les numériques
-   - Ajouter les mappings pour ignorer les colonnes non pertinentes
+Après modification, vous pourrez créer des événements avec un créneau horaire complet :
+- Début : 12:00
+- Fin : 14:00
 
----
-
-## Test attendu
-
-Après modification, l'import devrait :
-1. Convertir "1 novembre 2019 si je ne me trompe pas" → `2019-11-01` (ou null si échec)
-2. Ne plus afficher 0 pour les champs non remplis mais null
-3. Importer correctement tous les champs du CSV Wix
+L'événement sera affiché avec la plage horaire complète dans le calendrier.
