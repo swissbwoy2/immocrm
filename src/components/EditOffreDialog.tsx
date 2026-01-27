@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,36 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Save, MapPin, DollarSign, Home, Layers, Building2, Link, MessageSquare, User, Phone } from 'lucide-react';
+import { Save, MapPin, DollarSign, Home, Layers, Building2, Link, MessageSquare, User, Phone, Calendar } from 'lucide-react';
+
+interface VisiteData {
+  id: string;
+  date_visite: string;
+  date_visite_fin: string;
+  statut: string;
+}
+
+// Convert ISO date to datetime-local format
+const formatDateTimeLocal = (isoDate: string): string => {
+  const date = new Date(isoDate);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+// Extract time from ISO date (HH:mm format)
+const extractTime = (isoDate: string): string => {
+  const date = new Date(isoDate);
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
 
 interface EditOffreDialogProps {
   open: boolean;
@@ -23,6 +50,7 @@ interface EditOffreDialogProps {
 
 export function EditOffreDialog({ open, onOpenChange, offre, onSuccess }: EditOffreDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [visites, setVisites] = useState<VisiteData[]>([]);
   const [formData, setFormData] = useState({
     adresse: '',
     prix: '',
@@ -40,6 +68,25 @@ export function EditOffreDialog({ open, onOpenChange, offre, onSuccess }: EditOf
     locataire_tel: '',
     disponibilite: '',
   });
+
+  const loadVisites = useCallback(async () => {
+    if (!offre?.id) return;
+    
+    const { data } = await supabase
+      .from('visites')
+      .select('id, date_visite, date_visite_fin, statut')
+      .eq('offre_id', offre.id)
+      .order('date_visite', { ascending: true });
+      
+    if (data) {
+      setVisites(data.map(v => ({
+        id: v.id,
+        date_visite: v.date_visite ? formatDateTimeLocal(v.date_visite) : '',
+        date_visite_fin: v.date_visite_fin ? extractTime(v.date_visite_fin) : '',
+        statut: v.statut || 'planifiee'
+      })));
+    }
+  }, [offre?.id]);
 
   useEffect(() => {
     if (offre) {
@@ -60,8 +107,21 @@ export function EditOffreDialog({ open, onOpenChange, offre, onSuccess }: EditOf
         locataire_tel: offre.locataire_tel || '',
         disponibilite: offre.disponibilite || '',
       });
+      loadVisites();
     }
-  }, [offre]);
+  }, [offre, loadVisites]);
+
+  const handleVisiteDateChange = (index: number, value: string) => {
+    const updated = [...visites];
+    updated[index].date_visite = value;
+    setVisites(updated);
+  };
+
+  const handleVisiteEndTimeChange = (index: number, value: string) => {
+    const updated = [...visites];
+    updated[index].date_visite_fin = value;
+    setVisites(updated);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,7 +157,26 @@ export function EditOffreDialog({ open, onOpenChange, offre, onSuccess }: EditOf
 
       if (error) throw error;
 
-      toast.success('Offre modifiée avec succès');
+      // Update visites
+      for (const visite of visites) {
+        if (!visite.date_visite) continue;
+        
+        let endDate = null;
+        if (visite.date_visite_fin && visite.date_visite) {
+          const dateOnly = visite.date_visite.split('T')[0];
+          endDate = new Date(`${dateOnly}T${visite.date_visite_fin}`).toISOString();
+        }
+        
+        await supabase
+          .from('visites')
+          .update({
+            date_visite: new Date(visite.date_visite).toISOString(),
+            date_visite_fin: endDate
+          })
+          .eq('id', visite.id);
+      }
+
+      toast.success('Offre et visites modifiées avec succès');
       onSuccess({ ...offre, ...data });
       onOpenChange(false);
     } catch (error) {
@@ -334,6 +413,48 @@ export function EditOffreDialog({ open, onOpenChange, offre, onSuccess }: EditOf
               />
             </div>
           </div>
+
+          {/* Section Visites */}
+          {visites.length > 0 && (
+            <div className="space-y-4 pt-4 border-t">
+              <h4 className="font-medium text-sm text-muted-foreground flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Créneaux de visite
+              </h4>
+              
+              {visites.map((visite, index) => (
+                <div key={visite.id} className="space-y-3 p-3 bg-muted/30 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">
+                      {visite.statut === 'planifiee' ? 'Planifiée' : 
+                       visite.statut === 'confirmee' ? 'Confirmée' :
+                       visite.statut === 'effectuee' ? 'Effectuée' :
+                       visite.statut === 'annulee' ? 'Annulée' : visite.statut}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label className="text-xs">Début</Label>
+                      <Input
+                        type="datetime-local"
+                        value={visite.date_visite}
+                        onChange={(e) => handleVisiteDateChange(index, e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs">Heure de fin</Label>
+                      <Input
+                        type="time"
+                        value={visite.date_visite_fin || ''}
+                        onChange={(e) => handleVisiteEndTimeChange(index, e.target.value)}
+                        placeholder="14:00"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
