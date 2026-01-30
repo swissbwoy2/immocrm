@@ -166,6 +166,7 @@ export default function DemandesActivation() {
 
   const handleMarkAsPaid = async (demande: DemandeMandat) => {
     try {
+      // 1. Enregistrer le paiement
       const { error } = await supabase
         .from('demandes_mandat')
         .update({ 
@@ -175,11 +176,18 @@ export default function DemandesActivation() {
         .eq('id', demande.id);
 
       if (error) throw error;
-      toast.success('Paiement enregistré');
-      await loadData();
+      
+      toast.success('Paiement enregistré, activation en cours...');
+      
+      // 2. Déclencher automatiquement l'activation
+      await handleActivateMandat({
+        ...demande,
+        statut: 'paye',
+        date_paiement: new Date().toISOString()
+      });
     } catch (error) {
       console.error('Error:', error);
-      toast.error('Erreur');
+      toast.error('Erreur lors du paiement');
     }
   };
 
