@@ -153,6 +153,87 @@ serve(async (req) => {
 
       console.log('Demande updated to paye status');
 
+      // Automatically trigger client invitation/activation
+      console.log('Triggering automatic client activation...');
+      try {
+        const inviteResponse = await fetch(
+          `${Deno.env.get('SUPABASE_URL')}/functions/v1/invite-client`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+            },
+            body: JSON.stringify({
+              email: demande.email,
+              prenom: demande.prenom,
+              nom: demande.nom,
+              telephone: demande.telephone,
+              demandeMandat: {
+                id: demande.id,
+                adresse: demande.adresse,
+                date_naissance: demande.date_naissance,
+                nationalite: demande.nationalite,
+                type_permis: demande.type_permis,
+                etat_civil: demande.etat_civil,
+                gerance_actuelle: demande.gerance_actuelle,
+                contact_gerance: demande.contact_gerance,
+                loyer_actuel: demande.loyer_actuel,
+                depuis_le: demande.depuis_le,
+                pieces_actuel: demande.pieces_actuel,
+                charges_extraordinaires: demande.charges_extraordinaires,
+                montant_charges_extra: demande.montant_charges_extra,
+                poursuites: demande.poursuites,
+                curatelle: demande.curatelle,
+                motif_changement: demande.motif_changement,
+                profession: demande.profession,
+                employeur: demande.employeur,
+                revenus_mensuels: demande.revenus_mensuels,
+                date_engagement: demande.date_engagement,
+                utilisation_logement: demande.utilisation_logement,
+                animaux: demande.animaux,
+                instrument_musique: demande.instrument_musique,
+                vehicules: demande.vehicules,
+                numero_plaques: demande.numero_plaques,
+                decouverte_agence: demande.decouverte_agence,
+                type_recherche: demande.type_recherche,
+                nombre_occupants: demande.nombre_occupants,
+                type_bien: demande.type_bien,
+                pieces_recherche: demande.pieces_recherche,
+                region_recherche: demande.region_recherche,
+                budget_max: demande.budget_max,
+                apport_personnel: demande.apport_personnel,
+                souhaits_particuliers: demande.souhaits_particuliers,
+                candidats: demande.candidats || [],
+                documents_uploades: demande.documents_uploades || [],
+                signature_data: demande.signature_data,
+                cgv_acceptees_at: demande.cgv_acceptees_at
+              }
+            })
+          }
+        );
+
+        const inviteResult = await inviteResponse.json();
+        
+        if (inviteResult.success) {
+          console.log('Client automatically activated:', inviteResult.userId);
+          
+          // Update demande status to active
+          await supabaseAdmin
+            .from('demandes_mandat')
+            .update({
+              statut: 'active',
+              processed_at: new Date().toISOString()
+            })
+            .eq('id', demande.id);
+        } else {
+          console.error('Failed to activate client:', inviteResult.error);
+        }
+      } catch (inviteError) {
+        console.error('Error calling invite-client:', inviteError);
+        // Don't throw - payment is still recorded, admin can activate manually
+      }
+
       // Create notification for all admins
       const { data: admins } = await supabaseAdmin
         .from('user_roles')
@@ -164,8 +245,8 @@ serve(async (req) => {
           await supabaseAdmin.from('notifications').insert({
             user_id: admin.user_id,
             type: 'paiement_recu',
-            title: '💰 Paiement reçu',
-            message: `${demande.prenom} ${demande.nom} a payé son acompte de ${demande.montant_acompte} CHF`,
+            title: '💰 Paiement reçu + compte activé',
+            message: `${demande.prenom} ${demande.nom} a payé son acompte de ${demande.montant_acompte} CHF - compte créé automatiquement`,
             link: '/admin/demandes-activation',
             metadata: { 
               demande_id: demande.id,
@@ -180,7 +261,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: 'Payment processed',
+          message: 'Payment processed and client activated',
           demande_id: demande.id 
         }),
         {
