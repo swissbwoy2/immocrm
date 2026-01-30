@@ -1,91 +1,109 @@
 
-Objectif
-- Identifier pourquoi l’autocomplétion Google passe systématiquement en “Mode manuel” en production (tous appareils) et corriger le problème de façon robuste, avec un mécanisme de diagnostic clair si la cause est externe (clé/quotas/adblock/firewall).
+# Correction du problème d'activation pour Mondi + Amélioration du flux
 
-Constat (à partir du code et de vos réponses)
-- Vous voyez “Toujours en Mode manuel” sur la version publiée, partout (Envoyer une offre + formulaires publics), sur tous appareils.
-- Dans le code actuel, “Mode manuel” apparaît uniquement si :
-  - `isFallback === true` OU
-  - `(!isLoaded && !mapsLoading)` (plus de chargement mais pas de Google chargé).
-=> Donc le chargeur Google (`useGoogleMapsLoader`) bascule en fallback (timeout/erreur) ou n’arrive jamais à considérer Google “chargé” en production.
-- Le backend “get-google-maps-token” répond bien (clé renvoyée), donc la panne est très probablement au niveau du chargement/exécution du script Google Maps côté navigateur (bloqué, erreur de clé, libraries manquantes, script “stuck”, etc.).
-- Actuellement, le loader considère “chargé” sur `script.onload` sans vérifier que `google.maps.places` est réellement disponible, et n’expose pas de cause d’échec (il force `error: null`), ce qui rend le diagnostic difficile.
+## Diagnostic
 
-Hypothèses principales (priorisées)
-1) Le script Google Maps est bloqué côté client (adblock/firewall/DNS filtering) ou échoue à s’exécuter correctement en production.
-2) La clé Google est restreinte (référents/quotas/APIs) et l’API ne s’initialise pas correctement (cas typique: callback jamais appelé / `gm_authFailure`).
-3) Le script est présent dans le DOM mais “cassé” (ancienne tentative), et notre logique “existingScript” attend puis continue sans nettoyer, ce qui peut enfermer en état fallback.
-4) Les agents ne sont pas tous sur la dernière version (PWA/cache), donc une partie voit encore l’ancienne logique (timeout plus court, etc.). Même si ça n’explique pas tout, c’est un amplificateur.
+Le client "Mondi Karabrahimi" (`donir91@icloud.com`) a :
+- ✅ Une demande de mandat enregistrée
+- ✅ Le statut `paye` et `date_paiement` défini
+- ❌ `processed_at` et `processed_by` sont NULL (pas traité)
+- ❌ Aucun profil, user_role ou client créé
+- ❌ Aucun email d'invitation envoyé
 
-Solution proposée (rapide + robuste)
-A. Forcer la mise à jour côté production (prérequis)
-1) Utiliser le bouton Admin “Forcer la mise à jour pour tous” (page Paramètres admin) après publication, pour que tous les agents chargent bien la dernière version (sinon certains resteront sur une ancienne logique et on ne pourra pas valider le fix).
+**Cause racine** : Le paiement a été enregistré (soit manuellement, soit via le flux incomplet) sans que l'invitation ne soit déclenchée.
 
-B. Rendre le chargement Google “déterministe” (callback-based) + auto-réparation
-2) Remplacer la logique actuelle de chargement par une logique basée sur `callback=` (et non uniquement `script.onload`), afin de considérer “chargé” uniquement quand l’API est réellement prête.
-3) Ajouter une vérification stricte: on ne passe `isLoaded=true` que si `window.google?.maps?.places` est présent (car l’autocomplete dépend de Places).
-4) Ajouter une stratégie de retry automatique 1 fois :
-   - si échec/timeout/erreur script: supprimer le script Google existant (celui qu’on a injecté), nettoyer les callbacks globaux, reset `globalLoadingPromise`, puis retenter une fois.
-   - si le 2e essai échoue: passer en fallback, mais avec une raison explicite.
+## Solution immédiate (Action admin)
 
-C. Exposer la cause (diagnostic visible) au lieu de “Mode manuel” opaque
-5) Étendre l’état du hook `useGoogleMapsLoader` avec des infos de diagnostic :
-   - `stage`: `'idle' | 'token' | 'script' | 'ready' | 'fallback'`
-   - `error`: string non-null en cas d’échec (ex: `timeout_script`, `script_error`, `auth_failure`, `places_missing`, `token_error`)
-6) Détecter les cas “clé/referrer/billing” via `window.gm_authFailure` (Google déclenche ce callback global quand la clé est refusée). Si déclenché -> `error = 'auth_failure'` + message utilisateur actionnable.
-7) Dans `GoogleAddressAutocomplete` et `GooglePlacesAutocomplete`, afficher en fallback un message plus utile :
-   - “Google n’a pas pu se charger (raison: …).”
-   - Bouton “Réessayer” qui relance proprement le loader (sans `window.location.reload()`), en nettoyant script + callbacks.
-   - Option “Copier diagnostic” (texte court) pour que vous puissiez me le coller si ça persiste.
+1. Aller sur `/admin/demandes-activation`
+2. Trouver "Mondi Karabrahimi" dans la liste
+3. Cliquer sur le bouton **"Activer"** (pas "Marquer comme payé")
+4. Cela va :
+   - Créer le profil utilisateur
+   - Créer le rôle client
+   - Créer la fiche client avec toutes les données du mandat
+   - Envoyer l'email d'invitation pour créer le mot de passe
 
-D. Éviter un “faux échec” si l’utilisateur tape avant que Google soit prêt
-8) Dans `GoogleAddressAutocomplete`, quand `isLoaded` passe à true et que l’input contient déjà ≥ 3 caractères, relancer automatiquement `fetchPredictions(inputValue)` (sinon il faut retaper, et ça donne l’impression que ça ne marche pas).
+## Amélioration du système (Modifications code)
 
-Fichiers impactés (code)
-1) `src/hooks/useGoogleMapsLoader.ts`
-- Refonte du chargeur en “callback-based loader” + retry
-- Ajout du diagnostic (`stage`, `error`)
-- Ajout d’un helper exporté du module (ex: `resetGoogleMapsLoader()` ou `retryGoogleMapsLoader()`) pour que les composants puissent relancer proprement sans recharger la page.
-- Nettoyage robuste :
-  - `script.id = 'google-maps-js'` (ou data-attr) pour le retrouver/supprimer
-  - `window.gm_authFailure` handler
-  - callback unique (ex: `__gmapsInit_<timestamp>`) et suppression après usage
-  - timeout dédié au callback (ex: 20-25s) + fallback seulement après retry
+Pour éviter ce problème à l'avenir, deux modifications sont proposées :
 
-2) `src/components/GoogleAddressAutocomplete.tsx`
-- Utiliser `error` + `stage` pour afficher un message clair
-- Bouton “Réessayer” qui appelle le reset/retry du loader (au lieu de reload)
-- Auto-relance des predictions quand Google devient prêt (si texte déjà tapé)
-- (Optionnel) bouton “Copier diagnostic”
+### 1. Fusionner "Marquer comme payé" avec l'activation
 
-3) `src/components/GooglePlacesAutocomplete.tsx`
-- Même logique UX fallback (raison + retry) car il est utilisé dans plusieurs écrans et peut être concerné aussi.
+Modifier `handleMarkAsPaid` dans `DemandesActivation.tsx` pour qu'il déclenche automatiquement `handleActivateMandat` après avoir enregistré le paiement.
 
-4) (Procédure) `src/pages/admin/Parametres.tsx` (pas forcément à modifier)
-- Utilisation du bouton existant “Forcer la mise à jour pour tous” après publication pour assurer que le fix arrive bien chez les agents.
+Fichier modifié : `src/pages/admin/DemandesActivation.tsx`
 
-Tests / Validation
-1) En environnement de test (preview)
-- Ouvrir une page utilisant `GoogleAddressAutocomplete` (ex: EnvoyerOffre, formulaire vendeur).
-- Vérifier :
-  - Les suggestions apparaissent.
-  - Sélection d’une adresse remplit NPA/ville/canton correctement.
-  - Pas de passage en “Mode manuel” si Google charge correctement.
-  - Si on simule un blocage (désactiver réseau), on obtient fallback + message d’erreur explicite + “Réessayer”.
+Avant :
+```typescript
+const handleMarkAsPaid = async (demande: DemandeMandat) => {
+  // Seulement mise à jour du statut
+  await supabase.from('demandes_mandat').update({ 
+    statut: 'paye',
+    date_paiement: new Date().toISOString()
+  }).eq('id', demande.id);
+};
+```
 
-2) En production
-- Publier.
-- Aller dans Admin → Paramètres → cliquer “Forcer la mise à jour pour tous”.
-- Demander à 1–2 agents de tester (desktop + mobile). En cas d’échec, récupérer le “diagnostic” affiché et on saura immédiatement si c’est :
-  - auth_failure (clé/referrer/billing/API),
-  - script_error (bloqué),
-  - timeout (réseau lent),
-  - places_missing (libraries/API).
+Après :
+```typescript
+const handleMarkAsPaid = async (demande: DemandeMandat) => {
+  // Mise à jour du statut
+  await supabase.from('demandes_mandat').update({ 
+    statut: 'paye',
+    date_paiement: new Date().toISOString()
+  }).eq('id', demande.id);
+  
+  // Déclencher automatiquement l'activation
+  await handleActivateMandat(demande);
+};
+```
 
-Risques / Cas où le code ne peut pas “magiquement” corriger
-- Si le script Google est bloqué par un filtre réseau/adblock d’entreprise sur tous les appareils, aucune modification front ne pourra charger Google. Par contre, avec le nouveau diagnostic, on pourra le prouver rapidement et décider (whitelist, désactiver adblock, ou fallback amélioré).
-- Si la clé Google est restreinte (référents) et n’autorise pas le domaine publié, le diagnostic remontera `auth_failure` et il faudra ajuster les restrictions côté Google.
+### 2. Ajouter l'envoi d'invitation dans le webhook AbaNinja
 
-Livrable attendu
-- Autocomplete Google fonctionne à nouveau en production pour EnvoyerOffre + formulaires.
-- Si Google ne peut pas se charger, l’app ne “cache” plus le problème : elle affiche une raison + un bouton de retry, ce qui permet un dépannage immédiat au lieu d’un “Mode manuel” inexpliqué.
+Modifier `abaninja-webhook/index.ts` pour qu'il appelle `invite-client` après avoir enregistré le paiement.
+
+Fichier modifié : `supabase/functions/abaninja-webhook/index.ts`
+
+Ajouter après la mise à jour du statut `paye` :
+```typescript
+// Après avoir mis à jour le statut, créer le compte client
+const inviteResponse = await fetch(
+  `${Deno.env.get('SUPABASE_URL')}/functions/v1/invite-client`,
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
+    },
+    body: JSON.stringify({
+      email: demande.email,
+      prenom: demande.prenom,
+      nom: demande.nom,
+      telephone: demande.telephone,
+      demandeMandat: {
+        // ... toutes les données du mandat
+      }
+    })
+  }
+);
+```
+
+### 3. Simplifier l'interface admin
+
+Supprimer le bouton "Marquer comme payé" séparé pour éviter toute confusion. Garder uniquement :
+- **"Activer"** : Enregistre le paiement ET envoie l'invitation
+- **"Renvoyer invitation"** : Pour les cas où l'email n'est pas arrivé
+
+## Fichiers à modifier
+
+| Fichier | Modification |
+|---------|-------------|
+| `src/pages/admin/DemandesActivation.tsx` | Fusionner `handleMarkAsPaid` avec `handleActivateMandat` |
+| `supabase/functions/abaninja-webhook/index.ts` | Ajouter l'appel à `invite-client` après confirmation de paiement |
+| (Optionnel) `src/pages/admin/FacturesAbaNinja.tsx` | Même logique si "Marquer payé" existe là aussi |
+
+## Résultat attendu
+
+- Plus aucun client ne peut rester "payé mais non activé"
+- Le flux est simplifié : paiement = activation automatique
+- Les admins n'ont plus à se soucier de l'ordre des boutons à cliquer
