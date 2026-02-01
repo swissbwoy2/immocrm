@@ -1,109 +1,143 @@
 
-# Correction du problème d'activation pour Mondi + Amélioration du flux
+# Adaptation du formulaire de mandat pour les locaux commerciaux
 
-## Diagnostic
+## Concept
 
-Le client "Mondi Karabrahimi" (`donir91@icloud.com`) a :
-- ✅ Une demande de mandat enregistrée
-- ✅ Le statut `paye` et `date_paiement` défini
-- ❌ `processed_at` et `processed_by` sont NULL (pas traité)
-- ❌ Aucun profil, user_role ou client créé
-- ❌ Aucun email d'invitation envoyé
+Quand un client sélectionne **"Local commercial"** comme type de bien, le formulaire doit s'adapter avec :
+1. Une question : **"Louez-vous en nom propre ou au nom d'une société ?"**
+2. Des champs différents selon la réponse
 
-**Cause racine** : Le paiement a été enregistré (soit manuellement, soit via le flux incomplet) sans que l'invitation ne soit déclenchée.
+## Logique conditionnelle
 
-## Solution immédiate (Action admin)
+### Si "En nom propre" (personne physique)
+→ On garde les champs actuels :
+- Profession
+- Employeur
+- **Revenu mensuel net** (personnel)
+- Date d'engagement
 
-1. Aller sur `/admin/demandes-activation`
-2. Trouver "Mondi Karabrahimi" dans la liste
-3. Cliquer sur le bouton **"Activer"** (pas "Marquer comme payé")
-4. Cela va :
-   - Créer le profil utilisateur
-   - Créer le rôle client
-   - Créer la fiche client avec toutes les données du mandat
-   - Envoyer l'email d'invitation pour créer le mot de passe
+### Si "Au nom d'une société"
+→ On remplace par des champs entreprise :
+- **Raison sociale** de l'entreprise
+- **Numéro IDE** (CHE-xxx.xxx.xxx)
+- **Chiffre d'affaires annuel** ou budget locatif mensuel
+- **Activité / Type d'exploitation** (Bureau, Commerce, Restaurant, Atelier, etc.)
+- **Nombre d'employés** (optionnel)
 
-## Amélioration du système (Modifications code)
+## Champs spécifiques au local commercial (dans les deux cas)
 
-Pour éviter ce problème à l'avenir, deux modifications sont proposées :
+Remplacer les questions résidentielles par :
+- **Surface souhaitée (m²)** - au lieu de "nombre de pièces"
+- **Type d'affectation** (Bureau, Commerce, Artisanat, Restauration, Stockage)
+- **Étage souhaité** (Rez-de-chaussée, Étages, Sous-sol, Peu importe)
+- **Besoins spécifiques** :
+  - Vitrine / visibilité rue
+  - Accès livraison / quai
+  - Parking / places de parc
+  - Terrasse (pour restauration)
+  - Extraction / ventilation
 
-### 1. Fusionner "Marquer comme payé" avec l'activation
+## Champs à masquer pour "Local commercial"
 
-Modifier `handleMarkAsPaid` dans `DemandesActivation.tsx` pour qu'il déclenche automatiquement `handleActivateMandat` après avoir enregistré le paiement.
+Ces questions n'ont pas de sens pour un commerce :
+- ❌ "Combien de personnes occuperaient le bien ?"
+- ❌ "Avez-vous des animaux ?"
+- ❌ "Pratiquez-vous un instrument de musique ?"
+- ❌ Questions sur les poursuites/curatelle (sauf si en nom propre)
 
-Fichier modifié : `src/pages/admin/DemandesActivation.tsx`
+## Modifications techniques
 
-Avant :
+### 1. Mise à jour des types (`types.ts`)
+
+Ajouter de nouveaux champs au `MandatFormData` :
 ```typescript
-const handleMarkAsPaid = async (demande: DemandeMandat) => {
-  // Seulement mise à jour du statut
-  await supabase.from('demandes_mandat').update({ 
-    statut: 'paye',
-    date_paiement: new Date().toISOString()
-  }).eq('id', demande.id);
-};
+// Commercial
+location_type: 'personnel' | 'societe' | null; // null = pas commercial
+raison_sociale: string;
+numero_ide: string;
+chiffre_affaires: number;
+type_exploitation: string;
+nombre_employes: number;
+surface_souhaitee: number;
+etage_souhaite: string;
+affectation_commerciale: string;
+besoins_commerciaux: string[]; // vitrine, livraison, parking, etc.
 ```
 
-Après :
+Ajouter les constantes :
 ```typescript
-const handleMarkAsPaid = async (demande: DemandeMandat) => {
-  // Mise à jour du statut
-  await supabase.from('demandes_mandat').update({ 
-    statut: 'paye',
-    date_paiement: new Date().toISOString()
-  }).eq('id', demande.id);
-  
-  // Déclencher automatiquement l'activation
-  await handleActivateMandat(demande);
-};
+export const TYPES_EXPLOITATION = [
+  'Bureau', 'Commerce de détail', 'Restaurant / Bar', 
+  'Salon (coiffure, beauté, etc.)', 'Atelier artisanal', 
+  'Stockage / Entrepôt', 'Cabinet médical', 'Autre'
+];
+
+export const AFFECTATIONS_COMMERCIALES = [
+  'Bureaux', 'Commerce', 'Artisanat', 'Restauration', 
+  'Industriel léger', 'Stockage'
+];
+
+export const ETAGES_COMMERCIAUX = [
+  'Rez-de-chaussée uniquement', 'Étages acceptés', 
+  'Sous-sol accepté', 'Peu importe'
+];
+
+export const BESOINS_COMMERCIAUX = [
+  { value: 'vitrine', label: 'Vitrine / Visibilité rue' },
+  { value: 'livraison', label: 'Accès livraison / Quai de déchargement' },
+  { value: 'parking', label: 'Parking / Places de parc' },
+  { value: 'terrasse', label: 'Terrasse (restauration)' },
+  { value: 'extraction', label: 'Extraction / Ventilation' },
+  { value: 'entree_privee', label: 'Entrée indépendante' },
+];
 ```
 
-### 2. Ajouter l'envoi d'invitation dans le webhook AbaNinja
+### 2. Modification de MandatFormStep3.tsx
 
-Modifier `abaninja-webhook/index.ts` pour qu'il appelle `invite-client` après avoir enregistré le paiement.
+Ajouter une condition pour détecter `type_bien === 'Local commercial'` :
 
-Fichier modifié : `supabase/functions/abaninja-webhook/index.ts`
-
-Ajouter après la mise à jour du statut `paye` :
 ```typescript
-// Après avoir mis à jour le statut, créer le compte client
-const inviteResponse = await fetch(
-  `${Deno.env.get('SUPABASE_URL')}/functions/v1/invite-client`,
-  {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`
-    },
-    body: JSON.stringify({
-      email: demande.email,
-      prenom: demande.prenom,
-      nom: demande.nom,
-      telephone: demande.telephone,
-      demandeMandat: {
-        // ... toutes les données du mandat
-      }
-    })
-  }
-);
+const isCommercial = data.type_bien === 'Local commercial';
+const isPersonnel = data.location_type === 'personnel';
+const isSociete = data.location_type === 'societe';
 ```
 
-### 3. Simplifier l'interface admin
+**Si commercial**, afficher d'abord :
+- RadioGroup : "Location en nom propre" vs "Au nom d'une société"
 
-Supprimer le bouton "Marquer comme payé" séparé pour éviter toute confusion. Garder uniquement :
-- **"Activer"** : Enregistre le paiement ET envoie l'invitation
-- **"Renvoyer invitation"** : Pour les cas où l'email n'est pas arrivé
+**Si en nom propre** → garder profession, employeur, revenu mensuel
+**Si société** → afficher raison sociale, IDE, CA, type exploitation
+
+### 3. Modification de MandatFormStep4.tsx
+
+Remplacer conditionnellement :
+- "Nombre de pièces" → "Surface souhaitée (m²)"
+- "Nombre d'occupants" → masquer ou remplacer par "Nombre d'employés"
+- Ajouter les sélecteurs pour affectation, étage, besoins
+
+### 4. Calcul de viabilité adapté
+
+Pour les locaux commerciaux au nom d'une société :
+- Ne pas utiliser la règle du tiers des revenus personnels
+- Afficher un message neutre : "Notre équipe évaluera votre dossier"
+
+Pour les locaux commerciaux en nom propre :
+- Garder la logique actuelle du 1/3 des revenus
 
 ## Fichiers à modifier
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/pages/admin/DemandesActivation.tsx` | Fusionner `handleMarkAsPaid` avec `handleActivateMandat` |
-| `supabase/functions/abaninja-webhook/index.ts` | Ajouter l'appel à `invite-client` après confirmation de paiement |
-| (Optionnel) `src/pages/admin/FacturesAbaNinja.tsx` | Même logique si "Marquer payé" existe là aussi |
+| `src/components/mandat/types.ts` | Ajouter champs commerciaux + constantes |
+| `src/components/mandat/MandatFormStep3.tsx` | Logique conditionnelle personne/société |
+| `src/components/mandat/MandatFormStep4.tsx` | Champs spécifiques commerciaux (surface, étage, besoins) |
+| `src/components/mandat/MandatFormStep5.tsx` | Adapter les questions (masquer animaux, musique si commercial) |
 
 ## Résultat attendu
 
-- Plus aucun client ne peut rester "payé mais non activé"
-- Le flux est simplifié : paiement = activation automatique
-- Les admins n'ont plus à se soucier de l'ordre des boutons à cliquer
+Un formulaire intelligent qui :
+- Détecte automatiquement quand le client cherche un local commercial
+- Pose les bonnes questions selon qu'il loue en nom propre ou via société
+- Collecte les informations pertinentes (surface, affectation, besoins)
+- Garde le revenu mensuel pour les locations personnelles
+- Affiche des calculs de viabilité adaptés au contexte
