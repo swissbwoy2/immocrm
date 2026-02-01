@@ -58,6 +58,22 @@ export interface MandatFormData {
   
   // Code promo
   code_promo: string;
+  
+  // Commercial - Location type
+  location_type: 'personnel' | 'societe' | null;
+  
+  // Commercial - Company fields
+  raison_sociale: string;
+  numero_ide: string;
+  chiffre_affaires: number;
+  type_exploitation: string;
+  nombre_employes: number;
+  
+  // Commercial - Search criteria
+  surface_souhaitee: number;
+  etage_souhaite: string;
+  affectation_commerciale: string;
+  besoins_commerciaux: string[];
 }
 
 export interface CandidatData {
@@ -119,6 +135,32 @@ export const LIENS_CANDIDAT = [
   'Conjoint(e)', 'Enfant', 'Parent', 'Colocataire', 'Garant', 'Autre'
 ];
 
+// Commercial property constants
+export const TYPES_EXPLOITATION = [
+  'Bureau', 'Commerce de détail', 'Restaurant / Bar', 
+  'Salon (coiffure, beauté, etc.)', 'Atelier artisanal', 
+  'Stockage / Entrepôt', 'Cabinet médical', 'Autre'
+];
+
+export const AFFECTATIONS_COMMERCIALES = [
+  'Bureaux', 'Commerce', 'Artisanat', 'Restauration', 
+  'Industriel léger', 'Stockage'
+];
+
+export const ETAGES_COMMERCIAUX = [
+  'Rez-de-chaussée uniquement', 'Étages acceptés', 
+  'Sous-sol accepté', 'Peu importe'
+];
+
+export const BESOINS_COMMERCIAUX = [
+  { value: 'vitrine', label: 'Vitrine / Visibilité rue' },
+  { value: 'livraison', label: 'Accès livraison / Quai de déchargement' },
+  { value: 'parking', label: 'Parking / Places de parc' },
+  { value: 'terrasse', label: 'Terrasse (restauration)' },
+  { value: 'extraction', label: 'Extraction / Ventilation' },
+  { value: 'entree_privee', label: 'Entrée indépendante' },
+];
+
 export const initialFormData: MandatFormData = {
   email: '',
   prenom: '',
@@ -162,4 +204,16 @@ export const initialFormData: MandatFormData = {
   signature_data: '',
   cgv_acceptees: false,
   code_promo: '',
+  
+  // Commercial fields
+  location_type: null,
+  raison_sociale: '',
+  numero_ide: '',
+  chiffre_affaires: 0,
+  type_exploitation: '',
+  nombre_employes: 0,
+  surface_souhaitee: 0,
+  etage_souhaite: '',
+  affectation_commerciale: '',
+  besoins_commerciaux: [],
 };
