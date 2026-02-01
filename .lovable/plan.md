@@ -1,137 +1,71 @@
 
-# Adaptation du formulaire de mandat pour les locaux commerciaux
+# Adaptation du formulaire de mandat pour les locaux commerciaux ✅ IMPLÉMENTÉ
 
-## Concept
+## Statut: Terminé
 
-Quand un client sélectionne **"Local commercial"** comme type de bien, le formulaire doit s'adapter avec :
-1. Une question : **"Louez-vous en nom propre ou au nom d'une société ?"**
-2. Des champs différents selon la réponse
+L'adaptation du formulaire de mandat pour les locaux commerciaux a été implémentée avec succès.
 
-## Logique conditionnelle
+## Fonctionnalités implémentées
 
-### Si "En nom propre" (personne physique)
-→ On garde les champs actuels :
-- Profession
-- Employeur
-- **Revenu mensuel net** (personnel)
-- Date d'engagement
+### 1. Détection automatique du type commercial
+- Quand `type_bien === 'Local commercial'`, le formulaire s'adapte automatiquement
 
-### Si "Au nom d'une société"
-→ On remplace par des champs entreprise :
-- **Raison sociale** de l'entreprise
-- **Numéro IDE** (CHE-xxx.xxx.xxx)
-- **Chiffre d'affaires annuel** ou budget locatif mensuel
-- **Activité / Type d'exploitation** (Bureau, Commerce, Restaurant, Atelier, etc.)
-- **Nombre d'employés** (optionnel)
+### 2. Choix nom propre / société (Step 3)
+- RadioGroup pour choisir entre "En nom propre" et "Au nom d'une société"
+- **En nom propre**: affiche profession, employeur, revenu mensuel net, date d'engagement
+- **Au nom d'une société**: affiche raison sociale, numéro IDE, chiffre d'affaires annuel, type d'exploitation, nombre d'employés
 
-## Champs spécifiques au local commercial (dans les deux cas)
+### 3. Questions financières conditionnelles (Step 3)
+- Charges extraordinaires, poursuites, curatelle: affichées uniquement si résidentiel OU commercial en nom propre
+- Masquées pour les locations commerciales au nom d'une société
 
-Remplacer les questions résidentielles par :
-- **Surface souhaitée (m²)** - au lieu de "nombre de pièces"
-- **Type d'affectation** (Bureau, Commerce, Artisanat, Restauration, Stockage)
-- **Étage souhaité** (Rez-de-chaussée, Étages, Sous-sol, Peu importe)
-- **Besoins spécifiques** :
-  - Vitrine / visibilité rue
-  - Accès livraison / quai
-  - Parking / places de parc
-  - Terrasse (pour restauration)
-  - Extraction / ventilation
+### 4. Critères de recherche adaptés (Step 4)
+- **Masqué pour commercial**: nombre de personnes, nombre de pièces
+- **Ajouté pour commercial**: 
+  - Surface souhaitée (m²)
+  - Type d'affectation (Bureaux, Commerce, Artisanat, Restauration, etc.)
+  - Étage souhaité (Rez-de-chaussée, Étages, Sous-sol, Peu importe)
+  - Besoins spécifiques (checkboxes): vitrine, livraison, parking, terrasse, extraction, entrée indépendante
 
-## Champs à masquer pour "Local commercial"
+### 5. Questions résidentielles masquées (Step 4)
+- Animaux, instrument de musique, véhicules: masqués pour les locaux commerciaux
 
-Ces questions n'ont pas de sens pour un commerce :
-- ❌ "Combien de personnes occuperaient le bien ?"
-- ❌ "Avez-vous des animaux ?"
-- ❌ "Pratiquez-vous un instrument de musique ?"
-- ❌ Questions sur les poursuites/curatelle (sauf si en nom propre)
+## Fichiers modifiés
 
-## Modifications techniques
+| Fichier | Modification |
+|---------|-------------|
+| `src/components/mandat/types.ts` | Nouveaux champs + constantes commerciales |
+| `src/components/mandat/CommercialFieldsStep3.tsx` | Nouveau composant pour choix personne/société |
+| `src/components/mandat/CommercialSearchFields.tsx` | Nouveau composant pour critères commerciaux |
+| `src/components/mandat/MandatFormStep3.tsx` | Logique conditionnelle intégrée |
+| `src/components/mandat/MandatFormStep4.tsx` | Champs conditionnels + composant commercial |
 
-### 1. Mise à jour des types (`types.ts`)
+## Nouveaux champs dans MandatFormData
 
-Ajouter de nouveaux champs au `MandatFormData` :
 ```typescript
-// Commercial
-location_type: 'personnel' | 'societe' | null; // null = pas commercial
+// Location type
+location_type: 'personnel' | 'societe' | null;
+
+// Company fields
 raison_sociale: string;
 numero_ide: string;
 chiffre_affaires: number;
 type_exploitation: string;
 nombre_employes: number;
+
+// Commercial search criteria
 surface_souhaitee: number;
 etage_souhaite: string;
 affectation_commerciale: string;
-besoins_commerciaux: string[]; // vitrine, livraison, parking, etc.
+besoins_commerciaux: string[];
 ```
 
-Ajouter les constantes :
-```typescript
-export const TYPES_EXPLOITATION = [
-  'Bureau', 'Commerce de détail', 'Restaurant / Bar', 
-  'Salon (coiffure, beauté, etc.)', 'Atelier artisanal', 
-  'Stockage / Entrepôt', 'Cabinet médical', 'Autre'
-];
+## Nouvelles constantes
 
-export const AFFECTATIONS_COMMERCIALES = [
-  'Bureaux', 'Commerce', 'Artisanat', 'Restauration', 
-  'Industriel léger', 'Stockage'
-];
-
-export const ETAGES_COMMERCIAUX = [
-  'Rez-de-chaussée uniquement', 'Étages acceptés', 
-  'Sous-sol accepté', 'Peu importe'
-];
-
-export const BESOINS_COMMERCIAUX = [
-  { value: 'vitrine', label: 'Vitrine / Visibilité rue' },
-  { value: 'livraison', label: 'Accès livraison / Quai de déchargement' },
-  { value: 'parking', label: 'Parking / Places de parc' },
-  { value: 'terrasse', label: 'Terrasse (restauration)' },
-  { value: 'extraction', label: 'Extraction / Ventilation' },
-  { value: 'entree_privee', label: 'Entrée indépendante' },
-];
-```
-
-### 2. Modification de MandatFormStep3.tsx
-
-Ajouter une condition pour détecter `type_bien === 'Local commercial'` :
-
-```typescript
-const isCommercial = data.type_bien === 'Local commercial';
-const isPersonnel = data.location_type === 'personnel';
-const isSociete = data.location_type === 'societe';
-```
-
-**Si commercial**, afficher d'abord :
-- RadioGroup : "Location en nom propre" vs "Au nom d'une société"
-
-**Si en nom propre** → garder profession, employeur, revenu mensuel
-**Si société** → afficher raison sociale, IDE, CA, type exploitation
-
-### 3. Modification de MandatFormStep4.tsx
-
-Remplacer conditionnellement :
-- "Nombre de pièces" → "Surface souhaitée (m²)"
-- "Nombre d'occupants" → masquer ou remplacer par "Nombre d'employés"
-- Ajouter les sélecteurs pour affectation, étage, besoins
-
-### 4. Calcul de viabilité adapté
-
-Pour les locaux commerciaux au nom d'une société :
-- Ne pas utiliser la règle du tiers des revenus personnels
-- Afficher un message neutre : "Notre équipe évaluera votre dossier"
-
-Pour les locaux commerciaux en nom propre :
-- Garder la logique actuelle du 1/3 des revenus
-
-## Fichiers à modifier
-
-| Fichier | Modification |
-|---------|-------------|
-| `src/components/mandat/types.ts` | Ajouter champs commerciaux + constantes |
-| `src/components/mandat/MandatFormStep3.tsx` | Logique conditionnelle personne/société |
-| `src/components/mandat/MandatFormStep4.tsx` | Champs spécifiques commerciaux (surface, étage, besoins) |
-| `src/components/mandat/MandatFormStep5.tsx` | Adapter les questions (masquer animaux, musique si commercial) |
+- `TYPES_EXPLOITATION`: Bureau, Commerce de détail, Restaurant / Bar, etc.
+- `AFFECTATIONS_COMMERCIALES`: Bureaux, Commerce, Artisanat, Restauration, etc.
+- `ETAGES_COMMERCIAUX`: Rez-de-chaussée uniquement, Étages acceptés, etc.
+- `BESOINS_COMMERCIAUX`: Vitrine, Livraison, Parking, Terrasse, Extraction, Entrée indépendante
 
 ## Résultat attendu
 

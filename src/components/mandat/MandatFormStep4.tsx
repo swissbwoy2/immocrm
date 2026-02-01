@@ -8,9 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { MandatFormData, DECOUVERTES_AGENCE, TYPES_BIEN, PIECES_OPTIONS } from './types';
-import { Home, Building2, AlertCircle, CheckCircle, Calculator, Users, TrendingUp, Wallet, Info, UserPlus } from 'lucide-react';
+import { Home, Building2, AlertCircle, CheckCircle, Calculator, Users, TrendingUp, Wallet, Info, UserPlus, Store } from 'lucide-react';
 import CapacityGauge from './CapacityGauge';
 import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
+import CommercialSearchFields from './CommercialSearchFields';
 
 interface Props {
   data: MandatFormData;
@@ -21,6 +22,8 @@ interface Props {
 export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props) {
   const isRental = data.type_recherche === 'Louer';
   const isPurchase = data.type_recherche === 'Acheter';
+  const isCommercial = data.type_bien === 'Local commercial';
+  const isSociete = data.location_type === 'societe';
 
   // Calculate total income including candidates
   const clientRevenus = data.revenus_mensuels || 0;
@@ -204,7 +207,8 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
           </Card>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Number of occupants - hide for commercial */}
+        {!isCommercial && (
           <div className="space-y-2">
             <Label htmlFor="nombre_occupants">Combien de personnes occuperaient le bien ? *</Label>
             <Input
@@ -215,21 +219,43 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
               required
             />
           </div>
+        )}
 
-          <div className="space-y-2">
-            <Label htmlFor="type_bien">Type d'objet *</Label>
-            <Select value={data.type_bien} onValueChange={(value) => onChange({ type_bien: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionnez" />
-              </SelectTrigger>
-              <SelectContent>
-                {TYPES_BIEN.map((type) => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="type_bien">Type d'objet *</Label>
+          <Select value={data.type_bien} onValueChange={(value) => {
+            // Reset commercial fields when changing type
+            if (value !== 'Local commercial') {
+              onChange({ 
+                type_bien: value,
+                location_type: null,
+                raison_sociale: '',
+                numero_ide: '',
+                chiffre_affaires: 0,
+                type_exploitation: '',
+                nombre_employes: 0,
+                surface_souhaitee: 0,
+                etage_souhaite: '',
+                affectation_commerciale: '',
+                besoins_commerciaux: []
+              });
+            } else {
+              onChange({ type_bien: value });
+            }
+          }}>
+            <SelectTrigger>
+              <SelectValue placeholder="Sélectionnez" />
+            </SelectTrigger>
+            <SelectContent>
+              {TYPES_BIEN.map((type) => (
+                <SelectItem key={type} value={type}>{type}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
+        {/* Number of rooms - hide for commercial, show surface instead */}
+        {!isCommercial && (
           <div className="space-y-2">
             <Label htmlFor="pieces_recherche">Nombre de pièces *</Label>
             <Select value={data.pieces_recherche} onValueChange={(value) => onChange({ pieces_recherche: value })}>
@@ -243,19 +269,27 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
               </SelectContent>
             </Select>
           </div>
+        )}
 
-          <div className="space-y-2">
-            <Label htmlFor="region_recherche">Région(s) *</Label>
-            <GooglePlacesAutocomplete
-              value={data.region_recherche}
-              onChange={(value) => onChange({ region_recherche: value })}
-              placeholder="Tapez une région, commune ou district..."
-              multiSelect
-            />
-            <p className="text-xs text-muted-foreground">
-              Vous pouvez sélectionner plusieurs régions
-            </p>
+        <div className="space-y-2">
+          <Label htmlFor="region_recherche">Région(s) *</Label>
+          <GooglePlacesAutocomplete
+            value={data.region_recherche}
+            onChange={(value) => onChange({ region_recherche: value })}
+            placeholder="Tapez une région, commune ou district..."
+            multiSelect
+          />
+          <p className="text-xs text-muted-foreground">
+            Vous pouvez sélectionner plusieurs régions
+          </p>
+        </div>
+
+        {/* Commercial-specific search fields */}
+        {isCommercial && (
+          <div className="md:col-span-2">
+            <CommercialSearchFields data={data} onChange={onChange} />
           </div>
+        )}
 
           {/* RENTAL: Budget field */}
           {isRental && (
@@ -646,74 +680,76 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
           </div>
         </div>
 
-        <div className="space-y-4 pt-4 border-t">
-          <div className="space-y-3">
-            <Label>Avez-vous des animaux ?</Label>
-            <RadioGroup
-              value={data.animaux ? 'oui' : 'non'}
-              onValueChange={(value) => onChange({ animaux: value === 'oui' })}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="oui" id="animaux-oui" />
-                <Label htmlFor="animaux-oui" className="font-normal">Oui</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="non" id="animaux-non" />
-                <Label htmlFor="animaux-non" className="font-normal">Non</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          <div className="space-y-3">
-            <Label>Jouez-vous d'un instrument de musique ? *</Label>
-            <RadioGroup
-              value={data.instrument_musique ? 'oui' : 'non'}
-              onValueChange={(value) => onChange({ instrument_musique: value === 'oui' })}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="oui" id="instrument-oui" />
-                <Label htmlFor="instrument-oui" className="font-normal">Oui</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="non" id="instrument-non" />
-                <Label htmlFor="instrument-non" className="font-normal">Non</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          <div className="space-y-3">
-            <Label>Avez-vous un ou plusieurs véhicules ? *</Label>
-            <RadioGroup
-              value={data.vehicules ? 'oui' : 'non'}
-              onValueChange={(value) => onChange({ vehicules: value === 'oui' })}
-              className="flex gap-4"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="oui" id="vehicules-oui" />
-                <Label htmlFor="vehicules-oui" className="font-normal">Oui</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="non" id="vehicules-non" />
-                <Label htmlFor="vehicules-non" className="font-normal">Non</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {data.vehicules && (
-            <div className="space-y-2 pl-4 border-l-2 border-primary/30">
-              <Label htmlFor="numero_plaques">Numéro(s) de plaque(s)</Label>
-              <Input
-                id="numero_plaques"
-                value={data.numero_plaques}
-                onChange={(e) => onChange({ numero_plaques: e.target.value })}
-                placeholder="Ex: VD 123456"
-              />
+        {/* Residential questions - hide for commercial */}
+        {!isCommercial && (
+          <div className="space-y-4 pt-4 border-t">
+            <div className="space-y-3">
+              <Label>Avez-vous des animaux ?</Label>
+              <RadioGroup
+                value={data.animaux ? 'oui' : 'non'}
+                onValueChange={(value) => onChange({ animaux: value === 'oui' })}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="oui" id="animaux-oui" />
+                  <Label htmlFor="animaux-oui" className="font-normal">Oui</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="non" id="animaux-non" />
+                  <Label htmlFor="animaux-non" className="font-normal">Non</Label>
+                </div>
+              </RadioGroup>
             </div>
-          )}
-        </div>
-      </div>
+
+            <div className="space-y-3">
+              <Label>Jouez-vous d'un instrument de musique ? *</Label>
+              <RadioGroup
+                value={data.instrument_musique ? 'oui' : 'non'}
+                onValueChange={(value) => onChange({ instrument_musique: value === 'oui' })}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="oui" id="instrument-oui" />
+                  <Label htmlFor="instrument-oui" className="font-normal">Oui</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="non" id="instrument-non" />
+                  <Label htmlFor="instrument-non" className="font-normal">Non</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div className="space-y-3">
+              <Label>Avez-vous un ou plusieurs véhicules ? *</Label>
+              <RadioGroup
+                value={data.vehicules ? 'oui' : 'non'}
+                onValueChange={(value) => onChange({ vehicules: value === 'oui' })}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="oui" id="vehicules-oui" />
+                  <Label htmlFor="vehicules-oui" className="font-normal">Oui</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="non" id="vehicules-non" />
+                  <Label htmlFor="vehicules-non" className="font-normal">Non</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            {data.vehicules && (
+              <div className="space-y-2 pl-4 border-l-2 border-primary/30">
+                <Label htmlFor="numero_plaques">Numéro(s) de plaque(s)</Label>
+                <Input
+                  id="numero_plaques"
+                  value={data.numero_plaques}
+                  onChange={(e) => onChange({ numero_plaques: e.target.value })}
+                  placeholder="Ex: VD 123456"
+                />
+              </div>
+            )}
+          </div>
+        )}
     </div>
   );
 }
