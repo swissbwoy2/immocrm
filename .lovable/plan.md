@@ -1,77 +1,71 @@
 
-# Adaptation du formulaire de mandat pour les locaux commerciaux ✅ IMPLÉMENTÉ
+# Ajout d'un bouton "Créer facture AbaNinja" pour les clients importés
 
-## Statut: Terminé
+## Contexte
 
-L'adaptation du formulaire de mandat pour les locaux commerciaux a été implémentée avec succès.
+Actuellement, les factures AbaNinja sont générées automatiquement uniquement quand un client s'inscrit via le formulaire public (`NouveauMandat.tsx`). Les clients importés via CSV n'ont pas ce flux et n'ont donc pas de facture associée.
 
-## Fonctionnalités implémentées
+## Solution proposée
 
-### 1. Détection automatique du type commercial
-- Quand `type_bien === 'Local commercial'`, le formulaire s'adapte automatiquement
+Ajouter un bouton **"Créer facture AbaNinja"** dans la page de détail du client (`ClientDetail.tsx`) qui permet à l'admin de générer manuellement une facture pour les clients importés.
 
-### 2. Choix nom propre / société (Step 3)
-- RadioGroup pour choisir entre "En nom propre" et "Au nom d'une société"
-- **En nom propre**: affiche profession, employeur, revenu mensuel net, date d'engagement
-- **Au nom d'une société**: affiche raison sociale, numéro IDE, chiffre d'affaires annuel, type d'exploitation, nombre d'employés
+## Modifications techniques
 
-### 3. Questions financières conditionnelles (Step 3)
-- Charges extraordinaires, poursuites, curatelle: affichées uniquement si résidentiel OU commercial en nom propre
-- Masquées pour les locations commerciales au nom d'une société
+### 1. Migration base de données
+Ajouter des colonnes à la table `clients` pour stocker les références AbaNinja :
+- `abaninja_client_uuid` (text) - UUID du client dans AbaNinja
+- `abaninja_invoice_id` (text) - UUID de la facture
+- `abaninja_invoice_ref` (text) - Référence de la facture (ex: MANDAT-XXXX)
 
-### 4. Critères de recherche adaptés (Step 4)
-- **Masqué pour commercial**: nombre de personnes, nombre de pièces
-- **Ajouté pour commercial**: 
-  - Surface souhaitée (m²)
-  - Type d'affectation (Bureaux, Commerce, Artisanat, Restauration, etc.)
-  - Étage souhaité (Rez-de-chaussée, Étages, Sous-sol, Peu importe)
-  - Besoins spécifiques (checkboxes): vitrine, livraison, parking, terrasse, extraction, entrée indépendante
+### 2. Modification de `ClientDetail.tsx`
 
-### 5. Questions résidentielles masquées (Step 4)
-- Animaux, instrument de musique, véhicules: masqués pour les locaux commerciaux
+Ajouter dans la section des actions du header :
+- Un bouton "Créer facture AbaNinja" visible uniquement si le client n'a pas déjà de facture
+- Une indication "Facture envoyée" avec la référence si elle existe déjà
 
-## Fichiers modifiés
-
-| Fichier | Modification |
-|---------|-------------|
-| `src/components/mandat/types.ts` | Nouveaux champs + constantes commerciales |
-| `src/components/mandat/CommercialFieldsStep3.tsx` | Nouveau composant pour choix personne/société |
-| `src/components/mandat/CommercialSearchFields.tsx` | Nouveau composant pour critères commerciaux |
-| `src/components/mandat/MandatFormStep3.tsx` | Logique conditionnelle intégrée |
-| `src/components/mandat/MandatFormStep4.tsx` | Champs conditionnels + composant commercial |
-
-## Nouveaux champs dans MandatFormData
-
-```typescript
-// Location type
-location_type: 'personnel' | 'societe' | null;
-
-// Company fields
-raison_sociale: string;
-numero_ide: string;
-chiffre_affaires: number;
-type_exploitation: string;
-nombre_employes: number;
-
-// Commercial search criteria
-surface_souhaitee: number;
-etage_souhaite: string;
-affectation_commerciale: string;
-besoins_commerciaux: string[];
+Logique du bouton :
+```text
+1. Appeler create-abaninja-client avec les infos du profil (prenom, nom, email, telephone, adresse)
+2. Appeler create-abaninja-invoice avec le client_uuid reçu
+3. Mettre à jour la table clients avec les références AbaNinja
+4. Afficher un toast de succès
 ```
 
-## Nouvelles constantes
+### 3. Interface utilisateur
 
-- `TYPES_EXPLOITATION`: Bureau, Commerce de détail, Restaurant / Bar, etc.
-- `AFFECTATIONS_COMMERCIALES`: Bureaux, Commerce, Artisanat, Restauration, etc.
-- `ETAGES_COMMERCIAUX`: Rez-de-chaussée uniquement, Étages acceptés, etc.
-- `BESOINS_COMMERCIAUX`: Vitrine, Livraison, Parking, Terrasse, Extraction, Entrée indépendante
+Le bouton sera placé à côté des autres actions (modifier, supprimer, envoyer email) :
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│  [Retour]   Prénom Nom                                  │
+│                                                          │
+│  [Modifier] [Supprimer] [Email] [📄 Créer facture]      │
+│                           OU                             │
+│  [Modifier] [Supprimer] [Email] ✓ Facture: MANDAT-XXXX  │
+└─────────────────────────────────────────────────────────┘
+```
+
+Le montant sera déterminé automatiquement selon `type_recherche` :
+- "Acheter" → 2500 CHF
+- Autre (Louer) → 300 CHF
+
+## Fichiers à modifier
+
+| Fichier | Action |
+|---------|--------|
+| `src/pages/admin/ClientDetail.tsx` | Ajouter le bouton et la logique d'appel |
+| Migration SQL | Ajouter colonnes abaninja_* à la table clients |
+
+## Sécurité
+
+- Seuls les administrateurs connectés peuvent accéder à cette page
+- Les Edge Functions AbaNinja sont déjà sécurisées
+- L'action est tracée dans les logs
 
 ## Résultat attendu
 
-Un formulaire intelligent qui :
-- Détecte automatiquement quand le client cherche un local commercial
-- Pose les bonnes questions selon qu'il loue en nom propre ou via société
-- Collecte les informations pertinentes (surface, affectation, besoins)
-- Garde le revenu mensuel pour les locations personnelles
-- Affiche des calculs de viabilité adaptés au contexte
+L'administrateur pourra :
+1. Ouvrir la fiche d'un client importé
+2. Cliquer sur "Créer facture"
+3. La facture est créée dans AbaNinja et envoyée par email au client
+4. La référence de facture est affichée sur la fiche client
