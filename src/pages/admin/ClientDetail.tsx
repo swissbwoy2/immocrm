@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send, RefreshCw, FileCheck, FileDown } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send, RefreshCw, FileCheck, FileDown, Receipt, Loader2 } from 'lucide-react';
 import { DownloadClientPDFButton } from '@/components/DownloadClientPDFButton';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
 import { ClientActivityStats } from '@/components/admin/ClientActivityStats';
@@ -32,6 +32,7 @@ import { ApporteurInfoCard } from '@/components/ApporteurInfoCard';
 import { AnimatedCounter } from '@/components/AnimatedCounter';
 import { SwissRomandeMapGoogle } from '@/components/SwissRomandeMapGoogle';
 import { OnlineStatusBadge } from '@/components/premium/OnlineStatusBadge';
+import { useAbaNinjaInvoice } from '@/hooks/useAbaNinjaInvoice';
 
 interface Client {
   id: string;
@@ -86,11 +87,16 @@ interface Client {
   vehicules?: boolean;
   numero_plaques?: string;
   decouverte_agence?: string;
+  type_recherche?: string;
   // Contract fields
   mandat_pdf_url?: string | null;
   mandat_signature_data?: string | null;
   mandat_date_signature?: string | null;
   demande_mandat_id?: string | null;
+  // AbaNinja fields
+  abaninja_client_uuid?: string | null;
+  abaninja_invoice_id?: string | null;
+  abaninja_invoice_ref?: string | null;
 }
 
 interface Profile {
@@ -184,6 +190,9 @@ export default function ClientDetail() {
   const { candidates, refresh: refreshCandidates } = useClientCandidates(id);
   const solvabilityResult = useSolvabilityCheck(client, candidates);
   const [documentsRefreshKey, setDocumentsRefreshKey] = useState(0);
+  
+  // Hook pour AbaNinja
+  const { loading: abaNinjaLoading, createInvoice } = useAbaNinjaInvoice();
   
   // Documents state
   const [documents, setDocuments] = useState<any[]>([]);
@@ -681,7 +690,26 @@ export default function ClientDetail() {
     }
   };
 
-  // Premium loading state
+  const handleCreateAbaNinjaInvoice = async () => {
+    if (!client || !profile) return;
+    
+    const result = await createInvoice({
+      clientId: client.id,
+      prenom: profile.prenom,
+      nom: profile.nom,
+      email: profile.email,
+      telephone: profile.telephone || '',
+      adresse: client.adresse || '',
+      typeRecherche: client.type_recherche || client.type_bien || 'Louer'
+    });
+    
+    if (result.success) {
+      // Refresh client data to get the new AbaNinja refs
+      loadClientData();
+    }
+  };
+
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -1018,6 +1046,31 @@ export default function ClientDetail() {
                 <span className="hidden sm:inline">Message</span>
                 <span className="sm:hidden">Msg</span>
               </Button>
+              {/* AbaNinja Invoice Button */}
+              {client.abaninja_invoice_ref ? (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span className="text-sm font-medium">
+                    <span className="hidden sm:inline">Facture: </span>
+                    {client.abaninja_invoice_ref}
+                  </span>
+                </div>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  className="w-full sm:w-auto group bg-amber-500/10 backdrop-blur-sm border-amber-500/30 text-amber-600 hover:bg-amber-500/20 hover:border-amber-500/50 hover:shadow-[0_0_15px_rgba(245,158,11,0.2)] transition-all duration-300" 
+                  onClick={handleCreateAbaNinjaInvoice}
+                  disabled={abaNinjaLoading}
+                >
+                  {abaNinjaLoading ? (
+                    <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" />
+                  ) : (
+                    <Receipt className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
+                  )}
+                  <span className="hidden sm:inline">Créer facture</span>
+                  <span className="sm:hidden">Facture</span>
+                </Button>
+              )}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button 
