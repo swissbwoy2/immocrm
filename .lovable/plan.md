@@ -1,71 +1,159 @@
 
-# Ajout d'un bouton "Créer facture AbaNinja" pour les clients importés
+# Système de Facture Finale AbaNinja
 
-## Contexte
+## Résumé du Flux
 
-Actuellement, les factures AbaNinja sont générées automatiquement uniquement quand un client s'inscrit via le formulaire public (`NouveauMandat.tsx`). Les clients importés via CSV n'ont pas ce flux et n'ont donc pas de facture associée.
+Le processus de facturation se déroule en **deux étapes** :
 
-## Solution proposée
+1. **Facture d'acompte (300 CHF)** → À l'inscription du client ✅ (déjà implémenté)
+2. **Facture finale (Loyer - 300 CHF)** → Quand l'agent valide l'attribution auprès de la régie 🆕
 
-Ajouter un bouton **"Créer facture AbaNinja"** dans la page de détail du client (`ClientDetail.tsx`) qui permet à l'admin de générer manuellement une facture pour les clients importés.
+**Exemple concret :**
+- Mongi s'inscrit → Facture acompte de 300 CHF
+- Agent trouve un appartement à 1590 CHF/mois
+- Régie accepte le dossier → Agent clique "Valider auprès de la régie"
+- Système génère automatiquement la facture finale de **1290 CHF** (1590 - 300)
 
-## Modifications techniques
+## Moment de Déclenchement
 
-### 1. Migration base de données
-Ajouter des colonnes à la table `clients` pour stocker les références AbaNinja :
-- `abaninja_client_uuid` (text) - UUID du client dans AbaNinja
-- `abaninja_invoice_id` (text) - UUID de la facture
-- `abaninja_invoice_ref` (text) - Référence de la facture (ex: MANDAT-XXXX)
+La facture finale sera générée automatiquement lorsque l'agent clique sur **"Valider auprès de la régie"** (passage du statut `bail_conclu` → `attente_bail`). C'est le moment où :
+- Le client a confirmé son intérêt
+- La régie a accepté le dossier
+- L'agent valide l'attribution
 
-### 2. Modification de `ClientDetail.tsx`
+---
 
-Ajouter dans la section des actions du header :
-- Un bouton "Créer facture AbaNinja" visible uniquement si le client n'a pas déjà de facture
-- Une indication "Facture envoyée" avec la référence si elle existe déjà
+## Modifications Techniques
 
-Logique du bouton :
+### 1. Migration Base de Données
+
+Ajouter des colonnes à la table `candidatures` pour stocker les références de la facture finale :
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `facture_finale_invoice_id` | text | UUID de la facture finale dans AbaNinja |
+| `facture_finale_invoice_ref` | text | Référence (ex: SOLDE-ABC123) |
+| `facture_finale_montant` | numeric | Montant de la facture finale |
+| `facture_finale_created_at` | timestamptz | Date de création |
+
+### 2. Nouvelle Edge Function : `create-final-invoice`
+
+Créer une nouvelle Edge Function spécifique pour la facture finale :
+
+**Paramètres d'entrée :**
+- `client_uuid` : UUID AbaNinja du client
+- `address_uuid` : UUID de l'adresse AbaNinja
+- `candidature_id` : ID de la candidature
+- `loyer_mensuel` : Prix du loyer (depuis offres.prix)
+- `acompte_paye` : Montant déjà payé (300 CHF par défaut)
+- `prenom`, `nom`, `email` : Infos du client
+- `adresse_bien` : Adresse du bien loué
+
+**Logique :**
 ```text
-1. Appeler create-abaninja-client avec les infos du profil (prenom, nom, email, telephone, adresse)
-2. Appeler create-abaninja-invoice avec le client_uuid reçu
-3. Mettre à jour la table clients avec les références AbaNinja
-4. Afficher un toast de succès
+montant_final = loyer_mensuel - acompte_paye
+
+Créer facture AbaNinja avec :
+- Référence : SOLDE-{candidature_id_short}
+- Description : "Solde mandat de recherche - Location réussie"
+- Détails : Adresse du bien, loyer mensuel, déduction acompte
+- Montant : montant_final
 ```
 
-### 3. Interface utilisateur
+### 3. Modification du Workflow
 
-Le bouton sera placé à côté des autres actions (modifier, supprimer, envoyer email) :
+Dans `src/pages/admin/Candidatures.tsx` et `src/components/premium/PremiumCandidatureDetails.tsx` :
+
+**Quand l'agent clique "Valider auprès de la régie" :**
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│  [Retour]   Prénom Nom                                  │
-│                                                          │
-│  [Modifier] [Supprimer] [Email] [📄 Créer facture]      │
-│                           OU                             │
-│  [Modifier] [Supprimer] [Email] ✓ Facture: MANDAT-XXXX  │
-└─────────────────────────────────────────────────────────┘
+1. Récupérer les infos du client (via clients.user_id → profiles)
+2. Vérifier que le client a un abaninja_client_uuid (sinon créer)
+3. Appeler create-final-invoice avec :
+   - loyer = offres.prix
+   - acompte = 300 CHF
+4. Mettre à jour candidature avec les refs de la facture
+5. Afficher toast de confirmation
 ```
 
-Le montant sera déterminé automatiquement selon `type_recherche` :
-- "Acheter" → 2500 CHF
-- Autre (Louer) → 300 CHF
+### 4. Affichage de la Facture Finale
 
-## Fichiers à modifier
+Dans les détails de candidature, afficher :
+- Un badge vert si la facture finale existe : "✓ Facture finale: SOLDE-ABC123 (1290 CHF)"
+- Les dates importantes avec la date de facturation
+
+---
+
+## Interface Utilisateur
+
+### Dans la vue Candidatures (admin/agent)
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  📍 Rue de la Gare 15, 1000 Lausanne                        │
+│  💰 1590 CHF/mois                                           │
+│                                                              │
+│  Statut: bail_conclu                                        │
+│                                                              │
+│  [🏢 Valider auprès de la régie]                            │
+│           ↓                                                  │
+│  ⚡ Génère automatiquement la facture de 1290 CHF           │
+│                                                              │
+│  Après validation:                                           │
+│  ✓ Facture finale: SOLDE-ABC123 - 1290 CHF                  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Calcul du Montant
+
+| Type de recherche | Acompte | Loyer | Facture finale |
+|-------------------|---------|-------|----------------|
+| Location | 300 CHF | 1590 CHF | 1290 CHF |
+| Location | 300 CHF | 2000 CHF | 1700 CHF |
+| Location | 300 CHF | 1200 CHF | 900 CHF |
+
+---
+
+## Fichiers à Modifier/Créer
 
 | Fichier | Action |
 |---------|--------|
-| `src/pages/admin/ClientDetail.tsx` | Ajouter le bouton et la logique d'appel |
-| Migration SQL | Ajouter colonnes abaninja_* à la table clients |
+| Migration SQL | Ajouter colonnes facture_finale_* à candidatures |
+| `supabase/functions/create-final-invoice/index.ts` | Nouvelle Edge Function |
+| `supabase/config.toml` | Ajouter la config de la nouvelle fonction |
+| `src/hooks/useFinalInvoice.ts` | Nouveau hook pour créer la facture finale |
+| `src/pages/admin/Candidatures.tsx` | Intégrer la création de facture lors de la validation |
+| `src/components/premium/PremiumCandidatureDetails.tsx` | Afficher le badge de facture finale |
+
+---
 
 ## Sécurité
 
-- Seuls les administrateurs connectés peuvent accéder à cette page
-- Les Edge Functions AbaNinja sont déjà sécurisées
-- L'action est tracée dans les logs
+- Seuls les administrateurs et agents connectés peuvent déclencher la facture
+- L'Edge Function vérifie les données avant d'appeler AbaNinja
+- La facture ne peut être créée qu'une seule fois par candidature (vérification de `facture_finale_invoice_id`)
 
-## Résultat attendu
+---
 
-L'administrateur pourra :
-1. Ouvrir la fiche d'un client importé
-2. Cliquer sur "Créer facture"
-3. La facture est créée dans AbaNinja et envoyée par email au client
-4. La référence de facture est affichée sur la fiche client
+## Gestion des Erreurs
+
+| Cas | Comportement |
+|-----|--------------|
+| Client sans UUID AbaNinja | Créer le client AbaNinja d'abord |
+| Facture déjà existante | Afficher un toast d'info, ne pas recréer |
+| Erreur AbaNinja | Afficher erreur, permettre de réessayer |
+| Loyer non défini | Afficher erreur "Prix du bien manquant" |
+
+---
+
+## Résultat Attendu
+
+1. Le client s'inscrit → reçoit facture acompte 300 CHF ✅
+2. L'agent trouve un bien → soumet la candidature
+3. La régie accepte → le client confirme
+4. **L'agent clique "Valider auprès de la régie"** → 
+   - Statut passe à `attente_bail`
+   - Facture finale générée automatiquement (Loyer - 300 CHF)
+   - Client reçoit la facture par email
+5. Le processus continue jusqu'à la remise des clés
+
