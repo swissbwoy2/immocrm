@@ -1321,6 +1321,10 @@ export type Database = {
           dates_signature_proposees: Json | null
           dossier_complet: boolean | null
           emails_recommandation: Json | null
+          facture_finale_created_at: string | null
+          facture_finale_invoice_id: string | null
+          facture_finale_invoice_ref: string | null
+          facture_finale_montant: number | null
           heure_etat_lieux: string | null
           id: string
           lieu_signature: string | null
@@ -1351,6 +1355,10 @@ export type Database = {
           dates_signature_proposees?: Json | null
           dossier_complet?: boolean | null
           emails_recommandation?: Json | null
+          facture_finale_created_at?: string | null
+          facture_finale_invoice_id?: string | null
+          facture_finale_invoice_ref?: string | null
+          facture_finale_montant?: number | null
           heure_etat_lieux?: string | null
           id?: string
           lieu_signature?: string | null
@@ -1381,6 +1389,10 @@ export type Database = {
           dates_signature_proposees?: Json | null
           dossier_complet?: boolean | null
           emails_recommandation?: Json | null
+          facture_finale_created_at?: string | null
+          facture_finale_invoice_id?: string | null
+          facture_finale_invoice_ref?: string | null
+          facture_finale_montant?: number | null
           heure_etat_lieux?: string | null
           id?: string
           lieu_signature?: string | null
