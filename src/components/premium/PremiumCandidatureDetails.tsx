@@ -1,14 +1,15 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { 
   User, MapPin, Calendar, Phone, Mail, Clock, CheckCircle, XCircle,
   FileCheck, Building2, FileSignature, CalendarCheck, Key, Send, 
-  FastForward, Eye, Trash2, Sparkles
+  FastForward, Eye, Trash2, Sparkles, Receipt, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { useFinalInvoice } from '@/hooks/useFinalInvoice';
 
 interface Profile {
   id: string;
@@ -42,6 +43,11 @@ interface Candidature {
   offres: Offre | null;
   client_id: string;
   offre_id: string;
+  // Facture finale fields
+  facture_finale_invoice_id?: string | null;
+  facture_finale_invoice_ref?: string | null;
+  facture_finale_montant?: number | null;
+  facture_finale_created_at?: string | null;
 }
 
 interface PremiumCandidatureDetailsProps {
@@ -55,6 +61,7 @@ interface PremiumCandidatureDetailsProps {
   onSetEtatLieux: () => void;
   onForceProgression: (targetStatut: string, label: string) => void;
   workflowTimeline: ReactNode;
+  onInvoiceCreated?: () => void;
 }
 
 const WORKFLOW_STEPS = [
@@ -83,11 +90,55 @@ export function PremiumCandidatureDetails({
   onSetEtatLieux,
   onForceProgression,
   workflowTimeline,
+  onInvoiceCreated,
 }: PremiumCandidatureDetailsProps) {
+  const { loading: invoiceLoading, createFinalInvoice } = useFinalInvoice();
+  const [isCreatingInvoice, setIsCreatingInvoice] = useState(false);
+
   const currentIndex = STEP_ORDER.indexOf(candidature.statut);
   const progressPercent = currentIndex >= 0 ? ((currentIndex + 1) / STEP_ORDER.length) * 100 : 0;
   const isCompleted = candidature.statut === 'cles_remises';
   const isRefused = candidature.statut === 'refusee';
+  const hasFactureFinale = !!candidature.facture_finale_invoice_id;
+
+  // Handle validation regie with invoice creation
+  const handleValidateRegie = async () => {
+    if (!candidature.offres?.prix) {
+      return;
+    }
+
+    setIsCreatingInvoice(true);
+    
+    try {
+      // First create the final invoice
+      const result = await createFinalInvoice({
+        candidatureId: candidature.id,
+        clientId: candidature.client_id,
+        loyerMensuel: candidature.offres.prix,
+        acomptePaye: 300,
+        adresseBien: candidature.offres.adresse
+      });
+
+      // Then update the status regardless of invoice result
+      await onStatutChange(candidature.id, 'attente_bail', { 
+        agent_valide_regie: true, 
+        agent_valide_regie_at: new Date().toISOString(),
+        // Add invoice data if successful
+        ...(result.success && {
+          facture_finale_invoice_id: result.invoiceId,
+          facture_finale_invoice_ref: result.invoiceRef,
+          facture_finale_montant: result.montant,
+          facture_finale_created_at: new Date().toISOString()
+        })
+      });
+
+      if (onInvoiceCreated) {
+        onInvoiceCreated();
+      }
+    } finally {
+      setIsCreatingInvoice(false);
+    }
+  };
 
   return (
     <div className="space-y-6 pt-6">
@@ -291,21 +342,62 @@ export function PremiumCandidatureDetails({
           )}
 
           {candidature.statut === 'bail_conclu' && (
-            <Button 
-              onClick={() => onStatutChange(candidature.id, 'attente_bail', { 
-                agent_valide_regie: true, 
-                agent_valide_regie_at: new Date().toISOString() 
-              })}
-              className="shadow-lg"
-            >
-              <Building2 className="h-4 w-4 mr-2" />Valider auprès de la régie
-            </Button>
+            <div className="space-y-3">
+              {/* Show expected invoice amount */}
+              {candidature.offres?.prix && (
+                <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                  <Receipt className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-blue-700 dark:text-blue-300">
+                      Facture finale sera générée automatiquement
+                    </p>
+                    <p className="text-blue-600 dark:text-blue-400 mt-1">
+                      Montant: <span className="font-bold">{(candidature.offres.prix - 300).toFixed(2)} CHF</span>
+                      <span className="text-xs ml-2">(Loyer {candidature.offres.prix} CHF - Acompte 300 CHF)</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              <Button 
+                onClick={handleValidateRegie}
+                disabled={isCreatingInvoice || invoiceLoading}
+                className="shadow-lg"
+              >
+                {isCreatingInvoice || invoiceLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />Création facture...
+                  </>
+                ) : (
+                  <>
+                    <Building2 className="h-4 w-4 mr-2" />Valider auprès de la régie
+                  </>
+                )}
+              </Button>
+            </div>
           )}
 
           {candidature.statut === 'attente_bail' && (
-            <Button onClick={onProposeDates} className="shadow-lg">
-              <FileCheck className="h-4 w-4 mr-2" />Bail reçu - Proposer dates
-            </Button>
+            <div className="space-y-3">
+              {/* Show final invoice badge if exists */}
+              {hasFactureFinale && candidature.facture_finale_invoice_ref && (
+                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                  <Receipt className="h-5 w-5 text-emerald-500" />
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="bg-emerald-600 text-white">
+                      ✓ Facture finale: {candidature.facture_finale_invoice_ref}
+                    </Badge>
+                    <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                      {candidature.facture_finale_montant?.toFixed(2)} CHF
+                    </span>
+                  </div>
+                </div>
+              )}
+              
+              <Button onClick={onProposeDates} className="shadow-lg">
+                <FileCheck className="h-4 w-4 mr-2" />Bail reçu - Proposer dates
+              </Button>
+            </div>
           )}
 
           {candidature.statut === 'bail_recu' && (

@@ -107,3 +107,6 @@ verify_jwt = true
 
 [functions.generate-bail-pdf]
 verify_jwt = false
+
+[functions.create-final-invoice]
+verify_jwt = false
