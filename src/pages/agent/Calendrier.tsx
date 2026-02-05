@@ -217,12 +217,100 @@ export default function AgentCalendrier() {
     }
   };
 
-  // Update candidature status
-  const handleUpdateCandidatureStatus = async (candidatureId: string, newStatus: string) => {
+  // Update candidature status with invoice generation for bail_conclu → attente_bail
+  const handleUpdateCandidatureStatus = async (candidatureId: string, newStatus: string, candidatureData?: { currentStatut: string; clientId: string; offrePrix: number; offreAdresse: string }) => {
     try {
+      // Check if we need to generate an invoice (bail_conclu → attente_bail)
+      if (candidatureData && candidatureData.currentStatut === 'bail_conclu' && newStatus === 'attente_bail') {
+        console.log('[Calendrier] Transition bail_conclu → attente_bail, création facture...');
+        
+        // Get client info for invoice
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select(`
+            id,
+            user_id,
+            abaninja_client_uuid,
+            profiles:user_id (id, prenom, nom, email, telephone, adresse)
+          `)
+          .eq('id', candidatureData.clientId)
+          .single();
+
+        if (clientData) {
+          const profile = clientData.profiles as any;
+          let clientUuid = clientData.abaninja_client_uuid;
+          let addressUuid: string | null = null;
+
+          // Create client if needed
+          if (!clientUuid && profile) {
+            const { data: createClientResult } = await supabase.functions.invoke('create-abaninja-client', {
+              body: {
+                prenom: profile.prenom || 'Client',
+                nom: profile.nom || 'Inconnu',
+                email: profile.email,
+                telephone: profile.telephone || '',
+                adresse: profile.adresse || ''
+              }
+            });
+
+            if (createClientResult?.success) {
+              clientUuid = createClientResult.client_uuid;
+              addressUuid = createClientResult.address_uuid;
+              await supabase.from('clients').update({ abaninja_client_uuid: clientUuid }).eq('id', candidatureData.clientId);
+            }
+          }
+
+          // Create final invoice if we have client UUID
+          if (clientUuid) {
+            const { data: invoiceResult } = await supabase.functions.invoke('create-final-invoice', {
+              body: {
+                client_uuid: clientUuid,
+                address_uuid: addressUuid || clientUuid,
+                candidature_id: candidatureId,
+                loyer_mensuel: candidatureData.offrePrix,
+                acompte_paye: 300,
+                prenom: profile?.prenom || 'Client',
+                nom: profile?.nom || '',
+                email: profile?.email,
+                adresse_bien: candidatureData.offreAdresse
+              }
+            });
+
+            if (invoiceResult?.success) {
+              // Update candidature with invoice data
+              const { error } = await supabase
+                .from('candidatures')
+                .update({ 
+                  statut: newStatus,
+                  agent_valide_regie: true,
+                  agent_valide_regie_at: new Date().toISOString(),
+                  facture_finale_invoice_id: invoiceResult.invoice_id,
+                  facture_finale_invoice_ref: invoiceResult.invoice_ref,
+                  facture_finale_montant: invoiceResult.montant,
+                  facture_finale_created_at: new Date().toISOString()
+                })
+                .eq('id', candidatureId);
+
+              if (error) throw error;
+              
+              toast.success(`Statut mis à jour + Facture ${invoiceResult.invoice_ref} créée`);
+              loadData();
+              return;
+            }
+          }
+        }
+      }
+
+      // Default update (no invoice needed or invoice creation failed)
+      const updateData: any = { statut: newStatus };
+      if (newStatus === 'attente_bail') {
+        updateData.agent_valide_regie = true;
+        updateData.agent_valide_regie_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from('candidatures')
-        .update({ statut: newStatus })
+        .update(updateData)
         .eq('id', candidatureId);
       
       if (error) throw error;
