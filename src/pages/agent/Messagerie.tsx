@@ -714,14 +714,123 @@ const Messagerie = () => {
 
         case 'valider_regie':
           if (candidature) {
-            await supabase
-              .from('candidatures')
-              .update({ 
-                agent_valide_regie: true,
-                agent_valide_regie_at: new Date().toISOString(),
-                statut: 'attente_bail'
-              })
-              .eq('id', candidature.id);
+            // Use centralized progression with automatic invoice creation
+            const { progressCandidature } = await import('@/hooks/useHandleCandidatureProgression').then(m => ({ progressCandidature: null }));
+            
+            // Since we can't use hooks here, we use useFinalInvoice directly
+            const { createFinalInvoice } = await import('@/hooks/useFinalInvoice').then(async m => {
+              // Create invoice if transitioning from bail_conclu
+              if (candidature.statut === 'bail_conclu') {
+                console.log('[Messagerie] Transition bail_conclu → attente_bail, création facture...');
+                
+                const invoiceResult = await supabase.functions.invoke('create-abaninja-client', {
+                  body: { skip: true } // Just to check availability
+                }).catch(() => ({ data: null, error: null }));
+                
+                // Get client info for invoice
+                const { data: clientData } = await supabase
+                  .from('clients')
+                  .select(`
+                    id,
+                    user_id,
+                    abaninja_client_uuid,
+                    profiles:user_id (id, prenom, nom, email, telephone, adresse)
+                  `)
+                  .eq('id', candidature.client_id)
+                  .single();
+
+                if (clientData) {
+                  const profile = clientData.profiles as any;
+                  let clientUuid = clientData.abaninja_client_uuid;
+                  let addressUuid: string | null = null;
+
+                  // Create client if needed
+                  if (!clientUuid && profile) {
+                    const { data: createClientResult } = await supabase.functions.invoke('create-abaninja-client', {
+                      body: {
+                        prenom: profile.prenom || 'Client',
+                        nom: profile.nom || 'Inconnu',
+                        email: profile.email,
+                        telephone: profile.telephone || '',
+                        adresse: profile.adresse || ''
+                      }
+                    });
+
+                    if (createClientResult?.success) {
+                      clientUuid = createClientResult.client_uuid;
+                      addressUuid = createClientResult.address_uuid;
+                      await supabase.from('clients').update({ abaninja_client_uuid: clientUuid }).eq('id', candidature.client_id);
+                    }
+                  }
+
+                  // Create final invoice
+                  if (clientUuid) {
+                    const { data: invoiceResult } = await supabase.functions.invoke('create-final-invoice', {
+                      body: {
+                        client_uuid: clientUuid,
+                        address_uuid: addressUuid || clientUuid,
+                        candidature_id: candidature.id,
+                        loyer_mensuel: offre.prix,
+                        acompte_paye: 300,
+                        prenom: profile?.prenom || 'Client',
+                        nom: profile?.nom || '',
+                        email: profile?.email,
+                        adresse_bien: offre.adresse
+                      }
+                    });
+
+                    if (invoiceResult?.success) {
+                      // Update candidature with invoice data
+                      await supabase
+                        .from('candidatures')
+                        .update({ 
+                          agent_valide_regie: true,
+                          agent_valide_regie_at: new Date().toISOString(),
+                          statut: 'attente_bail',
+                          facture_finale_invoice_id: invoiceResult.invoice_id,
+                          facture_finale_invoice_ref: invoiceResult.invoice_ref,
+                          facture_finale_montant: invoiceResult.montant,
+                          facture_finale_created_at: new Date().toISOString()
+                        })
+                        .eq('id', candidature.id);
+
+                      console.log('[Messagerie] Facture finale créée:', invoiceResult.invoice_ref);
+                    } else {
+                      // Fallback: update without invoice
+                      await supabase
+                        .from('candidatures')
+                        .update({ 
+                          agent_valide_regie: true,
+                          agent_valide_regie_at: new Date().toISOString(),
+                          statut: 'attente_bail'
+                        })
+                        .eq('id', candidature.id);
+                    }
+                  } else {
+                    // No client UUID, just update status
+                    await supabase
+                      .from('candidatures')
+                      .update({ 
+                        agent_valide_regie: true,
+                        agent_valide_regie_at: new Date().toISOString(),
+                        statut: 'attente_bail'
+                      })
+                      .eq('id', candidature.id);
+                  }
+                }
+              } else {
+                // Not from bail_conclu, just update status
+                await supabase
+                  .from('candidatures')
+                  .update({ 
+                    agent_valide_regie: true,
+                    agent_valide_regie_at: new Date().toISOString(),
+                    statut: 'attente_bail'
+                  })
+                  .eq('id', candidature.id);
+              }
+              return { createFinalInvoice: null };
+            });
 
             await supabase.from('messages').insert({
               conversation_id: selectedConv,

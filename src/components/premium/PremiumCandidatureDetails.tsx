@@ -140,6 +140,31 @@ export function PremiumCandidatureDetails({
     }
   };
 
+  // Handle creating missing invoice for recovery
+  const handleCreateMissingInvoice = async () => {
+    if (!candidature.offres?.prix) {
+      return;
+    }
+
+    setIsCreatingInvoice(true);
+    
+    try {
+      const result = await createFinalInvoice({
+        candidatureId: candidature.id,
+        clientId: candidature.client_id,
+        loyerMensuel: candidature.offres.prix,
+        acomptePaye: 300,
+        adresseBien: candidature.offres.adresse
+      });
+
+      if (result.success && onInvoiceCreated) {
+        onInvoiceCreated();
+      }
+    } finally {
+      setIsCreatingInvoice(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pt-6">
       {/* Premium Progress Section */}
@@ -393,6 +418,34 @@ export function PremiumCandidatureDetails({
                   </div>
                 </div>
               )}
+
+              {/* Recovery button if invoice is missing */}
+              {!hasFactureFinale && candidature.offres?.prix && (
+                <div className="space-y-2">
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                    <Receipt className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      ⚠️ Facture finale manquante. Cliquez pour la générer.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={handleCreateMissingInvoice}
+                    disabled={isCreatingInvoice || invoiceLoading}
+                    variant="outline"
+                    className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+                  >
+                    {isCreatingInvoice || invoiceLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />Création...
+                      </>
+                    ) : (
+                      <>
+                        <Receipt className="h-4 w-4 mr-2" />Générer facture manquante
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
               
               <Button onClick={onProposeDates} className="shadow-lg">
                 <FileCheck className="h-4 w-4 mr-2" />Bail reçu - Proposer dates
@@ -402,6 +455,30 @@ export function PremiumCandidatureDetails({
 
           {candidature.statut === 'bail_recu' && (
             <>
+              {/* Recovery button if invoice is missing */}
+              {!hasFactureFinale && candidature.offres?.prix && (
+                <div className="space-y-2">
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                    <Receipt className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                    <p className="text-sm text-amber-700 dark:text-amber-300">
+                      ⚠️ Facture finale manquante.
+                    </p>
+                  </div>
+                  <Button 
+                    onClick={handleCreateMissingInvoice}
+                    disabled={isCreatingInvoice || invoiceLoading}
+                    variant="outline"
+                    className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+                  >
+                    {isCreatingInvoice || invoiceLoading ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Création...</>
+                    ) : (
+                      <><Receipt className="h-4 w-4 mr-2" />Générer facture manquante</>
+                    )}
+                  </Button>
+                </div>
+              )}
+
               <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
                 <Clock className="h-5 w-5 text-blue-500 animate-pulse" />
                 <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
