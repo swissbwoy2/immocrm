@@ -69,6 +69,20 @@ export function AgentStatsSection({
   const currentTransactions = filterByDateRange(transactions, 'date_transaction', dateRange);
   const currentCandidatures = filterByDateRange(candidatures, 'created_at', dateRange);
 
+  // Filter paid transactions by payment date (for commission calculations)
+  const filterPaidByPaymentDate = (items: any[], range: { from: Date; to: Date }) => {
+    return items.filter((item) => {
+      if (item.statut !== 'conclue' || !item.commission_payee) return false;
+      const paymentDate = item.date_paiement_commission || item.date_transaction;
+      if (!paymentDate) return false;
+      const itemDate = new Date(paymentDate);
+      return isWithinInterval(itemDate, { start: range.from, end: range.to });
+    });
+  };
+
+  const currentPaidTransactions = filterPaidByPaymentDate(transactions, dateRange);
+  const previousPaidTransactions = filterPaidByPaymentDate(transactions, previousPeriod);
+
   // Previous period data for comparison - raw and deduplicated
   const previousOffresRaw = filterByDateRange(offres, 'date_envoi', previousPeriod);
   const previousOffresUniques = getUniqueOffres(previousOffresRaw);
@@ -84,15 +98,13 @@ export function AgentStatsSection({
     const offresUniques = currentOffresUniques.length;
     const previousOffresUniques = previousOffresRaw.length;
 
+    // Activity metric: Affaires conclues (based on date_transaction)
     const affairesConclues = currentTransactions.filter(t => t.statut === 'conclue').length;
     const previousAffairesConclues = previousTransactions.filter(t => t.statut === 'conclue').length;
 
-    const commissionsGagnees = currentTransactions
-      .filter(t => t.statut === 'conclue')
-      .reduce((sum, t) => sum + (t.part_agent || 0), 0);
-    const previousCommissions = previousTransactions
-      .filter(t => t.statut === 'conclue')
-      .reduce((sum, t) => sum + (t.part_agent || 0), 0);
+    // Revenue metric: Commissions (based on date_paiement_commission)
+    const commissionsGagnees = currentPaidTransactions.reduce((sum, t) => sum + (t.part_agent || 0), 0);
+    const previousCommissions = previousPaidTransactions.reduce((sum, t) => sum + (t.part_agent || 0), 0);
 
     const tauxConversion = offresUniques > 0 
       ? Math.round((affairesConclues / offresUniques) * 100) 
@@ -117,7 +129,7 @@ export function AgentStatsSection({
       candidaturesEnCours,
       clientsActifs: clients.length,
     };
-  }, [currentOffresRaw, currentOffresUniques, previousOffresRaw, currentTransactions, previousTransactions, currentCandidatures, clients]);
+  }, [currentOffresRaw, currentOffresUniques, previousOffresRaw, currentTransactions, previousTransactions, currentPaidTransactions, previousPaidTransactions, currentCandidatures, clients]);
 
   // Chart data - offres over time (use raw for timeline)
   const offresChartData = useMemo(() => {
@@ -139,13 +151,11 @@ export function AgentStatsSection({
 
   // Chart data - commissions over time
   const commissionsChartData = useMemo(() => {
-    return currentTransactions
-      .filter(t => t.statut === 'conclue')
-      .map((t) => ({
-        date: new Date(t.date_transaction),
-        value: t.part_agent || 0,
-      }));
-  }, [currentTransactions]);
+    return currentPaidTransactions.map((t) => ({
+      date: new Date(t.date_paiement_commission || t.date_transaction),
+      value: t.part_agent || 0,
+    }));
+  }, [currentPaidTransactions]);
 
   // Multi-series chart for activity comparison (use raw for timeline)
   const activitySeries = useMemo(() => [
@@ -184,14 +194,15 @@ export function AgentStatsSection({
            t.statut === 'conclue';
   }).length;
 
-  const monthlyCommissions = transactions
-    .filter(t => {
-      const date = new Date(t.date_transaction);
-      return date.getMonth() === currentMonth.getMonth() && 
-             date.getFullYear() === currentMonth.getFullYear() &&
-             t.statut === 'conclue';
-    })
-    .reduce((sum, t) => sum + (t.part_agent || 0), 0);
+  // Monthly commissions based on payment date
+  const monthlyCommissions = transactions.filter(t => {
+    if (t.statut !== 'conclue' || !t.commission_payee) return false;
+    const paymentDate = t.date_paiement_commission || t.date_transaction;
+    if (!paymentDate) return false;
+    const date = new Date(paymentDate);
+    return date.getMonth() === currentMonth.getMonth() && 
+           date.getFullYear() === currentMonth.getFullYear();
+  }).reduce((sum, t) => sum + (t.part_agent || 0), 0);
 
   const hasPersonalizedGoals = personalizedGoals.length > 0;
 

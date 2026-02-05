@@ -117,14 +117,23 @@ export function useAgentGoals(agentId: string | undefined) {
             break;
           }
           case 'commissions': {
+            // Filter by payment date instead of transaction date
             const { data } = await supabase
               .from('transactions')
-              .select('part_agent')
+              .select('part_agent, date_paiement_commission, date_transaction')
               .eq('agent_id', agentId)
               .eq('statut', 'conclue')
-              .gte('date_transaction', start.toISOString())
-              .lte('date_transaction', end.toISOString());
-            current = data?.reduce((sum, t) => sum + (t.part_agent || 0), 0) || 0;
+              .eq('commission_payee', true);
+            
+            // Filter by date_paiement_commission (with fallback to date_transaction)
+            const filteredData = data?.filter(t => {
+              const paymentDate = t.date_paiement_commission || t.date_transaction;
+              if (!paymentDate) return false;
+              const date = new Date(paymentDate);
+              return date >= start && date <= end;
+            }) || [];
+            
+            current = filteredData.reduce((sum, t) => sum + (t.part_agent || 0), 0);
             break;
           }
           case 'visites': {
