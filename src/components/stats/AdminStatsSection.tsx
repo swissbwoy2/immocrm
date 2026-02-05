@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { subDays, isWithinInterval } from 'date-fns';
-import { Send, CheckCircle, DollarSign, Users, UserCog, TrendingUp, Target, Building, Home } from 'lucide-react';
+import { Send, CheckCircle, DollarSign, Users, UserCog, TrendingUp, Home } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DateRangeFilter, DateRange, getDefaultDateRange } from './DateRangeFilter';
 import { StatsCard } from './StatsCard';
@@ -31,9 +31,9 @@ export function AdminStatsSection({
     to: subDays(dateRange.from, 1),
   };
 
-  const filterByDateRange = (items: any[], dateField: string, range: { from: Date; to: Date }) => {
+  const filterByDateRange = (items: any[], dateField: string, range: { from: Date; to: Date }, fallbackField?: string) => {
     return items.filter((item) => {
-      const date = item[dateField];
+      const date = item[dateField] || (fallbackField ? item[fallbackField] : null);
       if (!date) return false;
       const itemDate = new Date(date);
       return isWithinInterval(itemDate, { start: range.from, end: range.to });
@@ -45,10 +45,26 @@ export function AdminStatsSection({
   const currentTransactions = filterByDateRange(transactions, 'date_transaction', dateRange);
   const currentClients = filterByDateRange(clients, 'date_ajout', dateRange);
 
+  // Transactions filtered by payment date (for revenue calculations)
+  const currentPaidTransactions = filterByDateRange(
+    transactions.filter(t => t.statut === 'conclue' && t.commission_payee === true),
+    'date_paiement_commission',
+    dateRange,
+    'date_transaction' // fallback if date_paiement_commission is missing
+  );
+
   // Previous period data
   const previousOffres = filterByDateRange(offres, 'date_envoi', previousPeriod);
   const previousTransactions = filterByDateRange(transactions, 'date_transaction', previousPeriod);
   const previousClients = filterByDateRange(clients, 'date_ajout', previousPeriod);
+
+  // Previous period paid transactions
+  const previousPaidTransactions = filterByDateRange(
+    transactions.filter(t => t.statut === 'conclue' && t.commission_payee === true),
+    'date_paiement_commission',
+    previousPeriod,
+    'date_transaction'
+  );
 
   // Deduplicated offers
   const currentOffresUniques = getUniqueOffres(currentOffres);
@@ -63,13 +79,15 @@ export function AdminStatsSection({
     const offresUniques = currentOffresUniques.length;
     const previousOffresUniquesCount = previousOffresUniques.length;
 
+    // Activity metric: Affaires conclues (based on date_transaction)
     const transactionsConclues = currentTransactions.filter(t => t.statut === 'conclue');
     const previousTransactionsConclues = previousTransactions.filter(t => t.statut === 'conclue');
 
-    const revenusAgence = transactionsConclues.reduce((sum, t) => sum + (t.part_agence || 0), 0);
-    const previousRevenus = previousTransactionsConclues.reduce((sum, t) => sum + (t.part_agence || 0), 0);
+    // Revenue metrics: based on payment date (date_paiement_commission)
+    const revenusAgence = currentPaidTransactions.reduce((sum, t) => sum + (t.part_agence || 0), 0);
+    const previousRevenus = previousPaidTransactions.reduce((sum, t) => sum + (t.part_agence || 0), 0);
 
-    const commissionsAgents = transactionsConclues.reduce((sum, t) => sum + (t.part_agent || 0), 0);
+    const commissionsAgents = currentPaidTransactions.reduce((sum, t) => sum + (t.part_agent || 0), 0);
 
     const nouveauxClients = currentClients.length;
     const previousNouveauxClients = previousClients.length;
@@ -89,13 +107,14 @@ export function AdminStatsSection({
       totalAgents: agents.length,
       agentsActifs: agents.filter(a => a.actif).length,
     };
-  }, [currentOffres, previousOffres, currentOffresUniques, previousOffresUniques, currentTransactions, previousTransactions, currentClients, previousClients, agents]);
+  }, [currentOffres, previousOffres, currentOffresUniques, previousOffresUniques, currentTransactions, previousTransactions, currentPaidTransactions, previousPaidTransactions, currentClients, previousClients, agents]);
 
   // Agent leaderboard
   const agentLeaderboard = useMemo(() => {
     return agents.map((agent) => {
-      const agentTransactions = currentTransactions.filter(t => 
-        t.agent_id === agent.id && t.statut === 'conclue'
+      // Use paid transactions for commission leaderboard
+      const agentTransactions = currentPaidTransactions.filter(t => 
+        t.agent_id === agent.id
       );
       const totalCommission = agentTransactions.reduce((sum, t) => sum + (t.part_agent || 0), 0);
       
@@ -106,7 +125,7 @@ export function AdminStatsSection({
         subtitle: `${agentTransactions.length} affaire${agentTransactions.length > 1 ? 's' : ''} conclue${agentTransactions.length > 1 ? 's' : ''}`,
       };
     }).filter(a => a.value > 0);
-  }, [agents, currentTransactions]);
+  }, [agents, currentPaidTransactions]);
 
   // Agent offres leaderboard
   const agentOffresLeaderboard = useMemo(() => {
@@ -123,13 +142,11 @@ export function AdminStatsSection({
 
   // Charts data
   const revenusChartData = useMemo(() => {
-    return currentTransactions
-      .filter(t => t.statut === 'conclue')
-      .map((t) => ({
-        date: new Date(t.date_transaction),
-        value: t.part_agence || 0,
-      }));
-  }, [currentTransactions]);
+    return currentPaidTransactions.map((t) => ({
+      date: new Date(t.date_paiement_commission || t.date_transaction),
+      value: t.part_agence || 0,
+    }));
+  }, [currentPaidTransactions]);
 
   const activitySeries = useMemo(() => [
     {
