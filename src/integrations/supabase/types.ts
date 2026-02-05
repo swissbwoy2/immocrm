@@ -3643,6 +3643,8 @@ export type Database = {
       leads: {
         Row: {
           a_garant: boolean | null
+          accord_bancaire: boolean | null
+          apport_personnel: string | null
           budget: string | null
           contacted: boolean | null
           created_at: string | null
@@ -3658,9 +3660,13 @@ export type Database = {
           source: string | null
           statut_emploi: string | null
           telephone: string | null
+          type_bien: string | null
+          type_recherche: string | null
         }
         Insert: {
           a_garant?: boolean | null
+          accord_bancaire?: boolean | null
+          apport_personnel?: string | null
           budget?: string | null
           contacted?: boolean | null
           created_at?: string | null
@@ -3676,9 +3682,13 @@ export type Database = {
           source?: string | null
           statut_emploi?: string | null
           telephone?: string | null
+          type_bien?: string | null
+          type_recherche?: string | null
         }
         Update: {
           a_garant?: boolean | null
+          accord_bancaire?: boolean | null
+          apport_personnel?: string | null
           budget?: string | null
           contacted?: boolean | null
           created_at?: string | null
@@ -3694,6 +3704,8 @@ export type Database = {
           source?: string | null
           statut_emploi?: string | null
           telephone?: string | null
+          type_bien?: string | null
+          type_recherche?: string | null
         }
         Relationships: []
       }
