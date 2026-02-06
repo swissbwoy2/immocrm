@@ -70,9 +70,15 @@ export default function NouveauMandat() {
         return true;
       case 3:
         return true; // Candidats optionnels
-      case 4:
-        return !!(formData.decouverte_agence && formData.type_bien && formData.pieces_recherche &&
+      case 4: {
+        const baseValid = !!(formData.decouverte_agence && formData.type_bien &&
           formData.region_recherche && formData.budget_max > 0);
+        if (formData.type_bien === 'Local commercial') {
+          return baseValid && !!(formData.surface_souhaitee && formData.surface_souhaitee > 0 &&
+            formData.affectation_commerciale && formData.etage_souhaite);
+        }
+        return baseValid && !!formData.pieces_recherche;
+      }
       case 5:
         return formData.documents_uploades.length >= 5;
       case 6:
