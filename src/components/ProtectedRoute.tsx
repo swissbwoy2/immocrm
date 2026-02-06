@@ -4,10 +4,10 @@ import { AlertTriangle } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: ('admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire')[];
+  allowedRoles?: ('admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier')[];
 }
 
-const VALID_ROLES = ['admin', 'agent', 'client', 'apporteur', 'proprietaire'] as const;
+const VALID_ROLES = ['admin', 'agent', 'client', 'apporteur', 'proprietaire', 'coursier'] as const;
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { user, userRole, loading, session } = useAuth();

@@ -2369,6 +2369,45 @@ export type Database = {
           },
         ]
       }
+      coursiers: {
+        Row: {
+          created_at: string
+          email: string | null
+          iban: string | null
+          id: string
+          nom: string
+          prenom: string
+          statut: string
+          telephone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          iban?: string | null
+          id?: string
+          nom?: string
+          prenom?: string
+          statut?: string
+          telephone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          iban?: string | null
+          id?: string
+          nom?: string
+          prenom?: string
+          statut?: string
+          telephone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       default_agent_goals: {
         Row: {
           created_at: string | null
@@ -5574,54 +5613,69 @@ export type Database = {
           adresse: string
           agent_id: string | null
           client_id: string | null
+          coursier_id: string | null
           created_at: string | null
           date_visite: string
           date_visite_fin: string | null
           est_deleguee: boolean | null
           feedback_agent: string | null
+          feedback_coursier: string | null
           id: string
           medias: Json | null
           notes: string | null
           offre_id: string | null
+          paye_coursier: boolean | null
           recommandation_agent: string | null
+          remuneration_coursier: number | null
           source: string | null
           statut: string | null
+          statut_coursier: string | null
           updated_at: string | null
         }
         Insert: {
           adresse: string
           agent_id?: string | null
           client_id?: string | null
+          coursier_id?: string | null
           created_at?: string | null
           date_visite: string
           date_visite_fin?: string | null
           est_deleguee?: boolean | null
           feedback_agent?: string | null
+          feedback_coursier?: string | null
           id?: string
           medias?: Json | null
           notes?: string | null
           offre_id?: string | null
+          paye_coursier?: boolean | null
           recommandation_agent?: string | null
+          remuneration_coursier?: number | null
           source?: string | null
           statut?: string | null
+          statut_coursier?: string | null
           updated_at?: string | null
         }
         Update: {
           adresse?: string
           agent_id?: string | null
           client_id?: string | null
+          coursier_id?: string | null
           created_at?: string | null
           date_visite?: string
           date_visite_fin?: string | null
           est_deleguee?: boolean | null
           feedback_agent?: string | null
+          feedback_coursier?: string | null
           id?: string
           medias?: Json | null
           notes?: string | null
           offre_id?: string | null
+          paye_coursier?: boolean | null
           recommandation_agent?: string | null
+          remuneration_coursier?: number | null
           source?: string | null
           statut?: string | null
+          statut_coursier?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -5637,6 +5691,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visites_coursier_id_fkey"
+            columns: ["coursier_id"]
+            isOneToOne: false
+            referencedRelation: "coursiers"
             referencedColumns: ["id"]
           },
           {

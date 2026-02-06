@@ -3,10 +3,12 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
+type UserRole = 'admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
-  userRole: 'admin' | 'agent' | 'client' | 'apporteur' | null;
+  userRole: UserRole | null;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -16,7 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [userRole, setUserRole] = useState<'admin' | 'agent' | 'client' | 'apporteur' | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -61,7 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) throw error;
-      setUserRole(data.role as 'admin' | 'agent' | 'client' | 'apporteur');
+      setUserRole(data.role as UserRole);
 
       // If this is an agent, activate them on first login
       if (data.role === 'agent') {
@@ -103,6 +105,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error('Failed to activate apporteur on first login:', updateError);
           } else {
             console.log('Apporteur activated successfully on first login:', userId);
+          }
+        }
+      }
+
+      // If this is a coursier, activate them on first login
+      if (data.role === 'coursier') {
+        const { data: coursierData } = await supabase
+          .from('coursiers')
+          .select('statut')
+          .eq('user_id', userId)
+          .single();
+
+        if (coursierData?.statut === 'en_attente') {
+          const { error: updateError } = await supabase
+            .from('coursiers')
+            .update({ statut: 'actif', updated_at: new Date().toISOString() })
+            .eq('user_id', userId);
+          
+          if (updateError) {
+            console.error('Failed to activate coursier on first login:', updateError);
+          } else {
+            console.log('Coursier activated successfully on first login:', userId);
           }
         }
       }

@@ -889,6 +889,21 @@ export default function AgentVisites() {
               Refuser
             </Button>
           </div>
+          <Button 
+            onClick={async (e) => {
+              e.stopPropagation();
+              try {
+                await supabase.from('visites').update({ statut_coursier: 'en_attente' }).eq('id', visite.id);
+                toast.success('Visite déléguée au pool coursier');
+                await loadVisites();
+              } catch { toast.error('Erreur'); }
+            }}
+            variant="outline"
+            size="sm"
+            className="w-full mt-2 border-primary/30 text-primary hover:bg-primary/10"
+          >
+            🏍️ Déléguer à un coursier (5.-)
+          </Button>
         </div>
       </div>
     );
