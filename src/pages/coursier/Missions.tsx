@@ -46,7 +46,7 @@ export default function CoursierMissions() {
 
       const { data: allMissions } = await supabase
         .from('visites')
-        .select('*, offres(*)')
+        .select('*, offres(*), clients!client_id(id, user_id, profiles:user_id(prenom, nom, email, telephone))')
         .or(`statut_coursier.eq.en_attente,coursier_id.eq.${coursierData.id}`)
         .order('date_visite', { ascending: true });
 
@@ -324,7 +324,36 @@ export default function CoursierMissions() {
                 </Card>
               )}
 
-              {/* Contact info */}
+              {/* Contact de la visite (client) */}
+              {selectedMission.clients?.profiles && (
+                <Card className="bg-blue-500/5 border-blue-500/20">
+                  <CardContent className="pt-4 space-y-2">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <User className="h-4 w-4 text-blue-600" />
+                      Contact de la visite
+                    </h4>
+                    <div className="text-sm space-y-1">
+                      <div className="font-medium">
+                        {selectedMission.clients.profiles.prenom} {selectedMission.clients.profiles.nom}
+                      </div>
+                      {selectedMission.clients.profiles.telephone && (
+                        <a href={`tel:${selectedMission.clients.profiles.telephone}`} className="flex items-center gap-2 text-primary hover:underline">
+                          <Phone className="h-3.5 w-3.5" />
+                          {selectedMission.clients.profiles.telephone}
+                        </a>
+                      )}
+                      {selectedMission.clients.profiles.email && (
+                        <a href={`mailto:${selectedMission.clients.profiles.email}`} className="flex items-center gap-2 text-primary hover:underline">
+                          <Mail className="h-3.5 w-3.5" />
+                          {selectedMission.clients.profiles.email}
+                        </a>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Informations d'accès */}
               {(selectedMission.offres?.concierge_nom || selectedMission.offres?.locataire_nom || selectedMission.offres?.code_immeuble) && (
                 <Card className="bg-primary/5 border-primary/20">
                   <CardContent className="pt-4 space-y-2">
@@ -371,7 +400,7 @@ export default function CoursierMissions() {
                 </Card>
               )}
 
-              {/* Notes */}
+              {/* Notes de visite */}
               {selectedMission.notes && (
                 <div className="p-3 bg-amber-500/10 rounded-lg">
                   <p className="text-sm flex items-start gap-2">
