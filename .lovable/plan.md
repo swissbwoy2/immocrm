@@ -1,95 +1,57 @@
 
 
-# Correction complete de la recursion infinie agents / visites
+# Enrichir la fiche mission du coursier avec les details complets de l'offre
 
-## Probleme identifie
+## Constat actuel
 
-La migration precedente a corrige la recursion sur les tables `clients` et `profiles`, mais **n'a pas traite** la recursion entre `agents` et `visites` qui est la cause principale du blocage.
+La boite de dialogue "Details de la mission" du coursier affiche actuellement une version simplifiee de l'offre :
+- Seulement 4 champs basiques (pieces, surface, prix, etage) dans une grille
+- Description en texte brut
+- Lien texte simple vers l'annonce
+- Pas de type de bien, pas de disponibilite, pas de commentaires de l'agent
 
-### La boucle circulaire active
+En comparaison, la vue agent (`AgentOffreDetailsDialog.tsx`) affiche :
+- Un bloc prix mis en valeur visuellement (gradient)
+- Les caracteristiques en 3 colonnes avec style carte (pieces, surface, etage)
+- Le type de bien et la disponibilite
+- La description avec separateur
+- Les informations pratiques stylisees (code immeuble, concierge, locataire) dans des cartes dediees
+- Les commentaires de l'agent
+- Un apercu visuel de l'annonce via `LinkPreviewCard` (image + titre + favicon)
 
-```text
-agents (policy "Coursiers peuvent voir agents...")
-  --> SELECT FROM visites (declenche le RLS de visites)
-    --> visites (policy "Agents can view their visites")
-      --> SELECT FROM agents (declenche le RLS de agents)
-        --> recursion infinie !
-```
+## Modifications prevues
 
-Les 527 visites planifiees en base de donnees sont invisibles car **toute requete** touchant la table `visites` declenche cette recursion, y compris pour l'admin.
+### Fichier : `src/pages/coursier/Missions.tsx`
 
-## Solution : Fonctions SECURITY DEFINER pour casser les deux directions du cycle
+Remplacer le bloc "Details du bien" (lignes 337-361) et le bloc "Informations d'acces" (lignes 393-437) par une structure identique a celle de `AgentOffreDetailsDialog.tsx` :
 
-### Etape 1 : Fonction pour la politique agents --> visites
+1. **Bloc prix** : Ajouter un encart gradient avec le prix en grand format "CHF X'XXX" et la mention "par mois"
 
-Remplacer la politique inline sur `agents` par une fonction SECURITY DEFINER.
+2. **Bloc caracteristiques** : Remplacer la grille 2 colonnes par une grille 3 colonnes avec style carte (fond muted, texte centre, nombre en grand) pour pieces / surface / etage. Ajouter en dessous les lignes "Type de bien" et "Disponibilite" avec icones
 
-```sql
-CREATE OR REPLACE FUNCTION public.is_coursier_for_agent(_agent_id uuid)
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM visites v
-    JOIN coursiers c ON c.user_id = auth.uid()
-    WHERE v.agent_id = _agent_id
-    AND (v.statut_coursier = 'en_attente' OR v.coursier_id = c.id)
-  )
-  AND EXISTS (SELECT 1 FROM coursiers WHERE user_id = auth.uid())
-$$;
-```
+3. **Description** : Ajouter un separateur visuel avant la description et utiliser `whitespace-pre-wrap`
 
-### Etape 2 : Fonction pour les politiques visites --> agents
+4. **Informations pratiques** : Restructurer le bloc code immeuble / concierge / locataire en cartes individuelles avec fond muted, labels en petit texte, et liens telephone cliquables (comme dans la vue agent)
 
-Creer une fonction qui retourne l'ID agent de l'utilisateur courant sans declencher le RLS sur `agents`.
+5. **Commentaires agent** : Ajouter un bloc pour `offre.commentaires` avec icone MessageSquare
 
-```sql
-CREATE OR REPLACE FUNCTION public.get_my_agent_id()
-RETURNS uuid
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-  SELECT id FROM agents WHERE user_id = auth.uid() LIMIT 1
-$$;
+6. **Apercu de l'annonce** : Remplacer le lien texte simple par le composant `LinkPreviewCard` avec `showInline` pour afficher une carte visuelle avec image et titre
 
-CREATE OR REPLACE FUNCTION public.get_my_co_agent_client_ids()
-RETURNS SETOF uuid
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-  SELECT ca.client_id FROM client_agents ca
-  JOIN agents a ON a.id = ca.agent_id
-  WHERE a.user_id = auth.uid()
-$$;
-```
+7. **Import** : Ajouter les imports de `Separator`, `ScrollArea`, `LinkPreviewCard`, `Layers` et `Calendar`
 
-### Etape 3 : Remplacer les politiques problematiques
+## Details techniques
 
-**Sur la table `agents` :**
-- Supprimer "Coursiers peuvent voir agents de leurs missions" (inline)
-- Recreer avec `is_coursier_for_agent(id)`
+| Element | Avant (coursier) | Apres (aligne sur agent) |
+|---------|-------------------|--------------------------|
+| Prix | Texte simple dans grille | Encart gradient avec gros chiffres |
+| Pieces/Surface/Etage | Grille 2 colonnes texte | 3 cartes centrees stylisees |
+| Type de bien | Absent | InfoRow avec icone Building |
+| Disponibilite | Absent | InfoRow avec icone Calendar |
+| Description | Texte brut sans separateur | Avec Separator et pre-wrap |
+| Code immeuble | Texte inline | Carte muted avec icone KeyRound |
+| Concierge/Locataire | Texte inline basique | Cartes individuelles avec labels |
+| Commentaires | Absent | Bloc dedie avec icone MessageSquare |
+| Lien annonce | Texte "Voir l'annonce" | LinkPreviewCard inline (image+titre) |
 
-**Sur la table `visites` :**
-- Supprimer "Agents can view their visites" / "Agents can update their visites" / "Agents multi peuvent gerer visites"
-- Recreer avec `get_my_agent_id()` et `get_my_co_agent_client_ids()`
-
-## Politiques recreees
-
-| Table | Politique | Nouvelle condition |
-|-------|-----------|-------------------|
-| agents | Coursiers peuvent voir agents | `is_coursier_for_agent(id)` |
-| visites | Agents can view their visites | `agent_id = get_my_agent_id()` |
-| visites | Agents can update their visites | `agent_id = get_my_agent_id()` |
-| visites | Agents multi peuvent gerer visites | `agent_id = get_my_agent_id() OR client_id IN (SELECT get_my_co_agent_client_ids())` |
-
-## Fichier modifie
-
-| Fichier | Modification |
-|---------|-------------|
-| Migration SQL | 3 fonctions SECURITY DEFINER + remplacement de 4 politiques RLS |
-
-## Resultat attendu
-
-- Plus aucune erreur de recursion infinie entre `agents` et `visites`
-- L'admin voit a nouveau les 527+ visites planifiees disponibles pour delegation
-- Les agents conservent l'acces a leurs visites
-- Les coursiers conservent la visibilite des agents lies a leurs missions
+Les donnees sont deja disponibles car la requete Supabase utilise `offres(*)` qui recupere toutes les colonnes de la table `offres`. Aucune modification de la requete n'est necessaire.
 
