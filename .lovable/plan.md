@@ -1,60 +1,38 @@
 
 
-# Création de compte Coursier - Edge Function manquante
+# Permettre a l'admin de deleguer des visites aux coursiers
 
-## Situation actuelle
+## Probleme actuel
 
-L'interface d'administration pour les coursiers (`/admin/coursiers`) est deja en place avec un bouton **"Ajouter un coursier"** et un formulaire (prenom, nom, email, telephone). Cependant, le formulaire appelle une Edge Function `invite-user` qui **n'existe pas** dans le backend. C'est pour cela que la creation echoue.
+Seuls les **agents** peuvent deleguer des visites aux coursiers, via le bouton sur `/agent/visites`. L'admin n'a aucun moyen de le faire depuis son interface.
 
 ## Solution
 
-Creer une Edge Function `create-coursier` en suivant le meme modele que `create-agent`, puis mettre a jour le code du formulaire pour appeler cette nouvelle fonction.
-
-## Etapes de la creation d'un compte coursier (workflow final)
-
-1. L'admin va sur `/admin/coursiers`
-2. Clique sur "Ajouter un coursier"
-3. Remplit le formulaire (prenom, nom, email, telephone)
-4. Le systeme envoie une invitation par email au coursier
-5. Le coursier recoit l'email, clique sur le lien, arrive sur `/first-login` pour definir son mot de passe
-6. A la prochaine connexion, le coursier est redirige vers `/coursier` (son tableau de bord)
+Ajouter une section **"Deleguer une visite"** dans la page `/admin/coursiers` qui permet a l'admin de :
+1. Voir la liste des visites eligibles (planifiees, pas encore deleguees a un coursier)
+2. Cliquer sur un bouton pour envoyer une visite dans le pool coursier
 
 ## Modifications techniques
 
-### 1. Creer l'Edge Function `create-coursier`
+### Fichier modifie : `src/pages/admin/Coursiers.tsx`
 
-**Fichier** : `supabase/functions/create-coursier/index.ts`
+1. **Charger les visites eligibles** : Ajouter une requete pour recuperer les visites avec `statut_coursier IS NULL` et `statut = 'planifiee'`, avec les informations de l'offre associee (adresse, client).
 
-La fonction effectuera les etapes suivantes dans l'ordre :
-1. Inviter l'utilisateur via `supabase.auth.admin.inviteUserByEmail()` (envoie un email automatique)
-2. Creer le profil dans la table `profiles` (prenom, nom, email, telephone)
-3. Assigner le role `coursier` dans la table `user_roles`
-4. Creer l'enregistrement dans la table `coursiers` (avec statut `en_attente`)
+2. **Ajouter une section "Visites a deleguer"** entre les stats et la liste des coursiers :
+   - Une carte listant les visites disponibles avec : adresse, date, nom du client
+   - Un bouton **"Deleguer au coursier (5.-)"** sur chaque visite
+   - Au clic, la visite est mise a jour avec `statut_coursier = 'en_attente'` et `remuneration_coursier = 5`
 
-### 2. Mettre a jour le formulaire admin
+3. **Rafraichir les donnees** apres chaque delegation pour mettre a jour les compteurs et les listes.
 
-**Fichier** : `src/pages/admin/Coursiers.tsx`
+### Pas de modification de base de donnees necessaire
 
-Changer l'appel de `invite-user` vers `create-coursier` et adapter les parametres envoyes.
+L'admin a deja les droits RLS necessaires pour modifier les visites (via les policies existantes sur la table `visites`). Aucune migration n'est requise.
 
-**Avant :**
-```typescript
-await supabase.functions.invoke('invite-user', {
-  body: { email, role: 'coursier', prenom, nom, telephone }
-});
-```
+## Resultat attendu
 
-**Apres :**
-```typescript
-await supabase.functions.invoke('create-coursier', {
-  body: { email, prenom, nom, telephone }
-});
-```
-
-## Resume des fichiers
-
-| Fichier | Action |
-|---------|--------|
-| `supabase/functions/create-coursier/index.ts` | Creer (nouvelle Edge Function) |
-| `src/pages/admin/Coursiers.tsx` | Modifier l'appel de la fonction (ligne 48) |
+L'admin pourra depuis `/admin/coursiers` :
+- Voir toutes les visites planifiees qui ne sont pas encore envoyees au pool coursier
+- Deleguer n'importe quelle visite en un clic
+- Suivre les missions en cours et gerer les paiements (deja en place)
 
