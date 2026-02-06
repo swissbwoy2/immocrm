@@ -45,10 +45,9 @@ export default function AdminCoursiers() {
     setCreating(true);
     try {
       // Invite user via edge function or create directly
-      const { data: inviteData, error: inviteError } = await supabase.functions.invoke('invite-user', {
+      const { data: inviteData, error: inviteError } = await supabase.functions.invoke('create-coursier', {
         body: {
           email: newCoursier.email,
-          role: 'coursier',
           prenom: newCoursier.prenom,
           nom: newCoursier.nom,
           telephone: newCoursier.telephone,
@@ -56,6 +55,9 @@ export default function AdminCoursiers() {
       });
 
       if (inviteError) throw inviteError;
+      
+      // Check for error in response body
+      if (inviteData?.error) throw new Error(inviteData.error);
       
       toast.success(`Coursier ${newCoursier.prenom} invité avec succès`);
       setCreateOpen(false);
