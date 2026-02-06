@@ -5956,6 +5956,7 @@ export type Database = {
         | "apporteur"
         | "proprietaire"
         | "annonceur"
+        | "coursier"
       contact_type:
         | "proprietaire"
         | "gerant_regie"
@@ -6099,6 +6100,7 @@ export const Constants = {
         "apporteur",
         "proprietaire",
         "annonceur",
+        "coursier",
       ],
       contact_type: [
         "proprietaire",
