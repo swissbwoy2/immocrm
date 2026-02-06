@@ -5857,6 +5857,8 @@ export type Database = {
         Returns: string
       }
       get_current_user_id: { Args: never; Returns: string }
+      get_my_agent_id: { Args: never; Returns: string }
+      get_my_co_agent_client_ids: { Args: never; Returns: string[] }
       get_next_abaninja_client_number: { Args: never; Returns: string }
       has_access_to_immeuble: {
         Args: { _immeuble_id: string }
@@ -5887,6 +5889,7 @@ export type Database = {
         Returns: boolean
       }
       is_assigned_agent: { Args: { _client_user_id: string }; Returns: boolean }
+      is_coursier_for_agent: { Args: { _agent_id: string }; Returns: boolean }
       is_coursier_for_agent_profile: {
         Args: { _profile_id: string }
         Returns: boolean
