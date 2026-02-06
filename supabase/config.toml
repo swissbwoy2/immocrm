@@ -110,3 +110,6 @@ verify_jwt = false
 
 [functions.create-final-invoice]
 verify_jwt = false
+
+[functions.create-coursier]
+verify_jwt = false
