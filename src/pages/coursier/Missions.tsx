@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { CalendarCheck, Clock, CheckCircle, MapPin, Banknote, Home, Maximize2, Phone, Mail, KeyRound, Building, User, MessageSquare, FileText, Upload, Loader2, X, Image } from 'lucide-react';
+import { CalendarCheck, Clock, CheckCircle, MapPin, Banknote, Home, Maximize2, Phone, Mail, KeyRound, Building, User, MessageSquare, FileText, Upload, Loader2, X, Image, UserCog } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -46,7 +46,7 @@ export default function CoursierMissions() {
 
       const { data: allMissions } = await supabase
         .from('visites')
-        .select('*, offres(*), clients!client_id(id, user_id, profiles:user_id(prenom, nom, email, telephone))')
+        .select('*, offres(*), clients!client_id(id, user_id, profiles:user_id(prenom, nom, email, telephone)), agents!agent_id(id, user_id, profiles:user_id(prenom, nom, email, telephone))')
         .or(`statut_coursier.eq.en_attente,coursier_id.eq.${coursierData.id}`)
         .order('date_visite', { ascending: true });
 
@@ -160,6 +160,13 @@ export default function CoursierMissions() {
           <Clock className="h-3.5 w-3.5" />
           {format(new Date(mission.date_visite), "EEE dd MMM 'à' HH:mm", { locale: fr })}
         </div>
+
+        {mission.agents?.profiles && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <UserCog className="h-3 w-3" />
+            Agent: {mission.agents.profiles.prenom} {mission.agents.profiles.nom}
+          </div>
+        )}
 
         {mission.offres && (
           <div className="flex gap-2 flex-wrap">
@@ -296,6 +303,35 @@ export default function CoursierMissions() {
                   {format(new Date(selectedMission.date_visite), "EEEE dd MMMM yyyy 'à' HH:mm", { locale: fr })}
                 </div>
               </div>
+
+              {/* Agent responsable */}
+              {selectedMission.agents?.profiles && (
+                <Card className="bg-purple-500/5 border-purple-500/20">
+                  <CardContent className="pt-4 space-y-2">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <UserCog className="h-4 w-4 text-purple-600" />
+                      Agent responsable
+                    </h4>
+                    <div className="text-sm space-y-1">
+                      <div className="font-medium">
+                        {selectedMission.agents.profiles.prenom} {selectedMission.agents.profiles.nom}
+                      </div>
+                      {selectedMission.agents.profiles.telephone && (
+                        <a href={`tel:${selectedMission.agents.profiles.telephone}`} className="flex items-center gap-2 text-primary hover:underline">
+                          <Phone className="h-3.5 w-3.5" />
+                          {selectedMission.agents.profiles.telephone}
+                        </a>
+                      )}
+                      {selectedMission.agents.profiles.email && (
+                        <a href={`mailto:${selectedMission.agents.profiles.email}`} className="flex items-center gap-2 text-primary hover:underline">
+                          <Mail className="h-3.5 w-3.5" />
+                          {selectedMission.agents.profiles.email}
+                        </a>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Offer details */}
               {selectedMission.offres && (
