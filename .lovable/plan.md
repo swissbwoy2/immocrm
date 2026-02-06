@@ -1,61 +1,60 @@
 
-# Correction du "Revenu agence a zero" - Recursion infinie sur `has_role`
+# Correction : Transactions manquantes pour les candidatures validees
 
-## Diagnostic
+## Probleme identifie
 
-Le probleme principal est la fonction `has_role()` qui est en **LANGUAGE SQL**. PostgreSQL "inline" les fonctions SQL, ce qui fait perdre le contexte `SECURITY DEFINER` et declenche une recursion infinie :
+Le systeme ne cree des transactions que lorsque les cles sont remises (`cles_remises = true`). Mais 5 dossiers sont valides par la regie et le client (stade `attente_bail` ou `bail_conclu`) sans aucune transaction associee.
+
+## Dossiers manquants confirmes dans la base
+
+| Client | Adresse | Loyer | Stade | Commission (loyer) | Agent (45%) | Agence (55%) |
+|--------|---------|-------|-------|-------------------|-------------|--------------|
+| Mongi Tayahi | Vallombreuse 81, Prilly | 1590 CHF | attente_bail | 1590 CHF | 716 CHF | 874 CHF |
+| Aziz Ed_Dahimi | Morges 11, Lausanne | 1310 CHF | attente_bail | 1310 CHF | 590 CHF | 720 CHF |
+| Miguel Angel Lloret Robles | Morges 11, Lausanne | 1310 CHF | bail_conclu | 1310 CHF | 590 CHF | 720 CHF |
+| Salah Benrabah | Simplon 45, Paudex | 1450 CHF | attente_bail | 1450 CHF | 653 CHF | 797 CHF |
+| Mohamed Hilal | Chomaz 2 | 1800 CHF | attente_bail | 1800 CHF | 810 CHF | 990 CHF |
+
+**Commission = loyer uniquement, pas de TVA.**
+
+## Ce qui va etre fait
+
+### 1. Migration SQL
+
+**Mise a jour du trigger** pour qu'il se declenche en deux temps :
 
 ```text
-Admin ouvre le tableau de bord
-  --> SELECT FROM transactions (RLS appelle has_role())
-    --> has_role() fait SELECT FROM user_roles (RLS appelle has_role())
-      --> has_role() fait SELECT FROM user_roles (RLS appelle has_role())
-        --> recursion infinie --> requete bloquee --> 0 resultats
+QUAND candidature est mise a jour :
+  SI nouveau statut = 'attente_bail' ET ancien statut != 'attente_bail' :
+    --> Verifier qu'aucune transaction n'existe deja
+    --> Creer transaction avec statut = 'en_cours'
+    --> Commission = loyer (sans TVA), split 45/55
+  
+  SI cles_remises passe de false a true :
+    --> Mettre a jour la transaction existante : statut = 'conclue'
+    --> Si aucune transaction n'existe, en creer une avec statut = 'conclue'
 ```
 
-Ce cycle affecte **toutes les tables** du systeme (39+ politiques utilisent `has_role`), ce qui explique pourquoi tout affiche zero : agents, clients, transactions, offres, etc.
+**Insertion des 5 transactions manquantes** directement dans la migration pour rattraper les dossiers existants. Chaque transaction sera creee avec le statut `en_cours` (sauf Miguel qui est `bail_conclu`, donc aussi `en_cours` en attente des cles).
 
-Les corrections precedentes ont converti les fonctions `is_coursier_for_agent`, `get_my_agent_id`, etc. en `plpgsql`, mais la fonction la plus critique -- `has_role` -- est restee en SQL.
+### 2. Adaptation de la page Transactions
 
-## Solution
+Actuellement seules les transactions `conclue` sont bien visibles. Modification pour :
+- Afficher aussi les transactions `en_cours` avec un badge distinct (couleur differente)
+- Les inclure dans les compteurs pertinents
 
-Convertir `has_role` de `LANGUAGE SQL` en `LANGUAGE plpgsql` pour empecher PostgreSQL de l'inliner. Cela preserve le contexte `SECURITY DEFINER` et casse la recursion.
-
-### Migration SQL
-
-```sql
-CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role app_role)
-RETURNS BOOLEAN
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = _user_id AND role = _role
-  );
-END;
-$$;
-```
-
-Aucune autre modification n'est necessaire : les 39+ politiques RLS existantes continueront d'appeler `has_role()` exactement comme avant, mais cette fois la fonction executera son SELECT sur `user_roles` **sans declencher le RLS** grace au `SECURITY DEFINER` correctement preserve.
-
-## Impact
+### Impact attendu
 
 | Element | Avant | Apres |
 |---------|-------|-------|
-| Transactions | 0 (recursion) | 6 visibles |
-| Revenus agence (fevrier) | CHF 0 | CHF 2'766 |
-| Agents | 0 | 7 visibles |
-| Clients | 0 | 45 visibles |
-| Toutes les autres tables | 0 | Donnees restaurees |
+| Transactions visibles | 6 | 11 |
+| Mongi, Miguel, Aziz, Salah, Mohamed | Absents | Visibles "En cours" |
+| Passage a "Conclue" | Manuel | Automatique a la remise des cles |
+| Calcul commission | Loyer (sans TVA) | Inchange |
 
-## Fichier modifie
+### Fichiers concernes
 
 | Fichier | Modification |
 |---------|-------------|
-| Nouvelle migration SQL | Conversion de `has_role` en `plpgsql` (1 seule instruction) |
-
-Aucun fichier frontend n'est modifie. Le code du dashboard fonctionne deja correctement -- c'est uniquement la base de donnees qui bloque les resultats.
+| Nouvelle migration SQL | Trigger mis a jour + 5 transactions inserees |
+| `src/pages/admin/Transactions.tsx` | Affichage des transactions "en_cours" |
