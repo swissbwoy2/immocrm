@@ -1,85 +1,99 @@
 
 
-# Correction : Le coursier ne voit pas les details de l'offre
+# Afficher les contacts et infos completes pour le coursier
 
-## Problemes identifies
+## Probleme identifie
 
-### 1. Politique de securite manquante (RLS) sur la table `offres`
+La base de donnees montre que pour cette visite :
+- Les champs `concierge_nom`, `concierge_tel`, `locataire_nom`, `locataire_tel` sont **vides** dans l'offre
+- Le **client** associe a la visite (Sahlu Amanuel, +41 78 943 00 62) existe bien dans la base, mais la requete ne le charge pas
+- Le coursier ne sait donc pas **qui il doit rencontrer** ni **comment le contacter**
 
-La requete du coursier fait `select('*, offres(*)')`, mais la table `offres` n'a **aucune politique de lecture pour les coursiers**. Les politiques actuelles autorisent uniquement :
-- Les admins
-- Les agents (via `client_agents`)
-- Les clients (via `clients.user_id`)
+## Solution
 
-Resultat : Supabase retourne `offres: null` dans la jointure car le coursier n'a pas le droit de lire la table `offres`.
+### 1. Ajouter des politiques RLS pour permettre aux coursiers d'acceder aux infos clients
 
-### 2. Noms de colonnes incorrects dans le code
+Les coursiers n'ont actuellement aucun droit de lecture sur les tables `clients` et `profiles`. Il faut ajouter des politiques SELECT limitees aux missions du coursier.
 
-Le code de `Missions.tsx` reference des colonnes qui n'existent pas :
-- `contact_concierge` -- n'existe pas
-- `contact_locataire` -- n'existe pas
-
-Les vrais noms dans la table `offres` sont :
-- `concierge_nom` + `concierge_tel`
-- `locataire_nom` + `locataire_tel`
-
-## Plan de correction
-
-### Etape 1 : Ajouter une politique RLS sur la table `offres`
-
-Creer une politique SELECT permettant aux coursiers de lire les offres liees a leurs missions (visites en attente ou acceptees).
-
+**Table `clients`** :
 ```sql
-CREATE POLICY "Coursiers peuvent voir offres de leurs missions"
-  ON public.offres FOR SELECT
+CREATE POLICY "Coursiers peuvent voir clients de leurs missions"
+  ON public.clients FOR SELECT
   USING (
     EXISTS (
       SELECT 1 FROM visites v
-      JOIN coursiers c ON c.id = v.coursier_id
-      WHERE v.offre_id = offres.id
-      AND c.user_id = auth.uid()
-      AND v.statut_coursier IN ('accepte', 'termine')
-    )
-    OR
-    EXISTS (
-      SELECT 1 FROM visites v
-      WHERE v.offre_id = offres.id
-      AND v.statut_coursier = 'en_attente'
-      AND EXISTS (
-        SELECT 1 FROM coursiers c WHERE c.user_id = auth.uid()
+      WHERE v.client_id = clients.id
+      AND (
+        v.statut_coursier = 'en_attente'
+        OR (v.coursier_id IN (
+          SELECT c.id FROM coursiers c WHERE c.user_id = auth.uid()
+        ))
       )
     )
+    AND EXISTS (SELECT 1 FROM coursiers c WHERE c.user_id = auth.uid())
   );
 ```
 
-Cette politique permet au coursier de voir :
-- Les offres des missions en attente (disponibles pour tous les coursiers)
-- Les offres des missions qu'il a acceptees ou terminees
+**Table `profiles`** :
+```sql
+CREATE POLICY "Coursiers peuvent voir profils clients de leurs missions"
+  ON public.profiles FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM clients cl
+      JOIN visites v ON v.client_id = cl.id
+      WHERE cl.user_id = profiles.id
+      AND (
+        v.statut_coursier = 'en_attente'
+        OR (v.coursier_id IN (
+          SELECT c.id FROM coursiers c WHERE c.user_id = auth.uid()
+        ))
+      )
+    )
+    AND EXISTS (SELECT 1 FROM coursiers c WHERE c.user_id = auth.uid())
+  );
+```
 
-### Etape 2 : Corriger les noms de colonnes dans `Missions.tsx`
+### 2. Modifier la requete dans Missions.tsx
 
-Modifier la section "Informations d'acces" (lignes 328-358) pour utiliser les bons noms de colonnes :
+Ajouter la jointure vers `clients` et `profiles` pour charger les infos du client :
 
-| Code actuel (incorrect) | Code corrige |
-|-------------------------|-------------|
-| `offres?.contact_concierge` | `offres?.concierge_nom` |
-| `offres?.contact_locataire` | `offres?.locataire_nom` |
+**Avant :**
+```typescript
+.select('*, offres(*)')
+```
 
-Et ajouter l'affichage des numeros de telephone (`concierge_tel`, `locataire_tel`) quand ils sont disponibles.
+**Apres :**
+```typescript
+.select('*, offres(*), clients!client_id(id, user_id, profiles:user_id(prenom, nom, email, telephone))')
+```
+
+### 3. Ajouter la section "Contact de la visite" dans le dialog
+
+Apres la section "Informations d'acces", ajouter un bloc affichant :
+- Nom et prenom du client
+- Numero de telephone (cliquable)
+- Email (cliquable)
+
+Ce bloc s'affichera toujours car le client est toujours associe a la visite, contrairement aux champs concierge/locataire qui sont optionnels.
+
+### 4. Afficher aussi les notes de la visite
+
+Le champ `notes` de la table `visites` (instructions speciales pour la visite) sera affiche dans le dialog meme s'il est vide, pour que le coursier ait toutes les informations necessaires.
 
 ## Fichiers modifies
 
 | Fichier | Modification |
 |---------|-------------|
-| Migration SQL | Ajout politique RLS sur `offres` pour les coursiers |
-| `src/pages/coursier/Missions.tsx` | Correction des noms de colonnes + ajout numeros de tel |
+| Migration SQL | 2 politiques RLS (clients + profiles pour coursiers) |
+| `src/pages/coursier/Missions.tsx` | Jointure client + affichage contact + notes |
 
 ## Resultat attendu
 
-Le coursier pourra voir dans le detail de chaque mission :
-- Les informations du bien (pieces, surface, prix, etage)
-- La description et le lien d'annonce
-- Le code d'immeuble
-- Le nom et telephone du concierge
-- Le nom et telephone du locataire actuel
-
+Le coursier verra dans les details de la mission :
+- Adresse et date/heure
+- Details du bien (pieces, surface, prix, etage, description)
+- **Contact de la visite** : nom, telephone cliquable, email du client
+- Informations d'acces (code immeuble, concierge, locataire) si renseignees
+- Notes de la visite si presentes
+- Remuneration
