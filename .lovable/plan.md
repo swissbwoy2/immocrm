@@ -1,59 +1,47 @@
 
 
-# Correction : La section "Visites a deleguer" ne s'affiche pas
+# Correction : Afficher uniquement les visites a venir dans "Visites a deleguer"
 
-## Probleme identifie
+## Probleme
 
-La requete pour charger les visites eligibles retourne une **erreur 400** car elle reference des colonnes inexistantes (`client_nom`, `client_prenom`) dans la table `offres`.
-
-Erreur exacte du serveur :
-```
-column offres_1.client_nom does not exist
-```
-
-La table `offres` n'a pas de colonnes `client_nom` / `client_prenom`. Le nom du client est stocke dans la table `profiles`, accessible via `clients.user_id`.
-
-## Cause racine
-
-Ligne 32 du fichier `src/pages/admin/Coursiers.tsx` :
-```typescript
-// INCORRECT - client_nom et client_prenom n'existent pas dans offres
-supabase.from('visites')
-  .select('*, offres(adresse, client_nom, client_prenom)')
-  .is('statut_coursier', null)
-  .eq('statut', 'planifiee')
-```
+La requete charge les 50 visites les plus anciennes avec `statut = 'planifiee'` et `statut_coursier IS NULL`, triees par date croissante. Resultat : les vieilles visites de decembre 2025 (passees depuis longtemps) apparaissent en premier et cachent les visites a venir de fevrier 2026.
 
 ## Solution
 
-Modifier la requete pour :
-1. Retirer `client_nom` et `client_prenom` de la jointure `offres`
-2. Ajouter une jointure vers `clients` puis `profiles` pour obtenir le nom du client
+Ajouter un filtre `date_visite >= maintenant` a la requete pour ne montrer que les visites futures.
 
-La requete corrigee sera :
+## Modification technique
+
+**Fichier** : `src/pages/admin/Coursiers.tsx`, ligne 32
+
+Ajouter `.gte('date_visite', new Date().toISOString())` a la requete des visites eligibles :
+
+**Avant :**
 ```typescript
 supabase.from('visites')
-  .select('*, offres(adresse), clients!client_id(user_id, profiles:user_id(prenom, nom))')
+  .select('*, offres(adresse), clients!client_id(...)')
   .is('statut_coursier', null)
   .eq('statut', 'planifiee')
+  .order('date_visite', { ascending: true })
+  .limit(50)
 ```
 
-Puis adapter l'affichage du nom dans le template (ligne 200) :
+**Apres :**
 ```typescript
-// AVANT (ne marchait pas)
-v.offres?.client_prenom + ' ' + v.offres?.client_nom
-
-// APRES
-v.clients?.profiles?.prenom + ' ' + v.clients?.profiles?.nom
+supabase.from('visites')
+  .select('*, offres(adresse), clients!client_id(...)')
+  .is('statut_coursier', null)
+  .eq('statut', 'planifiee')
+  .gte('date_visite', new Date().toISOString())
+  .order('date_visite', { ascending: true })
+  .limit(50)
 ```
+
+Cela filtrera automatiquement les visites passees et n'affichera que les prochaines visites planifiees.
 
 ## Fichier modifie
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/pages/admin/Coursiers.tsx` | Corriger la requete (ligne 32) et l'affichage du nom client (ligne 200) |
-
-## Resultat attendu
-
-Apres correction, la section **"Visites a deleguer"** apparaitra entre les statistiques et le bouton "Ajouter un coursier", listant toutes les visites planifiees avec l'adresse, la date et le nom du client.
+| `src/pages/admin/Coursiers.tsx` | Ajouter le filtre `.gte('date_visite', ...)` a la ligne 32 |
 
