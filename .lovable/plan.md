@@ -1,47 +1,85 @@
 
 
-# Correction : Afficher uniquement les visites a venir dans "Visites a deleguer"
+# Correction : Le coursier ne voit pas les details de l'offre
 
-## Probleme
+## Problemes identifies
 
-La requete charge les 50 visites les plus anciennes avec `statut = 'planifiee'` et `statut_coursier IS NULL`, triees par date croissante. Resultat : les vieilles visites de decembre 2025 (passees depuis longtemps) apparaissent en premier et cachent les visites a venir de fevrier 2026.
+### 1. Politique de securite manquante (RLS) sur la table `offres`
 
-## Solution
+La requete du coursier fait `select('*, offres(*)')`, mais la table `offres` n'a **aucune politique de lecture pour les coursiers**. Les politiques actuelles autorisent uniquement :
+- Les admins
+- Les agents (via `client_agents`)
+- Les clients (via `clients.user_id`)
 
-Ajouter un filtre `date_visite >= maintenant` a la requete pour ne montrer que les visites futures.
+Resultat : Supabase retourne `offres: null` dans la jointure car le coursier n'a pas le droit de lire la table `offres`.
 
-## Modification technique
+### 2. Noms de colonnes incorrects dans le code
 
-**Fichier** : `src/pages/admin/Coursiers.tsx`, ligne 32
+Le code de `Missions.tsx` reference des colonnes qui n'existent pas :
+- `contact_concierge` -- n'existe pas
+- `contact_locataire` -- n'existe pas
 
-Ajouter `.gte('date_visite', new Date().toISOString())` a la requete des visites eligibles :
+Les vrais noms dans la table `offres` sont :
+- `concierge_nom` + `concierge_tel`
+- `locataire_nom` + `locataire_tel`
 
-**Avant :**
-```typescript
-supabase.from('visites')
-  .select('*, offres(adresse), clients!client_id(...)')
-  .is('statut_coursier', null)
-  .eq('statut', 'planifiee')
-  .order('date_visite', { ascending: true })
-  .limit(50)
+## Plan de correction
+
+### Etape 1 : Ajouter une politique RLS sur la table `offres`
+
+Creer une politique SELECT permettant aux coursiers de lire les offres liees a leurs missions (visites en attente ou acceptees).
+
+```sql
+CREATE POLICY "Coursiers peuvent voir offres de leurs missions"
+  ON public.offres FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM visites v
+      JOIN coursiers c ON c.id = v.coursier_id
+      WHERE v.offre_id = offres.id
+      AND c.user_id = auth.uid()
+      AND v.statut_coursier IN ('accepte', 'termine')
+    )
+    OR
+    EXISTS (
+      SELECT 1 FROM visites v
+      WHERE v.offre_id = offres.id
+      AND v.statut_coursier = 'en_attente'
+      AND EXISTS (
+        SELECT 1 FROM coursiers c WHERE c.user_id = auth.uid()
+      )
+    )
+  );
 ```
 
-**Apres :**
-```typescript
-supabase.from('visites')
-  .select('*, offres(adresse), clients!client_id(...)')
-  .is('statut_coursier', null)
-  .eq('statut', 'planifiee')
-  .gte('date_visite', new Date().toISOString())
-  .order('date_visite', { ascending: true })
-  .limit(50)
-```
+Cette politique permet au coursier de voir :
+- Les offres des missions en attente (disponibles pour tous les coursiers)
+- Les offres des missions qu'il a acceptees ou terminees
 
-Cela filtrera automatiquement les visites passees et n'affichera que les prochaines visites planifiees.
+### Etape 2 : Corriger les noms de colonnes dans `Missions.tsx`
 
-## Fichier modifie
+Modifier la section "Informations d'acces" (lignes 328-358) pour utiliser les bons noms de colonnes :
+
+| Code actuel (incorrect) | Code corrige |
+|-------------------------|-------------|
+| `offres?.contact_concierge` | `offres?.concierge_nom` |
+| `offres?.contact_locataire` | `offres?.locataire_nom` |
+
+Et ajouter l'affichage des numeros de telephone (`concierge_tel`, `locataire_tel`) quand ils sont disponibles.
+
+## Fichiers modifies
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/pages/admin/Coursiers.tsx` | Ajouter le filtre `.gte('date_visite', ...)` a la ligne 32 |
+| Migration SQL | Ajout politique RLS sur `offres` pour les coursiers |
+| `src/pages/coursier/Missions.tsx` | Correction des noms de colonnes + ajout numeros de tel |
+
+## Resultat attendu
+
+Le coursier pourra voir dans le detail de chaque mission :
+- Les informations du bien (pieces, surface, prix, etage)
+- La description et le lien d'annonce
+- Le code d'immeuble
+- Le nom et telephone du concierge
+- Le nom et telephone du locataire actuel
 
