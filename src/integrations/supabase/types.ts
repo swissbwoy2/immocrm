@@ -5887,6 +5887,15 @@ export type Database = {
         Returns: boolean
       }
       is_assigned_agent: { Args: { _client_user_id: string }; Returns: boolean }
+      is_coursier_for_agent_profile: {
+        Args: { _profile_id: string }
+        Returns: boolean
+      }
+      is_coursier_for_client: { Args: { _client_id: string }; Returns: boolean }
+      is_coursier_for_profile: {
+        Args: { _profile_id: string }
+        Returns: boolean
+      }
       is_my_assigned_agent: { Args: { _agent_id: string }; Returns: boolean }
       is_proprietaire_owner: {
         Args: { _proprietaire_id: string }
