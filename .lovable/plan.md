@@ -1,122 +1,95 @@
 
-# Correction de la recursion infinie dans les politiques RLS
+
+# Correction complete de la recursion infinie agents / visites
 
 ## Probleme identifie
 
-Les logs de la base de donnees montrent des erreurs massives et repetees :
+La migration precedente a corrige la recursion sur les tables `clients` et `profiles`, mais **n'a pas traite** la recursion entre `agents` et `visites` qui est la cause principale du blocage.
 
+### La boucle circulaire active
+
+```text
+agents (policy "Coursiers peuvent voir agents...")
+  --> SELECT FROM visites (declenche le RLS de visites)
+    --> visites (policy "Agents can view their visites")
+      --> SELECT FROM agents (declenche le RLS de agents)
+        --> recursion infinie !
 ```
-infinite recursion detected in policy for relation "visites"
-infinite recursion detected in policy for relation "clients"
-```
 
-**Cause** : Les politiques RLS ajoutees precedemment pour les coursiers creent une boucle circulaire :
+Les 527 visites planifiees en base de donnees sont invisibles car **toute requete** touchant la table `visites` declenche cette recursion, y compris pour l'admin.
 
-1. La politique sur `clients` pour les coursiers contient `EXISTS (SELECT FROM visites ...)`
-2. Quand PostgreSQL evalue cette sous-requete sur `visites`, il declenche les politiques RLS de `visites`
-3. La politique `"Agents multi peuvent gerer visites"` sur `visites` reference `clients` via `client_agents`
-4. Cela declenche a nouveau les politiques RLS de `clients` --> boucle infinie
+## Solution : Fonctions SECURITY DEFINER pour casser les deux directions du cycle
 
-Ce probleme affecte **tous les utilisateurs** (pas seulement les coursiers) des qu'une requete joint `visites` et `clients`.
+### Etape 1 : Fonction pour la politique agents --> visites
 
-## Solution
-
-Remplacer les politiques qui causent la recursion par des fonctions `SECURITY DEFINER` qui contournent les politiques RLS lors de leurs verifications internes.
-
-### Etape 1 : Creer des fonctions SECURITY DEFINER
-
-Ces fonctions s'executent avec les privileges du proprietaire, ce qui evite la recursion RLS.
+Remplacer la politique inline sur `agents` par une fonction SECURITY DEFINER.
 
 ```sql
--- Fonction pour verifier si un coursier a acces a un client
-CREATE OR REPLACE FUNCTION public.is_coursier_for_client(_client_id uuid)
+CREATE OR REPLACE FUNCTION public.is_coursier_for_agent(_agent_id uuid)
 RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM visites v
     JOIN coursiers c ON c.user_id = auth.uid()
-    WHERE v.client_id = _client_id
+    WHERE v.agent_id = _agent_id
     AND (v.statut_coursier = 'en_attente' OR v.coursier_id = c.id)
   )
   AND EXISTS (SELECT 1 FROM coursiers WHERE user_id = auth.uid())
 $$;
+```
 
--- Fonction pour verifier si un coursier a acces a un profil (via client)
-CREATE OR REPLACE FUNCTION public.is_coursier_for_profile(_profile_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
+### Etape 2 : Fonction pour les politiques visites --> agents
+
+Creer une fonction qui retourne l'ID agent de l'utilisateur courant sans declencher le RLS sur `agents`.
+
+```sql
+CREATE OR REPLACE FUNCTION public.get_my_agent_id()
+RETURNS uuid
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM clients cl
-    JOIN visites v ON v.client_id = cl.id
-    WHERE cl.user_id = _profile_id
-    AND (v.statut_coursier = 'en_attente' OR v.coursier_id IN (
-      SELECT id FROM coursiers WHERE user_id = auth.uid()
-    ))
-  )
-  AND EXISTS (SELECT 1 FROM coursiers WHERE user_id = auth.uid())
+  SELECT id FROM agents WHERE user_id = auth.uid() LIMIT 1
 $$;
 
--- Fonction pour verifier si un coursier a acces a un profil d'agent
-CREATE OR REPLACE FUNCTION public.is_coursier_for_agent_profile(_profile_id uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
+CREATE OR REPLACE FUNCTION public.get_my_co_agent_client_ids()
+RETURNS SETOF uuid
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
 AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM agents a
-    JOIN visites v ON v.agent_id = a.id
-    WHERE a.user_id = _profile_id
-    AND (v.statut_coursier = 'en_attente' OR v.coursier_id IN (
-      SELECT id FROM coursiers WHERE user_id = auth.uid()
-    ))
-  )
-  AND EXISTS (SELECT 1 FROM coursiers WHERE user_id = auth.uid())
+  SELECT ca.client_id FROM client_agents ca
+  JOIN agents a ON a.id = ca.agent_id
+  WHERE a.user_id = auth.uid()
 $$;
 ```
 
-### Etape 2 : Supprimer les politiques problematiques
+### Etape 3 : Remplacer les politiques problematiques
 
-```sql
-DROP POLICY IF EXISTS "Coursiers peuvent voir clients de leurs missions" ON public.clients;
-DROP POLICY IF EXISTS "Coursiers peuvent voir profils clients de leurs missions" ON public.profiles;
-DROP POLICY IF EXISTS "Coursiers peuvent voir profils agents de leurs missions" ON public.profiles;
-```
+**Sur la table `agents` :**
+- Supprimer "Coursiers peuvent voir agents de leurs missions" (inline)
+- Recreer avec `is_coursier_for_agent(id)`
 
-### Etape 3 : Recreer les politiques avec les fonctions
+**Sur la table `visites` :**
+- Supprimer "Agents can view their visites" / "Agents can update their visites" / "Agents multi peuvent gerer visites"
+- Recreer avec `get_my_agent_id()` et `get_my_co_agent_client_ids()`
 
-```sql
-CREATE POLICY "Coursiers peuvent voir clients de leurs missions"
-  ON public.clients FOR SELECT
-  USING (is_coursier_for_client(id));
+## Politiques recreees
 
-CREATE POLICY "Coursiers peuvent voir profils clients de leurs missions"
-  ON public.profiles FOR SELECT
-  USING (is_coursier_for_profile(id));
-
-CREATE POLICY "Coursiers peuvent voir profils agents de leurs missions"
-  ON public.profiles FOR SELECT
-  USING (is_coursier_for_agent_profile(id));
-```
+| Table | Politique | Nouvelle condition |
+|-------|-----------|-------------------|
+| agents | Coursiers peuvent voir agents | `is_coursier_for_agent(id)` |
+| visites | Agents can view their visites | `agent_id = get_my_agent_id()` |
+| visites | Agents can update their visites | `agent_id = get_my_agent_id()` |
+| visites | Agents multi peuvent gerer visites | `agent_id = get_my_agent_id() OR client_id IN (SELECT get_my_co_agent_client_ids())` |
 
 ## Fichier modifie
 
 | Fichier | Modification |
 |---------|-------------|
-| Migration SQL | Fonctions SECURITY DEFINER + remplacement des 3 politiques RLS |
+| Migration SQL | 3 fonctions SECURITY DEFINER + remplacement de 4 politiques RLS |
 
 ## Resultat attendu
 
-- Plus aucune erreur de recursion infinie
-- L'admin voit a nouveau les visites a deleguer sur `/admin/coursiers`
-- Les coursiers conservent l'acces aux infos de contact (client + agent) pour leurs missions
-- Tous les autres utilisateurs (agents, clients) ne sont plus impactes
+- Plus aucune erreur de recursion infinie entre `agents` et `visites`
+- L'admin voit a nouveau les 527+ visites planifiees disponibles pour delegation
+- Les agents conservent l'acces a leurs visites
+- Les coursiers conservent la visibilite des agents lies a leurs missions
+
