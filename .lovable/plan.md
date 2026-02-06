@@ -1,119 +1,86 @@
 
-
-# Correction : Ajouter le bouton "Générer facture manquante" à la page Admin Candidatures
+# Correction : Colonne `adresse` manquante dans la requête du hook
 
 ## Problème identifié
 
-La page **Admin Candidatures** (`/admin/candidatures`) a son propre système de rendu des actions qui **ne contient pas** le bouton de récupération de facture. Contrairement à d'autres vues qui utilisent `PremiumCandidatureDetails.tsx`, cette page utilise `renderExpandedActions()` (lignes 405-521).
+L'erreur dans les logs est :
+```
+"message": "Client non trouvé: column profiles_1.adresse does not exist"
+```
 
-| Composant | Bouton "Générer facture" |
-|-----------|--------------------------|
-| `PremiumCandidatureDetails.tsx` | ✅ Présent (lignes 423-448) |
-| `AdminCandidatures.tsx` → `renderExpandedActions()` | ❌ **Absent** |
-| `AgentCandidatures.tsx` | ❌ À vérifier |
+Le hook `useFinalInvoice.ts` (lignes 33-50) fait une jointure vers `profiles` et demande la colonne `adresse`, mais cette colonne **n'existe pas** dans `profiles`.
+
+| Table | Colonne `adresse` |
+|-------|-------------------|
+| `profiles` | ❌ N'existe pas |
+| `clients` | ✅ Existe |
+| `demandes_mandat` | ✅ Existe |
 
 ## Solution
 
-Ajouter le bouton de récupération dans la fonction `renderExpandedActions()` de la page Admin Candidatures.
-
----
+Modifier le hook pour ne plus demander `adresse` via la jointure `profiles`, mais plutôt la récupérer directement depuis la table `clients` qui contient déjà cette information.
 
 ## Modifications à effectuer
 
-### Fichier : `src/pages/admin/Candidatures.tsx`
+### Fichier : `src/hooks/useFinalInvoice.ts`
 
-**1. Ajouter les imports nécessaires**
+**Avant (ligne 33-50) :**
 ```typescript
-import { Receipt, Loader2 } from 'lucide-react';
-import { useFinalInvoice } from '@/hooks/useFinalInvoice';
+const { data: clientData, error: clientError } = await supabase
+  .from('clients')
+  .select(`
+    id,
+    user_id,
+    abaninja_client_uuid,
+    abaninja_invoice_id,
+    profiles:user_id (
+      id,
+      prenom,
+      nom,
+      email,
+      telephone,
+      adresse          // ❌ N'existe pas dans profiles
+    )
+  `)
 ```
 
-**2. Utiliser le hook dans le composant**
+**Après :**
 ```typescript
-const { loading: invoiceLoading, createFinalInvoice } = useFinalInvoice();
+const { data: clientData, error: clientError } = await supabase
+  .from('clients')
+  .select(`
+    id,
+    user_id,
+    adresse,                    // ✅ Récupérer directement depuis clients
+    abaninja_client_uuid,
+    abaninja_invoice_id,
+    profiles:user_id (
+      id,
+      prenom,
+      nom,
+      email,
+      telephone
+    )
+  `)
 ```
 
-**3. Ajouter la fonction de création de facture manquante**
+**Puis mettre à jour l'utilisation (ligne 74) :**
 ```typescript
-const handleCreateMissingInvoice = async (candidature: Candidature) => {
-  if (!candidature.offres?.prix) return;
-  
-  const result = await createFinalInvoice({
-    candidatureId: candidature.id,
-    clientId: candidature.client_id,
-    loyerMensuel: candidature.offres.prix,
-    acomptePaye: 300,
-    adresseBien: candidature.offres.adresse
-  });
+// Avant
+adresse: profile.adresse || ''
 
-  if (result.success) {
-    loadData(); // Recharger les données
-    toast({ title: 'Facture créée', description: `Facture ${result.invoiceRef} générée` });
-  }
-};
+// Après
+adresse: clientData.adresse || ''
 ```
 
-**4. Ajouter le bouton dans `renderExpandedActions()` pour le statut `attente_bail`**
+## Résumé des changements
 
-Avant le bouton "Bail reçu - Proposer dates", ajouter :
-```typescript
-{candidature.statut === 'attente_bail' && (
-  <>
-    {/* Bouton facture manquante */}
-    {!candidature.facture_finale_invoice_id && candidature.offres?.prix && (
-      <div className="w-full mb-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-        <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">
-          ⚠️ Facture finale manquante
-        </p>
-        <Button 
-          size="sm" 
-          variant="outline"
-          className="border-amber-500 text-amber-600"
-          onClick={() => handleCreateMissingInvoice(candidature)}
-          disabled={invoiceLoading}
-        >
-          {invoiceLoading ? (
-            <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Création...</>
-          ) : (
-            <><Receipt className="h-4 w-4 mr-1" />Générer facture finale</>
-          )}
-        </Button>
-      </div>
-    )}
-    
-    {/* Bouton existant */}
-    <Button size="sm" onClick={() => { setSelectedCandidature(candidature); setShowDatesDialog(true); }}>
-      <FileCheck className="h-4 w-4 mr-1" />Bail reçu - Proposer dates
-    </Button>
-  </>
-)}
-```
-
-**5. Ajouter le champ `facture_finale_invoice_id` à l'interface Candidature**
-```typescript
-interface Candidature {
-  // ... champs existants ...
-  facture_finale_invoice_id?: string | null;
-  facture_finale_invoice_ref?: string | null;
-  facture_finale_montant?: number | null;
-}
-```
-
----
+| Fichier | Ligne | Modification |
+|---------|-------|--------------|
+| `src/hooks/useFinalInvoice.ts` | 35 | Ajouter `adresse` au select des clients |
+| `src/hooks/useFinalInvoice.ts` | 46 | Supprimer `adresse` du select des profiles |
+| `src/hooks/useFinalInvoice.ts` | 74 | Changer `profile.adresse` → `clientData.adresse` |
 
 ## Résultat attendu
 
-Après cette modification :
-
-1. **Pour Aziz (Av. de Morges 11)** : Le bouton orange "⚠️ Facture finale manquante" + "Générer facture finale" apparaîtra dans les actions
-2. **Pour les futures candidatures** : Si l'admin valide depuis cette page sans que la facture soit créée, le bouton de récupération sera visible
-
----
-
-## Fichiers à modifier
-
-| Fichier | Action |
-|---------|--------|
-| `src/pages/admin/Candidatures.tsx` | Ajouter le bouton de récupération + hook |
-| `src/pages/agent/Candidatures.tsx` | Vérifier et ajouter si nécessaire |
-
+Après cette correction, le bouton "Générer facture finale" fonctionnera correctement car la requête ne demandera plus une colonne inexistante.
