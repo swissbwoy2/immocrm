@@ -35,6 +35,7 @@ export function useFinalInvoice() {
         .select(`
           id,
           user_id,
+          adresse,
           abaninja_client_uuid,
           abaninja_invoice_id,
           profiles:user_id (
@@ -42,8 +43,7 @@ export function useFinalInvoice() {
             prenom,
             nom,
             email,
-            telephone,
-            adresse
+            telephone
           )
         `)
         .eq('id', clientId)
@@ -71,7 +71,7 @@ export function useFinalInvoice() {
             nom: profile.nom || 'Inconnu',
             email: profile.email,
             telephone: profile.telephone || '',
-            adresse: profile.adresse || ''
+            adresse: clientData.adresse || ''
           }
         });
 
