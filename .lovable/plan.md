@@ -1,180 +1,119 @@
 
 
-# Correction : Génération facture finale depuis tous les points d'entrée
+# Correction : Ajouter le bouton "Générer facture manquante" à la page Admin Candidatures
 
-## Problème diagnostiqué
+## Problème identifié
 
-La candidature d'Aziz (Av. de Morges 11) est passée au statut `attente_bail` **sans que la facture finale ait été créée**.
+La page **Admin Candidatures** (`/admin/candidatures`) a son propre système de rendu des actions qui **ne contient pas** le bouton de récupération de facture. Contrairement à d'autres vues qui utilisent `PremiumCandidatureDetails.tsx`, cette page utilise `renderExpandedActions()` (lignes 405-521).
 
-| Candidature | Statut | Facture finale |
-|-------------|--------|----------------|
-| Aziz - Av. de Morges 11 | `attente_bail` | ❌ Vide (`nil`) |
+| Composant | Bouton "Générer facture" |
+|-----------|--------------------------|
+| `PremiumCandidatureDetails.tsx` | ✅ Présent (lignes 423-448) |
+| `AdminCandidatures.tsx` → `renderExpandedActions()` | ❌ **Absent** |
+| `AgentCandidatures.tsx` | ❌ À vérifier |
 
-**Cause :** Il existe **4 chemins de code** pour changer le statut vers `attente_bail`, mais seul 1 d'entre eux génère la facture finale.
+## Solution
 
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  CHEMINS POUR PASSER À "attente_bail"                                       │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  1. PremiumCandidatureDetails.tsx  →  handleValidateRegie()    ✅ FACTURE   │
-│  2. Messagerie.tsx                 →  case 'valider_regie'     ❌ PAS DE    │
-│  3. Calendrier.tsx                 →  handleUpdateCandidatureStatus()  ❌   │
-│  4. Candidatures.tsx (admin/agent) →  handleStatutChange()     ❌           │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-L'agent a probablement validé via la **Messagerie** ou le **Calendrier**, contournant ainsi la logique de facturation.
+Ajouter le bouton de récupération dans la fonction `renderExpandedActions()` de la page Admin Candidatures.
 
 ---
 
-## Solution proposée
+## Modifications à effectuer
 
-Centraliser la logique de génération de facture dans un hook réutilisable et l'intégrer à **tous les points d'entrée**.
+### Fichier : `src/pages/admin/Candidatures.tsx`
 
-### 1. Créer une fonction utilitaire centralisée
-
-Créer un nouveau hook `useHandleCandidatureProgression` qui :
-- Détecte les transitions nécessitant une facture (`bail_conclu` → `attente_bail`)
-- Appelle automatiquement `createFinalInvoice` avant le changement de statut
-- Met à jour le statut avec les références de facture
-
-### 2. Modifier les points d'entrée
-
-| Fichier | Action |
-|---------|--------|
-| `src/pages/agent/Messagerie.tsx` | Intégrer le hook pour `valider_regie` |
-| `src/pages/agent/Calendrier.tsx` | Intégrer le hook pour transitions vers `attente_bail` |
-| `src/pages/admin/Candidatures.tsx` | Intégrer le hook pour transitions vers `attente_bail` |
-| `src/pages/agent/Candidatures.tsx` | Intégrer le hook pour transitions vers `attente_bail` |
-
-### 3. Ajouter un mécanisme de rattrapage
-
-Créer un bouton "Générer facture finale" visible dans les détails de candidature lorsque :
-- Statut est `attente_bail` ou plus avancé
-- ET `facture_finale_invoice_id` est vide
-
-Cela permettra de corriger les cas existants comme Aziz.
-
----
-
-## Détails techniques
-
-### Nouveau hook : `useHandleCandidatureProgression.ts`
-
+**1. Ajouter les imports nécessaires**
 ```typescript
-// Logique centralisée pour progression candidature
-export function useHandleCandidatureProgression() {
-  const { createFinalInvoice, loading } = useFinalInvoice();
-
-  const progressCandidature = async (
-    candidatureId: string,
-    currentStatut: string,
-    newStatut: string,
-    candidatureData: { client_id, offre_prix, offre_adresse }
-  ) => {
-    let additionalData = {};
-
-    // Si transition vers attente_bail depuis bail_conclu → créer facture
-    if (currentStatut === 'bail_conclu' && newStatut === 'attente_bail') {
-      const result = await createFinalInvoice({
-        candidatureId,
-        clientId: candidatureData.client_id,
-        loyerMensuel: candidatureData.offre_prix,
-        acomptePaye: 300,
-        adresseBien: candidatureData.offre_adresse
-      });
-
-      if (result.success) {
-        additionalData = {
-          facture_finale_invoice_id: result.invoiceId,
-          facture_finale_invoice_ref: result.invoiceRef,
-          facture_finale_montant: result.montant,
-          facture_finale_created_at: new Date().toISOString()
-        };
-      }
-    }
-
-    // Mettre à jour le statut
-    await supabase
-      .from('candidatures')
-      .update({ 
-        statut: newStatut, 
-        ...additionalData,
-        agent_valide_regie: newStatut === 'attente_bail',
-        agent_valide_regie_at: newStatut === 'attente_bail' ? new Date().toISOString() : undefined
-      })
-      .eq('id', candidatureId);
-
-    return { success: true, invoiceData: additionalData };
-  };
-
-  return { progressCandidature, loading };
-}
+import { Receipt, Loader2 } from 'lucide-react';
+import { useFinalInvoice } from '@/hooks/useFinalInvoice';
 ```
 
-### Modification Messagerie.tsx (exemple)
-
+**2. Utiliser le hook dans le composant**
 ```typescript
-// AVANT - Mise à jour directe sans facture
-case 'valider_regie':
-  await supabase
-    .from('candidatures')
-    .update({ statut: 'attente_bail' })
-    .eq('id', candidature.id);
-  break;
-
-// APRÈS - Utiliser le hook centralisé
-case 'valider_regie':
-  await progressCandidature(
-    candidature.id,
-    candidature.statut,
-    'attente_bail',
-    { client_id: candidature.client_id, offre_prix: offre.prix, offre_adresse: offre.adresse }
-  );
-  break;
+const { loading: invoiceLoading, createFinalInvoice } = useFinalInvoice();
 ```
 
-### Bouton de rattrapage dans PremiumCandidatureDetails.tsx
-
-Ajouter un bouton visible quand la facture est manquante :
-
+**3. Ajouter la fonction de création de facture manquante**
 ```typescript
-{/* Bouton rattrapage si facture manquante */}
-{!hasFactureFinale && ['attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(candidature.statut) && (
-  <Button onClick={handleCreateMissingInvoice} variant="outline" className="border-amber-500">
-    <Receipt className="h-4 w-4 mr-2" />
-    Générer facture finale manquante
-  </Button>
+const handleCreateMissingInvoice = async (candidature: Candidature) => {
+  if (!candidature.offres?.prix) return;
+  
+  const result = await createFinalInvoice({
+    candidatureId: candidature.id,
+    clientId: candidature.client_id,
+    loyerMensuel: candidature.offres.prix,
+    acomptePaye: 300,
+    adresseBien: candidature.offres.adresse
+  });
+
+  if (result.success) {
+    loadData(); // Recharger les données
+    toast({ title: 'Facture créée', description: `Facture ${result.invoiceRef} générée` });
+  }
+};
+```
+
+**4. Ajouter le bouton dans `renderExpandedActions()` pour le statut `attente_bail`**
+
+Avant le bouton "Bail reçu - Proposer dates", ajouter :
+```typescript
+{candidature.statut === 'attente_bail' && (
+  <>
+    {/* Bouton facture manquante */}
+    {!candidature.facture_finale_invoice_id && candidature.offres?.prix && (
+      <div className="w-full mb-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+        <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">
+          ⚠️ Facture finale manquante
+        </p>
+        <Button 
+          size="sm" 
+          variant="outline"
+          className="border-amber-500 text-amber-600"
+          onClick={() => handleCreateMissingInvoice(candidature)}
+          disabled={invoiceLoading}
+        >
+          {invoiceLoading ? (
+            <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Création...</>
+          ) : (
+            <><Receipt className="h-4 w-4 mr-1" />Générer facture finale</>
+          )}
+        </Button>
+      </div>
+    )}
+    
+    {/* Bouton existant */}
+    <Button size="sm" onClick={() => { setSelectedCandidature(candidature); setShowDatesDialog(true); }}>
+      <FileCheck className="h-4 w-4 mr-1" />Bail reçu - Proposer dates
+    </Button>
+  </>
 )}
 ```
 
----
-
-## Fichiers à modifier
-
-| Fichier | Type | Description |
-|---------|------|-------------|
-| `src/hooks/useHandleCandidatureProgression.ts` | Nouveau | Hook centralisé pour progressions |
-| `src/pages/agent/Messagerie.tsx` | Modifier | Intégrer hook pour `valider_regie` |
-| `src/pages/agent/Calendrier.tsx` | Modifier | Intégrer hook pour transitions |
-| `src/pages/admin/Candidatures.tsx` | Modifier | Intégrer hook pour transitions |
-| `src/pages/agent/Candidatures.tsx` | Modifier | Intégrer hook pour transitions |
-| `src/components/premium/PremiumCandidatureDetails.tsx` | Modifier | Ajouter bouton rattrapage |
+**5. Ajouter le champ `facture_finale_invoice_id` à l'interface Candidature**
+```typescript
+interface Candidature {
+  // ... champs existants ...
+  facture_finale_invoice_id?: string | null;
+  facture_finale_invoice_ref?: string | null;
+  facture_finale_montant?: number | null;
+}
+```
 
 ---
 
 ## Résultat attendu
 
-### Pour les nouvelles candidatures :
-- Quelle que soit la source (Messagerie, Calendrier, page Candidatures), la transition vers `attente_bail` créera automatiquement la facture finale
+Après cette modification :
 
-### Pour les candidatures existantes (comme Aziz) :
-- L'agent pourra générer manuellement la facture manquante via un bouton dédié
+1. **Pour Aziz (Av. de Morges 11)** : Le bouton orange "⚠️ Facture finale manquante" + "Générer facture finale" apparaîtra dans les actions
+2. **Pour les futures candidatures** : Si l'admin valide depuis cette page sans que la facture soit créée, le bouton de récupération sera visible
 
-### Données Aziz corrigées :
-| Champ | Avant | Après |
-|-------|-------|-------|
-| `facture_finale_invoice_id` | `null` | UUID de la facture |
-| `facture_finale_invoice_ref` | `null` | `SOLDE-6CE7EA8F` |
-| `facture_finale_montant` | `null` | `1010.00 CHF` (1310 - 300) |
+---
+
+## Fichiers à modifier
+
+| Fichier | Action |
+|---------|--------|
+| `src/pages/admin/Candidatures.tsx` | Ajouter le bouton de récupération + hook |
+| `src/pages/agent/Candidatures.tsx` | Vérifier et ajouter si nécessaire |
 
