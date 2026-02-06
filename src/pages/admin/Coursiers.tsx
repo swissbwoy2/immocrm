@@ -29,7 +29,7 @@ export default function AdminCoursiers() {
       const [{ data: coursiersData }, { data: missionsData }, { data: eligibleData }] = await Promise.all([
         supabase.from('coursiers').select('*').order('created_at', { ascending: false }),
         supabase.from('visites').select('*, offres(adresse)').not('statut_coursier', 'is', null).order('updated_at', { ascending: false }).limit(50),
-        supabase.from('visites').select('*, offres(adresse), clients!client_id(user_id, profiles:user_id(prenom, nom))').is('statut_coursier', null).eq('statut', 'planifiee').order('date_visite', { ascending: true }).limit(50),
+        supabase.from('visites').select('*, offres(adresse), clients!client_id(user_id, profiles:user_id(prenom, nom))').is('statut_coursier', null).eq('statut', 'planifiee').gte('date_visite', new Date().toISOString()).order('date_visite', { ascending: true }).limit(50),
       ]);
       setCoursiers(coursiersData || []);
       setMissions(missionsData || []);
