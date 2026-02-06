@@ -6,11 +6,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { CalendarCheck, Clock, CheckCircle, MapPin, Banknote, Home, Maximize2, Phone, Mail, KeyRound, Building, User, MessageSquare, FileText, Upload, Loader2, X, Image, UserCog } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { CalendarCheck, Clock, CheckCircle, MapPin, Banknote, Home, Maximize2, Phone, Mail, KeyRound, Building, User, MessageSquare, FileText, Upload, Loader2, X, Image, UserCog, Layers, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AddressLink } from '@/components/AddressLink';
@@ -287,182 +290,278 @@ export default function CoursierMissions() {
 
       {/* Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Détails de la mission</DialogTitle>
-          </DialogHeader>
-          {selectedMission && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-primary" />
-                  <span className="font-medium">{selectedMission.adresse}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="h-4 w-4" />
-                  {format(new Date(selectedMission.date_visite), "EEEE dd MMMM yyyy 'à' HH:mm", { locale: fr })}
-                </div>
-              </div>
-
-              {/* Agent responsable */}
-              {selectedMission.agents?.profiles && (
-                <Card className="bg-purple-500/5 border-purple-500/20">
-                  <CardContent className="pt-4 space-y-2">
-                    <h4 className="font-medium flex items-center gap-2">
-                      <UserCog className="h-4 w-4 text-purple-600" />
-                      Agent responsable
-                    </h4>
-                    <div className="text-sm space-y-1">
-                      <div className="font-medium">
-                        {selectedMission.agents.profiles.prenom} {selectedMission.agents.profiles.nom}
-                      </div>
-                      {selectedMission.agents.profiles.telephone && (
-                        <a href={`tel:${selectedMission.agents.profiles.telephone}`} className="flex items-center gap-2 text-primary hover:underline">
-                          <Phone className="h-3.5 w-3.5" />
-                          {selectedMission.agents.profiles.telephone}
-                        </a>
-                      )}
-                      {selectedMission.agents.profiles.email && (
-                        <a href={`mailto:${selectedMission.agents.profiles.email}`} className="flex items-center gap-2 text-primary hover:underline">
-                          <Mail className="h-3.5 w-3.5" />
-                          {selectedMission.agents.profiles.email}
-                        </a>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Offer details */}
-              {selectedMission.offres && (
-                <Card className="bg-muted/30">
-                  <CardContent className="pt-4 space-y-2">
-                    <h4 className="font-medium flex items-center gap-2">
-                      <Building className="h-4 w-4 text-primary" />
-                      Détails du bien
-                    </h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      {selectedMission.offres.pieces && <div><span className="text-muted-foreground">Pièces:</span> {selectedMission.offres.pieces}</div>}
-                      {selectedMission.offres.surface && <div><span className="text-muted-foreground">Surface:</span> {selectedMission.offres.surface}m²</div>}
-                      {selectedMission.offres.prix && <div><span className="text-muted-foreground">Prix:</span> {selectedMission.offres.prix.toLocaleString('fr-CH')} CHF</div>}
-                      {selectedMission.offres.etage && <div><span className="text-muted-foreground">Étage:</span> {selectedMission.offres.etage}</div>}
-                    </div>
-                    {selectedMission.offres.description && (
-                      <p className="text-sm text-muted-foreground mt-2">{selectedMission.offres.description}</p>
-                    )}
-                    {selectedMission.offres.lien_annonce && (
-                      <a href={selectedMission.offres.lien_annonce} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center gap-1">
-                        <FileText className="h-3.5 w-3.5" />
-                        Voir l'annonce
-                      </a>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Contact de la visite (client) */}
-              {selectedMission.clients?.profiles && (
-                <Card className="bg-blue-500/5 border-blue-500/20">
-                  <CardContent className="pt-4 space-y-2">
-                    <h4 className="font-medium flex items-center gap-2">
-                      <User className="h-4 w-4 text-blue-600" />
-                      Contact de la visite
-                    </h4>
-                    <div className="text-sm space-y-1">
-                      <div className="font-medium">
-                        {selectedMission.clients.profiles.prenom} {selectedMission.clients.profiles.nom}
-                      </div>
-                      {selectedMission.clients.profiles.telephone && (
-                        <a href={`tel:${selectedMission.clients.profiles.telephone}`} className="flex items-center gap-2 text-primary hover:underline">
-                          <Phone className="h-3.5 w-3.5" />
-                          {selectedMission.clients.profiles.telephone}
-                        </a>
-                      )}
-                      {selectedMission.clients.profiles.email && (
-                        <a href={`mailto:${selectedMission.clients.profiles.email}`} className="flex items-center gap-2 text-primary hover:underline">
-                          <Mail className="h-3.5 w-3.5" />
-                          {selectedMission.clients.profiles.email}
-                        </a>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Informations d'accès */}
-              {(selectedMission.offres?.concierge_nom || selectedMission.offres?.locataire_nom || selectedMission.offres?.code_immeuble) && (
-                <Card className="bg-primary/5 border-primary/20">
-                  <CardContent className="pt-4 space-y-2">
-                    <h4 className="font-medium flex items-center gap-2">
-                      <KeyRound className="h-4 w-4 text-primary" />
-                      Informations d'accès
-                    </h4>
-                    {selectedMission.offres?.code_immeuble && (
-                      <div className="text-sm flex items-center gap-2">
-                        <KeyRound className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-muted-foreground">Code immeuble:</span>
-                        <span className="font-mono font-medium">{selectedMission.offres.code_immeuble}</span>
-                      </div>
-                    )}
-                    {selectedMission.offres?.concierge_nom && (
-                      <div className="text-sm">
-                        <div className="flex items-center gap-2">
-                          <User className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-muted-foreground">Concierge:</span>
-                          <span>{selectedMission.offres.concierge_nom}</span>
-                        </div>
-                        {selectedMission.offres.concierge_tel && (
-                          <a href={`tel:${selectedMission.offres.concierge_tel}`} className="ml-6 text-primary hover:underline">
-                            📞 {selectedMission.offres.concierge_tel}
-                          </a>
-                        )}
-                      </div>
-                    )}
-                    {selectedMission.offres?.locataire_nom && (
-                      <div className="text-sm">
-                        <div className="flex items-center gap-2">
-                          <User className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-muted-foreground">Locataire:</span>
-                          <span>{selectedMission.offres.locataire_nom}</span>
-                        </div>
-                        {selectedMission.offres.locataire_tel && (
-                          <a href={`tel:${selectedMission.offres.locataire_tel}`} className="ml-6 text-primary hover:underline">
-                            📞 {selectedMission.offres.locataire_tel}
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Notes de visite */}
-              {selectedMission.notes && (
-                <div className="p-3 bg-amber-500/10 rounded-lg">
-                  <p className="text-sm flex items-start gap-2">
-                    <MessageSquare className="h-4 w-4 text-amber-600 mt-0.5" />
-                    <span>{selectedMission.notes}</span>
+        <DialogContent className="max-w-lg max-h-[85vh] p-0 gap-0">
+          <DialogHeader className="p-6 pb-4">
+            {selectedMission && (
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <DialogTitle className="text-lg font-semibold line-clamp-2">
+                    <AddressLink 
+                      address={selectedMission.adresse}
+                      showIcon={false}
+                      className="text-lg font-semibold"
+                    />
+                  </DialogTitle>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {format(new Date(selectedMission.date_visite), "EEEE dd MMMM yyyy 'à' HH:mm", { locale: fr })}
                   </p>
                 </div>
-              )}
-
-              {/* Feedback coursier if completed */}
-              {selectedMission.feedback_coursier && (
-                <div className="p-3 bg-green-500/10 rounded-lg">
-                  <h4 className="text-sm font-medium mb-1">Mon compte-rendu</h4>
-                  <p className="text-sm text-muted-foreground">{selectedMission.feedback_coursier}</p>
-                </div>
-              )}
-
-              {/* Rémunération */}
-              <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg border border-green-500/20">
-                <span className="text-sm font-medium">Rémunération</span>
-                <Badge className="bg-green-500/20 text-green-700 border-green-500/30 text-base">
-                  {(selectedMission.remuneration_coursier || 5).toFixed(2)} CHF
+                <Badge className="shrink-0 bg-primary/10 text-primary border-primary/30">
+                  {(selectedMission.remuneration_coursier || 5).toFixed(0)} CHF
                 </Badge>
               </div>
+            )}
+          </DialogHeader>
 
-              <DialogFooter>
+          <ScrollArea className="max-h-[calc(85vh-120px)]">
+            {selectedMission && (
+              <div className="px-6 pb-6 space-y-5">
+                {/* Prix */}
+                {selectedMission.offres?.prix && (
+                  <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-primary">
+                        CHF {Number(selectedMission.offres.prix).toLocaleString('fr-CH')}
+                      </div>
+                      <div className="text-sm text-muted-foreground">par mois</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Caractéristiques */}
+                {selectedMission.offres && (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                      <Home className="h-4 w-4" />
+                      Caractéristiques
+                    </h4>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="p-3 bg-muted/50 rounded-lg text-center">
+                        <div className="text-lg font-semibold">{selectedMission.offres.pieces || '-'}</div>
+                        <div className="text-xs text-muted-foreground">pièces</div>
+                      </div>
+                      <div className="p-3 bg-muted/50 rounded-lg text-center">
+                        <div className="text-lg font-semibold">{selectedMission.offres.surface || '-'}</div>
+                        <div className="text-xs text-muted-foreground">m²</div>
+                      </div>
+                      <div className="p-3 bg-muted/50 rounded-lg text-center">
+                        <div className="text-lg font-semibold">{selectedMission.offres.etage || '-'}</div>
+                        <div className="text-xs text-muted-foreground">étage</div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 space-y-1">
+                      {selectedMission.offres.type_bien && (
+                        <div className="flex items-start gap-3 py-2">
+                          <Building className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs text-muted-foreground">Type de bien</span>
+                            <p className="text-sm font-medium">{selectedMission.offres.type_bien}</p>
+                          </div>
+                        </div>
+                      )}
+                      {selectedMission.offres.disponibilite && (
+                        <div className="flex items-start gap-3 py-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs text-muted-foreground">Disponibilité</span>
+                            <p className="text-sm font-medium">{selectedMission.offres.disponibilite}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Description */}
+                {selectedMission.offres?.description && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Description</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                        {selectedMission.offres.description}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* Agent responsable */}
+                {selectedMission.agents?.profiles && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <UserCog className="h-4 w-4" />
+                        Agent responsable
+                      </h4>
+                      <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                        <p className="text-sm font-medium">
+                          {selectedMission.agents.profiles.prenom} {selectedMission.agents.profiles.nom}
+                        </p>
+                        {selectedMission.agents.profiles.telephone && (
+                          <a href={`tel:${selectedMission.agents.profiles.telephone}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
+                            <Phone className="h-3 w-3" />
+                            {selectedMission.agents.profiles.telephone}
+                          </a>
+                        )}
+                        {selectedMission.agents.profiles.email && (
+                          <a href={`mailto:${selectedMission.agents.profiles.email}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
+                            <Mail className="h-3 w-3" />
+                            {selectedMission.agents.profiles.email}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Contact client */}
+                {selectedMission.clients?.profiles && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Contact de la visite
+                      </h4>
+                      <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                        <p className="text-sm font-medium">
+                          {selectedMission.clients.profiles.prenom} {selectedMission.clients.profiles.nom}
+                        </p>
+                        {selectedMission.clients.profiles.telephone && (
+                          <a href={`tel:${selectedMission.clients.profiles.telephone}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
+                            <Phone className="h-3 w-3" />
+                            {selectedMission.clients.profiles.telephone}
+                          </a>
+                        )}
+                        {selectedMission.clients.profiles.email && (
+                          <a href={`mailto:${selectedMission.clients.profiles.email}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
+                            <Mail className="h-3 w-3" />
+                            {selectedMission.clients.profiles.email}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Informations pratiques */}
+                {(selectedMission.offres?.code_immeuble || selectedMission.offres?.concierge_nom || selectedMission.offres?.locataire_nom) && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <Layers className="h-4 w-4" />
+                        Informations pratiques
+                      </h4>
+                      <div className="space-y-2">
+                        {selectedMission.offres?.code_immeuble && (
+                          <div className="flex items-start gap-3 py-2">
+                            <KeyRound className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-xs text-muted-foreground">Code immeuble</span>
+                              <p className="text-sm font-medium font-mono">{selectedMission.offres.code_immeuble}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {selectedMission.offres?.concierge_nom && (
+                          <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <User className="h-3 w-3" />
+                              Concierge
+                            </div>
+                            <p className="text-sm font-medium">{selectedMission.offres.concierge_nom}</p>
+                            {selectedMission.offres.concierge_tel && (
+                              <a href={`tel:${selectedMission.offres.concierge_tel}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
+                                <Phone className="h-3 w-3" />
+                                {selectedMission.offres.concierge_tel}
+                              </a>
+                            )}
+                          </div>
+                        )}
+
+                        {selectedMission.offres?.locataire_nom && (
+                          <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <User className="h-3 w-3" />
+                              Locataire actuel
+                            </div>
+                            <p className="text-sm font-medium">{selectedMission.offres.locataire_nom}</p>
+                            {selectedMission.offres.locataire_tel && (
+                              <a href={`tel:${selectedMission.offres.locataire_tel}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
+                                <Phone className="h-3 w-3" />
+                                {selectedMission.offres.locataire_tel}
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Commentaires agent */}
+                {selectedMission.offres?.commentaires && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        Commentaires de l'agent
+                      </h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap p-3 bg-muted/50 rounded-lg">
+                        {selectedMission.offres.commentaires}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* Notes de visite */}
+                {selectedMission.notes && (
+                  <>
+                    <Separator />
+                    <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                      <p className="text-sm flex items-start gap-2">
+                        <MessageSquare className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                        <span>{selectedMission.notes}</span>
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* Lien vers l'annonce */}
+                {selectedMission.offres?.lien_annonce && selectedMission.offres.lien_annonce.trim() && (
+                  <>
+                    <Separator />
+                    <div>
+                      <h4 className="text-sm font-semibold mb-3">Annonce originale</h4>
+                      <LinkPreviewCard url={selectedMission.offres.lien_annonce} showInline />
+                    </div>
+                  </>
+                )}
+
+                {/* Feedback coursier if completed */}
+                {selectedMission.feedback_coursier && (
+                  <>
+                    <Separator />
+                    <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                      <h4 className="text-sm font-medium mb-1">Mon compte-rendu</h4>
+                      <p className="text-sm text-muted-foreground">{selectedMission.feedback_coursier}</p>
+                    </div>
+                  </>
+                )}
+
+                {/* Rémunération */}
+                <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg border border-green-500/20">
+                  <span className="text-sm font-medium">Rémunération</span>
+                  <Badge className="bg-green-500/20 text-green-700 border-green-500/30 text-base">
+                    {(selectedMission.remuneration_coursier || 5).toFixed(2)} CHF
+                  </Badge>
+                </div>
+
+                {/* Actions */}
                 {selectedMission.statut_coursier === 'en_attente' && (
                   <Button onClick={() => { handleAccept(selectedMission.id); setDetailOpen(false); }} className="w-full">
                     <CheckCircle className="mr-2 h-4 w-4" />
@@ -478,9 +577,9 @@ export default function CoursierMissions() {
                     Terminer la visite
                   </Button>
                 )}
-              </DialogFooter>
-            </div>
-          )}
+              </div>
+            )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
