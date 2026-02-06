@@ -29,7 +29,7 @@ export default function AdminCoursiers() {
       const [{ data: coursiersData }, { data: missionsData }, { data: eligibleData }] = await Promise.all([
         supabase.from('coursiers').select('*').order('created_at', { ascending: false }),
         supabase.from('visites').select('*, offres(adresse)').not('statut_coursier', 'is', null).order('updated_at', { ascending: false }).limit(50),
-        supabase.from('visites').select('*, offres(adresse, client_nom, client_prenom)').is('statut_coursier', null).eq('statut', 'planifiee').order('date_visite', { ascending: true }).limit(50),
+        supabase.from('visites').select('*, offres(adresse), clients!client_id(user_id, profiles:user_id(prenom, nom))').is('statut_coursier', null).eq('statut', 'planifiee').order('date_visite', { ascending: true }).limit(50),
       ]);
       setCoursiers(coursiersData || []);
       setMissions(missionsData || []);
@@ -197,7 +197,7 @@ export default function AdminCoursiers() {
                         <p className="text-xs text-muted-foreground flex items-center gap-2">
                           <Calendar className="h-3 w-3" />
                           {format(new Date(v.date_visite), "dd MMM yyyy 'à' HH:mm", { locale: fr })}
-                          {v.offres?.client_prenom && ` • ${v.offres.client_prenom} ${v.offres.client_nom || ''}`}
+                          {v.clients?.profiles?.prenom && ` • ${v.clients.profiles.prenom} ${v.clients.profiles.nom || ''}`}
                         </p>
                       </div>
                     </div>
