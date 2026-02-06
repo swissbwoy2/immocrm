@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Bike, Users, CheckCircle, Clock, Wallet, UserPlus, Loader2, MapPin, DollarSign } from 'lucide-react';
+import { Bike, Users, CheckCircle, Clock, Wallet, UserPlus, Loader2, MapPin, DollarSign, Send, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
@@ -15,7 +15,9 @@ import { fr } from 'date-fns/locale';
 export default function AdminCoursiers() {
   const [coursiers, setCoursiers] = useState<any[]>([]);
   const [missions, setMissions] = useState<any[]>([]);
+  const [eligibleVisites, setEligibleVisites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [delegating, setDelegating] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newCoursier, setNewCoursier] = useState({ email: '', prenom: '', nom: '', telephone: '' });
@@ -24,16 +26,36 @@ export default function AdminCoursiers() {
 
   const loadData = async () => {
     try {
-      const [{ data: coursiersData }, { data: missionsData }] = await Promise.all([
+      const [{ data: coursiersData }, { data: missionsData }, { data: eligibleData }] = await Promise.all([
         supabase.from('coursiers').select('*').order('created_at', { ascending: false }),
         supabase.from('visites').select('*, offres(adresse)').not('statut_coursier', 'is', null).order('updated_at', { ascending: false }).limit(50),
+        supabase.from('visites').select('*, offres(adresse, client_nom, client_prenom)').is('statut_coursier', null).eq('statut', 'planifiee').order('date_visite', { ascending: true }).limit(50),
       ]);
       setCoursiers(coursiersData || []);
       setMissions(missionsData || []);
+      setEligibleVisites(eligibleData || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelegateVisite = async (visiteId: string) => {
+    setDelegating(visiteId);
+    try {
+      const { error } = await supabase
+        .from('visites')
+        .update({ statut_coursier: 'en_attente', remuneration_coursier: 5 })
+        .eq('id', visiteId);
+      if (error) throw error;
+      toast.success('Visite envoyée dans le pool coursier');
+      loadData();
+    } catch (error) {
+      console.error('Error delegating:', error);
+      toast.error('Erreur lors de la délégation');
+    } finally {
+      setDelegating(null);
     }
   };
 
@@ -154,6 +176,49 @@ export default function AdminCoursiers() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Eligible visits to delegate */}
+        {eligibleVisites.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Send className="h-5 w-5 text-primary" />
+                Visites à déléguer ({eligibleVisites.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {eligibleVisites.map((v) => (
+                  <div key={v.id} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">{v.adresse || v.offres?.adresse || 'Adresse non renseignée'}</p>
+                        <p className="text-xs text-muted-foreground flex items-center gap-2">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(v.date_visite), "dd MMM yyyy 'à' HH:mm", { locale: fr })}
+                          {v.offres?.client_prenom && ` • ${v.offres.client_prenom} ${v.offres.client_nom || ''}`}
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleDelegateVisite(v.id)}
+                      disabled={delegating === v.id}
+                    >
+                      {delegating === v.id ? (
+                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Bike className="mr-1 h-3.5 w-3.5" />
+                      )}
+                      Déléguer (5.-)
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end">
