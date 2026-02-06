@@ -1,177 +1,60 @@
 
-# Espace Coursier - Tableau de bord pour les visites deleguees
 
-## Objectif
-Creer un espace dedie aux coursiers ou l'agent peut deleguer une visite, le coursier l'accepte, effectue la visite et est remunere 5 CHF par visite. Le coursier a acces a toutes les informations de l'offre (adresse, code immeuble, contact concierge/locataire, etc.).
+# Création de compte Coursier - Edge Function manquante
 
-## Workflow
+## Situation actuelle
 
-```text
-+------------------+       +------------------+       +------------------+
-|     AGENT        |       |    COURSIER      |       |     CLIENT       |
-|                  |       |                  |       |                  |
-| Visite deleguee  |       | Dashboard        |       | Recoit feedback  |
-| par le client    +------>+ Missions dispo   +------>+ de la visite     |
-|                  |       |                  |       |                  |
-| Bouton "Deleguer | Accepte| Effectue visite  | Valide|                  |
-| au coursier"     |       | + feedback/photos |       |                  |
-+------------------+       +------------------+       +------------------+
-                                    |
-                                    v
-                           Remunere 5.- CHF
+L'interface d'administration pour les coursiers (`/admin/coursiers`) est deja en place avec un bouton **"Ajouter un coursier"** et un formulaire (prenom, nom, email, telephone). Cependant, le formulaire appelle une Edge Function `invite-user` qui **n'existe pas** dans le backend. C'est pour cela que la creation echoue.
+
+## Solution
+
+Creer une Edge Function `create-coursier` en suivant le meme modele que `create-agent`, puis mettre a jour le code du formulaire pour appeler cette nouvelle fonction.
+
+## Etapes de la creation d'un compte coursier (workflow final)
+
+1. L'admin va sur `/admin/coursiers`
+2. Clique sur "Ajouter un coursier"
+3. Remplit le formulaire (prenom, nom, email, telephone)
+4. Le systeme envoie une invitation par email au coursier
+5. Le coursier recoit l'email, clique sur le lien, arrive sur `/first-login` pour definir son mot de passe
+6. A la prochaine connexion, le coursier est redirige vers `/coursier` (son tableau de bord)
+
+## Modifications techniques
+
+### 1. Creer l'Edge Function `create-coursier`
+
+**Fichier** : `supabase/functions/create-coursier/index.ts`
+
+La fonction effectuera les etapes suivantes dans l'ordre :
+1. Inviter l'utilisateur via `supabase.auth.admin.inviteUserByEmail()` (envoie un email automatique)
+2. Creer le profil dans la table `profiles` (prenom, nom, email, telephone)
+3. Assigner le role `coursier` dans la table `user_roles`
+4. Creer l'enregistrement dans la table `coursiers` (avec statut `en_attente`)
+
+### 2. Mettre a jour le formulaire admin
+
+**Fichier** : `src/pages/admin/Coursiers.tsx`
+
+Changer l'appel de `invite-user` vers `create-coursier` et adapter les parametres envoyes.
+
+**Avant :**
+```typescript
+await supabase.functions.invoke('invite-user', {
+  body: { email, role: 'coursier', prenom, nom, telephone }
+});
 ```
 
----
-
-## 1. Migration base de donnees
-
-### A. Ajouter le role `coursier` a l'enum `app_role`
-```sql
-ALTER TYPE public.app_role ADD VALUE 'coursier';
+**Apres :**
+```typescript
+await supabase.functions.invoke('create-coursier', {
+  body: { email, prenom, nom, telephone }
+});
 ```
 
-### B. Creer la table `coursiers`
-Similaire a la table `agents`, pour stocker les informations specifiques :
-- `id` (UUID, PK)
-- `user_id` (reference `auth.users`)
-- `prenom`, `nom`, `telephone`, `email`
-- `iban` (pour le paiement)
-- `statut` (actif, inactif)
-- `created_at`, `updated_at`
+## Resume des fichiers
 
-### C. Ajouter des colonnes a la table `visites`
-- `coursier_id` (UUID, nullable, reference `coursiers.id`) : le coursier assigne
-- `statut_coursier` (TEXT, nullable) : `'en_attente'`, `'accepte'`, `'refuse'`, `'termine'`
-- `remuneration_coursier` (NUMERIC, defaut 5.00)
-- `paye_coursier` (BOOLEAN, defaut false)
-- `feedback_coursier` (TEXT, nullable) : compte-rendu du coursier
-
-### D. Politiques RLS
-- Les coursiers peuvent lire les visites ou `coursier_id` est leur ID, ou `statut_coursier = 'en_attente'` (pool de missions disponibles)
-- Les coursiers peuvent mettre a jour les visites assignees a eux (accepter, ajouter feedback)
-- Les agents et admins gardent un acces total
-
----
-
-## 2. Authentification et navigation
-
-### A. `src/contexts/AuthContext.tsx`
-- Ajouter `'coursier'` au type `userRole`
-- Gerer l'activation automatique au premier login (comme les agents)
-
-### B. `src/components/ProtectedRoute.tsx`
-- Ajouter `'coursier'` a la liste des roles valides
-
-### C. `src/components/AppSidebar.tsx`
-Ajouter un menu coursier :
-- Tableau de bord (`/coursier`)
-- Missions disponibles (`/coursier/missions`)
-- Historique et gains (`/coursier/historique`)
-- Parametres (`/coursier/parametres`)
-
-### D. `src/App.tsx`
-Ajouter les routes :
-```text
-/coursier          -> Dashboard
-/coursier/missions -> Missions disponibles + mes missions
-/coursier/historique -> Historique des visites + solde
-/coursier/parametres -> Parametres du compte
-```
-
----
-
-## 3. Interface Agent - Bouton "Deleguer au coursier"
-
-### Fichier : `src/pages/agent/Visites.tsx`
-Pour chaque visite deleguee (`est_deleguee = true`), ajouter un bouton :
-- **"Deleguer au coursier"** : passe `statut_coursier` a `'en_attente'` et rend la visite visible dans le pool des coursiers
-- L'agent voit ensuite le statut de la mission (en attente / acceptee / terminee)
-
----
-
-## 4. Dashboard Coursier (nouveau)
-
-### Page principale : `src/pages/coursier/Dashboard.tsx`
-
-**Section 1 - KPIs en haut**
-- Nombre de missions completees ce mois
-- Gains du mois (missions x 5.-)
-- Gains totaux cumules
-- Missions en cours
-
-**Section 2 - Onglets**
-
-#### Onglet "Missions disponibles"
-Liste des visites ou `statut_coursier = 'en_attente'` :
-- Adresse du bien
-- Date de la visite
-- Infos resumees (pieces, surface, prix)
-- Bouton **"Accepter la mission (5.-)"**
-
-#### Onglet "Mes missions"
-Visites acceptees par le coursier connecte :
-- Statut (accepte / termine)
-- Toutes les infos de l'offre :
-  - Adresse complete
-  - Code immeuble
-  - Contact concierge (nom + tel)
-  - Contact locataire (nom + tel)
-  - Nombre de pieces, surface, etage
-  - Prix / loyer
-  - Description
-  - Lien annonce
-  - Commentaires de l'agent
-- Bouton **"Terminer la visite"** ouvrant un formulaire :
-  - Feedback texte
-  - Upload photos/videos
-  - Note recommandation
-
-#### Onglet "Historique"
-Visites terminees avec :
-- Recapitulatif des gains
-- Detail par visite (date, adresse, statut paiement)
-
----
-
-## 5. Administration des coursiers
-
-### Page : `src/pages/admin/Coursiers.tsx`
-- Liste de tous les coursiers
-- Creation de nouveaux comptes coursiers (comme pour les agents)
-- Suivi des missions et paiements
-- Marquer les visites comme payees
-
----
-
-## Fichiers a creer
-
-| Fichier | Description |
-|---------|-------------|
-| `supabase/migrations/xxxx_add_coursier_role.sql` | Migration DB |
-| `src/pages/coursier/Dashboard.tsx` | Dashboard principal |
-| `src/pages/coursier/Missions.tsx` | Missions dispo + mes missions |
-| `src/pages/coursier/Historique.tsx` | Historique et gains |
-| `src/pages/coursier/Parametres.tsx` | Parametres du compte |
-| `src/pages/admin/Coursiers.tsx` | Gestion admin des coursiers |
-
-## Fichiers a modifier
-
-| Fichier | Modification |
-|---------|-------------|
-| `src/contexts/AuthContext.tsx` | Ajouter role `coursier` |
-| `src/components/ProtectedRoute.tsx` | Ajouter `coursier` aux roles valides |
-| `src/components/AppSidebar.tsx` | Menu coursier |
-| `src/App.tsx` | Routes `/coursier/*` et `/admin/coursiers` |
-| `src/pages/agent/Visites.tsx` | Bouton "Deleguer au coursier" |
-| `src/pages/Login.tsx` | Redirection `/coursier` apres login |
-
----
-
-## Resume de la remuneration
-
-| Element | Valeur |
+| Fichier | Action |
 |---------|--------|
-| Remuneration par visite | 5.00 CHF |
-| Declencheur | Visite marquee comme "terminee" |
-| Suivi paiement | Colonne `paye_coursier` dans `visites` |
-| Validation | Admin marque comme paye |
+| `supabase/functions/create-coursier/index.ts` | Creer (nouvelle Edge Function) |
+| `src/pages/admin/Coursiers.tsx` | Modifier l'appel de la fonction (ligne 48) |
+
