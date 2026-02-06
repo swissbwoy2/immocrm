@@ -1,38 +1,59 @@
 
 
-# Permettre a l'admin de deleguer des visites aux coursiers
+# Correction : La section "Visites a deleguer" ne s'affiche pas
 
-## Probleme actuel
+## Probleme identifie
 
-Seuls les **agents** peuvent deleguer des visites aux coursiers, via le bouton sur `/agent/visites`. L'admin n'a aucun moyen de le faire depuis son interface.
+La requete pour charger les visites eligibles retourne une **erreur 400** car elle reference des colonnes inexistantes (`client_nom`, `client_prenom`) dans la table `offres`.
+
+Erreur exacte du serveur :
+```
+column offres_1.client_nom does not exist
+```
+
+La table `offres` n'a pas de colonnes `client_nom` / `client_prenom`. Le nom du client est stocke dans la table `profiles`, accessible via `clients.user_id`.
+
+## Cause racine
+
+Ligne 32 du fichier `src/pages/admin/Coursiers.tsx` :
+```typescript
+// INCORRECT - client_nom et client_prenom n'existent pas dans offres
+supabase.from('visites')
+  .select('*, offres(adresse, client_nom, client_prenom)')
+  .is('statut_coursier', null)
+  .eq('statut', 'planifiee')
+```
 
 ## Solution
 
-Ajouter une section **"Deleguer une visite"** dans la page `/admin/coursiers` qui permet a l'admin de :
-1. Voir la liste des visites eligibles (planifiees, pas encore deleguees a un coursier)
-2. Cliquer sur un bouton pour envoyer une visite dans le pool coursier
+Modifier la requete pour :
+1. Retirer `client_nom` et `client_prenom` de la jointure `offres`
+2. Ajouter une jointure vers `clients` puis `profiles` pour obtenir le nom du client
 
-## Modifications techniques
+La requete corrigee sera :
+```typescript
+supabase.from('visites')
+  .select('*, offres(adresse), clients!client_id(user_id, profiles:user_id(prenom, nom))')
+  .is('statut_coursier', null)
+  .eq('statut', 'planifiee')
+```
 
-### Fichier modifie : `src/pages/admin/Coursiers.tsx`
+Puis adapter l'affichage du nom dans le template (ligne 200) :
+```typescript
+// AVANT (ne marchait pas)
+v.offres?.client_prenom + ' ' + v.offres?.client_nom
 
-1. **Charger les visites eligibles** : Ajouter une requete pour recuperer les visites avec `statut_coursier IS NULL` et `statut = 'planifiee'`, avec les informations de l'offre associee (adresse, client).
+// APRES
+v.clients?.profiles?.prenom + ' ' + v.clients?.profiles?.nom
+```
 
-2. **Ajouter une section "Visites a deleguer"** entre les stats et la liste des coursiers :
-   - Une carte listant les visites disponibles avec : adresse, date, nom du client
-   - Un bouton **"Deleguer au coursier (5.-)"** sur chaque visite
-   - Au clic, la visite est mise a jour avec `statut_coursier = 'en_attente'` et `remuneration_coursier = 5`
+## Fichier modifie
 
-3. **Rafraichir les donnees** apres chaque delegation pour mettre a jour les compteurs et les listes.
-
-### Pas de modification de base de donnees necessaire
-
-L'admin a deja les droits RLS necessaires pour modifier les visites (via les policies existantes sur la table `visites`). Aucune migration n'est requise.
+| Fichier | Modification |
+|---------|-------------|
+| `src/pages/admin/Coursiers.tsx` | Corriger la requete (ligne 32) et l'affichage du nom client (ligne 200) |
 
 ## Resultat attendu
 
-L'admin pourra depuis `/admin/coursiers` :
-- Voir toutes les visites planifiees qui ne sont pas encore envoyees au pool coursier
-- Deleguer n'importe quelle visite en un clic
-- Suivre les missions en cours et gerer les paiements (deja en place)
+Apres correction, la section **"Visites a deleguer"** apparaitra entre les statistiques et le bouton "Ajouter un coursier", listant toutes les visites planifiees avec l'adresse, la date et le nom du client.
 
