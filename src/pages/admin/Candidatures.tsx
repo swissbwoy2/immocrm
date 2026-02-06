@@ -11,8 +11,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { 
   FileCheck, User, MapPin, Calendar, Search, CheckCircle, XCircle, Clock,
   Building2, FileSignature, CalendarCheck, Key, AlertTriangle,
-  ChevronDown, ChevronUp, FastForward, Phone, Users, UserCog
+  ChevronDown, ChevronUp, FastForward, Phone, Users, UserCog, Receipt, Loader2
 } from 'lucide-react';
+import { useFinalInvoice } from '@/hooks/useFinalInvoice';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -57,6 +58,9 @@ interface Candidature {
   signature_effectuee_at: string | null;
   cles_remises: boolean | null;
   cles_remises_at: string | null;
+  facture_finale_invoice_id?: string | null;
+  facture_finale_invoice_ref?: string | null;
+  facture_finale_montant?: number | null;
   offres: {
     adresse: string;
     prix: number;
@@ -88,6 +92,7 @@ export default function AdminCandidatures() {
   const [searchParams] = useSearchParams();
   const { user, userRole } = useAuth();
   const { toast } = useToast();
+  const { loading: invoiceLoading, createFinalInvoice } = useFinalInvoice();
   
   const [candidatures, setCandidatures] = useState<Candidature[]>([]);
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
@@ -476,9 +481,44 @@ export default function AdminCandidatures() {
             )}
 
             {candidature.statut === 'attente_bail' && (
-              <Button size="sm" onClick={() => { setSelectedCandidature(candidature); setShowDatesDialog(true); }}>
-                <FileCheck className="h-4 w-4 mr-1" />Bail reçu - Proposer dates
-              </Button>
+              <>
+                {/* Missing invoice warning */}
+                {!candidature.facture_finale_invoice_id && candidature.offres?.prix && (
+                  <div className="w-full mb-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                    <p className="text-sm text-amber-700 dark:text-amber-300 mb-2">
+                      ⚠️ Facture finale manquante
+                    </p>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                      onClick={async () => {
+                        if (!candidature.offres?.prix) return;
+                        const result = await createFinalInvoice({
+                          candidatureId: candidature.id,
+                          clientId: candidature.client_id,
+                          loyerMensuel: candidature.offres.prix,
+                          acomptePaye: 300,
+                          adresseBien: candidature.offres.adresse
+                        });
+                        if (result.success) {
+                          loadData();
+                        }
+                      }}
+                      disabled={invoiceLoading}
+                    >
+                      {invoiceLoading ? (
+                        <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Création...</>
+                      ) : (
+                        <><Receipt className="h-4 w-4 mr-1" />Générer facture finale</>
+                      )}
+                    </Button>
+                  </div>
+                )}
+                <Button size="sm" onClick={() => { setSelectedCandidature(candidature); setShowDatesDialog(true); }}>
+                  <FileCheck className="h-4 w-4 mr-1" />Bail reçu - Proposer dates
+                </Button>
+              </>
             )}
 
             {candidature.statut === 'bail_recu' && (
