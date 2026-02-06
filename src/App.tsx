@@ -99,6 +99,12 @@ const AgentBienVenteDetail = lazy(() => import("./pages/agent/BienVenteDetail"))
 const AgentProprietaires = lazy(() => import("./pages/agent/Proprietaires"));
 const AgentProprietaireDetail = lazy(() => import("./pages/agent/ProprietaireDetail"));
 
+// Coursier pages
+const CoursierDashboard = lazy(() => import("./pages/coursier/Dashboard"));
+const CoursierMissions = lazy(() => import("./pages/coursier/Missions"));
+const CoursierHistorique = lazy(() => import("./pages/coursier/Historique"));
+const CoursierParametres = lazy(() => import("./pages/coursier/Parametres"));
+
 // Client pages
 const ClientDashboard = lazy(() => import("./pages/client/Dashboard"));
 const ClientDossier = lazy(() => import("./pages/client/Dossier"));
@@ -144,6 +150,9 @@ const AdminProprietaireDetail = lazy(() => import("./pages/admin/ProprietaireDet
 const AdminAnnoncesPubliques = lazy(() => import("./pages/admin/AnnoncesPubliques"));
 const AdminAnnonceurs = lazy(() => import("./pages/admin/Annonceurs"));
 const AdminAnnonceurDetail = lazy(() => import("./pages/admin/AnnonceurDetail"));
+
+// Admin Coursiers page
+const AdminCoursiers = lazy(() => import("./pages/admin/Coursiers"));
 
 // Proprietaire pages
 const ProprietaireDashboard = lazy(() => import("./pages/proprietaire/Dashboard"));
@@ -328,6 +337,14 @@ const App = () => (
               <Route path="/admin/annonceurs" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAnnonceurs /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/annonceurs/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAnnonceurDetail /></AppLayout></ProtectedRoute>} />
 
+              {/* Admin Coursiers Routes */}
+              <Route path="/admin/coursiers" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminCoursiers /></AppLayout></ProtectedRoute>} />
+
+              {/* Coursier Routes */}
+              <Route path="/coursier" element={<ProtectedRoute allowedRoles={['coursier']}><AppLayout><CoursierDashboard /></AppLayout></ProtectedRoute>} />
+              <Route path="/coursier/missions" element={<ProtectedRoute allowedRoles={['coursier']}><AppLayout><CoursierMissions /></AppLayout></ProtectedRoute>} />
+              <Route path="/coursier/historique" element={<ProtectedRoute allowedRoles={['coursier']}><AppLayout><CoursierHistorique /></AppLayout></ProtectedRoute>} />
+              <Route path="/coursier/parametres" element={<ProtectedRoute allowedRoles={['coursier']}><AppLayout><CoursierParametres /></AppLayout></ProtectedRoute>} />
               {/* Proprietaire Routes */}
               <Route path="/proprietaire" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireDashboard /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/immeubles" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireMesImmeubles /></AppLayout></ProtectedRoute>} />

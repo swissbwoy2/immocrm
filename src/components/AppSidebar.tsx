@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -64,6 +64,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Annonces Publiques', icon: Globe, path: '/admin/annonces-publiques', notifKey: null },
         { name: 'Annonceurs', icon: Megaphone, path: '/admin/annonceurs', notifKey: null },
         { name: 'Rappels', icon: AlarmClock, path: '/admin/rappels', notifKey: null },
+        { name: 'Coursiers', icon: Bike, path: '/admin/coursiers', notifKey: null },
         { name: 'Notifications', icon: Bell, path: '/admin/notifications', notifKey: 'total' },
         { name: 'Paramètres', icon: Settings, path: '/admin/parametres', notifKey: null },
       ];
@@ -136,6 +137,13 @@ const getMenuForRole = (role: string) => {
         { name: 'Documents', icon: FileText, path: '/proprietaire/documents', notifKey: null },
         { name: 'Notifications', icon: Bell, path: '/proprietaire/notifications', notifKey: 'total' },
         { name: 'Paramètres', icon: Settings, path: '/proprietaire/parametres', notifKey: null },
+      ];
+    case 'coursier':
+      return [
+        { name: 'Tableau de bord', icon: LayoutDashboard, path: '/coursier', notifKey: null },
+        { name: 'Missions disponibles', icon: CalendarCheck, path: '/coursier/missions', notifKey: null },
+        { name: 'Historique & gains', icon: Wallet, path: '/coursier/historique', notifKey: null },
+        { name: 'Paramètres', icon: Settings, path: '/coursier/parametres', notifKey: null },
       ];
     default:
       return [];
