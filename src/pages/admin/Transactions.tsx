@@ -233,9 +233,11 @@ const Transactions = () => {
   };
 
   const transactionsConclues = transactions.filter(t => t.statut === 'conclue');
+  const transactionsEnCours = transactions.filter(t => t.statut === 'en_cours');
   const transactionsPayees = transactions.filter(t => t.statut === 'conclue' && t.commission_payee);
   const transactionsEnAttente = transactions.filter(t => t.statut === 'conclue' && !t.commission_payee);
   const totalCommissions = transactionsConclues.reduce((sum, t) => sum + (t.commission_totale || 0), 0);
+  const totalCommissionsEnCours = transactionsEnCours.reduce((sum, t) => sum + (t.commission_totale || 0), 0);
   const totalCommissionsPayees = transactionsPayees.reduce((sum, t) => sum + (t.commission_totale || 0), 0);
   const totalAgentPart = transactionsConclues.reduce((sum, t) => sum + (t.part_agent || 0), 0);
   const totalAgencyPart = transactionsConclues.reduce((sum, t) => sum + (t.part_agence || 0), 0);
@@ -284,7 +286,10 @@ const Transactions = () => {
       <div className="p-4 md:p-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-foreground">Transactions</h1>
-            <p className="text-muted-foreground">Suivi des commissions et transactions - {transactionsConclues.length} affaire{transactionsConclues.length > 1 ? 's' : ''} conclue{transactionsConclues.length > 1 ? 's' : ''}</p>
+            <p className="text-muted-foreground">
+              Suivi des commissions et transactions — {transactionsConclues.length} conclue{transactionsConclues.length > 1 ? 's' : ''}
+              {transactionsEnCours.length > 0 && ` · ${transactionsEnCours.length} en cours`}
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mb-6 md:mb-8">
