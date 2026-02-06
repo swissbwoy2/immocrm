@@ -325,7 +325,7 @@ export default function CoursierMissions() {
               )}
 
               {/* Contact info */}
-              {(selectedMission.offres?.contact_concierge || selectedMission.offres?.contact_locataire || selectedMission.offres?.code_immeuble) && (
+              {(selectedMission.offres?.concierge_nom || selectedMission.offres?.locataire_nom || selectedMission.offres?.code_immeuble) && (
                 <Card className="bg-primary/5 border-primary/20">
                   <CardContent className="pt-4 space-y-2">
                     <h4 className="font-medium flex items-center gap-2">
@@ -339,18 +339,32 @@ export default function CoursierMissions() {
                         <span className="font-mono font-medium">{selectedMission.offres.code_immeuble}</span>
                       </div>
                     )}
-                    {selectedMission.offres?.contact_concierge && (
-                      <div className="text-sm flex items-center gap-2">
-                        <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-muted-foreground">Concierge:</span>
-                        <span>{selectedMission.offres.contact_concierge}</span>
+                    {selectedMission.offres?.concierge_nom && (
+                      <div className="text-sm">
+                        <div className="flex items-center gap-2">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-muted-foreground">Concierge:</span>
+                          <span>{selectedMission.offres.concierge_nom}</span>
+                        </div>
+                        {selectedMission.offres.concierge_tel && (
+                          <a href={`tel:${selectedMission.offres.concierge_tel}`} className="ml-6 text-primary hover:underline">
+                            📞 {selectedMission.offres.concierge_tel}
+                          </a>
+                        )}
                       </div>
                     )}
-                    {selectedMission.offres?.contact_locataire && (
-                      <div className="text-sm flex items-center gap-2">
-                        <User className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-muted-foreground">Locataire:</span>
-                        <span>{selectedMission.offres.contact_locataire}</span>
+                    {selectedMission.offres?.locataire_nom && (
+                      <div className="text-sm">
+                        <div className="flex items-center gap-2">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-muted-foreground">Locataire:</span>
+                          <span>{selectedMission.offres.locataire_nom}</span>
+                        </div>
+                        {selectedMission.offres.locataire_tel && (
+                          <a href={`tel:${selectedMission.offres.locataire_tel}`} className="ml-6 text-primary hover:underline">
+                            📞 {selectedMission.offres.locataire_tel}
+                          </a>
+                        )}
                       </div>
                     )}
                   </CardContent>
