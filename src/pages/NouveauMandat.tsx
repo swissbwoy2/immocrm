@@ -377,6 +377,13 @@ export default function NouveauMandat() {
         `Demande envoyée avec succès ! Vous allez recevoir par email votre mandat signé en PDF ainsi qu'un lien pour créer votre mot de passe et accéder à votre espace client.${invoiceMessage}`,
         { duration: 8000 }
       );
+
+      // Meta Pixel Lead conversion -- fired on successful mandate submission
+      const consent = localStorage.getItem('cookie-consent');
+      if (consent === 'accepted' && (window as any).fbq) {
+        (window as any).fbq('track', 'Lead');
+        console.log('[Meta Pixel] Lead fired on successful mandate submission');
+      }
       
       navigate('/inscription-validee');
 
