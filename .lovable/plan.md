@@ -1,60 +1,66 @@
 
-# Correction : Transactions manquantes pour les candidatures validees
+# Correction : Visite en triple et bouton coursier manquant
 
-## Probleme identifie
+## Problemes identifies
 
-Le systeme ne cree des transactions que lorsque les cles sont remises (`cles_remises = true`). Mais 5 dossiers sont valides par la regie et le client (stade `attente_bail` ou `bail_conclu`) sans aucune transaction associee.
+### 1. La visite apparait 3 fois
 
-## Dossiers manquants confirmes dans la base
+La base de donnees contient **2 enregistrements distincts** pour la meme visite (meme offre, meme client, meme date) :
+- Enregistrement A : `est_deleguee: true`, `statut: confirmee`
+- Enregistrement B : `est_deleguee: false`, `statut: planifiee`
 
-| Client | Adresse | Loyer | Stade | Commission (loyer) | Agent (45%) | Agence (55%) |
-|--------|---------|-------|-------|-------------------|-------------|--------------|
-| Mongi Tayahi | Vallombreuse 81, Prilly | 1590 CHF | attente_bail | 1590 CHF | 716 CHF | 874 CHF |
-| Aziz Ed_Dahimi | Morges 11, Lausanne | 1310 CHF | attente_bail | 1310 CHF | 590 CHF | 720 CHF |
-| Miguel Angel Lloret Robles | Morges 11, Lausanne | 1310 CHF | bail_conclu | 1310 CHF | 590 CHF | 720 CHF |
-| Salah Benrabah | Simplon 45, Paudex | 1450 CHF | attente_bail | 1450 CHF | 653 CHF | 797 CHF |
-| Mohamed Hilal | Chomaz 2 | 1800 CHF | attente_bail | 1800 CHF | 810 CHF | 990 CHF |
+L'enregistrement A apparait dans **2 sections** differentes :
+- Section "Visites urgentes" (car elle est a venir et imminente)
+- Section "Visites deleguees confirmees" (car `est_deleguee + confirmee`)
 
-**Commission = loyer uniquement, pas de TVA.**
+L'enregistrement B apparait dans :
+- Section "Visites urgentes" (car il est aussi a venir et imminent)
+
+**Total = 3 cartes** pour ce qui devrait etre 1 seule visite.
+
+### 2. Le bouton "Deleguer a un coursier" n'apparait pas
+
+Ce bouton n'existe que dans le composant `renderPendingRequestCard`, utilise uniquement pour les demandes en attente (`est_deleguee && planifiee`). Les visites confirmees utilisent `renderPremiumVisiteCard` qui ne contient pas ce bouton.
 
 ## Ce qui va etre fait
 
-### 1. Migration SQL
+### Etape 1 : Nettoyage de la base (donnees dupliquees)
 
-**Mise a jour du trigger** pour qu'il se declenche en deux temps :
+Supprimer l'enregistrement B (le doublon `planifiee` non delegue) car la visite a deja ete confirmee via l'enregistrement A.
 
-```text
-QUAND candidature est mise a jour :
-  SI nouveau statut = 'attente_bail' ET ancien statut != 'attente_bail' :
-    --> Verifier qu'aucune transaction n'existe deja
-    --> Creer transaction avec statut = 'en_cours'
-    --> Commission = loyer (sans TVA), split 45/55
-  
-  SI cles_remises passe de false a true :
-    --> Mettre a jour la transaction existante : statut = 'conclue'
-    --> Si aucune transaction n'existe, en creer une avec statut = 'conclue'
-```
+### Etape 2 : Dedupliquer l'affichage dans le code
 
-**Insertion des 5 transactions manquantes** directement dans la migration pour rattraper les dossiers existants. Chaque transaction sera creee avec le statut `en_cours` (sauf Miguel qui est `bail_conclu`, donc aussi `en_cours` en attente des cles).
+Modifier la logique de filtrage pour que les visites affichees dans la section "Urgentes" soient **exclues** des sections "Visites deleguees confirmees" et "Visites planifiees". Cela evite qu'une meme visite apparaisse dans deux sections en meme temps.
 
-### 2. Adaptation de la page Transactions
+Actuellement :
+- Urgentes = visites a venir + imminentes (peut contenir des deleguees)
+- Deleguees confirmees = toutes les deleguees confirmees a venir
+- Planifiees = toutes les non-deleguees a venir
 
-Actuellement seules les transactions `conclue` sont bien visibles. Modification pour :
-- Afficher aussi les transactions `en_cours` avec un badge distinct (couleur differente)
-- Les inclure dans les compteurs pertinents
+Apres correction :
+- Urgentes = visites a venir + imminentes (inchange)
+- Deleguees confirmees = deleguees confirmees a venir **sauf celles deja affichees dans urgentes**
+- Planifiees = non-deleguees a venir **sauf celles deja affichees dans urgentes**
 
-### Impact attendu
+### Etape 3 : Ajouter le bouton "Deleguer a un coursier" aux visites confirmees
 
-| Element | Avant | Apres |
-|---------|-------|-------|
-| Transactions visibles | 6 | 11 |
-| Mongi, Miguel, Aziz, Salah, Mohamed | Absents | Visibles "En cours" |
-| Passage a "Conclue" | Manuel | Automatique a la remise des cles |
-| Calcul commission | Loyer (sans TVA) | Inchange |
+Modifier `renderPremiumVisiteCard` pour afficher le bouton de delegation coursier sur les visites a venir qui :
+- N'ont pas encore ete deleguees a un coursier (`statut_coursier` est null)
+- Sont a une date future
 
-### Fichiers concernes
+Cela permet a l'agent de deleguer **n'importe quelle visite** a un coursier, qu'elle soit deleguee par le client ou planifiee directement.
+
+## Fichiers concernes
 
 | Fichier | Modification |
 |---------|-------------|
-| Nouvelle migration SQL | Trigger mis a jour + 5 transactions inserees |
-| `src/pages/admin/Transactions.tsx` | Affichage des transactions "en_cours" |
+| Migration SQL | Suppression du doublon dans la table `visites` |
+| `src/pages/agent/Visites.tsx` | Deduplication des sections urgentes/normales + ajout du bouton coursier dans `renderPremiumVisiteCard` |
+
+## Resultat attendu
+
+| Element | Avant | Apres |
+|---------|-------|-------|
+| Cartes affichees pour cette visite | 3 | 1 |
+| Bouton "Deleguer a un coursier" | Absent (sauf demandes en attente) | Visible sur toutes les visites a venir |
+| Doublons en base | 2 enregistrements | 1 seul enregistrement |
