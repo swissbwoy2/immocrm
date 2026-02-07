@@ -1,111 +1,160 @@
 
 
-# Simplifier le Meta Pixel : chargement statique dans index.html
+# Tracking Meta Pixel pour campagne Facebook Ads "Vente"
 
-## Le probleme
+## Etat actuel
 
-Le systeme actuel charge le SDK Meta dynamiquement via JavaScript (injection de script dans le DOM). Cette approche est fragile dans une SPA React : les guards (`__META_PIXEL_INIT`, `document.getElementById`, consent checks) se combinent et bloquent l'initialisation du pixel. Resultat : zero PageView, zero Lead dans Events Manager.
+Le Meta Pixel (ID: `1270471197464641`) est deja installe dans `index.html` et fonctionne. Voici ce qui est deja en place :
 
-## La solution
+- **PageView** : se declenche automatiquement a chaque chargement de page et navigation SPA (via `AppContent` dans `App.tsx`)
+- **Lead** : se declenche dans `NouveauMandat.tsx` quand un client soumet son mandat complet (activation de recherche)
+- **CompleteRegistration** : se declenche dans `Test24hActive.tsx` quand un lead qualifie demande un test 24h
 
-Remplacer toute la mecanique dynamique par le snippet officiel Meta, directement dans le HTML. Le pixel se charge une seule fois au niveau du navigateur et survit a toutes les navigations SPA.
+## 2 problemes a corriger dans le code
 
-## 6 modifications
+### Probleme 1 : Le Lead est conditionne au consentement cookies
 
-### 1. `index.html` -- Ajouter le snippet Meta Pixel officiel
+Dans `NouveauMandat.tsx` (ligne 382-383), le Lead ne se declenche que si `cookie-consent === 'accepted'`. Mais le pixel lui-meme est charge sans condition dans `index.html`. Resultat : si l'utilisateur n'a pas clique "Accepter" dans la banniere cookies, le Lead n'est jamais envoye alors que le pixel tourne deja.
 
-Inserer dans le `<head>`, juste avant `</head>`, le snippet standard fourni par Meta :
+**Correction** : Supprimer la condition `consent === 'accepted'` pour que le Lead se declenche systematiquement, comme le PageView.
+
+### Probleme 2 : Le CompleteRegistration risque de ne pas s'envoyer (race condition)
+
+Dans `Test24hActive.tsx`, le `setTimeout` de 2000ms est en competition avec le countdown de 3 secondes. Si la redirection se fait avant les 2 secondes, l'evenement est annule par le `clearTimeout`.
+
+**Correction** : Envoyer le CompleteRegistration immediatement au mount du composant (sans `setTimeout`), tout en gardant le guard `sessionStorage` contre le double-tracking.
+
+### Ajout : Lead sur le QuickLeadForm qualifie
+
+Quand un lead qualifie soumet le formulaire rapide sur la landing page (`QuickLeadForm.tsx`), il est redirige vers `/test-24h-active`. C'est aussi une conversion importante. Ajouter un evenement `Lead` juste avant cette redirection.
+
+## Modifications techniques
+
+### 1. `src/pages/NouveauMandat.tsx` -- Supprimer la condition consent
+
+Lignes 381-386 : retirer le check `localStorage.getItem('cookie-consent')` et garder uniquement le check `window.fbq` :
 
 ```text
-<!-- Meta Pixel Code -->
-<script>
-!function(f,b,e,v,n,t,s)
-{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];
-s.parentNode.insertBefore(t,s)}(window, document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '1270471197464641');
-fbq('track', 'PageView');
-</script>
-<noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=1270471197464641&ev=PageView&noscript=1"
-/></noscript>
-<!-- End Meta Pixel Code -->
+// Avant (actuel)
+const consent = localStorage.getItem('cookie-consent');
+if (consent === 'accepted' && (window as any).fbq) {
+
+// Apres (corrige)
+if ((window as any).fbq) {
 ```
 
-Ce snippet est celui que Meta fournit dans Events Manager. Il charge `fbevents.js`, initialise le pixel et envoie le premier PageView immediatement, au niveau HTML, avant meme que React ne demarre.
+### 2. `src/pages/Test24hActive.tsx` -- Envoyer immediatement sans setTimeout
 
-### 2. `src/App.tsx` -- Supprimer MetaPixelProvider, ajouter PageView sur route change
-
-- Supprimer l'import de `MetaPixelProvider` (ligne 13)
-- Supprimer le wrapping `<MetaPixelProvider>...</MetaPixelProvider>` (lignes 211 et 383)
-- Transformer `AppContent` pour ajouter le tracking PageView sur chaque changement de route :
+Remplacer le `useEffect` avec `setTimeout` par un envoi immediat au mount :
 
 ```text
-const AppContent = () => {
-  const location = useLocation();
-  useAppVersionCheck();
-
-  // Track SPA page views
-  useEffect(() => {
+useEffect(() => {
+  if (!sessionStorage.getItem('meta_track_completeRegistration_test24h')) {
     if ((window as any).fbq) {
-      (window as any).fbq('track', 'PageView');
+      (window as any).fbq('track', 'CompleteRegistration');
+      console.log('[Test24hActive] Meta Pixel CompleteRegistration event sent');
     }
-  }, [location.pathname]);
-
-  return null;
-};
+    sessionStorage.setItem('meta_track_completeRegistration_test24h', '1');
+  }
+}, []);
 ```
 
-Note : `AppContent` est deja rendu a l'interieur de `<BrowserRouter>`, donc `useLocation()` fonctionne.
+### 3. `src/components/landing/QuickLeadForm.tsx` -- Ajouter Lead sur soumission qualifiee
 
-### 3. `src/components/MetaPixelProvider.tsx` -- Supprimer le fichier
+Juste avant `navigate('/test-24h-active')` (ligne 162), ajouter :
 
-Ce composant n'a plus de raison d'etre. Toute son utilite (init + PageView) est desormais geree par `index.html` + `AppContent`.
-
-### 4. `src/lib/meta-pixel.ts` -- Supprimer le fichier
-
-Toutes les fonctions (`initMetaPixel`, `grantMetaConsent`, `trackMetaPageView`, `trackMetaEvent`, `trackMetaEventWithRetry`) sont remplacees par des appels directs a `window.fbq`. Le module entier peut etre supprime.
-
-### 5. `src/components/CookieConsentBanner.tsx` -- Supprimer l'import Meta
-
-- Supprimer l'import `{ grantMetaConsent } from '@/lib/meta-pixel'` (ligne 5)
-- Supprimer l'appel `grantMetaConsent()` dans `handleAccept` (ligne 27)
-- Le TikTok consent (`grantTikTokConsent()`) reste inchange
-
-### 6. `src/pages/Test24hActive.tsx` -- Remplacer trackMetaEventWithRetry par appel direct
-
-- Supprimer l'import `{ trackMetaEventWithRetry } from '@/lib/meta-pixel'` (ligne 6)
-- Remplacer `trackMetaEventWithRetry('CompleteRegistration')` par `(window as any).fbq && (window as any).fbq('track', 'CompleteRegistration')`
-- Le reste (setTimeout 2000ms, sessionStorage guard, clearTimeout) reste identique
-
-### NouveauMandat.tsx -- Aucun changement
-
-Le code actuel (lignes 381-386) utilise deja `(window as any).fbq` directement. Il est parfaitement compatible avec le nouveau systeme.
+```text
+if ((window as any).fbq) {
+  (window as any).fbq('track', 'Lead');
+  console.log('[Meta Pixel] Lead fired on qualified quick lead form submission');
+}
+```
 
 ## Fichiers modifies
 
-| Fichier | Action |
+| Fichier | Modification |
 |---|---|
-| `index.html` | Ajout snippet Meta Pixel dans `<head>` |
-| `src/App.tsx` | Suppression MetaPixelProvider + ajout PageView dans AppContent |
-| `src/components/MetaPixelProvider.tsx` | Suppression du fichier |
-| `src/lib/meta-pixel.ts` | Suppression du fichier |
-| `src/components/CookieConsentBanner.tsx` | Suppression import/appel grantMetaConsent |
-| `src/pages/Test24hActive.tsx` | Remplacement trackMetaEventWithRetry par fbq direct |
+| `src/pages/NouveauMandat.tsx` | Suppression condition consent sur Lead |
+| `src/pages/Test24hActive.tsx` | Envoi immediat du CompleteRegistration (sans setTimeout) |
+| `src/components/landing/QuickLeadForm.tsx` | Ajout evenement Lead sur soumission qualifiee |
 
-## Pourquoi ca fonctionne
+## Resume des evenements apres correction
 
-- Le snippet HTML est charge par le navigateur AVANT React -- il ne depend d'aucun state, consent, guard ou lifecycle React
-- `fbq` est disponible globalement sur `window` des le premier rendu
-- Les navigations SPA declenchent un `PageView` via le `useEffect` dans `AppContent`
-- Le `Lead` dans `NouveauMandat.tsx` et le `CompleteRegistration` dans `Test24hActive.tsx` appellent `window.fbq` directement -- zero dependance a un module intermediaire
-- Plus aucun guard (`__META_PIXEL_INIT`, `document.getElementById`, consent check) ne peut bloquer l'initialisation
+| Evenement | Quand | Ou dans le code |
+|---|---|---|
+| PageView | Chaque page/navigation | `index.html` + `App.tsx` |
+| Lead | Soumission mandat complet | `NouveauMandat.tsx` |
+| Lead | Lead qualifie (test 24h) | `QuickLeadForm.tsx` |
+| CompleteRegistration | Page test 24h active | `Test24hActive.tsx` |
 
-## Note sur le GDPR
+---
 
-Le snippet dans `index.html` charge le pixel inconditionnellement (sans attendre le consentement cookies). Si la conformite GDPR stricte est requise, il sera possible d'ajouter un systeme de consentement plus tard. Pour l'instant, la priorite est de retablir le tracking et de debloquer l'optimisation Meta Ads.
+## Guide : Configuration dans Facebook Ads Manager et Events Manager
+
+### Etape 1 : Verifier le Pixel dans Events Manager
+
+1. Aller sur [business.facebook.com](https://business.facebook.com)
+2. Menu hamburger en haut a gauche > **Gestionnaire d'evenements** (Events Manager)
+3. Selectionner le pixel **1270471197464641** dans la colonne de gauche
+4. Onglet **Apercu** : vous devriez voir les evenements `PageView`, `Lead`, `CompleteRegistration` remonter en temps reel
+
+### Etape 2 : Tester avec l'outil Test Events
+
+1. Dans le Gestionnaire d'evenements, onglet **Tester des evenements** (Test Events)
+2. Entrer l'URL du site (par exemple `https://immocrm.lovable.app`)
+3. Cliquer sur **Ouvrir le site web** -- une fenetre s'ouvre
+4. Naviguer sur le site, remplir le formulaire rapide ou le mandat complet
+5. Les evenements apparaissent en temps reel dans l'onglet Test Events
+
+### Etape 3 : Configurer la campagne dans Ads Manager
+
+1. Aller dans **Gestionnaire de publicites** (Ads Manager)
+2. Creer une nouvelle campagne > Objectif : **Leads** (ou **Conversions**)
+3. Au niveau de l'**ensemble de publicites** :
+   - Section **Evenement de conversion** : selectionner **Lead**
+   - Cela indique a Facebook d'optimiser pour les personnes qui sont les plus susceptibles de soumettre un mandat ou un formulaire qualifie
+4. Alternative : utiliser **CompleteRegistration** comme evenement de conversion si vous voulez optimiser specifiquement sur les demandes de test 24h
+
+### Etape 4 : Verifier le domaine (recommande)
+
+1. Dans Business Manager > **Parametres** > **Securite de la marque** > **Domaines**
+2. Ajouter et verifier `immocrm.lovable.app` (ou votre domaine personnalise)
+3. Cela permet a Facebook de mieux attribuer les conversions et d'eviter les blocages iOS
+
+### Etape 5 : Configurer les evenements prioritaires (Aggregated Event Measurement)
+
+1. Dans le Gestionnaire d'evenements > onglet **Mesure des evenements agreges**
+2. Configurer et prioriser vos evenements dans l'ordre :
+   - Priorite 1 : **Lead** (votre conversion principale)
+   - Priorite 2 : **CompleteRegistration**
+   - Priorite 3 : **PageView**
+3. Cela est necessaire pour le tracking des utilisateurs iOS 14.5+ qui refusent le suivi
+
+### Resume visuel du parcours de conversion
+
+```text
+Visiteur arrive sur la landing page
+        |
+        v
+    [PageView]  <-- declenche automatiquement
+        |
+        v
+  Remplit le formulaire rapide (QuickLeadForm)
+        |
+        +-- Lead qualifie ---------> [Lead] + redirection /test-24h-active
+        |                                         |
+        |                                         v
+        |                              [CompleteRegistration]
+        |
+        +-- Non qualifie --> message "un agent va vous contacter"
+        
+        
+  OU : Remplit le mandat complet (NouveauMandat)
+        |
+        v
+    [Lead]  <-- declenche au succes de soumission
+        |
+        v
+  /inscription-validee (confirmation)
+```
 
