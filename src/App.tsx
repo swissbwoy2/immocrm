@@ -1,8 +1,8 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { AuthProvider } from "./contexts/AuthContext";
 import { SearchTypeProvider } from "./contexts/SearchTypeContext";
@@ -10,7 +10,6 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { PageLoader } from "./components/PageLoader";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { TikTokPixelProvider } from "./components/TikTokPixelProvider";
-import { MetaPixelProvider } from "./components/MetaPixelProvider";
 import { useAppVersionCheck } from "./hooks/useAppVersionCheck";
 
 // Eager load critical pages
@@ -192,7 +191,16 @@ const queryClient = new QueryClient({
 
 // Component to use hooks inside providers
 const AppContent = () => {
+  const location = useLocation();
   useAppVersionCheck();
+
+  // Track SPA page views for Meta Pixel
+  useEffect(() => {
+    if ((window as any).fbq) {
+      (window as any).fbq('track', 'PageView');
+    }
+  }, [location.pathname]);
+
   return null;
 };
 
@@ -208,7 +216,6 @@ const App = () => (
         }}
       >
         <TikTokPixelProvider>
-          <MetaPixelProvider>
           <AuthProvider>
             <AppContent />
             <Suspense fallback={<PageLoader />}>
@@ -380,7 +387,6 @@ const App = () => (
               </Routes>
             </Suspense>
           </AuthProvider>
-          </MetaPixelProvider>
         </TikTokPixelProvider>
       </BrowserRouter>
     </TooltipProvider>
