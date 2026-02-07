@@ -379,8 +379,7 @@ export default function NouveauMandat() {
       );
 
       // Meta Pixel Lead conversion -- fired on successful mandate submission
-      const consent = localStorage.getItem('cookie-consent');
-      if (consent === 'accepted' && (window as any).fbq) {
+      if ((window as any).fbq) {
         (window as any).fbq('track', 'Lead');
         console.log('[Meta Pixel] Lead fired on successful mandate submission');
       }
