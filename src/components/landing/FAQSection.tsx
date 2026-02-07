@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronDown, HelpCircle, Sparkles, MessageCircle, ShieldCheck } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
+import { useSearchType } from "@/contexts/SearchTypeContext";
 
-const faqItems = [
+const faqItemsLocation = [
   {
     question: "Combien ça coûte exactement ?",
     answer:
@@ -51,8 +52,64 @@ const faqItems = [
   },
 ];
 
+const faqItemsAchat = [
+  {
+    question: "Combien ça coûte exactement ?",
+    answer:
+      "C'est transparent : un acompte de 2'500 CHF est versé pour activer ton mandat de recherche. En cas d'achat, la commission s'élève à 1% du prix d'acquisition. Les 2'500 CHF d'acompte sont intégralement déduits de cette commission. Aucun frais caché.",
+  },
+  {
+    question: "Dois-je signer un contrat ?",
+    answer:
+      "Oui ! Tu signes un mandat de recherche exclusif d'une durée de 6 mois. Ce cadre juridique protège tes droits, définit clairement les missions de ton chasseur immobilier et garantit un accompagnement professionnel de bout en bout.",
+  },
+  {
+    question: "Comment fonctionne la garantie remboursement ?",
+    answer:
+      "Si après 6 mois de recherche active aucun bien correspondant à tes critères n'a été trouvé, ton acompte de 2'500 CHF t'est intégralement remboursé. Aucun risque financier : tu ne paies la commission de 1% que si tu achètes effectivement un bien grâce à notre accompagnement.",
+  },
+  {
+    question: "Que se passe-t-il si je trouve moi-même ?",
+    answer:
+      "Bonne nouvelle ! Si tu trouves par toi-même un bien qui n'a aucun lien avec nos recherches, aucune commission n'est due. On te demande simplement de nous prévenir rapidement pour qu'on arrête les démarches de notre côté.",
+  },
+  {
+    question: "Dans quels cantons êtes-vous actifs ?",
+    answer:
+      "Toute la Suisse romande ! Genève, Vaud, Valais, Neuchâtel, Fribourg et Jura. Notre réseau de partenaires et notre accès aux biens off-market nous permettent de dénicher des opportunités dans tous ces cantons.",
+  },
+  {
+    question: "Combien de temps pour trouver en moyenne ?",
+    answer:
+      "En moyenne 3 à 8 semaines, selon tes critères et le marché local. Ton mandat est valable 6 mois, ce qui nous laisse le temps de trouver LE bien idéal. Notre accès aux biens off-market et notre réseau accélèrent considérablement le processus.",
+  },
+  {
+    question: "Comment ça marche concrètement ?",
+    answer:
+      "Tu remplis le formulaire et signes un mandat de recherche. Tu verses l'acompte de 2'500 CHF et ton chasseur immobilier dédié se met immédiatement au travail : recherche active, accès aux biens off-market, pré-sélection, organisation des visites, négociation du prix et accompagnement jusqu'au notaire.",
+  },
+  {
+    question: "Comment travaillez-vous pour moi ?",
+    answer:
+      "Ton chasseur immobilier dédié travaille exclusivement dans TON intérêt. Il recherche activement les biens correspondant à tes critères, négocie le meilleur prix, vérifie les aspects juridiques et techniques, et t'accompagne jusqu'à la signature chez le notaire. Un vrai partenaire d'achat.",
+  },
+  {
+    question: "Comment fonctionne la délégation de visite ?",
+    answer:
+      "Si tu n'es pas disponible, ton chasseur immobilier visite à ta place. Tu reçois une vidéo HD + un compte-rendu détaillé sous 24h. Si tu décides d'acheter le bien suite à notre accompagnement, la commission de 1% du prix d'achat s'applique selon le mandat signé.",
+  },
+];
+
 export function FAQSection() {
   const [openItems, setOpenItems] = useState<number[]>([]);
+  const { isAchat } = useSearchType();
+
+  const items = isAchat ? faqItemsAchat : faqItemsLocation;
+
+  // Reset open items when search type changes
+  useEffect(() => {
+    setOpenItems([]);
+  }, [isAchat]);
 
   const toggleItem = (index: number) => {
     setOpenItems((prev) => (prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]));
@@ -120,7 +177,7 @@ export function FAQSection() {
 
         {/* FAQ items */}
         <div className="max-w-3xl mx-auto space-y-4 md:space-y-5">
-          {faqItems.map((item, index) => {
+          {items.map((item, index) => {
             const isOpen = openItems.includes(index);
 
             return (
