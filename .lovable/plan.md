@@ -1,112 +1,70 @@
 
 
-# Implementation -- Meta Pixel global GDPR-safe
+# Deploy: Meta Pixel conversion events avec retry
 
-## Contexte
+## 3 fichiers a modifier
 
-L'erreur de build actuelle (`Cloudflare R2 429`) est un probleme temporaire d'infrastructure (rate-limiting), non lie au code. L'implementation ci-dessous est purement du code frontend -- le deploiement reussira au prochain essai.
+### 1. `src/lib/meta-pixel.ts` -- Ajouter `trackMetaEventWithRetry`
 
-Les fichiers `src/lib/meta-pixel.ts` et `src/components/MetaPixelProvider.tsx` n'existent pas encore. Les pages `/inscription-validee` et `/test-24h-active` utilisent deja `window.fbq` avec guards sessionStorage -- elles n'ont pas besoin de modification.
+Ajout d'une nouvelle fonction exportee a la fin du fichier. Les fonctions existantes (`initMetaPixel`, `grantMetaConsent`, `trackMetaPageView`, `trackMetaEvent`) restent strictement inchangees.
 
----
+```typescript
+export function trackMetaEventWithRetry(
+  event: string,
+  params?: object,
+  maxAttempts: number = 20,
+  intervalMs: number = 500
+) {
+  if (typeof window === 'undefined') return;
 
-## Fichiers a creer (2)
+  if (window.fbq) {
+    window.fbq('track', event, params);
+    console.log('[Meta Pixel] Event sent:', event);
+    return;
+  }
 
-### 1. `src/lib/meta-pixel.ts`
-
-Utilitaire Meta Pixel avec quadruple guard :
-
-- `typeof window === 'undefined'` (SSR safety)
-- `withConsent === false` (GDPR : rien n'est charge sans consentement)
-- `isInitialized` flag interne (anti-double logique)
-- `document.getElementById('meta-pixel-sdk')` (anti-double injection DOM)
-
-Fonctions exportees :
-- `initMetaPixel(withConsent)` : injecte fbevents.js avec `id="meta-pixel-sdk"`, initialise la queue fbq, appelle `fbq('init', '1270471197464641')` puis `fbq('track', 'PageView')`
-- `grantMetaConsent()` : raccourci pour `initMetaPixel(true)`
-- `trackMetaPageView()` : `window.fbq('track', 'PageView')` avec guard
-- `trackMetaEvent(event, params?)` : `window.fbq('track', event, params)` avec guard
-
-### 2. `src/components/MetaPixelProvider.tsx`
-
-Provider global (meme pattern que `TikTokPixelProvider`) :
-
-- Au mount : lit `localStorage.getItem('cookie-consent')`, appelle `initMetaPixel(consent === 'accepted')`
-- Sur changement de `location.pathname` : appelle `trackMetaPageView()` si consent est `'accepted'`
-- Rend `{children}` sans markup
-
----
-
-## Fichiers a modifier (2)
-
-### 3. `src/components/CookieConsentBanner.tsx`
-
-- Ligne 4 : ajouter import `grantMetaConsent` depuis `@/lib/meta-pixel`
-- Ligne 24 : ajouter `grantMetaConsent();` apres `grantTikTokConsent();` dans `handleAccept()`
-
-### 4. `src/App.tsx`
-
-- Ligne 12 : ajouter import `MetaPixelProvider`
-- Ligne 210 : inserer `<MetaPixelProvider>` entre `<TikTokPixelProvider>` et `<AuthProvider>`
-- Ligne 380 : fermer `</MetaPixelProvider>` entre `</AuthProvider>` et `</TikTokPixelProvider>`
-
-Structure resultante :
-
-```text
-<TikTokPixelProvider>
-  <MetaPixelProvider>
-    <AuthProvider>
-      ...routes...
-    </AuthProvider>
-  </MetaPixelProvider>
-</TikTokPixelProvider>
+  let attempts = 0;
+  const timer = setInterval(() => {
+    attempts++;
+    if (window.fbq) {
+      window.fbq('track', event, params);
+      console.log('[Meta Pixel] Event sent (after retry):', event, '- attempts:', attempts);
+      clearInterval(timer);
+    } else if (attempts >= maxAttempts) {
+      console.warn('[Meta Pixel] fbq not available after', maxAttempts, 'attempts. Event lost:', event);
+      clearInterval(timer);
+    }
+  }, intervalMs);
+}
 ```
 
----
+### 2. `src/pages/InscriptionValidee.tsx` -- Lead uniquement
 
-## Fichiers inchanges
+- Remplacer l'import `trackMetaEvent` par `trackMetaEventWithRetry` et ajouter `initMetaPixel`
+- Dans le `useEffect` : appeler `initMetaPixel(true)` avant le tracking
+- Appeler `trackMetaEventWithRetry('Lead')` uniquement (supprimer `CompleteRegistration`)
+- Ajouter `console.log` pour debug
 
-- `src/pages/InscriptionValidee.tsx` : garde `if (window.fbq) window.fbq('track', 'Lead')` avec guard sessionStorage
-- `src/pages/Test24hActive.tsx` : garde `if (window.fbq) window.fbq('track', 'CompleteRegistration')` avec guard sessionStorage
-- `src/types/meta-pixel.d.ts` : reste en place
+### 3. `src/pages/Test24hActive.tsx` -- CompleteRegistration uniquement + GDPR
 
----
+- Ajouter imports `trackMetaEventWithRetry` et `initMetaPixel` depuis `@/lib/meta-pixel`
+- Ajouter constante `COOKIE_CONSENT_KEY = 'cookie-consent'`
+- Remplacer le `useEffect` de tracking : check consent GDPR + `initMetaPixel(true)` + `trackMetaEventWithRetry('CompleteRegistration')`
+- Guard sessionStorage conserve
 
-## Flux GDPR
+## Mapping final
 
-```text
-Arrivee -> MetaPixelProvider -> consent=null -> initMetaPixel(false) -> RETURN (rien charge)
-
-Cookie banner -> "Accepter"
-  -> localStorage = 'accepted'
-  -> grantTikTokConsent()
-  -> grantMetaConsent() -> initMetaPixel(true)
-    -> quadruple guard OK
-    -> script#meta-pixel-sdk injecte
-    -> fbq('init', '1270471197464641')
-    -> fbq('track', 'PageView')
-  -> Tracking actif
-
-Cookie banner -> "Refuser" -> Rien charge
-```
-
----
+| Page | Evenement Meta | Description |
+|---|---|---|
+| `/inscription-validee` | `Lead` | Mandat signe (conversion principale) |
+| `/test-24h-active` | `CompleteRegistration` | Essai 24h qualifie |
 
 ## Validation post-deploiement
 
-| Test | Resultat attendu |
-|---|---|
-| Nav privee + refus cookies | Aucun script `meta-pixel-sdk` dans le DOM, aucun appel `connect.facebook.net` |
-| Nav privee + acceptation cookies | Script charge, PageView visible dans Events Manager **Test Events** (temps reel) |
-| `/inscription-validee` apres acceptation | Evenement `Lead` dans Events Manager Test Events |
-| `/test-24h-active` apres acceptation | Evenement `CompleteRegistration` dans Events Manager Test Events |
-
-## Resume des fichiers
-
-| Fichier | Action |
-|---|---|
-| `src/lib/meta-pixel.ts` | Nouveau |
-| `src/components/MetaPixelProvider.tsx` | Nouveau |
-| `src/components/CookieConsentBanner.tsx` | Ajout import + `grantMetaConsent()` |
-| `src/App.tsx` | Ajout import + wrapper `<MetaPixelProvider>` |
+En navigation privee :
+1. Accepter cookies
+2. Parcours complet jusqu'a signature mandat
+3. Page `/inscription-validee` : console affiche `[Meta Pixel] Event sent: Lead`
+4. Page `/test-24h-active` : console affiche `[Meta Pixel] Event sent: CompleteRegistration`
+5. Events Manager puis Test Events : Lead et CompleteRegistration visibles en temps reel
 
