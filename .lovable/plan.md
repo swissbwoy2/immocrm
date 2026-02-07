@@ -1,57 +1,49 @@
 
 
-# Fix: Delai 2000ms avant le tracking Lead sur /inscription-validee
+# Fix : Eliminer le double init Meta Pixel
 
-## Modification unique : `src/pages/InscriptionValidee.tsx`
+## Objectif
+Supprimer le warning "Multiple pixels with conflicting versions" en garantissant un seul `fbq('init')` dans toute l'application.
 
-Le `useEffect` de tracking Meta Pixel est modifie pour ajouter un `setTimeout` de 2000ms avant l'envoi de l'evenement Lead.
+## 3 modifications
 
-### Changements precis (lignes 14-22 du fichier actuel)
+### 1. `src/lib/meta-pixel.ts` -- Guard global sur `window`
 
-Le bloc actuel :
+Remplacer le guard module-scoped `let isInitialized = false` par `(window as any).__META_PIXEL_INIT`. Ce flag survit meme si Vite duplique le module (code-splitting, HMR).
 
-```text
-useEffect(() => {
-  const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
-  if (consent === 'accepted' && !sessionStorage.getItem('meta_track_lead_inscription_validee')) {
-    initMetaPixel(true);
-    trackMetaEventWithRetry('Lead');
-    sessionStorage.setItem('meta_track_lead_inscription_validee', '1');
-    console.log('[InscriptionValidee] Meta Pixel Lead event queued');
-  }
-}, []);
-```
+- Supprimer `let isInitialized = false` (ligne 3)
+- Remplacer `if (isInitialized) return` par `if ((window as any).__META_PIXEL_INIT) return`
+- Remplacer `isInitialized = true` par `(window as any).__META_PIXEL_INIT = true`
 
-Devient :
+### 2. `src/pages/InscriptionValidee.tsx` -- Events only
 
-```text
-useEffect(() => {
-  const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
-  if (consent === 'accepted' && !sessionStorage.getItem('meta_track_lead_inscription_validee')) {
-    initMetaPixel(true);
-    const timeout = setTimeout(() => {
-      trackMetaEventWithRetry('Lead');
-      sessionStorage.setItem('meta_track_lead_inscription_validee', '1');
-      console.log('[InscriptionValidee] Meta Pixel Lead event sent after delay');
-    }, 2000);
-    return () => clearTimeout(timeout);
-  }
-}, []);
-```
+- Remplacer l'import `{ initMetaPixel, trackMetaEventWithRetry }` par `{ trackMetaEventWithRetry }` uniquement
+- Supprimer l'appel `initMetaPixel(true)` dans le useEffect
+- Le reste (setTimeout 2000ms, sessionStorage guard, trackMetaEventWithRetry, clearTimeout) reste identique
 
-### Points cles
+### 3. `src/pages/Test24hActive.tsx` -- Events only + delai 2000ms
 
-- `initMetaPixel(true)` reste appele immediatement (cree la queue fbq de facon synchrone)
-- Le tracking est differe de 2000ms (au lieu de 1500ms) pour couvrir les mobiles et reseaux lents
-- `sessionStorage.setItem` est place DANS le setTimeout, apres l'envoi effectif
-- `clearTimeout` dans le cleanup du `useEffect` pour eviter l'envoi si l'utilisateur quitte la page avant les 2 secondes
-- `trackMetaEventWithRetry` ajoute en plus son propre polling de 500ms x 20 tentatives en backup
+- Remplacer l'import `{ initMetaPixel, trackMetaEventWithRetry }` par `{ trackMetaEventWithRetry }` uniquement
+- Supprimer l'appel `initMetaPixel(true)` dans le useEffect
+- Ajouter un `setTimeout` de 2000ms autour du `trackMetaEventWithRetry('CompleteRegistration')` et du `sessionStorage.setItem`
+- Ajouter le cleanup `return () => clearTimeout(timeout)`
 
-### Fichier modifie
+### 4. `vite.config.ts` -- Dedupe React (bonus)
 
-| Fichier | Action |
+Ajouter `dedupe: ["react", "react-dom", "react/jsx-runtime"]` dans le bloc `resolve` existant pour eviter toute duplication de modules par le bundler.
+
+## Fichiers modifies
+
+| Fichier | Modification |
 |---|---|
-| `src/pages/InscriptionValidee.tsx` | setTimeout 2000ms avant trackMetaEventWithRetry('Lead') + cleanup |
+| `src/lib/meta-pixel.ts` | Guard `window.__META_PIXEL_INIT` remplace `let isInitialized` |
+| `src/pages/InscriptionValidee.tsx` | Suppression `initMetaPixel(true)`, garde setTimeout 2000ms |
+| `src/pages/Test24hActive.tsx` | Suppression `initMetaPixel(true)`, ajout setTimeout 2000ms |
+| `vite.config.ts` | Ajout `resolve.dedupe` |
 
-Aucun autre fichier n'est modifie. `meta-pixel.ts` et `Test24hActive.tsx` restent inchanges.
+## Resultat attendu
+
+- Un seul `fbq('init', '1270471197464641')` (via MetaPixelProvider)
+- Disparition du warning "Multiple pixels with conflicting versions"
+- Events Lead et CompleteRegistration envoyes apres 2 secondes de delai
 
