@@ -1,141 +1,112 @@
 
-# Implementation -- Meta Ads Tracking Pages
 
-## Objectif
+# Implementation -- Meta Pixel global GDPR-safe
 
-Creer deux pages de tracking dediees a Meta Ads pour distinguer deux niveaux d'engagement :
-- **Prospect qualifie** (mandat signe) : evenement `Lead` sur `/inscription-validee`
-- **Prospect interesse** (formulaire rapide qualifie) : evenement `CompleteRegistration` sur `/test-24h-active`
+## Contexte
 
-Tous les ajustements demandes sont integres : `window.fbq(...)`, cles sessionStorage explicites, redirection conditionnelle, et cleanup des timers.
+L'erreur de build actuelle (`Cloudflare R2 429`) est un probleme temporaire d'infrastructure (rate-limiting), non lie au code. L'implementation ci-dessous est purement du code frontend -- le deploiement reussira au prochain essai.
 
----
-
-## Fichiers a creer (3)
-
-### 1. `src/types/meta-pixel.d.ts`
-Declaration TypeScript pour `window.fbq` (propriete optionnelle sur l'interface Window).
-
-### 2. `src/pages/InscriptionValidee.tsx`
-Page publique post-mandat :
-- Icone CheckCircle + titre "Merci ! Votre demande a bien ete enregistree"
-- Sous-titre : "Votre agent Logisorama va analyser votre recherche et vous contacter."
-- Bouton "Acceder a mon espace" vers `/login`
-- Compte a rebours visible de 5 secondes, puis redirection automatique vers `/login`
-- Tracking Meta dans `useEffect` au mount avec guard anti-double :
-  - Cle sessionStorage : `meta_track_lead_inscription_validee`
-  - Appel : `window.fbq('track', 'Lead')`
-- Cleanup `clearInterval` dans le return du `useEffect` du countdown
-
-### 3. `src/pages/Test24hActive.tsx`
-Page publique post-QuickLeadForm qualifie :
-- Titre "Votre acces d'essai est active"
-- Sous-titre : "Vous pouvez des maintenant decouvrir Logisorama. Un agent pourra vous accompagner si besoin."
-- Bouton "Acceder a mon espace"
-- Compte a rebours de 3 secondes
-- Redirection conditionnelle via `useAuth` :
-  - Utilisateur authentifie -> `/client`
-  - Sinon -> `/login`
-- Tracking Meta dans `useEffect` au mount avec guard anti-double :
-  - Cle sessionStorage : `meta_track_completeRegistration_test24h`
-  - Appel : `window.fbq('track', 'CompleteRegistration')`
-- Cleanup `clearInterval` dans le return du `useEffect` du countdown
+Les fichiers `src/lib/meta-pixel.ts` et `src/components/MetaPixelProvider.tsx` n'existent pas encore. Les pages `/inscription-validee` et `/test-24h-active` utilisent deja `window.fbq` avec guards sessionStorage -- elles n'ont pas besoin de modification.
 
 ---
 
-## Fichiers a modifier (3)
+## Fichiers a creer (2)
 
-### 4. `src/pages/NouveauMandat.tsx` (ligne 381)
+### 1. `src/lib/meta-pixel.ts`
 
-Remplacer :
-```
-navigate('/login', { state: { mandatSubmitted: true } });
-```
-Par :
-```
-navigate('/inscription-validee');
-```
+Utilitaire Meta Pixel avec quadruple guard :
 
-Le toast de succes reste identique.
+- `typeof window === 'undefined'` (SSR safety)
+- `withConsent === false` (GDPR : rien n'est charge sans consentement)
+- `isInitialized` flag interne (anti-double logique)
+- `document.getElementById('meta-pixel-sdk')` (anti-double injection DOM)
 
-### 5. `src/components/landing/QuickLeadForm.tsx` (ligne 157)
+Fonctions exportees :
+- `initMetaPixel(withConsent)` : injecte fbevents.js avec `id="meta-pixel-sdk"`, initialise la queue fbq, appelle `fbq('init', '1270471197464641')` puis `fbq('track', 'PageView')`
+- `grantMetaConsent()` : raccourci pour `initMetaPixel(true)`
+- `trackMetaPageView()` : `window.fbq('track', 'PageView')` avec guard
+- `trackMetaEvent(event, params?)` : `window.fbq('track', event, params)` avec guard
 
-Ajouter `useNavigate` de `react-router-dom` aux imports (ligne 1) et instancier le hook dans le composant.
+### 2. `src/components/MetaPixelProvider.tsx`
 
-Apres la ligne 157 (`setSubmitResult(isQualified ? 'qualified' : 'not_qualified')`), ajouter une redirection conditionnelle :
-```
-if (isQualified) {
-  navigate('/test-24h-active');
-  return;
-}
-```
+Provider global (meme pattern que `TikTokPixelProvider`) :
 
-Le cas `not_qualified` continue d'afficher le message inline existant. Le bloc de rendu `submitResult === 'qualified'` (lignes 198-218) est conserve comme fallback visuel.
-
-### 6. `src/App.tsx`
-
-Ajouter deux lazy imports apres la ligne 34 :
-```
-const InscriptionValidee = lazy(() => import("./pages/InscriptionValidee"));
-const Test24hActive = lazy(() => import("./pages/Test24hActive"));
-```
-
-Ajouter deux routes publiques avant la route catch-all `*` (avant la ligne 373) :
-```
-<Route path="/inscription-validee" element={<InscriptionValidee />} />
-<Route path="/test-24h-active" element={<Test24hActive />} />
-```
+- Au mount : lit `localStorage.getItem('cookie-consent')`, appelle `initMetaPixel(consent === 'accepted')`
+- Sur changement de `location.pathname` : appelle `trackMetaPageView()` si consent est `'accepted'`
+- Rend `{children}` sans markup
 
 ---
 
-## Flux resultants
+## Fichiers a modifier (2)
+
+### 3. `src/components/CookieConsentBanner.tsx`
+
+- Ligne 4 : ajouter import `grantMetaConsent` depuis `@/lib/meta-pixel`
+- Ligne 24 : ajouter `grantMetaConsent();` apres `grantTikTokConsent();` dans `handleAccept()`
+
+### 4. `src/App.tsx`
+
+- Ligne 12 : ajouter import `MetaPixelProvider`
+- Ligne 210 : inserer `<MetaPixelProvider>` entre `<TikTokPixelProvider>` et `<AuthProvider>`
+- Ligne 380 : fermer `</MetaPixelProvider>` entre `</AuthProvider>` et `</TikTokPixelProvider>`
+
+Structure resultante :
 
 ```text
-MANDAT COMPLET :
-/nouveau-mandat -> soumission
-     |
-     v
-Toast "Demande envoyee avec succes !"
-     |
-     v
-/inscription-validee (5 sec, window.fbq Lead, 1 seule fois)
-     |
-     v
-/login
-
-QUICKFORM QUALIFIE :
-Landing #quickform -> soumission qualifiee
-     |
-     v
-/test-24h-active (3 sec, window.fbq CompleteRegistration, 1 seule fois)
-     |
-     v
-/client (si connecte) ou /login (sinon)
+<TikTokPixelProvider>
+  <MetaPixelProvider>
+    <AuthProvider>
+      ...routes...
+    </AuthProvider>
+  </MetaPixelProvider>
+</TikTokPixelProvider>
 ```
 
-## Signal Meta Ads
+---
 
-| Action utilisateur | Page de tracking | Evenement Meta | Cle sessionStorage |
-|---|---|---|---|
-| Signature mandat complet | /inscription-validee | Lead | meta_track_lead_inscription_validee |
-| Formulaire rapide qualifie | /test-24h-active | CompleteRegistration | meta_track_completeRegistration_test24h |
+## Fichiers inchanges
 
-## Points techniques confirmes
+- `src/pages/InscriptionValidee.tsx` : garde `if (window.fbq) window.fbq('track', 'Lead')` avec guard sessionStorage
+- `src/pages/Test24hActive.tsx` : garde `if (window.fbq) window.fbq('track', 'CompleteRegistration')` avec guard sessionStorage
+- `src/types/meta-pixel.d.ts` : reste en place
 
-- `window.fbq(...)` utilise partout (jamais `fbq(...)` direct)
-- Cles sessionStorage uniques et explicites
-- Route dashboard client confirmee : `/client`
-- Cleanup des timers (clearInterval/clearTimeout) dans les useEffect
-- Tracking declenche au mount avant le debut du countdown (pas de race condition)
-- Guard `window.fbq` present : aucun risque d'erreur si pixel absent ou cookies refuses
+---
+
+## Flux GDPR
+
+```text
+Arrivee -> MetaPixelProvider -> consent=null -> initMetaPixel(false) -> RETURN (rien charge)
+
+Cookie banner -> "Accepter"
+  -> localStorage = 'accepted'
+  -> grantTikTokConsent()
+  -> grantMetaConsent() -> initMetaPixel(true)
+    -> quadruple guard OK
+    -> script#meta-pixel-sdk injecte
+    -> fbq('init', '1270471197464641')
+    -> fbq('track', 'PageView')
+  -> Tracking actif
+
+Cookie banner -> "Refuser" -> Rien charge
+```
+
+---
+
+## Validation post-deploiement
+
+| Test | Resultat attendu |
+|---|---|
+| Nav privee + refus cookies | Aucun script `meta-pixel-sdk` dans le DOM, aucun appel `connect.facebook.net` |
+| Nav privee + acceptation cookies | Script charge, PageView visible dans Events Manager **Test Events** (temps reel) |
+| `/inscription-validee` apres acceptation | Evenement `Lead` dans Events Manager Test Events |
+| `/test-24h-active` apres acceptation | Evenement `CompleteRegistration` dans Events Manager Test Events |
 
 ## Resume des fichiers
 
 | Fichier | Action |
 |---|---|
-| `src/types/meta-pixel.d.ts` | Nouveau |
-| `src/pages/InscriptionValidee.tsx` | Nouveau |
-| `src/pages/Test24hActive.tsx` | Nouveau |
-| `src/pages/NouveauMandat.tsx` | Modification ligne 381 |
-| `src/components/landing/QuickLeadForm.tsx` | Ajout navigate + redirection qualifie |
-| `src/App.tsx` | Ajout 2 lazy imports + 2 routes publiques |
+| `src/lib/meta-pixel.ts` | Nouveau |
+| `src/components/MetaPixelProvider.tsx` | Nouveau |
+| `src/components/CookieConsentBanner.tsx` | Ajout import + `grantMetaConsent()` |
+| `src/App.tsx` | Ajout import + wrapper `<MetaPixelProvider>` |
+
