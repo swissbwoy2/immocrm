@@ -1,70 +1,57 @@
 
 
-# Deploy: Meta Pixel conversion events avec retry
+# Fix: Delai 2000ms avant le tracking Lead sur /inscription-validee
 
-## 3 fichiers a modifier
+## Modification unique : `src/pages/InscriptionValidee.tsx`
 
-### 1. `src/lib/meta-pixel.ts` -- Ajouter `trackMetaEventWithRetry`
+Le `useEffect` de tracking Meta Pixel est modifie pour ajouter un `setTimeout` de 2000ms avant l'envoi de l'evenement Lead.
 
-Ajout d'une nouvelle fonction exportee a la fin du fichier. Les fonctions existantes (`initMetaPixel`, `grantMetaConsent`, `trackMetaPageView`, `trackMetaEvent`) restent strictement inchangees.
+### Changements precis (lignes 14-22 du fichier actuel)
 
-```typescript
-export function trackMetaEventWithRetry(
-  event: string,
-  params?: object,
-  maxAttempts: number = 20,
-  intervalMs: number = 500
-) {
-  if (typeof window === 'undefined') return;
+Le bloc actuel :
 
-  if (window.fbq) {
-    window.fbq('track', event, params);
-    console.log('[Meta Pixel] Event sent:', event);
-    return;
+```text
+useEffect(() => {
+  const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
+  if (consent === 'accepted' && !sessionStorage.getItem('meta_track_lead_inscription_validee')) {
+    initMetaPixel(true);
+    trackMetaEventWithRetry('Lead');
+    sessionStorage.setItem('meta_track_lead_inscription_validee', '1');
+    console.log('[InscriptionValidee] Meta Pixel Lead event queued');
   }
-
-  let attempts = 0;
-  const timer = setInterval(() => {
-    attempts++;
-    if (window.fbq) {
-      window.fbq('track', event, params);
-      console.log('[Meta Pixel] Event sent (after retry):', event, '- attempts:', attempts);
-      clearInterval(timer);
-    } else if (attempts >= maxAttempts) {
-      console.warn('[Meta Pixel] fbq not available after', maxAttempts, 'attempts. Event lost:', event);
-      clearInterval(timer);
-    }
-  }, intervalMs);
-}
+}, []);
 ```
 
-### 2. `src/pages/InscriptionValidee.tsx` -- Lead uniquement
+Devient :
 
-- Remplacer l'import `trackMetaEvent` par `trackMetaEventWithRetry` et ajouter `initMetaPixel`
-- Dans le `useEffect` : appeler `initMetaPixel(true)` avant le tracking
-- Appeler `trackMetaEventWithRetry('Lead')` uniquement (supprimer `CompleteRegistration`)
-- Ajouter `console.log` pour debug
+```text
+useEffect(() => {
+  const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
+  if (consent === 'accepted' && !sessionStorage.getItem('meta_track_lead_inscription_validee')) {
+    initMetaPixel(true);
+    const timeout = setTimeout(() => {
+      trackMetaEventWithRetry('Lead');
+      sessionStorage.setItem('meta_track_lead_inscription_validee', '1');
+      console.log('[InscriptionValidee] Meta Pixel Lead event sent after delay');
+    }, 2000);
+    return () => clearTimeout(timeout);
+  }
+}, []);
+```
 
-### 3. `src/pages/Test24hActive.tsx` -- CompleteRegistration uniquement + GDPR
+### Points cles
 
-- Ajouter imports `trackMetaEventWithRetry` et `initMetaPixel` depuis `@/lib/meta-pixel`
-- Ajouter constante `COOKIE_CONSENT_KEY = 'cookie-consent'`
-- Remplacer le `useEffect` de tracking : check consent GDPR + `initMetaPixel(true)` + `trackMetaEventWithRetry('CompleteRegistration')`
-- Guard sessionStorage conserve
+- `initMetaPixel(true)` reste appele immediatement (cree la queue fbq de facon synchrone)
+- Le tracking est differe de 2000ms (au lieu de 1500ms) pour couvrir les mobiles et reseaux lents
+- `sessionStorage.setItem` est place DANS le setTimeout, apres l'envoi effectif
+- `clearTimeout` dans le cleanup du `useEffect` pour eviter l'envoi si l'utilisateur quitte la page avant les 2 secondes
+- `trackMetaEventWithRetry` ajoute en plus son propre polling de 500ms x 20 tentatives en backup
 
-## Mapping final
+### Fichier modifie
 
-| Page | Evenement Meta | Description |
-|---|---|---|
-| `/inscription-validee` | `Lead` | Mandat signe (conversion principale) |
-| `/test-24h-active` | `CompleteRegistration` | Essai 24h qualifie |
+| Fichier | Action |
+|---|---|
+| `src/pages/InscriptionValidee.tsx` | setTimeout 2000ms avant trackMetaEventWithRetry('Lead') + cleanup |
 
-## Validation post-deploiement
-
-En navigation privee :
-1. Accepter cookies
-2. Parcours complet jusqu'a signature mandat
-3. Page `/inscription-validee` : console affiche `[Meta Pixel] Event sent: Lead`
-4. Page `/test-24h-active` : console affiche `[Meta Pixel] Event sent: CompleteRegistration`
-5. Events Manager puis Test Events : Lead et CompleteRegistration visibles en temps reel
+Aucun autre fichier n'est modifie. `meta-pixel.ts` et `Test24hActive.tsx` restent inchanges.
 
