@@ -1,160 +1,38 @@
 
 
-# Tracking Meta Pixel pour campagne Facebook Ads "Vente"
+# Adapter la FAQ au mode Location / Achat
 
-## Etat actuel
+## Probleme identifie
 
-Le Meta Pixel (ID: `1270471197464641`) est deja installe dans `index.html` et fonctionne. Voici ce qui est deja en place :
+La section FAQ de la landing page affiche uniquement des questions/reponses liees a la **location** (300 CHF, bail, 3 mois, loyer...), meme quand le visiteur a selectionne **"Je cherche a acheter"**. C'est incoherent avec le reste de la page qui s'adapte dynamiquement (Hero, Garantie, Differenciation...).
 
-- **PageView** : se declenche automatiquement a chaque chargement de page et navigation SPA (via `AppContent` dans `App.tsx`)
-- **Lead** : se declenche dans `NouveauMandat.tsx` quand un client soumet son mandat complet (activation de recherche)
-- **CompleteRegistration** : se declenche dans `Test24hActive.tsx` quand un lead qualifie demande un test 24h
+## Solution
 
-## 2 problemes a corriger dans le code
+Creer deux jeux de FAQ distincts et afficher le bon en fonction du contexte `SearchType`, exactement comme le font deja les autres sections.
 
-### Probleme 1 : Le Lead est conditionne au consentement cookies
+## Contenu des FAQ Achat (nouvelles)
 
-Dans `NouveauMandat.tsx` (ligne 382-383), le Lead ne se declenche que si `cookie-consent === 'accepted'`. Mais le pixel lui-meme est charge sans condition dans `index.html`. Resultat : si l'utilisateur n'a pas clique "Accepter" dans la banniere cookies, le Lead n'est jamais envoye alors que le pixel tourne deja.
-
-**Correction** : Supprimer la condition `consent === 'accepted'` pour que le Lead se declenche systematiquement, comme le PageView.
-
-### Probleme 2 : Le CompleteRegistration risque de ne pas s'envoyer (race condition)
-
-Dans `Test24hActive.tsx`, le `setTimeout` de 2000ms est en competition avec le countdown de 3 secondes. Si la redirection se fait avant les 2 secondes, l'evenement est annule par le `clearTimeout`.
-
-**Correction** : Envoyer le CompleteRegistration immediatement au mount du composant (sans `setTimeout`), tout en gardant le guard `sessionStorage` contre le double-tracking.
-
-### Ajout : Lead sur le QuickLeadForm qualifie
-
-Quand un lead qualifie soumet le formulaire rapide sur la landing page (`QuickLeadForm.tsx`), il est redirige vers `/test-24h-active`. C'est aussi une conversion importante. Ajouter un evenement `Lead` juste avant cette redirection.
+| # | Question | Reponse (resume) |
+|---|----------|-------------------|
+| 1 | Combien ca coute exactement ? | Acompte 2'500 CHF, commission 1% du prix d'achat, acompte deduit de la commission |
+| 2 | Dois-je signer un contrat ? | Oui, mandat de recherche de 6 mois (vs 3 mois location) |
+| 3 | Comment fonctionne la garantie remboursement ? | 6 mois sans bien trouve = remboursement integral des 2'500 CHF |
+| 4 | Que se passe-t-il si je trouve moi-meme ? | Aucune commission due si pas de lien avec nos recherches |
+| 5 | Dans quels cantons etes-vous actifs ? | Identique : toute la Suisse romande |
+| 6 | Combien de temps pour trouver en moyenne ? | 3 a 8 semaines, mandat de 6 mois |
+| 7 | Comment ca marche concretement ? | Formulaire, mandat, acompte 2'500 CHF, recherche off-market + negociation |
+| 8 | Comment travaillez-vous pour moi ? | Chasseur immobilier dedie, recherche, negociation, accompagnement notaire |
+| 9 | Comment fonctionne la delegation de visite ? | Identique mais adapte : si le bien est achete, commission 1% |
 
 ## Modifications techniques
 
-### 1. `src/pages/NouveauMandat.tsx` -- Supprimer la condition consent
+### Fichier modifie : `src/components/landing/FAQSection.tsx`
 
-Lignes 381-386 : retirer le check `localStorage.getItem('cookie-consent')` et garder uniquement le check `window.fbq` :
+1. **Importer** `useSearchType` depuis `@/contexts/SearchTypeContext`
+2. **Creer** un second tableau `faqItemsAchat` avec les 9 questions adaptees a l'achat
+3. **Renommer** le tableau actuel en `faqItemsLocation`
+4. **Dans le composant**, utiliser `const { isAchat } = useSearchType()` pour selectionner le bon tableau : `const items = isAchat ? faqItemsAchat : faqItemsLocation`
+5. **Reset** les items ouverts quand le mode change (via `useEffect` sur `isAchat`)
 
-```text
-// Avant (actuel)
-const consent = localStorage.getItem('cookie-consent');
-if (consent === 'accepted' && (window as any).fbq) {
-
-// Apres (corrige)
-if ((window as any).fbq) {
-```
-
-### 2. `src/pages/Test24hActive.tsx` -- Envoyer immediatement sans setTimeout
-
-Remplacer le `useEffect` avec `setTimeout` par un envoi immediat au mount :
-
-```text
-useEffect(() => {
-  if (!sessionStorage.getItem('meta_track_completeRegistration_test24h')) {
-    if ((window as any).fbq) {
-      (window as any).fbq('track', 'CompleteRegistration');
-      console.log('[Test24hActive] Meta Pixel CompleteRegistration event sent');
-    }
-    sessionStorage.setItem('meta_track_completeRegistration_test24h', '1');
-  }
-}, []);
-```
-
-### 3. `src/components/landing/QuickLeadForm.tsx` -- Ajouter Lead sur soumission qualifiee
-
-Juste avant `navigate('/test-24h-active')` (ligne 162), ajouter :
-
-```text
-if ((window as any).fbq) {
-  (window as any).fbq('track', 'Lead');
-  console.log('[Meta Pixel] Lead fired on qualified quick lead form submission');
-}
-```
-
-## Fichiers modifies
-
-| Fichier | Modification |
-|---|---|
-| `src/pages/NouveauMandat.tsx` | Suppression condition consent sur Lead |
-| `src/pages/Test24hActive.tsx` | Envoi immediat du CompleteRegistration (sans setTimeout) |
-| `src/components/landing/QuickLeadForm.tsx` | Ajout evenement Lead sur soumission qualifiee |
-
-## Resume des evenements apres correction
-
-| Evenement | Quand | Ou dans le code |
-|---|---|---|
-| PageView | Chaque page/navigation | `index.html` + `App.tsx` |
-| Lead | Soumission mandat complet | `NouveauMandat.tsx` |
-| Lead | Lead qualifie (test 24h) | `QuickLeadForm.tsx` |
-| CompleteRegistration | Page test 24h active | `Test24hActive.tsx` |
-
----
-
-## Guide : Configuration dans Facebook Ads Manager et Events Manager
-
-### Etape 1 : Verifier le Pixel dans Events Manager
-
-1. Aller sur [business.facebook.com](https://business.facebook.com)
-2. Menu hamburger en haut a gauche > **Gestionnaire d'evenements** (Events Manager)
-3. Selectionner le pixel **1270471197464641** dans la colonne de gauche
-4. Onglet **Apercu** : vous devriez voir les evenements `PageView`, `Lead`, `CompleteRegistration` remonter en temps reel
-
-### Etape 2 : Tester avec l'outil Test Events
-
-1. Dans le Gestionnaire d'evenements, onglet **Tester des evenements** (Test Events)
-2. Entrer l'URL du site (par exemple `https://immocrm.lovable.app`)
-3. Cliquer sur **Ouvrir le site web** -- une fenetre s'ouvre
-4. Naviguer sur le site, remplir le formulaire rapide ou le mandat complet
-5. Les evenements apparaissent en temps reel dans l'onglet Test Events
-
-### Etape 3 : Configurer la campagne dans Ads Manager
-
-1. Aller dans **Gestionnaire de publicites** (Ads Manager)
-2. Creer une nouvelle campagne > Objectif : **Leads** (ou **Conversions**)
-3. Au niveau de l'**ensemble de publicites** :
-   - Section **Evenement de conversion** : selectionner **Lead**
-   - Cela indique a Facebook d'optimiser pour les personnes qui sont les plus susceptibles de soumettre un mandat ou un formulaire qualifie
-4. Alternative : utiliser **CompleteRegistration** comme evenement de conversion si vous voulez optimiser specifiquement sur les demandes de test 24h
-
-### Etape 4 : Verifier le domaine (recommande)
-
-1. Dans Business Manager > **Parametres** > **Securite de la marque** > **Domaines**
-2. Ajouter et verifier `immocrm.lovable.app` (ou votre domaine personnalise)
-3. Cela permet a Facebook de mieux attribuer les conversions et d'eviter les blocages iOS
-
-### Etape 5 : Configurer les evenements prioritaires (Aggregated Event Measurement)
-
-1. Dans le Gestionnaire d'evenements > onglet **Mesure des evenements agreges**
-2. Configurer et prioriser vos evenements dans l'ordre :
-   - Priorite 1 : **Lead** (votre conversion principale)
-   - Priorite 2 : **CompleteRegistration**
-   - Priorite 3 : **PageView**
-3. Cela est necessaire pour le tracking des utilisateurs iOS 14.5+ qui refusent le suivi
-
-### Resume visuel du parcours de conversion
-
-```text
-Visiteur arrive sur la landing page
-        |
-        v
-    [PageView]  <-- declenche automatiquement
-        |
-        v
-  Remplit le formulaire rapide (QuickLeadForm)
-        |
-        +-- Lead qualifie ---------> [Lead] + redirection /test-24h-active
-        |                                         |
-        |                                         v
-        |                              [CompleteRegistration]
-        |
-        +-- Non qualifie --> message "un agent va vous contacter"
-        
-        
-  OU : Remplit le mandat complet (NouveauMandat)
-        |
-        v
-    [Lead]  <-- declenche au succes de soumission
-        |
-        v
-  /inscription-validee (confirmation)
-```
+Aucun autre fichier n'est modifie. Le pattern est identique a `GuaranteeSection` et `DifferentiationSection`.
 
