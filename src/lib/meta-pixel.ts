@@ -1,14 +1,12 @@
 export const META_PIXEL_ID = '1270471197464641';
 
-let isInitialized = false;
-
 export function initMetaPixel(withConsent: boolean = false) {
   if (typeof window === 'undefined') return;
   if (!withConsent) return;
-  if (isInitialized) return;
+  if ((window as any).__META_PIXEL_INIT) return;
   if (document.getElementById('meta-pixel-sdk')) return;
 
-  isInitialized = true;
+  (window as any).__META_PIXEL_INIT = true;
 
   // Initialize fbq queue
   const w = window as any;

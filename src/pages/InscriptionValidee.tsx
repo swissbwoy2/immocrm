@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { initMetaPixel, trackMetaEventWithRetry } from '@/lib/meta-pixel';
+import { trackMetaEventWithRetry } from '@/lib/meta-pixel';
 
 const COOKIE_CONSENT_KEY = 'cookie-consent';
 
@@ -14,7 +14,6 @@ const InscriptionValidee = () => {
   useEffect(() => {
     const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
     if (consent === 'accepted' && !sessionStorage.getItem('meta_track_lead_inscription_validee')) {
-      initMetaPixel(true);
       const timeout = setTimeout(() => {
         trackMetaEventWithRetry('Lead');
         sessionStorage.setItem('meta_track_lead_inscription_validee', '1');
