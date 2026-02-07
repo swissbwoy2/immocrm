@@ -562,6 +562,9 @@ export default function AgentVisites() {
     return urgency.urgent;
   });
 
+  // Set of urgent visit IDs to exclude from other sections
+  const urgentIds = new Set(visitesUrgentes.map(v => v.id));
+
   const stats = {
     total: visites.length,
     aVenir: toutesVisitesAVenir.length,
@@ -756,7 +759,7 @@ export default function AgentVisites() {
             </div>
           </div>
 
-          {/* Action button */}
+          {/* Action buttons */}
           {isVisiteDatePassed && (
             <Button 
               onClick={(e) => {
@@ -780,6 +783,25 @@ export default function AgentVisites() {
                   Marquer comme effectuée
                 </>
               )}
+            </Button>
+          )}
+
+          {/* Courier delegation button */}
+          {!isVisiteDatePassed && !visite.statut_coursier && (
+            <Button 
+              onClick={async (e) => {
+                e.stopPropagation();
+                try {
+                  await supabase.from('visites').update({ statut_coursier: 'en_attente', remuneration_coursier: 5 }).eq('id', visite.id);
+                  toast.success('Visite déléguée au pool coursier');
+                  await loadVisites();
+                } catch { toast.error('Erreur'); }
+              }}
+              variant="outline"
+              size="sm"
+              className="w-full mt-2 border-primary/30 text-primary hover:bg-primary/10"
+            >
+              🏍️ Déléguer à un coursier (5.-)
             </Button>
           )}
         </div>
@@ -1092,29 +1114,29 @@ export default function AgentVisites() {
           </TabsList>
 
           <TabsContent value="a-venir" className="mt-6 space-y-6">
-            {/* Confirmed delegated visits */}
-            {visitesDeleguees.length > 0 && (
+            {/* Confirmed delegated visits (excluding urgent ones) */}
+            {visitesDeleguees.filter(v => !urgentIds.has(v.id)).length > 0 && (
               <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <span>🤝 Visites déléguées confirmées</span>
-                  <Badge variant="secondary">{visitesDeleguees.length}</Badge>
+                  <Badge variant="secondary">{visitesDeleguees.filter(v => !urgentIds.has(v.id)).length}</Badge>
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {visitesDeleguees.map((visite, index) => renderPremiumVisiteCard(visite, index))}
+                  {visitesDeleguees.filter(v => !urgentIds.has(v.id)).map((visite, index) => renderPremiumVisiteCard(visite, index))}
                 </div>
               </div>
             )}
 
-            {/* Normal planned visits */}
-            {visitesAVenir.length > 0 && (
+            {/* Normal planned visits (excluding urgent ones) */}
+            {visitesAVenir.filter(v => !urgentIds.has(v.id)).length > 0 && (
               <div>
                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                   <span>📅 Visites planifiées</span>
-                  <Badge variant="secondary">{visitesAVenir.length}</Badge>
+                  <Badge variant="secondary">{visitesAVenir.filter(v => !urgentIds.has(v.id)).length}</Badge>
                 </h3>
                 <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                   {visitesAVenir
-                    .filter(v => !getVisiteUrgency(v.date_visite).urgent)
+                    .filter(v => !urgentIds.has(v.id))
                     .map((visite, index) => renderPremiumVisiteCard(visite, index))}
                 </div>
               </div>
