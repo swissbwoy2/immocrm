@@ -3171,6 +3171,7 @@ export type Database = {
       }
       immeubles: {
         Row: {
+          accessibilite_data: Json | null
           accord_proprietaire_publication: boolean | null
           administrateur_ppe: string | null
           adresse: string
@@ -3178,18 +3179,26 @@ export type Database = {
           annee_construction: number | null
           annee_renovation: number | null
           annonces_comparables: Json | null
+          bruit_ferroviaire_jour: number | null
+          bruit_ferroviaire_nuit: number | null
+          bruit_routier_jour: number | null
+          bruit_routier_nuit: number | null
           canton: string | null
           caracteristiques_entourage: Json | null
           caracteristiques_vue: Json | null
+          categorie_ofs: string | null
           charges_chauffage_ec: number | null
           charges_locataire: number | null
           charges_ppe: number | null
           classe_energetique: string | null
           classification_batiment: string | null
+          classification_ofs: string | null
           code_postal: string | null
           combustible: string | null
           commission_agence_prevue: number | null
           commission_mode: string | null
+          commodites_details: Json | null
+          commodites_scores: Json | null
           commune_rf: string | null
           created_at: string | null
           date_accord_publication: string | null
@@ -3208,12 +3217,16 @@ export type Database = {
           distance_gare: number | null
           distance_gymnase: number | null
           distance_poste: number | null
+          donnees_distribution_prix: Json | null
           donnees_socio_economiques: Json | null
           duree_publication_moyenne: number | null
           egaid: string | null
           egid: string | null
+          egrid: string | null
           email_locataire: string | null
           emprise_sol: number | null
+          emprise_sol_m2: number | null
+          ensoleillement_data: Json | null
           equipements_cuisine: Json | null
           equipements_exterieur: Json | null
           equipements_interieur: Json | null
@@ -3231,6 +3244,7 @@ export type Database = {
           etage: number | null
           etat_bien: Json | null
           etat_locatif_annuel: number | null
+          evolution_prix_median_1an: number | null
           evolution_prix_secteur: number | null
           exposition: Json | null
           facteurs_negatifs: Json | null
@@ -3241,16 +3255,20 @@ export type Database = {
           hauteur_plafond: number | null
           id: string
           indice_energetique: number | null
+          installation_solaire_actuelle: string | null
           locataire_actuel: string | null
+          logements_details: Json | null
           lots_rf: string | null
           loyer_actuel: number | null
           loyer_estime_cc: number | null
           loyer_estime_hc: number | null
           mode_exploitation: string | null
+          nb_biens_comparables: number | null
           nb_chambres: number | null
           nb_etages_batiment: number | null
           nb_garages: number | null
           nb_logements: number | null
+          nb_nouvelles_annonces: number | null
           nb_places_ext: number | null
           nb_places_int: number | null
           nb_salles_eau: number | null
@@ -3265,27 +3283,35 @@ export type Database = {
           nombre_pieces: number | null
           notes: string | null
           numero_feuillet: string | null
+          numero_officiel_batiment: string | null
           numero_parcelle: string | null
           pays: string | null
+          permis_construire: Json | null
           places_parc_incluses: boolean | null
+          plan_affectation_nom: string | null
+          plan_affectation_type: string | null
           points_forts: string[] | null
           potentiel_developpement: string | null
+          potentiel_solaire: Json | null
           potentiel_solaire_aptitude: string | null
           potentiel_solaire_exposition: number | null
           prix_acquisition: number | null
           prix_commercial: number | null
           prix_m2_secteur: number | null
+          prix_median_secteur: number | null
           prix_vendeur: number | null
           prix_vente_demande: number | null
           prix_vente_estime: number | null
           proprietaire_id: string
           publier_espace_acheteur: boolean | null
+          rapport_estimation_images: Json | null
           recommandation_commercialisation: string | null
           reglement_urbanisme: string | null
           rendement_brut: number | null
           rendement_net: number | null
           restrictions_parcelle: Json | null
           score_sous_exploitation: number | null
+          source_energie_chauffage: string | null
           sous_type_bien: string | null
           statut: string | null
           statut_vente: string | null
@@ -3294,16 +3320,23 @@ export type Database = {
           surface_au_sol_garage: number | null
           surface_balcon: number | null
           surface_jardin: number | null
+          surface_logement_totale: number | null
+          surface_parcelle: number | null
           surface_ppe: number | null
           surface_reference_energetique: number | null
           surface_terrasse: number | null
           surface_totale: number | null
+          systeme_chauffage_principal: Json | null
+          systeme_chauffage_supplementaire: Json | null
+          systeme_eau_chaude: Json | null
+          systeme_eau_chaude_supplementaire: Json | null
           taux_vacance: number | null
           tel_locataire: string | null
           tendance_marche: string | null
           travaux_plus_value: number | null
           type_bien: string | null
           type_chauffage: string | null
+          type_parcelle: string | null
           type_sol: Json | null
           updated_at: string | null
           valeur_assurance: number | null
@@ -3317,6 +3350,7 @@ export type Database = {
           zone_construction: string | null
         }
         Insert: {
+          accessibilite_data?: Json | null
           accord_proprietaire_publication?: boolean | null
           administrateur_ppe?: string | null
           adresse: string
@@ -3324,18 +3358,26 @@ export type Database = {
           annee_construction?: number | null
           annee_renovation?: number | null
           annonces_comparables?: Json | null
+          bruit_ferroviaire_jour?: number | null
+          bruit_ferroviaire_nuit?: number | null
+          bruit_routier_jour?: number | null
+          bruit_routier_nuit?: number | null
           canton?: string | null
           caracteristiques_entourage?: Json | null
           caracteristiques_vue?: Json | null
+          categorie_ofs?: string | null
           charges_chauffage_ec?: number | null
           charges_locataire?: number | null
           charges_ppe?: number | null
           classe_energetique?: string | null
           classification_batiment?: string | null
+          classification_ofs?: string | null
           code_postal?: string | null
           combustible?: string | null
           commission_agence_prevue?: number | null
           commission_mode?: string | null
+          commodites_details?: Json | null
+          commodites_scores?: Json | null
           commune_rf?: string | null
           created_at?: string | null
           date_accord_publication?: string | null
@@ -3354,12 +3396,16 @@ export type Database = {
           distance_gare?: number | null
           distance_gymnase?: number | null
           distance_poste?: number | null
+          donnees_distribution_prix?: Json | null
           donnees_socio_economiques?: Json | null
           duree_publication_moyenne?: number | null
           egaid?: string | null
           egid?: string | null
+          egrid?: string | null
           email_locataire?: string | null
           emprise_sol?: number | null
+          emprise_sol_m2?: number | null
+          ensoleillement_data?: Json | null
           equipements_cuisine?: Json | null
           equipements_exterieur?: Json | null
           equipements_interieur?: Json | null
@@ -3377,6 +3423,7 @@ export type Database = {
           etage?: number | null
           etat_bien?: Json | null
           etat_locatif_annuel?: number | null
+          evolution_prix_median_1an?: number | null
           evolution_prix_secteur?: number | null
           exposition?: Json | null
           facteurs_negatifs?: Json | null
@@ -3387,16 +3434,20 @@ export type Database = {
           hauteur_plafond?: number | null
           id?: string
           indice_energetique?: number | null
+          installation_solaire_actuelle?: string | null
           locataire_actuel?: string | null
+          logements_details?: Json | null
           lots_rf?: string | null
           loyer_actuel?: number | null
           loyer_estime_cc?: number | null
           loyer_estime_hc?: number | null
           mode_exploitation?: string | null
+          nb_biens_comparables?: number | null
           nb_chambres?: number | null
           nb_etages_batiment?: number | null
           nb_garages?: number | null
           nb_logements?: number | null
+          nb_nouvelles_annonces?: number | null
           nb_places_ext?: number | null
           nb_places_int?: number | null
           nb_salles_eau?: number | null
@@ -3411,27 +3462,35 @@ export type Database = {
           nombre_pieces?: number | null
           notes?: string | null
           numero_feuillet?: string | null
+          numero_officiel_batiment?: string | null
           numero_parcelle?: string | null
           pays?: string | null
+          permis_construire?: Json | null
           places_parc_incluses?: boolean | null
+          plan_affectation_nom?: string | null
+          plan_affectation_type?: string | null
           points_forts?: string[] | null
           potentiel_developpement?: string | null
+          potentiel_solaire?: Json | null
           potentiel_solaire_aptitude?: string | null
           potentiel_solaire_exposition?: number | null
           prix_acquisition?: number | null
           prix_commercial?: number | null
           prix_m2_secteur?: number | null
+          prix_median_secteur?: number | null
           prix_vendeur?: number | null
           prix_vente_demande?: number | null
           prix_vente_estime?: number | null
           proprietaire_id: string
           publier_espace_acheteur?: boolean | null
+          rapport_estimation_images?: Json | null
           recommandation_commercialisation?: string | null
           reglement_urbanisme?: string | null
           rendement_brut?: number | null
           rendement_net?: number | null
           restrictions_parcelle?: Json | null
           score_sous_exploitation?: number | null
+          source_energie_chauffage?: string | null
           sous_type_bien?: string | null
           statut?: string | null
           statut_vente?: string | null
@@ -3440,16 +3499,23 @@ export type Database = {
           surface_au_sol_garage?: number | null
           surface_balcon?: number | null
           surface_jardin?: number | null
+          surface_logement_totale?: number | null
+          surface_parcelle?: number | null
           surface_ppe?: number | null
           surface_reference_energetique?: number | null
           surface_terrasse?: number | null
           surface_totale?: number | null
+          systeme_chauffage_principal?: Json | null
+          systeme_chauffage_supplementaire?: Json | null
+          systeme_eau_chaude?: Json | null
+          systeme_eau_chaude_supplementaire?: Json | null
           taux_vacance?: number | null
           tel_locataire?: string | null
           tendance_marche?: string | null
           travaux_plus_value?: number | null
           type_bien?: string | null
           type_chauffage?: string | null
+          type_parcelle?: string | null
           type_sol?: Json | null
           updated_at?: string | null
           valeur_assurance?: number | null
@@ -3463,6 +3529,7 @@ export type Database = {
           zone_construction?: string | null
         }
         Update: {
+          accessibilite_data?: Json | null
           accord_proprietaire_publication?: boolean | null
           administrateur_ppe?: string | null
           adresse?: string
@@ -3470,18 +3537,26 @@ export type Database = {
           annee_construction?: number | null
           annee_renovation?: number | null
           annonces_comparables?: Json | null
+          bruit_ferroviaire_jour?: number | null
+          bruit_ferroviaire_nuit?: number | null
+          bruit_routier_jour?: number | null
+          bruit_routier_nuit?: number | null
           canton?: string | null
           caracteristiques_entourage?: Json | null
           caracteristiques_vue?: Json | null
+          categorie_ofs?: string | null
           charges_chauffage_ec?: number | null
           charges_locataire?: number | null
           charges_ppe?: number | null
           classe_energetique?: string | null
           classification_batiment?: string | null
+          classification_ofs?: string | null
           code_postal?: string | null
           combustible?: string | null
           commission_agence_prevue?: number | null
           commission_mode?: string | null
+          commodites_details?: Json | null
+          commodites_scores?: Json | null
           commune_rf?: string | null
           created_at?: string | null
           date_accord_publication?: string | null
@@ -3500,12 +3575,16 @@ export type Database = {
           distance_gare?: number | null
           distance_gymnase?: number | null
           distance_poste?: number | null
+          donnees_distribution_prix?: Json | null
           donnees_socio_economiques?: Json | null
           duree_publication_moyenne?: number | null
           egaid?: string | null
           egid?: string | null
+          egrid?: string | null
           email_locataire?: string | null
           emprise_sol?: number | null
+          emprise_sol_m2?: number | null
+          ensoleillement_data?: Json | null
           equipements_cuisine?: Json | null
           equipements_exterieur?: Json | null
           equipements_interieur?: Json | null
@@ -3523,6 +3602,7 @@ export type Database = {
           etage?: number | null
           etat_bien?: Json | null
           etat_locatif_annuel?: number | null
+          evolution_prix_median_1an?: number | null
           evolution_prix_secteur?: number | null
           exposition?: Json | null
           facteurs_negatifs?: Json | null
@@ -3533,16 +3613,20 @@ export type Database = {
           hauteur_plafond?: number | null
           id?: string
           indice_energetique?: number | null
+          installation_solaire_actuelle?: string | null
           locataire_actuel?: string | null
+          logements_details?: Json | null
           lots_rf?: string | null
           loyer_actuel?: number | null
           loyer_estime_cc?: number | null
           loyer_estime_hc?: number | null
           mode_exploitation?: string | null
+          nb_biens_comparables?: number | null
           nb_chambres?: number | null
           nb_etages_batiment?: number | null
           nb_garages?: number | null
           nb_logements?: number | null
+          nb_nouvelles_annonces?: number | null
           nb_places_ext?: number | null
           nb_places_int?: number | null
           nb_salles_eau?: number | null
@@ -3557,27 +3641,35 @@ export type Database = {
           nombre_pieces?: number | null
           notes?: string | null
           numero_feuillet?: string | null
+          numero_officiel_batiment?: string | null
           numero_parcelle?: string | null
           pays?: string | null
+          permis_construire?: Json | null
           places_parc_incluses?: boolean | null
+          plan_affectation_nom?: string | null
+          plan_affectation_type?: string | null
           points_forts?: string[] | null
           potentiel_developpement?: string | null
+          potentiel_solaire?: Json | null
           potentiel_solaire_aptitude?: string | null
           potentiel_solaire_exposition?: number | null
           prix_acquisition?: number | null
           prix_commercial?: number | null
           prix_m2_secteur?: number | null
+          prix_median_secteur?: number | null
           prix_vendeur?: number | null
           prix_vente_demande?: number | null
           prix_vente_estime?: number | null
           proprietaire_id?: string
           publier_espace_acheteur?: boolean | null
+          rapport_estimation_images?: Json | null
           recommandation_commercialisation?: string | null
           reglement_urbanisme?: string | null
           rendement_brut?: number | null
           rendement_net?: number | null
           restrictions_parcelle?: Json | null
           score_sous_exploitation?: number | null
+          source_energie_chauffage?: string | null
           sous_type_bien?: string | null
           statut?: string | null
           statut_vente?: string | null
@@ -3586,16 +3678,23 @@ export type Database = {
           surface_au_sol_garage?: number | null
           surface_balcon?: number | null
           surface_jardin?: number | null
+          surface_logement_totale?: number | null
+          surface_parcelle?: number | null
           surface_ppe?: number | null
           surface_reference_energetique?: number | null
           surface_terrasse?: number | null
           surface_totale?: number | null
+          systeme_chauffage_principal?: Json | null
+          systeme_chauffage_supplementaire?: Json | null
+          systeme_eau_chaude?: Json | null
+          systeme_eau_chaude_supplementaire?: Json | null
           taux_vacance?: number | null
           tel_locataire?: string | null
           tendance_marche?: string | null
           travaux_plus_value?: number | null
           type_bien?: string | null
           type_chauffage?: string | null
+          type_parcelle?: string | null
           type_sol?: Json | null
           updated_at?: string | null
           valeur_assurance?: number | null

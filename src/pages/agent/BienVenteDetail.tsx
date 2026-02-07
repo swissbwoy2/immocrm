@@ -13,12 +13,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PremiumPageHeader, PremiumCard, PremiumPhotoGallery } from '@/components/premium';
 import { EstimationModule } from '@/components/biens-vente/EstimationModule';
 import { MarketAnalysisModule } from '@/components/biens-vente/MarketAnalysisModule';
+import { RapportEstimationDataForm } from '@/components/biens-vente/rapport-estimation';
 import { GenerateDocumentsSection } from '@/components/biens-vente/GenerateDocumentsSection';
 import { EditBienVenteDialog } from '@/components/biens-vente/EditBienVenteDialog';
 import { 
   ArrowLeft, Building2, MapPin, Ruler, Thermometer, Banknote, 
   FileText, Eye, EyeOff, Loader2, Edit, Camera, Files, 
-  TrendingUp, Calculator, BarChart3, Handshake
+  TrendingUp, Calculator, BarChart3, Handshake, ClipboardList
 } from 'lucide-react';
 
 interface Immeuble {
@@ -313,7 +314,7 @@ export default function AgentBienVenteDetail() {
       </div>
 
       <Tabs defaultValue="fiche" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-8 h-auto gap-1">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-9 h-auto gap-1">
           <TabsTrigger value="fiche" className="flex items-center gap-1.5 text-xs">
             <FileText className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Fiche</span>
@@ -321,6 +322,10 @@ export default function AgentBienVenteDetail() {
           <TabsTrigger value="estimation" className="flex items-center gap-1.5 text-xs">
             <Calculator className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Estimation</span>
+          </TabsTrigger>
+          <TabsTrigger value="rapport" className="flex items-center gap-1.5 text-xs">
+            <ClipboardList className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Rapport</span>
           </TabsTrigger>
           <TabsTrigger value="marche" className="flex items-center gap-1.5 text-xs">
             <BarChart3 className="h-3.5 w-3.5" />
@@ -425,6 +430,11 @@ export default function AgentBienVenteDetail() {
         {/* Estimation */}
         <TabsContent value="estimation">
           <EstimationModule immeuble={immeuble} onUpdate={loadData} />
+        </TabsContent>
+
+        {/* Rapport d'estimation */}
+        <TabsContent value="rapport">
+          <RapportEstimationDataForm immeuble={immeuble} onUpdate={loadData} />
         </TabsContent>
 
         {/* Analyse Marché */}
