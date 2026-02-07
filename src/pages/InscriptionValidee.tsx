@@ -2,15 +2,20 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { trackMetaEvent } from '@/lib/meta-pixel';
+
+const COOKIE_CONSENT_KEY = 'cookie-consent';
 
 const InscriptionValidee = () => {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState(5);
 
-  // Meta Pixel tracking — fires once per session
+  // Meta Pixel conversion tracking — fires once per session, only with consent
   useEffect(() => {
-    if (window.fbq && !sessionStorage.getItem('meta_track_lead_inscription_validee')) {
-      window.fbq('track', 'Lead');
+    const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
+    if (consent === 'accepted' && !sessionStorage.getItem('meta_track_lead_inscription_validee')) {
+      trackMetaEvent('Lead');
+      trackMetaEvent('CompleteRegistration');
       sessionStorage.setItem('meta_track_lead_inscription_validee', '1');
     }
   }, []);
