@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { trackMetaEvent } from '@/lib/meta-pixel';
+import { initMetaPixel, trackMetaEventWithRetry } from '@/lib/meta-pixel';
 
 const COOKIE_CONSENT_KEY = 'cookie-consent';
 
@@ -10,13 +10,14 @@ const InscriptionValidee = () => {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState(5);
 
-  // Meta Pixel conversion tracking — fires once per session, only with consent
+  // Meta Pixel conversion tracking — Lead uniquement, fires once per session, only with consent
   useEffect(() => {
     const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
     if (consent === 'accepted' && !sessionStorage.getItem('meta_track_lead_inscription_validee')) {
-      trackMetaEvent('Lead');
-      trackMetaEvent('CompleteRegistration');
+      initMetaPixel(true);
+      trackMetaEventWithRetry('Lead');
       sessionStorage.setItem('meta_track_lead_inscription_validee', '1');
+      console.log('[InscriptionValidee] Meta Pixel Lead event queued');
     }
   }, []);
 

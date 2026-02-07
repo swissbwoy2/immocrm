@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { initMetaPixel, trackMetaEventWithRetry } from '@/lib/meta-pixel';
+
+const COOKIE_CONSENT_KEY = 'cookie-consent';
 
 const Test24hActive = () => {
   const navigate = useNavigate();
@@ -11,11 +14,14 @@ const Test24hActive = () => {
 
   const redirectPath = user ? '/client' : '/login';
 
-  // Meta Pixel tracking — fires once per session
+  // Meta Pixel tracking — CompleteRegistration uniquement, with GDPR consent
   useEffect(() => {
-    if (window.fbq && !sessionStorage.getItem('meta_track_completeRegistration_test24h')) {
-      window.fbq('track', 'CompleteRegistration');
+    const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
+    if (consent === 'accepted' && !sessionStorage.getItem('meta_track_completeRegistration_test24h')) {
+      initMetaPixel(true);
+      trackMetaEventWithRetry('CompleteRegistration');
       sessionStorage.setItem('meta_track_completeRegistration_test24h', '1');
+      console.log('[Test24hActive] Meta Pixel CompleteRegistration event queued');
     }
   }, []);
 
