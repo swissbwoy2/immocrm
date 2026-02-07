@@ -55,3 +55,31 @@ export function trackMetaEvent(event: string, params?: object) {
     window.fbq('track', event, params);
   }
 }
+
+export function trackMetaEventWithRetry(
+  event: string,
+  params?: object,
+  maxAttempts: number = 20,
+  intervalMs: number = 500
+) {
+  if (typeof window === 'undefined') return;
+
+  if (window.fbq) {
+    window.fbq('track', event, params);
+    console.log('[Meta Pixel] Event sent:', event);
+    return;
+  }
+
+  let attempts = 0;
+  const timer = setInterval(() => {
+    attempts++;
+    if (window.fbq) {
+      window.fbq('track', event, params);
+      console.log('[Meta Pixel] Event sent (after retry):', event, '- attempts:', attempts);
+      clearInterval(timer);
+    } else if (attempts >= maxAttempts) {
+      console.warn('[Meta Pixel] fbq not available after', maxAttempts, 'attempts. Event lost:', event);
+      clearInterval(timer);
+    }
+  }, intervalMs);
+}
