@@ -15,9 +15,12 @@ const InscriptionValidee = () => {
     const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
     if (consent === 'accepted' && !sessionStorage.getItem('meta_track_lead_inscription_validee')) {
       initMetaPixel(true);
-      trackMetaEventWithRetry('Lead');
-      sessionStorage.setItem('meta_track_lead_inscription_validee', '1');
-      console.log('[InscriptionValidee] Meta Pixel Lead event queued');
+      const timeout = setTimeout(() => {
+        trackMetaEventWithRetry('Lead');
+        sessionStorage.setItem('meta_track_lead_inscription_validee', '1');
+        console.log('[InscriptionValidee] Meta Pixel Lead event sent after delay');
+      }, 2000);
+      return () => clearTimeout(timeout);
     }
   }, []);
 
