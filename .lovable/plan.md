@@ -1,49 +1,62 @@
 
 
-# Fix : Eliminer le double init Meta Pixel
+# Deplacer le Lead Meta Pixel sur le succes metier
 
-## Objectif
-Supprimer le warning "Multiple pixels with conflicting versions" en garantissant un seul `fbq('init')` dans toute l'application.
+## Le probleme
 
-## 3 modifications
+La page `/inscription-validee` a un countdown de 5 secondes avec redirection automatique vers `/login`. Le `setTimeout` de 2000ms pour le tracking Lead est en competition avec cette redirection. Si le composant est demonte (navigation), le `clearTimeout` annule l'envoi. Le Lead n'est donc jamais execute.
 
-### 1. `src/lib/meta-pixel.ts` -- Guard global sur `window`
+## La solution
 
-Remplacer le guard module-scoped `let isInitialized = false` par `(window as any).__META_PIXEL_INIT`. Ce flag survit meme si Vite duplique le module (code-splitting, HMR).
+Declencher le Lead au moment exact ou le backend confirme le succes de la soumission du mandat, dans `NouveauMandat.tsx`, juste avant le `navigate('/inscription-validee')`.
 
-- Supprimer `let isInitialized = false` (ligne 3)
-- Remplacer `if (isInitialized) return` par `if ((window as any).__META_PIXEL_INIT) return`
-- Remplacer `isInitialized = true` par `(window as any).__META_PIXEL_INIT = true`
+## Modifications
 
-### 2. `src/pages/InscriptionValidee.tsx` -- Events only
+### 1. `src/pages/NouveauMandat.tsx` -- Ajouter le Lead au succes metier
 
-- Remplacer l'import `{ initMetaPixel, trackMetaEventWithRetry }` par `{ trackMetaEventWithRetry }` uniquement
-- Supprimer l'appel `initMetaPixel(true)` dans le useEffect
-- Le reste (setTimeout 2000ms, sessionStorage guard, trackMetaEventWithRetry, clearTimeout) reste identique
+A la ligne 380, juste avant `navigate('/inscription-validee')` (ligne 381), inserer :
 
-### 3. `src/pages/Test24hActive.tsx` -- Events only + delai 2000ms
+```text
+// Meta Pixel Lead conversion -- fired on successful mandate submission
+const consent = localStorage.getItem('cookie-consent');
+if (consent === 'accepted' && (window as any).fbq) {
+  (window as any).fbq('track', 'Lead');
+  console.log('[Meta Pixel] Lead fired on successful mandate submission');
+}
+```
 
-- Remplacer l'import `{ initMetaPixel, trackMetaEventWithRetry }` par `{ trackMetaEventWithRetry }` uniquement
-- Supprimer l'appel `initMetaPixel(true)` dans le useEffect
-- Ajouter un `setTimeout` de 2000ms autour du `trackMetaEventWithRetry('CompleteRegistration')` et du `sessionStorage.setItem`
-- Ajouter le cleanup `return () => clearTimeout(timeout)`
+Cet appel est :
+- Synchrone (pas de setTimeout, pas de risque de demontage)
+- Conditionne au consentement cookies (GDPR)
+- Protege par le check `window.fbq` (pas d'erreur si le pixel n'est pas charge)
+- Place APRES le succes backend complet (toast, localStorage cleanup)
+- Place AVANT le `navigate()` (le pixel a le temps de s'executer)
 
-### 4. `vite.config.ts` -- Dedupe React (bonus)
+### 2. `src/pages/InscriptionValidee.tsx` -- Supprimer tout le tracking Lead
 
-Ajouter `dedupe: ["react", "react-dom", "react/jsx-runtime"]` dans le bloc `resolve` existant pour eviter toute duplication de modules par le bundler.
+- Supprimer l'import de `trackMetaEventWithRetry` (ligne 5)
+- Supprimer le `useEffect` complet du tracking Meta (lignes 13-24)
+- La page ne conserve que le countdown et la redirection
+
+Le fichier final ne contient plus aucune reference a Meta Pixel.
 
 ## Fichiers modifies
 
 | Fichier | Modification |
 |---|---|
-| `src/lib/meta-pixel.ts` | Guard `window.__META_PIXEL_INIT` remplace `let isInitialized` |
-| `src/pages/InscriptionValidee.tsx` | Suppression `initMetaPixel(true)`, garde setTimeout 2000ms |
-| `src/pages/Test24hActive.tsx` | Suppression `initMetaPixel(true)`, ajout setTimeout 2000ms |
-| `vite.config.ts` | Ajout `resolve.dedupe` |
+| `src/pages/NouveauMandat.tsx` | Ajout `fbq('track', 'Lead')` a la ligne 380, avant navigate |
+| `src/pages/InscriptionValidee.tsx` | Suppression complete du tracking Lead (import + useEffect) |
 
-## Resultat attendu
+## Pourquoi ca fonctionne immediatement
 
-- Un seul `fbq('init', '1270471197464641')` (via MetaPixelProvider)
-- Disparition du warning "Multiple pixels with conflicting versions"
-- Events Lead et CompleteRegistration envoyes apres 2 secondes de delai
+- `fbq('track', 'Lead')` est un appel synchrone qui cree un pixel `<img>` dans le DOM
+- Le navigateur envoie la requete HTTP immediatement, meme si un `navigate()` suit juste apres
+- Pas de dependance a un timer, pas de risque de demontage React
+- Le `MetaPixelProvider` a deja initialise le pixel au chargement de l'app
+
+## Ce qui ne change pas
+
+- `MetaPixelProvider` reste le seul point d'initialisation du pixel
+- `Test24hActive.tsx` garde son tracking CompleteRegistration (pas de redirection auto sur cette page, le timer fonctionne)
+- `meta-pixel.ts` reste inchange avec le guard `window.__META_PIXEL_INIT`
 
