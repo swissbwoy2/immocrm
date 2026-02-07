@@ -10,6 +10,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { PageLoader } from "./components/PageLoader";
 import { ScrollToTop } from "./components/ScrollToTop";
 import { TikTokPixelProvider } from "./components/TikTokPixelProvider";
+import { MetaPixelProvider } from "./components/MetaPixelProvider";
 import { useAppVersionCheck } from "./hooks/useAppVersionCheck";
 
 // Eager load critical pages
@@ -207,6 +208,7 @@ const App = () => (
         }}
       >
         <TikTokPixelProvider>
+          <MetaPixelProvider>
           <AuthProvider>
             <AppContent />
             <Suspense fallback={<PageLoader />}>
@@ -378,6 +380,7 @@ const App = () => (
               </Routes>
             </Suspense>
           </AuthProvider>
+          </MetaPixelProvider>
         </TikTokPixelProvider>
       </BrowserRouter>
     </TooltipProvider>
