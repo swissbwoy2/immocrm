@@ -11,17 +11,14 @@ const Test24hActive = () => {
 
   const redirectPath = user ? '/client' : '/login';
 
-  // Meta Pixel tracking — CompleteRegistration
+  // Meta Pixel tracking — CompleteRegistration (immediate, no setTimeout)
   useEffect(() => {
     if (!sessionStorage.getItem('meta_track_completeRegistration_test24h')) {
-      const timeout = setTimeout(() => {
-        if ((window as any).fbq) {
-          (window as any).fbq('track', 'CompleteRegistration');
-        }
-        sessionStorage.setItem('meta_track_completeRegistration_test24h', '1');
+      if ((window as any).fbq) {
+        (window as any).fbq('track', 'CompleteRegistration');
         console.log('[Test24hActive] Meta Pixel CompleteRegistration event sent');
-      }, 2000);
-      return () => clearTimeout(timeout);
+      }
+      sessionStorage.setItem('meta_track_completeRegistration_test24h', '1');
     }
   }, []);
 

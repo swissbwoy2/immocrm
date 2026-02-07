@@ -159,6 +159,11 @@ export function QuickLeadForm() {
       setSubmitResult(isQualified ? 'qualified' : 'not_qualified');
 
       if (isQualified) {
+        // Meta Pixel Lead conversion -- fired on qualified quick lead form submission
+        if ((window as any).fbq) {
+          (window as any).fbq('track', 'Lead');
+          console.log('[Meta Pixel] Lead fired on qualified quick lead form submission');
+        }
         navigate('/test-24h-active');
         return;
       }
