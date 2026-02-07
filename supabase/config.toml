@@ -113,3 +113,6 @@ verify_jwt = false
 
 [functions.create-coursier]
 verify_jwt = false
+
+[functions.generate-estimation-report-pdf]
+verify_jwt = false
