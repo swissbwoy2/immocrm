@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -58,6 +59,7 @@ const apportOptions = [
 type FormStep = 'qualification' | 'info' | 'garant';
 
 export function QuickLeadForm() {
+  const navigate = useNavigate();
   const { searchType, isAchat } = useSearchType();
   
   // Step order changed: qualification FIRST, then personal info
@@ -155,6 +157,11 @@ export function QuickLeadForm() {
       }).catch((err) => console.error('Email notification error:', err));
 
       setSubmitResult(isQualified ? 'qualified' : 'not_qualified');
+
+      if (isQualified) {
+        navigate('/test-24h-active');
+        return;
+      }
     } catch (error) {
       console.error('Error submitting lead:', error);
       toast.error('Une erreur est survenue. Veuillez réessayer.');

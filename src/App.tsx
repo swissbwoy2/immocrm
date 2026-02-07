@@ -32,6 +32,8 @@ const AnnonceDetail = lazy(() => import("./pages/public/AnnonceDetail"));
 const InscriptionAnnonceur = lazy(() => import("./pages/public/InscriptionAnnonceur"));
 const ConnexionAnnonceur = lazy(() => import("./pages/public/ConnexionAnnonceur"));
 const DownloadFiles = lazy(() => import("./pages/DownloadFiles"));
+const InscriptionValidee = lazy(() => import("./pages/InscriptionValidee"));
+const Test24hActive = lazy(() => import("./pages/Test24hActive"));
 
 // Annonceur pages
 const AnnonceurDashboard = lazy(() => import("./pages/annonceur/Dashboard"));
@@ -369,6 +371,8 @@ const App = () => (
 
               {/* Public Routes */}
               <Route path="/download/:token" element={<DownloadFiles />} />
+              <Route path="/inscription-validee" element={<InscriptionValidee />} />
+              <Route path="/test-24h-active" element={<Test24hActive />} />
 
               <Route path="*" element={<NotFound />} />
               </Routes>
