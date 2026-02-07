@@ -378,7 +378,7 @@ export default function NouveauMandat() {
         { duration: 8000 }
       );
       
-      navigate('/login', { state: { mandatSubmitted: true } });
+      navigate('/inscription-validee');
 
     } catch (error: any) {
       console.error('Submit error:', error);
