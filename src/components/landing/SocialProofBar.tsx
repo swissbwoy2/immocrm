@@ -1,17 +1,6 @@
-import { useEffect } from 'react';
 import { Users, Award } from 'lucide-react';
 
 export function SocialProofBar() {
-  useEffect(() => {
-    // Load Elfsight platform script dynamically
-    if (!document.querySelector('script[src="https://elfsightcdn.com/platform.js"]')) {
-      const script = document.createElement('script');
-      script.src = 'https://elfsightcdn.com/platform.js';
-      script.async = true;
-      document.body.appendChild(script);
-    }
-  }, []);
-
   return (
     <section className="py-6 md:py-8 bg-gradient-to-b from-background to-muted/30 relative overflow-hidden">
       <div className="container mx-auto px-4 relative z-10">
