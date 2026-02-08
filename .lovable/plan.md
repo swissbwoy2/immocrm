@@ -1,65 +1,33 @@
 
 
-# Creer la section "Nos partenaires de confiance" avec 7 logos
+# Supprimer le badge "+500 familles" et le bouton flottant "Demarrer"
 
-## Objectif
+## Problemes identifies
 
-Creer une nouvelle section sur la landing page affichant les logos de tous les partenaires de confiance, avec des liens d'affiliation pour certains d'entre eux.
+1. **Badge "+500 familles relogees"** : Affiche un chiffre qui fait une mauvaise reference aux avis Google (18 avis reels). A supprimer pour eviter la confusion.
 
-## Liste complete des partenaires
+2. **Bouton flottant "Demarrer" (fusee)** : Sur mobile, il chevauche la banniere de cookies. Quand l'utilisateur clique sur "Accepter", il clique accidentellement sur "Demarrer" en dessous. A supprimer completement.
 
-| Partenaire | Fichier source | Lien |
-|-----------|---------------|------|
-| Allianz | Allianz.svg (deja uploade) | Aucun |
-| AXA | AXA_Logo.svg (deja uploade) | Aucun |
-| Resolve | download.svg (deja uploade) | https://app.resolve.ch/?ref=3cDockrkQdpgjmMqm&utm_source=referral_link_user |
-| FirstCaution | download-1.svg (deja uploade) | https://www.firstcaution.ch/fr/onboarding/?ref=link=0062863 |
-| Flatfox | download-3.svg (nouveau) | Aucun |
-| Immobilier.ch | download-2.svg (nouveau) | Aucun |
-| RealAdvisor | download.png (nouveau) | Aucun |
+## Modifications
 
-## Emplacement dans la page
+### 1. SocialProofBar.tsx - Supprimer le badge "+500 familles relogees"
 
-```text
-StatsSection
-PartnersSection    <-- NOUVEAU
-ProptechSection
-```
+Retirer le `div` contenant l'icone `Users` et le texte "+500 familles relogees" (lignes 9-14). Le badge "Experts relocation depuis 2016" sera conserve et centre seul.
 
-## Modifications techniques
+### 2. Landing.tsx - Supprimer le bouton flottant CTA
 
-### 1. Copier les 7 logos dans `src/assets/partners/`
+Retirer entierement le bloc "Floating CTA - Activer ma recherche" (lignes 104-126), incluant :
+- Le conteneur `fixed bottom-4 right-4`
+- Le halo anime (glow)
+- Le bouton avec les textes "Activer ma recherche" (desktop) et "Demarrer" (mobile)
+- L'import de `ArrowRight` de lucide-react (plus utilise)
+- L'import de `Link` de react-router-dom (verifier s'il est encore utilise ailleurs dans le fichier)
 
-- `Allianz.svg` vers `src/assets/partners/allianz.svg`
-- `AXA_Logo.svg` vers `src/assets/partners/axa.svg`
-- `download.svg` vers `src/assets/partners/resolve.svg`
-- `download-1.svg` vers `src/assets/partners/firstcaution.svg`
-- `download-3.svg` vers `src/assets/partners/flatfox.svg`
-- `download-2.svg` vers `src/assets/partners/immobilier-ch.svg`
-- `download.png` vers `src/assets/partners/realadvisor.png`
+Les utilisateurs pourront toujours acceder a la page `/nouveau-mandat` via les autres CTA presents dans la page (HeroSection, QuickLeadForm, etc.).
 
-### 2. Creer `src/components/landing/PartnersSection.tsx`
-
-Nouveau composant contenant :
-- Titre centre "Nos partenaires de confiance"
-- Sous-titre discret
-- Grille responsive centree avec les 7 logos de hauteur uniforme (~40-50px)
-- Les logos **Resolve** et **FirstCaution** sont cliquables avec leurs liens d'affiliation respectifs (ouverts dans un nouvel onglet)
-- Les autres logos (Allianz, AXA, Flatfox, Immobilier.ch, RealAdvisor) sont affiches sans lien
-- Effet grayscale au repos avec couleur au survol pour tous les logos
-- Animation fade-in coherente avec les autres sections du site
-- Fond leger (`muted/30`) pour separer visuellement
-
-### 3. Integrer dans `src/pages/Landing.tsx`
-
-- Importer `PartnersSection`
-- Placer `<PartnersSection />` entre `<StatsSection />` (ligne 89) et `<ProptechSection />` (ligne 90)
-
-## Resume des fichiers concernes
+## Resume des fichiers
 
 | Fichier | Action |
 |---------|--------|
-| `src/assets/partners/` (7 fichiers) | Copier les logos SVG et PNG |
-| `src/components/landing/PartnersSection.tsx` | Nouveau composant |
-| `src/pages/Landing.tsx` | Importer et placer la section |
-
+| `src/components/landing/SocialProofBar.tsx` | Supprimer le badge "+500 familles relogees" |
+| `src/pages/Landing.tsx` | Supprimer le bouton flottant CTA et les imports inutilises |
