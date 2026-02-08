@@ -17,6 +17,7 @@ import { CoverageSection } from '@/components/landing/CoverageSection';
 import { StatsSection } from '@/components/landing/StatsSection';
 import { ApporteurSection } from '@/components/landing/ApporteurSection';
 import { LandingFooter } from '@/components/landing/LandingFooter';
+import { TeamSection } from '@/components/landing/TeamSection';
 import { CookieConsentBanner } from '@/components/CookieConsentBanner';
 import { ProptechSection } from '@/components/landing/ProptechSection';
 import { EntreprisesRHSection } from '@/components/landing/EntreprisesRHSection';
@@ -80,6 +81,7 @@ export default function Landing() {
         <BudgetCalculatorSection />
         <DifferentiationSection />
         <SocialProofBar />
+        <TeamSection />
         <QuickLeadForm />
         <FAQSection />
         <CoverageSection />
