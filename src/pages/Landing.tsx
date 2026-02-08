@@ -92,6 +92,14 @@ export default function Landing() {
         <ApporteurSection />
         <LandingFooter />
 
+        {/* Floating WhatsApp Widget - Bottom Left */}
+        <div 
+          className="fixed bottom-4 left-4 md:bottom-6 md:left-6 z-50"
+          style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
+        >
+          <div className="elfsight-app-015a7ee8-3cf5-416f-a607-eb9d4a46e860" data-elfsight-app-lazy></div>
+        </div>
+
         {/* Floating CTA - Activer ma recherche */}
         <div 
           className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 animate-fade-in"
