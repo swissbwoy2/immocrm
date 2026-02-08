@@ -1,9 +1,7 @@
 import { useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { SearchTypeProvider } from '@/contexts/SearchTypeContext';
-import { Button } from '@/components/ui/button';
-import { ArrowRight } from 'lucide-react';
 import { HeroSection } from '@/components/landing/HeroSection';
 import { SocialProofBar } from '@/components/landing/SocialProofBar';
 import { QuickLeadForm } from '@/components/landing/QuickLeadForm';
@@ -101,28 +99,6 @@ export default function Landing() {
           <div className="elfsight-app-015a7ee8-3cf5-416f-a607-eb9d4a46e860" data-elfsight-app-lazy></div>
         </div>
 
-        {/* Floating CTA - Activer ma recherche */}
-        <div 
-          className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 animate-fade-in"
-          style={{ bottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}
-        >
-          <div className="relative group">
-            {/* Animated glow */}
-            <div className="absolute -inset-1.5 bg-primary/30 rounded-full blur-lg opacity-70 group-hover:opacity-100 transition-opacity animate-pulse" />
-            
-            <Button 
-              asChild 
-              size="lg" 
-              className="relative shadow-xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 text-sm md:text-base px-5 md:px-8 hover:scale-105 bg-gradient-to-r from-primary to-primary/90"
-            >
-              <Link to="/nouveau-mandat">
-                <span className="hidden sm:inline">🚀 Activer ma recherche</span>
-                <span className="sm:hidden">🚀 Démarrer</span>
-                <ArrowRight className="ml-2 h-4 w-4 md:h-5 md:w-5 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </Button>
-          </div>
-        </div>
 
         {/* Cookie Consent Banner */}
         <CookieConsentBanner />
