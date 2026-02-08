@@ -1,45 +1,49 @@
 
 
-# Corriger l'affichage du widget Elfsight Google Reviews
+# Deplacer le SocialProofBar juste au-dessus de "Recois ta shortlist"
 
-## Probleme identifie
+## Situation actuelle
 
-Le widget Elfsight ne s'affiche pas car :
-1. Le script est charge dynamiquement via un `useEffect` React, ce qui peut causer des problemes de timing (le script Elfsight cherche les elements avec la classe `elfsight-app-*` mais ils peuvent ne pas etre detectes)
-2. L'environnement de previsualisation Lovable (iframe) peut bloquer certains scripts tiers -- le widget devrait fonctionner correctement sur le site publie
+L'ordre des sections dans la landing page est :
 
-## Solution
-
-### 1. Deplacer le script Elfsight dans index.html
-
-**Fichier** : `index.html`
-
-Ajouter le script Elfsight directement dans le `<head>`, a cote du Meta Pixel existant. Cela garantit que le script est charge des le debut, avant meme que React ne monte les composants.
-
-```html
-<script src="https://elfsightcdn.com/platform.js" async></script>
+```text
+HeroSection
+SocialProofBar  <-- position actuelle (ligne 77)
+QuickLeadForm   <-- "Recois ta shortlist"
+GuaranteeSection
+BenefitsSection
+HowItWorks
+BudgetCalculatorSection
+DifferentiationSection
+FAQSection
+...
 ```
 
-### 2. Simplifier le composant SocialProofBar
+Le `SocialProofBar` est colle juste apres le hero, ce qui fait qu'il apparait toujours au meme endroit en haut de page.
 
-**Fichier** : `src/components/landing/SocialProofBar.tsx`
+## Modification
 
-- Supprimer le `useEffect` qui charge le script dynamiquement (puisqu'il sera dans index.html)
-- Supprimer l'import de `useEffect`
-- Garder uniquement les badges et le conteneur du widget
+**Fichier** : `src/pages/Landing.tsx`
 
-### 3. Verification post-deploiement
+Deplacer `<SocialProofBar />` de la ligne 77 vers juste avant `<QuickLeadForm />`, mais **apres** les sections intermediaires. Le nouvel ordre sera :
 
-Le widget pourrait ne pas s'afficher dans la previsualisation Lovable (restriction iframe) mais devrait fonctionner correctement sur le site publie (immocrm.lovable.app). Il faudra publier et tester sur le site en production.
+```text
+HeroSection
+GuaranteeSection
+BenefitsSection
+HowItWorks
+BudgetCalculatorSection
+DifferentiationSection
+SocialProofBar  <-- nouvelle position (juste au-dessus du formulaire)
+QuickLeadForm   <-- "Recois ta shortlist"
+FAQSection
+...
+```
 
-## Resume des modifications
+Cela place les avis Google Reviews comme element de preuve sociale juste avant que le visiteur remplisse le formulaire, ce qui renforce la confiance au moment de la conversion.
+
+## Resume
 
 | Fichier | Changement |
 |---------|-----------|
-| `index.html` | Ajouter le script Elfsight dans le `<head>` |
-| `SocialProofBar.tsx` | Supprimer le `useEffect` de chargement dynamique du script |
-
-## Note importante
-
-Si le widget ne s'affiche toujours pas apres publication, cela pourrait indiquer un probleme cote Elfsight (widget non active, plan expire, ou domaine non autorise dans les parametres Elfsight). Il faudra verifier dans le tableau de bord Elfsight que le widget est bien actif et que le domaine du site est autorise.
-
+| `src/pages/Landing.tsx` | Deplacer `SocialProofBar` de apres `HeroSection` vers juste avant `QuickLeadForm` |
