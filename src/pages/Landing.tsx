@@ -17,6 +17,7 @@ import { CoverageSection } from '@/components/landing/CoverageSection';
 import { StatsSection } from '@/components/landing/StatsSection';
 import { ApporteurSection } from '@/components/landing/ApporteurSection';
 import { LandingFooter } from '@/components/landing/LandingFooter';
+import { PartnersSection } from '@/components/landing/PartnersSection';
 import { TeamSection } from '@/components/landing/TeamSection';
 import { CookieConsentBanner } from '@/components/CookieConsentBanner';
 import { ProptechSection } from '@/components/landing/ProptechSection';
@@ -87,8 +88,8 @@ export default function Landing() {
         <FAQSection />
         <CoverageSection />
         <StatsSection />
+        <PartnersSection />
         <ProptechSection />
-        <EntreprisesRHSection />
         <ApporteurSection />
         <LandingFooter />
 
