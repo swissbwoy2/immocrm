@@ -1,47 +1,76 @@
 
 
-# Deplacer l'analyse de dossier et ajouter un CTA dans le Hero
+# Tracking UTM automatique pour mesurer le ROI Facebook Ads
 
-## 2 modifications
+## Objectif
 
-### 1. Deplacer la section "Analyse de dossier" juste apres la video
+Capturer automatiquement les parametres UTM (utm_source, utm_medium, utm_campaign, utm_content, utm_term) depuis l'URL d'arrivee et les enregistrer avec chaque lead dans la base de donnees. Cela permet de savoir exactement quel lead vient de quelle campagne Facebook.
 
-Actuellement l'ordre est :
+## Exemple concret
+
+Un visiteur arrive via cette URL Facebook Ads :
 ```text
-VideoSection
-QuickLeadForm
-GuaranteeSection
-BenefitsSection
-HowItWorks
-DossierAnalyseSection   <-- ici actuellement
+https://immocrm.lovable.app/?utm_source=facebook&utm_medium=cpc&utm_campaign=location_romande_jan25&utm_content=frustration_v1
 ```
 
-Nouvel ordre :
+Quand il soumet un formulaire (QuickLeadForm ou Analyse Dossier), ces parametres sont automatiquement enregistres avec son lead.
+
+## Ce qui sera fait
+
+### 1. Ajout de 5 colonnes UTM dans la table `leads`
+
+Migration SQL pour ajouter :
+- `utm_source` (text, nullable) -- ex: "facebook"
+- `utm_medium` (text, nullable) -- ex: "cpc"
+- `utm_campaign` (text, nullable) -- ex: "location_romande_jan25"
+- `utm_content` (text, nullable) -- ex: "frustration_v1"
+- `utm_term` (text, nullable) -- ex: mot-cle cible
+
+Toutes nullable car les leads organiques (sans UTM) continueront de fonctionner normalement.
+
+### 2. Creation d'un hook utilitaire `useUTMParams`
+
+Nouveau fichier : `src/hooks/useUTMParams.ts`
+
+Ce hook :
+- Lit les parametres UTM depuis l'URL a l'arrivee du visiteur
+- Les stocke dans `sessionStorage` (persiste pendant toute la session meme si le visiteur navigue sur d'autres pages)
+- Retourne un objet `{ utm_source, utm_medium, utm_campaign, utm_content, utm_term }` pret a etre insere dans la base
+
+Pourquoi `sessionStorage` ? Parce que le visiteur peut arriver sur la page d'accueil avec les UTM dans l'URL, puis naviguer vers le formulaire (ou scroller). Sans persistance, les parametres seraient perdus.
+
+### 3. Integration dans les 3 points d'insertion de leads
+
+Modification des 3 fichiers qui inserent des leads pour ajouter les champs UTM :
+
+- **`src/components/landing/QuickLeadForm.tsx`** -- Formulaire de shortlist rapide
+- **`src/components/landing/DossierAnalyseSection.tsx`** -- Analyse gratuite de dossier
+- **`src/pages/FormulaireVendeurComplet.tsx`** -- Formulaire vendeur
+
+Dans chaque fichier : import du hook `useUTMParams`, puis ajout des 5 champs UTM dans l'objet `.insert({...})`.
+
+### 4. Ajout des UTM dans la notification email
+
+Modification de l'edge function `notify-new-lead` pour afficher la source UTM dans l'email de notification envoye a info@immo-rama.ch. L'email indiquera par exemple :
+
 ```text
-VideoSection
-DossierAnalyseSection   <-- deplace ici, juste apres la video
-QuickLeadForm
-GuaranteeSection
-BenefitsSection
-HowItWorks
-BudgetCalculatorSection
-...
+Source: facebook / cpc / location_romande_jan25
 ```
 
-**Fichier** : `src/pages/Landing.tsx` -- Deplacer `<DossierAnalyseSection />` de la ligne 86 vers juste apres `<VideoSection />` (ligne 81).
+## Resume technique
 
-### 2. Ajouter un bouton CTA "Analyse gratuite de solvabilite" dans le HeroSection
+| Element | Fichier | Action |
+|---------|---------|--------|
+| Base de donnees | Migration SQL | Ajouter 5 colonnes UTM |
+| Hook UTM | `src/hooks/useUTMParams.ts` | Nouveau fichier |
+| QuickLeadForm | `src/components/landing/QuickLeadForm.tsx` | Ajouter UTM a l'insert |
+| DossierAnalyse | `src/components/landing/DossierAnalyseSection.tsx` | Ajouter UTM a l'insert |
+| FormulaireVendeur | `src/pages/FormulaireVendeurComplet.tsx` | Ajouter UTM a l'insert |
+| Notification email | `supabase/functions/notify-new-lead/index.ts` | Afficher source UTM |
 
-Ajouter un nouveau bouton en dessous du bouton "Tester le service gratuitement pendant 24h" (ligne 188). Ce bouton sera un lien ancre (`#analyse-dossier`) qui scrollera vers la section DossierAnalyseSection.
+## Impact
 
-**Design** : bouton `variant="outline"` avec une icone `FileSearch`, texte "Analyse gratuite de solvabilite", style similaire au bouton "Tester le service" mais avec un visuel distinct (bordure en vert/success pour se demarquer).
-
-**Fichier** : `src/components/landing/HeroSection.tsx` -- Ajouter un bouton entre la ligne 188 et la ligne 190 (apres le bouton "Tester le service" et avant les trust signals).
-
-## Resume des fichiers
-
-| Fichier | Action |
-|---------|--------|
-| `src/pages/Landing.tsx` | Deplacer `DossierAnalyseSection` juste apres `VideoSection` |
-| `src/components/landing/HeroSection.tsx` | Ajouter le bouton CTA "Analyse gratuite de solvabilite" avec lien ancre vers `#analyse-dossier` |
+- Aucun changement visuel pour le visiteur
+- Les leads existants ne sont pas affectes (colonnes nullable)
+- Compatible avec toutes les plateformes (Facebook, Google, TikTok...) -- il suffit de tagger l'URL
 
