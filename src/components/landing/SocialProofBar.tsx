@@ -1,4 +1,4 @@
-import { Users, Award } from 'lucide-react';
+import { Award } from 'lucide-react';
 
 export function SocialProofBar() {
   return (
@@ -6,13 +6,6 @@ export function SocialProofBar() {
       <div className="container mx-auto px-4 relative z-10">
         {/* Stats badges */}
         <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8 mb-6 animate-fade-in">
-          <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full px-4 py-2 border border-border/50 shadow-sm">
-            <Users className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-foreground">
-              +500 familles relogées
-            </span>
-          </div>
-          
           <div className="flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full px-4 py-2 border border-border/50 shadow-sm">
             <Award className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium text-foreground">
