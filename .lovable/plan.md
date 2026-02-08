@@ -1,52 +1,34 @@
 
+# Ajouter le widget WhatsApp flottant a gauche
 
-# Remonter les sections et ajouter un pop-up video Instagram
+## Objectif
 
-## Probleme actuel
+Placer le widget Elfsight WhatsApp Chat en position flottante en bas a gauche de l'ecran, en miroir du bouton "Activer ma recherche" qui est en bas a droite. Les deux elements resteront visibles en permanence lors du defilement.
 
-Les sections `SocialProofBar`, `TeamSection` et `QuickLeadForm` sont actuellement placees tout en bas, apres `DifferentiationSection` (ligne 82-85). Elles doivent etre remontees juste apres le `HeroSection`.
+## Modification
 
-## Modifications prevues
+**Fichier** : `src/pages/Landing.tsx`
 
-### 1. Reorganiser l'ordre des sections dans `Landing.tsx`
+Ajouter un `div` flottant positionne en `fixed bottom-4 left-4` (symetrique au bouton CTA qui est en `fixed bottom-4 right-4`) contenant le widget Elfsight WhatsApp.
 
-Nouvel ordre :
+Le script Elfsight (`https://elfsightcdn.com/platform.js`) est deja charge dans `index.html` pour le widget Google Reviews, donc pas besoin de le re-ajouter.
+
+## Positionnement visuel
 
 ```text
-HeroSection
-SocialProofBar       <-- remonte juste apres Hero
-TeamSection          <-- remonte juste apres
-QuickLeadForm        <-- remonte juste apres ("Recois ta shortlist")
-GuaranteeSection
-BenefitsSection
-HowItWorks
-BudgetCalculatorSection
-DifferentiationSection
-FAQSection
-CoverageSection
-StatsSection
-...
++----------------------------------+
+|                                  |
+|         (page content)           |
+|                                  |
+|  [WhatsApp]          [Activer]   |
+|  bas-gauche          bas-droite  |
++----------------------------------+
 ```
 
-### 2. Creer un pop-up de bienvenue avec la video Instagram
+## Detail technique
 
-**Nouveau fichier** : `src/components/landing/WelcomeVideoPopup.tsx`
+| Fichier | Changement |
+|---------|-----------|
+| `src/pages/Landing.tsx` | Ajouter un `div` flottant (`fixed bottom-4 left-4 z-50`) contenant le widget `elfsight-app-015a7ee8-3cf5-416f-a607-eb9d4a46e860` avec `data-elfsight-app-lazy`, juste avant ou apres le bouton CTA flottant existant |
 
-- S'affiche automatiquement a l'atterrissage sur le site
-- Contient un embed Instagram Reel (`https://www.instagram.com/reel/DUf-zVlDDDv/`) via une iframe Instagram embed
-- Bouton CTA "Activer ma recherche" qui redirige vers `/nouveau-mandat`
-- Bouton de fermeture (croix) en haut a droite
-- Ne s'affiche qu'une seule fois par session (stockage en `sessionStorage` pour ne pas spammer le visiteur a chaque rechargement)
-- Design : overlay sombre + modal centree, style coherent avec le reste du site
-
-### 3. Integrer le pop-up dans `Landing.tsx`
-
-- Importer et ajouter `<WelcomeVideoPopup />` dans le composant Landing
-
-## Details techniques
-
-| Fichier | Action |
-|---------|--------|
-| `src/pages/Landing.tsx` | Reorganiser les sections + ajouter le pop-up |
-| `src/components/landing/WelcomeVideoPopup.tsx` | Nouveau composant : modal video Instagram + CTA |
-
+Le widget utilisera le meme `z-50` et le meme calcul `safe-area-inset-bottom` que le bouton CTA pour un alignement coherent sur mobile.
