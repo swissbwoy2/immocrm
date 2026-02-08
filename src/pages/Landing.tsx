@@ -74,13 +74,13 @@ export default function Landing() {
         
         {/* OPTIMIZED SECTION ORDER - Form visible without scroll */}
         <HeroSection />
-        <SocialProofBar />
-        <QuickLeadForm />
         <GuaranteeSection />
         <BenefitsSection />
         <HowItWorks />
         <BudgetCalculatorSection />
         <DifferentiationSection />
+        <SocialProofBar />
+        <QuickLeadForm />
         <FAQSection />
         <CoverageSection />
         <StatsSection />
