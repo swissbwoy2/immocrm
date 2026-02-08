@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Handshake, TrendingUp, Eye, CreditCard, ArrowRight, Sparkles, Users, Building2, Briefcase } from 'lucide-react';
+import { Handshake, TrendingUp, Eye, CreditCard, ArrowRight, Users, Building2, Briefcase } from 'lucide-react';
 
 const benefits = [
   {
@@ -30,40 +30,15 @@ const targetProfiles = [
 export function ApporteurSection() {
   return (
     <section className="py-24 md:py-32 relative overflow-hidden">
-      {/* Subtle gradient background */}
+      {/* Clean gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.03] via-background to-primary/[0.05]" />
-
-      {/* Subtle animated orbs - hidden on mobile */}
-      <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 right-[10%] w-48 h-48 bg-primary/5 rounded-full blur-3xl animate-float" />
-        <div className="absolute bottom-20 left-[10%] w-64 h-64 bg-primary/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-      </div>
-
-      {/* Subtle sparkles - hidden on mobile */}
-      <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(4)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute"
-            style={{
-              top: `${20 + i * 20}%`,
-              left: `${15 + i * 25}%`,
-            }}
-          >
-            <Sparkles 
-              className="h-3 w-3 text-primary/20 animate-pulse" 
-              style={{ animationDuration: `${3 + i}s`, animationDelay: `${i * 0.5}s` }}
-            />
-          </div>
-        ))}
-      </div>
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 md:gap-16 items-center">
           {/* Left content */}
           <div className="animate-fade-in">
-            <div className="inline-flex items-center gap-2 relative group mb-6">
-              <div className="relative glass-morphism rounded-full px-5 py-2.5 border border-primary/20 bg-card/80">
+            <div className="inline-flex items-center gap-2 mb-6">
+              <div className="bg-card/80 rounded-full px-5 py-2.5 border border-primary/20">
                 <Handshake className="inline-block h-4 w-4 text-primary mr-2" />
                 <span className="text-sm font-semibold text-primary">Programme partenaire</span>
               </div>
@@ -95,15 +70,12 @@ export function ApporteurSection() {
             </div>
 
             {/* CTA */}
-            <div className="relative inline-block group">
-              <Button asChild size="lg" className="relative overflow-hidden shadow-lg shadow-primary/20 group-hover:shadow-primary/30 transition-all duration-300">
-                <Link to="/login">
-                  <Sparkles className="mr-2 h-5 w-5" />
-                  <span>Devenir partenaire</span>
-                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                </Link>
-              </Button>
-            </div>
+            <Button asChild size="lg" className="shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300">
+              <Link to="/login">
+                <span>Devenir partenaire</span>
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </Button>
           </div>
 
           {/* Right content - Benefits */}
@@ -114,8 +86,7 @@ export function ApporteurSection() {
                 className="relative rounded-2xl p-6 md:p-8 animate-fade-in group"
                 style={{ animationDelay: `${index * 150}ms` }}
               >
-                {/* Glass background */}
-                <div className="absolute inset-0 glass-morphism rounded-2xl border border-border/40 group-hover:border-primary/30 group-hover:shadow-lg group-hover:shadow-primary/5 transition-all duration-300 bg-card/80" />
+                <div className="absolute inset-0 rounded-2xl border border-border/40 group-hover:border-primary/30 group-hover:shadow-lg transition-all duration-300 bg-card/80" />
 
                 <div className="flex gap-5 md:gap-6 relative z-10">
                   <div className="flex-shrink-0">

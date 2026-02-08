@@ -1,4 +1,4 @@
-import { Sparkles, Radar, BarChart3, FileCheck, LayoutDashboard, Cpu, Crown } from 'lucide-react';
+import { Radar, BarChart3, FileCheck, LayoutDashboard, Cpu, Crown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 const features = [
@@ -30,23 +30,17 @@ export function ProptechSection() {
       {/* Gradient background */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/[0.03] to-background" />
 
-      {/* Tech-inspired grid pattern */}
+      {/* Tech grid pattern */}
       <div className="absolute inset-0 opacity-[0.02]" style={{
         backgroundImage: `linear-gradient(hsl(var(--primary)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--primary)) 1px, transparent 1px)`,
         backgroundSize: '50px 50px'
       }} />
 
-      {/* Animated orbs */}
-      <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 right-[15%] w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
-        <div className="absolute bottom-20 left-[15%] w-72 h-72 bg-primary/8 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
-      </div>
-
       <div className="container mx-auto px-4 relative z-10">
         {/* Section header */}
         <div className="text-center mb-16 md:mb-20 animate-fade-in">
-          <div className="inline-flex items-center gap-2 relative group mb-4">
-            <div className="relative glass-morphism rounded-full px-5 py-2.5 border border-primary/20 bg-card/80">
+          <div className="inline-flex items-center gap-2 mb-4">
+            <div className="bg-card/80 rounded-full px-5 py-2.5 border border-primary/20">
               <Cpu className="inline-block h-4 w-4 text-primary mr-2" />
               <span className="text-sm font-semibold text-primary">🤖 Tech & Innovation</span>
             </div>
@@ -64,19 +58,16 @@ export function ProptechSection() {
           {features.map((feature, index) => (
             <Card
               key={index}
-              className="relative overflow-hidden bg-card/80 backdrop-blur-sm border-border/40 group animate-fade-in hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300"
+              className="relative overflow-hidden bg-card/80 border-border/40 group animate-fade-in hover:border-primary/30 hover:shadow-lg transition-all duration-300"
               style={{ animationDelay: `${index * 100}ms` }}
             >
               <CardContent className="p-8 relative z-10">
                 <div className="flex gap-5">
-                  {/* Icon */}
                   <div className="flex-shrink-0">
                     <div className="w-16 h-16 rounded-2xl bg-primary/10 group-hover:bg-primary/15 flex items-center justify-center transition-all duration-300 border border-primary/20 group-hover:border-primary/30">
                       <feature.icon className="h-8 w-8 text-primary" />
                     </div>
                   </div>
-
-                  {/* Content */}
                   <div className="flex-1">
                     <h3 className="text-xl font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
                       {feature.title}
@@ -96,7 +87,7 @@ export function ProptechSection() {
 
         {/* Bottom message */}
         <div className="text-center mt-12 md:mt-16 animate-fade-in" style={{ animationDelay: '400ms' }}>
-          <div className="inline-flex items-center gap-3 glass-morphism rounded-full px-6 py-3 border border-border/40 bg-card/80">
+          <div className="inline-flex items-center gap-3 bg-card/80 rounded-full px-6 py-3 border border-border/40">
             <Crown className="h-5 w-5 text-amber-500" />
             <span className="text-foreground font-medium">L'alliance parfaite : humains + robots + réseau privé 🚀</span>
           </div>

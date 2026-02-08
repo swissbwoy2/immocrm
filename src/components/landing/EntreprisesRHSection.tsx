@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Building2, Users, BarChart3, Clock, ArrowRight, Sparkles, CheckCircle } from "lucide-react";
+import { Building2, Users, BarChart3, Clock, ArrowRight, CheckCircle } from "lucide-react";
+import b2bTeam from "@/assets/b2b-team.jpg";
 
 const benefits = [
   {
@@ -24,25 +25,16 @@ const benefits = [
 export function EntreprisesRHSection() {
   return (
     <section className="py-24 md:py-32 relative overflow-hidden">
-      {/* Gradient background */}
+      {/* Clean gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.05] via-background to-primary/[0.03]" />
-
-      {/* Subtle animated orbs */}
-      <div className="hidden md:block absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-20 left-[10%] w-64 h-64 bg-primary/8 rounded-full blur-3xl animate-float" />
-        <div
-          className="absolute bottom-20 right-[10%] w-72 h-72 bg-primary/5 rounded-full blur-3xl animate-float"
-          style={{ animationDelay: "2s" }}
-        />
-      </div>
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 md:gap-16 items-center">
             {/* Left content */}
             <div className="animate-fade-in">
-              <div className="inline-flex items-center gap-2 relative group mb-6">
-                <div className="relative glass-morphism rounded-full px-5 py-2.5 border border-primary/20 bg-card/80">
+              <div className="inline-flex items-center gap-2 mb-6">
+                <div className="bg-card/80 rounded-full px-5 py-2.5 border border-primary/20">
                   <Building2 className="inline-block h-4 w-4 text-primary mr-2" />
                   <span className="text-sm font-semibold text-primary">Entreprises & RH</span>
                 </div>
@@ -74,38 +66,37 @@ export function EntreprisesRHSection() {
               </div>
 
               {/* CTA */}
-              <div className="flex flex-col gap-4">
-                <Button
-                  asChild
-                  size="lg"
-                  className="group shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 w-full sm:w-auto"
+              <Button
+                asChild
+                size="lg"
+                className="shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 w-full sm:w-auto"
+              >
+                <a
+                  href="mailto:info@immo-rama.ch?subject=Demande de renseignements - Service Relocation Entreprises"
+                  className="flex items-center justify-center"
                 >
-                  <a
-                    href="mailto:info@immo-rama.ch?subject=Demande de renseignements - Service Relocation Entreprises"
-                    className="flex items-center justify-center"
-                  >
-                    <Sparkles className="mr-2 h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                    <span className="text-sm sm:text-base">Parler relocation</span>
-                    <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 group-hover:translate-x-1 transition-transform flex-shrink-0" />
-                  </a>
-                </Button>
-              </div>
+                  <span className="text-sm sm:text-base">Parler relocation</span>
+                  <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5 group-hover:translate-x-1 transition-transform flex-shrink-0" />
+                </a>
+              </Button>
             </div>
 
-            {/* Right content - Visual */}
+            {/* Right content - Real image */}
             <div
-              className="animate-fade-in hidden lg:flex items-center justify-center"
+              className="animate-fade-in hidden lg:block"
               style={{ animationDelay: "200ms" }}
             >
-              <div className="relative">
-                {/* Decorative circles */}
-                <div className="absolute -inset-8 bg-primary/5 rounded-full blur-2xl" />
-                <div className="relative w-80 h-80 rounded-3xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center shadow-2xl shadow-primary/10">
-                  <div className="text-center p-8">
-                    <Building2 className="h-20 w-20 text-primary mx-auto mb-6" />
-                    <p className="text-2xl font-bold text-foreground mb-2">Service B2B</p>
-                    <p className="text-muted-foreground">Relocation professionnelle</p>
-                  </div>
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl">
+                <img 
+                  src={b2bTeam} 
+                  alt="Notre équipe de relocation professionnelle" 
+                  className="w-full h-[400px] object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
+                <div className="absolute bottom-6 left-6 right-6">
+                  <p className="text-xl font-bold text-white mb-1">Service B2B</p>
+                  <p className="text-white/80 text-sm">Relocation professionnelle sur-mesure</p>
                 </div>
               </div>
             </div>

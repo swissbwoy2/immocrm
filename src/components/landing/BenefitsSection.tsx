@@ -1,4 +1,4 @@
-import { User, MessageSquare, Eye, CalendarCheck, FileText, Crown, Sparkles, Home, Building, Key, Briefcase } from 'lucide-react';
+import { User, MessageSquare, Eye, CalendarCheck, FileText, Crown, Home, Building, Key, Briefcase } from 'lucide-react';
 import { useSearchType } from '@/contexts/SearchTypeContext';
 
 const benefitsLocation = [
@@ -76,36 +76,11 @@ export function BenefitsSection() {
       {/* Subtle gradient background */}
       <div className="absolute inset-0 bg-gradient-to-b from-background via-primary/[0.02] to-background" />
 
-      {/* Subtle animated orb - hidden on mobile */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
-        <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-primary/5 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
-        <div className="absolute bottom-1/4 right-1/4 w-[300px] h-[300px] bg-primary/5 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
-      </div>
-      
-      {/* Subtle floating sparkles - hidden on mobile */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none hidden md:block">
-        {[...Array(4)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute"
-            style={{
-              top: `${20 + i * 20}%`,
-              left: `${15 + i * 25}%`,
-            }}
-          >
-            <Sparkles 
-              className="h-3 w-3 text-primary/20 animate-pulse" 
-              style={{ animationDuration: `${3 + i}s`, animationDelay: `${i * 0.5}s` }}
-            />
-          </div>
-        ))}
-      </div>
-
       <div className="container mx-auto px-4 relative z-10">
         {/* Section header */}
         <div className="text-center mb-10 md:mb-16 animate-fade-in">
-          <div className="inline-flex items-center gap-2 relative group mb-4">
-            <div className="relative bg-primary/10 rounded-full px-5 py-2.5 border border-primary/20">
+          <div className="inline-flex items-center gap-2 mb-4">
+            <div className="bg-primary/10 rounded-full px-5 py-2.5 border border-primary/20">
               <span className="text-primary font-semibold text-sm md:text-base">✅ Ce que tu obtiens</span>
             </div>
           </div>
@@ -132,15 +107,7 @@ export function BenefitsSection() {
               className="group relative animate-fade-in"
               style={{ animationDelay: `${index * 75}ms` }}
             >
-              {/* Subtle border glow on hover */}
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-primary/20 via-primary/30 to-primary/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-500 blur-sm" />
-              
-              <div className="relative glass-morphism rounded-2xl p-6 md:p-8 border border-border/40 group-hover:border-primary/30 transition-all duration-300 h-full bg-card/80 backdrop-blur-sm overflow-hidden group-hover:shadow-lg group-hover:shadow-primary/5 group-hover:-translate-y-1">
-                {/* Subtle shine effect */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                  <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 delay-100 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-                </div>
-                
+              <div className="relative rounded-2xl p-6 md:p-8 border border-border/40 group-hover:border-primary/30 transition-all duration-300 h-full bg-card/80 group-hover:shadow-lg group-hover:-translate-y-1">
                 {/* Step number */}
                 <div className="absolute top-4 left-4 opacity-40 group-hover:opacity-60 transition-opacity">
                   <span className="text-xs font-bold text-muted-foreground">0{index + 1}</span>
@@ -148,7 +115,7 @@ export function BenefitsSection() {
                 
                 {/* Icon */}
                 <div className="relative mb-5 md:mb-6">
-                  <div className="relative w-14 h-14 md:w-16 md:h-16 rounded-xl bg-primary/10 group-hover:bg-primary/15 flex items-center justify-center transition-all duration-300 border border-primary/20 group-hover:border-primary/30">
+                  <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-primary/10 group-hover:bg-primary/15 flex items-center justify-center transition-all duration-300 border border-primary/20 group-hover:border-primary/30">
                     <benefit.icon className="h-7 w-7 md:h-8 md:w-8 text-primary" />
                   </div>
                 </div>
