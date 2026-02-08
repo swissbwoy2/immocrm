@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Calculator, CheckCircle, AlertTriangle, ArrowRight, Sparkles, Info, ShieldCheck, Landmark, Home, PiggyBank } from 'lucide-react';
+import { Calculator, CheckCircle, AlertTriangle, ArrowRight, Info, ShieldCheck, Landmark, Home, PiggyBank } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -61,28 +61,7 @@ function AnimatedNumber({ value, duration = 1000 }: { value: number; duration?: 
   return <>{formatCHF(Math.round(displayValue))}</>;
 }
 
-function FloatingParticle({ className, delay = 0 }: { className?: string; delay?: number }) {
-  return (
-    <div 
-      className={cn(
-        "absolute w-1 h-1 bg-primary/40 rounded-full animate-float pointer-events-none",
-        className
-      )}
-      style={{ animationDelay: `${delay}s` }}
-    />
-  );
-}
 
-function SparkleIcon({ className }: { className?: string }) {
-  return (
-    <Sparkles 
-      className={cn(
-        "absolute w-4 h-4 text-primary/60 animate-pulse pointer-events-none",
-        className
-      )} 
-    />
-  );
-}
 
 export function BudgetCalculatorSection() {
   const { isAchat } = useSearchType();
@@ -201,68 +180,39 @@ export function BudgetCalculatorSection() {
 
   return (
     <section className="py-16 md:py-24 relative overflow-hidden bg-gradient-to-b from-muted/10 via-background to-muted/10">
-      {/* Premium animated background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 right-[10%] w-64 h-64 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full blur-3xl animate-float hidden md:block" />
-        <div className="absolute bottom-1/4 left-[5%] w-80 h-80 bg-gradient-to-br from-success/15 to-success/5 rounded-full blur-3xl animate-float hidden md:block" style={{ animationDelay: '2s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl animate-pulse hidden md:block" />
-        
-        <FloatingParticle className="top-[20%] left-[15%] hidden md:block" delay={0} />
-        <FloatingParticle className="top-[30%] right-[20%] hidden md:block" delay={0.5} />
-        <FloatingParticle className="bottom-[25%] left-[25%] hidden md:block" delay={1} />
-        <FloatingParticle className="top-[40%] left-[40%] hidden md:block" delay={1.5} />
-        <FloatingParticle className="bottom-[35%] right-[15%] hidden md:block" delay={2} />
-        
-        <SparkleIcon className="top-[15%] right-[25%] hidden md:block" />
-        <SparkleIcon className="bottom-[20%] left-[20%] hidden md:block" />
-      </div>
+
+
 
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto">
           {/* Premium section header */}
           <div className="text-center mb-10 md:mb-14 animate-fade-in">
-            <div className="relative inline-flex items-center gap-2 mb-4 group">
-              <div className="relative overflow-hidden bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 rounded-full px-5 py-2.5 border border-primary/30 shadow-lg shadow-primary/10">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                <div className="absolute inset-0 rounded-full bg-primary/20 blur-md animate-pulse" />
-                <div className="relative flex items-center gap-2">
+            <div className="inline-flex items-center gap-2 mb-4">
+              <div className="bg-primary/10 rounded-full px-5 py-2.5 border border-primary/20">
+                <div className="flex items-center gap-2">
                   {isAchat ? (
-                    <Landmark className="h-4 w-4 text-primary animate-bounce" style={{ animationDuration: '2s' }} />
+                    <Landmark className="h-4 w-4 text-primary" />
                   ) : (
-                    <Calculator className="h-4 w-4 text-primary animate-bounce" style={{ animationDuration: '2s' }} />
+                    <Calculator className="h-4 w-4 text-primary" />
                   )}
                   <span className="text-primary font-semibold">Calculateur gratuit</span>
-                  <Sparkles className="h-3 w-3 text-primary/70" />
                 </div>
               </div>
-              <span className="absolute -top-1 -right-1 text-primary/60 animate-pulse">✨</span>
-              <span className="absolute -bottom-1 -left-1 text-primary/40 animate-pulse" style={{ animationDelay: '0.5s' }}>⭐</span>
             </div>
             
-            <h2 className="text-2xl md:text-4xl font-bold mb-3">
-              <span className="bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent bg-[length:200%_auto] animate-[gradient_3s_linear_infinite]">
-                {content.title}
-              </span>
+            <h2 className="text-2xl md:text-4xl font-bold mb-3 text-foreground">
+              {content.title}
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm md:text-base">
               {content.subtitle}
             </p>
           </div>
 
-          {/* Premium calculator card */}
-          <div className="relative group animate-fade-in">
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-primary/50 via-success/50 to-primary/50 rounded-2xl md:rounded-3xl opacity-0 group-hover:opacity-100 blur-sm transition-opacity duration-500" />
-            <div className="absolute -inset-[1px] bg-gradient-to-r from-primary/30 via-success/30 to-primary/30 rounded-2xl md:rounded-3xl opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
-            
-            <div className="relative glass-morphism rounded-2xl md:rounded-3xl border border-border/30 p-5 md:p-8 overflow-hidden backdrop-blur-xl bg-card/80">
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-              </div>
-              
-              <div className="absolute top-4 right-4 w-2 h-2 bg-primary/30 rounded-full animate-float hidden md:block" />
-              <div className="absolute bottom-8 left-8 w-1.5 h-1.5 bg-success/40 rounded-full animate-float hidden md:block" style={{ animationDelay: '1s' }} />
-              
-              <div className="relative grid md:grid-cols-2 gap-6 md:gap-8">
+
+          {/* Calculator card */}
+          <div className="relative animate-fade-in">
+            <div className="rounded-2xl md:rounded-3xl border border-border/30 p-5 md:p-8 bg-card/80">
+              <div className="grid md:grid-cols-2 gap-6 md:gap-8">
                 {/* Form */}
                 <div className="space-y-5">
                   {isAchat ? (
@@ -403,24 +353,21 @@ export function BudgetCalculatorSection() {
                     </>
                   )}
 
-                  {/* Premium calculate button */}
-                  <div className="relative group/btn">
-                    <div className="absolute -inset-1 bg-gradient-to-r from-primary/50 to-primary/30 rounded-xl blur-md opacity-60 group-hover/btn:opacity-100 transition-opacity animate-pulse" />
+                  <div>
                     <Button 
                       onClick={handleCalculate}
-                      className="relative w-full h-12 text-base font-semibold overflow-hidden group-hover/btn:scale-[1.02] transition-transform duration-300"
+                      className="w-full h-12 text-base font-semibold"
                       disabled={isAchat ? (!revenusAchat && !apport) : !revenus}
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700" />
                       {isAchat ? (
-                        <Landmark className="mr-2 h-5 w-5 group-hover/btn:animate-bounce" />
+                        <Landmark className="mr-2 h-5 w-5" />
                       ) : (
-                        <Calculator className="mr-2 h-5 w-5 group-hover/btn:animate-bounce" />
+                        <Calculator className="mr-2 h-5 w-5" />
                       )}
                       {isAchat ? "Calculer ma capacité d'achat" : "Calculer mon budget"}
-                      <Sparkles className="ml-2 h-4 w-4 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
                     </Button>
                   </div>
+
                 </div>
 
                 {/* Result */}
@@ -521,7 +468,7 @@ export function BudgetCalculatorSection() {
                           
                           <Button asChild className="w-full group">
                             <a href="#quickform">
-                              <Sparkles className="mr-2 h-4 w-4" />
+                              <CheckCircle className="mr-2 h-4 w-4" />
                               {isAchat ? "Trouver mon bien" : "Recevoir ma shortlist gratuite"}
                               <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                             </a>

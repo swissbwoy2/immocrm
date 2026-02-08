@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle, X, Shield, Search, Users, Filter, Calendar, FileText, MessageSquare, Brain, Eye, Sparkles, ArrowRight, Crown, ChevronDown, ChevronUp, Home, Handshake, Landmark, PiggyBank, Key } from "lucide-react";
+import { CheckCircle, X, Shield, Search, Users, Filter, Calendar, FileText, MessageSquare, Brain, Eye, ArrowRight, Crown, ChevronDown, ChevronUp, Home, Handshake, Landmark, PiggyBank, Key } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -129,41 +129,34 @@ export function DifferentiationSection() {
   };
   
   return <section className="py-24 md:py-32 relative overflow-hidden">
-      {/* Premium animated background */}
+      {/* Dark background */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
 
-      {/* Animated gradient orbs */}
-      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary/20 rounded-full blur-[120px] animate-pulse" />
-      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-500/15 rounded-full blur-[100px] animate-pulse" style={{
-      animationDelay: "1s"
-    }} />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-violet-500/10 rounded-full blur-[150px]" />
+      {/* Subtle gradient accents */}
+      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px]" />
+      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-500/8 rounded-full blur-[100px]" />
 
       {/* Grid pattern overlay */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px]" />
 
-      {/* Radial gradient spotlight */}
+      {/* Radial gradient */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.5)_100%)]" />
+
 
       <div className="container mx-auto px-4 relative z-10">
         {/* Section header */}
         <div className="text-center mb-12 md:mb-16 animate-fade-in">
-          {/* Premium badge */}
-          <div className="inline-flex items-center gap-2 relative group mb-6">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/50 via-blue-500/50 to-violet-500/50 rounded-full blur-xl opacity-60 group-hover:opacity-100 transition-opacity" />
-            <div className="relative backdrop-blur-xl rounded-full px-6 py-3 border border-white/20 bg-white/5 shadow-2xl">
+          <div className="inline-flex items-center gap-2 mb-6">
+            <div className="backdrop-blur-xl rounded-full px-6 py-3 border border-white/20 bg-white/5 shadow-2xl">
               <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Crown className="h-5 w-5 text-amber-400" />
-                  <div className="absolute inset-0 bg-amber-400/50 blur-md" />
-                </div>
-                <span className="text-sm font-bold bg-gradient-to-r from-amber-300 via-amber-400 to-amber-300 bg-clip-text text-transparent uppercase tracking-wider">
+                <Crown className="h-5 w-5 text-amber-400" />
+                <span className="text-sm font-bold text-amber-300 uppercase tracking-wider">
                   Accès Privilégié
                 </span>
-                <Sparkles className="h-4 w-4 text-amber-400 animate-pulse" />
               </div>
             </div>
           </div>
+
 
           <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-4 leading-tight tracking-tight">
             Pas une agence comme les autres
@@ -312,25 +305,13 @@ export function DifferentiationSection() {
         <div className="mt-12 sm:mt-20 md:mt-24 text-center animate-fade-in px-2 sm:px-0" style={{
         animationDelay: "700ms"
       }}>
-          <div className="relative group w-full max-w-3xl mx-auto">
-            {/* Animated glow */}
-            <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-r from-primary via-blue-500 to-violet-500 rounded-2xl sm:rounded-3xl blur-xl sm:blur-2xl opacity-40 group-hover:opacity-60 transition-opacity animate-pulse" />
-
-            <div className="relative backdrop-blur-xl rounded-2xl sm:rounded-3xl p-6 sm:p-10 md:p-12 bg-gradient-to-br from-white/10 to-white/5 border border-white/20 shadow-2xl overflow-hidden">
-              {/* Inner gradient overlay */}
+          <div className="relative w-full max-w-3xl mx-auto">
+            <div className="backdrop-blur-xl rounded-2xl sm:rounded-3xl p-6 sm:p-10 md:p-12 bg-gradient-to-br from-white/10 to-white/5 border border-white/20 shadow-2xl overflow-hidden">
+              {/* Inner gradient */}
               <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-violet-500/10" />
 
-              {/* Sparkle decorations */}
-              <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
-                <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-400/60 animate-pulse" />
-              </div>
-              <div className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4">
-                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary/60 animate-pulse" style={{
-                animationDelay: "0.5s"
-              }} />
-              </div>
-
               <div className="relative">
+
                 <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-3 sm:mb-4">
                   La différence est claire 🎯
                 </h3>
