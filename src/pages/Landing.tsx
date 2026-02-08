@@ -21,7 +21,8 @@ import { CookieConsentBanner } from '@/components/CookieConsentBanner';
 import { ProptechSection } from '@/components/landing/ProptechSection';
 import { EntreprisesRHSection } from '@/components/landing/EntreprisesRHSection';
 import { FloatingNav } from '@/components/landing/FloatingNav';
-import { WelcomeVideoPopup } from '@/components/landing/WelcomeVideoPopup';
+import { VideoSection } from '@/components/landing/VideoSection';
+import { DossierAnalyseSection } from '@/components/landing/DossierAnalyseSection';
 
 export default function Landing() {
   const { user, userRole, loading } = useAuth();
@@ -77,10 +78,12 @@ export default function Landing() {
         <HeroSection />
         <SocialProofBar />
         <TeamSection />
+        <VideoSection />
         <QuickLeadForm />
         <GuaranteeSection />
         <BenefitsSection />
         <HowItWorks />
+        <DossierAnalyseSection />
         <BudgetCalculatorSection />
         <DifferentiationSection />
         <FAQSection />
@@ -99,12 +102,8 @@ export default function Landing() {
           <div className="elfsight-app-015a7ee8-3cf5-416f-a607-eb9d4a46e860" data-elfsight-app-lazy></div>
         </div>
 
-
         {/* Cookie Consent Banner */}
         <CookieConsentBanner />
-
-        {/* Welcome Video Popup */}
-        <WelcomeVideoPopup />
       </div>
     </SearchTypeProvider>
   );
