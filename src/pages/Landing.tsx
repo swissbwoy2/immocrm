@@ -22,6 +22,7 @@ import { CookieConsentBanner } from '@/components/CookieConsentBanner';
 import { ProptechSection } from '@/components/landing/ProptechSection';
 import { EntreprisesRHSection } from '@/components/landing/EntreprisesRHSection';
 import { FloatingNav } from '@/components/landing/FloatingNav';
+import { WelcomeVideoPopup } from '@/components/landing/WelcomeVideoPopup';
 
 export default function Landing() {
   const { user, userRole, loading } = useAuth();
@@ -75,14 +76,14 @@ export default function Landing() {
         
         {/* OPTIMIZED SECTION ORDER - Form visible without scroll */}
         <HeroSection />
+        <SocialProofBar />
+        <TeamSection />
+        <QuickLeadForm />
         <GuaranteeSection />
         <BenefitsSection />
         <HowItWorks />
         <BudgetCalculatorSection />
         <DifferentiationSection />
-        <SocialProofBar />
-        <TeamSection />
-        <QuickLeadForm />
         <FAQSection />
         <CoverageSection />
         <StatsSection />
@@ -116,6 +117,9 @@ export default function Landing() {
 
         {/* Cookie Consent Banner */}
         <CookieConsentBanner />
+
+        {/* Welcome Video Popup */}
+        <WelcomeVideoPopup />
       </div>
     </SearchTypeProvider>
   );
