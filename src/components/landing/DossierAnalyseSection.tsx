@@ -21,6 +21,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSearchType } from '@/contexts/SearchTypeContext';
+import { useUTMParams } from '@/hooks/useUTMParams';
 
 const permisOptions = [
   { value: 'Suisse', label: 'Nationalité Suisse' },
@@ -48,6 +49,7 @@ type Step = 'qualification' | 'coordonnees' | 'submitted';
 
 export function DossierAnalyseSection() {
   const { searchType, isAchat, setSearchType } = useSearchType();
+  const utmParams = useUTMParams();
 
   // Step state
   const [step, setStep] = useState<Step>('qualification');
@@ -107,6 +109,11 @@ export function DossierAnalyseSection() {
         accord_bancaire: isAchat ? accordBancaire === 'oui' : null,
         apport_personnel: isAchat ? apportPersonnel : null,
         type_bien: isAchat ? typeBien : null,
+        utm_source: utmParams.utm_source,
+        utm_medium: utmParams.utm_medium,
+        utm_campaign: utmParams.utm_campaign,
+        utm_content: utmParams.utm_content,
+        utm_term: utmParams.utm_term,
       });
 
       if (error) throw error;
@@ -125,6 +132,9 @@ export function DossierAnalyseSection() {
             poursuites: isAchat ? null : !confirmNoPoursuites,
             is_qualified: true,
             type_recherche: isAchat ? 'achat' : 'location',
+            utm_source: utmParams.utm_source,
+            utm_medium: utmParams.utm_medium,
+            utm_campaign: utmParams.utm_campaign,
           },
         })
         .catch((err) => console.error('Notification error:', err));

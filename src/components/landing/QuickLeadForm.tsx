@@ -10,6 +10,7 @@ import { Mail, MapPin, Wallet, ArrowRight, ArrowLeft, CheckCircle, Loader2, User
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSearchType } from '@/contexts/SearchTypeContext';
+import { useUTMParams } from '@/hooks/useUTMParams';
 
 // Budget options for RENTAL
 const budgetOptionsLocation = [
@@ -61,6 +62,7 @@ type FormStep = 'qualification' | 'info' | 'garant';
 export function QuickLeadForm() {
   const navigate = useNavigate();
   const { searchType, isAchat } = useSearchType();
+  const utmParams = useUTMParams();
   
   // Step order changed: qualification FIRST, then personal info
   const [step, setStep] = useState<FormStep>('qualification');
@@ -134,6 +136,11 @@ export function QuickLeadForm() {
           accord_bancaire: isAchat ? (accordBancaire === 'oui') : null,
           apport_personnel: isAchat ? apportPersonnel : null,
           type_bien: isAchat ? typeBien : null,
+          utm_source: utmParams.utm_source,
+          utm_medium: utmParams.utm_medium,
+          utm_campaign: utmParams.utm_campaign,
+          utm_content: utmParams.utm_content,
+          utm_term: utmParams.utm_term,
         });
 
       if (error) throw error;
@@ -153,6 +160,9 @@ export function QuickLeadForm() {
           a_garant: isAchat ? null : (aGarant === 'oui'),
           is_qualified: isQualified,
           type_recherche: isAchat ? 'achat' : 'location',
+          utm_source: utmParams.utm_source,
+          utm_medium: utmParams.utm_medium,
+          utm_campaign: utmParams.utm_campaign,
         }
       }).catch((err) => console.error('Email notification error:', err));
 
