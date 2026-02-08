@@ -3800,6 +3800,11 @@ export type Database = {
           telephone: string | null
           type_bien: string | null
           type_recherche: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
         }
         Insert: {
           a_garant?: boolean | null
@@ -3822,6 +3827,11 @@ export type Database = {
           telephone?: string | null
           type_bien?: string | null
           type_recherche?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
         }
         Update: {
           a_garant?: boolean | null
@@ -3844,6 +3854,11 @@ export type Database = {
           telephone?: string | null
           type_bien?: string | null
           type_recherche?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
         }
         Relationships: []
       }

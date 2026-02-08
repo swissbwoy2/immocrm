@@ -20,6 +20,9 @@ interface LeadNotificationRequest {
   poursuites?: boolean;
   a_garant?: boolean;
   is_qualified?: boolean;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -94,6 +97,18 @@ const handler = async (req: Request): Promise<Response> => {
             <li><strong>Poursuites:</strong> ${leadData.poursuites ? 'Oui' : 'Non'}</li>
             ${leadData.poursuites ? `<li><strong>A un garant:</strong> ${leadData.a_garant ? 'Oui' : 'Non'}</li>` : ''}
           </ul>
+          
+          ${(leadData.utm_source || leadData.utm_medium || leadData.utm_campaign) ? `
+          <h3>📊 Source marketing</h3>
+          <ul>
+            ${leadData.utm_source ? `<li><strong>Source:</strong> ${leadData.utm_source}</li>` : ''}
+            ${leadData.utm_medium ? `<li><strong>Medium:</strong> ${leadData.utm_medium}</li>` : ''}
+            ${leadData.utm_campaign ? `<li><strong>Campagne:</strong> ${leadData.utm_campaign}</li>` : ''}
+          </ul>
+          ` : `
+          <h3>📊 Source marketing</h3>
+          <p style="color: #888;">Organique (pas de paramètre UTM)</p>
+          `}
           
           <hr style="margin: 20px 0;" />
           <p style="color: #666; font-size: 12px;">

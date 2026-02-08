@@ -24,6 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNativeCamera } from '@/hooks/useNativeCamera';
+import { useUTMParams } from '@/hooks/useUTMParams';
 
 const formSchema = z.object({
   // Infos bien (pré-remplies)
@@ -115,6 +116,7 @@ export default function FormulaireVendeurComplet() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const utmParams = useUTMParams();
   const [isSuccess, setIsSuccess] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   
@@ -384,6 +386,11 @@ export default function FormulaireVendeurComplet() {
         budget: data.prix_souhaite,
         source: 'formulaire_vendeur_complet',
         notes: notes.join(' | '),
+        utm_source: utmParams.utm_source,
+        utm_medium: utmParams.utm_medium,
+        utm_campaign: utmParams.utm_campaign,
+        utm_content: utmParams.utm_content,
+        utm_term: utmParams.utm_term,
       });
 
       if (error) throw error;
