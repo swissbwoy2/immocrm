@@ -1,47 +1,45 @@
 
 
-# Rendre le widget Google Reviews visible immediatement
+# Corriger l'affichage du widget Elfsight Google Reviews
 
 ## Probleme identifie
 
-Le widget Elfsight ne s'affiche pas pour deux raisons :
+Le widget Elfsight ne s'affiche pas car :
+1. Le script est charge dynamiquement via un `useEffect` React, ce qui peut causer des problemes de timing (le script Elfsight cherche les elements avec la classe `elfsight-app-*` mais ils peuvent ne pas etre detectes)
+2. L'environnement de previsualisation Lovable (iframe) peut bloquer certains scripts tiers -- le widget devrait fonctionner correctement sur le site publie
 
-1. L'attribut `data-elfsight-app-lazy` force le chargement paresseux -- le widget ne se charge que quand l'utilisateur scrolle jusqu'a lui
-2. Le `SocialProofBar` est place apres le `HeroSection` qui occupe tout l'ecran (`min-h-screen`), donc le widget est invisible sans scroller
+## Solution
 
-## Solution proposee
+### 1. Deplacer le script Elfsight dans index.html
 
-### 1. Supprimer le lazy loading du widget
+**Fichier** : `index.html`
 
-**Fichier** : `src/components/landing/SocialProofBar.tsx`
+Ajouter le script Elfsight directement dans le `<head>`, a cote du Meta Pixel existant. Cela garantit que le script est charge des le debut, avant meme que React ne monte les composants.
 
-- Retirer l'attribut `data-elfsight-app-lazy` du div du widget pour qu'il se charge immediatement au chargement de la page
+```html
+<script src="https://elfsightcdn.com/platform.js" async></script>
+```
 
-### 2. Remonter le SocialProofBar juste apres le bandeau superieur
-
-**Fichier** : `src/pages/Landing.tsx`
-
-- Deplacer `<SocialProofBar />` de sa position actuelle (apres HeroSection) a juste avant le HeroSection (apres le top banner)
-- Ordre des sections :
-  1. FloatingNav
-  2. Top banner (Immo-rama.ch)
-  3. **SocialProofBar** (widget Google Reviews + badges)
-  4. HeroSection
-  5. QuickLeadForm
-  6. ... reste inchange
-
-### 3. Adapter le style du SocialProofBar pour sa nouvelle position
+### 2. Simplifier le composant SocialProofBar
 
 **Fichier** : `src/components/landing/SocialProofBar.tsx`
 
-- Reduire le padding vertical (de `py-10 md:py-16` a `py-6 md:py-8`) pour un rendu compact en haut de page
-- Garder les badges "+500 familles relogees" et "Experts relocation depuis 2016" au-dessus du widget
-- S'assurer que le widget s'affiche proprement sur mobile
+- Supprimer le `useEffect` qui charge le script dynamiquement (puisqu'il sera dans index.html)
+- Supprimer l'import de `useEffect`
+- Garder uniquement les badges et le conteneur du widget
+
+### 3. Verification post-deploiement
+
+Le widget pourrait ne pas s'afficher dans la previsualisation Lovable (restriction iframe) mais devrait fonctionner correctement sur le site publie (immocrm.lovable.app). Il faudra publier et tester sur le site en production.
 
 ## Resume des modifications
 
 | Fichier | Changement |
 |---------|-----------|
-| SocialProofBar.tsx | Retirer `data-elfsight-app-lazy`, reduire le padding |
-| Landing.tsx | Deplacer SocialProofBar avant HeroSection |
+| `index.html` | Ajouter le script Elfsight dans le `<head>` |
+| `SocialProofBar.tsx` | Supprimer le `useEffect` de chargement dynamique du script |
+
+## Note importante
+
+Si le widget ne s'affiche toujours pas apres publication, cela pourrait indiquer un probleme cote Elfsight (widget non active, plan expire, ou domaine non autorise dans les parametres Elfsight). Il faudra verifier dans le tableau de bord Elfsight que le widget est bien actif et que le domaine du site est autorise.
 
