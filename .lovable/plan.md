@@ -1,34 +1,65 @@
 
-# Ajouter le widget WhatsApp flottant a gauche
+
+# Creer la section "Nos partenaires de confiance" avec 7 logos
 
 ## Objectif
 
-Placer le widget Elfsight WhatsApp Chat en position flottante en bas a gauche de l'ecran, en miroir du bouton "Activer ma recherche" qui est en bas a droite. Les deux elements resteront visibles en permanence lors du defilement.
+Creer une nouvelle section sur la landing page affichant les logos de tous les partenaires de confiance, avec des liens d'affiliation pour certains d'entre eux.
 
-## Modification
+## Liste complete des partenaires
 
-**Fichier** : `src/pages/Landing.tsx`
+| Partenaire | Fichier source | Lien |
+|-----------|---------------|------|
+| Allianz | Allianz.svg (deja uploade) | Aucun |
+| AXA | AXA_Logo.svg (deja uploade) | Aucun |
+| Resolve | download.svg (deja uploade) | https://app.resolve.ch/?ref=3cDockrkQdpgjmMqm&utm_source=referral_link_user |
+| FirstCaution | download-1.svg (deja uploade) | https://www.firstcaution.ch/fr/onboarding/?ref=link=0062863 |
+| Flatfox | download-3.svg (nouveau) | Aucun |
+| Immobilier.ch | download-2.svg (nouveau) | Aucun |
+| RealAdvisor | download.png (nouveau) | Aucun |
 
-Ajouter un `div` flottant positionne en `fixed bottom-4 left-4` (symetrique au bouton CTA qui est en `fixed bottom-4 right-4`) contenant le widget Elfsight WhatsApp.
-
-Le script Elfsight (`https://elfsightcdn.com/platform.js`) est deja charge dans `index.html` pour le widget Google Reviews, donc pas besoin de le re-ajouter.
-
-## Positionnement visuel
+## Emplacement dans la page
 
 ```text
-+----------------------------------+
-|                                  |
-|         (page content)           |
-|                                  |
-|  [WhatsApp]          [Activer]   |
-|  bas-gauche          bas-droite  |
-+----------------------------------+
+StatsSection
+PartnersSection    <-- NOUVEAU
+ProptechSection
 ```
 
-## Detail technique
+## Modifications techniques
 
-| Fichier | Changement |
-|---------|-----------|
-| `src/pages/Landing.tsx` | Ajouter un `div` flottant (`fixed bottom-4 left-4 z-50`) contenant le widget `elfsight-app-015a7ee8-3cf5-416f-a607-eb9d4a46e860` avec `data-elfsight-app-lazy`, juste avant ou apres le bouton CTA flottant existant |
+### 1. Copier les 7 logos dans `src/assets/partners/`
 
-Le widget utilisera le meme `z-50` et le meme calcul `safe-area-inset-bottom` que le bouton CTA pour un alignement coherent sur mobile.
+- `Allianz.svg` vers `src/assets/partners/allianz.svg`
+- `AXA_Logo.svg` vers `src/assets/partners/axa.svg`
+- `download.svg` vers `src/assets/partners/resolve.svg`
+- `download-1.svg` vers `src/assets/partners/firstcaution.svg`
+- `download-3.svg` vers `src/assets/partners/flatfox.svg`
+- `download-2.svg` vers `src/assets/partners/immobilier-ch.svg`
+- `download.png` vers `src/assets/partners/realadvisor.png`
+
+### 2. Creer `src/components/landing/PartnersSection.tsx`
+
+Nouveau composant contenant :
+- Titre centre "Nos partenaires de confiance"
+- Sous-titre discret
+- Grille responsive centree avec les 7 logos de hauteur uniforme (~40-50px)
+- Les logos **Resolve** et **FirstCaution** sont cliquables avec leurs liens d'affiliation respectifs (ouverts dans un nouvel onglet)
+- Les autres logos (Allianz, AXA, Flatfox, Immobilier.ch, RealAdvisor) sont affiches sans lien
+- Effet grayscale au repos avec couleur au survol pour tous les logos
+- Animation fade-in coherente avec les autres sections du site
+- Fond leger (`muted/30`) pour separer visuellement
+
+### 3. Integrer dans `src/pages/Landing.tsx`
+
+- Importer `PartnersSection`
+- Placer `<PartnersSection />` entre `<StatsSection />` (ligne 89) et `<ProptechSection />` (ligne 90)
+
+## Resume des fichiers concernes
+
+| Fichier | Action |
+|---------|--------|
+| `src/assets/partners/` (7 fichiers) | Copier les logos SVG et PNG |
+| `src/components/landing/PartnersSection.tsx` | Nouveau composant |
+| `src/pages/Landing.tsx` | Importer et placer la section |
+
