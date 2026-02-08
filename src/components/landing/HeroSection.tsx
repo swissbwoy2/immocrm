@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Rocket, CheckCircle, ShieldCheck, Users, Crown, Home, Key, Lock } from "lucide-react";
+import { ArrowRight, Rocket, CheckCircle, ShieldCheck, Users, Crown, Home, Key, Lock, FileSearch } from "lucide-react";
 import logoImmoRama from "@/assets/logo-immo-rama-new.png";
 import heroBg from "@/assets/hero-bg.jpg";
 import { useSearchType } from "@/contexts/SearchTypeContext";
@@ -184,6 +184,19 @@ export function HeroSection() {
             >
               <a href="#quickform">
                 <span>Tester le service gratuitement pendant 24h</span>
+              </a>
+            </Button>
+
+            {/* CTA Analyse de solvabilité */}
+            <Button 
+              asChild 
+              variant="outline"
+              size="lg" 
+              className="group text-sm md:text-base px-6 md:px-8 py-4 md:py-5 border-2 border-green-500/40 hover:border-green-500 hover:bg-green-500/5 text-green-600 hover:text-green-700 transition-all duration-300"
+            >
+              <a href="#analyse-dossier">
+                <FileSearch className="mr-2 h-5 w-5" />
+                <span>Analyse gratuite de solvabilité</span>
               </a>
             </Button>
 

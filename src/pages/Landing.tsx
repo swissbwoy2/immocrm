@@ -79,11 +79,11 @@ export default function Landing() {
         <SocialProofBar />
         <TeamSection />
         <VideoSection />
+        <DossierAnalyseSection />
         <QuickLeadForm />
         <GuaranteeSection />
         <BenefitsSection />
         <HowItWorks />
-        <DossierAnalyseSection />
         <BudgetCalculatorSection />
         <DifferentiationSection />
         <FAQSection />
