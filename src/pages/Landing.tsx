@@ -72,9 +72,11 @@ export default function Landing() {
           </div>
         </div>
         
+        {/* Social proof visible immédiatement */}
+        <SocialProofBar />
+        
         {/* OPTIMIZED SECTION ORDER - Form visible without scroll */}
         <HeroSection />
-        <SocialProofBar />
         <QuickLeadForm />
         <GuaranteeSection />
         <BenefitsSection />
