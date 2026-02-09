@@ -23,10 +23,12 @@ import { EntreprisesRHSection } from '@/components/landing/EntreprisesRHSection'
 import { FloatingNav } from '@/components/landing/FloatingNav';
 import { VideoSection } from '@/components/landing/VideoSection';
 import { DossierAnalyseSection } from '@/components/landing/DossierAnalyseSection';
+import { useWhatsAppTracking } from '@/hooks/useWhatsAppTracking';
 
 export default function Landing() {
   const { user, userRole, loading } = useAuth();
   const navigate = useNavigate();
+  useWhatsAppTracking();
 
   // Redirect authenticated users to their dashboard
   useEffect(() => {
