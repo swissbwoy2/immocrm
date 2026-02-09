@@ -2504,6 +2504,11 @@ export type Database = {
           updated_at: string | null
           user_id: string | null
           utilisation_logement: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
           vehicules: boolean | null
         }
         Insert: {
@@ -2562,6 +2567,11 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
           utilisation_logement?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
           vehicules?: boolean | null
         }
         Update: {
@@ -2620,6 +2630,11 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
           utilisation_logement?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
           vehicules?: boolean | null
         }
         Relationships: [
