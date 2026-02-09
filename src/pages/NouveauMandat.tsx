@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useUTMParams } from '@/hooks/useUTMParams';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { ArrowLeft, ArrowRight, Send, Loader2, Sparkles, Check } from 'lucide-react';
@@ -29,6 +30,7 @@ const STEPS = [
 
 export default function NouveauMandat() {
   const navigate = useNavigate();
+  const utmParams = useUTMParams();
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<MandatFormData>(initialFormData);
   const [submitting, setSubmitting] = useState(false);
@@ -234,6 +236,11 @@ export default function NouveauMandat() {
         abaninja_client_uuid: abaninjaClientUuid,
         abaninja_invoice_id: abaninjaInvoiceId,
         abaninja_invoice_ref: abaninjaInvoiceRef,
+        utm_source: utmParams.utm_source,
+        utm_medium: utmParams.utm_medium,
+        utm_campaign: utmParams.utm_campaign,
+        utm_content: utmParams.utm_content,
+        utm_term: utmParams.utm_term,
       };
 
       const { error: insertError } = await supabase
