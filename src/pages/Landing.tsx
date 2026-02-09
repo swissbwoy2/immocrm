@@ -78,9 +78,9 @@ export default function Landing() {
         <HeroSection />
         <SocialProofBar />
         <TeamSection />
+        <QuickLeadForm />
         <VideoSection />
         <DossierAnalyseSection />
-        <QuickLeadForm />
         <GuaranteeSection />
         <BenefitsSection />
         <HowItWorks />
