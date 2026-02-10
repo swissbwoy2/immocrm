@@ -10,7 +10,7 @@ import { SocialProofBar } from '@/components/landing/SocialProofBar';
 import { TeamSection } from '@/components/landing/TeamSection';
 import { QuickLeadForm } from '@/components/landing/QuickLeadForm';
 import { FloatingNav } from '@/components/landing/FloatingNav';
-import { EngagementPopup } from '@/components/landing/EngagementPopup';
+
 
 // Below the fold - lazy load
 const VideoSection = lazy(() => import('@/components/landing/VideoSection').then(m => ({ default: m.VideoSection })));
@@ -87,8 +87,6 @@ export default function Landing() {
         <TeamSection />
         <QuickLeadForm />
         
-        {/* Engagement popup for mobile anti-bounce */}
-        <EngagementPopup />
 
         {/* Lazy loaded sections below the fold */}
         <Suspense fallback={null}>
