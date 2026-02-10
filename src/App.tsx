@@ -72,6 +72,7 @@ const AdminRemplirPDF = lazy(() => import("./pages/admin/RemplirPDF"));
 const AdminRemplirDemandeIA = lazy(() => import("./pages/admin/RemplirDemandeIA"));
 const AdminLeads = lazy(() => import("./pages/admin/Leads"));
 const AdminContacts = lazy(() => import("./pages/admin/Contacts"));
+const AdminAnalytics = lazy(() => import("./pages/admin/Analytics"));
 
 // Agent pages
 const AgentDashboard = lazy(() => import("./pages/agent/Dashboard"));
@@ -275,6 +276,7 @@ const App = () => (
               <Route path="/admin/remplir-demande-ia" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRemplirDemandeIA /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/leads" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminLeads /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/contacts" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminContacts /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/analytics" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAnalytics /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/proprietaires" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminProprietaires /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/proprietaires/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminProprietaireDetail /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/biens-vente" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminBiensEnVente /></AppLayout></ProtectedRoute>} />
