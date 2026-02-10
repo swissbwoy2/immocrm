@@ -56,34 +56,34 @@ export function HeroSection() {
         <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/85 to-background/95" />
       </div>
 
-      <div className="container mx-auto px-4 py-12 md:py-20 relative z-10">
+      <div className="container mx-auto px-4 py-8 md:py-20 relative z-10">
         <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
-          {/* N°1 Badge */}
-          <div className="animate-fade-in mb-4">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/50 rounded-full px-5 py-2.5">
-              <Crown className="h-5 w-5 text-amber-500" />
-              <span className="text-sm md:text-base font-semibold text-amber-500">
+      {/* N°1 Badge */}
+          <div className="animate-fade-in mb-2 md:mb-4">
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/50 rounded-full px-3 py-1.5 md:px-5 md:py-2.5">
+              <Crown className="h-4 w-4 md:h-5 md:w-5 text-amber-500" />
+              <span className="text-xs md:text-base font-semibold text-amber-500">
                 ⭐ Chasseur immobilier N°1 en Suisse romande
               </span>
             </div>
           </div>
 
           {/* Logo */}
-          <div className="animate-fade-in mb-4" style={{ animationDelay: "50ms" }}>
-            <img src={logoImmoRama} alt="Immo-Rama" className="h-24 md:h-32 w-auto drop-shadow-2xl" />
+          <div className="animate-fade-in mb-2 md:mb-4" style={{ animationDelay: "50ms" }}>
+            <img src={logoImmoRama} alt="Immo-Rama" className="h-16 md:h-32 w-auto drop-shadow-2xl" />
           </div>
 
           {/* Slogan */}
-          <div className="animate-fade-in mb-6" style={{ animationDelay: "75ms" }}>
-            <span className="text-lg md:text-xl font-semibold text-primary tracking-wide">L'immobilier accessible</span>
+          <div className="animate-fade-in mb-3 md:mb-6" style={{ animationDelay: "75ms" }}>
+            <span className="text-base md:text-xl font-semibold text-primary tracking-wide">L'immobilier accessible</span>
           </div>
 
           {/* TYPE SELECTOR */}
-          <div className="animate-fade-in mb-6 w-full max-w-md" style={{ animationDelay: "85ms" }}>
+          <div className="animate-fade-in mb-3 md:mb-6 w-full max-w-md" style={{ animationDelay: "85ms" }}>
             <div className="flex rounded-xl border-2 border-primary/30 bg-background/80 backdrop-blur-sm p-1 gap-1">
               <button
                 onClick={() => setSearchType('location')}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 md:py-3 md:px-4 rounded-lg font-semibold transition-all duration-300 ${
                   isLocation || !searchType
                     ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
                     : 'text-muted-foreground hover:text-foreground hover:bg-primary/10'
@@ -94,7 +94,7 @@ export function HeroSection() {
               </button>
               <button
                 onClick={() => setSearchType('achat')}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 md:py-3 md:px-4 rounded-lg font-semibold transition-all duration-300 ${
                   isAchat
                     ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
                     : 'text-muted-foreground hover:text-foreground hover:bg-primary/10'
@@ -108,7 +108,7 @@ export function HeroSection() {
 
           {/* Headline */}
           <h1 
-            className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 animate-fade-in text-foreground" 
+            className="text-xl md:text-3xl lg:text-4xl font-bold mb-2 md:mb-3 animate-fade-in text-foreground" 
             style={{ animationDelay: "100ms" }}
           >
             {c.headline} <span className="text-primary">{c.headlineAccent}</span>
@@ -116,7 +116,7 @@ export function HeroSection() {
 
           {/* Subheadline */}
           <p 
-            className="text-xl md:text-2xl font-semibold mb-3 animate-fade-in text-foreground" 
+            className="text-base md:text-2xl font-semibold mb-2 md:mb-3 animate-fade-in text-foreground" 
             style={{ animationDelay: "125ms" }}
           >
             {c.subheadline}{" "}
@@ -127,7 +127,7 @@ export function HeroSection() {
 
           {/* Tech line */}
           <p 
-            className="text-base md:text-lg text-primary font-medium mb-4 animate-fade-in" 
+            className="text-sm md:text-lg text-primary font-medium mb-2 md:mb-4 animate-fade-in" 
             style={{ animationDelay: "140ms" }}
           >
             {c.techLine}
@@ -135,7 +135,7 @@ export function HeroSection() {
 
           {/* Empathic subheadline */}
           <p 
-            className="text-base md:text-lg text-muted-foreground mb-6 max-w-2xl animate-fade-in leading-relaxed" 
+            className="text-sm md:text-lg text-muted-foreground mb-4 md:mb-6 max-w-2xl animate-fade-in leading-relaxed" 
             style={{ animationDelay: "150ms" }}
           >
             Nos experts cherchent, sélectionnent et contactent {isAchat ? 'les vendeurs' : 'les régies'} pour toi, afin de{" "}
@@ -143,11 +143,11 @@ export function HeroSection() {
           </p>
 
           {/* Promise box */}
-          <div className="animate-fade-in mb-6 md:mb-8" style={{ animationDelay: "200ms" }}>
-            <div className="rounded-xl md:rounded-2xl px-5 md:px-8 py-4 md:py-5 border-2 border-green-500/50 bg-green-500/10 shadow-lg">
+          <div className="animate-fade-in mb-4 md:mb-8" style={{ animationDelay: "200ms" }}>
+            <div className="rounded-xl md:rounded-2xl px-4 md:px-8 py-3 md:py-5 border-2 border-green-500/50 bg-green-500/10 shadow-lg">
               <div className="flex items-center justify-center gap-2 md:gap-3">
                 <ShieldCheck className="h-6 w-6 md:h-8 md:w-8 text-green-500 flex-shrink-0" />
-                <span className="text-lg md:text-2xl font-bold text-foreground">
+                <span className="text-base md:text-2xl font-bold text-foreground">
                   {c.promise}
                 </span>
               </div>
@@ -160,7 +160,7 @@ export function HeroSection() {
             <Button 
               asChild 
               size="lg" 
-              className="group text-lg md:text-2xl px-10 md:px-14 py-7 md:py-9 shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 hover:scale-105"
+              className="group text-base md:text-2xl px-8 md:px-14 py-5 md:py-9 shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 hover:scale-105"
             >
               <Link to={c.ctaLink}>
                 <Rocket className="mr-3 h-6 w-6 md:h-7 md:w-7" />
