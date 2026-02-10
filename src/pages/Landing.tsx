@@ -1,29 +1,34 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { SearchTypeProvider } from '@/contexts/SearchTypeContext';
+import { useWhatsAppTracking } from '@/hooks/useWhatsAppTracking';
+
+// Above the fold - eager load
 import { HeroSection } from '@/components/landing/HeroSection';
 import { SocialProofBar } from '@/components/landing/SocialProofBar';
-import { QuickLeadForm } from '@/components/landing/QuickLeadForm';
-import { BenefitsSection } from '@/components/landing/BenefitsSection';
-import { BudgetCalculatorSection } from '@/components/landing/BudgetCalculatorSection';
-import { GuaranteeSection } from '@/components/landing/GuaranteeSection';
-import { DifferentiationSection } from '@/components/landing/DifferentiationSection';
-import { FAQSection } from '@/components/landing/FAQSection';
-import { HowItWorks } from '@/components/landing/HowItWorks';
-import { CoverageSection } from '@/components/landing/CoverageSection';
-import { StatsSection } from '@/components/landing/StatsSection';
-import { ApporteurSection } from '@/components/landing/ApporteurSection';
-import { LandingFooter } from '@/components/landing/LandingFooter';
-import { PartnersSection } from '@/components/landing/PartnersSection';
 import { TeamSection } from '@/components/landing/TeamSection';
-import { CookieConsentBanner } from '@/components/CookieConsentBanner';
-import { ProptechSection } from '@/components/landing/ProptechSection';
-import { EntreprisesRHSection } from '@/components/landing/EntreprisesRHSection';
+import { QuickLeadForm } from '@/components/landing/QuickLeadForm';
 import { FloatingNav } from '@/components/landing/FloatingNav';
-import { VideoSection } from '@/components/landing/VideoSection';
-import { DossierAnalyseSection } from '@/components/landing/DossierAnalyseSection';
-import { useWhatsAppTracking } from '@/hooks/useWhatsAppTracking';
+import { EngagementPopup } from '@/components/landing/EngagementPopup';
+
+// Below the fold - lazy load
+const VideoSection = lazy(() => import('@/components/landing/VideoSection').then(m => ({ default: m.VideoSection })));
+const DossierAnalyseSection = lazy(() => import('@/components/landing/DossierAnalyseSection').then(m => ({ default: m.DossierAnalyseSection })));
+const GuaranteeSection = lazy(() => import('@/components/landing/GuaranteeSection').then(m => ({ default: m.GuaranteeSection })));
+const BenefitsSection = lazy(() => import('@/components/landing/BenefitsSection').then(m => ({ default: m.BenefitsSection })));
+const HowItWorks = lazy(() => import('@/components/landing/HowItWorks').then(m => ({ default: m.HowItWorks })));
+const BudgetCalculatorSection = lazy(() => import('@/components/landing/BudgetCalculatorSection').then(m => ({ default: m.BudgetCalculatorSection })));
+const DifferentiationSection = lazy(() => import('@/components/landing/DifferentiationSection').then(m => ({ default: m.DifferentiationSection })));
+const FAQSection = lazy(() => import('@/components/landing/FAQSection').then(m => ({ default: m.FAQSection })));
+const CoverageSection = lazy(() => import('@/components/landing/CoverageSection').then(m => ({ default: m.CoverageSection })));
+const StatsSection = lazy(() => import('@/components/landing/StatsSection').then(m => ({ default: m.StatsSection })));
+const PartnersSection = lazy(() => import('@/components/landing/PartnersSection').then(m => ({ default: m.PartnersSection })));
+const ProptechSection = lazy(() => import('@/components/landing/ProptechSection').then(m => ({ default: m.ProptechSection })));
+const EntreprisesRHSection = lazy(() => import('@/components/landing/EntreprisesRHSection').then(m => ({ default: m.EntreprisesRHSection })));
+const ApporteurSection = lazy(() => import('@/components/landing/ApporteurSection').then(m => ({ default: m.ApporteurSection })));
+const LandingFooter = lazy(() => import('@/components/landing/LandingFooter').then(m => ({ default: m.LandingFooter })));
+const CookieConsentBanner = lazy(() => import('@/components/CookieConsentBanner').then(m => ({ default: m.CookieConsentBanner })));
 
 export default function Landing() {
   const { user, userRole, loading } = useAuth();
@@ -81,20 +86,27 @@ export default function Landing() {
         <SocialProofBar />
         <TeamSection />
         <QuickLeadForm />
-        <VideoSection />
-        <DossierAnalyseSection />
-        <GuaranteeSection />
-        <BenefitsSection />
-        <HowItWorks />
-        <BudgetCalculatorSection />
-        <DifferentiationSection />
-        <FAQSection />
-        <CoverageSection />
-        <StatsSection />
-        <PartnersSection />
-        <ProptechSection />
-        <ApporteurSection />
-        <LandingFooter />
+        
+        {/* Engagement popup for mobile anti-bounce */}
+        <EngagementPopup />
+
+        {/* Lazy loaded sections below the fold */}
+        <Suspense fallback={null}>
+          <VideoSection />
+          <DossierAnalyseSection />
+          <GuaranteeSection />
+          <BenefitsSection />
+          <HowItWorks />
+          <BudgetCalculatorSection />
+          <DifferentiationSection />
+          <FAQSection />
+          <CoverageSection />
+          <StatsSection />
+          <PartnersSection />
+          <ProptechSection />
+          <ApporteurSection />
+          <LandingFooter />
+        </Suspense>
 
         {/* Floating WhatsApp Widget - Bottom Left */}
         <div 
@@ -105,7 +117,9 @@ export default function Landing() {
         </div>
 
         {/* Cookie Consent Banner */}
-        <CookieConsentBanner />
+        <Suspense fallback={null}>
+          <CookieConsentBanner />
+        </Suspense>
       </div>
     </SearchTypeProvider>
   );
