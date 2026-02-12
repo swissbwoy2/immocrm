@@ -102,6 +102,34 @@ export default function AgentVisites() {
   const [agentId, setAgentId] = useState<string | null>(null);
   const [selectedVisites, setSelectedVisites] = useState<Set<string>>(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [cancelDelegationDialogOpen, setCancelDelegationDialogOpen] = useState(false);
+  const [visiteToCancel, setVisiteToCancel] = useState<any>(null);
+
+  const handleCancelDelegation = async (visite: any) => {
+    try {
+      await supabase.from('visites').update({ 
+        statut_coursier: null, 
+        coursier_id: null, 
+        remuneration_coursier: null 
+      }).eq('id', visite.id);
+      toast.success('Délégation coursier annulée');
+      await loadVisites();
+    } catch { 
+      toast.error('Erreur lors de l\'annulation'); 
+    }
+    setCancelDelegationDialogOpen(false);
+    setVisiteToCancel(null);
+  };
+
+  const triggerCancelDelegation = (visite: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (visite.statut_coursier === 'accepte') {
+      setVisiteToCancel(visite);
+      setCancelDelegationDialogOpen(true);
+    } else {
+      handleCancelDelegation(visite);
+    }
+  };
   
   // Media upload states
   const [feedbackMedias, setFeedbackMedias] = useState<{url: string, type: string, name: string, size: number}[]>([]);
@@ -804,6 +832,21 @@ export default function AgentVisites() {
               🏍️ Déléguer à un coursier (5.-)
             </Button>
           )}
+          {!isVisiteDatePassed && (visite.statut_coursier === 'en_attente' || visite.statut_coursier === 'accepte') && (
+            <div className="w-full mt-2 space-y-1">
+              <Badge variant={visite.statut_coursier === 'accepte' ? 'default' : 'secondary'} className="text-xs">
+                {visite.statut_coursier === 'accepte' ? '✅ Coursier accepté' : '⏳ Coursier en attente'}
+              </Badge>
+              <Button 
+                onClick={(e) => triggerCancelDelegation(visite, e)}
+                variant="destructive"
+                size="sm"
+                className="w-full"
+              >
+                Annuler délégation
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -911,21 +954,38 @@ export default function AgentVisites() {
               Refuser
             </Button>
           </div>
-          <Button 
-            onClick={async (e) => {
-              e.stopPropagation();
-              try {
-                await supabase.from('visites').update({ statut_coursier: 'en_attente' }).eq('id', visite.id);
-                toast.success('Visite déléguée au pool coursier');
-                await loadVisites();
-              } catch { toast.error('Erreur'); }
-            }}
-            variant="outline"
-            size="sm"
-            className="w-full mt-2 border-primary/30 text-primary hover:bg-primary/10"
-          >
-            🏍️ Déléguer à un coursier (5.-)
-          </Button>
+          {!visite.statut_coursier && (
+            <Button 
+              onClick={async (e) => {
+                e.stopPropagation();
+                try {
+                  await supabase.from('visites').update({ statut_coursier: 'en_attente' }).eq('id', visite.id);
+                  toast.success('Visite déléguée au pool coursier');
+                  await loadVisites();
+                } catch { toast.error('Erreur'); }
+              }}
+              variant="outline"
+              size="sm"
+              className="w-full mt-2 border-primary/30 text-primary hover:bg-primary/10"
+            >
+              🏍️ Déléguer à un coursier (5.-)
+            </Button>
+          )}
+          {(visite.statut_coursier === 'en_attente' || visite.statut_coursier === 'accepte') && (
+            <div className="w-full mt-2 space-y-1">
+              <Badge variant={visite.statut_coursier === 'accepte' ? 'default' : 'secondary'} className="text-xs">
+                {visite.statut_coursier === 'accepte' ? '✅ Coursier accepté' : '⏳ Coursier en attente'}
+              </Badge>
+              <Button 
+                onClick={(e) => triggerCancelDelegation(visite, e)}
+                variant="destructive"
+                size="sm"
+                className="w-full"
+              >
+                Annuler délégation
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1559,6 +1619,29 @@ export default function AgentVisites() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Cancel Courier Delegation Dialog */}
+      <AlertDialog open={cancelDelegationDialogOpen} onOpenChange={setCancelDelegationDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Annuler la délégation coursier ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Un coursier a déjà accepté cette mission. L'annulation lui retirera la visite.
+              <br /><br />
+              <span className="text-destructive font-medium">Voulez-vous continuer ?</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setVisiteToCancel(null)}>Non, garder</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => visiteToCancel && handleCancelDelegation(visiteToCancel)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Oui, annuler
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
