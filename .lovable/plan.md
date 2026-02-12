@@ -1,77 +1,36 @@
 
 
-# Correction de l'affichage des noms de coursiers (Admin + Agent)
+# Fix: Affichage des 2 coursiers inscrits
 
-## Probleme identifie
+## Probleme
 
-Les colonnes `prenom`, `nom`, `email` de la table `coursiers` sont **vides** pour tous les coursiers existants. Les donnees sont stockees dans la table `profiles` (liee via `user_id`), mais le code affiche directement les champs de `coursiers`.
+La jointure `profiles:user_id(...)` dans la requete Supabase ne fonctionne pas car il manque la **cle etrangere** entre `coursiers.user_id` et `profiles.id` dans la base de donnees. PostgREST a besoin de cette relation pour resoudre la jointure.
 
-**Cause racine** : L'edge function `create-coursier` cree bien le profil dans `profiles` avec prenom/nom/email, mais insere un enregistrement `coursiers` avec seulement `user_id` et `statut`. Les colonnes redondantes `prenom/nom/email` de `coursiers` restent vides.
+## Solution : Migration SQL uniquement
 
-## Solution
+Une seule migration SQL qui fait 2 choses :
 
-Deux corrections complementaires :
+### 1. Ajouter la cle etrangere manquante
 
-### 1. Modifier la requete dans `AdminCoursiers` (page admin)
-
-**Fichier** : `src/pages/admin/Coursiers.tsx`
-
-Actuellement (ligne 30) :
-```
-supabase.from('coursiers').select('*')
+```sql
+ALTER TABLE coursiers 
+ADD CONSTRAINT coursiers_user_id_profiles_fkey 
+FOREIGN KEY (user_id) REFERENCES profiles(id);
 ```
 
-Remplacer par :
-```
-supabase.from('coursiers').select('*, profiles:user_id(prenom, nom, email, telephone)')
-```
+Cela permet a la requete `.select('*, profiles:user_id(...)')` de fonctionner correctement.
 
-Puis mettre a jour l'affichage (lignes 253-257) pour utiliser `c.profiles?.prenom` au lieu de `c.prenom`, avec fallback sur les champs directs de `coursiers` :
-```
-{c.profiles?.prenom || c.prenom} {c.profiles?.nom || c.nom}
-```
-
-Idem pour l'initiale dans l'avatar et la ligne email/telephone.
-
-### 2. Corriger l'edge function `create-coursier`
-
-**Fichier** : `supabase/functions/create-coursier/index.ts`
-
-Ajouter les champs `prenom`, `nom`, `email`, `telephone` lors de l'insertion dans la table `coursiers` pour que les donnees soient aussi disponibles directement :
-
-```typescript
-.from("coursiers")
-.insert({
-  user_id: authData.user.id,
-  statut: "en_attente",
-  prenom,
-  nom,
-  email,
-  telephone,
-})
-```
-
-### 3. Corriger les 2 coursiers existants (migration SQL)
-
-Executer une migration pour remplir les colonnes vides a partir de `profiles` :
+### 2. Remplir les colonnes vides des 2 coursiers existants
 
 ```sql
 UPDATE coursiers c
-SET
-  prenom = p.prenom,
-  nom = p.nom,
-  email = p.email,
-  telephone = p.telephone
+SET prenom = p.prenom, nom = p.nom, email = p.email, telephone = p.telephone
 FROM profiles p
 WHERE c.user_id = p.id
 AND (c.prenom IS NULL OR c.prenom = '');
 ```
 
-## Resume des fichiers modifies
+## Aucun changement de code
 
-| Fichier | Modification |
-|---------|-------------|
-| `src/pages/admin/Coursiers.tsx` | Jointure `profiles` dans la requete + affichage avec fallback |
-| `supabase/functions/create-coursier/index.ts` | Ajout prenom/nom/email/telephone a l'insert coursiers |
-| Migration SQL | Mise a jour des 2 coursiers existants |
+Le code frontend et l'edge function sont deja corrects depuis la derniere modification. Une fois la migration executee, les 2 coursiers s'afficheront immediatement avec leurs noms.
 
