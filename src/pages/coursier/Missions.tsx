@@ -161,7 +161,11 @@ export default function CoursierMissions() {
         
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Clock className="h-3.5 w-3.5" />
-          {format(new Date(mission.date_visite), "EEE dd MMM 'à' HH:mm", { locale: fr })}
+          {format(new Date(mission.date_visite), "EEE dd MMM", { locale: fr })}{' '}
+          {mission.date_visite_fin 
+            ? `de ${format(new Date(mission.date_visite), "HH:mm")} à ${format(new Date(mission.date_visite_fin), "HH:mm")}`
+            : `à ${format(new Date(mission.date_visite), "HH:mm")}`
+          }
         </div>
 
         {mission.agents?.profiles && (
@@ -303,7 +307,11 @@ export default function CoursierMissions() {
                     />
                   </DialogTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    {format(new Date(selectedMission.date_visite), "EEEE dd MMMM yyyy 'à' HH:mm", { locale: fr })}
+                    {format(new Date(selectedMission.date_visite), "EEEE dd MMMM yyyy", { locale: fr })}{' '}
+                    {selectedMission.date_visite_fin 
+                      ? `de ${format(new Date(selectedMission.date_visite), "HH:mm")} à ${format(new Date(selectedMission.date_visite_fin), "HH:mm")}`
+                      : `à ${format(new Date(selectedMission.date_visite), "HH:mm")}`
+                    }
                   </p>
                 </div>
                 <Badge className="shrink-0 bg-primary/10 text-primary border-primary/30">
@@ -316,6 +324,33 @@ export default function CoursierMissions() {
           <ScrollArea className="max-h-[calc(85vh-120px)]">
             {selectedMission && (
               <div className="px-6 pb-6 space-y-5">
+                {/* Créneau de visite */}
+                <div className="p-4 bg-gradient-to-br from-amber-500/10 to-amber-500/5 rounded-xl border border-amber-500/20">
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-amber-600" />
+                    Créneau de visite
+                  </h4>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">
+                        {format(new Date(selectedMission.date_visite), "EEEE dd MMMM yyyy", { locale: fr })}
+                      </p>
+                      <p className="text-lg font-bold text-amber-600">
+                        {format(new Date(selectedMission.date_visite), "HH:mm")}
+                        {selectedMission.date_visite_fin && ` → ${format(new Date(selectedMission.date_visite_fin), "HH:mm")}`}
+                      </p>
+                    </div>
+                    {selectedMission.date_visite_fin && (
+                      <div className="text-right">
+                        <span className="text-xs text-muted-foreground">Durée</span>
+                        <p className="text-sm font-semibold">
+                          {Math.round((new Date(selectedMission.date_visite_fin).getTime() - new Date(selectedMission.date_visite).getTime()) / 60000)} min
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {/* Prix */}
                 {selectedMission.offres?.prix && (
                   <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
