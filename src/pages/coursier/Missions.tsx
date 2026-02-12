@@ -416,14 +416,54 @@ export default function CoursierMissions() {
                   </>
                 )}
 
-                {/* Contact client */}
+                {/* Contact de la visite (concierge ou locataire) */}
+                <Separator />
+                <div>
+                  <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    Contact de la visite
+                  </h4>
+                  {selectedMission.offres?.concierge_nom ? (
+                    <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        Concierge
+                      </div>
+                      <p className="text-sm font-medium">{selectedMission.offres.concierge_nom}</p>
+                      {selectedMission.offres.concierge_tel && (
+                        <a href={`tel:${selectedMission.offres.concierge_tel}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
+                          <Phone className="h-3 w-3" />
+                          {selectedMission.offres.concierge_tel}
+                        </a>
+                      )}
+                    </div>
+                  ) : selectedMission.offres?.locataire_nom ? (
+                    <div className="p-3 bg-muted/50 rounded-lg space-y-1">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        Locataire actuel
+                      </div>
+                      <p className="text-sm font-medium">{selectedMission.offres.locataire_nom}</p>
+                      {selectedMission.offres.locataire_tel && (
+                        <a href={`tel:${selectedMission.offres.locataire_tel}`} className="flex items-center gap-1 text-sm text-primary hover:underline">
+                          <Phone className="h-3 w-3" />
+                          {selectedMission.offres.locataire_tel}
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">Aucun contact spécifique renseigné</p>
+                  )}
+                </div>
+
+                {/* Client */}
                 {selectedMission.clients?.profiles && (
                   <>
                     <Separator />
                     <div>
                       <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                         <User className="h-4 w-4" />
-                        Contact de la visite
+                        Client
                       </h4>
                       <div className="p-3 bg-muted/50 rounded-lg space-y-1">
                         <p className="text-sm font-medium">
