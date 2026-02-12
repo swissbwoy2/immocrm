@@ -140,7 +140,7 @@ export default function CoursierCarte() {
           content: `
             <div style="max-width:240px;font-family:system-ui">
               <p style="font-weight:600;margin:0 0 4px">${mission.adresse}</p>
-              <p style="color:#666;font-size:13px;margin:0 0 8px">${format(new Date(mission.date_visite), "EEE dd MMM 'à' HH:mm", { locale: fr })}</p>
+              <p style="color:#666;font-size:13px;margin:0 0 8px">${format(new Date(mission.date_visite), "EEE dd MMM", { locale: fr })} ${mission.date_visite_fin ? `de ${format(new Date(mission.date_visite), "HH:mm")} à ${format(new Date(mission.date_visite_fin), "HH:mm")}` : `à ${format(new Date(mission.date_visite), "HH:mm")}`}</p>
               <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(mission.adresse)}" 
                  target="_blank" rel="noopener" 
                  style="color:#2563eb;font-size:13px;text-decoration:none">
@@ -233,7 +233,11 @@ export default function CoursierCarte() {
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
-                      {format(new Date(m.date_visite), "EEE dd MMM 'à' HH:mm", { locale: fr })}
+                      {format(new Date(m.date_visite), "EEE dd MMM", { locale: fr })}{' '}
+                      {m.date_visite_fin 
+                        ? `de ${format(new Date(m.date_visite), "HH:mm")} à ${format(new Date(m.date_visite_fin), "HH:mm")}`
+                        : `à ${format(new Date(m.date_visite), "HH:mm")}`
+                      }
                     </div>
                     <a
                       href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(m.adresse)}`}
