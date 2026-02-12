@@ -104,7 +104,7 @@ serve(async (req) => {
       visite: VisiteWithDetails;
       reminderType: string;
       recipientId: string;
-      recipientRole: 'agent' | 'client' | 'admin';
+      recipientRole: 'agent' | 'client' | 'admin' | 'coursier';
       urgencyLevel: "critical" | "high" | "normal";
     }> = [];
 
@@ -133,6 +133,17 @@ serve(async (req) => {
       .select("user_id")
       .eq("role", "admin");
     const adminUserIds = admins?.map(a => a.user_id) || [];
+
+    // Fetch coursiers in batch (for visits with accepted coursier)
+    const coursierIds = [...new Set((visites || []).map(v => (v as any).coursier_id).filter(Boolean))];
+    let coursierMap = new Map<string, string>();
+    if (coursierIds.length > 0) {
+      const { data: coursiersData } = await supabase
+        .from("coursiers")
+        .select("id, user_id")
+        .in("id", coursierIds);
+      coursierMap = new Map(coursiersData?.map(c => [c.id, c.user_id]) || []);
+    }
 
     // Fetch all existing reminders in batch to avoid N+1 queries
     const { data: existingReminders } = await supabase
@@ -214,6 +225,24 @@ serve(async (req) => {
                 reminderType: reminder.type,
                 recipientId: adminUserId,
                 recipientRole: 'admin',
+                urgencyLevel: reminder.urgency,
+              });
+              existingReminderSet.add(key);
+            }
+          }
+        }
+
+        // Coursier - if visit has accepted coursier
+        if ((visite as any).statut_coursier === 'accepte' && (visite as any).coursier_id) {
+          const coursierUserId = coursierMap.get((visite as any).coursier_id);
+          if (coursierUserId) {
+            const key = `${visite.id}:${coursierUserId}:${reminder.type}`;
+            if (!existingReminderSet.has(key)) {
+              remindersToSend.push({
+                visite: visite as VisiteWithDetails,
+                reminderType: reminder.type,
+                recipientId: coursierUserId,
+                recipientRole: 'coursier' as any,
                 urgencyLevel: reminder.urgency,
               });
               existingReminderSet.add(key);
@@ -372,7 +401,7 @@ function getReminderMessage(
   }
 }
 
-function getRecipientLink(role: 'agent' | 'client' | 'admin'): string {
+function getRecipientLink(role: 'agent' | 'client' | 'admin' | 'coursier'): string {
   switch (role) {
     case 'agent':
       return '/agent/visites';
@@ -380,6 +409,8 @@ function getRecipientLink(role: 'agent' | 'client' | 'admin'): string {
       return '/client/visites';
     case 'admin':
       return '/admin/calendrier';
+    case 'coursier':
+      return '/coursier/missions';
     default:
       return '/';
   }

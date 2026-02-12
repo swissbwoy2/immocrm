@@ -143,6 +143,8 @@ const getMenuForRole = (role: string) => {
       return [
         { name: 'Tableau de bord', icon: LayoutDashboard, path: '/coursier', notifKey: null },
         { name: 'Missions disponibles', icon: CalendarCheck, path: '/coursier/missions', notifKey: null },
+        { name: 'Carte', icon: Home, path: '/coursier/carte', notifKey: null },
+        { name: 'Calendrier', icon: Calendar, path: '/coursier/calendrier', notifKey: null },
         { name: 'Historique & gains', icon: Wallet, path: '/coursier/historique', notifKey: null },
         { name: 'Paramètres', icon: Settings, path: '/coursier/parametres', notifKey: null },
       ];
