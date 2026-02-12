@@ -27,7 +27,7 @@ export default function AdminCoursiers() {
   const loadData = async () => {
     try {
       const [{ data: coursiersData }, { data: missionsData }, { data: eligibleData }] = await Promise.all([
-        supabase.from('coursiers').select('*').order('created_at', { ascending: false }),
+        supabase.from('coursiers').select('*, profiles:user_id(prenom, nom, email, telephone)').order('created_at', { ascending: false }),
         supabase.from('visites').select('*, offres(adresse)').not('statut_coursier', 'is', null).order('updated_at', { ascending: false }).limit(50),
         supabase.from('visites').select('*, offres(adresse), clients!client_id(user_id, profiles:user_id(prenom, nom))').is('statut_coursier', null).eq('statut', 'planifiee').gte('date_visite', new Date().toISOString()).order('date_visite', { ascending: true }).limit(50),
       ]);
@@ -250,11 +250,11 @@ export default function AdminCoursiers() {
                     <div key={c.id} className="flex items-center justify-between p-4 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                          {c.prenom?.[0]}{c.nom?.[0]}
+                          {(c.profiles?.prenom || c.prenom)?.[0]}{(c.profiles?.nom || c.nom)?.[0]}
                         </div>
                         <div>
-                          <p className="font-medium">{c.prenom} {c.nom}</p>
-                          <p className="text-xs text-muted-foreground">{c.email} • {c.telephone}</p>
+                          <p className="font-medium">{c.profiles?.prenom || c.prenom} {c.profiles?.nom || c.nom}</p>
+                          <p className="text-xs text-muted-foreground">{c.profiles?.email || c.email} • {c.profiles?.telephone || c.telephone}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">

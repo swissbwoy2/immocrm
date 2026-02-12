@@ -94,6 +94,10 @@ serve(async (req) => {
       .insert({
         user_id: authData.user.id,
         statut: "en_attente",
+        prenom,
+        nom,
+        email,
+        telephone,
       });
 
     if (coursierError) {
