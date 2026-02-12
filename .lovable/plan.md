@@ -1,43 +1,77 @@
 
 
-# Rendu compact par defaut (equivalent 2x "petit A" sur Safari)
+# Correction de l'affichage des noms de coursiers (Admin + Agent)
 
-## Contexte
-Sur iOS Safari, chaque appui sur le petit "A" reduit la taille d'environ 85%. Deux appuis = ~72% de la taille originale. L'objectif est d'obtenir ce rendu compact directement a 100% de zoom.
+## Probleme identifie
 
-## Changements dans `src/components/landing/HeroSection.tsx`
+Les colonnes `prenom`, `nom`, `email` de la table `coursiers` sont **vides** pour tous les coursiers existants. Les donnees sont stockees dans la table `profiles` (liee via `user_id`), mais le code affiche directement les champs de `coursiers`.
 
-Un seul fichier modifie. Toutes les reductions concernent uniquement les classes mobiles (sans prefixe `md:`).
+**Cause racine** : L'edge function `create-coursier` cree bien le profil dans `profiles` avec prenom/nom/email, mais insere un enregistrement `coursiers` avec seulement `user_id` et `statut`. Les colonnes redondantes `prenom/nom/email` de `coursiers` restent vides.
 
-| Element | Actuel (mobile) | Nouveau (mobile) |
-|---------|-----------------|-------------------|
-| Section padding | `py-8` | `py-4` |
-| Badge N1 | `text-xs`, `px-3 py-1.5` | `text-[10px]`, `px-2 py-1` |
-| Crown icon | `h-4 w-4` | `h-3 w-3` |
-| Logo | `h-16` | `h-10` |
-| Logo margin | `mb-2` | `mb-1` |
-| Slogan | `text-base` | `text-sm` |
-| Slogan margin | `mb-3` | `mb-1.5` |
-| Selecteur location/achat | `py-2.5 px-3` | `py-2 px-2` |
-| Selecteur icons | `h-5 w-5` | `h-4 w-4` |
-| Selecteur texte | (base ~14px) | `text-xs` |
-| Selecteur margin | `mb-3` | `mb-2` |
-| Titre H1 | `text-xl` | `text-base` |
-| Sous-titre | `text-base` | `text-sm` |
-| Tech line | `text-sm` | `text-xs` |
-| Paragraphe empathique | `text-sm`, `mb-4` | `text-xs`, `mb-2` |
-| Promise box | `text-base`, `h-6 w-6`, `px-4 py-3` | `text-sm`, `h-5 w-5`, `px-3 py-2` |
-| Promise margin | `mb-4` | `mb-3` |
-| CTA principal | `text-base px-8 py-5` | `text-sm px-6 py-4` |
-| CTA icons | `h-6 w-6` | `h-5 w-5` |
-| Sans engagement | `text-sm` | `text-xs` |
-| CTAs secondaires | `text-sm px-6 py-4` | `text-xs px-4 py-3` |
-| CTAs gap | `gap-4` | `gap-2` |
-| Trust block | `mt-8` | `mt-4` |
-| Login link | `mt-4` | `mt-2` |
+## Solution
 
-## Impact
-- Aucun changement sur desktop/tablette (classes `md:` et `lg:` inchangees)
-- Le hero entier tient dans l'ecran mobile a 100% de zoom, comme sur ta capture
-- Complexite faible : uniquement du Tailwind CSS dans un seul fichier
+Deux corrections complementaires :
+
+### 1. Modifier la requete dans `AdminCoursiers` (page admin)
+
+**Fichier** : `src/pages/admin/Coursiers.tsx`
+
+Actuellement (ligne 30) :
+```
+supabase.from('coursiers').select('*')
+```
+
+Remplacer par :
+```
+supabase.from('coursiers').select('*, profiles:user_id(prenom, nom, email, telephone)')
+```
+
+Puis mettre a jour l'affichage (lignes 253-257) pour utiliser `c.profiles?.prenom` au lieu de `c.prenom`, avec fallback sur les champs directs de `coursiers` :
+```
+{c.profiles?.prenom || c.prenom} {c.profiles?.nom || c.nom}
+```
+
+Idem pour l'initiale dans l'avatar et la ligne email/telephone.
+
+### 2. Corriger l'edge function `create-coursier`
+
+**Fichier** : `supabase/functions/create-coursier/index.ts`
+
+Ajouter les champs `prenom`, `nom`, `email`, `telephone` lors de l'insertion dans la table `coursiers` pour que les donnees soient aussi disponibles directement :
+
+```typescript
+.from("coursiers")
+.insert({
+  user_id: authData.user.id,
+  statut: "en_attente",
+  prenom,
+  nom,
+  email,
+  telephone,
+})
+```
+
+### 3. Corriger les 2 coursiers existants (migration SQL)
+
+Executer une migration pour remplir les colonnes vides a partir de `profiles` :
+
+```sql
+UPDATE coursiers c
+SET
+  prenom = p.prenom,
+  nom = p.nom,
+  email = p.email,
+  telephone = p.telephone
+FROM profiles p
+WHERE c.user_id = p.id
+AND (c.prenom IS NULL OR c.prenom = '');
+```
+
+## Resume des fichiers modifies
+
+| Fichier | Modification |
+|---------|-------------|
+| `src/pages/admin/Coursiers.tsx` | Jointure `profiles` dans la requete + affichage avec fallback |
+| `supabase/functions/create-coursier/index.ts` | Ajout prenom/nom/email/telephone a l'insert coursiers |
+| Migration SQL | Mise a jour des 2 coursiers existants |
 
