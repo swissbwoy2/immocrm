@@ -1,36 +1,45 @@
 
 
-# Fix: Affichage des 2 coursiers inscrits
+# Annulation de la delegation coursier par l'agent
 
-## Probleme
+## Contexte
 
-La jointure `profiles:user_id(...)` dans la requete Supabase ne fonctionne pas car il manque la **cle etrangere** entre `coursiers.user_id` et `profiles.id` dans la base de donnees. PostgREST a besoin de cette relation pour resoudre la jointure.
+Actuellement, lorsqu'un agent delegue une visite a un coursier (statut_coursier = "en_attente" ou "accepte"), il n'a aucun moyen d'annuler cette delegation. Le bouton "Deleguer a un coursier" disparait une fois la delegation effectuee, sans etre remplace par une option d'annulation.
 
-## Solution : Migration SQL uniquement
+## Solution
 
-Une seule migration SQL qui fait 2 choses :
+Ajouter un bouton "Annuler delegation coursier" visible par l'agent lorsque `statut_coursier` est `en_attente` ou `accepte` (pas `termine`).
 
-### 1. Ajouter la cle etrangere manquante
+### Modification dans `src/pages/agent/Visites.tsx`
 
-```sql
-ALTER TABLE coursiers 
-ADD CONSTRAINT coursiers_user_id_profiles_fkey 
-FOREIGN KEY (user_id) REFERENCES profiles(id);
+**Deux emplacements** affichent le bouton de delegation (lignes ~790 et ~914). Dans chacun, ajouter un bloc conditionnel complementaire :
+
+- **Condition actuelle** : `!visite.statut_coursier` -> affiche le bouton "Deleguer"
+- **Nouveau bloc** : `visite.statut_coursier === 'en_attente' || visite.statut_coursier === 'accepte'` -> affiche un bouton "Annuler delegation"
+
+Le bouton d'annulation :
+- Remet `statut_coursier` a `null`, `coursier_id` a `null`, et `remuneration_coursier` a `null`
+- Affiche un badge indiquant le statut actuel (ex: "Coursier en attente" ou "Coursier accepte")
+- Utilise un style rouge/destructif pour signaler l'annulation
+- Demande une confirmation avant d'annuler si un coursier a deja accepte la mission
+
+### Details techniques
+
+Action du bouton d'annulation :
+
+```typescript
+await supabase.from('visites').update({ 
+  statut_coursier: null, 
+  coursier_id: null, 
+  remuneration_coursier: null 
+}).eq('id', visite.id);
 ```
 
-Cela permet a la requete `.select('*, profiles:user_id(...)')` de fonctionner correctement.
+Pour le cas ou `statut_coursier === 'accepte'` (un coursier a deja pris la mission), afficher une boite de dialogue de confirmation avant d'executer l'annulation, car cela retire la mission a un coursier qui l'a acceptee.
 
-### 2. Remplir les colonnes vides des 2 coursiers existants
+### Resume des fichiers modifies
 
-```sql
-UPDATE coursiers c
-SET prenom = p.prenom, nom = p.nom, email = p.email, telephone = p.telephone
-FROM profiles p
-WHERE c.user_id = p.id
-AND (c.prenom IS NULL OR c.prenom = '');
-```
-
-## Aucun changement de code
-
-Le code frontend et l'edge function sont deja corrects depuis la derniere modification. Une fois la migration executee, les 2 coursiers s'afficheront immediatement avec leurs noms.
+| Fichier | Modification |
+|---------|-------------|
+| `src/pages/agent/Visites.tsx` | Ajout du bouton d'annulation de delegation dans les 2 emplacements de cartes de visite + dialogue de confirmation |
 
