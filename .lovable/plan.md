@@ -1,61 +1,93 @@
 
 
-# Affichage complet des horaires de visite pour le coursier
+# Rapport financier des visites deleguees aux coursiers
 
 ## Probleme
 
-1. **Heure de fin manquante** : Les cartes de mission et le dialogue de detail n'affichent que l'heure de debut (ex: "jeu. 12 fevr. a 18:00") mais pas l'heure de fin (`date_visite_fin`). Le coursier ne sait pas combien de temps dure la visite.
+Actuellement, il n'y a aucune visibilite financiere cote agent sur le cout des visites deleguees aux coursiers. L'agent est celui qui paie 100% des 5 CHF par visite deleguee, mais aucun KPI ne lui indique combien il doit ce mois-ci. Cote admin, il manque un rapport detaille par agent.
 
-2. **Dialogue trop sommaire** : Le dialogue de detail du coursier est un dialogue custom alors que l'utilisateur souhaite qu'il soit aussi complet que la vue `AgentOffreDetailsDialog` utilisee par les agents.
+---
 
-## Solution
+## 1. KPI "Solde coursier" dans le tableau de bord agent
 
-### Modification de `src/pages/coursier/Missions.tsx`
+**Fichier modifie** : `src/pages/agent/Dashboard.tsx`
 
-**1. Afficher l'heure de fin sur les cartes de mission (ligne ~162-165)**
+Ajouter un nouveau `PremiumKPICard` dans la grille de KPIs existante (apres "Ce mois") :
 
-Remplacer l'affichage de la date/heure pour inclure `date_visite_fin` quand il existe :
+- **Titre** : "Solde coursier"
+- **Valeur** : Nombre de CHF a payer ce mois-ci (visites deleguees avec `statut_coursier = 'termine'` et `paye_coursier = false` du mois en cours)
+- **Icone** : `Bike`
+- **Variante** : `danger` si solde > 0, sinon `default`
+- **Sous-titre** : "CHF (X visite(s))"
 
-- Avant : `jeu. 12 fevr. a 18:00`
-- Apres : `jeu. 12 fevr. de 18:00 a 18:30`
+La donnee est deja chargee dans l'etat `visites` (toutes les visites de l'agent). Il suffit de filtrer :
 
-Si `date_visite_fin` est null, garder le format actuel.
+```text
+visites terminées ce mois + non payées
+-> somme de remuneration_coursier (default 5)
+```
 
-**2. Afficher l'heure de fin dans le header du dialogue de detail (ligne ~306)**
+## 2. Rapport financier admin par agent
 
-Meme logique : afficher le creneau complet "de HH:mm a HH:mm" quand `date_visite_fin` existe.
+**Fichier modifie** : `src/pages/admin/Coursiers.tsx`
 
-**3. Ajouter une section "Creneau de visite" dans le dialogue de detail**
+Ajouter une nouvelle section "Solde par agent" dans la page admin coursiers :
 
-Ajouter un bloc visuel bien visible (avec icone Clock) montrant clairement :
-- Date complete
-- Heure de debut -> heure de fin
-- Duree estimee (calcul automatique)
+- Un tableau listant chaque agent ayant des visites deleguees impayees
+- Colonnes : Nom de l'agent, Nb visites impayees, Total a payer (CHF)
+- Necessiter de joindre les visites avec les agents + profiles pour afficher les noms
 
-Cela sera place juste apres le prix et avant les caracteristiques.
+La requete existante charge deja les missions avec `statut_coursier` non null. Il faudra enrichir la requete pour inclure `agent_id` et faire un groupement par agent.
 
-### Modification de `src/pages/coursier/Carte.tsx`
+Ajouter aussi un KPI global supplementaire : "Solde total agents" (somme de ce que tous les agents doivent aux coursiers).
 
-Meme correction pour les cartes de la page Carte : afficher le creneau complet dans les info-bulles et la liste laterale.
+## 3. Rapport financier cote coursier (existant mais enrichi)
 
-### Resume des fichiers modifies
+**Fichier modifie** : `src/pages/coursier/Historique.tsx`
+
+Le coursier a deja une page Historique avec les stats paid/unpaid. Ajouter un regroupement par agent pour que le coursier voie qui lui doit combien :
+
+- Section "Solde par agent" : liste des agents avec le montant du aux coursier
+- Necessite de joindre `agents` et `profiles` via `agent_id` de la visite
+
+---
+
+## Details techniques
+
+### Fichiers a modifier
 
 | Fichier | Modification |
 |---------|-------------|
-| `src/pages/coursier/Missions.tsx` | Affichage heure de fin dans les cartes + dialogue de detail + section creneau |
-| `src/pages/coursier/Carte.tsx` | Affichage heure de fin dans la liste laterale et les info-bulles de la carte |
+| `src/pages/agent/Dashboard.tsx` | Ajout KPI "Solde coursier" avec calcul depuis les visites deja chargees |
+| `src/pages/admin/Coursiers.tsx` | Ajout section rapport par agent (jointure agents/profiles) + KPI supplementaire |
+| `src/pages/coursier/Historique.tsx` | Ajout regroupement par agent pour le solde du |
 
-### Detail technique
+### Calcul du solde agent (mois en cours)
 
-Format d'affichage conditionnel :
 ```typescript
-// Si date_visite_fin existe
-const startTime = format(new Date(mission.date_visite), "HH:mm");
-const endTime = format(new Date(mission.date_visite_fin), "HH:mm");
-// -> "jeu. 12 fevr. de 18:00 a 18:30"
+const now = new Date();
+const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-// Sinon
-// -> "jeu. 12 fevr. a 18:00"
+const visitesCoursierCeMois = visites.filter(v =>
+  v.statut_coursier === 'termine' &&
+  !v.paye_coursier &&
+  new Date(v.date_visite) >= startOfMonth
+);
+
+const soldeCoursier = visitesCoursierCeMois.reduce(
+  (sum, v) => sum + (v.remuneration_coursier || 5), 0
+);
 ```
 
-Pas de modification de base de donnees necessaire, le champ `date_visite_fin` existe deja dans la table `visites`.
+### Enrichissement requete admin
+
+La requete missions dans `Coursiers.tsx` sera enrichie pour inclure les infos agent :
+
+```typescript
+supabase.from('visites')
+  .select('*, offres(adresse), agents:agent_id(id, user_id, profiles:user_id(prenom, nom))')
+  .not('statut_coursier', 'is', null)
+```
+
+Cela permettra de grouper les missions impayees par agent et d'afficher le nom de chaque agent.
+
