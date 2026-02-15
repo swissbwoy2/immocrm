@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download, Calendar, FileCheck, Home, Key, Sparkles } from 'lucide-react';
+import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download, Calendar, FileCheck, Home, Key, Sparkles, Bike } from 'lucide-react';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -361,7 +361,7 @@ export default function AgentDashboard() {
               variant="default"
               subtitle="CHF (3 mois)"
             />
-            <PremiumKPICard 
+             <PremiumKPICard 
               title="Ce mois" 
               value={`${commissionsCeMois.toLocaleString()}`} 
               icon={DollarSign}
@@ -369,6 +369,25 @@ export default function AgentDashboard() {
               subtitle={`CHF (${transactionsCeMois.length} affaire${transactionsCeMois.length > 1 ? 's' : ''})`}
               onClick={() => navigate('/agent/transactions')}
             />
+            {(() => {
+              const visitesCoursierImpayees = visites.filter(v =>
+                v.statut_coursier === 'termine' &&
+                !v.paye_coursier &&
+                new Date(v.date_visite) >= startOfMonth
+              );
+              const soldeCoursier = visitesCoursierImpayees.reduce(
+                (sum, v) => sum + (v.remuneration_coursier || 5), 0
+              );
+              return (
+                <PremiumKPICard 
+                  title="Solde coursier" 
+                  value={`${soldeCoursier.toLocaleString()}`} 
+                  icon={Bike}
+                  variant={soldeCoursier > 0 ? 'danger' : 'default'}
+                  subtitle={`CHF (${visitesCoursierImpayees.length} visite${visitesCoursierImpayees.length > 1 ? 's' : ''})`}
+                />
+              );
+            })()}
           </div>
 
           {/* Section Statistiques détaillées avec glassmorphism */}
