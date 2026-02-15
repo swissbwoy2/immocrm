@@ -28,7 +28,7 @@ export default function AdminCoursiers() {
     try {
       const [{ data: coursiersData }, { data: missionsData }, { data: eligibleData }] = await Promise.all([
         supabase.from('coursiers').select('*, profiles:user_id(prenom, nom, email, telephone)').order('created_at', { ascending: false }),
-        supabase.from('visites').select('*, offres(adresse)').not('statut_coursier', 'is', null).order('updated_at', { ascending: false }).limit(50),
+        supabase.from('visites').select('*, offres(adresse), agents:agent_id(id, user_id, profiles:user_id(prenom, nom))').not('statut_coursier', 'is', null).order('updated_at', { ascending: false }).limit(50),
         supabase.from('visites').select('*, offres(adresse), clients!client_id(user_id, profiles:user_id(prenom, nom))').is('statut_coursier', null).eq('statut', 'planifiee').gte('date_visite', new Date().toISOString()).order('date_visite', { ascending: true }).limit(50),
       ]);
       setCoursiers(coursiersData || []);
@@ -109,6 +109,19 @@ export default function AdminCoursiers() {
 
   const unpaidMissions = missions.filter(m => m.statut_coursier === 'termine' && !m.paye_coursier);
   const totalUnpaid = unpaidMissions.reduce((sum, m) => sum + (m.remuneration_coursier || 5), 0);
+
+  // Group unpaid missions by agent
+  const unpaidByAgent = unpaidMissions.reduce((acc: Record<string, { name: string; count: number; total: number }>, m) => {
+    const agentId = m.agent_id || 'unknown';
+    const agentName = m.agents?.profiles?.prenom 
+      ? `${m.agents.profiles.prenom} ${m.agents.profiles.nom || ''}`.trim()
+      : 'Agent inconnu';
+    if (!acc[agentId]) acc[agentId] = { name: agentName, count: 0, total: 0 };
+    acc[agentId].count += 1;
+    acc[agentId].total += (m.remuneration_coursier || 5);
+    return acc;
+  }, {});
+  const agentBalances = Object.entries(unpaidByAgent);
 
   if (loading) {
     return (
@@ -273,6 +286,36 @@ export default function AdminCoursiers() {
             )}
           </CardContent>
         </Card>
+
+        {/* Solde par agent */}
+        {agentBalances.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bike className="h-5 w-5 text-primary" />
+                Solde par agent ({agentBalances.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {agentBalances.map(([agentId, data]: [string, { name: string; count: number; total: number }]) => (
+                  <div key={agentId} className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                        {data.name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{data.name}</p>
+                        <p className="text-xs text-muted-foreground">{data.count} visite{data.count > 1 ? 's' : ''} impayée{data.count > 1 ? 's' : ''}</p>
+                      </div>
+                    </div>
+                    <span className="font-bold text-amber-600">{data.total.toFixed(0)} CHF</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Unpaid missions */}
         {unpaidMissions.length > 0 && (

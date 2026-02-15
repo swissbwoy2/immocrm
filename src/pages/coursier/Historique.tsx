@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { History, Wallet, CheckCircle, MapPin, Clock, TrendingUp } from 'lucide-react';
+import { History, Wallet, CheckCircle, MapPin, Clock, TrendingUp, UserCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
@@ -31,7 +31,7 @@ export default function CoursierHistorique() {
 
       const { data } = await supabase
         .from('visites')
-        .select('*, offres(*)')
+        .select('*, offres(*), agents:agent_id(id, user_id, profiles:user_id(prenom, nom))')
         .eq('coursier_id', coursierData.id)
         .eq('statut_coursier', 'termine')
         .order('updated_at', { ascending: false });
@@ -130,6 +130,43 @@ export default function CoursierHistorique() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Solde par agent */}
+        {(() => {
+          const unpaidByAgent = missions.filter(m => !m.paye_coursier).reduce((acc: Record<string, { name: string; total: number; count: number }>, m) => {
+            const agentId = m.agent_id || 'unknown';
+            const agentName = m.agents?.profiles?.prenom 
+              ? `${m.agents.profiles.prenom} ${m.agents.profiles.nom || ''}`.trim()
+              : 'Agent inconnu';
+            if (!acc[agentId]) acc[agentId] = { name: agentName, total: 0, count: 0 };
+            acc[agentId].total += (m.remuneration_coursier || 5);
+            acc[agentId].count += 1;
+            return acc;
+          }, {});
+          const entries = Object.entries(unpaidByAgent);
+          if (entries.length === 0) return null;
+          return (
+            <Card className="border-border/50">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <UserCircle className="h-5 w-5 text-primary" />
+                  <h3 className="font-semibold">Solde dû par agent</h3>
+                </div>
+                <div className="space-y-2">
+                  {entries.map(([agentId, data]: [string, { name: string; total: number; count: number }]) => (
+                    <div key={agentId} className="flex items-center justify-between p-3 rounded-lg border border-amber-500/30 bg-amber-500/5">
+                      <div>
+                        <p className="text-sm font-medium">{data.name}</p>
+                        <p className="text-xs text-muted-foreground">{data.count} visite{data.count > 1 ? 's' : ''}</p>
+                      </div>
+                      <span className="font-bold text-amber-600">{data.total.toFixed(0)} CHF</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Mission list */}
         {missions.length === 0 ? (
