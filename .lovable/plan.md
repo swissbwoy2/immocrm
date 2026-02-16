@@ -1,90 +1,93 @@
 
 
-# Itineraire intelligent pour les coursiers
+# Carte des visites pour Agents et Clients
 
 ## Objectif
+Ajouter une page "Carte" avec optimisation de trajet intelligent pour les agents et les clients, identique a celle des coursiers.
 
-Ajouter une fonctionnalite d'optimisation de trajet sur la page Carte des coursiers. L'application detecte la position actuelle du coursier, trie ses visites du jour dans l'ordre optimal (sans aller-retour) et affiche l'itineraire complet sur la carte avec un bouton pour le lancer dans Google Maps.
+## Approche technique
 
-## Comment ca marche pour le coursier
-
-1. Le coursier ouvre la page **Carte** et clique sur **"Optimiser mon trajet"**
-2. L'application demande sa position GPS actuelle
-3. Les visites du jour (filtre "Mes missions") sont triees automatiquement dans l'ordre le plus court grace a l'API Google Maps Directions avec `optimizeWaypoints: true` (algorithme TSP integre de Google)
-4. La carte affiche le trajet trace avec des marqueurs numerotes (1, 2, 3...)
-5. La liste laterale se reordonne avec les temps de trajet estimes entre chaque etape
-6. Un bouton **"Lancer l'itineraire"** ouvre Google Maps avec tous les waypoints pre-remplis dans le bon ordre
+Plutot que de dupliquer le code de `src/pages/coursier/Carte.tsx` trois fois, on va extraire la logique commune dans un composant reutilisable, puis creer des pages legeres pour chaque role.
 
 ## Modifications
 
-### Fichier modifie : `src/pages/coursier/Carte.tsx`
+### 1. Nouveau composant : `src/components/maps/VisitesMapView.tsx`
 
-**Nouveaux etats** :
-- `courierPosition` : position GPS du coursier (lat/lng)
-- `optimizedRoute` : resultat du Directions API (trajet optimise)
-- `isOptimizing` : etat de chargement pendant le calcul
-- `routeOrder` : ordre optimal des missions
+Composant reutilisable qui contient toute la logique de la carte des coursiers :
+- Carte Google Maps avec marqueurs
+- Bouton "Optimiser mon trajet" avec geolocalisation
+- DirectionsRenderer pour le trace de l'itineraire
+- Liste laterale reordonnee avec temps de trajet
+- Bouton "Lancer l'itineraire" vers Google Maps
 
-**Nouveau bouton "Optimiser mon trajet"** (dans la barre de filtres) :
-- Icone `Route` de lucide-react
-- Desactive si moins de 2 missions ou si Google Maps pas charge
-- Au clic : demande la geolocalisation, puis lance le calcul
+**Props** :
+- `missions` : tableau de visites (avec `adresse`, `date_visite`, `date_visite_fin`, `statut_coursier` ou `statut`)
+- `loading` : boolean
+- `title` : titre de la page (ex: "Carte des visites")
+- `subtitle` : sous-titre
+- `statusField` : champ a utiliser pour le statut (pour adapter les badges)
+- `statusConfig` : mapping statut -> couleur/label pour les badges
 
-**Logique d'optimisation** :
-- Utilise `navigator.geolocation.getCurrentPosition()` pour obtenir la position du coursier
-- Geocode toutes les adresses des missions (deja fait dans le code actuel)
-- Appelle `google.maps.DirectionsService.route()` avec :
-  - `origin` = position actuelle du coursier
-  - `destination` = derniere mission (ou retour au depart)
-  - `waypoints` = toutes les autres missions avec `optimizeWaypoints: true`
-  - `travelMode` = DRIVING
-- Google renvoie `waypointOrder` qui donne l'ordre optimal
+### 2. Nouvelle page : `src/pages/agent/Carte.tsx`
 
-**Affichage du trajet sur la carte** :
-- Utilise `google.maps.DirectionsRenderer` pour tracer le parcours
-- Marqueurs numerotes (1, 2, 3...) au lieu des marqueurs verts/orange
-- Chaque etape montre le temps de trajet depuis l'etape precedente
+- Charge les visites de l'agent via `agents.id` -> `visites.agent_id`
+- Filtre les visites a venir (futures)
+- Filtres : Toutes / Aujourd'hui / Cette semaine
+- Passe les donnees au composant `VisitesMapView`
 
-**Liste laterale reordonnee** :
-- Quand le trajet est optimise, la liste se reordonne selon `waypointOrder`
-- Chaque carte de mission affiche en plus : "Etape X - ~Y min de trajet"
-- Badge de temps de trajet entre chaque mission
+### 3. Nouvelle page : `src/pages/client/Carte.tsx`
 
-**Bouton "Lancer l'itineraire"** :
-- Genere une URL Google Maps avec waypoints dans l'ordre optimal
-- Format : `https://www.google.com/maps/dir/?api=1&origin=lat,lng&destination=addr&waypoints=addr1|addr2|addr3`
-- Ouvre dans un nouvel onglet (ou l'app Google Maps sur mobile)
+- Charge les visites du client via `clients.id` -> `visites.client_id`
+- Filtre les visites a venir
+- Filtres : Toutes / Aujourd'hui / Cette semaine
+- Passe les donnees au composant `VisitesMapView`
 
-**Bouton "Reinitialiser"** :
-- Permet de revenir a la vue normale (marqueurs simples, pas de trajet)
+### 4. Refactoring : `src/pages/coursier/Carte.tsx`
 
-### Detail technique du calcul
+- Simplifie pour utiliser le nouveau composant `VisitesMapView` au lieu de dupliquer la logique
 
+### 5. Routes : `src/App.tsx`
+
+Ajouter deux nouvelles routes :
+- `/agent/carte` -> `AgentCarte` (roles: agent, admin)
+- `/client/carte` -> `ClientCarte` (role: client)
+
+### 6. Navigation : `src/components/AppSidebar.tsx`
+
+Ajouter l'entree "Carte" dans les menus :
+- **Agent** : entre "Visites" et "Candidatures", icone `MapPin`
+- **Client** : entre "Mes visites" et "Calendrier", icone `MapPin`
+
+## Requetes de donnees
+
+**Agent** :
 ```text
-1. Position GPS du coursier -> origin
-2. Missions du jour acceptees -> waypoints[]
-3. Google Directions API (optimizeWaypoints: true)
-   -> waypointOrder = [2, 0, 1] (ordre optimal)
-   -> legs[] = durees et distances entre chaque etape
-4. Reordonnement de la liste + tracage du trajet
+1. agents.id WHERE user_id = current_user
+2. visites WHERE agent_id = agent.id AND date_visite >= now()
+   -> recupere adresse, date_visite, date_visite_fin, statut
 ```
 
-L'API Google Maps Directions est deja incluse dans le script charge (`libraries=places,geometry`). Il faudra ajouter `routes` a la liste des libraries chargees dans `useGoogleMapsLoader.ts`.
+**Client** :
+```text
+1. clients.id WHERE user_id = current_user
+2. visites WHERE client_id = client.id AND date_visite >= now()
+   -> recupere adresse, date_visite, date_visite_fin, statut
+```
 
-### Fichier modifie : `src/hooks/useGoogleMapsLoader.ts`
-
-- Ajouter `routes` dans la liste des libraries chargees (ligne du script src) pour que le DirectionsService soit disponible
-
-### Resume des fichiers
+## Fichiers concernes
 
 | Fichier | Action |
 |---------|--------|
-| `src/pages/coursier/Carte.tsx` | Modifier - Ajout optimisation de trajet, DirectionsService/Renderer, liste reordonnee, bouton lancer |
-| `src/hooks/useGoogleMapsLoader.ts` | Modifier - Ajout library `routes` dans le chargement du script |
+| `src/components/maps/VisitesMapView.tsx` | Creer - Composant reutilisable carte + optimisation |
+| `src/pages/agent/Carte.tsx` | Creer - Page carte agent |
+| `src/pages/client/Carte.tsx` | Creer - Page carte client |
+| `src/pages/coursier/Carte.tsx` | Modifier - Refactoring pour utiliser VisitesMapView |
+| `src/App.tsx` | Modifier - Ajout routes /agent/carte et /client/carte |
+| `src/components/AppSidebar.tsx` | Modifier - Ajout entrees menu Carte pour agent et client |
 
-### Limites
+## Resultat pour l'utilisateur
 
-- Google Maps Directions API supporte max 25 waypoints (largement suffisant pour des visites journalieres)
-- La geolocalisation necessite que le coursier autorise l'acces GPS dans son navigateur
-- Le trajet est calcule en mode voiture (DRIVING) par defaut
+- L'agent voit toutes ses visites planifiees sur une carte et peut optimiser son trajet
+- Le client voit ses prochaines visites sur une carte et peut planifier son deplacement
+- Le bouton "Optimiser mon trajet" fonctionne de la meme maniere : GPS -> calcul optimal -> trace sur la carte -> lancement dans Google Maps
 
