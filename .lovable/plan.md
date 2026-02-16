@@ -1,93 +1,90 @@
 
 
-# Rapport financier des visites deleguees aux coursiers
+# Itineraire intelligent pour les coursiers
 
-## Probleme
+## Objectif
 
-Actuellement, il n'y a aucune visibilite financiere cote agent sur le cout des visites deleguees aux coursiers. L'agent est celui qui paie 100% des 5 CHF par visite deleguee, mais aucun KPI ne lui indique combien il doit ce mois-ci. Cote admin, il manque un rapport detaille par agent.
+Ajouter une fonctionnalite d'optimisation de trajet sur la page Carte des coursiers. L'application detecte la position actuelle du coursier, trie ses visites du jour dans l'ordre optimal (sans aller-retour) et affiche l'itineraire complet sur la carte avec un bouton pour le lancer dans Google Maps.
 
----
+## Comment ca marche pour le coursier
 
-## 1. KPI "Solde coursier" dans le tableau de bord agent
+1. Le coursier ouvre la page **Carte** et clique sur **"Optimiser mon trajet"**
+2. L'application demande sa position GPS actuelle
+3. Les visites du jour (filtre "Mes missions") sont triees automatiquement dans l'ordre le plus court grace a l'API Google Maps Directions avec `optimizeWaypoints: true` (algorithme TSP integre de Google)
+4. La carte affiche le trajet trace avec des marqueurs numerotes (1, 2, 3...)
+5. La liste laterale se reordonne avec les temps de trajet estimes entre chaque etape
+6. Un bouton **"Lancer l'itineraire"** ouvre Google Maps avec tous les waypoints pre-remplis dans le bon ordre
 
-**Fichier modifie** : `src/pages/agent/Dashboard.tsx`
+## Modifications
 
-Ajouter un nouveau `PremiumKPICard` dans la grille de KPIs existante (apres "Ce mois") :
+### Fichier modifie : `src/pages/coursier/Carte.tsx`
 
-- **Titre** : "Solde coursier"
-- **Valeur** : Nombre de CHF a payer ce mois-ci (visites deleguees avec `statut_coursier = 'termine'` et `paye_coursier = false` du mois en cours)
-- **Icone** : `Bike`
-- **Variante** : `danger` si solde > 0, sinon `default`
-- **Sous-titre** : "CHF (X visite(s))"
+**Nouveaux etats** :
+- `courierPosition` : position GPS du coursier (lat/lng)
+- `optimizedRoute` : resultat du Directions API (trajet optimise)
+- `isOptimizing` : etat de chargement pendant le calcul
+- `routeOrder` : ordre optimal des missions
 
-La donnee est deja chargee dans l'etat `visites` (toutes les visites de l'agent). Il suffit de filtrer :
+**Nouveau bouton "Optimiser mon trajet"** (dans la barre de filtres) :
+- Icone `Route` de lucide-react
+- Desactive si moins de 2 missions ou si Google Maps pas charge
+- Au clic : demande la geolocalisation, puis lance le calcul
+
+**Logique d'optimisation** :
+- Utilise `navigator.geolocation.getCurrentPosition()` pour obtenir la position du coursier
+- Geocode toutes les adresses des missions (deja fait dans le code actuel)
+- Appelle `google.maps.DirectionsService.route()` avec :
+  - `origin` = position actuelle du coursier
+  - `destination` = derniere mission (ou retour au depart)
+  - `waypoints` = toutes les autres missions avec `optimizeWaypoints: true`
+  - `travelMode` = DRIVING
+- Google renvoie `waypointOrder` qui donne l'ordre optimal
+
+**Affichage du trajet sur la carte** :
+- Utilise `google.maps.DirectionsRenderer` pour tracer le parcours
+- Marqueurs numerotes (1, 2, 3...) au lieu des marqueurs verts/orange
+- Chaque etape montre le temps de trajet depuis l'etape precedente
+
+**Liste laterale reordonnee** :
+- Quand le trajet est optimise, la liste se reordonne selon `waypointOrder`
+- Chaque carte de mission affiche en plus : "Etape X - ~Y min de trajet"
+- Badge de temps de trajet entre chaque mission
+
+**Bouton "Lancer l'itineraire"** :
+- Genere une URL Google Maps avec waypoints dans l'ordre optimal
+- Format : `https://www.google.com/maps/dir/?api=1&origin=lat,lng&destination=addr&waypoints=addr1|addr2|addr3`
+- Ouvre dans un nouvel onglet (ou l'app Google Maps sur mobile)
+
+**Bouton "Reinitialiser"** :
+- Permet de revenir a la vue normale (marqueurs simples, pas de trajet)
+
+### Detail technique du calcul
 
 ```text
-visites terminées ce mois + non payées
--> somme de remuneration_coursier (default 5)
+1. Position GPS du coursier -> origin
+2. Missions du jour acceptees -> waypoints[]
+3. Google Directions API (optimizeWaypoints: true)
+   -> waypointOrder = [2, 0, 1] (ordre optimal)
+   -> legs[] = durees et distances entre chaque etape
+4. Reordonnement de la liste + tracage du trajet
 ```
 
-## 2. Rapport financier admin par agent
+L'API Google Maps Directions est deja incluse dans le script charge (`libraries=places,geometry`). Il faudra ajouter `routes` a la liste des libraries chargees dans `useGoogleMapsLoader.ts`.
 
-**Fichier modifie** : `src/pages/admin/Coursiers.tsx`
+### Fichier modifie : `src/hooks/useGoogleMapsLoader.ts`
 
-Ajouter une nouvelle section "Solde par agent" dans la page admin coursiers :
+- Ajouter `routes` dans la liste des libraries chargees (ligne du script src) pour que le DirectionsService soit disponible
 
-- Un tableau listant chaque agent ayant des visites deleguees impayees
-- Colonnes : Nom de l'agent, Nb visites impayees, Total a payer (CHF)
-- Necessiter de joindre les visites avec les agents + profiles pour afficher les noms
+### Resume des fichiers
 
-La requete existante charge deja les missions avec `statut_coursier` non null. Il faudra enrichir la requete pour inclure `agent_id` et faire un groupement par agent.
+| Fichier | Action |
+|---------|--------|
+| `src/pages/coursier/Carte.tsx` | Modifier - Ajout optimisation de trajet, DirectionsService/Renderer, liste reordonnee, bouton lancer |
+| `src/hooks/useGoogleMapsLoader.ts` | Modifier - Ajout library `routes` dans le chargement du script |
 
-Ajouter aussi un KPI global supplementaire : "Solde total agents" (somme de ce que tous les agents doivent aux coursiers).
+### Limites
 
-## 3. Rapport financier cote coursier (existant mais enrichi)
-
-**Fichier modifie** : `src/pages/coursier/Historique.tsx`
-
-Le coursier a deja une page Historique avec les stats paid/unpaid. Ajouter un regroupement par agent pour que le coursier voie qui lui doit combien :
-
-- Section "Solde par agent" : liste des agents avec le montant du aux coursier
-- Necessite de joindre `agents` et `profiles` via `agent_id` de la visite
-
----
-
-## Details techniques
-
-### Fichiers a modifier
-
-| Fichier | Modification |
-|---------|-------------|
-| `src/pages/agent/Dashboard.tsx` | Ajout KPI "Solde coursier" avec calcul depuis les visites deja chargees |
-| `src/pages/admin/Coursiers.tsx` | Ajout section rapport par agent (jointure agents/profiles) + KPI supplementaire |
-| `src/pages/coursier/Historique.tsx` | Ajout regroupement par agent pour le solde du |
-
-### Calcul du solde agent (mois en cours)
-
-```typescript
-const now = new Date();
-const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-const visitesCoursierCeMois = visites.filter(v =>
-  v.statut_coursier === 'termine' &&
-  !v.paye_coursier &&
-  new Date(v.date_visite) >= startOfMonth
-);
-
-const soldeCoursier = visitesCoursierCeMois.reduce(
-  (sum, v) => sum + (v.remuneration_coursier || 5), 0
-);
-```
-
-### Enrichissement requete admin
-
-La requete missions dans `Coursiers.tsx` sera enrichie pour inclure les infos agent :
-
-```typescript
-supabase.from('visites')
-  .select('*, offres(adresse), agents:agent_id(id, user_id, profiles:user_id(prenom, nom))')
-  .not('statut_coursier', 'is', null)
-```
-
-Cela permettra de grouper les missions impayees par agent et d'afficher le nom de chaque agent.
+- Google Maps Directions API supporte max 25 waypoints (largement suffisant pour des visites journalieres)
+- La geolocalisation necessite que le coursier autorise l'acces GPS dans son navigateur
+- Le trajet est calcule en mode voiture (DRIVING) par defaut
 
