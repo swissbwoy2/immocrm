@@ -187,7 +187,7 @@ export function useGoogleMapsLoader() {
       // Create and inject script
       const script = document.createElement('script');
       script.id = SCRIPT_ID;
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&language=fr&region=CH&callback=${CALLBACK_NAME}`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry,routes&language=fr&region=CH&callback=${CALLBACK_NAME}`;
       script.async = true;
       script.defer = true;
 
