@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Clock, Navigation, Loader2, AlertTriangle } from 'lucide-react';
+import { MapPin, Clock, Navigation, Loader2, AlertTriangle, Route, RotateCcw, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
@@ -11,6 +11,12 @@ import { AddressLink } from '@/components/AddressLink';
 import { useGoogleMapsLoader } from '@/hooks/useGoogleMapsLoader';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+
+interface OptimizedRoute {
+  order: number[];
+  legs: { duration: string; distance: string }[];
+  directionsResult: google.maps.DirectionsResult;
+}
 
 export default function CoursierCarte() {
   const { user } = useAuth();
@@ -24,6 +30,12 @@ export default function CoursierCarte() {
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+
+  // Route optimization state
+  const [courierPosition, setCourierPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [optimizedRoute, setOptimizedRoute] = useState<OptimizedRoute | null>(null);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
 
   useEffect(() => {
     if (user) loadData();
@@ -61,6 +73,11 @@ export default function CoursierCarte() {
     return true;
   });
 
+  // Get the display list: reordered if optimized
+  const displayMissions = optimizedRoute
+    ? optimizedRoute.order.map(i => filteredMissions[i])
+    : filteredMissions;
+
   const initMap = useCallback(async () => {
     if (!mapRef.current || !isLoaded || !window.google?.maps) return;
 
@@ -69,7 +86,7 @@ export default function CoursierCarte() {
       await google.maps.importLibrary("marker");
 
       const map = new Map(mapRef.current, {
-        center: { lat: 46.52, lng: 6.63 }, // Lausanne
+        center: { lat: 46.52, lng: 6.63 },
         zoom: 10,
         mapId: 'coursier-missions-map',
         disableDefaultUI: false,
@@ -92,15 +109,15 @@ export default function CoursierCarte() {
   }, [isLoaded, loading, initMap]);
 
   useEffect(() => {
-    if (mapInstanceRef.current && geocoderRef.current) {
+    if (mapInstanceRef.current && geocoderRef.current && !optimizedRoute) {
       geocodeAndPlaceMarkers();
     }
-  }, [filteredMissions]);
+  }, [filteredMissions, optimizedRoute]);
 
   const geocodeAndPlaceMarkers = async () => {
     if (!mapInstanceRef.current || !geocoderRef.current) return;
 
-    // Clear old markers
+    // Clear old markers & directions
     markersRef.current.forEach(m => (m.map = null));
     markersRef.current = [];
 
@@ -171,6 +188,119 @@ export default function CoursierCarte() {
     }
   };
 
+  // --- Route optimization ---
+  const optimizeRoute = async () => {
+    if (filteredMissions.length < 2 || !isLoaded) return;
+    setIsOptimizing(true);
+
+    try {
+      // Step 1: Get courier GPS position
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+        });
+      });
+
+      const origin = { lat: position.coords.latitude, lng: position.coords.longitude };
+      setCourierPosition(origin);
+
+      // Step 2: Build waypoints from mission addresses
+      const addresses = filteredMissions
+        .filter(m => m.adresse)
+        .map(m => m.adresse + ', Suisse');
+
+      if (addresses.length < 2) {
+        setIsOptimizing(false);
+        return;
+      }
+
+      // Step 3: Call Directions API with optimizeWaypoints
+      const directionsService = new google.maps.DirectionsService();
+      const lastAddress = addresses[addresses.length - 1];
+      const waypointAddresses = addresses.slice(0, -1);
+
+      const result = await directionsService.route({
+        origin,
+        destination: lastAddress,
+        waypoints: waypointAddresses.map(addr => ({ location: addr, stopover: true })),
+        optimizeWaypoints: true,
+        travelMode: google.maps.TravelMode.DRIVING,
+      });
+
+      if (result.routes?.[0]) {
+        const route = result.routes[0];
+        const waypointOrder = route.waypoint_order || [];
+        // Append the destination index at the end
+        const fullOrder = [...waypointOrder, addresses.length - 1];
+
+        const legs = route.legs.map(leg => ({
+          duration: leg.duration?.text || '',
+          distance: leg.distance?.text || '',
+        }));
+
+        // Clear simple markers
+        markersRef.current.forEach(m => (m.map = null));
+        markersRef.current = [];
+
+        // Show directions on map
+        if (directionsRendererRef.current) {
+          directionsRendererRef.current.setMap(null);
+        }
+        const renderer = new google.maps.DirectionsRenderer({
+          map: mapInstanceRef.current!,
+          directions: result,
+          suppressMarkers: false,
+          polylineOptions: {
+            strokeColor: '#2563eb',
+            strokeWeight: 5,
+            strokeOpacity: 0.8,
+          },
+        });
+        directionsRendererRef.current = renderer;
+
+        setOptimizedRoute({
+          order: fullOrder,
+          legs,
+          directionsResult: result,
+        });
+      }
+    } catch (err: any) {
+      console.error('[CoursierCarte] Route optimization error:', err);
+      if (err.code === 1) {
+        alert('Veuillez autoriser la géolocalisation pour optimiser votre trajet.');
+      }
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
+  const resetRoute = () => {
+    setOptimizedRoute(null);
+    setCourierPosition(null);
+    if (directionsRendererRef.current) {
+      directionsRendererRef.current.setMap(null);
+      directionsRendererRef.current = null;
+    }
+    // Re-place simple markers
+    if (mapInstanceRef.current && geocoderRef.current) {
+      geocodeAndPlaceMarkers();
+    }
+  };
+
+  const launchGoogleMapsRoute = () => {
+    if (!optimizedRoute || !courierPosition) return;
+
+    const orderedMissions = optimizedRoute.order.map(i => filteredMissions[i]).filter(m => m.adresse);
+    if (orderedMissions.length === 0) return;
+
+    const destination = encodeURIComponent(orderedMissions[orderedMissions.length - 1].adresse);
+    const waypoints = orderedMissions.slice(0, -1).map(m => encodeURIComponent(m.adresse)).join('|');
+
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${courierPosition.lat},${courierPosition.lng}&destination=${destination}${waypoints ? `&waypoints=${waypoints}` : ''}&travelmode=driving`;
+    window.open(url, '_blank');
+  };
+
   if (loading) {
     return (
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -190,8 +320,8 @@ export default function CoursierCarte() {
           subtitle="Visualisez les missions sur la carte et planifiez vos trajets"
         />
 
-        <div className="flex items-center gap-3">
-          <Select value={filter} onValueChange={setFilter}>
+        <div className="flex flex-wrap items-center gap-3">
+          <Select value={filter} onValueChange={(v) => { setFilter(v); resetRoute(); }}>
             <SelectTrigger className="w-48">
               <SelectValue />
             </SelectTrigger>
@@ -202,12 +332,36 @@ export default function CoursierCarte() {
             </SelectContent>
           </Select>
           <Badge variant="secondary">{filteredMissions.length} mission(s)</Badge>
+
+          {!optimizedRoute ? (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={optimizeRoute}
+              disabled={filteredMissions.length < 2 || !isLoaded || isOptimizing}
+              className="gap-2"
+            >
+              {isOptimizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Route className="h-4 w-4" />}
+              {isOptimizing ? 'Calcul en cours...' : 'Optimiser mon trajet'}
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button variant="default" size="sm" onClick={launchGoogleMapsRoute} className="gap-2">
+                <ExternalLink className="h-4 w-4" />
+                Lancer l'itinéraire
+              </Button>
+              <Button variant="outline" size="sm" onClick={resetRoute} className="gap-2">
+                <RotateCcw className="h-4 w-4" />
+                Réinitialiser
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ minHeight: '500px' }}>
           {/* Liste compacte */}
           <div className="lg:col-span-1 space-y-3 overflow-y-auto max-h-[600px]">
-            {filteredMissions.length === 0 ? (
+            {displayMissions.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-8 text-center">
                   <MapPin className="h-10 w-10 text-muted-foreground/50 mx-auto mb-3" />
@@ -215,43 +369,63 @@ export default function CoursierCarte() {
                 </CardContent>
               </Card>
             ) : (
-              filteredMissions.map(m => (
-                <Card
-                  key={m.id}
-                  className={`cursor-pointer transition-all hover:shadow-md ${selectedId === m.id ? 'ring-2 ring-primary' : ''}`}
-                  onClick={() => setSelectedId(m.id)}
-                >
-                  <CardContent className="pt-4 pb-3 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <AddressLink address={m.adresse} className="text-sm font-medium" truncate />
-                      <Badge className={m.statut_coursier === 'en_attente'
-                        ? 'bg-green-500/10 text-green-600 border-green-500/30 text-xs'
-                        : 'bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs'
-                      }>
-                        {m.statut_coursier === 'en_attente' ? 'Dispo' : 'En cours'}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="h-3 w-3" />
-                      {format(new Date(m.date_visite), "EEE dd MMM", { locale: fr })}{' '}
-                      {m.date_visite_fin 
-                        ? `de ${format(new Date(m.date_visite), "HH:mm")} à ${format(new Date(m.date_visite_fin), "HH:mm")}`
-                        : `à ${format(new Date(m.date_visite), "HH:mm")}`
-                      }
-                    </div>
-                    <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(m.adresse)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <Navigation className="h-3 w-3" />
-                      Itinéraire
-                    </a>
-                  </CardContent>
-                </Card>
-              ))
+              displayMissions.map((m, idx) => {
+                const legInfo = optimizedRoute?.legs[idx];
+                return (
+                  <Card
+                    key={m.id}
+                    className={`cursor-pointer transition-all hover:shadow-md ${selectedId === m.id ? 'ring-2 ring-primary' : ''}`}
+                    onClick={() => setSelectedId(m.id)}
+                  >
+                    <CardContent className="pt-4 pb-3 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {optimizedRoute && (
+                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold shrink-0">
+                              {idx + 1}
+                            </span>
+                          )}
+                          <AddressLink address={m.adresse} className="text-sm font-medium" truncate />
+                        </div>
+                        <Badge className={m.statut_coursier === 'en_attente'
+                          ? 'bg-green-500/10 text-green-600 border-green-500/30 text-xs'
+                          : 'bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs'
+                        }>
+                          {m.statut_coursier === 'en_attente' ? 'Dispo' : 'En cours'}
+                        </Badge>
+                      </div>
+
+                      {legInfo && (
+                        <div className="flex items-center gap-2 text-xs font-medium text-primary">
+                          <Navigation className="h-3 w-3" />
+                          {idx === 0 ? 'Depuis votre position' : `Depuis étape ${idx}`} — {legInfo.duration} ({legInfo.distance})
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        {format(new Date(m.date_visite), "EEE dd MMM", { locale: fr })}{' '}
+                        {m.date_visite_fin
+                          ? `de ${format(new Date(m.date_visite), "HH:mm")} à ${format(new Date(m.date_visite_fin), "HH:mm")}`
+                          : `à ${format(new Date(m.date_visite), "HH:mm")}`
+                        }
+                      </div>
+                      {!optimizedRoute && (
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(m.adresse)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <Navigation className="h-3 w-3" />
+                          Itinéraire
+                        </a>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })
             )}
           </div>
 
