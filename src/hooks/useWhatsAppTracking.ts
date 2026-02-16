@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { trackTikTokEvent } from '@/lib/tiktok-pixel';
+import { trackGoogleAdsEvent } from '@/lib/google-ads';
 
 const ELFSIGHT_WIDGET_SELECTOR = '.elfsight-app-015a7ee8-3cf5-416f-a607-eb9d4a46e860';
 const DEBOUNCE_MS = 3000;
@@ -31,7 +32,10 @@ export function useWhatsAppTracking() {
         // Fire TikTok Pixel Contact event
         trackTikTokEvent('Contact');
 
-        console.log('[WhatsApp Tracking] Contact event fired (Meta + TikTok)');
+        // Fire Google Ads event
+        trackGoogleAdsEvent('contact');
+
+        console.log('[WhatsApp Tracking] Contact event fired (Meta + TikTok + Google Ads)');
       }, 50);
     };
 

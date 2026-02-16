@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Cookie } from 'lucide-react';
 import { grantTikTokConsent } from '@/lib/tiktok-pixel';
+import { grantGoogleAdsConsent } from '@/lib/google-ads';
 
 const COOKIE_CONSENT_KEY = 'cookie-consent';
 
@@ -22,6 +23,8 @@ export function CookieConsentBanner() {
     setShowBanner(false);
     // Grant TikTok Pixel consent (pixel is already loaded with holdConsent)
     grantTikTokConsent();
+    // Grant Google Ads consent
+    grantGoogleAdsConsent();
   };
 
   const handleDecline = () => {
