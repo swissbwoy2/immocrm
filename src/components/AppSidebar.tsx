@@ -1,4 +1,4 @@
-import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike } from 'lucide-react';
+import { LogOut, LayoutDashboard, Users, FileText, DollarSign, MessageSquare, Send, Home, Clipboard, UserCog, User, Calendar, Settings, Mail, HandHeart, Bell, MailPlus, History, Inbox, CalendarCheck, FileCheck, AlarmClock, UserPlus, Receipt, FileEdit, TrendingUp, Wallet, Link, Handshake, FilePen, Target, Contact, Brain, Building2, Heart, HardHat, Globe, Megaphone, Tag, Bike, MapPin } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -79,6 +79,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Biens en vente', icon: Building2, path: '/agent/biens-vente', notifKey: null },
         { name: 'Matching AI', icon: Brain, path: '/agent/matching-ai', notifKey: null },
         { name: 'Visites', icon: CalendarCheck, path: '/agent/visites', notifKey: 'new_visit' },
+        { name: 'Carte', icon: MapPin, path: '/agent/carte', notifKey: null },
         { name: 'Candidatures', icon: FileCheck, path: '/agent/candidatures', notifKey: null },
         { name: 'Déposer candidature', icon: Clipboard, path: '/agent/deposer-candidature', notifKey: null },
         { name: 'Transactions', icon: DollarSign, path: '/agent/transactions', notifKey: null },
@@ -103,6 +104,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Offres reçues', icon: Home, path: '/client/offres-recues', notifKey: 'new_offer' },
         { name: 'Annonces', icon: Building2, path: '/client/annonces', notifKey: null },
         { name: 'Mes visites', icon: CalendarCheck, path: '/client/visites', notifKey: 'new_visit' },
+        { name: 'Carte', icon: MapPin, path: '/client/carte', notifKey: null },
         { name: 'Calendrier', icon: Calendar, path: '/client/calendrier', notifKey: 'visit_combined' },
         { name: 'Visites déléguées', icon: HandHeart, path: '/client/visites-deleguees', notifKey: null },
         { name: 'Mes candidatures', icon: Clipboard, path: '/client/mes-candidatures', notifKey: null },
