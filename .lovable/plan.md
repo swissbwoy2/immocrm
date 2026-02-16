@@ -1,93 +1,70 @@
 
 
-# Carte des visites pour Agents et Clients
+# Integration Google Ads (gtag.js) pour logisorama.ch
 
 ## Objectif
-Ajouter une page "Carte" avec optimisation de trajet intelligent pour les agents et les clients, identique a celle des coursiers.
-
-## Approche technique
-
-Plutot que de dupliquer le code de `src/pages/coursier/Carte.tsx` trois fois, on va extraire la logique commune dans un composant reutilisable, puis creer des pages legeres pour chaque role.
+Installer la balise Google Ads (ID: AW-10985038602) avec le meme systeme de consentement cookies RGPD que les pixels Meta et TikTok existants.
 
 ## Modifications
 
-### 1. Nouveau composant : `src/components/maps/VisitesMapView.tsx`
+### 1. `index.html` - Ajouter le script gtag.js
+- Ajouter le script async `https://www.googletagmanager.com/gtag/js?id=AW-10985038602` dans le `<head>`
+- Initialiser `window.dataLayer` et la fonction `gtag()`
+- Configurer avec `gtag('config', 'AW-10985038602')` mais avec le **consent mode** actif par defaut (pas de collecte avant acceptation cookies)
 
-Composant reutilisable qui contient toute la logique de la carte des coursiers :
-- Carte Google Maps avec marqueurs
-- Bouton "Optimiser mon trajet" avec geolocalisation
-- DirectionsRenderer pour le trace de l'itineraire
-- Liste laterale reordonnee avec temps de trajet
-- Bouton "Lancer l'itineraire" vers Google Maps
+### 2. `src/lib/google-ads.ts` - Nouveau fichier utilitaire
+- Fonctions utilitaires pour Google Ads, meme pattern que `tiktok-pixel.ts`
+- `initGoogleAds()` : initialise gtag avec consent mode (denied par defaut)
+- `grantGoogleAdsConsent()` : active la collecte apres acceptation cookies
+- `trackGoogleAdsConversion(conversionId, params)` : declencher des evenements de conversion
+- `trackGoogleAdsEvent(eventName, params)` : tracking d'evenements generiques
 
-**Props** :
-- `missions` : tableau de visites (avec `adresse`, `date_visite`, `date_visite_fin`, `statut_coursier` ou `statut`)
-- `loading` : boolean
-- `title` : titre de la page (ex: "Carte des visites")
-- `subtitle` : sous-titre
-- `statusField` : champ a utiliser pour le statut (pour adapter les badges)
-- `statusConfig` : mapping statut -> couleur/label pour les badges
+### 3. `src/components/CookieConsentBanner.tsx` - Modifier
+- Ajouter l'appel a `grantGoogleAdsConsent()` dans `handleAccept()` (a cote de `grantTikTokConsent()`)
 
-### 2. Nouvelle page : `src/pages/agent/Carte.tsx`
+### 4. `index.html` - Google Consent Mode v2
+- Configurer le consent mode v2 avant le chargement de gtag :
+  ```
+  gtag('consent', 'default', {
+    'ad_storage': 'denied',
+    'ad_user_data': 'denied',
+    'ad_personalization': 'denied',
+    'analytics_storage': 'denied'
+  });
+  ```
+- Quand l'utilisateur accepte les cookies, on met a jour avec `gtag('consent', 'update', { ... 'granted' })`
 
-- Charge les visites de l'agent via `agents.id` -> `visites.agent_id`
-- Filtre les visites a venir (futures)
-- Filtres : Toutes / Aujourd'hui / Cette semaine
-- Passe les donnees au composant `VisitesMapView`
+### 5. `src/hooks/useWhatsAppTracking.ts` - Modifier
+- Ajouter le tracking Google Ads Contact/conversion quand le widget WhatsApp est clique (a cote des evenements Meta et TikTok existants)
 
-### 3. Nouvelle page : `src/pages/client/Carte.tsx`
+## Schema du flux de consentement
 
-- Charge les visites du client via `clients.id` -> `visites.client_id`
-- Filtre les visites a venir
-- Filtres : Toutes / Aujourd'hui / Cette semaine
-- Passe les donnees au composant `VisitesMapView`
-
-### 4. Refactoring : `src/pages/coursier/Carte.tsx`
-
-- Simplifie pour utiliser le nouveau composant `VisitesMapView` au lieu de dupliquer la logique
-
-### 5. Routes : `src/App.tsx`
-
-Ajouter deux nouvelles routes :
-- `/agent/carte` -> `AgentCarte` (roles: agent, admin)
-- `/client/carte` -> `ClientCarte` (role: client)
-
-### 6. Navigation : `src/components/AppSidebar.tsx`
-
-Ajouter l'entree "Carte" dans les menus :
-- **Agent** : entre "Visites" et "Candidatures", icone `MapPin`
-- **Client** : entre "Mes visites" et "Calendrier", icone `MapPin`
-
-## Requetes de donnees
-
-**Agent** :
 ```text
-1. agents.id WHERE user_id = current_user
-2. visites WHERE agent_id = agent.id AND date_visite >= now()
-   -> recupere adresse, date_visite, date_visite_fin, statut
-```
-
-**Client** :
-```text
-1. clients.id WHERE user_id = current_user
-2. visites WHERE client_id = client.id AND date_visite >= now()
-   -> recupere adresse, date_visite, date_visite_fin, statut
+Page chargee
+    |
+    v
+gtag.js charge avec consent mode "denied"
+    |
+    v
+Cookie banner s'affiche
+    |
+    +-- Accepter --> gtag('consent', 'update', granted)
+    |                grantTikTokConsent()
+    |                grantGoogleAdsConsent()  <-- nouveau
+    |
+    +-- Refuser --> rien ne change, collecte bloquee
 ```
 
 ## Fichiers concernes
 
 | Fichier | Action |
 |---------|--------|
-| `src/components/maps/VisitesMapView.tsx` | Creer - Composant reutilisable carte + optimisation |
-| `src/pages/agent/Carte.tsx` | Creer - Page carte agent |
-| `src/pages/client/Carte.tsx` | Creer - Page carte client |
-| `src/pages/coursier/Carte.tsx` | Modifier - Refactoring pour utiliser VisitesMapView |
-| `src/App.tsx` | Modifier - Ajout routes /agent/carte et /client/carte |
-| `src/components/AppSidebar.tsx` | Modifier - Ajout entrees menu Carte pour agent et client |
+| `index.html` | Modifier - Ajouter script gtag.js + consent mode v2 |
+| `src/lib/google-ads.ts` | Creer - Fonctions utilitaires Google Ads |
+| `src/components/CookieConsentBanner.tsx` | Modifier - Appeler grantGoogleAdsConsent() |
+| `src/hooks/useWhatsAppTracking.ts` | Modifier - Ajouter tracking Google Ads |
 
-## Resultat pour l'utilisateur
-
-- L'agent voit toutes ses visites planifiees sur une carte et peut optimiser son trajet
-- Le client voit ses prochaines visites sur une carte et peut planifier son deplacement
-- Le bouton "Optimiser mon trajet" fonctionne de la meme maniere : GPS -> calcul optimal -> trace sur la carte -> lancement dans Google Maps
-
+## Resultat
+- La balise Google sera detectee par Google Ads lors du test d'installation
+- Le consent mode v2 assure la conformite RGPD (obligatoire pour l'EEE comme indique dans la capture)
+- Les conversions WhatsApp seront trackees sur les 3 plateformes (Meta, TikTok, Google)
