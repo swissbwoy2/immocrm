@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { 
   Search, Home, Send,
-  Check, X, Clock, FileSignature, Key, Calendar, Plus, Trash2, FileEdit
+  Check, X, Clock, FileSignature, Key, Calendar, Plus, Trash2, FileEdit, Loader2
 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
@@ -941,13 +941,15 @@ const Messagerie = () => {
             .eq('offre_id', offreId)
             .eq('est_deleguee', true)
             .eq('statut', 'planifiee')
-            .single();
+            .maybeSingle();
 
           if (visite) {
             await supabase
               .from('visites')
               .update({ statut: 'confirmee' })
               .eq('id', visite.id);
+
+            await supabase.from('offres').update({ statut: 'visite_confirmee' }).eq('id', offreId);
 
             await supabase.from('messages').insert({
               conversation_id: selectedConv,
@@ -958,6 +960,8 @@ const Messagerie = () => {
             });
 
             toast({ title: "Visite déléguée confirmée" });
+          } else {
+            toast({ title: "Erreur", description: "Visite introuvable ou déjà traitée", variant: "destructive" });
           }
           break;
 
@@ -968,7 +972,7 @@ const Messagerie = () => {
             .eq('offre_id', offreId)
             .eq('est_deleguee', true)
             .eq('statut', 'planifiee')
-            .single();
+            .maybeSingle();
 
           if (visiteRefus) {
             await supabase
@@ -985,6 +989,8 @@ const Messagerie = () => {
             });
 
             toast({ title: "Visite déléguée refusée" });
+          } else {
+            toast({ title: "Erreur", description: "Visite introuvable ou déjà traitée", variant: "destructive" });
           }
           break;
       }
@@ -1136,12 +1142,22 @@ const Messagerie = () => {
   );
 
   // Agent contextual actions
-  const OffreActions = ({ offre, onAction }: { offre: any, onAction: (action: string) => void }) => {
+  const OffreActions = ({ offre, onAction }: { offre: any, onAction: (action: string) => Promise<void> | void }) => {
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
     if (!offre) return null;
 
     const candidature = candidaturesMap[offre.id];
     const statut = candidature?.statut || offre.statut;
     const visites = visitesMap[offre.id] || [];
+
+    const handleAction = async (action: string) => {
+      setActionLoading(action);
+      try {
+        await onAction(action);
+      } finally {
+        setActionLoading(null);
+      }
+    };
 
     // Check for delegated visits status
     const hasPendingDelegatedVisit = offre.statut === 'interesse' && 
@@ -1161,8 +1177,8 @@ const Messagerie = () => {
               <Calendar className="h-3 w-3" /> Visite planifiée
             </p>
           </div>
-          <Button size="sm" onClick={() => onAction('confirmer_visite')} className="w-full">
-            <Check className="h-4 w-4 mr-1" /> Confirmer présence client
+          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('confirmer_visite')} className="w-full">
+            {actionLoading === 'confirmer_visite' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />} Confirmer présence client
           </Button>
         </div>
       );
@@ -1204,11 +1220,11 @@ const Messagerie = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={() => onAction('confirmer_visite_deleguee')} className="flex-1">
-              <Check className="h-4 w-4 mr-1" /> Confirmer visite
+            <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('confirmer_visite_deleguee')} className="flex-1">
+              {actionLoading === 'confirmer_visite_deleguee' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />} Confirmer visite
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onAction('refuser_visite_deleguee')} className="flex-1">
-              <X className="h-4 w-4 mr-1" /> Indisponible
+            <Button size="sm" variant="outline" disabled={!!actionLoading} onClick={() => handleAction('refuser_visite_deleguee')} className="flex-1">
+              {actionLoading === 'refuser_visite_deleguee' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <X className="h-4 w-4 mr-1" />} Indisponible
             </Button>
           </div>
         </div>
@@ -1225,11 +1241,11 @@ const Messagerie = () => {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={() => onAction('accepter_candidature')} className="flex-1">
-              <Check className="h-4 w-4 mr-1" /> Accepter
+            <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('accepter_candidature')} className="flex-1">
+              {actionLoading === 'accepter_candidature' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />} Accepter
             </Button>
-            <Button size="sm" variant="destructive" onClick={() => onAction('refuser_candidature')} className="flex-1">
-              <X className="h-4 w-4 mr-1" /> Refuser
+            <Button size="sm" variant="destructive" disabled={!!actionLoading} onClick={() => handleAction('refuser_candidature')} className="flex-1">
+              {actionLoading === 'refuser_candidature' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <X className="h-4 w-4 mr-1" />} Refuser
             </Button>
           </div>
         </div>
@@ -1245,8 +1261,8 @@ const Messagerie = () => {
               <Check className="h-3 w-3" /> Client confirme vouloir ce bien
             </p>
           </div>
-          <Button size="sm" onClick={() => onAction('valider_regie')} className="w-full">
-            <Check className="h-4 w-4 mr-1" /> Valider auprès de la régie
+          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('valider_regie')} className="w-full">
+            {actionLoading === 'valider_regie' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />} Valider auprès de la régie
           </Button>
         </div>
       );
@@ -1261,8 +1277,8 @@ const Messagerie = () => {
               <Clock className="h-3 w-3" /> En attente du bail de la régie
             </p>
           </div>
-          <Button size="sm" onClick={() => onAction('bail_recu')} className="w-full">
-            <FileSignature className="h-4 w-4 mr-1" /> Bail reçu - Proposer dates signature
+          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('bail_recu')} className="w-full">
+            {actionLoading === 'bail_recu' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileSignature className="h-4 w-4 mr-1" />} Bail reçu - Proposer dates signature
           </Button>
         </div>
       );
@@ -1282,8 +1298,8 @@ const Messagerie = () => {
               )}
             </p>
           </div>
-          <Button size="sm" onClick={() => onAction('confirmer_signature')} className="w-full">
-            <Check className="h-4 w-4 mr-1" /> Confirmer signature effectuée
+          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('confirmer_signature')} className="w-full">
+            {actionLoading === 'confirmer_signature' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Check className="h-4 w-4 mr-1" />} Confirmer signature effectuée
           </Button>
         </div>
       );
@@ -1298,8 +1314,8 @@ const Messagerie = () => {
               <Check className="h-3 w-3" /> Bail signé
             </p>
           </div>
-          <Button size="sm" onClick={() => onAction('fixer_etat_lieux')} className="w-full">
-            <Key className="h-4 w-4 mr-1" /> Fixer date état des lieux
+          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('fixer_etat_lieux')} className="w-full">
+            {actionLoading === 'fixer_etat_lieux' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Key className="h-4 w-4 mr-1" />} Fixer date état des lieux
           </Button>
         </div>
       );
@@ -1320,8 +1336,8 @@ const Messagerie = () => {
               )}
             </p>
           </div>
-          <Button size="sm" onClick={() => onAction('remettre_cles')} className="w-full">
-            <Key className="h-4 w-4 mr-1" /> Clés remises - Conclure
+          <Button size="sm" disabled={!!actionLoading} onClick={() => handleAction('remettre_cles')} className="w-full">
+            {actionLoading === 'remettre_cles' ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Key className="h-4 w-4 mr-1" />} Clés remises - Conclure
           </Button>
         </div>
       );
