@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { EmailConfigurationDialog } from '@/components/EmailConfigurationDialog';
 import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
+import { GoogleCalendarConnect } from '@/components/settings/GoogleCalendarConnect';
 
 export default function AgentParametres() {
   const { user } = useAuth();
@@ -311,6 +312,9 @@ export default function AgentParametres() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Google Agenda */}
+          <GoogleCalendarConnect />
 
           {/* Changer le mot de passe */}
           <ChangePasswordCard />

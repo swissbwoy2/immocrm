@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { EmailConfigurationDialog } from '@/components/EmailConfigurationDialog';
 import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 import { AdminDefaultGoalsManager } from '@/components/stats/AdminDefaultGoalsManager';
+import { GoogleCalendarConnect } from '@/components/settings/GoogleCalendarConnect';
 
 export default function AdminParametres() {
   const { user } = useAuth();
@@ -379,6 +380,9 @@ export default function AdminParametres() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Google Agenda */}
+          <GoogleCalendarConnect />
 
           {/* Changer le mot de passe */}
           <ChangePasswordCard />

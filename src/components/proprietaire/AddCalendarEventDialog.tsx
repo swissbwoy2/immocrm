@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Calendar } from 'lucide-react';
 import { format } from 'date-fns';
+import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync';
 
 interface AddCalendarEventDialogProps {
   open: boolean;
@@ -37,6 +38,7 @@ const PRIORITIES = [
 
 export function AddCalendarEventDialog({ open, onClose, onSuccess, initialDate }: AddCalendarEventDialogProps) {
   const { user } = useAuth();
+  const { syncEvent } = useGoogleCalendarSync();
   const [loading, setLoading] = useState(false);
   
   // Form state
@@ -112,6 +114,15 @@ export function AddCalendarEventDialog({ open, onClose, onSuccess, initialDate }
       });
 
       if (error) throw error;
+
+      // Sync to Google Calendar (non-blocking, silent fail)
+      syncEvent(user.id, {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        start: fullEventDate,
+        end: fullEndDate || undefined,
+        allDay,
+      });
 
       toast.success('Événement créé avec succès');
       onSuccess();
