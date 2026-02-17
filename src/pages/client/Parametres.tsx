@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 import { DeleteAccountDialog } from '@/components/DeleteAccountDialog';
+import { GoogleCalendarConnect } from '@/components/settings/GoogleCalendarConnect';
 
 export default function ClientParametres() {
   const { user } = useAuth();
@@ -331,6 +332,9 @@ export default function ClientParametres() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Google Agenda */}
+          <GoogleCalendarConnect />
 
           {/* Changer le mot de passe */}
           <ChangePasswordCard />

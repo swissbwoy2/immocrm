@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Settings, User, Bell, Shield, CreditCard, Trash2 } from 'lucide-react';
+import { GoogleCalendarConnect } from '@/components/settings/GoogleCalendarConnect';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -228,6 +229,9 @@ export default function Parametres() {
         </TabsContent>
 
         <TabsContent value="securite" className="space-y-6">
+          {/* Google Agenda */}
+          <GoogleCalendarConnect />
+
           <ChangePasswordCard />
 
           {/* Supprimer le compte */}
