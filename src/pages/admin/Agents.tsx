@@ -47,26 +47,43 @@ const Agents = () => {
 
   const fetchAgents = async () => {
     try {
-      // Récupérer les agents avec le count réel des clients
+      // Récupérer les agents
       const { data: agentsData, error } = await supabase
         .from('agents')
-        .select('id, user_id, statut, clients(count)');
+        .select('id, user_id, statut');
 
       if (error) throw error;
 
       const userIds = agentsData?.map(a => a.user_id) || [];
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, nom, prenom, email, telephone, actif, avatar_url')
-        .in('id', userIds);
+      const agentIds = agentsData?.map(a => a.id) || [];
 
-      if (profilesError) throw profilesError;
+      // Récupérer les profils et le count des clients via client_agents (source de vérité)
+      const [profilesResult, clientCountsResult] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, nom, prenom, email, telephone, actif, avatar_url')
+          .in('id', userIds),
+        supabase
+          .from('client_agents')
+          .select('agent_id, clients!inner(statut)')
+          .in('agent_id', agentIds)
+          .neq('clients.statut', 'reloge'),
+      ]);
+
+      if (profilesResult.error) throw profilesResult.error;
+
+      // Construire un map agent_id -> count
+      const countByAgent: Record<string, number> = {};
+      if (clientCountsResult.data) {
+        for (const row of clientCountsResult.data) {
+          countByAgent[row.agent_id] = (countByAgent[row.agent_id] || 0) + 1;
+        }
+      }
 
       const mergedData = agentsData?.map(agent => ({
         ...agent,
-        // Extraire le count réel depuis la requête agrégée
-        clients_count: (agent.clients as any)?.[0]?.count || 0,
-        profiles: profilesData?.find(p => p.id === agent.user_id) || {
+        clients_count: countByAgent[agent.id] || 0,
+        profiles: profilesResult.data?.find(p => p.id === agent.user_id) || {
           nom: '',
           prenom: '',
           email: '',
