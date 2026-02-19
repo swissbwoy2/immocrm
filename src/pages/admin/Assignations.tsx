@@ -306,6 +306,12 @@ export default function Assignations() {
 
       if (error) throw error;
 
+      // Also clear legacy agent_id on clients table
+      await supabase
+        .from('clients')
+        .update({ agent_id: null })
+        .eq('id', clientId);
+
       // Decrement each agent's count
       for (const assignment of currentAssignments) {
         await (supabase.rpc as any)('decrement_agent_clients', { agent_uuid: assignment.agent_id });
@@ -383,7 +389,7 @@ export default function Assignations() {
         throw new Error('Erreur lors de la mise à jour');
       }
 
-      // Sync clients.commission_split with primary agent
+      // Sync clients.agent_id with primary agent (or clear it if no primary)
       const primaryAgent = editAgentAssignments.find(a => a.is_primary);
       if (primaryAgent) {
         await supabase
@@ -392,6 +398,12 @@ export default function Assignations() {
             agent_id: primaryAgent.agent_id,
             commission_split: primaryAgent.commission_split 
           })
+          .eq('id', editingClientId);
+      } else {
+        // No primary agent — clear legacy agent_id
+        await supabase
+          .from('clients')
+          .update({ agent_id: null })
           .eq('id', editingClientId);
       }
 
