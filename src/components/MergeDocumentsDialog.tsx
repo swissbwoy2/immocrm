@@ -179,10 +179,11 @@ export function MergeDocumentsDialog({
       } catch (error) {
         console.error('Error merging documents:', error);
         const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+        const isMissingFiles = errorMessage.includes('introuvable') || errorMessage.includes('stockage');
         toast({
-          title: 'Erreur de création du dossier',
-          description: errorMessage.includes('Aucun document') 
-            ? 'Aucun document valide n\'a pu être traité. Vérifiez que les fichiers ne sont pas corrompus ou protégés.'
+          title: isMissingFiles ? '⚠️ Fichiers manquants dans le stockage' : 'Erreur de création du dossier',
+          description: isMissingFiles
+            ? errorMessage.substring(0, 400)
             : `Impossible de créer le dossier: ${errorMessage.substring(0, 100)}`,
           variant: 'destructive',
         });
@@ -220,10 +221,11 @@ export function MergeDocumentsDialog({
       } catch (error) {
         console.error('Error merging documents:', error);
         const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
+        const isMissingFiles = errorMessage.includes('introuvable') || errorMessage.includes('stockage');
         toast({
-          title: 'Erreur de création du dossier',
-          description: errorMessage.includes('Aucun document') 
-            ? 'Aucun document valide n\'a pu être traité. Vérifiez que les fichiers ne sont pas corrompus ou protégés.'
+          title: isMissingFiles ? '⚠️ Fichiers manquants dans le stockage' : 'Erreur de création du dossier',
+          description: isMissingFiles
+            ? errorMessage.substring(0, 400)
             : `Impossible de créer le dossier: ${errorMessage.substring(0, 100)}`,
           variant: 'destructive',
         });
