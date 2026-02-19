@@ -1,72 +1,65 @@
 
-# Problème : L'admin voit 2 clients pour Carina au lieu de 6
+# Problème : Impossible de prévisualiser/télécharger les documents depuis le profil agent
 
-## Cause identifiée
+## Cause racine identifiée
 
-Il y a **2 problèmes combinés** :
+Il existe **deux types de chemins de stockage** pour les documents clients, et les politiques RLS du bucket `client-documents` ne couvrent qu'un seul correctement pour les agents :
 
-### 1. Désynchronisation de données dans la base
-
-4 clients de Carina ont leur `agent_id` qui pointe encore vers **Christ Ramazani** dans la table `clients`, alors qu'ils sont correctement liés à Carina dans `client_agents` :
-
-| Client | `clients.agent_id` | `client_agents` |
+| Chemin de stockage | Exemple | Politique RLS agent |
 |---|---|---|
-| Guelda IRAKOZE | ✅ Carina | ✅ Carina |
-| Léa Davoudi | ✅ Carina | ✅ Carina |
-| Voncicia Romela Ngoma | ❌ Christ Ramazani | ✅ Carina |
-| Bintou Ndiaye | ❌ Christ Ramazani | ✅ Carina |
-| Formoso Ualo | ❌ Christ Ramazani | ✅ Carina |
-| Alicem Demir | ❌ Christ Ramazani | ✅ Carina |
+| `mandat/{timestamp}_type.pdf` | `mandat/1771244445349_poursuites.pdf` | ✅ Vérifie `client_agents` (junction table) |
+| `{user_id}/{timestamp}_nom.pdf` | `98da5cb0-.../1769543391775.pdf` | ❌ Vérifie seulement `clients.agent_id` (colonne directe) |
 
-### 2. La requête dans Agents.tsx utilise la mauvaise source
+Les documents dans le dossier `{user_id}/` — qui sont les documents uploadés directement par l'agent ou via l'interface admin — ne sont **pas accessibles** aux agents co-assignés (liés via `client_agents`) car les politiques de stockage pour ce pattern ignorent la table de liaison `client_agents`.
 
-```typescript
-// PROBLÈME : compte via clients.agent_id (colonne directe)
-.select('id, user_id, statut, clients(count)')
-
-// CORRECT : devrait compter via client_agents (table de liaison)
-```
-
-La page admin Agents.tsx compte les clients via la relation directe `clients.agent_id`, ce qui exclut tous les clients co-assignés ou réassignés via `client_agents`.
-
-## Solution en 2 étapes
-
-### Étape 1 : Corriger les données (mise à jour SQL)
-
-Mettre à jour `clients.agent_id` pour les 4 clients désynchronisés afin qu'ils pointent vers Carina. La requête vérifée en base confirme les IDs :
+## Politiques RLS actuelles (défaillantes pour les agents co-assignés)
 
 ```sql
-UPDATE clients
-SET agent_id = '67f3a2c5-c890-424f-8d3e-bdf2cf470d78'  -- Carina Tavares
-WHERE id IN (
-  'bde09837-19a7-4bf3-8d57-271b1539dd5a',  -- Voncicia Romela Ngoma
-  '81741e25-b8b1-4269-bd4f-b293d7a65117',  -- Bintou Ndiaye
-  '18f30241-deb0-433b-ba94-67366875df05',  -- Formoso Ualo
-  'd41de71b-c122-4f89-9bf4-021ba4a168aa'   -- Alicem Demir
+-- ❌ Vérifie uniquement c.agent_id (colonne directe), pas client_agents
+"Agents can view their clients documents":
+  folder[1] as uuid IN (
+    SELECT c.user_id FROM clients c JOIN agents a ON a.id = c.agent_id WHERE a.user_id = auth.uid()
+  )
+
+"Agents peuvent voir documents de leurs clients":
+  EXISTS (
+    SELECT 1 FROM clients c JOIN agents a ON a.id = c.agent_id
+    WHERE c.user_id = folder[1] AND a.user_id = auth.uid()
+  )
+```
+
+## Solution : Ajouter une politique RLS Storage pour les agents co-assignés
+
+Créer une **nouvelle politique SELECT** sur `storage.objects` qui autorise les agents à lire les fichiers dans les dossiers `{user_id}/` de leurs clients co-assignés via `client_agents` :
+
+```sql
+CREATE POLICY "Agents co-assignés peuvent voir documents clients (user_id folder)"
+ON storage.objects FOR SELECT
+USING (
+  bucket_id = 'client-documents'
+  AND (storage.foldername(name))[1] ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  AND EXISTS (
+    SELECT 1 FROM clients c
+    JOIN client_agents ca ON ca.client_id = c.id
+    JOIN agents a ON a.id = ca.agent_id
+    WHERE c.user_id::text = (storage.foldername(name))[1]
+    AND a.user_id = auth.uid()
+  )
 );
 ```
 
-### Étape 2 : Corriger la requête dans Agents.tsx
-
-Modifier `fetchAgents()` pour compter les clients via `client_agents` (source de vérité) plutôt que via `clients(count)` (colonne directe souvent désynchronisée). Cela rendra le comptage robuste pour tous les cas futurs (co-assignation, réassignation, etc.).
-
-La nouvelle approche : récupérer les agents, puis faire une requête séparée sur `client_agents` pour compter les clients actifs par agent.
-
-```typescript
-// Nouvelle requête : count via client_agents + filtre statut != reloge
-const { data: clientCounts } = await supabase
-  .from('client_agents')
-  .select('agent_id, clients!inner(statut)')
-  .neq('clients.statut', 'reloge');
-```
+Cette politique :
+- Cible uniquement les fichiers dont le premier segment du chemin est un UUID (dossier `user_id/`)
+- Vérifie que l'agent courant est lié au client via `client_agents`
+- Couvre donc tous les agents assignés (via colonne directe ET via junction table)
 
 ## Fichiers impactés
 
-| Action | Fichier |
+| Action | Détail |
 |---|---|
-| Mise à jour SQL des 4 clients | Migration SQL (data fix) |
-| Correction de la requête | `src/pages/admin/Agents.tsx` |
+| Migration SQL | Ajouter la politique RLS Storage pour agents co-assignés sur dossiers `{user_id}/` |
+| Aucun fichier frontend | Le code `handlePreview` / `handleDownload` de `ClientDetail.tsx` est correct |
 
 ## Résultat attendu
 
-Après correction, l'admin verra **6 clients** pour Carina dans la liste des agents, cohérent avec le tableau de bord de Carina.
+Après la migration, Carina (et tout agent co-assigné) pourra prévisualiser et télécharger **tous les documents** de ses clients, qu'ils soient stockés dans `mandat/` ou dans `{user_id}/`.
