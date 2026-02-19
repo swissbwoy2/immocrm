@@ -1,5 +1,6 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { supabase } from '@/integrations/supabase/client';
+import { getStoragePath } from '@/lib/documentUtils';
 
 interface Document {
   id: string;
@@ -27,29 +28,25 @@ export async function downloadFileAsBlob(doc: Document): Promise<Blob | null> {
   try {
     // Si l'URL est une data URL (base64)
     if (doc.url.startsWith('data:')) {
-      // Vérifier la taille du base64 (éviter les fichiers trop volumineux qui peuvent crasher)
       const base64Data = doc.url.split(',')[1];
       if (!base64Data) {
         console.warn(`Document "${doc.nom}": URL base64 invalide`);
         return null;
       }
-      
-      // Limite de 50MB pour les base64 (environ 67MB encodé)
+
       const maxBase64Length = 67 * 1024 * 1024;
       if (base64Data.length > maxBase64Length) {
-        console.warn(`Document "${doc.nom}": fichier base64 trop volumineux (${(base64Data.length / 1024 / 1024).toFixed(1)} MB encodé)`);
+        console.warn(`Document "${doc.nom}": fichier base64 trop volumineux`);
         return null;
       }
-      
+
       try {
         const binaryString = atob(base64Data);
         const len = binaryString.length;
         const bytes = new Uint8Array(len);
-        
         for (let i = 0; i < len; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
-        
         return new Blob([bytes], { type: doc.type });
       } catch (decodeError) {
         console.error(`Document "${doc.nom}": Erreur de décodage base64:`, decodeError);
@@ -57,50 +54,30 @@ export async function downloadFileAsBlob(doc: Document): Promise<Blob | null> {
       }
     }
 
-    // Si c'est une URL complète (http/https), extraire le chemin relatif et utiliser le SDK Supabase
-    if (doc.url.startsWith('http')) {
-      try {
-        let storagePath = doc.url;
-        if (doc.url.includes('/client-documents/')) {
-          storagePath = doc.url.split('/client-documents/')[1].split('?')[0];
-        } else if (doc.url.includes('/storage/v1/object/')) {
-          const match = doc.url.match(/\/storage\/v1\/object\/(?:public|sign)\/[^/]+\/([^?]+)/);
-          if (match) storagePath = match[1];
-        }
+    // Pour toutes les autres URLs (complètes http ou chemin relatif),
+    // utiliser createSignedUrl + fetch (comme handlePreview/handleDownload)
+    const storagePath = getStoragePath(doc.url);
 
-        const { data, error } = await supabase.storage
-          .from('client-documents')
-          .download(storagePath);
-
-        if (error) {
-          console.warn(`Document "${doc.nom}": SDK download failed, trying signed URL:`, error);
-          const { data: signedData } = await supabase.storage
-            .from('client-documents')
-            .createSignedUrl(storagePath, 60);
-          if (signedData?.signedUrl) {
-            const response = await fetch(signedData.signedUrl);
-            if (response.ok) return await response.blob();
-          }
-          console.error(`Document "${doc.nom}": Impossible de télécharger via SDK ni URL signée`);
-          return null;
-        }
-        return data;
-      } catch (fetchError) {
-        console.error(`Document "${doc.nom}": Erreur de téléchargement HTTP:`, fetchError);
-        return null;
-      }
-    }
-
-    // Sinon télécharger depuis le storage avec chemin relatif
-    const { data, error } = await supabase.storage
-      .from('client-documents')
-      .download(doc.url);
-
-    if (error) {
-      console.error(`Document "${doc.nom}": Erreur de téléchargement depuis le storage:`, error);
+    if (!storagePath) {
+      console.error(`Document "${doc.nom}": chemin de stockage vide`);
       return null;
     }
-    return data;
+
+    const { data: signedData, error: signedError } = await supabase.storage
+      .from('client-documents')
+      .createSignedUrl(storagePath, 300);
+
+    if (signedError || !signedData?.signedUrl) {
+      console.error(`Document "${doc.nom}": Impossible de créer l'URL signée:`, signedError);
+      return null;
+    }
+
+    const response = await fetch(signedData.signedUrl);
+    if (!response.ok) {
+      console.error(`Document "${doc.nom}": Fetch échoué (${response.status})`);
+      return null;
+    }
+    return await response.blob();
   } catch (error) {
     console.error(`Error downloading file ${doc.nom}:`, error);
     return null;
