@@ -1,65 +1,83 @@
 
-# Problème : Impossible de prévisualiser/télécharger les documents depuis le profil agent
+# Problème : Création du dossier complet échoue — Documents non téléchargeables
 
 ## Cause racine identifiée
 
-Il existe **deux types de chemins de stockage** pour les documents clients, et les politiques RLS du bucket `client-documents` ne couvrent qu'un seul correctement pour les agents :
+La base de données contient deux formats d'URL pour les documents :
 
-| Chemin de stockage | Exemple | Politique RLS agent |
+| Format | Exemple | Count |
 |---|---|---|
-| `mandat/{timestamp}_type.pdf` | `mandat/1771244445349_poursuites.pdf` | ✅ Vérifie `client_agents` (junction table) |
-| `{user_id}/{timestamp}_nom.pdf` | `98da5cb0-.../1769543391775.pdf` | ❌ Vérifie seulement `clients.agent_id` (colonne directe) |
+| URL complète (http) | `https://ydljsdscdnqrqnjvqela.supabase.co/storage/v1/object/public/client-documents/mandat/1770895042936_identite.jpg` | 210 docs |
+| Chemin relatif | `mandat/1770895042936_identite.jpg` | 413 docs |
+| Data URL (base64) | `data:image/jpeg;base64,...` | 2 docs |
 
-Les documents dans le dossier `{user_id}/` — qui sont les documents uploadés directement par l'agent ou via l'interface admin — ne sont **pas accessibles** aux agents co-assignés (liés via `client_agents`) car les politiques de stockage pour ce pattern ignorent la table de liaison `client_agents`.
+La fonction `downloadFileAsBlob` dans `src/utils/pdfMerger.ts` traite les URLs `http` via un `fetch()` direct. Mais Supabase bloque ce type de requête cross-origin depuis le navigateur (CORS), ce qui fait que **tous les documents stockés avec une URL complète retournent une erreur**, et donc aucun document ne peut être inclus dans le dossier fusionné.
 
-## Politiques RLS actuelles (défaillantes pour les agents co-assignés)
+## Flux du problème
 
-```sql
--- ❌ Vérifie uniquement c.agent_id (colonne directe), pas client_agents
-"Agents can view their clients documents":
-  folder[1] as uuid IN (
-    SELECT c.user_id FROM clients c JOIN agents a ON a.id = c.agent_id WHERE a.user_id = auth.uid()
-  )
-
-"Agents peuvent voir documents de leurs clients":
-  EXISTS (
-    SELECT 1 FROM clients c JOIN agents a ON a.id = c.agent_id
-    WHERE c.user_id = folder[1] AND a.user_id = auth.uid()
-  )
+```text
+downloadFileAsBlob(doc) avec doc.url = "https://ydljsdscdnqrqnjvqela.supabase.co/..."
+  → url.startsWith('http') → true
+  → fetch(doc.url) 
+  → CORS Error / 403 Forbidden
+  → returns null
+  → document skipped
+  → successCount = 0
+  → throw DocumentProcessingError("Aucun document n'a pu être traité")
 ```
 
-## Solution : Ajouter une politique RLS Storage pour les agents co-assignés
+## Solution : Convertir les URLs complètes en chemins relatifs avant téléchargement
 
-Créer une **nouvelle politique SELECT** sur `storage.objects` qui autorise les agents à lire les fichiers dans les dossiers `{user_id}/` de leurs clients co-assignés via `client_agents` :
+Modifier `downloadFileAsBlob` dans `src/utils/pdfMerger.ts` pour **extraire le chemin relatif** depuis les URLs complètes Supabase et utiliser le SDK Supabase pour télécharger, au lieu du `fetch()` direct.
 
-```sql
-CREATE POLICY "Agents co-assignés peuvent voir documents clients (user_id folder)"
-ON storage.objects FOR SELECT
-USING (
-  bucket_id = 'client-documents'
-  AND (storage.foldername(name))[1] ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
-  AND EXISTS (
-    SELECT 1 FROM clients c
-    JOIN client_agents ca ON ca.client_id = c.id
-    JOIN agents a ON a.id = ca.agent_id
-    WHERE c.user_id::text = (storage.foldername(name))[1]
-    AND a.user_id = auth.uid()
-  )
-);
+La logique `getStoragePath()` existe déjà dans `src/lib/documentUtils.ts` — il faut l'utiliser (ou la dupliquer) dans `pdfMerger.ts`.
+
+### Modification de `downloadFileAsBlob`
+
+```typescript
+// AVANT (problème)
+if (doc.url.startsWith('http')) {
+  const response = await fetch(doc.url);  // ❌ CORS / 403
+  return await response.blob();
+}
+
+// APRÈS (correction)
+if (doc.url.startsWith('http')) {
+  // Extraire le chemin relatif depuis l'URL Supabase
+  let storagePath = doc.url;
+  if (doc.url.includes('/client-documents/')) {
+    storagePath = doc.url.split('/client-documents/')[1].split('?')[0];
+  } else if (doc.url.includes('/storage/v1/object/')) {
+    const match = doc.url.match(/\/storage\/v1\/object\/(?:public|sign)\/[^/]+\/([^?]+)/);
+    if (match) storagePath = match[1];
+  }
+  
+  // Utiliser le SDK Supabase pour télécharger
+  const { data, error } = await supabase.storage
+    .from('client-documents')
+    .download(storagePath);
+  
+  if (error) {
+    // Fallback: essayer une URL signée
+    const { data: signedData } = await supabase.storage
+      .from('client-documents')
+      .createSignedUrl(storagePath, 60);
+    if (signedData?.signedUrl) {
+      const response = await fetch(signedData.signedUrl);
+      if (response.ok) return await response.blob();
+    }
+    return null;
+  }
+  return data;
+}
 ```
 
-Cette politique :
-- Cible uniquement les fichiers dont le premier segment du chemin est un UUID (dossier `user_id/`)
-- Vérifie que l'agent courant est lié au client via `client_agents`
-- Couvre donc tous les agents assignés (via colonne directe ET via junction table)
+## Fichier impacté
 
-## Fichiers impactés
-
-| Action | Détail |
+| Fichier | Changement |
 |---|---|
-| Migration SQL | Ajouter la politique RLS Storage pour agents co-assignés sur dossiers `{user_id}/` |
-| Aucun fichier frontend | Le code `handlePreview` / `handleDownload` de `ClientDetail.tsx` est correct |
+| `src/utils/pdfMerger.ts` | Modifier `downloadFileAsBlob` pour extraire le chemin relatif des URLs complètes Supabase et utiliser le SDK au lieu de `fetch()` direct |
 
 ## Résultat attendu
 
-Après la migration, Carina (et tout agent co-assigné) pourra prévisualiser et télécharger **tous les documents** de ses clients, qu'ils soient stockés dans `mandat/` ou dans `{user_id}/`.
+Après correction, les 5 documents JPG d'Alicem Demir (et de tous les clients dont les URLs sont complètes) seront correctement téléchargés via le SDK Supabase, et le dossier complet sera créé avec succès.
