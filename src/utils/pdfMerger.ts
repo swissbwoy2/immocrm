@@ -57,15 +57,34 @@ export async function downloadFileAsBlob(doc: Document): Promise<Blob | null> {
       }
     }
 
-    // Si c'est une URL complète (http/https), télécharger via fetch
+    // Si c'est une URL complète (http/https), extraire le chemin relatif et utiliser le SDK Supabase
     if (doc.url.startsWith('http')) {
       try {
-        const response = await fetch(doc.url);
-        if (!response.ok) {
-          console.error(`Document "${doc.nom}": Erreur HTTP ${response.status}`);
+        let storagePath = doc.url;
+        if (doc.url.includes('/client-documents/')) {
+          storagePath = doc.url.split('/client-documents/')[1].split('?')[0];
+        } else if (doc.url.includes('/storage/v1/object/')) {
+          const match = doc.url.match(/\/storage\/v1\/object\/(?:public|sign)\/[^/]+\/([^?]+)/);
+          if (match) storagePath = match[1];
+        }
+
+        const { data, error } = await supabase.storage
+          .from('client-documents')
+          .download(storagePath);
+
+        if (error) {
+          console.warn(`Document "${doc.nom}": SDK download failed, trying signed URL:`, error);
+          const { data: signedData } = await supabase.storage
+            .from('client-documents')
+            .createSignedUrl(storagePath, 60);
+          if (signedData?.signedUrl) {
+            const response = await fetch(signedData.signedUrl);
+            if (response.ok) return await response.blob();
+          }
+          console.error(`Document "${doc.nom}": Impossible de télécharger via SDK ni URL signée`);
           return null;
         }
-        return await response.blob();
+        return data;
       } catch (fetchError) {
         console.error(`Document "${doc.nom}": Erreur de téléchargement HTTP:`, fetchError);
         return null;
