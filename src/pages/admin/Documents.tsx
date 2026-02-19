@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileText, Download, Eye, User, Calendar, File, Search, Pencil } from 'lucide-react';
+import { FileText, Download, Eye, User, Calendar, File, Search, Pencil, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -23,6 +23,7 @@ export default function AdminDocuments() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [documentToRename, setDocumentToRename] = useState<any>(null);
   const [newDocumentName, setNewDocumentName] = useState('');
+  const [missingFiles, setMissingFiles] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadDocuments();
@@ -93,12 +94,36 @@ export default function AdminDocuments() {
 
       setDocuments(documentsWithProfiles);
       setFilteredDocuments(documentsWithProfiles);
+
+      // Vérifier quels fichiers existent dans le stockage (en background)
+      checkMissingFiles(documentsWithProfiles);
     } catch (error) {
       console.error('Error loading documents:', error);
       toast.error('Erreur lors du chargement des documents');
     } finally {
       setLoading(false);
     }
+  };
+
+  const checkMissingFiles = async (docs: any[]) => {
+    const storageDocs = docs.filter(d => d.url && !d.url.startsWith('data:'));
+    const missing = new Set<string>();
+    // Vérifier par lots de 10 pour ne pas surcharger
+    for (let i = 0; i < Math.min(storageDocs.length, 50); i++) {
+      const doc = storageDocs[i];
+      try {
+        const filePath = getStoragePath(doc.url);
+        const { error } = await supabase.storage
+          .from('client-documents')
+          .createSignedUrl(filePath, 10);
+        if (error) {
+          missing.add(doc.id);
+        }
+      } catch {
+        missing.add(doc.id);
+      }
+    }
+    setMissingFiles(missing);
   };
 
 
@@ -273,9 +298,17 @@ export default function AdminDocuments() {
                                 {doc.nom}
                               </CardTitle>
                             </div>
-                            <Badge variant="outline" className="text-xs">
-                              {doc.type_document || 'Autre'}
-                            </Badge>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="outline" className="text-xs">
+                                {doc.type_document || 'Autre'}
+                              </Badge>
+                              {missingFiles.has(doc.id) && (
+                                <Badge variant="destructive" className="text-xs flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3" />
+                                  Fichier manquant
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </CardHeader>

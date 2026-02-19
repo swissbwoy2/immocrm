@@ -24,64 +24,63 @@ export class DocumentProcessingError extends Error {
   }
 }
 
-export async function downloadFileAsBlob(doc: Document): Promise<Blob | null> {
+// Résultat du téléchargement avec distinction fichier manquant vs autre erreur
+export interface DownloadResult {
+  blob: Blob | null;
+  missing: boolean; // true si le fichier n'existe pas dans le storage
+}
+
+// Vérifier si un fichier existe dans le storage et le télécharger
+export async function downloadFileAsBlobDetailed(doc: Document): Promise<DownloadResult> {
   try {
-    // Si l'URL est une data URL (base64)
     if (doc.url.startsWith('data:')) {
       const base64Data = doc.url.split(',')[1];
-      if (!base64Data) {
-        console.warn(`Document "${doc.nom}": URL base64 invalide`);
-        return null;
-      }
-
-      const maxBase64Length = 67 * 1024 * 1024;
-      if (base64Data.length > maxBase64Length) {
-        console.warn(`Document "${doc.nom}": fichier base64 trop volumineux`);
-        return null;
-      }
-
+      if (!base64Data) return { blob: null, missing: false };
       try {
         const binaryString = atob(base64Data);
         const len = binaryString.length;
         const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        return new Blob([bytes], { type: doc.type });
-      } catch (decodeError) {
-        console.error(`Document "${doc.nom}": Erreur de décodage base64:`, decodeError);
-        return null;
+        for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+        return { blob: new Blob([bytes], { type: doc.type }), missing: false };
+      } catch {
+        return { blob: null, missing: false };
       }
     }
 
-    // Pour toutes les autres URLs (complètes http ou chemin relatif),
-    // utiliser createSignedUrl + fetch (comme handlePreview/handleDownload)
     const storagePath = getStoragePath(doc.url);
-
-    if (!storagePath) {
-      console.error(`Document "${doc.nom}": chemin de stockage vide`);
-      return null;
-    }
+    if (!storagePath) return { blob: null, missing: false };
 
     const { data: signedData, error: signedError } = await supabase.storage
       .from('client-documents')
       .createSignedUrl(storagePath, 300);
 
-    if (signedError || !signedData?.signedUrl) {
-      console.error(`Document "${doc.nom}": Impossible de créer l'URL signée:`, signedError);
-      return null;
+    if (signedError) {
+      // Détecter si c'est une erreur "objet introuvable"
+      const errMsg = signedError.message?.toLowerCase() || '';
+      const isMissing = errMsg.includes('not found') || errMsg.includes('object not found') || errMsg.includes('no such key');
+      console.error(`Document "${doc.nom}" (${storagePath}): signed URL error:`, signedError.message);
+      return { blob: null, missing: isMissing };
     }
+
+    if (!signedData?.signedUrl) return { blob: null, missing: true };
 
     const response = await fetch(signedData.signedUrl);
     if (!response.ok) {
-      console.error(`Document "${doc.nom}": Fetch échoué (${response.status})`);
-      return null;
+      const isMissing = response.status === 404;
+      console.error(`Document "${doc.nom}": fetch ${response.status}`);
+      return { blob: null, missing: isMissing };
     }
-    return await response.blob();
+
+    return { blob: await response.blob(), missing: false };
   } catch (error) {
     console.error(`Error downloading file ${doc.nom}:`, error);
-    return null;
+    return { blob: null, missing: false };
   }
+}
+
+export async function downloadFileAsBlob(doc: Document): Promise<Blob | null> {
+  const result = await downloadFileAsBlobDetailed(doc);
+  return result.blob;
 }
 
 export function isSupported(doc: Document): boolean {
@@ -281,6 +280,7 @@ export async function createCoverPage(
 export interface MergeResult {
   blob: Blob;
   skippedDocuments: { name: string; reason: string }[];
+  missingDocuments: { name: string; path: string }[];
   successCount: number;
 }
 
@@ -291,6 +291,7 @@ export async function mergeDocuments(
   const mergedPdf = await PDFDocument.create();
   const total = documents.length;
   const skippedDocuments: { name: string; reason: string }[] = [];
+  const missingDocuments: { name: string; path: string }[] = [];
   let successCount = 0;
   
   for (let i = 0; i < documents.length; i++) {
@@ -300,54 +301,59 @@ export async function mergeDocuments(
     
     if (!isSupported(doc)) {
       skippedDocuments.push({ name: doc.nom, reason: 'Format non supporté' });
-      console.warn(`Skipping unsupported document: ${doc.nom}`);
       continue;
     }
     
-    const blob = await downloadFileAsBlob(doc);
-    if (!blob) {
-      skippedDocuments.push({ name: doc.nom, reason: 'Impossible de télécharger le fichier' });
-      console.warn(`Failed to download: ${doc.nom}`);
+    const result = await downloadFileAsBlobDetailed(doc);
+    if (!result.blob) {
+      if (result.missing) {
+        const path = getStoragePath(doc.url);
+        missingDocuments.push({ name: doc.nom, path });
+        skippedDocuments.push({ name: doc.nom, reason: '⚠️ Fichier introuvable dans le stockage (re-upload requis)' });
+      } else {
+        skippedDocuments.push({ name: doc.nom, reason: 'Impossible de télécharger le fichier' });
+      }
       continue;
     }
     
     try {
-      const arrayBuffer = await blob.arrayBuffer();
       let pdfBytes: ArrayBuffer | Uint8Array;
-      
       if (doc.type.includes('pdf')) {
-        pdfBytes = arrayBuffer;
+        pdfBytes = await result.blob.arrayBuffer();
       } else if (doc.type.includes('image')) {
-        pdfBytes = await imageToPdfPage(blob);
+        pdfBytes = await imageToPdfPage(result.blob);
       } else {
         skippedDocuments.push({ name: doc.nom, reason: 'Type de fichier non géré' });
         continue;
       }
-      
       const pdfToMerge = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
       const copiedPages = await mergedPdf.copyPages(pdfToMerge, pdfToMerge.getPageIndices());
-      
-      copiedPages.forEach((page) => {
-        mergedPdf.addPage(page);
-      });
+      copiedPages.forEach((page) => mergedPdf.addPage(page));
       successCount++;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
       skippedDocuments.push({ name: doc.nom, reason: `PDF corrompu ou protégé: ${errorMessage.substring(0, 50)}` });
-      console.error(`Error processing ${doc.nom}:`, error);
     }
   }
   
   if (successCount === 0) {
+    const missingCount = missingDocuments.length;
+    if (missingCount > 0) {
+      throw new Error(
+        `${missingCount} fichier${missingCount > 1 ? 's' : ''} introuvable${missingCount > 1 ? 's' : ''} dans le stockage :\n` +
+        missingDocuments.map(d => `• ${d.name}`).join('\n') +
+        '\n\nCes documents ont été supprimés du stockage et doivent être re-uploadés.'
+      );
+    }
     throw new DocumentProcessingError('Aucun document', new Error('Aucun document n\'a pu être traité. Vérifiez que les fichiers ne sont pas corrompus.'));
   }
   
   onProgress?.(total, total, 'Finalisation du document...');
-  
   const mergedPdfBytes = await mergedPdf.save();
   return {
     blob: new Blob([new Uint8Array(mergedPdfBytes)], { type: 'application/pdf' }),
     skippedDocuments,
+    missingDocuments,
     successCount,
   };
 }
@@ -366,112 +372,100 @@ export async function mergeDocumentsWithSeparators(
   
   const mergedPdf = await PDFDocument.create();
   const skippedDocuments: { name: string; reason: string }[] = [];
+  const missingDocuments: { name: string; path: string }[] = [];
   let successCount = 0;
   
-  // Calculer le total de documents
   const totalDocs = personsDocuments.reduce((sum, p) => sum + p.documents.length, 0);
   let currentDoc = 0;
   
-  // Ajouter la page de garde
   if (addCoverPage) {
     onProgress?.(0, totalDocs, 'Création de la page de garde...');
-    
     const coverPageBytes = await createCoverPage(
       mainTitle,
-      personsDocuments.map(p => ({
-        name: p.personName,
-        type: p.personType,
-        docCount: p.documents.length,
-      }))
+      personsDocuments.map(p => ({ name: p.personName, type: p.personType, docCount: p.documents.length }))
     );
-    
     const coverPdf = await PDFDocument.load(coverPageBytes);
     const coverPages = await mergedPdf.copyPages(coverPdf, coverPdf.getPageIndices());
     coverPages.forEach(page => mergedPdf.addPage(page));
   }
   
-  // Traiter chaque personne
-  for (let personIndex = 0; personIndex < personsDocuments.length; personIndex++) {
-    const person = personsDocuments[personIndex];
-    
-    // Ajouter une page de séparation
+  for (const person of personsDocuments) {
     if (addSeparators && person.documents.length > 0) {
       onProgress?.(currentDoc, totalDocs, `Ajout séparateur: ${person.personName}...`);
-      
       const typeLabels: Record<string, string> = {
-        'client': 'CLIENT PRINCIPAL',
-        'garant': 'GARANT',
-        'colocataire': 'COLOCATAIRE',
-        'co_debiteur': 'CO-DÉBITEUR',
+        'client': 'CLIENT PRINCIPAL', 'garant': 'GARANT',
+        'colocataire': 'COLOCATAIRE', 'co_debiteur': 'CO-DÉBITEUR',
         'signataire_solidaire': 'SIGNATAIRE SOLIDAIRE',
       };
-      
       const separatorBytes = await createSeparatorPage(
         typeLabels[person.personType] || person.personType.toUpperCase(),
         person.personName
       );
-      
       const separatorPdf = await PDFDocument.load(separatorBytes);
       const separatorPages = await mergedPdf.copyPages(separatorPdf, separatorPdf.getPageIndices());
       separatorPages.forEach(page => mergedPdf.addPage(page));
     }
     
-    // Ajouter les documents de cette personne
     for (const doc of person.documents) {
       currentDoc++;
       onProgress?.(currentDoc, totalDocs, `Traitement de ${doc.nom}...`);
       
       if (!isSupported(doc)) {
         skippedDocuments.push({ name: doc.nom, reason: 'Format non supporté' });
-        console.warn(`Skipping unsupported document: ${doc.nom}`);
         continue;
       }
       
-      const blob = await downloadFileAsBlob(doc);
-      if (!blob) {
-        skippedDocuments.push({ name: doc.nom, reason: 'Impossible de télécharger le fichier' });
-        console.warn(`Failed to download: ${doc.nom}`);
+      const dlResult = await downloadFileAsBlobDetailed(doc);
+      if (!dlResult.blob) {
+        if (dlResult.missing) {
+          const path = getStoragePath(doc.url);
+          missingDocuments.push({ name: doc.nom, path });
+          skippedDocuments.push({ name: doc.nom, reason: '⚠️ Fichier introuvable dans le stockage (re-upload requis)' });
+        } else {
+          skippedDocuments.push({ name: doc.nom, reason: 'Impossible de télécharger le fichier' });
+        }
         continue;
       }
       
       try {
-        const arrayBuffer = await blob.arrayBuffer();
         let pdfBytes: ArrayBuffer | Uint8Array;
-        
         if (doc.type.includes('pdf')) {
-          pdfBytes = arrayBuffer;
+          pdfBytes = await dlResult.blob.arrayBuffer();
         } else if (doc.type.includes('image')) {
-          pdfBytes = await imageToPdfPage(blob);
+          pdfBytes = await imageToPdfPage(dlResult.blob);
         } else {
           skippedDocuments.push({ name: doc.nom, reason: 'Type de fichier non géré' });
           continue;
         }
-        
         const pdfToMerge = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
         const copiedPages = await mergedPdf.copyPages(pdfToMerge, pdfToMerge.getPageIndices());
-        
-        copiedPages.forEach((page) => {
-          mergedPdf.addPage(page);
-        });
+        copiedPages.forEach((page) => mergedPdf.addPage(page));
         successCount++;
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue';
         skippedDocuments.push({ name: doc.nom, reason: `PDF corrompu ou protégé: ${errorMessage.substring(0, 50)}` });
-        console.error(`Error processing ${doc.nom}:`, error);
       }
     }
   }
   
   if (successCount === 0) {
+    const missingCount = missingDocuments.length;
+    if (missingCount > 0) {
+      throw new Error(
+        `${missingCount} fichier${missingCount > 1 ? 's' : ''} introuvable${missingCount > 1 ? 's' : ''} dans le stockage :\n` +
+        missingDocuments.map(d => `• ${d.name}`).join('\n') +
+        '\n\nCes documents ont été supprimés du stockage et doivent être re-uploadés par le client.'
+      );
+    }
     throw new DocumentProcessingError('Aucun document', new Error('Aucun document n\'a pu être traité. Vérifiez que les fichiers ne sont pas corrompus.'));
   }
   
   onProgress?.(totalDocs, totalDocs, 'Finalisation du document...');
-  
   const mergedPdfBytes = await mergedPdf.save();
   return {
     blob: new Blob([new Uint8Array(mergedPdfBytes)], { type: 'application/pdf' }),
     skippedDocuments,
+    missingDocuments,
     successCount,
   };
 }
