@@ -1,63 +1,59 @@
 
-# Diagnostic final : Pourquoi la création du dossier échoue toujours
+# Diagnostic réel : Les fichiers d'Alicem n'existent plus dans le stockage
 
-## Cause réelle identifiée
+## Cause racine confirmée
 
-L'URL des 5 documents d'Alicem a ce format :
-```
-https://...supabase.co/storage/v1/object/public/client-documents/mandat/1770895042936_identite.jpg
-```
+Les 5 fichiers d'Alicem Demir sont enregistrés en base de données, mais **physiquement absents du bucket `client-documents`** :
 
-La fonction `getStoragePath()` (dans `documentUtils.ts`) extrait correctement le chemin relatif `mandat/1770895042936_identite.jpg`. Le problème vient de ce que la fonction `downloadFileAsBlob` dans `pdfMerger.ts` utilise le SDK Supabase `.download()` qui effectue une requête **authentifiée**. Or, la politique RLS `"Allow public read access to mandat folder"` est bien présente mais le SDK `.download()` contourne parfois le bucket public et tombe sous les RLS strictes.
+Les URLs en base :
+- `mandat/1770895042936_identite.jpg`
+- `mandat/1770895005526_salaire3.jpg`
+- `mandat/1770894983989_salaire1.jpg`
+- `mandat/1770894958603_salaire2.jpg`
+- `mandat/1770894728508_poursuites.jpg`
 
-La solution fiable : utiliser **`.createSignedUrl()` puis `fetch()`** exactement comme le font déjà `handlePreview` et `handleDownload` dans `ClientDetail.tsx` et `AdminDocuments.tsx` — qui eux fonctionnent.
+Résultat de la requête directe sur `storage.objects` pour ces fichiers : **0 résultats**.
 
-## Ce qui fonctionne vs ce qui ne fonctionne pas
+C'est pour ça que `createSignedUrl()` échoue : Supabase ne peut pas créer une URL signée pour un fichier qui n'existe pas dans le stockage. Le code est correct — il n'y a plus rien à télécharger.
 
-| Méthode | Utilisé dans | Résultat |
-|---|---|---|
-| `createSignedUrl()` + `fetch()` | `handlePreview`, `handleDownload` dans ClientDetail, AdminDocuments | Fonctionne |
-| `.download()` SDK direct | `downloadFileAsBlob` dans pdfMerger.ts | Échoue pour les fichiers `mandat/` |
+## Pourquoi les fichiers ont disparu ?
 
-## Solution
+Ces fichiers ont été uploadés lors du processus de demande de mandat (via l'app mobile du client). Ils sont référencés dans `demandes_mandat.documents_uploades`. Il est probable qu'une **purge ou migration** ait supprimé les fichiers du bucket `mandat/` sans mettre à jour la table `documents`.
 
-Modifier `downloadFileAsBlob` dans `src/utils/pdfMerger.ts` pour **toujours passer par `createSignedUrl()`** pour les chemins de stockage (qu'ils viennent d'une URL complète ou d'un chemin relatif), en réutilisant la même logique que `getStoragePath()`.
+## Ce que le code peut faire vs ce qu'il ne peut pas faire
 
-### Logique modifiée
+| Situation | Possible ? |
+|---|---|
+| Télécharger un fichier qui existe dans le storage | ✅ Oui (code corrigé) |
+| Télécharger un fichier qui n'existe plus dans le storage | ❌ Impossible |
+| Afficher un fichier fantôme (URL morte) | ❌ Impossible |
 
-```typescript
-// Pour TOUTES les URLs (complètes ou relatives), utiliser createSignedUrl
-let storagePath: string;
+## Solutions possibles
 
-if (doc.url.startsWith('data:')) {
-  // data URL → décodage base64 (existant, inchangé)
-  ...
-} else {
-  // URL complète ou chemin relatif → extraire le chemin propre
-  storagePath = getStoragePath(doc.url);  // réutiliser la fonction existante
-  
-  // Créer une URL signée (comme handlePreview/handleDownload)
-  const { data: signedData, error: signedError } = await supabase.storage
-    .from('client-documents')
-    .createSignedUrl(storagePath, 300);  // 5 min
-  
-  if (signedError || !signedData?.signedUrl) {
-    console.error(`Document "${doc.nom}": Impossible de créer l'URL signée:`, signedError);
-    return null;
-  }
-  
-  const response = await fetch(signedData.signedUrl);
-  if (!response.ok) return null;
-  return await response.blob();
-}
-```
+Il y a **deux approches** :
+
+### Option A — Améliorer le message d'erreur (court terme)
+Modifier `pdfMerger.ts` et `MergeDocumentsDialog.tsx` pour indiquer précisément quels fichiers sont introuvables dans le stockage (erreur `Object not found` de Supabase), au lieu du message générique "Aucun document valide n'a pu être traité".
+
+Le message deviendrait : _"5 fichiers introuvables dans le stockage : mandat/1770895042936_identite.jpg, ..."_
+
+### Option B — Détecter et signaler les fichiers fantômes dans l'interface (moyen terme)
+Dans `ClientDetail.tsx`, au moment d'afficher les documents, vérifier si chaque fichier existe encore dans le stockage (via `createSignedUrl`) et afficher un badge "⚠️ Fichier manquant" sur les documents dont les fichiers ont disparu. Cela permettra à l'admin de re-uploader les documents manquants.
+
+### Option C — Les deux (recommandé)
+Combiner A et B : message d'erreur précis dans la fusion + badge "fichier manquant" dans la liste des documents.
 
 ## Fichiers impactés
 
 | Fichier | Changement |
 |---|---|
-| `src/utils/pdfMerger.ts` | Remplacer l'approche `.download()` SDK par `createSignedUrl()` + `fetch()` pour toutes les URLs storage, en important `getStoragePath` de `documentUtils.ts` |
+| `src/utils/pdfMerger.ts` | Distinguer l'erreur "Object not found" (fichier absent du storage) des autres erreurs, avec un message explicite |
+| `src/components/MergeDocumentsDialog.tsx` | Afficher la liste précise des fichiers manquants avec un message explicite avant de lancer la fusion |
+| `src/components/ClientDocuments.tsx` ou équivalent | Optionnel : badge "fichier manquant" sur les documents dont le stockage est vide |
 
 ## Résultat attendu
 
-Après correction, la création du dossier complet d'Alicem (et de tous les clients) fonctionnera car elle utilisera exactement le même mécanisme d'accès aux fichiers que les boutons "Prévisualiser" et "Télécharger" qui fonctionnent déjà.
+Après correction, au lieu de l'erreur opaque "Aucun document valide n'a pu être traité", l'utilisateur verra :
+_"Impossible de créer le dossier : 5 fichier(s) introuvables dans le stockage. Ces documents doivent être re-uploadés par le client."_
+
+Et dans la liste des documents d'Alicem, chaque document fantôme sera clairement marqué comme inaccessible.
