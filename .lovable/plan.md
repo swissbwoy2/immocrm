@@ -1,83 +1,63 @@
 
-# Problème : Création du dossier complet échoue — Documents non téléchargeables
+# Diagnostic final : Pourquoi la création du dossier échoue toujours
 
-## Cause racine identifiée
+## Cause réelle identifiée
 
-La base de données contient deux formats d'URL pour les documents :
-
-| Format | Exemple | Count |
-|---|---|---|
-| URL complète (http) | `https://ydljsdscdnqrqnjvqela.supabase.co/storage/v1/object/public/client-documents/mandat/1770895042936_identite.jpg` | 210 docs |
-| Chemin relatif | `mandat/1770895042936_identite.jpg` | 413 docs |
-| Data URL (base64) | `data:image/jpeg;base64,...` | 2 docs |
-
-La fonction `downloadFileAsBlob` dans `src/utils/pdfMerger.ts` traite les URLs `http` via un `fetch()` direct. Mais Supabase bloque ce type de requête cross-origin depuis le navigateur (CORS), ce qui fait que **tous les documents stockés avec une URL complète retournent une erreur**, et donc aucun document ne peut être inclus dans le dossier fusionné.
-
-## Flux du problème
-
-```text
-downloadFileAsBlob(doc) avec doc.url = "https://ydljsdscdnqrqnjvqela.supabase.co/..."
-  → url.startsWith('http') → true
-  → fetch(doc.url) 
-  → CORS Error / 403 Forbidden
-  → returns null
-  → document skipped
-  → successCount = 0
-  → throw DocumentProcessingError("Aucun document n'a pu être traité")
+L'URL des 5 documents d'Alicem a ce format :
+```
+https://...supabase.co/storage/v1/object/public/client-documents/mandat/1770895042936_identite.jpg
 ```
 
-## Solution : Convertir les URLs complètes en chemins relatifs avant téléchargement
+La fonction `getStoragePath()` (dans `documentUtils.ts`) extrait correctement le chemin relatif `mandat/1770895042936_identite.jpg`. Le problème vient de ce que la fonction `downloadFileAsBlob` dans `pdfMerger.ts` utilise le SDK Supabase `.download()` qui effectue une requête **authentifiée**. Or, la politique RLS `"Allow public read access to mandat folder"` est bien présente mais le SDK `.download()` contourne parfois le bucket public et tombe sous les RLS strictes.
 
-Modifier `downloadFileAsBlob` dans `src/utils/pdfMerger.ts` pour **extraire le chemin relatif** depuis les URLs complètes Supabase et utiliser le SDK Supabase pour télécharger, au lieu du `fetch()` direct.
+La solution fiable : utiliser **`.createSignedUrl()` puis `fetch()`** exactement comme le font déjà `handlePreview` et `handleDownload` dans `ClientDetail.tsx` et `AdminDocuments.tsx` — qui eux fonctionnent.
 
-La logique `getStoragePath()` existe déjà dans `src/lib/documentUtils.ts` — il faut l'utiliser (ou la dupliquer) dans `pdfMerger.ts`.
+## Ce qui fonctionne vs ce qui ne fonctionne pas
 
-### Modification de `downloadFileAsBlob`
+| Méthode | Utilisé dans | Résultat |
+|---|---|---|
+| `createSignedUrl()` + `fetch()` | `handlePreview`, `handleDownload` dans ClientDetail, AdminDocuments | Fonctionne |
+| `.download()` SDK direct | `downloadFileAsBlob` dans pdfMerger.ts | Échoue pour les fichiers `mandat/` |
+
+## Solution
+
+Modifier `downloadFileAsBlob` dans `src/utils/pdfMerger.ts` pour **toujours passer par `createSignedUrl()`** pour les chemins de stockage (qu'ils viennent d'une URL complète ou d'un chemin relatif), en réutilisant la même logique que `getStoragePath()`.
+
+### Logique modifiée
 
 ```typescript
-// AVANT (problème)
-if (doc.url.startsWith('http')) {
-  const response = await fetch(doc.url);  // ❌ CORS / 403
-  return await response.blob();
-}
+// Pour TOUTES les URLs (complètes ou relatives), utiliser createSignedUrl
+let storagePath: string;
 
-// APRÈS (correction)
-if (doc.url.startsWith('http')) {
-  // Extraire le chemin relatif depuis l'URL Supabase
-  let storagePath = doc.url;
-  if (doc.url.includes('/client-documents/')) {
-    storagePath = doc.url.split('/client-documents/')[1].split('?')[0];
-  } else if (doc.url.includes('/storage/v1/object/')) {
-    const match = doc.url.match(/\/storage\/v1\/object\/(?:public|sign)\/[^/]+\/([^?]+)/);
-    if (match) storagePath = match[1];
-  }
+if (doc.url.startsWith('data:')) {
+  // data URL → décodage base64 (existant, inchangé)
+  ...
+} else {
+  // URL complète ou chemin relatif → extraire le chemin propre
+  storagePath = getStoragePath(doc.url);  // réutiliser la fonction existante
   
-  // Utiliser le SDK Supabase pour télécharger
-  const { data, error } = await supabase.storage
+  // Créer une URL signée (comme handlePreview/handleDownload)
+  const { data: signedData, error: signedError } = await supabase.storage
     .from('client-documents')
-    .download(storagePath);
+    .createSignedUrl(storagePath, 300);  // 5 min
   
-  if (error) {
-    // Fallback: essayer une URL signée
-    const { data: signedData } = await supabase.storage
-      .from('client-documents')
-      .createSignedUrl(storagePath, 60);
-    if (signedData?.signedUrl) {
-      const response = await fetch(signedData.signedUrl);
-      if (response.ok) return await response.blob();
-    }
+  if (signedError || !signedData?.signedUrl) {
+    console.error(`Document "${doc.nom}": Impossible de créer l'URL signée:`, signedError);
     return null;
   }
-  return data;
+  
+  const response = await fetch(signedData.signedUrl);
+  if (!response.ok) return null;
+  return await response.blob();
 }
 ```
 
-## Fichier impacté
+## Fichiers impactés
 
 | Fichier | Changement |
 |---|---|
-| `src/utils/pdfMerger.ts` | Modifier `downloadFileAsBlob` pour extraire le chemin relatif des URLs complètes Supabase et utiliser le SDK au lieu de `fetch()` direct |
+| `src/utils/pdfMerger.ts` | Remplacer l'approche `.download()` SDK par `createSignedUrl()` + `fetch()` pour toutes les URLs storage, en important `getStoragePath` de `documentUtils.ts` |
 
 ## Résultat attendu
 
-Après correction, les 5 documents JPG d'Alicem Demir (et de tous les clients dont les URLs sont complètes) seront correctement téléchargés via le SDK Supabase, et le dossier complet sera créé avec succès.
+Après correction, la création du dossier complet d'Alicem (et de tous les clients) fonctionnera car elle utilisera exactement le même mécanisme d'accès aux fichiers que les boutons "Prévisualiser" et "Télécharger" qui fonctionnent déjà.
