@@ -1,59 +1,41 @@
 
-# Diagnostic réel : Les fichiers d'Alicem n'existent plus dans le stockage
+# Problème : Guelda reste dans la liste des clients de Carina après suppression
 
-## Cause racine confirmée
+## Cause racine identifiée
 
-Les 5 fichiers d'Alicem Demir sont enregistrés en base de données, mais **physiquement absents du bucket `client-documents`** :
+Le lien entre Guelda et Carina n'existe **pas dans `client_agents`** (la table junction moderne) — il n'existe que via le champ legacy `agent_id` directement sur la table `clients` :
 
-Les URLs en base :
-- `mandat/1770895042936_identite.jpg`
-- `mandat/1770895005526_salaire3.jpg`
-- `mandat/1770894983989_salaire1.jpg`
-- `mandat/1770894958603_salaire2.jpg`
-- `mandat/1770894728508_poursuites.jpg`
-
-Résultat de la requête directe sur `storage.objects` pour ces fichiers : **0 résultats**.
-
-C'est pour ça que `createSignedUrl()` échoue : Supabase ne peut pas créer une URL signée pour un fichier qui n'existe pas dans le stockage. Le code est correct — il n'y a plus rien à télécharger.
-
-## Pourquoi les fichiers ont disparu ?
-
-Ces fichiers ont été uploadés lors du processus de demande de mandat (via l'app mobile du client). Ils sont référencés dans `demandes_mandat.documents_uploades`. Il est probable qu'une **purge ou migration** ait supprimé les fichiers du bucket `mandat/` sans mettre à jour la table `documents`.
-
-## Ce que le code peut faire vs ce qu'il ne peut pas faire
-
-| Situation | Possible ? |
+| Table | Valeur |
 |---|---|
-| Télécharger un fichier qui existe dans le storage | ✅ Oui (code corrigé) |
-| Télécharger un fichier qui n'existe plus dans le storage | ❌ Impossible |
-| Afficher un fichier fantôme (URL morte) | ❌ Impossible |
+| `clients.agent_id` pour Guelda | `67f3a2c5` (= Carina) ✅ présent |
+| `client_agents` pour Guelda + Carina | **0 enregistrements** ❌ absent |
 
-## Solutions possibles
+Quand l'interface essaie de retirer Carina de la liste de clients, elle supprime uniquement dans `client_agents` — mais comme l'entrée n'y est pas, rien ne se passe. Le champ `clients.agent_id = Carina` reste intact, donc Guelda continue d'apparaître dans la liste de Carina.
 
-Il y a **deux approches** :
+## Solution en deux parties
 
-### Option A — Améliorer le message d'erreur (court terme)
-Modifier `pdfMerger.ts` et `MergeDocumentsDialog.tsx` pour indiquer précisément quels fichiers sont introuvables dans le stockage (erreur `Object not found` de Supabase), au lieu du message générique "Aucun document valide n'a pu être traité".
+### Partie 1 — Corriger la désassignation dans l'interface
 
-Le message deviendrait : _"5 fichiers introuvables dans le stockage : mandat/1770895042936_identite.jpg, ..."_
+Dans la page `ClientDetail.tsx`, la fonction de désassignation d'un agent (bouton "Retirer l'agent") doit également mettre `clients.agent_id` à `null` quand c'est l'agent principal qui est retiré, en plus de supprimer dans `client_agents`.
 
-### Option B — Détecter et signaler les fichiers fantômes dans l'interface (moyen terme)
-Dans `ClientDetail.tsx`, au moment d'afficher les documents, vérifier si chaque fichier existe encore dans le stockage (via `createSignedUrl`) et afficher un badge "⚠️ Fichier manquant" sur les documents dont les fichiers ont disparu. Cela permettra à l'admin de re-uploader les documents manquants.
+### Partie 2 — Corriger le problème immédiat de Guelda
 
-### Option C — Les deux (recommandé)
-Combiner A et B : message d'erreur précis dans la fusion + badge "fichier manquant" dans la liste des documents.
+Via une mise à jour directe en base : mettre `agent_id = NULL` sur l'enregistrement client de Guelda (`id = 3e8dfba6-eca3-4cc5-82ee-2528dc8249a7`), pour couper le lien avec Carina.
+
+La conversation est déjà archivée (`is_archived: true`), donc elle ne sera pas visible dans la messagerie. Pas besoin de toucher à la conversation.
 
 ## Fichiers impactés
 
 | Fichier | Changement |
 |---|---|
-| `src/utils/pdfMerger.ts` | Distinguer l'erreur "Object not found" (fichier absent du storage) des autres erreurs, avec un message explicite |
-| `src/components/MergeDocumentsDialog.tsx` | Afficher la liste précise des fichiers manquants avec un message explicite avant de lancer la fusion |
-| `src/components/ClientDocuments.tsx` ou équivalent | Optionnel : badge "fichier manquant" sur les documents dont le stockage est vide |
+| `src/pages/admin/ClientDetail.tsx` | Dans la fonction de retrait d'agent, ajouter la mise à null de `clients.agent_id` si c'était l'agent primaire |
+| `src/pages/admin/Assignations.tsx` | Même correction dans `handleEditAssignment` : s'assurer que `clients.agent_id` est mis à null quand tous les agents sont retirés ou que l'agent primaire change |
+
+## Correction immédiate (base de données)
+
+Mettre `agent_id = NULL` pour Guelda dans la table `clients` pour rompre immédiatement le lien avec Carina.
 
 ## Résultat attendu
 
-Après correction, au lieu de l'erreur opaque "Aucun document valide n'a pu être traité", l'utilisateur verra :
-_"Impossible de créer le dossier : 5 fichier(s) introuvables dans le stockage. Ces documents doivent être re-uploadés par le client."_
-
-Et dans la liste des documents d'Alicem, chaque document fantôme sera clairement marqué comme inaccessible.
+- Guelda n'apparaît plus dans la liste des clients de Carina
+- Toute future désassignation via l'interface fonctionnera correctement en mettant à jour les deux sources (`client_agents` ET `clients.agent_id`)
