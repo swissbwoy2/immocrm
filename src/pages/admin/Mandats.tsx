@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Calendar, TrendingUp, AlertCircle, RefreshCw, Search, ArrowUpDown, User, Undo2, History, FileText, Download, Eye, FileArchive, Loader2 } from "lucide-react";
+import { Calendar, TrendingUp, AlertCircle, RefreshCw, Search, ArrowUpDown, User, Undo2, History, FileText, Download, Eye, FileArchive, Loader2, Pause, StopCircle } from "lucide-react";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from "@/utils/calculations";
 import { toast } from "sonner";
@@ -136,12 +137,31 @@ const Mandats = () => {
     return daysSinceRenewal <= 7;
   };
 
+  const handleUpdateClientStatus = async (client: any, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({ statut: newStatus })
+        .eq('id', client.id);
+      
+      if (error) throw error;
+      
+      await loadData();
+      const labels: Record<string, string> = { suspendu: 'suspendu', stoppe: 'stoppé' };
+      toast.success(`Mandat ${labels[newStatus] || newStatus}`, {
+        description: `Le mandat de ${client.profiles?.prenom} ${client.profiles?.nom} a été ${labels[newStatus] || newStatus}.`
+      });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error("Erreur lors de la mise à jour du statut");
+    }
+  };
+
   const handleCancelRenewal = async () => {
     if (!selectedRenewal || !selectedClient) return;
     
     setIsCancelling(true);
     try {
-      // Restaurer la date_ajout à la date ancienne
       const { error: updateError } = await supabase
         .from('clients')
         .update({ date_ajout: selectedRenewal.date_ancien_mandat })
@@ -149,7 +169,6 @@ const Mandats = () => {
 
       if (updateError) throw updateError;
 
-      // Supprimer le renouvellement
       const { error: deleteError } = await supabase
         .from('renouvellements_mandat')
         .delete()
@@ -284,9 +303,14 @@ const Mandats = () => {
       
       // Filtre statut
       if (filterStatus !== 'all') {
-        const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
-        const status = getMandateStatus(daysElapsed);
-        if (status.key !== filterStatus) return false;
+        if (filterStatus === 'reloge' || filterStatus === 'suspendu' || filterStatus === 'stoppe') {
+          if (client.statut !== filterStatus) return false;
+        } else {
+          if (client.statut === 'reloge' || client.statut === 'suspendu' || client.statut === 'stoppe') return false;
+          const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
+          const status = getMandateStatus(daysElapsed);
+          if (status.key !== filterStatus) return false;
+        }
       }
       
       return matchSearch && matchAgent;
@@ -342,7 +366,7 @@ const Mandats = () => {
         </div>
 
         {/* Stats résumé */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-6">
           <Card className="p-3 md:p-4">
             <p className="text-xs text-muted-foreground">Total clients</p>
             <p className="text-xl md:text-2xl font-bold">{clients.length}</p>
@@ -350,13 +374,14 @@ const Mandats = () => {
           <Card className="p-3 md:p-4">
             <p className="text-xs text-muted-foreground">Nouveaux (≤30j)</p>
             <p className="text-xl md:text-2xl font-bold text-primary">
-              {clients.filter(c => calculateDaysElapsed(c.date_ajout || c.created_at) <= 30).length}
+              {clients.filter(c => c.statut !== 'reloge' && c.statut !== 'suspendu' && c.statut !== 'stoppe' && calculateDaysElapsed(c.date_ajout || c.created_at) <= 30).length}
             </p>
           </Card>
           <Card className="p-3 md:p-4">
             <p className="text-xs text-muted-foreground">En cours (30-60j)</p>
             <p className="text-xl md:text-2xl font-bold text-muted-foreground">
               {clients.filter(c => {
+                if (c.statut === 'reloge' || c.statut === 'suspendu' || c.statut === 'stoppe') return false;
                 const days = calculateDaysElapsed(c.date_ajout || c.created_at);
                 return days > 30 && days <= 60;
               }).length}
@@ -366,6 +391,7 @@ const Mandats = () => {
             <p className="text-xs text-muted-foreground">Critiques (60-89j)</p>
             <p className="text-xl md:text-2xl font-bold text-warning">
               {clients.filter(c => {
+                if (c.statut === 'reloge' || c.statut === 'suspendu' || c.statut === 'stoppe') return false;
                 const days = calculateDaysElapsed(c.date_ajout || c.created_at);
                 return days > 60 && days < 90;
               }).length}
@@ -374,7 +400,13 @@ const Mandats = () => {
           <Card className="p-3 md:p-4">
             <p className="text-xs text-muted-foreground">Expirés (90+j)</p>
             <p className="text-xl md:text-2xl font-bold text-destructive">
-              {clients.filter(c => calculateDaysElapsed(c.date_ajout || c.created_at) >= 90).length}
+              {clients.filter(c => c.statut !== 'reloge' && c.statut !== 'suspendu' && c.statut !== 'stoppe' && calculateDaysElapsed(c.date_ajout || c.created_at) >= 90).length}
+            </p>
+          </Card>
+          <Card className="p-3 md:p-4">
+            <p className="text-xs text-muted-foreground">Relogés</p>
+            <p className="text-xl md:text-2xl font-bold text-emerald-600">
+              {clients.filter(c => c.statut === 'reloge').length}
             </p>
           </Card>
         </div>
@@ -413,6 +445,9 @@ const Mandats = () => {
               <SelectItem value="en_cours">En cours</SelectItem>
               <SelectItem value="critique">Critiques</SelectItem>
               <SelectItem value="expire">Expirés</SelectItem>
+              <SelectItem value="reloge">Relogés</SelectItem>
+              <SelectItem value="suspendu">Suspendus</SelectItem>
+              <SelectItem value="stoppe">Stoppés</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -464,14 +499,33 @@ const Mandats = () => {
 
         <div className="grid gap-3 md:gap-4">
           {filteredAndSortedClients.map((client) => {
+            const isReloge = client.statut === 'reloge';
+            const isSuspendu = client.statut === 'suspendu';
+            const isStoppe = client.statut === 'stoppe';
+            const isFrozen = isReloge || isSuspendu || isStoppe;
+            
             const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
             const daysRemaining = calculateDaysRemaining(client.date_ajout || client.created_at);
-            const progress = Math.min((daysElapsed / 90) * 100, 100);
-            const status = getMandateStatus(daysElapsed);
+            const progress = isReloge ? 100 : Math.min((daysElapsed / 90) * 100, 100);
+            const status = isFrozen 
+              ? isReloge 
+                ? { label: "Relogé", variant: "default" as const, color: "text-emerald-600", key: "reloge" }
+                : isSuspendu
+                  ? { label: "Suspendu", variant: "secondary" as const, color: "text-amber-600", key: "suspendu" }
+                  : { label: "Stoppé", variant: "destructive" as const, color: "text-destructive", key: "stoppe" }
+              : getMandateStatus(daysElapsed);
             const renewed = isRecentlyRenewed(client.id);
+
+            const progressBarColor = isReloge 
+              ? "bg-emerald-500" 
+              : isSuspendu 
+                ? "bg-amber-500" 
+                : isStoppe 
+                  ? "bg-destructive" 
+                  : undefined;
             
             return (
-              <Card key={client.id} className="p-4 md:p-6">
+              <Card key={client.id} className={`p-4 md:p-6 ${isFrozen ? 'opacity-80' : ''}`}>
                 <div className="space-y-3 md:space-y-4">
                   {/* Header */}
                   <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
@@ -482,13 +536,21 @@ const Mandats = () => {
                             ? `${client.profiles.prenom} ${client.profiles.nom}` 
                             : 'Client (sans profil)'}
                         </h3>
-                        <Badge variant={status.variant} className="text-xs">{status.label}</Badge>
-                        {renewed && (
+                        {isReloge ? (
+                          <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 text-xs border-emerald-300">✅ Relogé</Badge>
+                        ) : isSuspendu ? (
+                          <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs border-amber-300">⏸️ Suspendu</Badge>
+                        ) : isStoppe ? (
+                          <Badge variant="destructive" className="text-xs">⛔ Stoppé</Badge>
+                        ) : (
+                          <Badge variant={status.variant} className="text-xs">{status.label}</Badge>
+                        )}
+                        {renewed && !isFrozen && (
                           <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-200 text-xs">
                             🔄 Renouvelé
                           </Badge>
                         )}
-                        {getLatestRenewal(client.id) && (
+                        {!isFrozen && getLatestRenewal(client.id) && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -511,12 +573,20 @@ const Mandats = () => {
                       </p>
                     </div>
                     <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-0">
-                      <div className={`text-2xl md:text-3xl font-bold ${status.color}`}>
-                        J+{Math.floor(daysElapsed)}
-                      </div>
-                      <p className="text-xs md:text-sm text-muted-foreground">
-                        {daysRemaining > 0 ? formatTimeRemaining(daysRemaining) : "Expiré"}
-                      </p>
+                      {isFrozen ? (
+                        <div className={`text-lg md:text-xl font-bold ${status.color}`}>
+                          {status.label}
+                        </div>
+                      ) : (
+                        <>
+                          <div className={`text-2xl md:text-3xl font-bold ${status.color}`}>
+                            J+{Math.floor(daysElapsed)}
+                          </div>
+                          <p className="text-xs md:text-sm text-muted-foreground">
+                            {daysRemaining > 0 ? formatTimeRemaining(daysRemaining) : "Expiré"}
+                          </p>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -526,7 +596,11 @@ const Mandats = () => {
                       <span>Progression du mandat</span>
                       <span>{Math.round(progress)}%</span>
                     </div>
-                    <Progress value={progress} className="h-2" />
+                    <Progress 
+                      value={progress} 
+                      className="h-2" 
+                      indicatorClassName={progressBarColor}
+                    />
                   </div>
 
                   {/* Infos */}
@@ -539,7 +613,7 @@ const Mandats = () => {
                       <TrendingUp className="h-3.5 w-3.5 md:h-4 md:w-4" />
                       Split: {client.commission_split}%
                     </div>
-                    {daysElapsed > 60 && (
+                    {!isFrozen && daysElapsed > 60 && (
                       <div className="flex items-center gap-1.5 text-destructive">
                         <AlertCircle className="h-3.5 w-3.5 md:h-4 md:w-4" />
                         <span className="hidden sm:inline">Proche expiration</span>
@@ -603,7 +677,7 @@ const Mandats = () => {
                       )}
                     </Button>
                     
-                    {daysRemaining <= 30 && (
+                    {!isFrozen && daysRemaining <= 30 && (
                       <Button
                         onClick={() => {
                           setSelectedClient(client);
@@ -615,6 +689,37 @@ const Mandats = () => {
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Renouveler le mandat
                       </Button>
+                    )}
+
+                    {!isFrozen && client.statut !== 'reloge' && (
+                      <>
+                        <ConfirmDialog
+                          trigger={
+                            <Button variant="warning" size="sm">
+                              <Pause className="h-4 w-4 mr-2" />
+                              Suspendre
+                            </Button>
+                          }
+                          title="Suspendre le mandat"
+                          description={`Voulez-vous suspendre le mandat de ${client.profiles?.prenom} ${client.profiles?.nom} ? La progression sera figée.`}
+                          confirmText="Suspendre"
+                          variant="default"
+                          onConfirm={() => handleUpdateClientStatus(client, 'suspendu')}
+                        />
+                        <ConfirmDialog
+                          trigger={
+                            <Button variant="destructive" size="sm">
+                              <StopCircle className="h-4 w-4 mr-2" />
+                              Stopper
+                            </Button>
+                          }
+                          title="Stopper le mandat"
+                          description={`Voulez-vous stopper définitivement le mandat de ${client.profiles?.prenom} ${client.profiles?.nom} ? Cette action est irréversible.`}
+                          confirmText="Stopper le mandat"
+                          variant="destructive"
+                          onConfirm={() => handleUpdateClientStatus(client, 'stoppe')}
+                        />
+                      </>
                     )}
                   </div>
                   
