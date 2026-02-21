@@ -573,15 +573,15 @@ const handler = async (req: Request): Promise<Response> => {
       checkNewPage();
       page.drawRectangle({
         x: margin,
-        y: yPosition - 35,
+        y: yPosition - 55,
         width: pageWidth - 2 * margin,
-        height: 45,
+        height: 65,
         color: rgb(0.95, 0.95, 1),
       });
       addText('2.1', margin + 5, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       yPosition -= lineHeight;
       addWrappedText(
-        "La commission est de 1 mois de loyer brut (loyer avec les charges) a la signature du contrat de bail. Une caution a hauteur de CHF 300.- doit etre versee pour l'activation de votre dossier. Elle sera comptabilisee en cas de reussite et deductible. Le mandat de recherche est valable 3 mois, passe ce delai, le mandat est renouvelable ou prend fin.",
+        "La commission est de 1 mois de loyer brut (loyer avec les charges) a la signature du contrat de bail. Une caution a hauteur de CHF 300.- doit etre versee pour l'activation de votre dossier. Elle sera comptabilisee en cas de reussite et deductible. Le mandat de recherche est valable 3 mois, passe ce delai, le mandat est renouvelable ou prend fin. En l'absence de resiliation, par lettre recommandee, au moins 30 jours avant son echeance, le present contrat est repute renouvele par reconduction tacite, a chaque fois pour 3 mois supplementaires. En cas de non-renouvellement, la caution vous est restituee sous un delai de 30 jours.",
         margin + 25, maxTextWidth - 30, 9
       );
       yPosition -= 10;
@@ -599,7 +599,16 @@ const handler = async (req: Request): Promise<Response> => {
       checkNewPage();
       addText('2.3', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       addWrappedText(
-        "En cas de resiliation du mandat avant terme, l'acompte ne sera pas remboursee, ni entierement, ni partiellement.",
+        "Le prolongement de contrat ou la conclusion de contrats ulterieurs sont possibles. Ils doivent toutefois etre communiques dans les 5 jours apres conclusion de contrat a Immo-Rama et sont soumis a la commission d'agence. Des prolongements de contrat ou des contrats ulterieurs sont des contrats qui sont conclus entre le meme chercheur ou la meme entreprise pendant ou durant les trois mois qui suivent la fin du premier contrat pour le meme objet ou un autre avec le meme bailleur.",
+        margin + 25, maxTextWidth - 25, 9
+      );
+      yPosition -= 8;
+      
+      // Article 2.4
+      checkNewPage();
+      addText('2.4', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+      addWrappedText(
+        "En cas de resiliation de contrat avant terme ou de renoncement au contrat de (sous)-location, la commission ne sera pas remboursee, ni entierement, ni partiellement.",
         margin + 25, maxTextWidth - 25, 9
       );
       yPosition -= 8;
@@ -608,7 +617,7 @@ const handler = async (req: Request): Promise<Response> => {
       checkNewPage();
       addText('3.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       addWrappedText(
-        "Les chercheurs s'engagent a declarer immediatement a Immo-Rama toute conclusion de contrat par oral ou par ecrit ainsi que des prolongations ou renouvellements de contrat et des modifications apportees a leur mandat de recherche.",
+        "Les chercheurs s'engagent a declarer immediatement a Immo-Rama toute conclusion de contrat par oral ou par ecrit ainsi que des prolongations ou renouvellements de contrat et des modifications apportees a leur mandat de recherche. Apres conclusion d'un contrat, les chercheurs sont tenus de communiquer a Immo-Rama l'adresse de leur future demeure ainsi que le nom et l'adresse du futur bailleur.",
         margin + 20, maxTextWidth - 20, 9
       );
       yPosition -= 8;
@@ -617,7 +626,7 @@ const handler = async (req: Request): Promise<Response> => {
       checkNewPage();
       addText('4.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       addWrappedText(
-        "Lorsque les chercheurs connaissent les adresses proposees par Immo-Rama d'une autre source, ils doivent le faire savoir a Immo-Rama dans un delai de 24 heures.",
+        "Lorsque les chercheurs connaissent les adresses proposees par Immo-Rama d'une autre source, ils doivent le faire savoir a Immo-Rama dans un delai de 24 heures, en indiquant cette autre source. Au cas contraire, l'adresse sera estimee etre fournie par Immo-Rama.",
         margin + 20, maxTextWidth - 20, 9
       );
       yPosition -= 8;
@@ -626,7 +635,7 @@ const handler = async (req: Request): Promise<Response> => {
       checkNewPage();
       addText('5.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       addWrappedText(
-        "Immo-Rama se reserve le droit de demander des securites, des references ou des preuves de la part des chercheurs ou de refuser des chercheurs potentiels sans donner de raisons.",
+        "Immo-Rama se reserve le droit de demander des securites, des references ou des preuves de la part des chercheurs ou de refuser des chercheurs potentiels sans donner de raisons. Les chercheurs autorisent explicitement Immo-Rama a demander des renseignements sur leur personne aupres de services de renseignements sur la solvabilite ainsi que de demander des references aupres de son employeur.",
         margin + 20, maxTextWidth - 20, 9
       );
       yPosition -= 8;
@@ -635,7 +644,7 @@ const handler = async (req: Request): Promise<Response> => {
       checkNewPage();
       addText('6.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       addWrappedText(
-        "Les informations donnees par Immo-Rama aux chercheurs ne peuvent etre remises a des tierces personnes.",
+        "Les informations donnees par Immo-Rama aux chercheurs ne peuvent etre remises a des tierces personnes. En cas ou des informations seraient tout de meme transmises a des tierces personnes, la personne responsable est tenue de supporter tout dommage qui pourrait en resulter, en particulier la commission qu'Immo-Rama aurait perdue par ce fait.",
         margin + 20, maxTextWidth - 20, 9
       );
       yPosition -= 8;
@@ -644,7 +653,7 @@ const handler = async (req: Request): Promise<Response> => {
       checkNewPage();
       addText('7.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       addWrappedText(
-        "Lorsqu'Immo-Rama est informee de la conclusion d'un contrat de location, il annule le mandat de recherche.",
+        "Lorsqu'Immo-Rama est informee de la conclusion d'un contrat de location, il annule le mandat de recherche. Un mandat de recherche peut etre retire a tout moment par les chercheurs ou annule par Immo-Rama.",
         margin + 20, maxTextWidth - 20, 9
       );
       yPosition -= 8;
@@ -653,7 +662,7 @@ const handler = async (req: Request): Promise<Response> => {
       checkNewPage();
       addText('8.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       addWrappedText(
-        "Si un client sous contrat confirme par ecrit ou verbalement que son dossier de candidature pour un logement peut etre transmis a la gerance en charge, Immo-Rama aura droit a une commission.",
+        "Si un client sous contrat confirme par ecrit ou verbalement que son dossier de candidature pour un logement peut etre transmis a la gerance en charge et que la gerance informe Immo-Rama de sa decision d'attribuer le logement a ce client, Immo-Rama aura droit a une commission equivalente a un mois de loyer du bien en location concerne.",
         margin + 20, maxTextWidth - 20, 9
       );
       yPosition -= 8;
@@ -662,15 +671,15 @@ const handler = async (req: Request): Promise<Response> => {
       checkNewPage();
       page.drawRectangle({
         x: margin,
-        y: yPosition - 35,
+        y: yPosition - 55,
         width: pageWidth - 2 * margin,
-        height: 45,
+        height: 65,
         color: rgb(0.97, 0.97, 0.97),
       });
       addText('9. Position de Immo-Rama', margin + 5, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       yPosition -= lineHeight;
       addWrappedText(
-        "Immo-Rama ne peut assurer aucune garantie de succes quant a la conclusion d'un contrat. Les contrats sont passes directement entre les chercheurs et les offreurs.",
+        "Immo-Rama ne peut assurer aucune garantie de succes quant a la conclusion d'un contrat. Les contrats sont passes directement entre les chercheurs et les offreurs. Immo-Rama ne peut assumer aucune responsabilite quant a l'exactitude des donnees concernant les offreurs et leurs offres de logement. Immo-Rama peut assister les parties contractantes lors de la signature de contrat et repondre aux questions relatives a la conclusion de contrat. Toutefois, Immo-Rama n'assume aucune responsabilite pour les consequences resultant de contrats defectueux ou de comportements fautifs de la part des parties contractantes. Ceci vaut egalement lorsque Immo-Rama a ete directement implique dans les negociations de contrat.",
         margin + 25, maxTextWidth - 30, 9
       );
       yPosition -= 10;
@@ -679,7 +688,7 @@ const handler = async (req: Request): Promise<Response> => {
       checkNewPage();
       addText('10.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       addWrappedText(
-        "Les chercheurs autorisent Immo-Rama a transmettre les donnees indiquees ainsi que les resultats des demandes concernant la solvabilite et la reference a des offreurs potentiels.",
+        "Les chercheurs autorisent Immo-Rama a transmettre les donnees indiquees ainsi que les resultats des demandes concernant la solvabilite et la reference a des offreurs potentiels. En outre, Immo-Rama a le droit d'utiliser les donnees de contact pour des envois d'informations propres a la Societe.",
         margin + 25, maxTextWidth - 25, 9
       );
       yPosition -= 8;
@@ -688,7 +697,7 @@ const handler = async (req: Request): Promise<Response> => {
       checkNewPage();
       addText('11.', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
       addWrappedText(
-        "La juridiction competente est Berne (Suisse). Le Code des obligations suisse (CO) fait foi.",
+        "La juridiction competente est Berne (Suisse). Sauf indication contraire contenue dans le present contrat, c'est le Code des obligations suisse (CO) qui fait foi.",
         margin + 25, maxTextWidth - 25, 9
       );
       yPosition -= 15;

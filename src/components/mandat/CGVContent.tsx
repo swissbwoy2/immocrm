@@ -137,7 +137,7 @@ export default function CGVContent({ typeRecherche }: Props) {
 
           <Card className="p-3 bg-primary/5 border-primary/20">
             <p>
-              <strong className="text-primary">2.1</strong> La commission est de 1 mois de loyer brut (loyer avec les charges) à la signature du contrat de bail. Une caution à hauteur de <strong>CHF 300.-</strong> doit être versée pour l'activation de votre dossier. Elle sera comptabilisée en cas de réussite et déductible. Le mandat de recherche est valable 3 mois, passé ce délai, le mandat est renouvelable ou prend fin.
+              <strong className="text-primary">2.1</strong> La commission est de 1 mois de loyer brut (loyer avec les charges) à la signature du contrat de bail. Une caution à hauteur de <strong>CHF 300.-</strong> doit être versée pour l'activation de votre dossier. Elle sera comptabilisée en cas de réussite et déductible. Le mandat de recherche est valable 3 mois, passé ce délai, le mandat est renouvelable ou prend fin. En l'absence de résiliation, par lettre recommandée, au moins 30 jours avant son échéance, le présent contrat est réputé renouvelé par reconduction tacite, à chaque fois pour 3 mois supplémentaires. En cas de non-renouvellement, la caution vous est restituée sous un délai de 30 jours.
             </p>
           </Card>
 
@@ -146,31 +146,35 @@ export default function CGVContent({ typeRecherche }: Props) {
           </p>
 
           <p>
-            <strong className="text-primary">2.3</strong> En cas de résiliation du mandat avant terme, l'acompte ne sera pas remboursée, ni entièrement, ni partiellement.
+            <strong className="text-primary">2.3</strong> Le prolongement de contrat ou la conclusion de contrats ultérieurs sont possibles. Ils doivent toutefois être communiqués dans les 5 jours après conclusion de contrat à Immo-Rama et sont soumis à la commission d'agence. Des prolongements de contrat ou des contrats ultérieurs sont des contrats qui sont conclus entre le même chercheur ou la même entreprise pendant ou durant les trois mois qui suivent la fin du premier contrat pour le même objet ou un autre avec le même bailleur.
           </p>
 
           <p>
-            <strong className="text-primary">3.</strong> Les chercheurs s'engagent à déclarer immédiatement à Immo-Rama toute conclusion de contrat par oral ou par écrit ainsi que des prolongations ou renouvellements de contrat et des modifications apportées à leur mandat de recherche.
+            <strong className="text-primary">2.4</strong> En cas de résiliation de contrat avant terme ou de renoncement au contrat de (sous)-location, la commission ne sera pas remboursée, ni entièrement, ni partiellement.
           </p>
 
           <p>
-            <strong className="text-primary">4.</strong> Lorsque les chercheurs connaissent les adresses proposées par Immo-Rama d'une autre source, ils doivent le faire savoir à Immo-Rama dans un délai de 24 heures.
+            <strong className="text-primary">3.</strong> Les chercheurs s'engagent à déclarer immédiatement à Immo-Rama toute conclusion de contrat par oral ou par écrit ainsi que des prolongations ou renouvellements de contrat et des modifications apportées à leur mandat de recherche. Après conclusion d'un contrat, les chercheurs sont tenus de communiquer à Immo-Rama l'adresse de leur future demeure ainsi que le nom et l'adresse du futur bailleur.
           </p>
 
           <p>
-            <strong className="text-primary">5.</strong> Immo-Rama se réserve le droit de demander des sécurités, des références ou des preuves de la part des chercheurs ou de refuser des chercheurs potentiels sans donner de raisons.
+            <strong className="text-primary">4.</strong> Lorsque les chercheurs connaissent les adresses proposées par Immo-Rama d'une autre source, ils doivent le faire savoir à Immo-Rama dans un délai de 24 heures, en indiquant cette autre source. Au cas contraire, l'adresse sera estimée être fournie par Immo-Rama.
           </p>
 
           <p>
-            <strong className="text-primary">6.</strong> Les informations données par Immo-Rama aux chercheurs ne peuvent être remises à des tierces personnes.
+            <strong className="text-primary">5.</strong> Immo-Rama se réserve le droit de demander des sécurités, des références ou des preuves de la part des chercheurs ou de refuser des chercheurs potentiels sans donner de raisons. Les chercheurs autorisent explicitement Immo-Rama à demander des renseignements sur leur personne auprès de services de renseignements sur la solvabilité ainsi que de demander des références auprès de son employeur.
           </p>
 
           <p>
-            <strong className="text-primary">7.</strong> Lorsqu'Immo-Rama est informée de la conclusion d'un contrat de location, il annule le mandat de recherche.
+            <strong className="text-primary">6.</strong> Les informations données par Immo-Rama aux chercheurs ne peuvent être remises à des tierces personnes. En cas où des informations seraient tout de même transmises à des tierces personnes, la personne responsable est tenue de supporter tout dommage qui pourrait en résulter, en particulier la commission qu'Immo-Rama aurait perdue par ce fait.
           </p>
 
           <p>
-            <strong className="text-primary">8.</strong> Si un client sous contrat confirme par écrit ou verbalement que son dossier de candidature pour un logement peut être transmis à la gérance en charge, Immo-Rama aura droit à une commission.
+            <strong className="text-primary">7.</strong> Lorsqu'Immo-Rama est informée de la conclusion d'un contrat de location, il annule le mandat de recherche. Un mandat de recherche peut être retiré à tout moment par les chercheurs ou annulé par Immo-Rama.
+          </p>
+
+          <p>
+            <strong className="text-primary">8.</strong> Si un client sous contrat confirme par écrit ou verbalement que son dossier de candidature pour un logement peut être transmis à la gérance en charge et que la gérance informe Immo-Rama de sa décision d'attribuer le logement à ce client, Immo-Rama aura droit à une commission équivalente à un mois de loyer du bien en location concerné.
           </p>
 
           <Card className="p-3 bg-muted/50">
@@ -178,16 +182,16 @@ export default function CGVContent({ typeRecherche }: Props) {
               <strong className="text-primary">9. Position de Immo-Rama</strong>
             </p>
             <p className="mt-2 text-muted-foreground">
-              Immo-Rama ne peut assurer aucune garantie de succès quant à la conclusion d'un contrat. Les contrats sont passés directement entre les chercheurs et les offreurs.
+              Immo-Rama ne peut assurer aucune garantie de succès quant à la conclusion d'un contrat. Les contrats sont passés directement entre les chercheurs et les offreurs. Immo-Rama ne peut assumer aucune responsabilité quant à l'exactitude des données concernant les offreurs et leurs offres de logement. Immo-Rama peut assister les parties contractantes lors de la signature de contrat et répondre aux questions relatives à la conclusion de contrat. Toutefois, Immo-Rama n'assume aucune responsabilité pour les conséquences résultant de contrats défectueux ou de comportements fautifs de la part des parties contractantes. Ceci vaut également lorsque Immo-Rama a été directement impliqué dans les négociations de contrat.
             </p>
           </Card>
 
           <p>
-            <strong className="text-primary">10.</strong> Les chercheurs autorisent Immo-Rama à transmettre les données indiquées ainsi que les résultats des demandes concernant la solvabilité et la référence à des offreurs potentiels.
+            <strong className="text-primary">10.</strong> Les chercheurs autorisent Immo-Rama à transmettre les données indiquées ainsi que les résultats des demandes concernant la solvabilité et la référence à des offreurs potentiels. En outre, Immo-Rama a le droit d'utiliser les données de contact pour des envois d'informations propres à la Société.
           </p>
 
           <p>
-            <strong className="text-primary">11.</strong> La juridiction compétente est Berne (Suisse). Le Code des obligations suisse (CO) fait foi.
+            <strong className="text-primary">11.</strong> La juridiction compétente est Berne (Suisse). Sauf indication contraire contenue dans le présent contrat, c'est le Code des obligations suisse (CO) qui fait foi.
           </p>
         </div>
 
