@@ -356,7 +356,7 @@ const AdminEnvoyerOffre = () => {
               agent_id: clientAgent,
               date_visite: isoWithTimezone,
               adresse: formData.localisation,
-              statut: 'planifiee',
+              statut: 'proposee',
               notes: formData.commentaires,
             });
         }

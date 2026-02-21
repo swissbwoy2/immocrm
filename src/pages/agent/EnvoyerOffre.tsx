@@ -338,7 +338,7 @@ const EnvoyerOffre = () => {
               date_visite: isoWithTimezone,
               date_visite_fin: endDate,
               adresse: formData.localisation,
-              statut: 'planifiee',
+              statut: 'proposee',
               source: 'proposee_agent',
               notes: formData.commentaires,
             });
