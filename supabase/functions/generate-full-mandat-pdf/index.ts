@@ -739,7 +739,7 @@ const handler = async (req: Request): Promise<Response> => {
     drawSectionTitle('7. SIGNATURE ET VALIDATION');
     
     const signatureDate = clientData.mandat_date_signature || demandeData?.cgv_acceptees_at;
-    addText(`Fait a Lausanne, le ${formatDate(signatureDate || new Date().toISOString())}`, margin, yPosition, 10);
+    addText(`Fait à Crissier, le ${formatDate(signatureDate || new Date().toISOString())}`, margin, yPosition, 10);
     yPosition -= 25;
     
     // Embed signature

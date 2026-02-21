@@ -658,7 +658,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
   
   addText('SIGNATURE', margin, yPosition, 12, helveticaBold);
   yPosition -= 15;
-  addText(`Fait a Lausanne, le ${formatDate(new Date().toISOString())}`, margin, yPosition, 10);
+  addText(`Fait à Crissier, le ${formatDate(new Date().toISOString())}`, margin, yPosition, 10);
   yPosition -= 25;
   
   // Add signature image if available
