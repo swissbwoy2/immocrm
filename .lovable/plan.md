@@ -1,54 +1,35 @@
 
+# Compléter les dispositions du mandat de recherche - Location
 
-# Corriger le statut des visites proposees par l'agent
+## Analyse comparative : PDF complet vs code actuel
 
-## Probleme actuel
+J'ai comparé article par article le contrat PDF fourni (le document de référence complet) avec ce qui est généré par l'application. Voici toutes les parties manquantes ou tronquées :
 
-Quand un agent envoie une offre avec des creneaux de visite, les visites sont creees avec le statut **`planifiee`** immediatement. L'agent voit donc "X visites a venir" dans son calendrier, comme si tout etait confirme -- alors que le client n'a peut-etre meme pas vu l'offre.
-
-Le systeme a deja un champ `source: 'proposee_agent'` et des badges visuels ("Creneau propose" en gris vs "Visite confirmee" en bleu), mais le **statut** sous-jacent est le meme (`planifiee`), ce qui cree la confusion.
-
-## Solution
-
-Introduire un nouveau statut **`proposee`** pour les visites creees par l'agent lors de l'envoi d'une offre. La visite ne passera a `planifiee` que lorsque le client choisit un creneau.
-
-### Changements
-
-| Fichier | Modification |
+| Article | Texte manquant dans le code |
 |---|---|
-| `src/pages/agent/EnvoyerOffre.tsx` | Changer `statut: 'planifiee'` en `statut: 'proposee'` (ligne 341) lors de la creation de la visite |
-| `src/pages/admin/EnvoyerOffre.tsx` | Meme changement pour l'envoi d'offre cote admin |
-| `src/pages/agent/Calendrier.tsx` | Exclure les visites `proposee` du compteur "visites a venir" ; les afficher differemment (grise, icone horloge) |
-| `src/pages/client/Calendrier.tsx` | Meme exclusion du compteur pour le client |
-| `src/components/calendar/PremiumCalendarView.tsx` | Utiliser le statut `proposee` au lieu de `source === 'proposee_agent'` pour determiner la couleur grise |
-| `src/components/calendar/PremiumDayEvents.tsx` | Utiliser le statut `proposee` pour afficher le badge "Creneau propose" au lieu de verifier la source |
-| `src/components/ResendOfferDialog.tsx` | S'assurer que le renvoi d'offre utilise aussi `statut: 'proposee'` |
+| **2.1** | "En l'absence de résiliation, par lettre recommandée, au moins 30 jours avant son échéance, le présent contrat est réputé renouvelé par reconduction tacite, à chaque fois pour 3 mois supplémentaires. En cas de non-renouvellement, la caution vous est restituée sous un délai de 30 jours." |
+| **2.3** (nouveau) | Article entier manquant : "Le prolongement de contrat ou la conclusion de contrats ultérieurs sont possibles. Ils doivent toutefois être communiqués dans les 5 jours après conclusion de contrat à Immo-Rama et sont soumis à la commission d'agence. Des prolongements de contrat ou des contrats ultérieurs sont des contrats qui sont conclus entre le même chercheur ou la même entreprise pendant ou durant les trois mois qui suivent la fin du premier contrat pour le même objet ou un autre avec le même bailleur." |
+| **2.4** (nouveau) | L'actuel 2.3 doit devenir 2.4 et être complété : "En cas de résiliation de contrat avant terme ou de renoncement au contrat de (sous)-location, la commission ne sera pas remboursée, ni entièrement, ni partiellement." |
+| **3** | Fin manquante : "Après conclusion d'un contrat, les chercheurs sont tenus de communiquer à Immo-Rama l'adresse de leur future demeure ainsi que le nom et l'adresse du futur bailleur." |
+| **4** | Fin manquante : ", en indiquant cette autre source. Au cas contraire, l'adresse sera estimée être fournie par Immo-Rama." |
+| **5** | Fin manquante : "Les chercheurs autorisent explicitement Immo-Rama à demander des renseignements sur leur personne auprès de services de renseignements sur la solvabilité ainsi que de demander des références auprès de son employeur." |
+| **6** | Fin manquante : "En cas où des informations seraient tout de même transmises à des tierces personnes, la personne responsable est tenue de supporter tout dommage qui pourrait en résulter, en particulier la commission qu'Immo-Rama aurait perdue par ce fait." |
+| **7** | Fin manquante : "Un mandat de recherche peut être retiré à tout moment par les chercheurs ou annulé par Immo-Rama." |
+| **8** | Version tronquée -- doit être : "...et que la gérance informe Immo-Rama de sa décision d'attribuer le logement à ce client, Immo-Rama aura droit à une commission équivalente à un mois de loyer du bien en location concerné." |
+| **9** | Gros paragraphe manquant sur la responsabilité : "Immo-Rama ne peut assumer aucune responsabilité quant à l'exactitude des données concernant les offreurs et leurs offres de logement. (...) Immo-Rama peut assister les parties contractantes lors de la signature de contrat et répondre aux questions relatives à la conclusion de contrat. Toutefois, Immo-Rama n'assume aucune responsabilité pour les conséquences résultant de contrats défectueux ou de comportements fautifs de la part des parties contractantes. Ceci vaut également lorsque Immo-Rama a été directement impliqué dans les négociations de contrat." |
+| **10** | Fin manquante : "En outre, Immo-Rama a le droit d'utiliser les données de contact pour des envois d'informations propres à la Société." |
+| **11** | Version tronquée -- doit être : "Sauf indication contraire contenue dans le présent contrat, c'est le Code des obligations suisse (CO) qui fait foi." |
 
-### Logique de transition des statuts
+## Fichiers à modifier
 
-```text
-Agent envoie offre avec creneaux
-       |
-       v
-  statut: 'proposee'     <-- NOUVEAU (grise dans le calendrier)
-       |
-  Client choisit un creneau
-       |
-       v
-  statut: 'planifiee'    <-- Comme avant (bleu dans le calendrier)
-       |
-  Visite effectuee
-       |
-       v
-  statut: 'effectuee'
-```
+| Fichier | Description |
+|---|---|
+| `src/components/mandat/CGVContent.tsx` | Dispositions affichées dans le formulaire (section location, lignes 117-226) |
+| `supabase/functions/generate-full-mandat-pdf/index.ts` | PDF généré pour téléchargement (articles lignes 550-694) |
+| `supabase/functions/send-mandat-pdf/index.ts` | PDF envoyé par email (articles lignes 506-635) |
 
-### Impact sur les compteurs
+## Détail des modifications
 
-- Le compteur "X visites a venir" dans le calendrier agent ne comptera que les visites `planifiee` (confirmees), pas les `proposee`
-- Un compteur separe "X creneaux en attente" sera affiche pour que l'agent sache combien de propositions attendent une reponse client
-- Cote client, les creneaux `proposee` apparaitront avec un appel a l'action clair ("Choisissez un creneau")
+Pour chaque fichier, le texte de tous les articles 1 à 11 sera remplacé par la version complète du contrat PDF de référence. La numérotation sera corrigée (ajout de 2.3 et 2.4, renumérotation de l'ancien 2.3).
 
-### Pas besoin de migration SQL
-
-Le champ `statut` est de type `text` sans contrainte CHECK, donc le nouveau statut `proposee` fonctionnera directement sans migration de base de donnees.
+Aucune modification de base de données n'est nécessaire.
