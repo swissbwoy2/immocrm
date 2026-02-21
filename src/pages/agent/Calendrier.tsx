@@ -738,7 +738,9 @@ export default function AgentCalendrier() {
             Mon calendrier
           </h1>
           <p className="text-muted-foreground mt-1 ml-12">
-            <span className="font-medium text-blue-600 dark:text-blue-400">{visites.filter(v => v.statut === 'planifiee').length}</span> visites à venir
+            <span className="font-medium text-blue-600 dark:text-blue-400">{visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= new Date()).length}</span> visites confirmées
+            <span className="mx-2">•</span>
+            <span className="font-medium text-amber-600 dark:text-amber-400">{visites.filter(v => v.statut === 'proposee').length}</span> en attente
             <span className="mx-2">•</span>
             <span className="font-medium">{events.length}</span> événements
           </p>

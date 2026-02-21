@@ -281,7 +281,8 @@ export default function ClientCalendrier() {
     );
   }
 
-  const upcomingVisites = visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= new Date());
+  const upcomingVisites = visites.filter(v => (v.statut === 'planifiee' || v.statut === 'proposee') && new Date(v.date_visite) >= new Date());
+  const pendingVisites = visites.filter(v => v.statut === 'proposee');
 
   return (
     <div className="p-4 md:p-6 space-y-6 overflow-auto h-full">

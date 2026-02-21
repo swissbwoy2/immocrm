@@ -150,14 +150,14 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
       const key = `${visite.adresse}-${visite.date_visite}`;
       const existingVisite = existing.find(e => e.isVisite && `${e.event.adresse}-${e.event.date_visite}` === key);
       
-      // Déterminer le type de visite selon la source
+      // Déterminer le type de visite selon le statut
       let visiteType = 'visite';
       if (visite.est_deleguee || visite.source === 'deleguee') {
         visiteType = 'visite_deleguee';
-      } else if (visite.source === 'proposee_agent') {
+      } else if (visite.statut === 'proposee') {
         visiteType = 'visite_proposee';
       }
-      // planifiee_client garde le type 'visite' (confirmée)
+      // planifiee garde le type 'visite' (confirmée)
       
       if (!existingVisite) {
         existing.push({ 
