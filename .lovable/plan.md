@@ -1,41 +1,54 @@
 
-# Problème : Guelda reste dans la liste des clients de Carina après suppression
 
-## Cause racine identifiée
+# Corriger le statut des visites proposees par l'agent
 
-Le lien entre Guelda et Carina n'existe **pas dans `client_agents`** (la table junction moderne) — il n'existe que via le champ legacy `agent_id` directement sur la table `clients` :
+## Probleme actuel
 
-| Table | Valeur |
+Quand un agent envoie une offre avec des creneaux de visite, les visites sont creees avec le statut **`planifiee`** immediatement. L'agent voit donc "X visites a venir" dans son calendrier, comme si tout etait confirme -- alors que le client n'a peut-etre meme pas vu l'offre.
+
+Le systeme a deja un champ `source: 'proposee_agent'` et des badges visuels ("Creneau propose" en gris vs "Visite confirmee" en bleu), mais le **statut** sous-jacent est le meme (`planifiee`), ce qui cree la confusion.
+
+## Solution
+
+Introduire un nouveau statut **`proposee`** pour les visites creees par l'agent lors de l'envoi d'une offre. La visite ne passera a `planifiee` que lorsque le client choisit un creneau.
+
+### Changements
+
+| Fichier | Modification |
 |---|---|
-| `clients.agent_id` pour Guelda | `67f3a2c5` (= Carina) ✅ présent |
-| `client_agents` pour Guelda + Carina | **0 enregistrements** ❌ absent |
+| `src/pages/agent/EnvoyerOffre.tsx` | Changer `statut: 'planifiee'` en `statut: 'proposee'` (ligne 341) lors de la creation de la visite |
+| `src/pages/admin/EnvoyerOffre.tsx` | Meme changement pour l'envoi d'offre cote admin |
+| `src/pages/agent/Calendrier.tsx` | Exclure les visites `proposee` du compteur "visites a venir" ; les afficher differemment (grise, icone horloge) |
+| `src/pages/client/Calendrier.tsx` | Meme exclusion du compteur pour le client |
+| `src/components/calendar/PremiumCalendarView.tsx` | Utiliser le statut `proposee` au lieu de `source === 'proposee_agent'` pour determiner la couleur grise |
+| `src/components/calendar/PremiumDayEvents.tsx` | Utiliser le statut `proposee` pour afficher le badge "Creneau propose" au lieu de verifier la source |
+| `src/components/ResendOfferDialog.tsx` | S'assurer que le renvoi d'offre utilise aussi `statut: 'proposee'` |
 
-Quand l'interface essaie de retirer Carina de la liste de clients, elle supprime uniquement dans `client_agents` — mais comme l'entrée n'y est pas, rien ne se passe. Le champ `clients.agent_id = Carina` reste intact, donc Guelda continue d'apparaître dans la liste de Carina.
+### Logique de transition des statuts
 
-## Solution en deux parties
+```text
+Agent envoie offre avec creneaux
+       |
+       v
+  statut: 'proposee'     <-- NOUVEAU (grise dans le calendrier)
+       |
+  Client choisit un creneau
+       |
+       v
+  statut: 'planifiee'    <-- Comme avant (bleu dans le calendrier)
+       |
+  Visite effectuee
+       |
+       v
+  statut: 'effectuee'
+```
 
-### Partie 1 — Corriger la désassignation dans l'interface
+### Impact sur les compteurs
 
-Dans la page `ClientDetail.tsx`, la fonction de désassignation d'un agent (bouton "Retirer l'agent") doit également mettre `clients.agent_id` à `null` quand c'est l'agent principal qui est retiré, en plus de supprimer dans `client_agents`.
+- Le compteur "X visites a venir" dans le calendrier agent ne comptera que les visites `planifiee` (confirmees), pas les `proposee`
+- Un compteur separe "X creneaux en attente" sera affiche pour que l'agent sache combien de propositions attendent une reponse client
+- Cote client, les creneaux `proposee` apparaitront avec un appel a l'action clair ("Choisissez un creneau")
 
-### Partie 2 — Corriger le problème immédiat de Guelda
+### Pas besoin de migration SQL
 
-Via une mise à jour directe en base : mettre `agent_id = NULL` sur l'enregistrement client de Guelda (`id = 3e8dfba6-eca3-4cc5-82ee-2528dc8249a7`), pour couper le lien avec Carina.
-
-La conversation est déjà archivée (`is_archived: true`), donc elle ne sera pas visible dans la messagerie. Pas besoin de toucher à la conversation.
-
-## Fichiers impactés
-
-| Fichier | Changement |
-|---|---|
-| `src/pages/admin/ClientDetail.tsx` | Dans la fonction de retrait d'agent, ajouter la mise à null de `clients.agent_id` si c'était l'agent primaire |
-| `src/pages/admin/Assignations.tsx` | Même correction dans `handleEditAssignment` : s'assurer que `clients.agent_id` est mis à null quand tous les agents sont retirés ou que l'agent primaire change |
-
-## Correction immédiate (base de données)
-
-Mettre `agent_id = NULL` pour Guelda dans la table `clients` pour rompre immédiatement le lien avec Carina.
-
-## Résultat attendu
-
-- Guelda n'apparaît plus dans la liste des clients de Carina
-- Toute future désassignation via l'interface fonctionnera correctement en mettant à jour les deux sources (`client_agents` ET `clients.agent_id`)
+Le champ `statut` est de type `text` sans contrainte CHECK, donc le nouveau statut `proposee` fonctionnera directement sans migration de base de donnees.
