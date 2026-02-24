@@ -223,14 +223,39 @@ export default function OffresEnvoyees() {
       if (!agentData) return;
       setAgent(agentData);
 
-      const { data: offresData, error } = await supabase
+      // 1. Fetch agent's own offres
+      const { data: ownOffres, error } = await supabase
         .from('offres')
-        .select('*, clients(*, profiles!clients_user_id_fkey(nom, prenom, email))')
+        .select('*, clients(*, profiles!clients_user_id_fkey(nom, prenom, email)), agents!offres_agent_id_fkey(id, user_id, profiles:agents_user_id_fkey(nom, prenom))')
         .eq('agent_id', agentData.id)
         .order('date_envoi', { ascending: false });
 
       if (error) throw error;
-      setOffres(offresData || []);
+
+      // 2. Fetch offres from co-assigned clients (other agents' offres)
+      const { data: clientAgentsForOffres } = await supabase
+        .from('client_agents')
+        .select('client_id')
+        .eq('agent_id', agentData.id);
+
+      const coClientIds = clientAgentsForOffres?.map(ca => ca.client_id) || [];
+      let coAgentOffres: any[] = [];
+      if (coClientIds.length > 0) {
+        const { data: coOffres } = await supabase
+          .from('offres')
+          .select('*, clients(*, profiles!clients_user_id_fkey(nom, prenom, email)), agents!offres_agent_id_fkey(id, user_id, profiles:agents_user_id_fkey(nom, prenom))')
+          .in('client_id', coClientIds)
+          .neq('agent_id', agentData.id)
+          .order('date_envoi', { ascending: false });
+        coAgentOffres = coOffres || [];
+      }
+
+      // 3. Merge and deduplicate
+      const allOffresMap = new Map();
+      (ownOffres || []).forEach(o => allOffresMap.set(o.id, { ...o, is_own: true }));
+      coAgentOffres.forEach(o => { if (!allOffresMap.has(o.id)) allOffresMap.set(o.id, { ...o, is_own: false }); });
+      const mergedOffres = Array.from(allOffresMap.values()).sort((a, b) => new Date(b.date_envoi).getTime() - new Date(a.date_envoi).getTime());
+      setOffres(mergedOffres);
       
       const { data: clientAgentsData } = await supabase
         .from('client_agents')
@@ -701,11 +726,16 @@ export default function OffresEnvoyees() {
                         <h3 className="font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
                           {offre.adresse}
                         </h3>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
                             <User className="h-3.5 w-3.5" />
                             <span className="truncate">{getClientName(offre)}</span>
                           </div>
+                          {!offre.is_own && offre.agents?.profiles && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/50 text-amber-600 dark:text-amber-400 bg-amber-500/10">
+                              Envoyé par {offre.agents.profiles.prenom} {offre.agents.profiles.nom}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
