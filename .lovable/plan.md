@@ -1,59 +1,33 @@
 
 
-# Corriger la visibilité historique des offres et visites entre agents
+## Problem Identified
 
-## Probleme identifie
+The issue is NOT that the buttons don't work -- they DO update the status. The real problem is that **there are duplicate visit entries in your database**. For example, "Chem. de Bonne-Espérance 12" appears 3 times with different IDs but the exact same data (same client, same agent, same date). When you click "Accepter" on one, it updates that specific entry, but the duplicates remain unchanged with their buttons still active.
 
-Quand on change l'agent assigne a un client :
-- L'ancien agent perd la visibilite sur les offres qu'il a envoyees (la politique de securite supprime son acces)
-- Le nouvel agent ne voit pas les offres et visites de l'ancien agent (les requetes filtrent par son propre `agent_id`)
+## Plan
 
-Exemple concret : Carina a envoye des offres pour Noah. Si on assigne Ebenezer a la place, Ebenezer ne voit pas ce que Carina a fait, et Carina perd l'acces a son propre travail.
+### Step 1: Clean up existing duplicates
+Remove all duplicate visits from the database, keeping only one entry per unique combination of (address, client, agent, date).
 
-## Solution en 2 volets
+### Step 2: Prevent future duplicates
+Add a check in the code that creates visits (in the client Messagerie and other pages) to verify if a visit with the same address, client, agent, and date already exists before inserting a new one. This prevents the "double-click" or "re-submit" problem.
 
-### 1. Politique de securite (RLS) sur la table `offres`
+### Step 3: Add a database constraint
+Add a unique constraint on the `visites` table for the combination of `(offre_id, client_id, agent_id, date_visite)` to prevent duplicates at the database level as a safety net.
 
-Ajouter une politique SELECT permettant a un agent de TOUJOURS voir les offres qu'il a lui-meme creees, meme s'il n'est plus assigne au client :
+---
 
-```text
-offres.agent_id = get_my_agent_id()  -->  acces en lecture garanti
-```
+### Technical Details
 
-Cela garantit que l'ancien agent conserve la visibilite sur son travail historique.
+**Database cleanup SQL:**
+- Identify duplicates grouped by `(adresse, client_id, agent_id, date_visite)` where `statut = 'planifiee'`
+- Delete all but the oldest entry (smallest `created_at`) in each group
 
-### 2. Requetes applicatives (code frontend)
+**Code changes:**
+- In files that insert into the `visites` table (e.g., `src/pages/client/Messagerie.tsx`, `src/pages/agent/Messagerie.tsx`), add a pre-check: query for an existing visit with the same parameters before inserting
+- Add a unique index on `visites(offre_id, client_id, agent_id, date_visite)` to enforce uniqueness at the DB level
 
-Modifier les pages agent pour afficher aussi les offres/visites des co-agents du meme client :
-
-| Fichier | Modification |
-|---|---|
-| `src/pages/agent/OffresEnvoyees.tsx` | Ajouter une 2e requete pour charger les offres des clients co-assignes (via `client_agents`), puis fusionner avec les offres propres |
-| `src/pages/agent/Visites.tsx` | Idem : charger les visites des clients co-assignes en plus des visites propres |
-
-### Detail technique
-
-**Migration SQL** : Ajouter une politique RLS sur `offres` :
-```text
-CREATE POLICY "Agents can view their own offres"
-ON offres FOR SELECT
-USING (agent_id = get_my_agent_id());
-```
-
-**OffresEnvoyees.tsx** (ligne 226-230) :
-- Requete actuelle : `.eq('agent_id', agentData.id)` (ne montre que ses propres offres)
-- Nouvelle logique : Charger AUSSI les offres ou `client_id` est dans la liste des clients co-assignes via `client_agents`
-- Fusionner les deux jeux de donnees en eliminant les doublons
-- Marquer visuellement les offres d'autres agents (badge "Envoye par [nom agent]")
-
-**Visites.tsx** (ligne 241-244) :
-- Meme approche : ajouter une requete pour les visites des clients co-assignes
-- Fusionner et marquer visuellement les visites d'autres agents
-
-### Resultat attendu
-
-- Carina voit toujours les offres qu'elle a envoyees pour Noah, meme apres reassignation
-- Ebenezer voit les offres envoyees par Carina pour Noah (son client co-assigne)
-- Le suivi historique est preserve dans les deux sens
-- Les offres/visites d'un autre agent sont visuellement identifiees
-
+**Files to modify:**
+- `src/pages/client/Messagerie.tsx` -- add duplicate check before insert
+- `src/pages/agent/Messagerie.tsx` -- add duplicate check before insert
+- Database migration -- cleanup + unique constraint
