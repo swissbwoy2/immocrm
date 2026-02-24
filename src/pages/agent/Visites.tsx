@@ -366,13 +366,18 @@ export default function AgentVisites() {
   };
 
   const handleRefuseDelegatedVisit = async (visite: any) => {
-    if (!agentId || !user) return;
+    if (!agentId || !user) {
+      toast.error('Erreur: agent non identifié');
+      return;
+    }
 
     try {
-      await supabase
+      const { error: updateError } = await supabase
         .from('visites')
         .update({ statut: 'refusee' })
         .eq('id', visite.id);
+
+      if (updateError) throw updateError;
 
       const { data: conv } = await supabase
         .from('conversations')
@@ -850,10 +855,11 @@ export default function AgentVisites() {
               onClick={async (e) => {
                 e.stopPropagation();
                 try {
-                  await supabase.from('visites').update({ statut_coursier: 'en_attente', remuneration_coursier: 5 }).eq('id', visite.id);
+                  const { error } = await supabase.from('visites').update({ statut_coursier: 'en_attente', remuneration_coursier: 5 }).eq('id', visite.id);
+                  if (error) throw error;
                   toast.success('Visite déléguée au pool coursier');
                   await loadVisites();
-                } catch { toast.error('Erreur'); }
+                } catch (err) { console.error('Error delegating to courier:', err); toast.error('Erreur lors de la délégation'); }
               }}
               variant="outline"
               size="sm"
@@ -989,10 +995,11 @@ export default function AgentVisites() {
               onClick={async (e) => {
                 e.stopPropagation();
                 try {
-                  await supabase.from('visites').update({ statut_coursier: 'en_attente' }).eq('id', visite.id);
+                  const { error } = await supabase.from('visites').update({ statut_coursier: 'en_attente', remuneration_coursier: 5 }).eq('id', visite.id);
+                  if (error) throw error;
                   toast.success('Visite déléguée au pool coursier');
                   await loadVisites();
-                } catch { toast.error('Erreur'); }
+                } catch (err) { console.error('Error delegating to courier:', err); toast.error('Erreur lors de la délégation'); }
               }}
               variant="outline"
               size="sm"
