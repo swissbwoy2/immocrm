@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -95,6 +96,7 @@ export default function Candidatures() {
   const [searchParams] = useSearchParams();
   const { user, userRole } = useAuth();
   const { toast } = useToast();
+  const { syncEvent } = useGoogleCalendarSync();
   
   const [candidatures, setCandidatures] = useState<Candidature[]>([]);
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
@@ -334,6 +336,15 @@ export default function Candidatures() {
           agent_id: agentData.id,
           created_by: user.id,
         });
+
+        // Sync to Google Calendar
+        if (user) {
+          syncEvent(user.id, {
+            title: `État des lieux - ${selectedCandidature.offres?.adresse || 'Appartement'}`,
+            description: `Remise des clés\n${etatLieuxHeure ? `Heure: ${etatLieuxHeure}` : ''}`,
+            start: eventDateTime,
+          });
+        }
 
         // Notify client
         const { data: clientData } = await supabase

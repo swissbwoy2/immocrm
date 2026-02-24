@@ -4,6 +4,7 @@ import { fr } from 'date-fns/locale';
 import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar, Pencil, Trash2, MapPin, Home, Phone, Upload, X, Image, Video, Loader2, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -92,6 +93,7 @@ const priorityLabels: Record<string, string> = {
 export default function AgentCalendrier() {
   const { user } = useAuth();
   const { markTypeAsRead } = useNotifications();
+  const { syncEvent } = useGoogleCalendarSync();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [visites, setVisites] = useState<any[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -387,6 +389,16 @@ export default function AgentCalendrier() {
       });
 
       if (error) throw error;
+
+      // Sync to Google Calendar
+      if (user) {
+        syncEvent(user.id, {
+          title: formData.title,
+          description: formData.description || undefined,
+          start: eventDate.toISOString(),
+          allDay: formData.all_day,
+        });
+      }
 
       toast.success('Événement créé');
       setShowEventForm(false);

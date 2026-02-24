@@ -4,6 +4,7 @@ import { fr } from 'date-fns/locale';
 import { Plus, Calendar as CalendarIcon, MapPin, Phone, ExternalLink, Home, User, Building2, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -41,6 +42,7 @@ interface Client {
 export default function AdminCalendrier() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { syncEvent } = useGoogleCalendarSync();
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [visites, setVisites] = useState<any[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -229,6 +231,16 @@ export default function AdminCalendrier() {
       });
 
       if (error) throw error;
+
+      // Sync to Google Calendar
+      if (user) {
+        syncEvent(user.id, {
+          title: formData.title,
+          description: formData.description || undefined,
+          start: eventDate.toISOString(),
+          allDay: formData.all_day,
+        });
+      }
 
       toast.success('Événement créé avec succès');
       setShowEventForm(false);

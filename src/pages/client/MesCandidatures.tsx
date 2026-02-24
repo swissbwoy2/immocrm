@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync';
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -67,6 +68,7 @@ const MesCandidatures = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { syncEvent } = useGoogleCalendarSync();
   const [searchParams] = useSearchParams();
   const [offres, setOffres] = useState<any[]>([]);
   const [candidatures, setCandidatures] = useState<any[]>([]);
@@ -286,6 +288,15 @@ const MesCandidatures = () => {
           agent_id: clientData.agent_id,
           created_by: user?.id,
         });
+
+        // Sync to Google Calendar
+        if (user) {
+          syncEvent(user.id, {
+            title: `Signature bail - ${offre?.adresse || 'Bail'}`,
+            description: `Lieu: ${selectedDate.lieu}`,
+            start: selectedDate.date,
+          });
+        }
       }
 
       await loadData();

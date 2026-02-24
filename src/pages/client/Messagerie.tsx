@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
+import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync';
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploader";
@@ -51,6 +52,7 @@ const removeAccents = (str: string) => {
 
 const Messagerie = () => {
   const { user } = useAuth();
+  const { syncEvent } = useGoogleCalendarSync();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { markTypeAsRead } = useNotifications();
@@ -785,6 +787,15 @@ const Messagerie = () => {
                 priority: 'haute'
               });
 
+              // Sync signature to Google Calendar
+              if (user) {
+                syncEvent(user.id, {
+                  title: `Signature bail - ${offre.adresse}`,
+                  description: `Lieu: ${selectedDateObj.lieu}`,
+                  start: selectedDateObj.date,
+                });
+              }
+
               await supabase.from('messages').insert({
                 conversation_id: selectedConv,
                 sender_id: user.id,
@@ -934,6 +945,15 @@ const Messagerie = () => {
           created_by: user.id,
           priority: 'normale'
         });
+
+        // Sync visite to Google Calendar
+        if (user) {
+          syncEvent(user.id, {
+            title: `Visite - ${selectedOffre.adresse}`,
+            description: `Visite planifiée pour ${selectedOffre.adresse}`,
+            start: visitDate,
+          });
+        }
       }
 
       await supabase.from('messages').insert({
@@ -1065,7 +1085,16 @@ const Messagerie = () => {
             agent_id: clientData.agent_id,
             created_by: user.id,
             priority: 'haute'
+        });
+
+        // Sync visite déléguée to Google Calendar
+        if (user) {
+          syncEvent(user.id, {
+            title: `Visite déléguée - ${selectedOffre.adresse}`,
+            description: `Visite déléguée pour ${selectedOffre.adresse}`,
+            start: delegateDate,
           });
+        }
         }
 
         messageContent = `🏠 **Demande de visite déléguée**\n\n📍 ${selectedOffre.adresse}\n📅 Date souhaitée : ${formattedDate}\n${delegateNotes ? `📝 Notes : ${delegateNotes}` : ''}\n\nPouvez-vous effectuer cette visite pour moi ?`;
