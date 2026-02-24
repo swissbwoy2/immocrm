@@ -75,7 +75,7 @@ export function GoogleCalendarConnect() {
           'Authorization': `Bearer ${session.access_token}`,
           'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         },
-        body: JSON.stringify({ app_url: window.location.origin }),
+        body: JSON.stringify({ app_url: window.location.origin, app_path: window.location.pathname }),
       });
 
       const data = await response.json();

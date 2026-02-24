@@ -45,9 +45,11 @@ Deno.serve(async (req) => {
 
     const userId = data.claims.sub;
 
-    // Get the redirect_uri from the request body
+    // Get callback context from request body
     const body = await req.json().catch(() => ({}));
     const appUrl = body.app_url || 'https://immocrm.lovable.app';
+    const rawAppPath = typeof body.app_path === 'string' ? body.app_path : '/admin/parametres';
+    const appPath = rawAppPath.startsWith('/') ? rawAppPath : '/admin/parametres';
 
     const redirectUri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/google-calendar-callback`;
 
@@ -55,7 +57,7 @@ Deno.serve(async (req) => {
       'https://www.googleapis.com/auth/calendar.events',
     ].join(' ');
 
-    const state = btoa(JSON.stringify({ userId, appUrl }));
+    const state = btoa(JSON.stringify({ userId, appUrl, appPath }));
 
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
     authUrl.searchParams.set('client_id', clientId);
