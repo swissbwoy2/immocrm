@@ -618,17 +618,32 @@ const OffresRecues = () => {
       // Si une date est sélectionnée, créer une visite avec cette date
       // Sinon, créer une demande de visite sans date (l'agent choisira)
       if (delegateDate) {
-        await supabase.from('visites').insert({
-          offre_id: selectedOffre.id,
-          client_id: clientData.id,
-          agent_id: clientData.agent_id,
-          adresse: selectedOffre.adresse,
-          date_visite: delegateDate,
-          statut: 'planifiee',
-          est_deleguee: true,
-          source: 'deleguee',
-          notes: 'Visite déléguée à l\'agent par le client'
-        });
+        // Check for existing visit to avoid duplicates
+        const { data: existingVisites } = await supabase
+          .from('visites')
+          .select('id')
+          .eq('offre_id', selectedOffre.id)
+          .eq('client_id', clientData.id)
+          .eq('est_deleguee', true)
+          .eq('statut', 'planifiee');
+
+        if (existingVisites && existingVisites.length > 0) {
+          await supabase.from('visites')
+            .update({ date_visite: delegateDate })
+            .eq('id', existingVisites[0].id);
+        } else {
+          await supabase.from('visites').insert({
+            offre_id: selectedOffre.id,
+            client_id: clientData.id,
+            agent_id: clientData.agent_id,
+            adresse: selectedOffre.adresse,
+            date_visite: delegateDate,
+            statut: 'planifiee',
+            est_deleguee: true,
+            source: 'deleguee',
+            notes: 'Visite déléguée à l\'agent par le client'
+          });
+        }
       }
 
       await supabase
