@@ -1,44 +1,59 @@
 
-# Corrections sur la page Admin/Mandats
 
-## 1. Fixer la barre de progression pour les clients reloges
+# Corriger la visibilité historique des offres et visites entre agents
 
-Actuellement, les clients avec `statut = 'reloge'` continuent d'afficher une barre de progression active et un compteur "J+X" qui s'incremente. 
+## Probleme identifie
 
-**Correction :** Quand `client.statut === 'reloge'`, on fige la barre a 100% en vert, on affiche un badge "Reloge" au lieu du compteur, et on masque l'alerte "Proche expiration".
+Quand on change l'agent assigne a un client :
+- L'ancien agent perd la visibilite sur les offres qu'il a envoyees (la politique de securite supprime son acces)
+- Le nouvel agent ne voit pas les offres et visites de l'ancien agent (les requetes filtrent par son propre `agent_id`)
 
-## 2. Ajouter les boutons "Suspendre" et "Stopper" le mandat
+Exemple concret : Carina a envoye des offres pour Noah. Si on assigne Ebenezer a la place, Ebenezer ne voit pas ce que Carina a fait, et Carina perd l'acces a son propre travail.
 
-Deux nouveaux boutons d'action seront ajoutes sur chaque carte client :
+## Solution en 2 volets
 
-- **Suspendre le mandat** : passe le statut du client a `suspendu` (bouton orange, icone Pause). Un dialog de confirmation sera affiche.
-- **Stopper le mandat** : passe le statut du client a `stoppe` (bouton rouge, icone StopCircle). Un dialog de confirmation sera affiche.
+### 1. Politique de securite (RLS) sur la table `offres`
 
-Les clients suspendus ou stoppes auront egalement leur barre de progression figee avec un style visuel distinct (orange pour suspendu, rouge pour stoppe).
+Ajouter une politique SELECT permettant a un agent de TOUJOURS voir les offres qu'il a lui-meme creees, meme s'il n'est plus assigne au client :
 
-## Fichier modifie
-
-| Fichier | Modifications |
-|---|---|
-| `src/pages/admin/Mandats.tsx` | - Detection du statut `reloge`/`suspendu`/`stoppe` pour figer la progression - Ajout des boutons Suspendre et Stopper avec dialogs de confirmation - Badges visuels adaptes - Masquage des alertes pour les mandats figes |
-
-## Detail technique
-
-### Logique de progression figee (lignes 466-549)
 ```text
-Si client.statut === 'reloge'  -> progress=100, barre verte, badge "Reloge", pas de compteur J+
-Si client.statut === 'suspendu' -> progress figee, barre orange, badge "Suspendu"
-Si client.statut === 'stoppe'   -> progress figee, barre rouge, badge "Stoppe"
+offres.agent_id = get_my_agent_id()  -->  acces en lecture garanti
 ```
 
-### Nouveaux boutons (lignes 559-618)
-- Bouton "Suspendre" avec icone Pause (variant warning/outline)
-- Bouton "Stopper" avec icone StopCircle (variant destructive)
-- Chacun ouvre un dialog de confirmation avant de mettre a jour le statut en base
+Cela garantit que l'ancien agent conserve la visibilite sur son travail historique.
 
-### Nouveaux filtres dans les stats
-- Ajout d'un compteur "Reloges" dans les stats en haut de page
-- Le filtre statut integrera les nouveaux etats
+### 2. Requetes applicatives (code frontend)
 
-### Pas de migration necessaire
-Le champ `statut` sur la table `clients` est deja un champ texte qui accepte toute valeur. Les nouvelles valeurs `suspendu` et `stoppe` seront simplement inserees via UPDATE.
+Modifier les pages agent pour afficher aussi les offres/visites des co-agents du meme client :
+
+| Fichier | Modification |
+|---|---|
+| `src/pages/agent/OffresEnvoyees.tsx` | Ajouter une 2e requete pour charger les offres des clients co-assignes (via `client_agents`), puis fusionner avec les offres propres |
+| `src/pages/agent/Visites.tsx` | Idem : charger les visites des clients co-assignes en plus des visites propres |
+
+### Detail technique
+
+**Migration SQL** : Ajouter une politique RLS sur `offres` :
+```text
+CREATE POLICY "Agents can view their own offres"
+ON offres FOR SELECT
+USING (agent_id = get_my_agent_id());
+```
+
+**OffresEnvoyees.tsx** (ligne 226-230) :
+- Requete actuelle : `.eq('agent_id', agentData.id)` (ne montre que ses propres offres)
+- Nouvelle logique : Charger AUSSI les offres ou `client_id` est dans la liste des clients co-assignes via `client_agents`
+- Fusionner les deux jeux de donnees en eliminant les doublons
+- Marquer visuellement les offres d'autres agents (badge "Envoye par [nom agent]")
+
+**Visites.tsx** (ligne 241-244) :
+- Meme approche : ajouter une requete pour les visites des clients co-assignes
+- Fusionner et marquer visuellement les visites d'autres agents
+
+### Resultat attendu
+
+- Carina voit toujours les offres qu'elle a envoyees pour Noah, meme apres reassignation
+- Ebenezer voit les offres envoyees par Carina pour Noah (son client co-assigne)
+- Le suivi historique est preserve dans les deux sens
+- Les offres/visites d'un autre agent sont visuellement identifiees
+
