@@ -238,11 +238,36 @@ export default function AgentVisites() {
       
       setAgentId(agentData.id);
 
-      const { data: visitesData } = await supabase
+      // 1. Fetch agent's own visites
+      const { data: ownVisites } = await supabase
         .from('visites')
-        .select('*, offres(*), clients!visites_client_id_fkey(id, user_id)')
+        .select('*, offres(*), clients!visites_client_id_fkey(id, user_id), agents!visites_agent_id_fkey(id, user_id, profiles:agents_user_id_fkey(nom, prenom))')
         .eq('agent_id', agentData.id)
         .order('date_visite', { ascending: true });
+
+      // 2. Fetch visites from co-assigned clients (other agents' visites)
+      const { data: clientAgentsData } = await supabase
+        .from('client_agents')
+        .select('client_id')
+        .eq('agent_id', agentData.id);
+
+      const coClientIds = clientAgentsData?.map(ca => ca.client_id) || [];
+      let coAgentVisites: any[] = [];
+      if (coClientIds.length > 0) {
+        const { data: coVisites } = await supabase
+          .from('visites')
+          .select('*, offres(*), clients!visites_client_id_fkey(id, user_id), agents!visites_agent_id_fkey(id, user_id, profiles:agents_user_id_fkey(nom, prenom))')
+          .in('client_id', coClientIds)
+          .neq('agent_id', agentData.id)
+          .order('date_visite', { ascending: true });
+        coAgentVisites = coVisites || [];
+      }
+
+      // 3. Merge and deduplicate
+      const allVisitesMap = new Map();
+      (ownVisites || []).forEach(v => allVisitesMap.set(v.id, { ...v, is_own: true }));
+      coAgentVisites.forEach(v => { if (!allVisitesMap.has(v.id)) allVisitesMap.set(v.id, { ...v, is_own: false }); });
+      const visitesData = Array.from(allVisitesMap.values()).sort((a: any, b: any) => new Date(a.date_visite).getTime() - new Date(b.date_visite).getTime());
 
       const clientUserIds = visitesData?.map(v => v.clients?.user_id).filter(Boolean) || [];
       const { data: profiles } = await supabase
@@ -709,6 +734,11 @@ export default function AgentVisites() {
               {visite.est_deleguee && (
                 <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30">
                   Déléguée
+                </Badge>
+              )}
+              {!visite.is_own && visite.agents?.profiles && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/50 text-amber-600 dark:text-amber-400 bg-amber-500/10">
+                  Par {visite.agents.profiles.prenom} {visite.agents.profiles.nom}
                 </Badge>
               )}
               <Badge className={cn("font-semibold shadow-lg", urgency.color, urgency.urgent && "animate-pulse")}>
