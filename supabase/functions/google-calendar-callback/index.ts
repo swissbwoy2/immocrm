@@ -13,13 +13,34 @@ Deno.serve(async (req) => {
   const redirectUri = `${supabaseUrl}/functions/v1/google-calendar-callback`;
 
   let appUrl = 'https://immocrm.lovable.app';
+  let appPath = '/admin/parametres';
   let userId: string | null = null;
+
+  const buildRedirectUrl = (status: 'success' | 'error', reason?: string) => {
+    try {
+      const safePath = appPath.startsWith('/') ? appPath : '/admin/parametres';
+      const redirectUrl = new URL(safePath, appUrl);
+      redirectUrl.searchParams.set('google_calendar', status);
+      if (reason) {
+        redirectUrl.searchParams.set('reason', reason);
+      }
+      return redirectUrl.toString();
+    } catch {
+      const fallback = new URL('/admin/parametres', 'https://immocrm.lovable.app');
+      fallback.searchParams.set('google_calendar', status);
+      if (reason) {
+        fallback.searchParams.set('reason', reason);
+      }
+      return fallback.toString();
+    }
+  };
 
   // Parse state
   if (state) {
     try {
       const stateData = JSON.parse(atob(state));
       appUrl = stateData.appUrl || appUrl;
+      appPath = stateData.appPath || appPath;
       userId = stateData.userId;
     } catch {
       console.error('Invalid state parameter');
@@ -29,11 +50,11 @@ Deno.serve(async (req) => {
   // Handle OAuth error
   if (errorParam) {
     console.error('OAuth error:', errorParam);
-    return Response.redirect(`${appUrl}/parametres?google_calendar=error&reason=${errorParam}`, 302);
+    return Response.redirect(buildRedirectUrl('error', errorParam), 302);
   }
 
   if (!code || !userId) {
-    return Response.redirect(`${appUrl}/parametres?google_calendar=error&reason=missing_params`, 302);
+    return Response.redirect(buildRedirectUrl('error', 'missing_params'), 302);
   }
 
   try {
@@ -54,7 +75,8 @@ Deno.serve(async (req) => {
 
     if (!tokenResponse.ok || !tokenData.refresh_token) {
       console.error('Token exchange failed:', tokenData);
-      return Response.redirect(`${appUrl}/parametres?google_calendar=error&reason=token_exchange_failed`, 302);
+      const reason = typeof tokenData?.error === 'string' ? tokenData.error : 'token_exchange_failed';
+      return Response.redirect(buildRedirectUrl('error', reason), 302);
     }
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
@@ -75,12 +97,12 @@ Deno.serve(async (req) => {
 
     if (upsertError) {
       console.error('Error saving token:', upsertError);
-      return Response.redirect(`${appUrl}/parametres?google_calendar=error&reason=db_error`, 302);
+      return Response.redirect(buildRedirectUrl('error', 'db_error'), 302);
     }
 
-    return Response.redirect(`${appUrl}/parametres?google_calendar=success`, 302);
+    return Response.redirect(buildRedirectUrl('success'), 302);
   } catch (error) {
     console.error('Error in google-calendar-callback:', error);
-    return Response.redirect(`${appUrl}/parametres?google_calendar=error&reason=server_error`, 302);
+    return Response.redirect(buildRedirectUrl('error', 'server_error'), 302);
   }
 });
