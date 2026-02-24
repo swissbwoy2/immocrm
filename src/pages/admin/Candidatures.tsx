@@ -16,6 +16,7 @@ import {
 import { useFinalInvoice } from '@/hooks/useFinalInvoice';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -93,6 +94,7 @@ export default function AdminCandidatures() {
   const { user, userRole } = useAuth();
   const { toast } = useToast();
   const { loading: invoiceLoading, createFinalInvoice } = useFinalInvoice();
+  const { syncEvent } = useGoogleCalendarSync();
   
   const [candidatures, setCandidatures] = useState<Candidature[]>([]);
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
@@ -337,6 +339,15 @@ export default function AdminCandidatures() {
           agent_id: agentId,
           created_by: user.id,
         });
+
+        // Sync to Google Calendar
+        if (user) {
+          syncEvent(user.id, {
+            title: `État des lieux - ${selectedCandidature.offres?.adresse || 'Appartement'}`,
+            description: `Remise des clés\n${etatLieuxHeure ? `Heure: ${etatLieuxHeure}` : ''}`,
+            start: eventDateTime,
+          });
+        }
       }
     } catch (error) {
       console.error('Error creating calendar event:', error);

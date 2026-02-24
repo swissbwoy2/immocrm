@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback } from "react";
+import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync';
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,7 @@ const cleanMessageContent = (content: string) => {
 
 const Messagerie = () => {
   const { user } = useAuth();
+  const { syncEvent } = useGoogleCalendarSync();
   const { toast } = useToast();
   const { markTypeAsRead } = useNotifications();
   const navigate = useNavigate();
@@ -1073,6 +1075,18 @@ const Messagerie = () => {
         created_by: user.id,
         priority: 'haute'
       });
+
+      // Sync état des lieux to Google Calendar
+      if (user) {
+        const edlDateTime = etatLieuxHeure 
+          ? `${etatLieuxDate}T${etatLieuxHeure}:00`
+          : `${etatLieuxDate}T09:00:00`;
+        syncEvent(user.id, {
+          title: `État des lieux - ${selectedOffre.adresse}`,
+          description: `État des lieux pour ${selectedOffre.adresse}`,
+          start: edlDateTime,
+        });
+      }
 
       const dateFormatted = format(new Date(etatLieuxDate), 'EEEE d MMMM yyyy', { locale: fr });
 
