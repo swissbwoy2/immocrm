@@ -1,64 +1,65 @@
 
 
-## Synchronisation Calendrier - Fichiers ICS universels
+## Filtre par nombre de pieces - Pages Admin et Agent "Biens en vente"
 
-### Probleme actuel
-La synchronisation Google Calendar depend d'une API externe qui n'est pas encore activee. De plus, elle ne fonctionne pas avec le calendrier natif iPhone.
+### Probleme
+Les pages `/admin/biens-vente` et `/agent/biens-vente` n'ont pas de filtre par nombre de pieces. Il faut pouvoir cliquer sur "2 pieces" et ne voir que les biens avec exactement 2 pieces.
 
 ### Solution
-Generer des fichiers `.ics` (format iCalendar universel) a chaque creation d'evenement. Ces fichiers fonctionnent avec :
-- **Calendrier iPhone** (natif)
-- **Google Calendar**
-- **Outlook**
-- **Tout autre calendrier**
+Ajouter un Select "Nombre de pieces" dans la barre de filtres existante (a cote du filtre Statut), avec des valeurs exactes incluant les demi-pieces suisses.
 
-Deux mecanismes complementaires :
+### Fichiers a modifier
 
-1. **Bouton "Ajouter au calendrier"** sur chaque visite/evenement : telecharge un fichier `.ics` que l'utilisateur peut ouvrir pour l'ajouter a son calendrier
-2. **Envoi automatique par email** : a chaque creation d'evenement, un email avec le fichier `.ics` en piece jointe est envoye au participant (fonctionne automatiquement sur iPhone - le calendrier propose l'ajout)
+**1. `src/pages/admin/BiensEnVente.tsx`**
+- Ajouter un state `piecesFilter` (defaut: `'all'`)
+- Ajouter un Select avec les options : Tous, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5+
+- Ajouter la condition dans `filteredImmeubles` :
+  - `'all'` -> pas de filtre
+  - `'5+'` -> `nombre_pieces >= 5`
+  - sinon -> `nombre_pieces === Number(piecesFilter)`
 
-### Ce qui sera synchronise
-- Visites (normales et deleguees)
-- Etats des lieux
-- Signatures de bail
-- Evenements manuels du calendrier
+**2. `src/pages/agent/BiensEnVente.tsx`**
+- Meme modification identique
 
 ### Details techniques
 
-**Nouveau fichier : `src/utils/generateICS.ts`**
-- Fonction utilitaire qui genere une chaine ICS valide (format RFC 5545) a partir des details d'un evenement (titre, description, date debut/fin, lieu)
-- Fonction pour declencher le telechargement du fichier `.ics` dans le navigateur
+Les deux fichiers suivent exactement le meme pattern. Dans chaque fichier :
 
-**Nouvelle edge function : `send-calendar-invite`**
-- Recoit les details de l'evenement + email du destinataire
-- Genere le fichier `.ics`
-- Envoie un email via Resend avec le `.ics` en piece jointe (`text/calendar`)
-- L'iPhone detecte automatiquement ce type de piece jointe et propose l'ajout au calendrier natif
-
-**Modifications des pages existantes :**
-- `src/pages/agent/Visites.tsx` : ajout d'un bouton "Ajouter au calendrier" sur chaque carte de visite
-- `src/pages/agent/Calendrier.tsx` : envoi d'invite ICS a la creation d'evenement
-- `src/pages/agent/Candidatures.tsx` : invite ICS pour les etats des lieux
-- `src/pages/client/Calendrier.tsx` : bouton "Ajouter au calendrier" sur les visites
-- `src/pages/client/MesCandidatures.tsx` : invite ICS pour les signatures
-- `src/pages/admin/Calendrier.tsx` : meme logique pour l'admin
-- `src/pages/agent/Messagerie.tsx` et `src/pages/client/Messagerie.tsx` : invite ICS quand une visite ou un etat des lieux est cree via la messagerie
-
-**Format du fichier ICS :**
+1. Ajouter le state :
 ```text
-BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//ImmoCRM//FR
-BEGIN:VEVENT
-DTSTART:20260225T140000Z
-DTEND:20260225T150000Z
-SUMMARY:Visite - Rue de Lausanne 15
-DESCRIPTION:Visite avec le client
-LOCATION:Rue de Lausanne 15, 1000 Lausanne
-END:VEVENT
-END:VCALENDAR
+const [piecesFilter, setPiecesFilter] = useState<string>('all');
 ```
 
-**Prerequis :**
-- Verification que le secret Resend (RESEND_API_KEY) est configure pour l'envoi email (sinon, seul le telechargement manuel sera disponible)
+2. Ajouter le Select apres celui du statut :
+```text
+<Select value={piecesFilter} onValueChange={setPiecesFilter}>
+  <SelectTrigger className="w-full sm:w-48">
+    <SelectValue placeholder="Pieces" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="all">Toutes les pieces</SelectItem>
+    <SelectItem value="1">1 piece</SelectItem>
+    <SelectItem value="1.5">1.5 pieces</SelectItem>
+    <SelectItem value="2">2 pieces</SelectItem>
+    <SelectItem value="2.5">2.5 pieces</SelectItem>
+    <SelectItem value="3">3 pieces</SelectItem>
+    <SelectItem value="3.5">3.5 pieces</SelectItem>
+    <SelectItem value="4">4 pieces</SelectItem>
+    <SelectItem value="4.5">4.5 pieces</SelectItem>
+    <SelectItem value="5">5 pieces</SelectItem>
+    <SelectItem value="5+">5+ pieces</SelectItem>
+  </SelectContent>
+</Select>
+```
 
+3. Modifier le filtre :
+```text
+const matchesPieces = piecesFilter === 'all'
+  ? true
+  : piecesFilter === '5+'
+    ? i.nombre_pieces >= 5
+    : i.nombre_pieces === Number(piecesFilter);
+return matchesSearch && matchesStatut && matchesPieces;
+```
+
+Aucune modification de base de donnees necessaire. Le champ `nombre_pieces` existe deja dans la table `immeubles`.
