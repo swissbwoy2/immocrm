@@ -546,6 +546,14 @@ const MesClients = () => {
             </div>
           </div>
 
+          {/* Compteur de clients filtrés */}
+          <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full w-fit">
+            <Users className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium text-primary">
+              {sortedClients.length} {sortedClients.length > 1 ? 'clients trouvés' : 'client trouvé'}
+            </span>
+          </div>
+
           {/* Grid de clients - Premium */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {sortedClients.map((client, index) => {
