@@ -41,6 +41,7 @@ export default function AdminBiensEnVente() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statutFilter, setStatutFilter] = useState<string>('all');
+  const [piecesFilter, setPiecesFilter] = useState<string>('all');
   const [showAddDialog, setShowAddDialog] = useState(false);
 
   useEffect(() => { loadData(); }, []);
@@ -84,7 +85,8 @@ export default function AdminBiensEnVente() {
   const filteredImmeubles = immeubles.filter(i => {
     const matchesSearch = searchTerm === '' || i.nom.toLowerCase().includes(searchTerm.toLowerCase()) || i.ville?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatut = statutFilter === 'all' || i.statut_vente === statutFilter;
-    return matchesSearch && matchesStatut;
+    const matchesPieces = piecesFilter === 'all' ? true : piecesFilter === '5+' ? i.nombre_pieces >= 5 : i.nombre_pieces === Number(piecesFilter);
+    return matchesSearch && matchesStatut && matchesPieces;
   });
 
   return (
@@ -115,6 +117,22 @@ export default function AdminBiensEnVente() {
             <SelectItem value="publie">Publié</SelectItem>
             <SelectItem value="sous_offre">Sous offre</SelectItem>
             <SelectItem value="vendu">Vendu</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={piecesFilter} onValueChange={setPiecesFilter}>
+          <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Pièces" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Toutes les pièces</SelectItem>
+            <SelectItem value="1">1 pièce</SelectItem>
+            <SelectItem value="1.5">1.5 pièces</SelectItem>
+            <SelectItem value="2">2 pièces</SelectItem>
+            <SelectItem value="2.5">2.5 pièces</SelectItem>
+            <SelectItem value="3">3 pièces</SelectItem>
+            <SelectItem value="3.5">3.5 pièces</SelectItem>
+            <SelectItem value="4">4 pièces</SelectItem>
+            <SelectItem value="4.5">4.5 pièces</SelectItem>
+            <SelectItem value="5">5 pièces</SelectItem>
+            <SelectItem value="5+">5+ pièces</SelectItem>
           </SelectContent>
         </Select>
       </div>
