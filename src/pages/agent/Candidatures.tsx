@@ -13,6 +13,7 @@ import {
   Filter, Building2, FileSignature, CalendarCheck, Key, Send, AlertTriangle,
   ChevronDown, ChevronUp, FastForward, Phone, Trash2, Home, Sparkles
 } from 'lucide-react';
+import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync';
@@ -346,12 +347,26 @@ export default function Candidatures() {
           });
         }
 
-        // Notify client
-        const { data: clientData } = await supabase
+        // Send ICS invite via email
+        const { data: clientProfile } = await supabase
           .from('clients')
-          .select('user_id')
+          .select('user_id, profiles:user_id(email)')
           .eq('id', selectedCandidature.client_id)
           .maybeSingle();
+
+        const clientEmail = (clientProfile?.profiles as any)?.email;
+        if (clientEmail) {
+          supabase.functions.invoke('send-calendar-invite', {
+            body: {
+              title: `État des lieux - ${selectedCandidature.offres?.adresse || 'Appartement'}`,
+              description: `Remise des clés\n${etatLieuxHeure ? `Heure: ${etatLieuxHeure}` : ''}`,
+              location: selectedCandidature.offres?.adresse || '',
+              start_date: eventDateTime,
+              end_date: new Date(new Date(eventDateTime).getTime() + 3600000).toISOString(),
+              recipient_email: clientEmail,
+            },
+          });
+        }
 
         // Notification handled by database trigger (notify_on_candidature_status_change)
       }

@@ -16,6 +16,7 @@ import {
   Bell, History, CheckCircle, XCircle, Trash2, Upload, X, Image, Video, 
   Home, Maximize2, Banknote, ChevronRight, Sparkles, Eye
 } from 'lucide-react';
+import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
 import { AddressLink } from '@/components/AddressLink';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -816,9 +817,23 @@ export default function AgentVisites() {
               </span>
             </div>
             
-            <div className="flex items-center gap-1 text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <span className="text-xs font-medium">Détails</span>
-              <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-300" />
+            <div className="flex items-center gap-2">
+              <AddToCalendarButton
+                event={{
+                  title: `Visite${visite.est_deleguee ? ' déléguée' : ''} - ${visite.adresse}`,
+                  description: `Visite pour ${visite.client_profile?.prenom || ''} ${visite.client_profile?.nom || ''}\n${visite.offres ? `${visite.offres.pieces}p • ${visite.offres.surface}m² • ${visite.offres.prix} CHF/mois` : ''}`,
+                  location: visite.adresse,
+                  startDate: visiteDate,
+                }}
+                recipientEmail={visite.client_profile?.email}
+                size="sm"
+                variant="ghost"
+                showLabel={false}
+              />
+              <div className="flex items-center gap-1 text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <span className="text-xs font-medium">Détails</span>
+                <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-300" />
+              </div>
             </div>
           </div>
 
