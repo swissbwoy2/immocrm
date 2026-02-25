@@ -222,7 +222,7 @@ const Clients = () => {
   };
 
   const regions = ['Chablais', 'Fribourg', 'Gros-de-Vaud', 'Lausanne et région', 'Ouest-lausannois', 'Lavaux', 'Nord-vaudois', 'Nyon et région', 'Riviera', 'Valais', 'Genève', 'Autre'];
-  const nombrePieces = ['1+', '2+', '3+', '4+', '5+', 'Autre'];
+  const nombrePieces = ['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '5+'];
 
   const toggleRegion = (region: string) => {
     setSelectedRegions(prev => 
@@ -250,14 +250,11 @@ const Clients = () => {
     
     const matchPieces = selectedPieces.length === 0 || 
       selectedPieces.some(p => {
-        if (p === 'Autre') return true;
-        const pieceNum = parseFloat(p.replace('+', ''));
-        const clientPieces = client.pieces || 0;
-        
-        if (p.includes('+')) {
-          return clientPieces >= pieceNum;
-        }
-        return Math.floor(clientPieces) === Math.floor(pieceNum);
+        if (client.pieces == null) return false;
+        if (p === '5+') return client.pieces >= 5;
+
+        const pieceNum = Number(p);
+        return !Number.isNaN(pieceNum) && Math.abs(client.pieces - pieceNum) < 0.01;
       });
     
     return matchesSearch && matchesAgent && matchesUnassigned && matchRegion && matchPieces;
@@ -568,7 +565,7 @@ const Clients = () => {
                           selectedPieces.includes(pieces) && "shadow-[0_0_10px_rgba(var(--primary),0.3)]"
                         )}
                       >
-                        {pieces}
+                        {pieces === '5+' ? '5+ pièces' : `${pieces} pièce${pieces === '1' ? '' : 's'}`}
                       </Button>
                     ))}
                   </div>
@@ -612,7 +609,7 @@ const Clients = () => {
                       selectedPieces.includes(pieces) && "shadow-[0_0_12px_rgba(var(--primary),0.3)]"
                     )}
                   >
-                    {pieces}
+                      {pieces === '5+' ? '5+ pièces' : `${pieces} pièce${pieces === '1' ? '' : 's'}`}
                   </Button>
                 ))}
               </div>
