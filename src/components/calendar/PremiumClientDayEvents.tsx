@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { CalendarEvent, eventTypeLabels, eventTypeColors } from './types';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
+import { AddToCalendarButton } from './AddToCalendarButton';
 
 interface PremiumClientDayEventsProps {
   date: Date | null;
@@ -393,6 +394,18 @@ export function PremiumClientDayEvents({
 
                         {/* Actions */}
                         <div className="space-y-3 pt-3 border-t border-border/50">
+                          {/* Add to calendar button */}
+                          <AddToCalendarButton
+                            event={{
+                              title: `Visite - ${data.adresse}`,
+                              description: data.offres ? `${data.offres.pieces}p • ${data.offres.surface}m² • ${data.offres.prix} CHF/mois` : undefined,
+                              location: data.adresse,
+                              startDate: new Date(data.date_visite),
+                            }}
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                          />
                           {data.statut === 'planifiee' && data.offres?.statut !== 'visite_effectuee' && isVisiteDatePassed && (
                             <Button 
                               onClick={() => onMarquerEffectuee(data)}

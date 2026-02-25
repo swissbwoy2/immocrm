@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { format, isSameDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Plus, Calendar as CalendarIcon, AlertTriangle, ThumbsUp, Minus, ThumbsDown, User, Clock, Calendar, Pencil, Trash2, MapPin, Home, Phone, Upload, X, Image, Video, Loader2, Filter } from 'lucide-react';
+import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync';
@@ -398,6 +399,31 @@ export default function AgentCalendrier() {
           start: eventDate.toISOString(),
           allDay: formData.all_day,
         });
+      }
+
+      // Send ICS invite if client is selected
+      if (formData.client_id) {
+        const client = clients.find(c => c.id === formData.client_id);
+        if (client?.profiles) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', client.user_id)
+            .maybeSingle();
+          
+          if (profile?.email) {
+            supabase.functions.invoke('send-calendar-invite', {
+              body: {
+                title: formData.title,
+                description: formData.description || '',
+                start_date: eventDate.toISOString(),
+                end_date: new Date(eventDate.getTime() + 3600000).toISOString(),
+                all_day: formData.all_day,
+                recipient_email: profile.email,
+              },
+            });
+          }
+        }
       }
 
       toast.success('Événement créé');

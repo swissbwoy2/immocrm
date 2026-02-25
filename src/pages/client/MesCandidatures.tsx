@@ -15,6 +15,7 @@ import {
   FileSignature, Building2, CalendarCheck, AlertCircle, ChevronDown, ChevronUp,
   MessageSquare, User, Phone, FileStack, Loader2
 } from "lucide-react";
+import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync';
@@ -295,6 +296,20 @@ const MesCandidatures = () => {
             title: `Signature bail - ${offre?.adresse || 'Bail'}`,
             description: `Lieu: ${selectedDate.lieu}`,
             start: selectedDate.date,
+          });
+        }
+
+        // Send ICS invite via email
+        if (user?.email) {
+          supabase.functions.invoke('send-calendar-invite', {
+            body: {
+              title: `Signature bail - ${offre?.adresse || 'Bail'}`,
+              description: `Lieu: ${selectedDate.lieu}`,
+              location: selectedDate.lieu,
+              start_date: selectedDate.date,
+              end_date: new Date(new Date(selectedDate.date).getTime() + 3600000).toISOString(),
+              recipient_email: user.email,
+            },
           });
         }
       }
