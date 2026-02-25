@@ -338,7 +338,7 @@ const MesClients = () => {
 
 
   const regions = ['Chablais', 'Fribourg', 'Gros-de-Vaud', 'Lausanne et région', 'Ouest-lausannois', 'Lavaux', 'Nord-vaudois', 'Nyon et région', 'Riviera', 'Valais', 'Genève', 'Autre'];
-  const nombrePieces = ['1+', '2+', '3+', '4+', '5+', 'Autre'];
+  const nombrePieces = ['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '5+'];
 
   const toggleRegion = (region: string) => {
     setSelectedRegions(prev => 
@@ -363,16 +363,12 @@ const MesClients = () => {
     
     const matchPieces = selectedPieces.length === 0 || 
       selectedPieces.some(p => {
-        if (p === 'Autre') return true;
-        const pieceNum = parseFloat(p.replace('+', ''));
-        const clientPieces = client.nombrePiecesSouhaite || '';
-        const clientNum = parseFloat(clientPieces.toString().replace('+', ''));
-        
-        if (p.includes('+')) {
-          return clientNum >= pieceNum;
-        }
-        
-        return Math.floor(clientNum) === Math.floor(pieceNum);
+        const clientNum = Number.parseFloat(client.nombrePiecesSouhaite?.toString() || '');
+        if (Number.isNaN(clientNum)) return false;
+        if (p === '5+') return clientNum >= 5;
+
+        const pieceNum = Number(p);
+        return !Number.isNaN(pieceNum) && Math.abs(clientNum - pieceNum) < 0.01;
       });
     
     const matchTypeRecherche = selectedTypeRecherche === 'all' || 
@@ -483,7 +479,7 @@ const MesClients = () => {
                       selectedPieces.includes(pieces) && "shadow-lg shadow-primary/20"
                     )}
                   >
-                    {pieces}
+                    {pieces === '5+' ? '5+ pièces' : `${pieces} pièce${pieces === '1' ? '' : 's'}`}
                   </Button>
                 ))}
               </div>
