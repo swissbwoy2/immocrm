@@ -19,15 +19,14 @@ export function TestimonialVideoSection() {
           </div>
 
           <div className="relative w-full rounded-2xl overflow-hidden bg-muted shadow-lg border border-border/50 animate-fade-in" style={{ animationDelay: '100ms' }}>
-            <video
-              className="w-full"
-              controls
-              preload="metadata"
-              playsInline
-            >
-              <source src="/videos/temoignage-clients.mov" type="video/quicktime" />
-              Votre navigateur ne supporte pas la lecture vidéo.
-            </video>
+            <iframe
+              src="https://www.instagram.com/reel/DVPQODmCNBU/embed/"
+              className="w-full border-0"
+              style={{ height: '520px' }}
+              allowFullScreen
+              loading="lazy"
+              title="Témoignage clients Immo-rama"
+            />
           </div>
         </div>
       </div>
