@@ -62,7 +62,10 @@ function AppLayoutContent({ children }: AppLayoutProps) {
               alt="Logo Immo-Rama - Retour à l'accueil" 
               className="h-8 w-auto object-contain"
             />
-            <span className="font-semibold text-lg">ImmoCRM</span>
+            <div className="flex flex-col leading-tight">
+              <span className="font-semibold text-base">Logisorama</span>
+              <span className="text-[10px] text-muted-foreground">by Immo-rama.ch</span>
+            </div>
           </button>
         </header>
         
