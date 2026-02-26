@@ -13,6 +13,7 @@ import { FloatingNav } from '@/components/landing/FloatingNav';
 
 
 // Below the fold - lazy load
+const TestimonialVideoSection = lazy(() => import('@/components/landing/TestimonialVideoSection').then(m => ({ default: m.TestimonialVideoSection })));
 const VideoSection = lazy(() => import('@/components/landing/VideoSection').then(m => ({ default: m.VideoSection })));
 const DossierAnalyseSection = lazy(() => import('@/components/landing/DossierAnalyseSection').then(m => ({ default: m.DossierAnalyseSection })));
 const GuaranteeSection = lazy(() => import('@/components/landing/GuaranteeSection').then(m => ({ default: m.GuaranteeSection })));
@@ -90,6 +91,7 @@ export default function Landing() {
 
         {/* Lazy loaded sections below the fold */}
         <Suspense fallback={null}>
+          <TestimonialVideoSection />
           <VideoSection />
           <DossierAnalyseSection />
           <GuaranteeSection />
