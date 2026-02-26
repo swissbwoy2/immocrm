@@ -240,8 +240,8 @@ export function AppSidebar() {
           />
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <h1 className="text-lg font-bold text-sidebar-foreground truncate">ImmoCRM</h1>
-              <p className="text-xs text-sidebar-foreground/60 truncate">Immo-Rama.ch</p>
+              <h1 className="text-lg font-bold text-sidebar-foreground truncate">Logisorama</h1>
+              <p className="text-xs text-sidebar-foreground/60 truncate">by Immo-rama.ch</p>
             </div>
           )}
           {!collapsed && <NotificationBell />}
