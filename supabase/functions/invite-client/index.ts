@@ -402,13 +402,29 @@ serve(async (req) => {
       }
     }
 
-    // Transfer documents from demandeMandat
+    // Transfer documents from demandeMandat (with deduplication check)
     if (demandeMandat?.documents_uploades && demandeMandat.documents_uploades.length > 0 && clientRecordId) {
-      console.log('Transferring documents:', demandeMandat.documents_uploades.length, JSON.stringify(demandeMandat.documents_uploades));
+      console.log('Transferring documents:', demandeMandat.documents_uploades.length);
       
+      // Check for existing documents to avoid duplicates
+      const { data: existingDocs } = await supabaseAdmin
+        .from('documents')
+        .select('nom, type_document')
+        .eq('user_id', userId);
+
+      const existingDocKeys = new Set(
+        (existingDocs || []).map((d: any) => `${d.nom}_${d.type_document}`)
+      );
+
       for (const doc of demandeMandat.documents_uploades) {
         const mappedType = mapDocumentType(doc.type);
         const mimeType = getMimeType(doc.name);
+        const docKey = `${doc.name}_${mappedType}`;
+
+        if (existingDocKeys.has(docKey)) {
+          console.log('Document already exists, skipping:', doc.name);
+          continue;
+        }
         
         console.log('Inserting document:', { 
           name: doc.name, 
@@ -425,8 +441,8 @@ serve(async (req) => {
             client_id: clientRecordId,
             nom: doc.name,
             url: doc.url,
-            type: mimeType,              // MIME type correct
-            type_document: mappedType,   // Type mappé correct
+            type: mimeType,
+            type_document: mappedType,
             statut: 'validé',
           });
 
