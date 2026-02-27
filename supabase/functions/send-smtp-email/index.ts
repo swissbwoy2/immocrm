@@ -99,12 +99,33 @@ serve(async (req) => {
             // Handle Supabase storage URLs
             let fetchUrl = attachment.url;
             
-            // If it's a storage path, get signed URL
-            if (attachment.url.startsWith('client-documents/')) {
+            // If it's not an HTTP URL, treat as a storage path
+            if (!attachment.url.startsWith('http')) {
+              let storageKey = attachment.url;
+              // Remove bucket prefix if present
+              if (storageKey.startsWith('client-documents/')) {
+                storageKey = storageKey.replace('client-documents/', '');
+              }
+              // Generate signed URL from storage
+              const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+                .from('client-documents')
+                .createSignedUrl(storageKey, 300);
+              
+              if (signedUrlError) {
+                console.warn(`Failed to create signed URL for ${storageKey}:`, signedUrlError.message);
+                continue; // Skip this attachment instead of failing
+              }
+              if (signedUrlData?.signedUrl) {
+                fetchUrl = signedUrlData.signedUrl;
+              } else {
+                console.warn(`No signed URL generated for ${storageKey}`);
+                continue;
+              }
+            } else if (attachment.url.startsWith('client-documents/')) {
+              // Legacy check (shouldn't reach here but kept for safety)
               const { data: signedUrlData } = await supabase.storage
                 .from('client-documents')
                 .createSignedUrl(attachment.url.replace('client-documents/', ''), 300);
-              
               if (signedUrlData?.signedUrl) {
                 fetchUrl = signedUrlData.signedUrl;
               }
