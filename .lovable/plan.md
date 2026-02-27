@@ -1,58 +1,55 @@
 
 
-## Corriger le depot de candidature (edge function error)
+## Corriger la duplication de documents lors de l'assignation/activation d'un client
 
-### Problemes identifies (via les logs)
+### Probleme identifie
 
-1. **URLs de documents invalides** : Les documents clients ont des URLs de type `480101c6-ec71-4b66-b6ad-4b2cc00cf30c/1771505247427_dossier_complet.pdf` (chemin de stockage brut). Le edge function `send-smtp-email` ne reconnait pas ce format et echoue avec `TypeError: Invalid URL`.
+La fonction `invite-client` est appelee **deux fois** pour le meme client avec les memes documents :
 
-2. **Erreurs d'adresse email** : Des fautes de frappe dans les adresses destinataires (`immo-rama.cg` au lieu de `.ch`, `imma-rama.ch` au lieu de `immo-rama.ch`) causent un rejet SMTP `450: Recipient address rejected: Domain not found`. Ce n'est pas un bug code mais une erreur de saisie.
+1. **1er appel** : Quand le client remplit le formulaire de mandat (`NouveauMandat.tsx` ligne 321) -- les documents sont inseres dans la table `documents`
+2. **2eme appel** : Quand l'admin active le mandat (`DemandesActivation.tsx` ligne 270) -- les memes documents sont inseres **une 2eme fois** car la fonction ne verifie jamais si les documents existent deja
 
-### Corrections a apporter
+Resultat : les documents apparaissent en double. Si ensuite la migration vers le storage est executee, les doublons obtiennent de nouveaux chemins de stockage. Si Carina supprime les originaux, les doublons pointent vers des fichiers inexistants.
 
-**1. `supabase/functions/send-smtp-email/index.ts`**
+### Correction
 
-Ameliorer la gestion des URLs de documents stockes dans le storage :
-- Si l'URL ne commence pas par `http` et ne commence pas par `client-documents/`, ajouter automatiquement le prefixe `client-documents/`
-- Generer un signed URL pour tous les chemins de stockage relatifs
-- Ajouter une meilleure gestion d'erreur pour eviter que l'echec d'une piece jointe bloque tout l'envoi
+**Fichier : `supabase/functions/invite-client/index.ts`**
 
-Modification dans la section de traitement des URLs (autour de la ligne 74) :
+Avant d'inserer les documents (ligne 406), ajouter une verification :
 
 ```text
-Avant:
-  if (attachment.url.startsWith('client-documents/')) {
-    // get signed URL
-  }
+// Avant la boucle d'insertion des documents :
+// 1. Verifier si des documents existent deja pour ce client
+const { data: existingDocs } = await supabaseAdmin
+  .from('documents')
+  .select('nom, type_document')
+  .eq('user_id', userId);
 
-Apres:
-  let storageKey = attachment.url;
-  if (!attachment.url.startsWith('http')) {
-    // C'est un chemin de stockage relatif
-    if (!storageKey.startsWith('client-documents/')) {
-      // Ajouter le prefixe du bucket
-      storageKey = storageKey; // utiliser tel quel comme clef dans le bucket
-    } else {
-      storageKey = storageKey.replace('client-documents/', '');
-    }
-    // Generer signed URL depuis le bucket
-    const { data: signedUrlData } = await supabase.storage
-      .from('client-documents')
-      .createSignedUrl(storageKey, 300);
-    if (signedUrlData?.signedUrl) {
-      fetchUrl = signedUrlData.signedUrl;
-    }
+const existingDocKeys = new Set(
+  (existingDocs || []).map(d => `${d.nom}_${d.type_document}`)
+);
+
+// 2. Dans la boucle, skipper si le document existe deja
+for (const doc of demandeMandat.documents_uploades) {
+  const mappedType = mapDocumentType(doc.type);
+  const docKey = `${doc.name}_${mappedType}`;
+  
+  if (existingDocKeys.has(docKey)) {
+    console.log('Document already exists, skipping:', doc.name);
+    continue; // Ne pas re-inserer
   }
+  
+  // ... reste du code d'insertion existant
+}
 ```
 
-**2. `src/pages/agent/DeposerCandidature.tsx`**
+Cette verification empeche la creation de doublons en comparant le nom + type du document avant insertion.
 
-S'assurer que l'URL envoyee au edge function inclut le bon chemin :
-- Verifier le format des URLs de documents avant envoi
-- Si l'URL est un chemin relatif, la prefixer correctement
+### Nettoyage des doublons existants
 
-### Resultat attendu
-- Les pieces jointes seront correctement telechargees depuis le storage via signed URLs
-- L'envoi d'email ne sera plus bloque par un `TypeError: Invalid URL`
-- Les candidatures pourront etre deposees avec succes (si l'adresse email destinataire est correcte)
+Apres le deploiement du fix, il faudra nettoyer les doublons actuels dans la base de donnees. On pourra identifier les doublons par `user_id` + `nom` + `type_document` et supprimer les entrees les plus recentes (celles qui ont potentiellement des chemins de stockage invalides).
 
+### Impact
+- L'activation d'un mandat ne creera plus de documents en double
+- Les re-invitations de clients existants ne dupliqueront plus les fichiers
+- Carina (et les autres agents) ne verront plus de fichiers fantomes
