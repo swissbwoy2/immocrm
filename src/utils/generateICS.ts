@@ -161,6 +161,38 @@ export function downloadMultiEventICSFile(events: ICSEventData[], filename: stri
 /**
  * Send calendar invite via edge function (email with .ics attachment)
  */
+export interface VisiteICSDescriptionData {
+  clients?: string;
+  agent?: string;
+  adresse?: string;
+  prix?: string;
+  pieces?: number | string;
+  surface?: number | string;
+  etage?: number | string;
+  notes?: string;
+  lien_annonce?: string;
+  description?: string;
+}
+
+export function buildVisiteICSDescription(data: VisiteICSDescriptionData): string {
+  const lines: string[] = [];
+  if (data.clients) lines.push(`👤 Client(s): ${data.clients}`);
+  if (data.agent) lines.push(`👨‍💼 Agent: ${data.agent}`);
+  if (data.adresse) lines.push(`📍 ${data.adresse}`);
+  if (data.prix) lines.push(`💰 Prix: ${data.prix}`);
+
+  const specs: string[] = [];
+  if (data.pieces) specs.push(`${data.pieces} pièces`);
+  if (data.surface) specs.push(`${data.surface}m²`);
+  if (data.etage) specs.push(`${data.etage}e étage`);
+  if (specs.length) lines.push(`🏠 ${specs.join(' • ')}`);
+
+  if (data.notes) lines.push(`📝 Notes: ${data.notes}`);
+  if (data.lien_annonce) lines.push(`🔗 Annonce: ${data.lien_annonce}`);
+  if (data.description) lines.push(`📄 ${data.description.substring(0, 200)}${data.description.length > 200 ? '...' : ''}`);
+  return lines.join('\n');
+}
+
 export async function sendCalendarInvite(
   event: ICSEventData,
   recipientEmail: string,

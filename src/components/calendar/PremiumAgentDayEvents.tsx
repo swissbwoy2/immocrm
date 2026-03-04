@@ -6,7 +6,7 @@ import {
   Sparkles, Home, Maximize, Building, Users, Download
 } from 'lucide-react';
 import { AddToCalendarButton } from './AddToCalendarButton';
-import { downloadMultiEventICSFile, type ICSEventData } from '@/utils/generateICS';
+import { downloadMultiEventICSFile, buildVisiteICSDescription, type ICSEventData } from '@/utils/generateICS';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -447,7 +447,19 @@ export function PremiumAgentDayEvents({
                         <AddToCalendarButton
                           event={{
                             title: `Visite - ${firstVisite.adresse}`,
-                            description: `${group.length} client(s)`,
+                            description: buildVisiteICSDescription({
+                              clients: group.map((v: any) => {
+                                const c = clients.find(cl => cl.id === v.client_id);
+                                return c ? `${c.profiles.prenom} ${c.profiles.nom}` : 'Inconnu';
+                              }).join(', '),
+                              adresse: firstVisite.adresse,
+                              prix: firstVisite.offres?.prix ? `${firstVisite.offres.prix} CHF/mois` : undefined,
+                              pieces: firstVisite.offres?.pieces,
+                              surface: firstVisite.offres?.surface,
+                              etage: firstVisite.offres?.etage,
+                              notes: firstVisite.notes,
+                              lien_annonce: firstVisite.offres?.lien_annonce,
+                            }),
                             location: firstVisite.adresse,
                             startDate: toSwissTime(firstVisite.date_visite),
                           }}

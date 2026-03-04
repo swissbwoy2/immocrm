@@ -3,6 +3,7 @@ import { isSameDay, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Plus, Calendar as CalendarIcon, MapPin, Phone, ExternalLink, Home, User, Building2, Trash2 } from 'lucide-react';
 import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
+import { buildVisiteICSDescription } from '@/utils/generateICS';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync';
@@ -678,7 +679,20 @@ export default function AdminCalendrier() {
               <AddToCalendarButton
                 event={{
                   title: `Visite - ${selectedVisiteGroup[0].offres?.titre || selectedVisiteGroup[0].adresse || 'Visite'}`,
-                  description: `${selectedVisiteGroup.length} client(s) concerné(s)`,
+                  description: buildVisiteICSDescription({
+                    clients: getUniqueVisitesByClient(selectedVisiteGroup)
+                      .map((v: any) => getClientName(v.client_id) || 'Inconnu')
+                      .join(', '),
+                    agent: getAgentName(selectedVisiteGroup[0].agent_id) || undefined,
+                    adresse: selectedVisiteGroup[0].adresse,
+                    prix: selectedVisiteGroup[0].offres?.prix ? `${selectedVisiteGroup[0].offres.prix} CHF/mois` : undefined,
+                    pieces: selectedVisiteGroup[0].offres?.pieces,
+                    surface: selectedVisiteGroup[0].offres?.surface,
+                    etage: selectedVisiteGroup[0].offres?.etage,
+                    notes: selectedVisiteGroup[0].notes,
+                    lien_annonce: selectedVisiteGroup[0].offres?.lien_annonce,
+                    description: selectedVisiteGroup[0].offres?.description,
+                  }),
                   location: selectedVisiteGroup[0].adresse || '',
                   startDate: new Date(selectedVisiteGroup[0].date_visite),
                 }}
