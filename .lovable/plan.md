@@ -1,15 +1,25 @@
 
 
-## Ajouter l'export groupé sur la page Admin Calendrier
+## Corriger les doublons lors du ré-export ICS
 
-### Modification : `src/pages/admin/Calendrier.tsx`
+### Problème
+`generateUID()` dans `src/utils/generateICS.ts` produit un UID aléatoire à chaque appel. Les apps calendrier (iPhone, Google, Outlook) considèrent chaque UID comme un événement distinct → doublons à chaque ré-export.
 
-1. **Import** `downloadMultiEventICSFile`, `type ICSEventData` depuis `@/utils/generateICS`, et `isToday`, `isThisWeek`, `isThisMonth`, `isFuture` depuis `date-fns`.
+### Solution
+Rendre le UID déterministe en le basant sur un identifiant stable (l'ID de la visite en base).
 
-2. **Ajouter un bloc "Exporter au calendrier"** après les filtres (ligne ~420), identique à celui de `src/pages/agent/Visites.tsx` (lignes 1177-1215). Le bloc filtre les `visites` chargées en mémoire par période (aujourd'hui / semaine / mois / tout à venir) et appelle `downloadMultiEventICSFile` avec les événements ICS construits à partir des données de chaque visite (adresse, date, clients via `getClientName`, agent via `getAgentName`, infos offre).
+#### Modifications :
 
-3. **Description enrichie** : utiliser `buildVisiteICSDescription` (déjà importé) pour chaque événement exporté, comme c'est fait dans le bouton individuel du dialog.
+1. **`src/utils/generateICS.ts`**
+   - Ajouter un champ optionnel `uid?: string` à `ICSEventData`
+   - Dans `generateICSContent` et `generateMultiEventICSContent`, utiliser `event.uid` s'il est fourni, sinon fallback sur `generateUID()` (rétrocompatibilité)
+
+2. **`src/pages/admin/Calendrier.tsx`** — Dans le batch export ET le bouton individuel, passer `uid: visite.id + '@immocrm'` dans l'objet `ICSEventData`
+
+3. **`src/pages/agent/Visites.tsx`** — Idem pour les exports agent (batch + individuel)
+
+4. **`src/components/calendar/PremiumAgentDayEvents.tsx`** et **`PremiumClientDayEvents.tsx`** — Passer le `uid` basé sur l'ID visite
 
 ### Résultat
-L'admin aura les mêmes 4 boutons d'export groupé que l'agent : "Aujourd'hui", "Cette semaine", "Ce mois", "Tout à venir", avec le nombre de visites entre parenthèses.
+Un même événement exporté deux fois aura le même UID → les apps calendrier le mettent à jour au lieu de le dupliquer.
 
