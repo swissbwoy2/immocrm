@@ -398,6 +398,7 @@ export function PremiumClientDayEvents({
                           {/* Add to calendar button */}
                           <AddToCalendarButton
                             event={{
+                              uid: `${data.id}@immocrm`,
                               title: `Visite - ${data.adresse}`,
                               description: buildVisiteICSDescription({
                                 adresse: data.adresse,

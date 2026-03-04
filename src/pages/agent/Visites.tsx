@@ -821,6 +821,7 @@ export default function AgentVisites() {
             <div className="flex items-center gap-2">
               <AddToCalendarButton
                 event={{
+                  uid: `${visite.id}@immocrm`,
                   title: `Visite${visite.est_deleguee ? ' déléguée' : ''} - ${visite.adresse}`,
                   description: buildVisiteICSDescription({
                     clients: `${visite.client_profile?.prenom || ''} ${visite.client_profile?.nom || ''}`.trim(),
@@ -1196,6 +1197,7 @@ export default function AgentVisites() {
                       disabled={filtered.length === 0}
                       onClick={() => {
                         const icsEvents: ICSEventData[] = filtered.map((v: any) => ({
+                          uid: `${v.id}@immocrm`,
                           title: `Visite - ${v.adresse}`,
                           description: v.client_profile ? `${v.client_profile.prenom} ${v.client_profile.nom}` : '',
                           location: v.adresse || '',
@@ -1661,6 +1663,7 @@ export default function AgentVisites() {
             )}
             <AddToCalendarButton
               event={{
+                uid: selectedVisite?.id ? `${selectedVisite.id}@immocrm` : undefined,
                 title: `Visite - ${selectedVisite?.adresse}`,
                 description: buildVisiteICSDescription({
                   clients: `${selectedVisite?.client_profile?.prenom || ''} ${selectedVisite?.client_profile?.nom || ''}`.trim(),
