@@ -1608,6 +1608,17 @@ export default function AgentVisites() {
                 {selectedVisite?.est_deleguee ? 'Donner mon feedback' : 'Marquer comme effectuée'}
               </Button>
             )}
+            <AddToCalendarButton
+              event={{
+                title: `Visite - ${selectedVisite?.adresse}`,
+                description: `Visite pour ${selectedVisite?.client_profile?.prenom} ${selectedVisite?.client_profile?.nom}`,
+                location: selectedVisite?.adresse || '',
+                startDate: new Date(selectedVisite?.date_visite),
+              }}
+              recipientEmail={selectedVisite?.client_profile?.email}
+              size="sm"
+              variant="outline"
+            />
             <Button 
               variant="destructive" 
               size="icon"

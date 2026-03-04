@@ -5,6 +5,7 @@ import {
   MessageSquare, AlertTriangle, ThumbsUp, ThumbsDown, Minus, Eye, Pencil,
   Sparkles, Home, Maximize, Building, Users
 } from 'lucide-react';
+import { AddToCalendarButton } from './AddToCalendarButton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -404,6 +405,19 @@ export function PremiumAgentDayEvents({
                             ))}
                           </div>
                         )}
+
+                        {/* Add to Calendar */}
+                        <AddToCalendarButton
+                          event={{
+                            title: `Visite - ${firstVisite.adresse}`,
+                            description: `${group.length} client(s)`,
+                            location: firstVisite.adresse,
+                            startDate: toSwissTime(firstVisite.date_visite),
+                          }}
+                          size="sm"
+                          variant="outline"
+                          className="w-full"
+                        />
 
                         {/* Action buttons */}
                         {group.some(v => v.statut === 'planifiee') && !isPast && (
