@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { isSameDay, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Plus, Calendar as CalendarIcon, MapPin, Phone, ExternalLink, Home, User, Building2, Trash2 } from 'lucide-react';
+import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync';
@@ -672,6 +673,18 @@ export default function AdminCalendrier() {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+            )}
+            {selectedVisiteGroup && (
+              <AddToCalendarButton
+                event={{
+                  title: `Visite - ${selectedVisiteGroup[0].offres?.titre || selectedVisiteGroup[0].adresse || 'Visite'}`,
+                  description: `${selectedVisiteGroup.length} client(s) concerné(s)`,
+                  location: selectedVisiteGroup[0].adresse || '',
+                  startDate: new Date(selectedVisiteGroup[0].date_visite),
+                }}
+                variant="outline"
+                size="sm"
+              />
             )}
             {selectedVisiteGroup?.[0].offres?.lien_annonce && (
               <Button 
