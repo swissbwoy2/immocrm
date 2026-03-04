@@ -1,39 +1,15 @@
 
 
-## Enrichir la description ICS avec toutes les infos utiles
+## Ajouter l'export groupé sur la page Admin Calendrier
 
-### Probleme
+### Modification : `src/pages/admin/Calendrier.tsx`
 
-Actuellement, le champ `description` du fichier `.ics` ne contient quasiment rien — juste "X client(s) concerné(s)" ou le nom d'un seul client. L'utilisateur perd toutes les infos utiles une fois l'evenement dans son calendrier natif (iPhone, Google, Outlook).
+1. **Import** `downloadMultiEventICSFile`, `type ICSEventData` depuis `@/utils/generateICS`, et `isToday`, `isThisWeek`, `isThisMonth`, `isFuture` depuis `date-fns`.
 
-### Solution
+2. **Ajouter un bloc "Exporter au calendrier"** après les filtres (ligne ~420), identique à celui de `src/pages/agent/Visites.tsx` (lignes 1177-1215). Le bloc filtre les `visites` chargées en mémoire par période (aujourd'hui / semaine / mois / tout à venir) et appelle `downloadMultiEventICSFile` avec les événements ICS construits à partir des données de chaque visite (adresse, date, clients via `getClientName`, agent via `getAgentName`, infos offre).
 
-Creer une fonction utilitaire `buildVisiteICSDescription()` dans `src/utils/generateICS.ts` qui construit une description riche a partir des donnees disponibles. Cette fonction sera appelee partout ou `AddToCalendarButton` est utilise pour des visites.
+3. **Description enrichie** : utiliser `buildVisiteICSDescription` (déjà importé) pour chaque événement exporté, comme c'est fait dans le bouton individuel du dialog.
 
-#### Contenu de la description ICS enrichie :
-```text
-👤 Client(s): Jean Dupont, Marie Martin
-👨‍💼 Agent: Christ Ramazani
-📍 Av. Victor-Ruffy 37, 1012 Lausanne
-💰 Prix: 2'450 CHF/mois
-🏠 3.5 pièces • 85m² • 2e étage
-📝 Notes: Client très intéressé, rappeler lundi
-🔗 Annonce: https://...
-📄 Description: Bel appartement lumineux...
-```
-
-#### Fichiers modifies :
-
-1. **`src/utils/generateICS.ts`** — Ajouter `buildVisiteICSDescription(data)` qui accepte un objet avec les champs optionnels (clients, agent, prix, pieces, surface, etage, notes, lien_annonce, description) et construit une string multiligne.
-
-2. **`src/pages/admin/Calendrier.tsx`** (ligne 677-687) — Remplacer la description minimale par l'appel a `buildVisiteICSDescription` avec toutes les donnees de `selectedVisiteGroup` (clients via `getClientName`, agent via `getAgentName`, offres.prix/pieces/surface/etage/description/lien_annonce, notes).
-
-3. **`src/pages/agent/Visites.tsx`** — Enrichir les 2 endroits (carte visite ligne 822 et dialog detail ligne 1652) avec les donnees client, offre et notes.
-
-4. **`src/components/calendar/PremiumAgentDayEvents.tsx`** (ligne 447) — Enrichir avec les noms des clients du groupe, les infos offre.
-
-5. **`src/components/calendar/PremiumClientDayEvents.tsx`** (ligne 398) — Enrichir avec les infos offre disponibles.
-
-### Resultat
-Le fichier `.ics` telecharge contiendra toutes les informations utiles directement lisibles dans l'app calendrier native, sans avoir besoin de retourner dans l'application.
+### Résultat
+L'admin aura les mêmes 4 boutons d'export groupé que l'agent : "Aujourd'hui", "Cette semaine", "Ce mois", "Tout à venir", avec le nombre de visites entre parenthèses.
 
