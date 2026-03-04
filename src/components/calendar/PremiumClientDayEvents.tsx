@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { CalendarEvent, eventTypeLabels, eventTypeColors } from './types';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { AddToCalendarButton } from './AddToCalendarButton';
+import { buildVisiteICSDescription } from '@/utils/generateICS';
 
 interface PremiumClientDayEventsProps {
   date: Date | null;
@@ -398,7 +399,16 @@ export function PremiumClientDayEvents({
                           <AddToCalendarButton
                             event={{
                               title: `Visite - ${data.adresse}`,
-                              description: data.offres ? `${data.offres.pieces}p • ${data.offres.surface}m² • ${data.offres.prix} CHF/mois` : undefined,
+                              description: buildVisiteICSDescription({
+                                adresse: data.adresse,
+                                prix: data.offres?.prix ? `${data.offres.prix} CHF/mois` : undefined,
+                                pieces: data.offres?.pieces,
+                                surface: data.offres?.surface,
+                                etage: data.offres?.etage,
+                                notes: data.notes,
+                                lien_annonce: data.offres?.lien_annonce,
+                                description: data.offres?.description,
+                              }),
                               location: data.adresse,
                               startDate: new Date(data.date_visite),
                             }}

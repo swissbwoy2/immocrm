@@ -17,7 +17,7 @@ import {
   Home, Maximize2, Banknote, ChevronRight, Sparkles, Eye, Download
 } from 'lucide-react';
 import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
-import { downloadMultiEventICSFile, type ICSEventData } from '@/utils/generateICS';
+import { downloadMultiEventICSFile, buildVisiteICSDescription, type ICSEventData } from '@/utils/generateICS';
 import { AddressLink } from '@/components/AddressLink';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -822,7 +822,17 @@ export default function AgentVisites() {
               <AddToCalendarButton
                 event={{
                   title: `Visite${visite.est_deleguee ? ' déléguée' : ''} - ${visite.adresse}`,
-                  description: `Visite pour ${visite.client_profile?.prenom || ''} ${visite.client_profile?.nom || ''}\n${visite.offres ? `${visite.offres.pieces}p • ${visite.offres.surface}m² • ${visite.offres.prix} CHF/mois` : ''}`,
+                  description: buildVisiteICSDescription({
+                    clients: `${visite.client_profile?.prenom || ''} ${visite.client_profile?.nom || ''}`.trim(),
+                    adresse: visite.adresse,
+                    prix: visite.offres?.prix ? `${visite.offres.prix} CHF/mois` : undefined,
+                    pieces: visite.offres?.pieces,
+                    surface: visite.offres?.surface,
+                    etage: visite.offres?.etage,
+                    notes: visite.notes,
+                    lien_annonce: visite.offres?.lien_annonce,
+                    description: visite.offres?.description,
+                  }),
                   location: visite.adresse,
                   startDate: visiteDate,
                 }}
@@ -1652,7 +1662,17 @@ export default function AgentVisites() {
             <AddToCalendarButton
               event={{
                 title: `Visite - ${selectedVisite?.adresse}`,
-                description: `Visite pour ${selectedVisite?.client_profile?.prenom} ${selectedVisite?.client_profile?.nom}`,
+                description: buildVisiteICSDescription({
+                  clients: `${selectedVisite?.client_profile?.prenom || ''} ${selectedVisite?.client_profile?.nom || ''}`.trim(),
+                  adresse: selectedVisite?.adresse,
+                  prix: selectedVisite?.offres?.prix ? `${selectedVisite.offres.prix} CHF/mois` : undefined,
+                  pieces: selectedVisite?.offres?.pieces,
+                  surface: selectedVisite?.offres?.surface,
+                  etage: selectedVisite?.offres?.etage,
+                  notes: selectedVisite?.notes,
+                  lien_annonce: selectedVisite?.offres?.lien_annonce,
+                  description: selectedVisite?.offres?.description,
+                }),
                 location: selectedVisite?.adresse || '',
                 startDate: new Date(selectedVisite?.date_visite),
               }}
