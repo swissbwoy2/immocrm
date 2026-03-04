@@ -97,6 +97,68 @@ export function downloadICSFile(event: ICSEventData, filename?: string): void {
 }
 
 /**
+ * Generate a single .ics file containing multiple events
+ */
+export function generateMultiEventICSContent(events: ICSEventData[]): string {
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//ImmoCRM//FR',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+  ];
+
+  for (const event of events) {
+    const { title, description, location, startDate, endDate, allDay } = event;
+    const end = endDate || new Date(startDate.getTime() + 60 * 60 * 1000);
+
+    lines.push('BEGIN:VEVENT');
+    lines.push(`UID:${generateUID()}`);
+    lines.push(`DTSTAMP:${formatDateToICS(new Date())}`);
+
+    if (allDay) {
+      lines.push(`DTSTART;VALUE=DATE:${formatDateToICS(startDate, true)}`);
+      lines.push(`DTEND;VALUE=DATE:${formatDateToICS(new Date(end.getTime() + 86400000), true)}`);
+    } else {
+      lines.push(`DTSTART:${formatDateToICS(startDate)}`);
+      lines.push(`DTEND:${formatDateToICS(end)}`);
+    }
+
+    lines.push(`SUMMARY:${escapeICSText(title)}`);
+    if (description) lines.push(`DESCRIPTION:${escapeICSText(description)}`);
+    if (location) lines.push(`LOCATION:${escapeICSText(location)}`);
+
+    lines.push('STATUS:CONFIRMED');
+    lines.push('BEGIN:VALARM');
+    lines.push('TRIGGER:-PT30M');
+    lines.push('ACTION:DISPLAY');
+    lines.push(`DESCRIPTION:${escapeICSText(title)}`);
+    lines.push('END:VALARM');
+    lines.push('END:VEVENT');
+  }
+
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+
+/**
+ * Download a multi-event .ics file
+ */
+export function downloadMultiEventICSFile(events: ICSEventData[], filename: string): void {
+  if (events.length === 0) return;
+  const content = generateMultiEventICSContent(events);
+  const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  URL.revokeObjectURL(url);
+  document.body.removeChild(a);
+}
+
+/**
  * Send calendar invite via edge function (email with .ics attachment)
  */
 export async function sendCalendarInvite(

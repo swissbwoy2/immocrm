@@ -14,9 +14,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { 
   Calendar, Clock, User, MessageSquare, ThumbsUp, ThumbsDown, Minus, AlertTriangle, 
   Bell, History, CheckCircle, XCircle, Trash2, Upload, X, Image, Video, 
-  Home, Maximize2, Banknote, ChevronRight, Sparkles, Eye
+  Home, Maximize2, Banknote, ChevronRight, Sparkles, Eye, Download
 } from 'lucide-react';
 import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
+import { downloadMultiEventICSFile, type ICSEventData } from '@/utils/generateICS';
 import { AddressLink } from '@/components/AddressLink';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,7 +25,7 @@ import { toast } from 'sonner';
 import { useNotifications } from '@/hooks/useNotifications';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { cn } from '@/lib/utils';
-import { format, differenceInHours, differenceInDays } from 'date-fns';
+import { format, differenceInHours, differenceInDays, isToday, isThisWeek, isThisMonth, isThisYear, isFuture } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
   AlertDialog,
@@ -1158,6 +1159,46 @@ export default function AgentVisites() {
                     Supprimer ({selectedVisites.size})
                   </Button>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Batch Calendar Export */}
+        {visites.length > 0 && (
+          <Card className="border-border/50 bg-card/80 backdrop-blur-sm">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Download className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium mr-1">Exporter au calendrier :</span>
+                {[
+                  { label: "Aujourd'hui", filter: (v: any) => isToday(new Date(v.date_visite)) },
+                  { label: 'Cette semaine', filter: (v: any) => isThisWeek(new Date(v.date_visite), { weekStartsOn: 1 }) },
+                  { label: 'Ce mois', filter: (v: any) => isThisMonth(new Date(v.date_visite)) },
+                  { label: 'Tout à venir', filter: (v: any) => isFuture(new Date(v.date_visite)) || isToday(new Date(v.date_visite)) },
+                ].map(({ label, filter }) => {
+                  const filtered = visites.filter(filter);
+                  return (
+                    <Button
+                      key={label}
+                      variant="outline"
+                      size="sm"
+                      disabled={filtered.length === 0}
+                      onClick={() => {
+                        const icsEvents: ICSEventData[] = filtered.map((v: any) => ({
+                          title: `Visite - ${v.adresse}`,
+                          description: v.client_profile ? `${v.client_profile.prenom} ${v.client_profile.nom}` : '',
+                          location: v.adresse || '',
+                          startDate: new Date(v.date_visite),
+                        }));
+                        downloadMultiEventICSFile(icsEvents, `visites_${label.replace(/[^a-zA-Z]/g, '_').toLowerCase()}.ics`);
+                      }}
+                      className="gap-1.5"
+                    >
+                      {label} ({filtered.length})
+                    </Button>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
