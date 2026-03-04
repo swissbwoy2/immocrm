@@ -1,25 +1,42 @@
 
 
-## Corriger les doublons lors du ré-export ICS
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-### Problème
-`generateUID()` dans `src/utils/generateICS.ts` produit un UID aléatoire à chaque appel. Les apps calendrier (iPhone, Google, Outlook) considèrent chaque UID comme un événement distinct → doublons à chaque ré-export.
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
 ### Solution
-Rendre le UID déterministe en le basant sur un identifiant stable (l'ID de la visite en base).
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
-#### Modifications :
+### Modifications
 
-1. **`src/utils/generateICS.ts`**
-   - Ajouter un champ optionnel `uid?: string` à `ICSEventData`
-   - Dans `generateICSContent` et `generateMultiEventICSContent`, utiliser `event.uid` s'il est fourni, sinon fallback sur `generateUID()` (rétrocompatibilité)
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
 
-2. **`src/pages/admin/Calendrier.tsx`** — Dans le batch export ET le bouton individuel, passer `uid: visite.id + '@immocrm'` dans l'objet `ICSEventData`
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
 
-3. **`src/pages/agent/Visites.tsx`** — Idem pour les exports agent (batch + individuel)
+### Detail technique
 
-4. **`src/components/calendar/PremiumAgentDayEvents.tsx`** et **`PremiumClientDayEvents.tsx`** — Passer le `uid` basé sur l'ID visite
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
+```
 
-### Résultat
-Un même événement exporté deux fois aura le même UID → les apps calendrier le mettent à jour au lieu de le dupliquer.
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 
