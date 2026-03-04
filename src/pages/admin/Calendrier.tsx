@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { isSameDay, format } from 'date-fns';
+import { isSameDay, format, isToday, isThisWeek, isThisMonth, isFuture } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Plus, Calendar as CalendarIcon, MapPin, Phone, ExternalLink, Home, User, Building2, Trash2 } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, MapPin, Phone, ExternalLink, Home, User, Building2, Trash2, Download } from 'lucide-react';
 import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
-import { buildVisiteICSDescription } from '@/utils/generateICS';
+import { buildVisiteICSDescription, downloadMultiEventICSFile, type ICSEventData } from '@/utils/generateICS';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useGoogleCalendarSync } from '@/hooks/useGoogleCalendarSync';
@@ -417,6 +417,59 @@ export default function AdminCalendrier() {
           />
         </div>
       </details>
+
+      {/* Batch Calendar Export */}
+      {filteredVisites.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap p-3 rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm">
+          <Download className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium mr-1">Exporter au calendrier :</span>
+          {[
+            { label: "Aujourd'hui", filter: (v: any) => isToday(new Date(v.date_visite)) },
+            { label: 'Cette semaine', filter: (v: any) => isThisWeek(new Date(v.date_visite), { weekStartsOn: 1 }) },
+            { label: 'Ce mois', filter: (v: any) => isThisMonth(new Date(v.date_visite)) },
+            { label: 'Tout à venir', filter: (v: any) => isFuture(new Date(v.date_visite)) || isToday(new Date(v.date_visite)) },
+          ].map(({ label, filter }) => {
+            const filtered = filteredVisites.filter(filter);
+            return (
+              <Button
+                key={label}
+                variant="outline"
+                size="sm"
+                disabled={filtered.length === 0}
+                onClick={() => {
+                  const icsEvents: ICSEventData[] = filtered.map((v: any) => {
+                    const clientName = getClientName(v.client_id);
+                    const agentName = getAgentName(v.agent_id);
+                    const offre = v.offres;
+                    return {
+                      title: `Visite - ${v.adresse || offre?.adresse || 'Adresse inconnue'}`,
+                      description: buildVisiteICSDescription({
+                        clients: clientName || undefined,
+                        agent: agentName || undefined,
+                        adresse: v.adresse || offre?.adresse,
+                        prix: offre?.prix ? `${Number(offre.prix).toLocaleString('fr-CH')} CHF` : undefined,
+                        pieces: offre?.pieces,
+                        surface: offre?.surface,
+                        etage: offre?.etage,
+                        notes: v.notes || undefined,
+                        lien_annonce: offre?.lien_annonce || undefined,
+                        description: offre?.description || undefined,
+                      }),
+                      location: v.adresse || offre?.adresse || '',
+                      startDate: new Date(v.date_visite),
+                    };
+                  });
+                  downloadMultiEventICSFile(icsEvents, `visites_${label.replace(/[^a-zA-Z]/g, '_').toLowerCase()}.ics`);
+                  toast.success(`${filtered.length} visite(s) exportée(s)`);
+                }}
+                className="gap-1.5"
+              >
+                {label} ({filtered.length})
+              </Button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Main content - responsive grid */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 min-w-0 w-full">
