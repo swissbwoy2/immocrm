@@ -3,9 +3,10 @@ import { toSwissTime, formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
 import { 
   Calendar, Clock, User, MapPin, CheckCircle, XCircle, Trash2,
   MessageSquare, AlertTriangle, ThumbsUp, ThumbsDown, Minus, Eye, Pencil,
-  Sparkles, Home, Maximize, Building, Users
+  Sparkles, Home, Maximize, Building, Users, Download
 } from 'lucide-react';
 import { AddToCalendarButton } from './AddToCalendarButton';
+import { downloadMultiEventICSFile, type ICSEventData } from '@/utils/generateICS';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -207,12 +208,48 @@ export function PremiumAgentDayEvents({
             </div>
           </div>
           
-          {allItems.length > 0 && (
-            <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-0 shadow-lg shadow-primary/20">
-              <Sparkles className="w-3 h-3 mr-1" />
-              {allItems.length}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {allItems.length > 0 && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const icsEvents: ICSEventData[] = [];
+                    visites.forEach(v => {
+                      icsEvents.push({
+                        title: `Visite - ${v.adresse}`,
+                        description: v.client_profile ? `${v.client_profile.prenom} ${v.client_profile.nom}` : '',
+                        location: v.adresse,
+                        startDate: toSwissTime(v.date_visite),
+                      });
+                    });
+                    events.forEach(ev => {
+                      icsEvents.push({
+                        title: ev.title,
+                        description: ev.description || '',
+                        startDate: toSwissTime(ev.event_date),
+                        endDate: ev.end_date ? toSwissTime(ev.end_date) : undefined,
+                        allDay: ev.all_day,
+                      });
+                    });
+                    if (icsEvents.length === 0) return;
+                    const dateStr = formatSwissDate(date, 'yyyy-MM-dd');
+                    downloadMultiEventICSFile(icsEvents, `calendrier_${dateStr}.ics`);
+                  }}
+                  className="gap-1.5"
+                  title="Exporter tous les événements du jour"
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden md:inline">Exporter</span>
+                </Button>
+                <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-0 shadow-lg shadow-primary/20">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  {allItems.length}
+                </Badge>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
