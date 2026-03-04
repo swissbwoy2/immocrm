@@ -1,50 +1,32 @@
 
 
-## Ajouter le bouton "Calendrier" aux endroits manquants
+## Export calendrier groupé (jour / semaine / mois / année)
 
-Le bouton `AddToCalendarButton` existe dans le code mais n'est visible que sur les cartes de visite de la page Visites (petit icone sans label). Il manque a deux endroits cles visibles dans les captures d'ecran :
+### Principe
 
-### 1. Panel droit du Calendrier agent (`PremiumAgentDayEvents.tsx`)
+Ajouter une fonction `generateMultiEventICS` dans `src/utils/generateICS.ts` qui génère un seul fichier `.ics` contenant **plusieurs VEVENT** (le format ICS supporte nativement plusieurs événements dans un même fichier). Puis ajouter un bouton d'export groupé sur la page Visites et le panneau calendrier.
 
-Ajouter un `AddToCalendarButton` dans chaque carte de visite groupee, juste avant les boutons d'action (autour de la ligne 408). Le bouton sera place apres les details clients et avant "Marquer comme effectuee".
+### Modifications
 
-```text
-// Apres la section clients (~ligne 386), avant les action buttons (~ligne 408)
-<AddToCalendarButton
-  event={{
-    title: `Visite - ${firstVisite.adresse}`,
-    description: `${group.length} client(s)`,
-    location: firstVisite.adresse,
-    startDate: toSwissTime(firstVisite.date_visite),
-  }}
-  size="sm"
-  variant="outline"
-  className="w-full"
-/>
-```
+#### 1. `src/utils/generateICS.ts` — Nouvelle fonction multi-événements
 
-Import a ajouter en haut du fichier : `import { AddToCalendarButton } from './AddToCalendarButton';`
+Ajouter `generateMultiEventICSContent(events: ICSEventData[])` qui produit un seul VCALENDAR avec N VEVENT à l'intérieur, et `downloadMultiEventICSFile(events, filename)` pour le téléchargement.
 
-### 2. Dialog de detail de visite (`Visites.tsx`)
+#### 2. `src/pages/agent/Visites.tsx` — Bouton d'export groupé
 
-Ajouter le bouton dans le `DialogFooter` du Detail Dialog (ligne 1574), a cote des boutons existants (Accepter/Refuser/Supprimer).
+Ajouter un dropdown/select en haut de la page (à côté des filtres existants) avec les options :
+- **Aujourd'hui** — exporte toutes les visites du jour
+- **Cette semaine** — visites de la semaine en cours
+- **Ce mois** — visites du mois en cours
+- **Tout** — toutes les visites à venir
 
-```text
-// Dans DialogFooter, ajouter avant le bouton Supprimer (~ligne 1611)
-<AddToCalendarButton
-  event={{
-    title: `Visite - ${selectedVisite?.adresse}`,
-    description: `Visite pour ${selectedVisite?.client_profile?.prenom} ${selectedVisite?.client_profile?.nom}`,
-    location: selectedVisite?.adresse || '',
-    startDate: new Date(selectedVisite?.date_visite),
-  }}
-  recipientEmail={selectedVisite?.client_profile?.email}
-  size="sm"
-  variant="outline"
-/>
-```
+Le bouton filtre les visites déjà chargées en mémoire selon la période choisie, génère le fichier `.ics` multi-événements et le télécharge.
 
-### Resultat
-- Le bouton "Calendrier" sera visible sur le panneau droit du calendrier agent et dans le dialog de detail des visites
-- Compatible iPhone (telecharge .ics), Google Calendar, Outlook
+#### 3. `src/components/calendar/PremiumAgentDayEvents.tsx` — Export du jour
+
+Ajouter un bouton "Exporter la journée" en haut du panneau latéral droit qui exporte toutes les visites + événements du jour sélectionné en un seul fichier `.ics`.
+
+### Résultat
+- Un seul fichier `.ics` contenant toutes les visites de la période → s'importe en une fois sur iPhone, Google Calendar, Outlook
+- Export rapide sans avoir à cliquer visite par visite
 
