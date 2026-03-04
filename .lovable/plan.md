@@ -1,55 +1,50 @@
 
 
-## Corriger la duplication de documents lors de l'assignation/activation d'un client
+## Ajouter le bouton "Calendrier" aux endroits manquants
 
-### Probleme identifie
+Le bouton `AddToCalendarButton` existe dans le code mais n'est visible que sur les cartes de visite de la page Visites (petit icone sans label). Il manque a deux endroits cles visibles dans les captures d'ecran :
 
-La fonction `invite-client` est appelee **deux fois** pour le meme client avec les memes documents :
+### 1. Panel droit du Calendrier agent (`PremiumAgentDayEvents.tsx`)
 
-1. **1er appel** : Quand le client remplit le formulaire de mandat (`NouveauMandat.tsx` ligne 321) -- les documents sont inseres dans la table `documents`
-2. **2eme appel** : Quand l'admin active le mandat (`DemandesActivation.tsx` ligne 270) -- les memes documents sont inseres **une 2eme fois** car la fonction ne verifie jamais si les documents existent deja
-
-Resultat : les documents apparaissent en double. Si ensuite la migration vers le storage est executee, les doublons obtiennent de nouveaux chemins de stockage. Si Carina supprime les originaux, les doublons pointent vers des fichiers inexistants.
-
-### Correction
-
-**Fichier : `supabase/functions/invite-client/index.ts`**
-
-Avant d'inserer les documents (ligne 406), ajouter une verification :
+Ajouter un `AddToCalendarButton` dans chaque carte de visite groupee, juste avant les boutons d'action (autour de la ligne 408). Le bouton sera place apres les details clients et avant "Marquer comme effectuee".
 
 ```text
-// Avant la boucle d'insertion des documents :
-// 1. Verifier si des documents existent deja pour ce client
-const { data: existingDocs } = await supabaseAdmin
-  .from('documents')
-  .select('nom, type_document')
-  .eq('user_id', userId);
-
-const existingDocKeys = new Set(
-  (existingDocs || []).map(d => `${d.nom}_${d.type_document}`)
-);
-
-// 2. Dans la boucle, skipper si le document existe deja
-for (const doc of demandeMandat.documents_uploades) {
-  const mappedType = mapDocumentType(doc.type);
-  const docKey = `${doc.name}_${mappedType}`;
-  
-  if (existingDocKeys.has(docKey)) {
-    console.log('Document already exists, skipping:', doc.name);
-    continue; // Ne pas re-inserer
-  }
-  
-  // ... reste du code d'insertion existant
-}
+// Apres la section clients (~ligne 386), avant les action buttons (~ligne 408)
+<AddToCalendarButton
+  event={{
+    title: `Visite - ${firstVisite.adresse}`,
+    description: `${group.length} client(s)`,
+    location: firstVisite.adresse,
+    startDate: toSwissTime(firstVisite.date_visite),
+  }}
+  size="sm"
+  variant="outline"
+  className="w-full"
+/>
 ```
 
-Cette verification empeche la creation de doublons en comparant le nom + type du document avant insertion.
+Import a ajouter en haut du fichier : `import { AddToCalendarButton } from './AddToCalendarButton';`
 
-### Nettoyage des doublons existants
+### 2. Dialog de detail de visite (`Visites.tsx`)
 
-Apres le deploiement du fix, il faudra nettoyer les doublons actuels dans la base de donnees. On pourra identifier les doublons par `user_id` + `nom` + `type_document` et supprimer les entrees les plus recentes (celles qui ont potentiellement des chemins de stockage invalides).
+Ajouter le bouton dans le `DialogFooter` du Detail Dialog (ligne 1574), a cote des boutons existants (Accepter/Refuser/Supprimer).
 
-### Impact
-- L'activation d'un mandat ne creera plus de documents en double
-- Les re-invitations de clients existants ne dupliqueront plus les fichiers
-- Carina (et les autres agents) ne verront plus de fichiers fantomes
+```text
+// Dans DialogFooter, ajouter avant le bouton Supprimer (~ligne 1611)
+<AddToCalendarButton
+  event={{
+    title: `Visite - ${selectedVisite?.adresse}`,
+    description: `Visite pour ${selectedVisite?.client_profile?.prenom} ${selectedVisite?.client_profile?.nom}`,
+    location: selectedVisite?.adresse || '',
+    startDate: new Date(selectedVisite?.date_visite),
+  }}
+  recipientEmail={selectedVisite?.client_profile?.email}
+  size="sm"
+  variant="outline"
+/>
+```
+
+### Resultat
+- Le bouton "Calendrier" sera visible sur le panneau droit du calendrier agent et dans le dialog de detail des visites
+- Compatible iPhone (telecharge .ics), Google Calendar, Outlook
+
