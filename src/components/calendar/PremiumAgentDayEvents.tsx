@@ -218,6 +218,7 @@ export function PremiumAgentDayEvents({
                     const icsEvents: ICSEventData[] = [];
                     visites.forEach(v => {
                       icsEvents.push({
+                        uid: `${v.id}@immocrm`,
                         title: `Visite - ${v.adresse}`,
                         description: v.client_profile ? `${v.client_profile.prenom} ${v.client_profile.nom}` : '',
                         location: v.adresse,
@@ -446,6 +447,7 @@ export function PremiumAgentDayEvents({
                         {/* Add to Calendar */}
                         <AddToCalendarButton
                           event={{
+                            uid: `${firstVisite.id}@immocrm`,
                             title: `Visite - ${firstVisite.adresse}`,
                             description: buildVisiteICSDescription({
                               clients: group.map((v: any) => {

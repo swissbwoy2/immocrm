@@ -14,6 +14,7 @@ export interface ICSEventData {
   startDate: Date;
   endDate?: Date;
   allDay?: boolean;
+  uid?: string;
 }
 
 function formatDateToICS(date: Date, allDay?: boolean): string {
@@ -50,7 +51,7 @@ export function generateICSContent(event: ICSEventData): string {
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',
-    `UID:${generateUID()}`,
+    `UID:${event.uid || generateUID()}`,
     `DTSTAMP:${formatDateToICS(new Date())}`,
   ];
 
@@ -113,7 +114,7 @@ export function generateMultiEventICSContent(events: ICSEventData[]): string {
     const end = endDate || new Date(startDate.getTime() + 60 * 60 * 1000);
 
     lines.push('BEGIN:VEVENT');
-    lines.push(`UID:${generateUID()}`);
+    lines.push(`UID:${event.uid || generateUID()}`);
     lines.push(`DTSTAMP:${formatDateToICS(new Date())}`);
 
     if (allDay) {

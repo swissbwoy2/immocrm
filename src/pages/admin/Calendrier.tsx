@@ -442,6 +442,7 @@ export default function AdminCalendrier() {
                     const agentName = getAgentName(v.agent_id);
                     const offre = v.offres;
                     return {
+                      uid: `${v.id}@immocrm`,
                       title: `Visite - ${v.adresse || offre?.adresse || 'Adresse inconnue'}`,
                       description: buildVisiteICSDescription({
                         clients: clientName || undefined,
@@ -731,6 +732,7 @@ export default function AdminCalendrier() {
             {selectedVisiteGroup && (
               <AddToCalendarButton
                 event={{
+                  uid: `${selectedVisiteGroup[0].id}@immocrm`,
                   title: `Visite - ${selectedVisiteGroup[0].offres?.titre || selectedVisiteGroup[0].adresse || 'Visite'}`,
                   description: buildVisiteICSDescription({
                     clients: getUniqueVisitesByClient(selectedVisiteGroup)
