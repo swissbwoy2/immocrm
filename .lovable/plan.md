@@ -1,42 +1,47 @@
 
+Problème clarifié: on parle bien de l’email d’invitation d’un nouvel agent, pas des invitations calendrier.
 
-## Envoi automatique d'invitations ICS par email lors de la création d'une visite
+Constat après vérification:
+- Le flux “nouvel agent” passe par `supabase/functions/create-agent/index.ts`.
+- Le renvoi passe par `supabase/functions/resend-agent-invitation/index.ts`.
+- Pour Oriane (`dulymbois@immo-rama.ch`), l’invitation a bien été déclenchée côté backend:
+  - création agent réussie
+  - utilisateur auth créé
+  - `invited_at` et `confirmation_sent_at` renseignés
+  - statut agent = `en_attente`
+- Donc le problème n’est probablement pas “l’agent n’a pas été invité”, mais plutôt “l’email n’arrive pas / n’est pas assez fiable / on ne voit pas clairement son état”.
 
-### Probleme
-Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
+Plan de correction:
+1. Fiabiliser les liens d’invitation
+- Remplacer les URLs hardcodées `https://immocrm.lovable.app/first-login` par une URL basée sur le domaine réel de l’app.
+- Appliquer ce correctif au moins à `create-agent` et `resend-agent-invitation` (et idéalement aux autres invitations similaires).
 
-### Solution
-Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
+2. Rendre l’état d’invitation visible dans l’admin
+- Afficher dans la page Agents si l’invitation a été envoyée, quand elle a été envoyée, et si le compte est encore “en attente”.
+- Éviter que l’admin pense que rien n’a été envoyé alors que le backend l’a bien déclenché.
 
-### Modifications
+3. Ajouter un vrai plan B de livraison
+- Conserver le renvoi d’invitation.
+- Ajouter une option de secours plus claire: renvoyer un email de définition de mot de passe si le compte existe déjà.
+- Option utile: générer/copier un lien d’activation manuel depuis l’admin si l’email n’arrive pas.
 
-1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
-   - Un pour le **client** (email depuis `profiles`)
-   - Un pour l'**agent** (email depuis `profiles` via `agents`)
-   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
-   
-   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
+4. Corriger la configuration d’envoi des emails d’authentification
+- Le projet a bien un domaine web personnalisé, mais aucun domaine email n’est configuré pour l’envoi.
+- Je prévoirais la mise en place du domaine d’envoi pour améliorer la délivrabilité des emails d’invitation.
 
-2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
+5. Vérification de bout en bout
+- Créer un agent test neuf avec une autre adresse.
+- Vérifier: création → email reçu → clic sur lien → page `first-login` → définition du mot de passe → passage de `en_attente` à actif si prévu par le flux.
 
-### Detail technique
-
-```sql
--- Dans notify_on_new_visit, après les notifications existantes :
--- Envoi ICS au client
-PERFORM net.http_post(
-  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
-  headers := jsonb_build_object(...),
-  body := jsonb_build_object(
-    'title', 'Visite - ' || NEW.adresse,
-    'start_date', NEW.date_visite,
-    'location', NEW.adresse,
-    'recipient_email', v_client_email
-  )
-);
--- Idem pour agent et admins
-```
-
-### Resultat
-Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
-
+Détail technique:
+- Fichiers concernés:
+  - `supabase/functions/create-agent/index.ts`
+  - `supabase/functions/resend-agent-invitation/index.ts`
+  - `src/pages/admin/Agents.tsx`
+- Donnée confirmée pour Oriane:
+  - profil existant
+  - rôle `agent`
+  - statut `en_attente`
+  - invitation backend enregistrée
+- Point important:
+  - le bug visible semble être surtout un problème de délivrabilité / configuration email + manque de visibilité dans l’interface, pas un échec de création de l’agent lui-même.
