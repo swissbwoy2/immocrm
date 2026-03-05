@@ -6,16 +6,25 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Mail, Phone, Users, Trash2, RefreshCw, UserCog, Search } from "lucide-react";
+import { Plus, Mail, Phone, Users, Trash2, RefreshCw, UserCog, Search, Copy, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PremiumPageHeader, PremiumCard, PremiumKPICard, PremiumEmptyState } from "@/components/premium";
+
+interface AgentInvitationStatus {
+  email: string | null;
+  invitedAt: string | null;
+  confirmationSentAt: string | null;
+  emailConfirmedAt: string | null;
+  lastSignInAt: string | null;
+}
 
 interface AgentWithProfile {
   id: string;
   user_id: string;
   statut: string;
   clients_count: number;
+  invitation: AgentInvitationStatus | null;
   profiles: {
     nom: string;
     prenom: string;
@@ -32,6 +41,8 @@ const Agents = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [resendingUserId, setResendingUserId] = useState<string | null>(null);
+  const [copyingLinkUserId, setCopyingLinkUserId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -47,17 +58,15 @@ const Agents = () => {
 
   const fetchAgents = async () => {
     try {
-      // Récupérer les agents
       const { data: agentsData, error } = await supabase
         .from('agents')
         .select('id, user_id, statut');
 
       if (error) throw error;
 
-      const userIds = agentsData?.map(a => a.user_id) || [];
-      const agentIds = agentsData?.map(a => a.id) || [];
+      const userIds = agentsData?.map((agent) => agent.user_id) || [];
+      const agentIds = agentsData?.map((agent) => agent.id) || [];
 
-      // Récupérer les profils et le count des clients via client_agents (source de vérité)
       const [profilesResult, clientCountsResult] = await Promise.all([
         supabase
           .from('profiles')
@@ -72,7 +81,6 @@ const Agents = () => {
 
       if (profilesResult.error) throw profilesResult.error;
 
-      // Construire un map agent_id -> count
       const countByAgent: Record<string, number> = {};
       if (clientCountsResult.data) {
         for (const row of clientCountsResult.data) {
@@ -80,17 +88,36 @@ const Agents = () => {
         }
       }
 
-      const mergedData = agentsData?.map(agent => ({
+      let invitationStatusByUserId: Record<string, AgentInvitationStatus> = {};
+      if (userIds.length > 0) {
+        const { data: invitationData, error: invitationError } = await supabase.functions.invoke('get-agent-invitation-statuses', {
+          body: {
+            userIds,
+            emails: profilesResult.data?.map((profile) => profile.email).filter(Boolean) || [],
+          },
+        });
+
+        if (invitationError) {
+          console.error('Invitation status error:', invitationError);
+        } else {
+          invitationStatusByUserId = Object.fromEntries(
+            (invitationData?.statuses || []).map((status: AgentInvitationStatus & { userId: string }) => [status.userId, status])
+          );
+        }
+      }
+
+      const mergedData = agentsData?.map((agent) => ({
         ...agent,
         clients_count: countByAgent[agent.id] || 0,
-        profiles: profilesResult.data?.find(p => p.id === agent.user_id) || {
+        invitation: invitationStatusByUserId[agent.user_id] || null,
+        profiles: profilesResult.data?.find((profile) => profile.id === agent.user_id) || {
           nom: '',
           prenom: '',
           email: '',
           telephone: '',
           actif: false,
-          avatar_url: null
-        }
+          avatar_url: null,
+        },
       })) || [];
 
       setAgents(mergedData);
@@ -200,25 +227,74 @@ const Agents = () => {
   };
 
   const resendInvitation = async (userId: string, email: string) => {
+    setResendingUserId(userId);
+
     try {
-      const { error } = await supabase.functions.invoke('resend-agent-invitation', {
+      const { data, error } = await supabase.functions.invoke('resend-agent-invitation', {
         body: { userId, email }
       });
       
       if (error) throw error;
-      
+
       toast({
         title: "Succès",
-        description: `Invitation renvoyée à ${email}`,
+        description: data?.mode === 'recovery'
+          ? `Email de définition du mot de passe renvoyé à ${email}`
+          : `Invitation renvoyée à ${email}`,
       });
+
+      fetchAgents();
     } catch (error: any) {
       toast({
         title: "Erreur",
         description: error.message || "Erreur lors du renvoi de l'invitation",
         variant: "destructive",
       });
+    } finally {
+      setResendingUserId(null);
     }
   };
+
+  const copyAccessLink = async (userId: string, email: string) => {
+    setCopyingLinkUserId(userId);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-agent-access-link', {
+        body: { userId, email },
+      });
+
+      if (error) throw error;
+      if (!data?.actionLink) {
+        throw new Error("Lien d'accès introuvable");
+      }
+
+      await navigator.clipboard.writeText(data.actionLink);
+
+      toast({
+        title: "Lien copié",
+        description: `Lien ${data.linkType === 'recovery' ? 'de connexion' : 'd’invitation'} copié pour ${email}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erreur",
+        description: error.message || "Erreur lors de la copie du lien",
+        variant: "destructive",
+      });
+    } finally {
+      setCopyingLinkUserId(null);
+    }
+  };
+
+  const formatDateTime = (value: string | null) => {
+    if (!value) return null;
+
+    return new Intl.DateTimeFormat('fr-CH', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    }).format(new Date(value));
+  };
+
+  const getInvitationSentAt = (agent: AgentWithProfile) => agent.invitation?.confirmationSentAt || agent.invitation?.invitedAt;
 
   const filteredAgents = agents.filter(agent =>
     `${agent.profiles.prenom} ${agent.profiles.nom}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -379,57 +455,100 @@ const Agents = () => {
                             </Badge>
                           )}
                         </div>
-                        <div className="space-y-1 md:space-y-2 text-xs md:text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
-                            <span className="truncate">{agent.profiles.email}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
-                            <span>{agent.profiles.telephone || 'Non renseigné'}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Users className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
-                            <span>{agent.clients_count} client{agent.clients_count > 1 ? 's' : ''}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Boutons d'action */}
-                    <div 
-                      className="flex sm:flex-col gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l border-border/50 sm:pl-4"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {agent.statut === 'en_attente' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 sm:flex-none text-xs md:text-sm"
-                          onClick={() => resendInvitation(agent.user_id, agent.profiles.email)}
-                        >
-                          <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
-                          Renvoyer
-                        </Button>
-                      )}
-                      <Button
-                        variant={agent.profiles.actif ? "outline" : "default"}
-                        size="sm"
-                        className="flex-1 sm:flex-none text-xs md:text-sm"
-                        onClick={() => toggleAgentStatus(agent.id, agent.profiles.actif)}
-                      >
-                        {agent.profiles.actif ? "Désactiver" : "Activer"}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="flex-1 sm:flex-none text-xs md:text-sm"
-                        onClick={() => deleteAgent(agent.user_id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
-                        Supprimer
-                      </Button>
-                    </div>
+                         <div className="space-y-1 md:space-y-2 text-xs md:text-sm text-muted-foreground">
+                           <div className="flex items-center gap-2">
+                             <Mail className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
+                             <span className="truncate">{agent.profiles.email}</span>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <Phone className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
+                             <span>{agent.profiles.telephone || 'Non renseigné'}</span>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <Users className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
+                             <span>{agent.clients_count} client{agent.clients_count > 1 ? 's' : ''}</span>
+                           </div>
+                         </div>
+
+                         {agent.statut === 'en_attente' && (
+                           <div className="mt-3 rounded-lg border border-border/60 bg-muted/40 px-3 py-2">
+                             <div className="flex flex-wrap items-center gap-2">
+                               <Badge variant="outline" className="text-xs">
+                                 {getInvitationSentAt(agent) ? 'Invitation envoyée' : 'Invitation en attente'}
+                               </Badge>
+                               {agent.invitation?.lastSignInAt && (
+                                 <Badge variant="secondary" className="text-xs">
+                                   Déjà connecté
+                                 </Badge>
+                               )}
+                             </div>
+                             <p className="mt-2 text-xs text-muted-foreground">
+                               {agent.invitation?.lastSignInAt
+                                 ? `Dernière connexion le ${formatDateTime(agent.invitation.lastSignInAt)}`
+                                 : getInvitationSentAt(agent)
+                                   ? `Dernier envoi le ${formatDateTime(getInvitationSentAt(agent))}`
+                                   : "Aucun envoi détecté côté authentification pour le moment."}
+                             </p>
+                           </div>
+                         )}
+                       </div>
+                     </div>
+                     
+                     {/* Boutons d'action */}
+                     <div 
+                       className="flex sm:flex-col gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l border-border/50 sm:pl-4"
+                       onClick={(e) => e.stopPropagation()}
+                     >
+                       {agent.statut === 'en_attente' && (
+                         <>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             className="flex-1 sm:flex-none text-xs md:text-sm"
+                             disabled={resendingUserId === agent.user_id}
+                             onClick={() => resendInvitation(agent.user_id, agent.profiles.email)}
+                           >
+                             {resendingUserId === agent.user_id ? (
+                               <Loader2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 animate-spin" />
+                             ) : (
+                               <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
+                             )}
+                             Renvoyer
+                           </Button>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             className="flex-1 sm:flex-none text-xs md:text-sm"
+                             disabled={copyingLinkUserId === agent.user_id}
+                             onClick={() => copyAccessLink(agent.user_id, agent.profiles.email)}
+                           >
+                             {copyingLinkUserId === agent.user_id ? (
+                               <Loader2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 animate-spin" />
+                             ) : (
+                               <Copy className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
+                             )}
+                             Copier le lien
+                           </Button>
+                         </>
+                       )}
+                       <Button
+                         variant={agent.profiles.actif ? "outline" : "default"}
+                         size="sm"
+                         className="flex-1 sm:flex-none text-xs md:text-sm"
+                         onClick={() => toggleAgentStatus(agent.id, agent.profiles.actif)}
+                       >
+                         {agent.profiles.actif ? "Désactiver" : "Activer"}
+                       </Button>
+                       <Button
+                         variant="destructive"
+                         size="sm"
+                         className="flex-1 sm:flex-none text-xs md:text-sm"
+                         onClick={() => deleteAgent(agent.user_id)}
+                       >
+                         <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
+                         Supprimer
+                       </Button>
+                     </div>
                   </div>
                 </div>
               </PremiumCard>
