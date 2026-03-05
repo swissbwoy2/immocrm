@@ -455,57 +455,100 @@ const Agents = () => {
                             </Badge>
                           )}
                         </div>
-                        <div className="space-y-1 md:space-y-2 text-xs md:text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
-                            <span className="truncate">{agent.profiles.email}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
-                            <span>{agent.profiles.telephone || 'Non renseigné'}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Users className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
-                            <span>{agent.clients_count} client{agent.clients_count > 1 ? 's' : ''}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Boutons d'action */}
-                    <div 
-                      className="flex sm:flex-col gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l border-border/50 sm:pl-4"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {agent.statut === 'en_attente' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 sm:flex-none text-xs md:text-sm"
-                          onClick={() => resendInvitation(agent.user_id, agent.profiles.email)}
-                        >
-                          <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
-                          Renvoyer
-                        </Button>
-                      )}
-                      <Button
-                        variant={agent.profiles.actif ? "outline" : "default"}
-                        size="sm"
-                        className="flex-1 sm:flex-none text-xs md:text-sm"
-                        onClick={() => toggleAgentStatus(agent.id, agent.profiles.actif)}
-                      >
-                        {agent.profiles.actif ? "Désactiver" : "Activer"}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="flex-1 sm:flex-none text-xs md:text-sm"
-                        onClick={() => deleteAgent(agent.user_id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
-                        Supprimer
-                      </Button>
-                    </div>
+                         <div className="space-y-1 md:space-y-2 text-xs md:text-sm text-muted-foreground">
+                           <div className="flex items-center gap-2">
+                             <Mail className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
+                             <span className="truncate">{agent.profiles.email}</span>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <Phone className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
+                             <span>{agent.profiles.telephone || 'Non renseigné'}</span>
+                           </div>
+                           <div className="flex items-center gap-2">
+                             <Users className="h-3.5 w-3.5 md:h-4 md:w-4 flex-shrink-0" />
+                             <span>{agent.clients_count} client{agent.clients_count > 1 ? 's' : ''}</span>
+                           </div>
+                         </div>
+
+                         {agent.statut === 'en_attente' && (
+                           <div className="mt-3 rounded-lg border border-border/60 bg-muted/40 px-3 py-2">
+                             <div className="flex flex-wrap items-center gap-2">
+                               <Badge variant="outline" className="text-xs">
+                                 {getInvitationSentAt(agent) ? 'Invitation envoyée' : 'Invitation en attente'}
+                               </Badge>
+                               {agent.invitation?.lastSignInAt && (
+                                 <Badge variant="secondary" className="text-xs">
+                                   Déjà connecté
+                                 </Badge>
+                               )}
+                             </div>
+                             <p className="mt-2 text-xs text-muted-foreground">
+                               {agent.invitation?.lastSignInAt
+                                 ? `Dernière connexion le ${formatDateTime(agent.invitation.lastSignInAt)}`
+                                 : getInvitationSentAt(agent)
+                                   ? `Dernier envoi le ${formatDateTime(getInvitationSentAt(agent))}`
+                                   : "Aucun envoi détecté côté authentification pour le moment."}
+                             </p>
+                           </div>
+                         )}
+                       </div>
+                     </div>
+                     
+                     {/* Boutons d'action */}
+                     <div 
+                       className="flex sm:flex-col gap-2 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l border-border/50 sm:pl-4"
+                       onClick={(e) => e.stopPropagation()}
+                     >
+                       {agent.statut === 'en_attente' && (
+                         <>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             className="flex-1 sm:flex-none text-xs md:text-sm"
+                             disabled={resendingUserId === agent.user_id}
+                             onClick={() => resendInvitation(agent.user_id, agent.profiles.email)}
+                           >
+                             {resendingUserId === agent.user_id ? (
+                               <Loader2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 animate-spin" />
+                             ) : (
+                               <RefreshCw className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
+                             )}
+                             Renvoyer
+                           </Button>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             className="flex-1 sm:flex-none text-xs md:text-sm"
+                             disabled={copyingLinkUserId === agent.user_id}
+                             onClick={() => copyAccessLink(agent.user_id, agent.profiles.email)}
+                           >
+                             {copyingLinkUserId === agent.user_id ? (
+                               <Loader2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 animate-spin" />
+                             ) : (
+                               <Copy className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
+                             )}
+                             Copier le lien
+                           </Button>
+                         </>
+                       )}
+                       <Button
+                         variant={agent.profiles.actif ? "outline" : "default"}
+                         size="sm"
+                         className="flex-1 sm:flex-none text-xs md:text-sm"
+                         onClick={() => toggleAgentStatus(agent.id, agent.profiles.actif)}
+                       >
+                         {agent.profiles.actif ? "Désactiver" : "Activer"}
+                       </Button>
+                       <Button
+                         variant="destructive"
+                         size="sm"
+                         className="flex-1 sm:flex-none text-xs md:text-sm"
+                         onClick={() => deleteAgent(agent.user_id)}
+                       >
+                         <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5" />
+                         Supprimer
+                       </Button>
+                     </div>
                   </div>
                 </div>
               </PremiumCard>
