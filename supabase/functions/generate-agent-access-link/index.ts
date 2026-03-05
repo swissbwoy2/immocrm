@@ -26,6 +26,8 @@ const getAppBaseUrl = (req: Request) => {
   return DEFAULT_APP_URL;
 };
 
+const getRedirectTo = (req: Request) => `${getAppBaseUrl(req)}/first-login`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -33,7 +35,7 @@ serve(async (req) => {
 
   try {
     const { email, userId } = await req.json();
-    const redirectTo = `${getAppBaseUrl(req)}/first-login`;
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -41,49 +43,73 @@ serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } },
     );
 
-    let agentEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
+    const { data: usersData, error: usersError } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+
+    if (usersError) {
+      throw usersError;
+    }
+
+    let targetUser = (usersData?.users ?? []).find(
+      (user) => user.id === userId || user.email?.trim().toLowerCase() === normalizedEmail,
+    );
+
+    let agentEmail = targetUser?.email?.trim().toLowerCase() ?? normalizedEmail;
+
     if (!agentEmail && userId) {
-      const { data: profile } = await supabaseAdmin
+      const { data: profile, error: profileError } = await supabaseAdmin
         .from("profiles")
         .select("email")
         .eq("id", userId)
-        .single();
+        .maybeSingle();
+
+      if (profileError) {
+        throw profileError;
+      }
+
       agentEmail = profile?.email?.trim().toLowerCase() ?? "";
+      targetUser = targetUser ?? (usersData?.users ?? []).find((user) => user.email?.trim().toLowerCase() === agentEmail);
     }
 
     if (!agentEmail) {
       throw new Error("Email non trouvé");
     }
 
-    console.log("Renvoi d'invitation pour:", agentEmail, "redirect:", redirectTo);
+    const linkType = targetUser?.email_confirmed_at || targetUser?.confirmed_at || targetUser?.last_sign_in_at
+      ? "recovery"
+      : "invite";
+    const redirectTo = getRedirectTo(req);
 
-    const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(agentEmail, {
-      redirectTo,
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: linkType,
+      email: agentEmail,
+      options: { redirectTo },
     });
 
-    let mode: "invite" | "recovery" = "invite";
+    if (linkError) {
+      throw linkError;
+    }
 
-    if (inviteError?.message?.includes("already been registered")) {
-      console.log("Utilisateur déjà enregistré, envoi de reset password");
-      const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(agentEmail, {
-        redirectTo,
-      });
-      if (resetError) throw resetError;
-      mode = "recovery";
-    } else if (inviteError) {
-      throw inviteError;
+    const actionLink = linkData?.properties?.action_link;
+
+    if (!actionLink) {
+      throw new Error("Lien d'accès non généré");
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        mode,
-        message: mode === "recovery" ? "Email de définition de mot de passe renvoyé" : "Invitation renvoyée avec succès",
+        email: agentEmail,
+        linkType,
+        actionLink,
+        redirectTo,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
     );
   } catch (error: any) {
-    console.error("Erreur lors du renvoi de l'invitation:", error);
+    console.error("Erreur lors de la génération du lien d'accès agent:", error);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
