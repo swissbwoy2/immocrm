@@ -3032,6 +3032,108 @@ export type Database = {
         }
         Relationships: []
       }
+      employes: {
+        Row: {
+          adresse: string | null
+          avs_number: string | null
+          banque: string | null
+          bareme_impot_source: string | null
+          canton_domicile: string | null
+          canton_travail: string | null
+          code_postal: string | null
+          created_at: string | null
+          date_engagement: string | null
+          date_fin: string | null
+          date_naissance: string | null
+          email: string | null
+          etat_civil: string | null
+          iban: string | null
+          id: string
+          is_independant: boolean | null
+          nationalite: string | null
+          nom: string
+          nombre_enfants: number | null
+          notes: string | null
+          poste: string | null
+          prenom: string
+          salaire_horaire: number | null
+          salaire_mensuel: number | null
+          statut: string | null
+          taux_activite: number | null
+          telephone: string | null
+          type_contrat: string | null
+          type_permis: string | null
+          updated_at: string | null
+          ville: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          avs_number?: string | null
+          banque?: string | null
+          bareme_impot_source?: string | null
+          canton_domicile?: string | null
+          canton_travail?: string | null
+          code_postal?: string | null
+          created_at?: string | null
+          date_engagement?: string | null
+          date_fin?: string | null
+          date_naissance?: string | null
+          email?: string | null
+          etat_civil?: string | null
+          iban?: string | null
+          id?: string
+          is_independant?: boolean | null
+          nationalite?: string | null
+          nom: string
+          nombre_enfants?: number | null
+          notes?: string | null
+          poste?: string | null
+          prenom: string
+          salaire_horaire?: number | null
+          salaire_mensuel?: number | null
+          statut?: string | null
+          taux_activite?: number | null
+          telephone?: string | null
+          type_contrat?: string | null
+          type_permis?: string | null
+          updated_at?: string | null
+          ville?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          avs_number?: string | null
+          banque?: string | null
+          bareme_impot_source?: string | null
+          canton_domicile?: string | null
+          canton_travail?: string | null
+          code_postal?: string | null
+          created_at?: string | null
+          date_engagement?: string | null
+          date_fin?: string | null
+          date_naissance?: string | null
+          email?: string | null
+          etat_civil?: string | null
+          iban?: string | null
+          id?: string
+          is_independant?: boolean | null
+          nationalite?: string | null
+          nom?: string
+          nombre_enfants?: number | null
+          notes?: string | null
+          poste?: string | null
+          prenom?: string
+          salaire_horaire?: number | null
+          salaire_mensuel?: number | null
+          statut?: string | null
+          taux_activite?: number | null
+          telephone?: string | null
+          type_contrat?: string | null
+          type_permis?: string | null
+          updated_at?: string | null
+          ville?: string | null
+        }
+        Relationships: []
+      }
       favoris_annonces: {
         Row: {
           alerte_prix: boolean | null
@@ -3063,6 +3165,161 @@ export type Database = {
             columns: ["annonce_id"]
             isOneToOne: false
             referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fiches_salaire: {
+        Row: {
+          absences_payees: number | null
+          annee: number
+          autres_deductions: number | null
+          cout_total_employeur: number | null
+          created_at: string | null
+          created_by: string | null
+          date_paiement: string | null
+          detail_autres_deductions: string | null
+          employe_id: string
+          heures_supplementaires: number | null
+          id: string
+          mois: number
+          montant_aanp: number | null
+          montant_aap: number | null
+          montant_ac: number | null
+          montant_ac_employeur: number | null
+          montant_af: number | null
+          montant_avs: number | null
+          montant_avs_employeur: number | null
+          montant_ijm: number | null
+          montant_impot_source: number | null
+          montant_lpcfam: number | null
+          montant_lpcfam_employeur: number | null
+          montant_lpp: number | null
+          montant_lpp_employeur: number | null
+          notes: string | null
+          pdf_url: string | null
+          primes: number | null
+          salaire_base: number | null
+          salaire_brut: number | null
+          salaire_net: number | null
+          statut: string | null
+          taux_aanp: number | null
+          taux_aap: number | null
+          taux_ac: number | null
+          taux_ac_employeur: number | null
+          taux_af: number | null
+          taux_avs: number | null
+          taux_avs_employeur: number | null
+          taux_ijm: number | null
+          taux_impot_source: number | null
+          taux_lpcfam: number | null
+          taux_lpcfam_employeur: number | null
+          total_charges_employeur: number | null
+          total_deductions: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          absences_payees?: number | null
+          annee: number
+          autres_deductions?: number | null
+          cout_total_employeur?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          date_paiement?: string | null
+          detail_autres_deductions?: string | null
+          employe_id: string
+          heures_supplementaires?: number | null
+          id?: string
+          mois: number
+          montant_aanp?: number | null
+          montant_aap?: number | null
+          montant_ac?: number | null
+          montant_ac_employeur?: number | null
+          montant_af?: number | null
+          montant_avs?: number | null
+          montant_avs_employeur?: number | null
+          montant_ijm?: number | null
+          montant_impot_source?: number | null
+          montant_lpcfam?: number | null
+          montant_lpcfam_employeur?: number | null
+          montant_lpp?: number | null
+          montant_lpp_employeur?: number | null
+          notes?: string | null
+          pdf_url?: string | null
+          primes?: number | null
+          salaire_base?: number | null
+          salaire_brut?: number | null
+          salaire_net?: number | null
+          statut?: string | null
+          taux_aanp?: number | null
+          taux_aap?: number | null
+          taux_ac?: number | null
+          taux_ac_employeur?: number | null
+          taux_af?: number | null
+          taux_avs?: number | null
+          taux_avs_employeur?: number | null
+          taux_ijm?: number | null
+          taux_impot_source?: number | null
+          taux_lpcfam?: number | null
+          taux_lpcfam_employeur?: number | null
+          total_charges_employeur?: number | null
+          total_deductions?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          absences_payees?: number | null
+          annee?: number
+          autres_deductions?: number | null
+          cout_total_employeur?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          date_paiement?: string | null
+          detail_autres_deductions?: string | null
+          employe_id?: string
+          heures_supplementaires?: number | null
+          id?: string
+          mois?: number
+          montant_aanp?: number | null
+          montant_aap?: number | null
+          montant_ac?: number | null
+          montant_ac_employeur?: number | null
+          montant_af?: number | null
+          montant_avs?: number | null
+          montant_avs_employeur?: number | null
+          montant_ijm?: number | null
+          montant_impot_source?: number | null
+          montant_lpcfam?: number | null
+          montant_lpcfam_employeur?: number | null
+          montant_lpp?: number | null
+          montant_lpp_employeur?: number | null
+          notes?: string | null
+          pdf_url?: string | null
+          primes?: number | null
+          salaire_base?: number | null
+          salaire_brut?: number | null
+          salaire_net?: number | null
+          statut?: string | null
+          taux_aanp?: number | null
+          taux_aap?: number | null
+          taux_ac?: number | null
+          taux_ac_employeur?: number | null
+          taux_af?: number | null
+          taux_avs?: number | null
+          taux_avs_employeur?: number | null
+          taux_ijm?: number | null
+          taux_impot_source?: number | null
+          taux_lpcfam?: number | null
+          taux_lpcfam_employeur?: number | null
+          total_charges_employeur?: number | null
+          total_deductions?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiches_salaire_employe_id_fkey"
+            columns: ["employe_id"]
+            isOneToOne: false
+            referencedRelation: "employes"
             referencedColumns: ["id"]
           },
         ]
