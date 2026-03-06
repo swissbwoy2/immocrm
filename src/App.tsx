@@ -19,6 +19,8 @@ import Landing from "./pages/Landing";
 
 // Lazy load all other pages
 const NouveauMandat = lazy(() => import("./pages/NouveauMandat"));
+const MandatV3 = lazy(() => import("./pages/MandatV3"));
+const MandatV3Suivi = lazy(() => import("./pages/MandatV3Suivi"));
 const VendreMonBien = lazy(() => import("./pages/VendreMonBien"));
 const FormulaireVendeurComplet = lazy(() => import("./pages/FormulaireVendeurComplet"));
 const FirstLogin = lazy(() => import("./pages/FirstLogin"));
