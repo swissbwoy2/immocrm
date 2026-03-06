@@ -89,6 +89,18 @@ export function QuickLeadForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<'qualified' | 'not_qualified' | null>(null);
 
+  // Hydrate form from PremiumHero query params
+  // Mapping: zone → localite, budget → budget, permis → permisNationalite
+  useEffect(() => {
+    const zoneParam = searchParams.get('zone');
+    const budgetParam = searchParams.get('budget');
+    const permisParam = searchParams.get('permis');
+    
+    if (zoneParam) setLocalite(zoneParam);              // zone → localite
+    if (budgetParam) setBudget(budgetParam);             // budget → budget
+    if (permisParam) setPermisNationalite(permisParam);  // permis → permisNationalite
+  }, [searchParams]);
+
   // Validation for each step
   const isQualificationValidLocation = statutEmploi && permisNationalite;
   const isQualificationValidAchat = accordBancaire && apportPersonnel;
