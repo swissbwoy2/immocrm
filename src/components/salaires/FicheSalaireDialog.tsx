@@ -32,6 +32,16 @@ interface TransactionDetail {
   statut: string;
 }
 
+interface MissionCoursier {
+  id: string;
+  adresse: string;
+  date_visite: string;
+  montant: number;
+  paye_coursier: boolean;
+}
+
+const TARIF_COURSIER = 5; // CHF par visite
+
 export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes, defaultMonth, defaultYear }: Props) {
   const queryClient = useQueryClient();
   const [selectedEmployeId, setSelectedEmployeId] = useState<string>('');
