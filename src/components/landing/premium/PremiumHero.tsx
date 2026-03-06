@@ -132,7 +132,7 @@ export function PremiumHero() {
 
               {/* Subtitle */}
               <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                Avec à peine 1% de logements disponibles en Suisse romande, Immo-Rama devient votre allié incontournable pour rechercher, cibler et décrocher plus rapidement le bon appartement.
+                Avec à peine 1% de logements disponibles en Suisse romande, Immo-Rama devient votre allié incontournable pour rechercher, cibler et dénicher plus rapidement votre futur appartement.
               </p>
 
               {/* Support block */}
