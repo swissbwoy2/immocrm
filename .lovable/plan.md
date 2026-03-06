@@ -1,42 +1,35 @@
 
 
-## Envoi automatique d'invitations ICS par email lors de la création d'une visite
+## Connecter le module Salaires aux agents et coursiers existants
 
-### Probleme
-Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
-
-### Solution
-Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
+### Constat
+La table `employes` est actuellement isolee : aucun lien avec les tables `agents` et `coursiers`. Les agents et coursiers doivent etre importes/lies automatiquement pour eviter la double saisie.
 
 ### Modifications
 
-1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
-   - Un pour le **client** (email depuis `profiles`)
-   - Un pour l'**agent** (email depuis `profiles` via `agents`)
-   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
-   
-   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
+**1. Migration SQL** : Ajouter une colonne `user_id` (uuid, nullable, unique) a la table `employes` pour lier un employe a un utilisateur existant (agent ou coursier).
 
-2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
+**2. Bouton "Importer agents & coursiers"** dans `EmployesList.tsx` :
+- Recupere tous les agents actifs (via `agents` + `profiles`) et coursiers actifs
+- Pour chaque personne non encore presente dans `employes` (verif par `user_id`), insere un enregistrement avec les infos pre-remplies (prenom, nom, email, telephone)
+- Les agents avec `is_independant = true` dans employes seront marques comme independants
+- Toast de confirmation avec le nombre d'imports
 
-### Detail technique
+**3. Enrichir `EmployeDialog.tsx`** :
+- Ajouter un selecteur optionnel "Lier a un agent/coursier" qui liste les agents et coursiers non encore lies
+- Quand un agent/coursier est selectionne, pre-remplit automatiquement prenom, nom, email, telephone
+- Stocke le `user_id` correspondant
 
-```sql
--- Dans notify_on_new_visit, après les notifications existantes :
--- Envoi ICS au client
-PERFORM net.http_post(
-  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
-  headers := jsonb_build_object(...),
-  body := jsonb_build_object(
-    'title', 'Visite - ' || NEW.adresse,
-    'start_date', NEW.date_visite,
-    'location', NEW.adresse,
-    'recipient_email', v_client_email
-  )
-);
--- Idem pour agent et admins
-```
+**4. Indicateur visuel dans `EmployesList.tsx`** :
+- Badge "Agent" ou "Coursier" a cote du nom pour les employes lies
+- Badge "Indépendant" pour les agents independants
 
-### Resultat
-Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
+### Donnees existantes
+- 5 agents actifs : Gaetan Mayoraz, Thibault Depraz, Maurine Perret, Christ Ramazani, Ebenezer Batista
+- 2 coursiers actifs : Guy, Coursier Un
+
+### Fichiers concernes
+- Migration SQL (ajout `user_id` a `employes`)
+- `src/components/salaires/EmployesList.tsx`
+- `src/components/salaires/EmployeDialog.tsx`
 
