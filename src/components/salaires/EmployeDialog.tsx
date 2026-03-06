@@ -324,6 +324,11 @@ export default function EmployeDialog({ open, onOpenChange, employe }: EmployeDi
                   💰 Rémunération à la commission : le brut est calculé automatiquement depuis les affaires conclues (45% part agent)
                 </p>
               )}
+              {modeRemuneration === 'coursier' && (
+                <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                  🚴 Coursier : rémunération calculée automatiquement depuis les visites terminées (5 CHF/visite)
+                </p>
+              )}
             </div>
 
             {/* Bank */}
