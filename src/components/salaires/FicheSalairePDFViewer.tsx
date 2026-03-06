@@ -15,6 +15,10 @@ interface Props {
   fiche: any | null;
 }
 
+function sanitizeForPdf(text: string): string {
+  return text.replace(/[\u00A0\u202F]/g, ' ');
+}
+
 async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([595, 842]); // A4
@@ -79,16 +83,19 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
   // Helper to draw a row
   const drawRow = (label: string, nombre: string, taux: string, sousTotal: string, total: string = '', bold = false) => {
     const f = bold ? fontBold : font;
-    page.drawText(label, { x: lm, y, font: f, size: 9, color: black });
-    if (nombre) page.drawText(nombre, { x: 200, y, font, size: 9, color: black });
-    if (taux) page.drawText(taux, { x: 300, y, font, size: 9, color: black });
+    const s = sanitizeForPdf;
+    page.drawText(s(label), { x: lm, y, font: f, size: 9, color: black });
+    if (nombre) page.drawText(s(nombre), { x: 200, y, font, size: 9, color: black });
+    if (taux) page.drawText(s(taux), { x: 300, y, font, size: 9, color: black });
     if (sousTotal) {
-      const tw2 = font.widthOfTextAtSize(sousTotal, 9);
-      page.drawText(sousTotal, { x: 430 - tw2, y, font, size: 9, color: black });
+      const st = s(sousTotal);
+      const tw2 = font.widthOfTextAtSize(st, 9);
+      page.drawText(st, { x: 430 - tw2, y, font, size: 9, color: black });
     }
     if (total) {
-      const tw2 = fontBold.widthOfTextAtSize(total, 9);
-      page.drawText(total, { x: rm - tw2, y, font: fontBold, size: 9, color: black });
+      const t = s(total);
+      const tw2 = fontBold.widthOfTextAtSize(t, 9);
+      page.drawText(t, { x: rm - tw2, y, font: fontBold, size: 9, color: black });
     }
     y -= 18;
   };
@@ -104,9 +111,9 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
     for (const t of detailCommissions) {
       const dateT = t.date ? new Date(t.date).toLocaleDateString('fr-CH') : '';
       const label = `${t.adresse || 'N/A'} (${dateT})`;
-      const amount = formatCHF(t.part_agent || 0);
+      const amount = sanitizeForPdf(formatCHF(t.part_agent || 0));
       const reserve = !t.payee ? ' *' : '';
-      page.drawText(label, { x: lm + 10, y, font, size: 8, color: black });
+      page.drawText(sanitizeForPdf(label), { x: lm + 10, y, font, size: 8, color: black });
       const tw = font.widthOfTextAtSize(amount + reserve, 8);
       page.drawText(amount + reserve, { x: 430 - tw, y, font, size: 8, color: black });
       y -= 15;
@@ -169,7 +176,7 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
   page.drawText('Paiements', { x: lm, y, font: fontBold, size: 10, color: darkBlue });
   y -= 18;
   const netLabel = isIndependant ? 'Honoraires nets' : 'Salaire net';
-  const paymentText = `CHF ${fiche.salaire_net?.toFixed(2)} sur compte bancaire ${employe.iban || 'N/A'}, ${employe.banque || ''}`;
+  const paymentText = sanitizeForPdf(`CHF ${fiche.salaire_net?.toFixed(2)} sur compte bancaire ${employe.iban || 'N/A'}, ${employe.banque || ''}`);
   page.drawText(paymentText, { x: lm, y, font, size: 9, color: black });
 
   return pdfDoc.save();
