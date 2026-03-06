@@ -1,31 +1,42 @@
 
 
-## Plan — Intégrer les gains coursier dans la fiche de salaire
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-### Problème
-Guy Whilter est un coursier avec `mode_remuneration = 'commission'`. Le système cherche ses gains dans la table `transactions` (via `agents`), mais un coursier n'est pas un agent — ses gains viennent de la table `visites` (5 CHF par visite terminée). Résultat : le champ "Total commissions" affiche 0 CHF et est grisé, alors qu'il a 60 CHF de gains (12 visites).
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
 ### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
-**1. Ajouter un mode de rémunération `coursier`** dans `src/lib/swissPayroll.ts` :
-- Ajouter `'coursier'` au type `ModeRemuneration`
-- Ajouter le label `'Coursier'` dans `MODE_REMUNERATION_LABELS`
+### Modifications
 
-**2. Mettre à jour la DB** : changer le `mode_remuneration` de Guy Whilter de `'commission'` à `'coursier'` via migration.
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
 
-**3. Modifier `FicheSalaireDialog.tsx`** :
-- Ajouter une query dédiée qui récupère les visites terminées (`statut_coursier = 'termine'`) pour le mois/année sélectionné, via la table `coursiers` (liée par `user_id`)
-- Afficher la liste des missions (adresse, date, 5 CHF chacune) comme pour les commissions
-- Le total des gains coursier alimente `salaire_base`
-- Traiter le mode `coursier` comme `commission` pour les déductions sociales
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
 
-**4. Mettre à jour `EmployeDialog.tsx`** : ajouter l'option "Coursier" dans le select de mode de rémunération.
+### Detail technique
 
-### Fichiers modifiés
-| Fichier | Action |
-|---------|--------|
-| `src/lib/swissPayroll.ts` | Ajouter type + label `coursier` |
-| `src/components/salaires/FicheSalaireDialog.tsx` | Query visites + affichage missions coursier |
-| `src/components/salaires/EmployeDialog.tsx` | Option "Coursier" dans le select |
-| Migration SQL | `UPDATE employes SET mode_remuneration = 'coursier' WHERE id = '3ab93bdd-...'` |
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
+```
+
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 

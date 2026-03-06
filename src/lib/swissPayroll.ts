@@ -44,13 +44,14 @@ export const BAREMES_IMPOT_SOURCE: Record<string, string> = {
 export const PERMIS_IMPOT_SOURCE = ['B', 'F', 'N', 'L'];
 
 // Remuneration modes
-export type ModeRemuneration = 'commission' | 'horaire' | 'fixe' | 'independant';
+export type ModeRemuneration = 'commission' | 'horaire' | 'fixe' | 'independant' | 'coursier';
 
 export const MODE_REMUNERATION_LABELS: Record<ModeRemuneration, string> = {
   commission: 'Commission',
   horaire: 'Horaire',
   fixe: 'Fixe',
   independant: 'Indépendant',
+  coursier: 'Coursier',
 };
 
 export interface SalaryCalculation {
