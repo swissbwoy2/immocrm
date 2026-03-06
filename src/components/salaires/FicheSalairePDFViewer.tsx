@@ -113,7 +113,7 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
       const tw2 = fontBold.widthOfTextAtSize(t, 9);
       page.drawText(t, { x: rm - tw2, y, font: fontBold, size: 9, color: black });
     }
-    y -= 18;
+    y -= 20;
   };
 
   // Commission details
