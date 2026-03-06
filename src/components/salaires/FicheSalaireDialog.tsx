@@ -205,7 +205,16 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
-      const detailCommissions = (mode === 'commission' || mode === 'independant')
+      const detailCommissions = mode === 'coursier'
+        ? missions.map(m => ({
+            id: m.id,
+            adresse: m.adresse,
+            part_agent: m.montant,
+            date: m.date_visite,
+            payee: m.paye_coursier,
+            statut: 'termine',
+          }))
+        : (mode === 'commission' || mode === 'independant')
         ? transactions.map(t => ({
             id: t.id,
             adresse: t.adresse,
@@ -221,7 +230,7 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
         mois: Number(data.mois),
         annee: Number(data.annee),
         mode_remuneration: mode,
-        montant_commissions: totalCommissions,
+        montant_commissions: mode === 'coursier' ? totalMissions : totalCommissions,
         nombre_heures: Number(data.nombre_heures) || 0,
         taux_horaire_utilise: mode === 'horaire' ? tauxHoraire : 0,
         detail_commissions: detailCommissions,
@@ -368,6 +377,54 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
               </div>
             )}
 
+            {/* Coursier mode: show missions */}
+            {mode === 'coursier' && selectedEmployeId && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase">
+                  Missions coursier — Visites terminées
+                </h3>
+                {loadingMissions ? (
+                  <p className="text-sm text-muted-foreground">Chargement des missions...</p>
+                ) : missions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center bg-muted rounded-lg">
+                    Aucune mission terminée pour {MOIS_LABELS[Number(mois) - 1]} {annee}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {missions.map((m) => (
+                      <div key={m.id} className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
+                        <div className="flex items-center gap-2">
+                          {m.paye_coursier ? (
+                            <CheckCircle className="h-4 w-4 text-primary" />
+                          ) : (
+                            <AlertCircle className="h-4 w-4 text-destructive" />
+                          )}
+                          <div>
+                            <span className="font-medium">{m.adresse}</span>
+                            <span className="text-muted-foreground ml-2 text-xs">
+                              {new Date(m.date_visite).toLocaleDateString('fr-CH')}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {!m.paye_coursier && (
+                            <Badge variant="outline" className="text-destructive border-destructive/30 text-xs">
+                              Non payé
+                            </Badge>
+                          )}
+                          <span className="font-mono font-semibold">{formatCHF(m.montant)}</span>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                      <div className="flex justify-between font-semibold">
+                        <span>Total missions ({missions.length} visite{missions.length > 1 ? 's' : ''} × {formatCHF(TARIF_COURSIER)})</span>
+                        <span>{formatCHF(totalMissions)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
             {/* Hourly mode: show hours input */}
             {mode === 'horaire' && selectedEmployeId && (
               <div className="space-y-3">
@@ -396,17 +453,17 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
             {/* Gross salary components */}
             <div className="space-y-3">
               <h3 className="font-semibold text-sm text-muted-foreground uppercase">
-                {mode === 'commission' || mode === 'independant' ? 'Salaire brut (commissions)' : 'Composants du salaire'}
+                {mode === 'commission' || mode === 'independant' ? 'Salaire brut (commissions)' : mode === 'coursier' ? 'Salaire brut (missions)' : 'Composants du salaire'}
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>{mode === 'commission' || mode === 'independant' ? 'Total commissions' : mode === 'horaire' ? 'Salaire horaire calculé' : 'Salaire de base'}</Label>
+                  <Label>{mode === 'commission' || mode === 'independant' ? 'Total commissions' : mode === 'coursier' ? 'Total missions' : mode === 'horaire' ? 'Salaire horaire calculé' : 'Salaire de base'}</Label>
                   <Input
                     type="number"
                     step="0.05"
                     {...register('salaire_base')}
-                    readOnly={mode === 'commission' || mode === 'independant'}
-                    className={mode === 'commission' || mode === 'independant' ? 'bg-muted' : ''}
+                    readOnly={mode === 'commission' || mode === 'independant' || mode === 'coursier'}
+                    className={mode === 'commission' || mode === 'independant' || mode === 'coursier' ? 'bg-muted' : ''}
                   />
                 </div>
                 {mode !== 'independant' && (
