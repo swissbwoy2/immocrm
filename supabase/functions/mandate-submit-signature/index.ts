@@ -18,11 +18,11 @@ Deno.serve(async (req) => {
     );
 
     const body = await req.json();
-    const { mandate_id, signature_data, email } = body;
+    const { mandate_id, signature_data, email, access_token } = body;
 
-    if (!mandate_id || !signature_data || !email) {
+    if (!mandate_id || !signature_data || !email || !access_token) {
       return new Response(
-        JSON.stringify({ success: false, error: "Missing required fields" }),
+        JSON.stringify({ success: false, error: "Missing required fields (mandate_id, signature_data, email, access_token)" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -32,10 +32,10 @@ Deno.serve(async (req) => {
                req.headers.get("x-real-ip") || "unknown";
     const userAgent = req.headers.get("user-agent") || "unknown";
 
-    // Verify mandate exists and is not already signed
+    // Verify mandate exists and validate access_token
     const { data: mandate, error: fetchErr } = await supabase
       .from("mandates")
-      .select("id, signed_at, activation_deposit_paid, access_token")
+      .select("id, signed_at, activation_deposit_paid, access_token, token_invalidated_at")
       .eq("id", mandate_id)
       .single();
 
@@ -43,6 +43,21 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ success: false, error: "Mandat introuvable" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate access_token
+    if (mandate.access_token !== access_token) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Token invalide" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (mandate.token_invalidated_at) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Token révoqué" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
