@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { MandatV3FormData, initialMandatV3Data, LEGAL_CHECKBOXES } from '@/components/mandat-v3/types';
 import { logMandateEvent } from '@/components/mandat-v3/useMandateAudit';
@@ -23,22 +22,69 @@ const STEPS = [
   { label: 'Signature', number: 7 },
 ];
 
+const SESSION_KEY = 'mandat_v3_session';
+
+function getEdgeFunctionUrl(name: string): string {
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  return `https://${projectId}.supabase.co/functions/v1/${name}`;
+}
+
 export default function MandatV3() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<MandatV3FormData>(initialMandatV3Data);
   const [mandateId, setMandateId] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // Restore session from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(SESSION_KEY);
+      if (saved) {
+        const { mandateId: mId, accessToken: at } = JSON.parse(saved);
+        if (mId && at) {
+          setMandateId(mId);
+          setAccessToken(at);
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }, []);
+
+  const saveSession = (mId: string, at: string) => {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ mandateId: mId, accessToken: at }));
+  };
+
+  const clearSession = () => {
+    sessionStorage.removeItem(SESSION_KEY);
+  };
 
   const updateForm = (partial: Partial<MandatV3FormData>) => {
     setFormData((prev) => ({ ...prev, ...partial }));
   };
 
-  // Save/create mandate in DB when leaving step 1
-  const saveMandateToDB = async () => {
-    if (mandateId) {
-      // Update existing
-      await supabase.from('mandates' as any).update({
+  // Call mandate-update-draft edge function
+  const callUpdateDraft = async (action: string, data: Record<string, unknown>) => {
+    const response = await fetch(getEdgeFunctionUrl('mandate-update-draft'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mandate_id: mandateId, access_token: accessToken, action, data }),
+    });
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.error || 'Erreur mise à jour');
+    }
+    return result;
+  };
+
+  // Create mandate via edge function (step 1, first time)
+  const createMandate = async () => {
+    const response = await fetch(getEdgeFunctionUrl('mandate-create'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         email: formData.email,
         prenom: formData.prenom,
         nom: formData.nom,
@@ -64,12 +110,25 @@ export default function MandatV3() {
         date_entree_souhaitee: formData.date_entree_souhaitee,
         criteres_obligatoires: formData.criteres_obligatoires,
         criteres_souhaites: formData.criteres_souhaites,
-      } as any).eq('id', mandateId);
-      return mandateId;
+      }),
+    });
+
+    const result = await response.json();
+    if (!result.success) {
+      toast.error(result.error || 'Erreur lors de la création');
+      return null;
     }
 
-    // Create new
-    const { data, error } = await supabase.from('mandates' as any).insert({
+    setMandateId(result.mandate_id);
+    setAccessToken(result.access_token);
+    saveSession(result.mandate_id, result.access_token);
+    await logMandateEvent(result.mandate_id, 'mandate_created', 'Mandat créé', true);
+    return result.mandate_id;
+  };
+
+  // Save identity (update existing)
+  const saveIdentity = async () => {
+    await callUpdateDraft('update_identity', {
       email: formData.email,
       prenom: formData.prenom,
       nom: formData.nom,
@@ -87,6 +146,12 @@ export default function MandatV3() {
       nombre_enfants: formData.nombre_enfants,
       animaux: formData.animaux,
       notes_personnelles: formData.notes_personnelles,
+    });
+  };
+
+  // Save search criteria
+  const saveSearch = async () => {
+    await callUpdateDraft('update_search', {
       type_recherche: formData.type_recherche,
       type_bien: formData.type_bien,
       zone_recherche: formData.zone_recherche,
@@ -95,25 +160,13 @@ export default function MandatV3() {
       date_entree_souhaitee: formData.date_entree_souhaitee,
       criteres_obligatoires: formData.criteres_obligatoires,
       criteres_souhaites: formData.criteres_souhaites,
-    } as any).select('id').single();
-
-    if (error) {
-      toast.error('Erreur lors de la sauvegarde');
-      console.error(error);
-      return null;
-    }
-
-    const newId = (data as any)?.id;
-    setMandateId(newId);
-    await logMandateEvent(newId, 'mandate_created', 'Mandat créé', true);
-    return newId;
+    });
   };
 
   // Save related parties
-  const saveRelatedParties = async (mId: string) => {
+  const saveRelatedParties = async () => {
     for (const party of formData.related_parties) {
-      await supabase.from('mandate_related_parties' as any).insert({
-        mandate_id: mId,
+      await callUpdateDraft('add_related_party', {
         role: party.role,
         prenom: party.prenom,
         nom: party.nom,
@@ -126,69 +179,71 @@ export default function MandatV3() {
         employeur: party.employeur,
         revenus_mensuels: party.revenus_mensuels,
         lien_avec_mandant: party.lien_avec_mandant,
-      } as any);
+      });
     }
   };
 
-  // Update legal checkboxes in DB
-  const saveLegalCheckboxes = async (mId: string) => {
+  // Save legal checkboxes
+  const saveLegalCheckboxes = async () => {
     const legalData: Record<string, boolean> = {};
     LEGAL_CHECKBOXES.forEach((cb) => {
       legalData[cb.key] = formData[cb.key as keyof MandatV3FormData] as boolean;
     });
-    await supabase.from('mandates' as any).update(legalData as any).eq('id', mId);
+    await callUpdateDraft('update_legal_checkboxes', legalData);
   };
 
   const handleNext = async () => {
-    // Validate step 1
-    if (step === 1) {
-      if (!formData.email || !formData.prenom || !formData.nom || !formData.telephone) {
-        toast.error('Veuillez remplir les champs obligatoires');
-        return;
+    try {
+      if (step === 1) {
+        if (!formData.email || !formData.prenom || !formData.nom || !formData.telephone) {
+          toast.error('Veuillez remplir les champs obligatoires');
+          return;
+        }
+        if (!mandateId) {
+          const mId = await createMandate();
+          if (!mId) return;
+        } else {
+          await saveIdentity();
+        }
       }
-      const mId = await saveMandateToDB();
-      if (!mId) return;
-    }
 
-    // Save search criteria on step 2
-    if (step === 2 && mandateId) {
-      await saveMandateToDB();
-    }
+      if (step === 2 && mandateId) {
+        await saveSearch();
+      }
 
-    // Save related parties on step 3
-    if (step === 3 && mandateId) {
-      await saveRelatedParties(mandateId);
-    }
+      if (step === 3 && mandateId) {
+        await saveRelatedParties();
+      }
 
-    // Save legal checkboxes on step 6
-    if (step === 6 && mandateId) {
-      await saveLegalCheckboxes(mandateId);
-    }
+      if (step === 6 && mandateId) {
+        await saveLegalCheckboxes();
+      }
 
-    setStep((s) => Math.min(s + 1, 7));
+      setStep((s) => Math.min(s + 1, 7));
+    } catch (err: any) {
+      console.error('Step save error:', err);
+      toast.error(err.message || 'Erreur lors de la sauvegarde');
+    }
   };
 
   const handleSubmitSignature = async () => {
-    if (!mandateId || !formData.signature_data) return;
+    if (!mandateId || !accessToken || !formData.signature_data) return;
 
     setIsSubmitting(true);
     try {
       // Save legal checkboxes first
-      await saveLegalCheckboxes(mandateId);
+      await saveLegalCheckboxes();
 
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/mandate-submit-signature`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            mandate_id: mandateId,
-            signature_data: formData.signature_data,
-            email: formData.email,
-          }),
-        }
-      );
+      const response = await fetch(getEdgeFunctionUrl('mandate-submit-signature'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mandate_id: mandateId,
+          access_token: accessToken,
+          signature_data: formData.signature_data,
+          email: formData.email,
+        }),
+      });
 
       const result = await response.json();
       if (!result.success) {
@@ -196,6 +251,7 @@ export default function MandatV3() {
         return;
       }
 
+      clearSession();
       setIsSubmitted(true);
       toast.success('Mandat signé avec succès !');
     } catch (err) {
@@ -244,7 +300,7 @@ export default function MandatV3() {
           {step === 1 && <MandatV3Step1Identity data={formData} onChange={updateForm} />}
           {step === 2 && <MandatV3Step2Search data={formData} onChange={updateForm} />}
           {step === 3 && <MandatV3Step3RelatedParties data={formData} onChange={updateForm} />}
-          {step === 4 && <MandatV3Step4Documents data={formData} mandateId={mandateId} onChange={updateForm} />}
+          {step === 4 && <MandatV3Step4Documents data={formData} mandateId={mandateId} accessToken={accessToken} onChange={updateForm} />}
           {step === 5 && <MandatV3Step5Financial />}
           {step === 6 && <MandatV3Step6Legal data={formData} mandateId={mandateId} onChange={updateForm} />}
           {step === 7 && (

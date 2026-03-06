@@ -134,3 +134,9 @@ verify_jwt = false
 
 [functions.mandate-get-status]
 verify_jwt = false
+
+[functions.mandate-create]
+verify_jwt = false
+
+[functions.mandate-update-draft]
+verify_jwt = false

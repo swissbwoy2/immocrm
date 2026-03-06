@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 interface Props {
   data: MandatV3FormData;
   mandateId: string | null;
+  accessToken: string | null;
   onChange: (data: Partial<MandatV3FormData>) => void;
 }
 
@@ -21,52 +22,77 @@ const DOC_CATEGORIES = [
   { value: 'autre', label: 'Autre document' },
 ];
 
-export default function MandatV3Step4Documents({ data, mandateId, onChange }: Props) {
+function getEdgeFunctionUrl(name: string): string {
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  return `https://${projectId}.supabase.co/functions/v1/${name}`;
+}
+
+export default function MandatV3Step4Documents({ data, mandateId, accessToken, onChange }: Props) {
   const [uploading, setUploading] = useState(false);
   const [category, setCategory] = useState('autre');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files || !mandateId) return;
+    if (!files || !mandateId || !accessToken) return;
 
     setUploading(true);
     const newDocs: MandateDocumentData[] = [];
 
     for (const file of Array.from(files)) {
       const filePath = `${mandateId}/${Date.now()}_${file.name}`;
-      const { error } = await supabase.storage.from('mandates-private').upload(filePath, file);
+      
+      // Step 1: Upload to storage
+      const { error: uploadError } = await supabase.storage.from('mandates-private').upload(filePath, file);
 
-      if (error) {
+      if (uploadError) {
         toast.error(`Erreur upload: ${file.name}`);
-        console.error(error);
+        console.error(uploadError);
         continue;
       }
 
-      // Record in mandate_documents table
-      const { data: docRow, error: insertErr } = await supabase
-        .from('mandate_documents' as any)
-        .insert({
-          mandate_id: mandateId,
-          file_name: file.name,
-          file_path: filePath,
-          file_type: file.type,
-          file_size: file.size,
-          document_category: category,
-        })
-        .select('id')
-        .single();
+      // Step 2: Register document via edge function
+      try {
+        const response = await fetch(getEdgeFunctionUrl('mandate-update-draft'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mandate_id: mandateId,
+            access_token: accessToken,
+            action: 'register_document',
+            data: {
+              file_name: file.name,
+              file_path: filePath,
+              file_type: file.type,
+              file_size: file.size,
+              document_category: category,
+            },
+          }),
+        });
 
-      if (insertErr) {
-        console.error('Doc insert error:', insertErr);
-      } else {
+        const result = await response.json();
+
+        if (!result.success) {
+          // Rollback: delete uploaded file
+          console.error('Document registration failed:', result.error);
+          await supabase.storage.from('mandates-private').remove([filePath]);
+          toast.error(`Erreur enregistrement: ${file.name}`);
+          continue;
+        }
+
         newDocs.push({
-          id: (docRow as any)?.id || crypto.randomUUID(),
+          id: result.document_id || crypto.randomUUID(),
           file_name: file.name,
           file_path: filePath,
           file_type: file.type,
           document_category: category,
         });
+      } catch (err) {
+        // Rollback: delete uploaded file on network error
+        console.error('Document registration exception:', err);
+        await supabase.storage.from('mandates-private').remove([filePath]);
+        toast.error(`Erreur enregistrement: ${file.name}`);
+        continue;
       }
     }
 
