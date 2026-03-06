@@ -9,9 +9,9 @@ import { useSearchType } from '@/contexts/SearchTypeContext';
 
 // A/B testable headline variants
 const HEADLINE_VARIANTS = {
-  A: "Nous trouvons votre appartement avec méthode, discrétion et efficacité.",
-  B: "Confiez votre recherche à un service structuré, haut de gamme et orienté résultat.",
-  C: "Vous n'avez plus besoin de chercher seul.",
+  A: "Vous n'êtes plus seul face à la pénurie du logement.",
+  B: "Seulement 1% de logements disponibles : faites enfin équipe avec Immo-Rama.",
+  C: "Dans un marché bloqué, Immo-Rama devient votre allié incontournable pour trouver plus vite.",
 };
 const ACTIVE_HEADLINE = HEADLINE_VARIANTS.A;
 
@@ -121,8 +121,8 @@ export function PremiumHero() {
           {(isLocation || !searchType) && (
             <div className="animate-fade-in space-y-6 md:space-y-8 w-full">
               {/* Eyebrow */}
-              <p className="text-xs sm:text-sm tracking-widest uppercase text-primary font-medium">
-                Recherche locative accompagnée en Suisse romande
+              <p className="text-xs sm:text-sm tracking-widest uppercase text-primary font-semibold">
+                Agence N°1 de relocation en Suisse romande
               </p>
 
               {/* H1 */}
@@ -132,8 +132,19 @@ export function PremiumHero() {
 
               {/* Subtitle */}
               <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                Un agent dédié vous accompagne à chaque étape : recherche ciblée, sélection des opportunités, organisation des visites et transmission du dossier aux bonnes régies.
+                Avec à peine 1% de logements disponibles en Suisse romande, Immo-Rama devient votre allié incontournable pour rechercher, cibler et décrocher plus rapidement le bon appartement.
               </p>
+
+              {/* Support block */}
+              <div className="flex flex-wrap items-center justify-center gap-x-1 text-sm sm:text-base font-medium text-foreground/80">
+                <span>Recherche ciblée</span>
+                <span className="text-primary">·</span>
+                <span>Dossier optimisé</span>
+                <span className="text-primary">·</span>
+                <span>Visites déléguées</span>
+                <span className="text-primary">·</span>
+                <span>Accompagnement jusqu'au bail</span>
+              </div>
 
               {/* Social proof */}
               <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs sm:text-sm text-muted-foreground">

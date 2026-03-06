@@ -6,6 +6,7 @@ import { useWhatsAppTracking } from '@/hooks/useWhatsAppTracking';
 
 // Above the fold - eager load
 import { PremiumHero } from '@/components/landing/premium/PremiumHero';
+import { SocialProofBar } from '@/components/landing/SocialProofBar';
 import { TeamSection } from '@/components/landing/TeamSection';
 import { ForWhoSection } from '@/components/landing/premium/ForWhoSection';
 import { HowItWorksSection } from '@/components/landing/premium/HowItWorksSection';
@@ -82,6 +83,7 @@ export default function Landing() {
 
         {/* Eager sections */}
         <PremiumHero />
+        <SocialProofBar />
         <TeamSection />
         <ForWhoSection />
         <HowItWorksSection />
