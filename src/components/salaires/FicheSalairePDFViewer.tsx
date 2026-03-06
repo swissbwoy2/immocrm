@@ -26,8 +26,12 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
   const gray = rgb(0.4, 0.4, 0.4);
   const darkBlue = rgb(0.1, 0.15, 0.35);
   let y = height - 50;
-  const lm = 50; // left margin
-  const rm = 545; // right margin
+  const lm = 50;
+  const rm = 545;
+
+  const mode = fiche.mode_remuneration || 'fixe';
+  const isIndependant = mode === 'independant';
+  const isCommission = mode === 'commission' || isIndependant;
 
   // Header - Employee info (left)
   const fullName = `${employe.prenom} ${employe.nom}`;
@@ -61,7 +65,8 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
   // Title
   y = height - 180;
   const moisLabel = MOIS_LABELS[(fiche.mois || 1) - 1];
-  const title = `Décompte de salaire ${moisLabel.toLowerCase()} ${fiche.annee}`;
+  const titlePrefix = isIndependant ? "Décompte d'honoraires" : 'Décompte de salaire';
+  const title = `${titlePrefix} ${moisLabel.toLowerCase()} ${fiche.annee}`;
   page.drawText(title, { x: lm, y, font: fontBold, size: 16, color: darkBlue });
   y -= 20;
 
@@ -71,16 +76,6 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
   page.drawText(dateStr, { x: lm, y, font, size: 9, color: gray });
   y -= 35;
 
-  // Table header
-  const cols = [lm, 200, 300, 400, rm];
-  const headers = ['Composant de salaire', 'Nombre', 'Taux', 'Sous-total'];
-  page.drawRectangle({ x: lm - 5, y: y - 5, width: rm - lm + 10, height: 20, color: rgb(0.93, 0.93, 0.96) });
-  headers.forEach((h, i) => {
-    const x = i === 3 ? cols[3] : cols[i];
-    page.drawText(h, { x, y, font: fontBold, size: 8, color: darkBlue });
-  });
-  y -= 25;
-
   // Helper to draw a row
   const drawRow = (label: string, nombre: string, taux: string, sousTotal: string, total: string = '', bold = false) => {
     const f = bold ? fontBold : font;
@@ -88,49 +83,92 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
     if (nombre) page.drawText(nombre, { x: 200, y, font, size: 9, color: black });
     if (taux) page.drawText(taux, { x: 300, y, font, size: 9, color: black });
     if (sousTotal) {
-      const tw = font.widthOfTextAtSize(sousTotal, 9);
-      page.drawText(sousTotal, { x: 430 - tw, y, font, size: 9, color: black });
+      const tw2 = font.widthOfTextAtSize(sousTotal, 9);
+      page.drawText(sousTotal, { x: 430 - tw2, y, font, size: 9, color: black });
     }
     if (total) {
-      const tw = fontBold.widthOfTextAtSize(total, 9);
-      page.drawText(total, { x: rm - tw, y, font: fontBold, size: 9, color: black });
+      const tw2 = fontBold.widthOfTextAtSize(total, 9);
+      page.drawText(total, { x: rm - tw2, y, font: fontBold, size: 9, color: black });
     }
     y -= 18;
   };
 
-  // Salary components
-  if (fiche.salaire_base > 0)
-    drawRow('Salaire mensuel', formatCHF(fiche.salaire_base), '100.000 %', formatCHF(fiche.salaire_base));
-  if (fiche.absences_payees > 0)
-    drawRow('Absences payées - SH', formatCHF(fiche.absences_payees), '1.00', formatCHF(fiche.absences_payees));
-  if (fiche.heures_supplementaires > 0)
-    drawRow('Heures supplémentaires', formatCHF(fiche.heures_supplementaires), '', formatCHF(fiche.heures_supplementaires));
-  if (fiche.primes > 0)
-    drawRow('Primes / Bonus', '', '', formatCHF(fiche.primes));
+  // Commission details
+  const detailCommissions = (fiche.detail_commissions as any[]) || [];
+  if (isCommission && detailCommissions.length > 0) {
+    // Table header
+    page.drawRectangle({ x: lm - 5, y: y - 5, width: rm - lm + 10, height: 20, color: rgb(0.93, 0.93, 0.96) });
+    page.drawText(isIndependant ? 'Honoraires — Détail des affaires' : 'Commissions — Détail des affaires', { x: lm, y, font: fontBold, size: 8, color: darkBlue });
+    y -= 25;
 
-  // Gross line
-  page.drawLine({ start: { x: lm, y: y + 5 }, end: { x: rm, y: y + 5 }, thickness: 0.5, color: gray });
-  drawRow('Salaire brut', '', '', '', formatCHF(fiche.salaire_brut), true);
-  y -= 5;
+    for (const t of detailCommissions) {
+      const dateT = t.date ? new Date(t.date).toLocaleDateString('fr-CH') : '';
+      const label = `${t.adresse || 'N/A'} (${dateT})`;
+      const amount = formatCHF(t.part_agent || 0);
+      const reserve = !t.payee ? ' *' : '';
+      page.drawText(label, { x: lm + 10, y, font, size: 8, color: black });
+      const tw = font.widthOfTextAtSize(amount + reserve, 8);
+      page.drawText(amount + reserve, { x: 430 - tw, y, font, size: 8, color: black });
+      y -= 15;
+    }
 
-  // Deductions
-  if (fiche.montant_avs > 0) drawRow('Cotisation AVS / AI / APG', formatCHF(fiche.salaire_brut), `${fiche.taux_avs} %`, `-${formatCHF(fiche.montant_avs)}`);
-  if (fiche.montant_ac > 0) drawRow('Cotisation AC', formatCHF(fiche.salaire_brut), `${fiche.taux_ac} %`, `-${formatCHF(fiche.montant_ac)}`);
-  if (fiche.montant_lpcfam > 0) drawRow('Cotisation LPCFam VD', formatCHF(fiche.salaire_brut), `${fiche.taux_lpcfam} %`, `-${formatCHF(fiche.montant_lpcfam)}`);
-  if (fiche.montant_aanp > 0) drawRow('Cotisation ANP', formatCHF(fiche.salaire_brut), `${fiche.taux_aanp} %`, `-${formatCHF(fiche.montant_aanp)}`);
-  if (fiche.montant_ijm > 0) drawRow('Cotisation IJM', formatCHF(fiche.salaire_brut), `${fiche.taux_ijm} %`, `-${formatCHF(fiche.montant_ijm)}`);
-  if (fiche.montant_lpp > 0) drawRow('Cotisations LPP fixe', '', '', `-${formatCHF(fiche.montant_lpp)}`);
-  if (fiche.montant_impot_source > 0) drawRow('Impôt à la source', formatCHF(fiche.salaire_brut), `${fiche.taux_impot_source} %`, `-${formatCHF(fiche.montant_impot_source)}`);
+    if (detailCommissions.some(t => !t.payee)) {
+      page.drawText('* Sous réserve de paiement du client', { x: lm + 10, y, font, size: 7, color: gray });
+      y -= 15;
+    }
 
-  // Net line
-  y -= 5;
-  page.drawLine({ start: { x: lm, y: y + 5 }, end: { x: rm, y: y + 5 }, thickness: 0.5, color: gray });
-  drawRow('Salaire net', '', '', '', formatCHF(fiche.salaire_net), true);
+    y -= 5;
+    page.drawLine({ start: { x: lm, y: y + 5 }, end: { x: rm, y: y + 5 }, thickness: 0.5, color: gray });
+    const totalLabel = isIndependant ? 'Total honoraires' : 'Total commissions';
+    drawRow(totalLabel, '', '', '', formatCHF(fiche.montant_commissions || fiche.salaire_brut || 0), true);
+    y -= 5;
+  } else {
+    // Standard salary table header
+    const headers = ['Composant de salaire', 'Nombre', 'Taux', 'Sous-total'];
+    page.drawRectangle({ x: lm - 5, y: y - 5, width: rm - lm + 10, height: 20, color: rgb(0.93, 0.93, 0.96) });
+    const cols = [lm, 200, 300, 400];
+    headers.forEach((h, i) => {
+      page.drawText(h, { x: cols[i], y, font: fontBold, size: 8, color: darkBlue });
+    });
+    y -= 25;
+
+    // Salary components
+    if (mode === 'horaire' && fiche.nombre_heures > 0) {
+      drawRow('Salaire horaire', `${fiche.nombre_heures}h × ${formatCHF(fiche.taux_horaire_utilise || 0)}`, '', formatCHF(fiche.salaire_base));
+    } else if (fiche.salaire_base > 0) {
+      drawRow('Salaire mensuel', formatCHF(fiche.salaire_base), '100.000 %', formatCHF(fiche.salaire_base));
+    }
+    if (fiche.absences_payees > 0) drawRow('Absences payées - SH', formatCHF(fiche.absences_payees), '1.00', formatCHF(fiche.absences_payees));
+    if (fiche.heures_supplementaires > 0) drawRow('Heures supplémentaires', formatCHF(fiche.heures_supplementaires), '', formatCHF(fiche.heures_supplementaires));
+    if (fiche.primes > 0) drawRow('Primes / Bonus', '', '', formatCHF(fiche.primes));
+
+    // Gross line
+    page.drawLine({ start: { x: lm, y: y + 5 }, end: { x: rm, y: y + 5 }, thickness: 0.5, color: gray });
+    drawRow('Salaire brut', '', '', '', formatCHF(fiche.salaire_brut), true);
+    y -= 5;
+  }
+
+  // Deductions — skip for independant
+  if (!isIndependant) {
+    if (fiche.montant_avs > 0) drawRow('Cotisation AVS / AI / APG', formatCHF(fiche.salaire_brut), `${fiche.taux_avs} %`, `-${formatCHF(fiche.montant_avs)}`);
+    if (fiche.montant_ac > 0) drawRow('Cotisation AC', formatCHF(fiche.salaire_brut), `${fiche.taux_ac} %`, `-${formatCHF(fiche.montant_ac)}`);
+    if (fiche.montant_lpcfam > 0) drawRow('Cotisation LPCFam VD', formatCHF(fiche.salaire_brut), `${fiche.taux_lpcfam} %`, `-${formatCHF(fiche.montant_lpcfam)}`);
+    if (fiche.montant_aanp > 0) drawRow('Cotisation ANP', formatCHF(fiche.salaire_brut), `${fiche.taux_aanp} %`, `-${formatCHF(fiche.montant_aanp)}`);
+    if (fiche.montant_ijm > 0) drawRow('Cotisation IJM', formatCHF(fiche.salaire_brut), `${fiche.taux_ijm} %`, `-${formatCHF(fiche.montant_ijm)}`);
+    if (fiche.montant_lpp > 0) drawRow('Cotisations LPP fixe', '', '', `-${formatCHF(fiche.montant_lpp)}`);
+    if (fiche.montant_impot_source > 0) drawRow('Impôt à la source', formatCHF(fiche.salaire_brut), `${fiche.taux_impot_source} %`, `-${formatCHF(fiche.montant_impot_source)}`);
+
+    // Net line
+    y -= 5;
+    page.drawLine({ start: { x: lm, y: y + 5 }, end: { x: rm, y: y + 5 }, thickness: 0.5, color: gray });
+    drawRow('Salaire net', '', '', '', formatCHF(fiche.salaire_net), true);
+  }
 
   // Payment info
   y -= 20;
   page.drawText('Paiements', { x: lm, y, font: fontBold, size: 10, color: darkBlue });
   y -= 18;
+  const netLabel = isIndependant ? 'Honoraires nets' : 'Salaire net';
   const paymentText = `CHF ${fiche.salaire_net?.toFixed(2)} sur compte bancaire ${employe.iban || 'N/A'}, ${employe.banque || ''}`;
   page.drawText(paymentText, { x: lm, y, font, size: 9, color: black });
 
@@ -167,7 +205,9 @@ export default function FicheSalairePDFViewer({ open, onOpenChange, fiche }: Pro
     if (!fiche || !employe) return;
     const bytes = await generateSalaryPDF(fiche, employe);
     const moisLabel = MOIS_LABELS[(fiche.mois || 1) - 1];
-    const filename = `Fiche_salaire_${employe.nom}_${moisLabel}_${fiche.annee}.pdf`;
+    const mode = fiche.mode_remuneration || 'fixe';
+    const prefix = mode === 'independant' ? 'Honoraires' : 'Fiche_salaire';
+    const filename = `${prefix}_${employe.nom}_${moisLabel}_${fiche.annee}.pdf`;
     const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
     const result = await downloadBlob(blob, { filename, mimeType: 'application/pdf' });
     if (result.success) toast.success('PDF téléchargé');
@@ -178,7 +218,9 @@ export default function FicheSalairePDFViewer({ open, onOpenChange, fiche }: Pro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh]">
         <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle>Fiche de salaire</DialogTitle>
+          <DialogTitle>
+            {fiche?.mode_remuneration === 'independant' ? "Décompte d'honoraires" : 'Fiche de salaire'}
+          </DialogTitle>
           <Button onClick={handleDownload} className="gap-2" size="sm">
             <Download className="h-4 w-4" /> Télécharger PDF
           </Button>

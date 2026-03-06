@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, FileDown, Trash2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
-import { MOIS_LABELS, formatCHF } from '@/lib/swissPayroll';
+import { MOIS_LABELS, formatCHF, MODE_REMUNERATION_LABELS, ModeRemuneration } from '@/lib/swissPayroll';
 import FicheSalaireDialog from './FicheSalaireDialog';
 import FicheSalairePDFViewer from './FicheSalairePDFViewer';
 
@@ -28,7 +28,7 @@ export default function FichesSalaireList() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('fiches_salaire')
-        .select('*, employes(prenom, nom, type_permis, is_independant, poste)')
+        .select('*, employes(prenom, nom, type_permis, is_independant, poste, mode_remuneration)')
         .eq('annee', parseInt(selectedYear))
         .eq('mois', parseInt(selectedMonth))
         .order('created_at', { ascending: false });
@@ -73,6 +73,16 @@ export default function FichesSalaireList() {
     return <Badge variant="outline">Brouillon</Badge>;
   };
 
+  const modeBadge = (mode: string) => {
+    const label = MODE_REMUNERATION_LABELS[mode as ModeRemuneration] || mode;
+    switch (mode) {
+      case 'commission': return <Badge className="bg-amber-100 text-amber-700">{label}</Badge>;
+      case 'horaire': return <Badge className="bg-sky-100 text-sky-700">{label}</Badge>;
+      case 'independant': return <Badge className="bg-purple-100 text-purple-700">{label}</Badge>;
+      default: return <Badge variant="secondary">{label}</Badge>;
+    }
+  };
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between flex-wrap gap-3">
@@ -107,7 +117,7 @@ export default function FichesSalaireList() {
             <TableHeader>
               <TableRow>
                 <TableHead>Employé</TableHead>
-                <TableHead>Type</TableHead>
+                <TableHead>Mode</TableHead>
                 <TableHead className="text-right">Brut</TableHead>
                 <TableHead className="text-right">Déductions</TableHead>
                 <TableHead className="text-right">Net</TableHead>
@@ -123,13 +133,7 @@ export default function FichesSalaireList() {
                     {f.employes?.poste && <span className="text-muted-foreground text-xs block">{f.employes.poste}</span>}
                   </TableCell>
                   <TableCell>
-                    {f.employes?.is_independant ? (
-                      <Badge variant="outline">Indépendant</Badge>
-                    ) : f.employes?.type_permis && ['B', 'F', 'N', 'L'].includes(f.employes.type_permis) ? (
-                      <Badge variant="destructive">IS - {f.employes.type_permis}</Badge>
-                    ) : (
-                      <Badge variant="secondary">Salarié</Badge>
-                    )}
+                    {modeBadge(f.mode_remuneration || f.employes?.mode_remuneration || 'fixe')}
                   </TableCell>
                   <TableCell className="text-right font-mono">{formatCHF(f.salaire_brut || 0)}</TableCell>
                   <TableCell className="text-right font-mono text-destructive">{formatCHF(f.total_deductions || 0)}</TableCell>

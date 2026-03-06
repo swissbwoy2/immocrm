@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { calculateSalary, formatCHF, MOIS_LABELS, isSubjectToSourceTax, DEFAULT_EMPLOYEE_RATES } from '@/lib/swissPayroll';
+import { calculateSalary, formatCHF, MOIS_LABELS, isSubjectToSourceTax, DEFAULT_EMPLOYEE_RATES, ModeRemuneration, MODE_REMUNERATION_LABELS } from '@/lib/swissPayroll';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 
 interface Props {
   open: boolean;
@@ -21,10 +23,22 @@ interface Props {
   defaultYear: number;
 }
 
+interface TransactionDetail {
+  id: string;
+  adresse: string;
+  part_agent: number;
+  date_transaction: string;
+  commission_payee: boolean;
+  statut: string;
+}
+
 export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes, defaultMonth, defaultYear }: Props) {
   const queryClient = useQueryClient();
   const [selectedEmployeId, setSelectedEmployeId] = useState<string>('');
   const { register, handleSubmit, setValue, watch, reset } = useForm();
+
+  const mois = watch('mois') || defaultMonth;
+  const annee = watch('annee') || defaultYear;
 
   // Fetch employee data when selected
   const { data: employeData } = useQuery({
@@ -38,10 +52,51 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
     enabled: !!selectedEmployeId,
   });
 
+  const mode: ModeRemuneration = (employeData as any)?.mode_remuneration || 'commission';
+
+  // Fetch transactions for commission mode
+  const { data: transactions = [], isLoading: loadingTransactions } = useQuery<TransactionDetail[]>({
+    queryKey: ['transactions-commission', selectedEmployeId, mois, annee],
+    queryFn: async () => {
+      if (!employeData?.user_id) return [];
+      // Get agent_id from user_id
+      const { data: agent } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('user_id', employeData.user_id)
+        .single();
+      if (!agent) return [];
+
+      const startDate = `${annee}-${String(mois).padStart(2, '0')}-01`;
+      const endMonth = Number(mois) === 12 ? 1 : Number(mois) + 1;
+      const endYear = Number(mois) === 12 ? Number(annee) + 1 : Number(annee);
+      const endDate = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
+
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('id, adresse, part_agent, date_transaction, commission_payee, statut')
+        .eq('agent_id', agent.id)
+        .gte('date_transaction', startDate)
+        .lt('date_transaction', endDate)
+        .in('statut', ['conclue', 'en_cours']);
+      if (error) throw error;
+      return (data || []) as TransactionDetail[];
+    },
+    enabled: !!employeData?.user_id && (mode === 'commission' || mode === 'independant'),
+  });
+
+  const totalCommissions = transactions.reduce((s, t) => s + (t.part_agent || 0), 0);
+
   // Pre-fill when employee loaded
   useEffect(() => {
     if (employeData && !fiche) {
-      setValue('salaire_base', employeData.salaire_mensuel || 0);
+      if (mode === 'commission' || mode === 'independant') {
+        setValue('salaire_base', totalCommissions);
+      } else if (mode === 'horaire') {
+        setValue('salaire_base', 0);
+      } else {
+        setValue('salaire_base', employeData.salaire_mensuel || 0);
+      }
       setValue('taux_avs', DEFAULT_EMPLOYEE_RATES.avs);
       setValue('taux_ac', DEFAULT_EMPLOYEE_RATES.ac);
       setValue('taux_aanp', DEFAULT_EMPLOYEE_RATES.aanp);
@@ -49,8 +104,16 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
       setValue('taux_lpcfam', DEFAULT_EMPLOYEE_RATES.lpcfam);
       setValue('montant_lpp', 0);
       setValue('taux_impot_source', 0);
+      setValue('nombre_heures', 0);
     }
-  }, [employeData, fiche, setValue]);
+  }, [employeData, fiche, setValue, mode, totalCommissions]);
+
+  // Auto-update salaire_base when commissions change (commission mode)
+  useEffect(() => {
+    if (!fiche && (mode === 'commission' || mode === 'independant')) {
+      setValue('salaire_base', totalCommissions);
+    }
+  }, [totalCommissions, mode, fiche, setValue]);
 
   useEffect(() => {
     if (fiche) {
@@ -67,6 +130,15 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
     }
   }, [fiche, setValue, reset, defaultMonth, defaultYear]);
 
+  // Hourly calc
+  const nombreHeures = Number(watch('nombre_heures')) || 0;
+  const tauxHoraire = employeData?.salaire_horaire || 0;
+  useEffect(() => {
+    if (!fiche && mode === 'horaire') {
+      setValue('salaire_base', Math.round(nombreHeures * tauxHoraire * 20) / 20);
+    }
+  }, [nombreHeures, tauxHoraire, mode, fiche, setValue]);
+
   // Live calculation
   const watchedFields = watch();
   const calc = calculateSalary({
@@ -81,14 +153,31 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
     taux_lpcfam: Number(watchedFields.taux_lpcfam),
     montant_lpp: Number(watchedFields.montant_lpp) || 0,
     taux_impot_source: Number(watchedFields.taux_impot_source) || 0,
+    mode_remuneration: mode,
   });
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
+      const detailCommissions = (mode === 'commission' || mode === 'independant')
+        ? transactions.map(t => ({
+            id: t.id,
+            adresse: t.adresse,
+            part_agent: t.part_agent,
+            date: t.date_transaction,
+            payee: t.commission_payee,
+            statut: t.statut,
+          }))
+        : [];
+
       const payload = {
         employe_id: selectedEmployeId,
         mois: Number(data.mois),
         annee: Number(data.annee),
+        mode_remuneration: mode,
+        montant_commissions: totalCommissions,
+        nombre_heures: Number(data.nombre_heures) || 0,
+        taux_horaire_utilise: mode === 'horaire' ? tauxHoraire : 0,
+        detail_commissions: detailCommissions,
         salaire_base: calc.salaire_base,
         absences_payees: calc.absences_payees,
         heures_supplementaires: calc.heures_supplementaires,
@@ -109,7 +198,6 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
         montant_impot_source: calc.montant_impot_source,
         total_deductions: calc.total_deductions,
         salaire_net: calc.salaire_net,
-        // Employer charges
         montant_avs_employeur: calc.montant_avs_employeur,
         montant_ac_employeur: calc.montant_ac_employeur,
         montant_aap: calc.montant_aap,
@@ -144,7 +232,14 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>{fiche ? 'Modifier la fiche' : 'Nouvelle fiche de salaire'}</DialogTitle>
+          <DialogTitle>
+            {fiche ? 'Modifier la fiche' : 'Nouvelle fiche de salaire'}
+            {employeData && (
+              <Badge variant="outline" className="ml-2">
+                {MODE_REMUNERATION_LABELS[mode] || mode}
+              </Badge>
+            )}
+          </DialogTitle>
         </DialogHeader>
         <ScrollArea className="max-h-[70vh] pr-4">
           <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-6">
@@ -176,14 +271,102 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
               </div>
             </div>
 
+            {/* Commission mode: show transactions */}
+            {(mode === 'commission' || mode === 'independant') && selectedEmployeId && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase">
+                  {mode === 'independant' ? 'Honoraires — Affaires conclues' : 'Commissions — Affaires conclues'}
+                </h3>
+                {loadingTransactions ? (
+                  <p className="text-sm text-muted-foreground">Chargement des transactions...</p>
+                ) : transactions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center bg-muted rounded-lg">
+                    Aucune affaire conclue pour {MOIS_LABELS[Number(mois) - 1]} {annee}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {transactions.map((t) => (
+                      <div key={t.id} className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
+                        <div className="flex items-center gap-2">
+                          {t.commission_payee ? (
+                            <CheckCircle className="h-4 w-4 text-emerald-600" />
+                          ) : (
+                            <AlertCircle className="h-4 w-4 text-orange-500" />
+                          )}
+                          <div>
+                            <span className="font-medium">{t.adresse || 'Adresse N/A'}</span>
+                            <span className="text-muted-foreground ml-2 text-xs">
+                              {new Date(t.date_transaction).toLocaleDateString('fr-CH')}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {!t.commission_payee && (
+                            <Badge variant="outline" className="text-orange-600 border-orange-300 text-xs">
+                              Sous réserve
+                            </Badge>
+                          )}
+                          <span className="font-mono font-semibold">{formatCHF(t.part_agent || 0)}</span>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                      <div className="flex justify-between font-semibold">
+                        <span>Total commissions ({transactions.length} affaire{transactions.length > 1 ? 's' : ''})</span>
+                        <span>{formatCHF(totalCommissions)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Hourly mode: show hours input */}
+            {mode === 'horaire' && selectedEmployeId && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase">Calcul horaire</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label>Nombre d'heures</Label>
+                    <Input type="number" step="0.25" {...register('nombre_heures')} />
+                  </div>
+                  <div>
+                    <Label>Taux horaire</Label>
+                    <div className="p-2 bg-muted rounded text-sm font-mono mt-1">
+                      {formatCHF(tauxHoraire)}/h
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Salaire calculé</Label>
+                    <div className="p-2 bg-primary/10 rounded text-sm font-mono font-semibold mt-1">
+                      {formatCHF(nombreHeures * tauxHoraire)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Gross salary components */}
             <div className="space-y-3">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase">Composants du salaire</h3>
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase">
+                {mode === 'commission' || mode === 'independant' ? 'Salaire brut (commissions)' : 'Composants du salaire'}
+              </h3>
               <div className="grid grid-cols-2 gap-3">
-                <div><Label>Salaire de base</Label><Input type="number" step="0.05" {...register('salaire_base')} /></div>
-                <div><Label>Absences payées (SH)</Label><Input type="number" step="0.05" {...register('absences_payees')} /></div>
-                <div><Label>Heures supplémentaires</Label><Input type="number" step="0.05" {...register('heures_supplementaires')} /></div>
-                <div><Label>Primes / Bonus</Label><Input type="number" step="0.05" {...register('primes')} /></div>
+                <div>
+                  <Label>{mode === 'commission' || mode === 'independant' ? 'Total commissions' : mode === 'horaire' ? 'Salaire horaire calculé' : 'Salaire de base'}</Label>
+                  <Input
+                    type="number"
+                    step="0.05"
+                    {...register('salaire_base')}
+                    readOnly={mode === 'commission' || mode === 'independant'}
+                    className={mode === 'commission' || mode === 'independant' ? 'bg-muted' : ''}
+                  />
+                </div>
+                {mode !== 'independant' && (
+                  <>
+                    <div><Label>Primes / Bonus</Label><Input type="number" step="0.05" {...register('primes')} /></div>
+                  </>
+                )}
               </div>
               <div className="p-3 bg-muted rounded-lg">
                 <div className="flex justify-between font-semibold">
@@ -193,77 +376,83 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
               </div>
             </div>
 
-            <Separator />
+            {/* Deductions — skip for independant */}
+            {mode !== 'independant' && (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm text-muted-foreground uppercase">Déductions employé</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div><Label>Taux AVS/AI/APG (%)</Label><Input type="number" step="0.01" {...register('taux_avs')} /></div>
+                    <div className="col-span-2 flex items-end"><span className="text-sm text-muted-foreground pb-2">= {formatCHF(calc.montant_avs)}</span></div>
+                    
+                    <div><Label>Taux AC (%)</Label><Input type="number" step="0.01" {...register('taux_ac')} /></div>
+                    <div className="col-span-2 flex items-end"><span className="text-sm text-muted-foreground pb-2">= {formatCHF(calc.montant_ac)}</span></div>
+                    
+                    <div><Label>Taux AANP (%)</Label><Input type="number" step="0.01" {...register('taux_aanp')} /></div>
+                    <div className="col-span-2 flex items-end"><span className="text-sm text-muted-foreground pb-2">= {formatCHF(calc.montant_aanp)}</span></div>
+                    
+                    <div><Label>Taux IJM (%)</Label><Input type="number" step="0.01" {...register('taux_ijm')} /></div>
+                    <div className="col-span-2 flex items-end"><span className="text-sm text-muted-foreground pb-2">= {formatCHF(calc.montant_ijm)}</span></div>
+                    
+                    <div><Label>Taux LPCFam (%)</Label><Input type="number" step="0.01" {...register('taux_lpcfam')} /></div>
+                    <div className="col-span-2 flex items-end"><span className="text-sm text-muted-foreground pb-2">= {formatCHF(calc.montant_lpcfam)}</span></div>
+                    
+                    <div><Label>LPP fixe (CHF)</Label><Input type="number" step="0.05" {...register('montant_lpp')} /></div>
+                    <div className="col-span-2" />
+                  </div>
 
-            {/* Deductions */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase">Déductions employé</h3>
-              <div className="grid grid-cols-3 gap-3">
-                <div><Label>Taux AVS/AI/APG (%)</Label><Input type="number" step="0.01" {...register('taux_avs')} /></div>
-                <div className="col-span-2 flex items-end"><span className="text-sm text-muted-foreground pb-2">= {formatCHF(calc.montant_avs)}</span></div>
-                
-                <div><Label>Taux AC (%)</Label><Input type="number" step="0.01" {...register('taux_ac')} /></div>
-                <div className="col-span-2 flex items-end"><span className="text-sm text-muted-foreground pb-2">= {formatCHF(calc.montant_ac)}</span></div>
-                
-                <div><Label>Taux AANP (%)</Label><Input type="number" step="0.01" {...register('taux_aanp')} /></div>
-                <div className="col-span-2 flex items-end"><span className="text-sm text-muted-foreground pb-2">= {formatCHF(calc.montant_aanp)}</span></div>
-                
-                <div><Label>Taux IJM (%)</Label><Input type="number" step="0.01" {...register('taux_ijm')} /></div>
-                <div className="col-span-2 flex items-end"><span className="text-sm text-muted-foreground pb-2">= {formatCHF(calc.montant_ijm)}</span></div>
-                
-                <div><Label>Taux LPCFam (%)</Label><Input type="number" step="0.01" {...register('taux_lpcfam')} /></div>
-                <div className="col-span-2 flex items-end"><span className="text-sm text-muted-foreground pb-2">= {formatCHF(calc.montant_lpcfam)}</span></div>
-                
-                <div><Label>LPP fixe (CHF)</Label><Input type="number" step="0.05" {...register('montant_lpp')} /></div>
-                <div className="col-span-2" />
-              </div>
+                  {needsIS && (
+                    <div className="p-3 border border-destructive/30 rounded-lg bg-destructive/5">
+                      <Label className="text-destructive">Taux impôt à la source (%)</Label>
+                      <Input type="number" step="0.01" {...register('taux_impot_source')} className="mt-1" />
+                      <p className="text-xs text-destructive mt-1">
+                        Permis {employeData?.type_permis} — Barème: {employeData?.bareme_impot_source || 'Non défini'}
+                        {' '}→ {formatCHF(calc.montant_impot_source)}
+                      </p>
+                    </div>
+                  )}
 
-              {needsIS && (
-                <div className="p-3 border border-destructive/30 rounded-lg bg-destructive/5">
-                  <Label className="text-destructive">Taux impôt à la source (%)</Label>
-                  <Input type="number" step="0.01" {...register('taux_impot_source')} className="mt-1" />
-                  <p className="text-xs text-destructive mt-1">
-                    Permis {employeData?.type_permis} — Barème: {employeData?.bareme_impot_source || 'Non défini'}
-                    {' '}→ {formatCHF(calc.montant_impot_source)}
-                  </p>
+                  <div className="p-3 bg-destructive/10 rounded-lg">
+                    <div className="flex justify-between font-semibold">
+                      <span>Total déductions</span>
+                      <span className="text-destructive">- {formatCHF(calc.total_deductions)}</span>
+                    </div>
+                  </div>
                 </div>
-              )}
-
-              <div className="p-3 bg-destructive/10 rounded-lg">
-                <div className="flex justify-between font-semibold">
-                  <span>Total déductions</span>
-                  <span className="text-destructive">- {formatCHF(calc.total_deductions)}</span>
-                </div>
-              </div>
-            </div>
+              </>
+            )}
 
             <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
               <div className="flex justify-between text-lg font-bold">
-                <span>Salaire net</span>
+                <span>{mode === 'independant' ? 'Honoraires nets' : 'Salaire net'}</span>
                 <span>{formatCHF(calc.salaire_net)}</span>
               </div>
             </div>
 
-            <Separator />
-
-            {/* Employer charges summary */}
-            <div className="space-y-2">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase">Charges employeur (calculées auto)</h3>
-              <div className="grid grid-cols-2 gap-1 text-sm">
-                <span className="text-muted-foreground">AVS employeur</span><span className="text-right">{formatCHF(calc.montant_avs_employeur)}</span>
-                <span className="text-muted-foreground">AC employeur</span><span className="text-right">{formatCHF(calc.montant_ac_employeur)}</span>
-                <span className="text-muted-foreground">AAP</span><span className="text-right">{formatCHF(calc.montant_aap)}</span>
-                <span className="text-muted-foreground">LPCFam employeur</span><span className="text-right">{formatCHF(calc.montant_lpcfam_employeur)}</span>
-                <span className="text-muted-foreground">LPP employeur</span><span className="text-right">{formatCHF(calc.montant_lpp_employeur)}</span>
-                <span className="text-muted-foreground">Allocations familiales</span><span className="text-right">{formatCHF(calc.montant_af)}</span>
-              </div>
-              <div className="p-3 bg-muted rounded-lg mt-2">
-                <div className="flex justify-between font-semibold">
-                  <span>Coût total employeur</span>
-                  <span>{formatCHF(calc.cout_total_employeur)}</span>
+            {/* Employer charges — skip for independant */}
+            {mode !== 'independant' && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <h3 className="font-semibold text-sm text-muted-foreground uppercase">Charges employeur (calculées auto)</h3>
+                  <div className="grid grid-cols-2 gap-1 text-sm">
+                    <span className="text-muted-foreground">AVS employeur</span><span className="text-right">{formatCHF(calc.montant_avs_employeur)}</span>
+                    <span className="text-muted-foreground">AC employeur</span><span className="text-right">{formatCHF(calc.montant_ac_employeur)}</span>
+                    <span className="text-muted-foreground">AAP</span><span className="text-right">{formatCHF(calc.montant_aap)}</span>
+                    <span className="text-muted-foreground">LPCFam employeur</span><span className="text-right">{formatCHF(calc.montant_lpcfam_employeur)}</span>
+                    <span className="text-muted-foreground">LPP employeur</span><span className="text-right">{formatCHF(calc.montant_lpp_employeur)}</span>
+                    <span className="text-muted-foreground">Allocations familiales</span><span className="text-right">{formatCHF(calc.montant_af)}</span>
+                  </div>
+                  <div className="p-3 bg-muted rounded-lg mt-2">
+                    <div className="flex justify-between font-semibold">
+                      <span>Coût total employeur</span>
+                      <span>{formatCHF(calc.cout_total_employeur)}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </>
+            )}
 
             {/* Status */}
             <div className="grid grid-cols-2 gap-3">

@@ -3050,6 +3050,7 @@ export type Database = {
           iban: string | null
           id: string
           is_independant: boolean | null
+          mode_remuneration: string
           nationalite: string | null
           nom: string
           nombre_enfants: number | null
@@ -3084,6 +3085,7 @@ export type Database = {
           iban?: string | null
           id?: string
           is_independant?: boolean | null
+          mode_remuneration?: string
           nationalite?: string | null
           nom: string
           nombre_enfants?: number | null
@@ -3118,6 +3120,7 @@ export type Database = {
           iban?: string | null
           id?: string
           is_independant?: boolean | null
+          mode_remuneration?: string
           nationalite?: string | null
           nom?: string
           nombre_enfants?: number | null
@@ -3182,9 +3185,11 @@ export type Database = {
           created_by: string | null
           date_paiement: string | null
           detail_autres_deductions: string | null
+          detail_commissions: Json | null
           employe_id: string
           heures_supplementaires: number | null
           id: string
+          mode_remuneration: string
           mois: number
           montant_aanp: number | null
           montant_aap: number | null
@@ -3193,12 +3198,14 @@ export type Database = {
           montant_af: number | null
           montant_avs: number | null
           montant_avs_employeur: number | null
+          montant_commissions: number | null
           montant_ijm: number | null
           montant_impot_source: number | null
           montant_lpcfam: number | null
           montant_lpcfam_employeur: number | null
           montant_lpp: number | null
           montant_lpp_employeur: number | null
+          nombre_heures: number | null
           notes: string | null
           pdf_url: string | null
           primes: number | null
@@ -3213,6 +3220,7 @@ export type Database = {
           taux_af: number | null
           taux_avs: number | null
           taux_avs_employeur: number | null
+          taux_horaire_utilise: number | null
           taux_ijm: number | null
           taux_impot_source: number | null
           taux_lpcfam: number | null
@@ -3230,9 +3238,11 @@ export type Database = {
           created_by?: string | null
           date_paiement?: string | null
           detail_autres_deductions?: string | null
+          detail_commissions?: Json | null
           employe_id: string
           heures_supplementaires?: number | null
           id?: string
+          mode_remuneration?: string
           mois: number
           montant_aanp?: number | null
           montant_aap?: number | null
@@ -3241,12 +3251,14 @@ export type Database = {
           montant_af?: number | null
           montant_avs?: number | null
           montant_avs_employeur?: number | null
+          montant_commissions?: number | null
           montant_ijm?: number | null
           montant_impot_source?: number | null
           montant_lpcfam?: number | null
           montant_lpcfam_employeur?: number | null
           montant_lpp?: number | null
           montant_lpp_employeur?: number | null
+          nombre_heures?: number | null
           notes?: string | null
           pdf_url?: string | null
           primes?: number | null
@@ -3261,6 +3273,7 @@ export type Database = {
           taux_af?: number | null
           taux_avs?: number | null
           taux_avs_employeur?: number | null
+          taux_horaire_utilise?: number | null
           taux_ijm?: number | null
           taux_impot_source?: number | null
           taux_lpcfam?: number | null
@@ -3278,9 +3291,11 @@ export type Database = {
           created_by?: string | null
           date_paiement?: string | null
           detail_autres_deductions?: string | null
+          detail_commissions?: Json | null
           employe_id?: string
           heures_supplementaires?: number | null
           id?: string
+          mode_remuneration?: string
           mois?: number
           montant_aanp?: number | null
           montant_aap?: number | null
@@ -3289,12 +3304,14 @@ export type Database = {
           montant_af?: number | null
           montant_avs?: number | null
           montant_avs_employeur?: number | null
+          montant_commissions?: number | null
           montant_ijm?: number | null
           montant_impot_source?: number | null
           montant_lpcfam?: number | null
           montant_lpcfam_employeur?: number | null
           montant_lpp?: number | null
           montant_lpp_employeur?: number | null
+          nombre_heures?: number | null
           notes?: string | null
           pdf_url?: string | null
           primes?: number | null
@@ -3309,6 +3326,7 @@ export type Database = {
           taux_af?: number | null
           taux_avs?: number | null
           taux_avs_employeur?: number | null
+          taux_horaire_utilise?: number | null
           taux_ijm?: number | null
           taux_impot_source?: number | null
           taux_lpcfam?: number | null

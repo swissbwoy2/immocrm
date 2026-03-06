@@ -1,6 +1,7 @@
 /**
  * Swiss Payroll Calculation Engine
  * Handles AVS/AI/APG, AC, AANP, IJM, LPP, LPCFam, source tax, employer charges
+ * Supports modes: commission, horaire, fixe, independant
  */
 
 // Default employee deduction rates (%)
@@ -42,6 +43,16 @@ export const BAREMES_IMPOT_SOURCE: Record<string, string> = {
 // Types of permits subject to source tax
 export const PERMIS_IMPOT_SOURCE = ['B', 'F', 'N', 'L'];
 
+// Remuneration modes
+export type ModeRemuneration = 'commission' | 'horaire' | 'fixe' | 'independant';
+
+export const MODE_REMUNERATION_LABELS: Record<ModeRemuneration, string> = {
+  commission: 'Commission',
+  horaire: 'Horaire',
+  fixe: 'Fixe',
+  independant: 'Indépendant',
+};
+
 export interface SalaryCalculation {
   salaire_base: number;
   absences_payees: number;
@@ -74,6 +85,7 @@ export interface SalaryInput {
   absences_payees?: number;
   heures_supplementaires?: number;
   primes?: number;
+  mode_remuneration?: ModeRemuneration;
   // Rates
   taux_avs?: number;
   taux_ac?: number;
@@ -96,20 +108,23 @@ function round5(n: number): number {
 }
 
 export function calculateSalary(input: SalaryInput): SalaryCalculation {
+  const mode = input.mode_remuneration || 'fixe';
   const salaire_base = input.salaire_base || 0;
   const absences_payees = input.absences_payees || 0;
   const heures_supplementaires = input.heures_supplementaires || 0;
   const primes = input.primes || 0;
   const salaire_brut = salaire_base + absences_payees + heures_supplementaires + primes;
 
-  // Employee deductions
-  const taux_avs = input.taux_avs ?? DEFAULT_EMPLOYEE_RATES.avs;
-  const taux_ac = input.taux_ac ?? DEFAULT_EMPLOYEE_RATES.ac;
-  const taux_aanp = input.taux_aanp ?? DEFAULT_EMPLOYEE_RATES.aanp;
-  const taux_ijm = input.taux_ijm ?? DEFAULT_EMPLOYEE_RATES.ijm;
-  const taux_lpcfam = input.taux_lpcfam ?? DEFAULT_EMPLOYEE_RATES.lpcfam;
-  const montant_lpp = input.montant_lpp || 0;
-  const taux_impot_source = input.taux_impot_source || 0;
+  const isIndependant = mode === 'independant';
+
+  // Employee deductions — 0 for independants
+  const taux_avs = isIndependant ? 0 : (input.taux_avs ?? DEFAULT_EMPLOYEE_RATES.avs);
+  const taux_ac = isIndependant ? 0 : (input.taux_ac ?? DEFAULT_EMPLOYEE_RATES.ac);
+  const taux_aanp = isIndependant ? 0 : (input.taux_aanp ?? DEFAULT_EMPLOYEE_RATES.aanp);
+  const taux_ijm = isIndependant ? 0 : (input.taux_ijm ?? DEFAULT_EMPLOYEE_RATES.ijm);
+  const taux_lpcfam = isIndependant ? 0 : (input.taux_lpcfam ?? DEFAULT_EMPLOYEE_RATES.lpcfam);
+  const montant_lpp = isIndependant ? 0 : (input.montant_lpp || 0);
+  const taux_impot_source = isIndependant ? 0 : (input.taux_impot_source || 0);
 
   const montant_avs = round5(salaire_brut * taux_avs / 100);
   const montant_ac = round5(salaire_brut * taux_ac / 100);
@@ -124,13 +139,13 @@ export function calculateSalary(input: SalaryInput): SalaryCalculation {
   );
   const salaire_net = round5(salaire_brut - total_deductions);
 
-  // Employer charges
-  const taux_avs_e = input.taux_avs_employeur ?? DEFAULT_EMPLOYER_RATES.avs;
-  const taux_ac_e = input.taux_ac_employeur ?? DEFAULT_EMPLOYER_RATES.ac;
-  const taux_aap = input.taux_aap ?? DEFAULT_EMPLOYER_RATES.aap;
-  const taux_lpcfam_e = input.taux_lpcfam_employeur ?? DEFAULT_EMPLOYER_RATES.lpcfam;
-  const montant_lpp_e = input.montant_lpp_employeur || montant_lpp;
-  const taux_af = input.taux_af ?? DEFAULT_EMPLOYER_RATES.af;
+  // Employer charges — 0 for independants
+  const taux_avs_e = isIndependant ? 0 : (input.taux_avs_employeur ?? DEFAULT_EMPLOYER_RATES.avs);
+  const taux_ac_e = isIndependant ? 0 : (input.taux_ac_employeur ?? DEFAULT_EMPLOYER_RATES.ac);
+  const taux_aap = isIndependant ? 0 : (input.taux_aap ?? DEFAULT_EMPLOYER_RATES.aap);
+  const taux_lpcfam_e = isIndependant ? 0 : (input.taux_lpcfam_employeur ?? DEFAULT_EMPLOYER_RATES.lpcfam);
+  const montant_lpp_e = isIndependant ? 0 : (input.montant_lpp_employeur || montant_lpp);
+  const taux_af = isIndependant ? 0 : (input.taux_af ?? DEFAULT_EMPLOYER_RATES.af);
 
   const montant_avs_e = round5(salaire_brut * taux_avs_e / 100);
   const montant_ac_e = round5(salaire_brut * taux_ac_e / 100);

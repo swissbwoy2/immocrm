@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { BAREMES_IMPOT_SOURCE, CANTONS, isSubjectToSourceTax } from '@/lib/swissPayroll';
+import { BAREMES_IMPOT_SOURCE, CANTONS, isSubjectToSourceTax, MODE_REMUNERATION_LABELS } from '@/lib/swissPayroll';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface EmployeDialogProps {
@@ -50,11 +50,13 @@ export default function EmployeDialog({ open, onOpenChange, employe }: EmployeDi
       type_contrat: 'fixe', poste: '', canton_travail: 'VD', canton_domicile: 'VD',
       bareme_impot_source: '', is_independant: false, statut: 'actif', notes: '',
       user_id: '' as string,
+      mode_remuneration: 'commission' as string,
     },
   });
 
   const typePermis = watch('type_permis');
   const isIndependant = watch('is_independant');
+  const modeRemuneration = watch('mode_remuneration');
   const needsSourceTax = isSubjectToSourceTax(typePermis);
 
   // Fetch linkable agents & coursiers not yet in employes
@@ -77,7 +79,6 @@ export default function EmployeDialog({ open, onOpenChange, employe }: EmployeDi
       const users: LinkableUser[] = [];
 
       for (const a of agents || []) {
-        // Allow if editing this employe's user_id or not yet linked
         if (linkedIds.has(a.user_id) && a.user_id !== employe?.user_id) continue;
         const p = a.profiles as any;
         if (!p) continue;
@@ -120,9 +121,24 @@ export default function EmployeDialog({ open, onOpenChange, employe }: EmployeDi
       setValue('nom', user.nom);
       setValue('email', user.email);
       if (user.telephone) setValue('telephone', user.telephone);
-      setValue('poste', user.type === 'agent' ? 'Agent immobilier' : 'Coursier');
+      if (user.type === 'agent') {
+        setValue('poste', 'Agent immobilier');
+        setValue('mode_remuneration', 'commission');
+      } else {
+        setValue('poste', 'Coursier');
+        setValue('mode_remuneration', 'horaire');
+      }
     }
   };
+
+  // Sync is_independant with mode
+  useEffect(() => {
+    if (modeRemuneration === 'independant') {
+      setValue('is_independant', true);
+    } else if (isIndependant && modeRemuneration !== 'independant') {
+      setValue('mode_remuneration', 'independant');
+    }
+  }, [modeRemuneration, isIndependant, setValue]);
 
   const mutation = useMutation({
     mutationFn: async (data: any) => {
@@ -133,6 +149,7 @@ export default function EmployeDialog({ open, onOpenChange, employe }: EmployeDi
         salaire_mensuel: Number(data.salaire_mensuel) || 0,
         salaire_horaire: Number(data.salaire_horaire) || null,
         user_id: data.user_id || null,
+        mode_remuneration: data.mode_remuneration || 'commission',
       };
 
       if (employe?.id) {
@@ -262,11 +279,18 @@ export default function EmployeDialog({ open, onOpenChange, employe }: EmployeDi
             {/* Employment */}
             <div className="space-y-3">
               <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Emploi</h3>
-              <div className="flex items-center gap-3">
-                <Switch checked={isIndependant} onCheckedChange={(v) => setValue('is_independant', v)} />
-                <Label>Agent indépendant (décompte honoraires)</Label>
-              </div>
               <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>Mode de rémunération *</Label>
+                  <Select value={modeRemuneration} onValueChange={(v) => setValue('mode_remuneration', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(MODE_REMUNERATION_LABELS).map(([val, label]) => (
+                        <SelectItem key={val} value={val}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div><Label>Poste</Label><Input {...register('poste')} /></div>
                 <div>
                   <Label>Type de contrat</Label>
@@ -281,9 +305,23 @@ export default function EmployeDialog({ open, onOpenChange, employe }: EmployeDi
                 </div>
                 <div><Label>Date d'engagement</Label><Input type="date" {...register('date_engagement')} /></div>
                 <div><Label>Taux d'activité (%)</Label><Input type="number" min="0" max="100" {...register('taux_activite')} /></div>
-                <div><Label>Salaire mensuel (CHF)</Label><Input type="number" step="0.05" {...register('salaire_mensuel')} /></div>
-                <div><Label>Salaire horaire (CHF)</Label><Input type="number" step="0.05" {...register('salaire_horaire')} /></div>
+                {(modeRemuneration === 'fixe') && (
+                  <div><Label>Salaire mensuel (CHF)</Label><Input type="number" step="0.05" {...register('salaire_mensuel')} /></div>
+                )}
+                {(modeRemuneration === 'horaire') && (
+                  <div><Label>Salaire horaire (CHF)</Label><Input type="number" step="0.05" {...register('salaire_horaire')} /></div>
+                )}
               </div>
+              {modeRemuneration === 'independant' && (
+                <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                  💼 Agent indépendant : décompte d'honoraires sans cotisations sociales
+                </p>
+              )}
+              {modeRemuneration === 'commission' && (
+                <p className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                  💰 Rémunération à la commission : le brut est calculé automatiquement depuis les affaires conclues (45% part agent)
+                </p>
+              )}
             </div>
 
             {/* Bank */}
