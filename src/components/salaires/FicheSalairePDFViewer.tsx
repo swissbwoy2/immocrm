@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { formatCHF, MOIS_LABELS } from '@/lib/swissPayroll';
+import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import { useFileDownload } from '@/hooks/useFileDownload';
 import { toast } from 'sonner';
 
