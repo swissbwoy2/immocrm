@@ -168,7 +168,8 @@ export default function FicheSalairePDFViewer({ open, onOpenChange, fiche }: Pro
     const bytes = await generateSalaryPDF(fiche, employe);
     const moisLabel = MOIS_LABELS[(fiche.mois || 1) - 1];
     const filename = `Fiche_salaire_${employe.nom}_${moisLabel}_${fiche.annee}.pdf`;
-    const result = await downloadBytes(new Uint8Array(bytes.buffer) as any, { filename, mimeType: 'application/pdf' });
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const result = await downloadBlob(blob, { filename, mimeType: 'application/pdf' });
     if (result.success) toast.success('PDF téléchargé');
     else toast.error('Erreur lors du téléchargement');
   };
