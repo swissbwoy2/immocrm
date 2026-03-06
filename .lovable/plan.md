@@ -1,42 +1,74 @@
 
 
-## Envoi automatique d'invitations ICS par email lors de la création d'une visite
+## Confirmation des 3 garde-fous techniques — Phase 1 Mandat v3
 
-### Probleme
-Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
+### 1. INSERT anon encadrés sur `mandate_related_parties` et `mandate_documents`
 
-### Solution
-Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
-
-### Modifications
-
-1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
-   - Un pour le **client** (email depuis `profiles`)
-   - Un pour l'**agent** (email depuis `profiles` via `agents`)
-   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
-   
-   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
-
-2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
-
-### Detail technique
+Les policies RLS INSERT pour ces tables seront conditionnées par la vérification que le `mandate_id` référencé existe ET n'est pas encore signé (`signed_at IS NULL`). Cela empêche un utilisateur anonyme de rattacher des données à un mandat arbitraire déjà finalisé.
 
 ```sql
--- Dans notify_on_new_visit, après les notifications existantes :
--- Envoi ICS au client
-PERFORM net.http_post(
-  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
-  headers := jsonb_build_object(...),
-  body := jsonb_build_object(
-    'title', 'Visite - ' || NEW.adresse,
-    'start_date', NEW.date_visite,
-    'location', NEW.adresse,
-    'recipient_email', v_client_email
+-- mandate_related_parties : INSERT only if mandate exists and is unsigned
+CREATE POLICY "Anon can insert related parties for unsigned mandates"
+ON mandate_related_parties FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM mandates
+    WHERE id = mandate_id
+    AND signed_at IS NULL
   )
 );
--- Idem pour agent et admins
+
+-- mandate_documents : same logic
+CREATE POLICY "Anon can insert documents for unsigned mandates"
+ON mandate_documents FOR INSERT
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM mandates
+    WHERE id = mandate_id
+    AND signed_at IS NULL
+  )
+);
 ```
 
-### Resultat
-Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
+Un utilisateur anonyme ne peut donc insérer que pour un mandat non signé qu'il connaît par son UUID (non devinable).
+
+### 2. Bucket `mandates-private` totalement sécurisé
+
+- Bucket créé en mode **privé** (pas de lecture publique)
+- Aucune policy SELECT/INSERT publique sur le storage
+- Les fichiers sont accessibles uniquement via **signed URLs** générées côté backend (edge function avec `service_role`)
+- L'INSERT storage sera autorisé uniquement via une policy liée au `mandate_id` dans le chemin du fichier, vérifiant que le mandat existe et n'est pas signé
+- Aucun fichier ne sera jamais exposé publiquement
+
+### 3. Edge function `mandate-get-status` — tokens invalidés refusés
+
+```typescript
+// Dans mandate-get-status
+if (mandate.token_invalidated_at !== null) {
+  return new Response(
+    JSON.stringify({ success: false, error: 'Token invalidé' }),
+    { status: 403 }
+  );
+}
+```
+
+La fonction retourne uniquement : statut du mandat, dates clés, et logs filtrés (`is_client_visible = true`). Aucune donnée sensible (IP, hash, données financières internes, logs admin) n'est exposée.
+
+---
+
+### Résumé de l'implémentation Phase 1
+
+**Migration SQL** — 8 tables, 2 fonctions SECURITY DEFINER, trigger auto-activation, texte contractuel v3, 2 buckets privés, RLS strictes avec garde-fous anon
+
+**Edge functions** (3) :
+- `mandate-submit-signature` — signature, hash, IP côté serveur, email de confirmation
+- `mandate-get-status` — lecture par token avec refus des tokens invalidés
+
+**Frontend** — 14 fichiers :
+- `MandatV3.tsx` — stepper 7 étapes
+- 7 composants d'étape + `ContractTextDisplay` + `useMandateAudit` + `types.ts`
+- `MandatV3Suivi.tsx` — page de suivi par token
+- Route ajoutée dans `App.tsx`
+
+Prêt à implémenter.
 
