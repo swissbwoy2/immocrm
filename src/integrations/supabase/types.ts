@@ -3064,6 +3064,7 @@ export type Database = {
           type_contrat: string | null
           type_permis: string | null
           updated_at: string | null
+          user_id: string | null
           ville: string | null
         }
         Insert: {
@@ -3097,6 +3098,7 @@ export type Database = {
           type_contrat?: string | null
           type_permis?: string | null
           updated_at?: string | null
+          user_id?: string | null
           ville?: string | null
         }
         Update: {
@@ -3130,6 +3132,7 @@ export type Database = {
           type_contrat?: string | null
           type_permis?: string | null
           updated_at?: string | null
+          user_id?: string | null
           ville?: string | null
         }
         Relationships: []
