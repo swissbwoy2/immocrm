@@ -4398,6 +4398,472 @@ export type Database = {
           },
         ]
       }
+      mandate_audit_logs: {
+        Row: {
+          actor_id: string | null
+          actor_type: string | null
+          created_at: string | null
+          event_description: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          is_client_visible: boolean | null
+          mandate_id: string
+          metadata: Json | null
+          user_agent: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_type?: string | null
+          created_at?: string | null
+          event_description?: string | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          is_client_visible?: boolean | null
+          mandate_id: string
+          metadata?: Json | null
+          user_agent?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          actor_type?: string | null
+          created_at?: string | null
+          event_description?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          is_client_visible?: boolean | null
+          mandate_id?: string
+          metadata?: Json | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandate_audit_logs_mandate_id_fkey"
+            columns: ["mandate_id"]
+            isOneToOne: false
+            referencedRelation: "mandates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandate_contract_texts: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          title: string
+          version: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          title: string
+          version: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          title?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      mandate_documents: {
+        Row: {
+          created_at: string | null
+          document_category: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          mandate_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          document_category?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          mandate_id: string
+        }
+        Update: {
+          created_at?: string | null
+          document_category?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          mandate_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandate_documents_mandate_id_fkey"
+            columns: ["mandate_id"]
+            isOneToOne: false
+            referencedRelation: "mandates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandate_pdf_exports: {
+        Row: {
+          file_path: string
+          generated_at: string | null
+          generated_by: string | null
+          id: string
+          mandate_id: string
+          version: number | null
+        }
+        Insert: {
+          file_path: string
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          mandate_id: string
+          version?: number | null
+        }
+        Update: {
+          file_path?: string
+          generated_at?: string | null
+          generated_by?: string | null
+          id?: string
+          mandate_id?: string
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandate_pdf_exports_mandate_id_fkey"
+            columns: ["mandate_id"]
+            isOneToOne: false
+            referencedRelation: "mandates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandate_related_parties: {
+        Row: {
+          created_at: string | null
+          date_naissance: string | null
+          email: string | null
+          employeur: string | null
+          id: string
+          lien_avec_mandant: string | null
+          mandate_id: string
+          nationalite: string | null
+          nom: string
+          prenom: string
+          profession: string | null
+          revenus_mensuels: number | null
+          role: string
+          signature_status: string | null
+          telephone: string | null
+          type_permis: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date_naissance?: string | null
+          email?: string | null
+          employeur?: string | null
+          id?: string
+          lien_avec_mandant?: string | null
+          mandate_id: string
+          nationalite?: string | null
+          nom: string
+          prenom: string
+          profession?: string | null
+          revenus_mensuels?: number | null
+          role?: string
+          signature_status?: string | null
+          telephone?: string | null
+          type_permis?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date_naissance?: string | null
+          email?: string | null
+          employeur?: string | null
+          id?: string
+          lien_avec_mandant?: string | null
+          mandate_id?: string
+          nationalite?: string | null
+          nom?: string
+          prenom?: string
+          profession?: string | null
+          revenus_mensuels?: number | null
+          role?: string
+          signature_status?: string | null
+          telephone?: string | null
+          type_permis?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandate_related_parties_mandate_id_fkey"
+            columns: ["mandate_id"]
+            isOneToOne: false
+            referencedRelation: "mandates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandate_signature_checkpoints: {
+        Row: {
+          checked_at: string | null
+          checkpoint_key: string
+          id: string
+          ip_address: string | null
+          mandate_id: string
+        }
+        Insert: {
+          checked_at?: string | null
+          checkpoint_key: string
+          id?: string
+          ip_address?: string | null
+          mandate_id: string
+        }
+        Update: {
+          checked_at?: string | null
+          checkpoint_key?: string
+          id?: string
+          ip_address?: string | null
+          mandate_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandate_signature_checkpoints_mandate_id_fkey"
+            columns: ["mandate_id"]
+            isOneToOne: false
+            referencedRelation: "mandates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandate_team_assignments: {
+        Row: {
+          agent_id: string | null
+          assigned_at: string | null
+          assigned_by: string | null
+          id: string
+          mandate_id: string
+          role: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          mandate_id: string
+          role?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          assigned_at?: string | null
+          assigned_by?: string | null
+          id?: string
+          mandate_id?: string
+          role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandate_team_assignments_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mandate_team_assignments_mandate_id_fkey"
+            columns: ["mandate_id"]
+            isOneToOne: false
+            referencedRelation: "mandates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandates: {
+        Row: {
+          access_token: string
+          acompte_montant: number | null
+          activation_deposit_paid: boolean | null
+          adresse: string | null
+          animaux: boolean | null
+          budget_max: number | null
+          commission_description: string | null
+          contract_version_id: string | null
+          created_at: string | null
+          created_by: string | null
+          criteres_obligatoires: string | null
+          criteres_souhaites: string | null
+          date_entree_souhaitee: string | null
+          date_naissance: string | null
+          duree_mandat_mois: number | null
+          email: string
+          employeur: string | null
+          etat_civil: string | null
+          id: string
+          legal_acceptation_generale: boolean | null
+          legal_acompte: boolean | null
+          legal_commission: boolean | null
+          legal_droit_applicable: boolean | null
+          legal_duree: boolean | null
+          legal_exclusivite: boolean | null
+          legal_litiges: boolean | null
+          legal_obligations_agence: boolean | null
+          legal_obligations_client: boolean | null
+          legal_protection_donnees: boolean | null
+          legal_resiliation: boolean | null
+          nationalite: string | null
+          nom: string
+          nombre_enfants: number | null
+          notes_personnelles: string | null
+          npa: string | null
+          pieces_min: string | null
+          prenom: string
+          profession: string | null
+          reconduction_tacite: boolean | null
+          revenus_mensuels: number | null
+          signature_data: string | null
+          signature_hash: string | null
+          signature_ip: string | null
+          signature_user_agent: string | null
+          signed_at: string | null
+          status: string | null
+          telephone: string | null
+          token_invalidated_at: string | null
+          type_bien: string | null
+          type_permis: string | null
+          type_recherche: string | null
+          updated_at: string | null
+          ville: string | null
+          zone_recherche: string | null
+        }
+        Insert: {
+          access_token?: string
+          acompte_montant?: number | null
+          activation_deposit_paid?: boolean | null
+          adresse?: string | null
+          animaux?: boolean | null
+          budget_max?: number | null
+          commission_description?: string | null
+          contract_version_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          criteres_obligatoires?: string | null
+          criteres_souhaites?: string | null
+          date_entree_souhaitee?: string | null
+          date_naissance?: string | null
+          duree_mandat_mois?: number | null
+          email: string
+          employeur?: string | null
+          etat_civil?: string | null
+          id?: string
+          legal_acceptation_generale?: boolean | null
+          legal_acompte?: boolean | null
+          legal_commission?: boolean | null
+          legal_droit_applicable?: boolean | null
+          legal_duree?: boolean | null
+          legal_exclusivite?: boolean | null
+          legal_litiges?: boolean | null
+          legal_obligations_agence?: boolean | null
+          legal_obligations_client?: boolean | null
+          legal_protection_donnees?: boolean | null
+          legal_resiliation?: boolean | null
+          nationalite?: string | null
+          nom: string
+          nombre_enfants?: number | null
+          notes_personnelles?: string | null
+          npa?: string | null
+          pieces_min?: string | null
+          prenom: string
+          profession?: string | null
+          reconduction_tacite?: boolean | null
+          revenus_mensuels?: number | null
+          signature_data?: string | null
+          signature_hash?: string | null
+          signature_ip?: string | null
+          signature_user_agent?: string | null
+          signed_at?: string | null
+          status?: string | null
+          telephone?: string | null
+          token_invalidated_at?: string | null
+          type_bien?: string | null
+          type_permis?: string | null
+          type_recherche?: string | null
+          updated_at?: string | null
+          ville?: string | null
+          zone_recherche?: string | null
+        }
+        Update: {
+          access_token?: string
+          acompte_montant?: number | null
+          activation_deposit_paid?: boolean | null
+          adresse?: string | null
+          animaux?: boolean | null
+          budget_max?: number | null
+          commission_description?: string | null
+          contract_version_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          criteres_obligatoires?: string | null
+          criteres_souhaites?: string | null
+          date_entree_souhaitee?: string | null
+          date_naissance?: string | null
+          duree_mandat_mois?: number | null
+          email?: string
+          employeur?: string | null
+          etat_civil?: string | null
+          id?: string
+          legal_acceptation_generale?: boolean | null
+          legal_acompte?: boolean | null
+          legal_commission?: boolean | null
+          legal_droit_applicable?: boolean | null
+          legal_duree?: boolean | null
+          legal_exclusivite?: boolean | null
+          legal_litiges?: boolean | null
+          legal_obligations_agence?: boolean | null
+          legal_obligations_client?: boolean | null
+          legal_protection_donnees?: boolean | null
+          legal_resiliation?: boolean | null
+          nationalite?: string | null
+          nom?: string
+          nombre_enfants?: number | null
+          notes_personnelles?: string | null
+          npa?: string | null
+          pieces_min?: string | null
+          prenom?: string
+          profession?: string | null
+          reconduction_tacite?: boolean | null
+          revenus_mensuels?: number | null
+          signature_data?: string | null
+          signature_hash?: string | null
+          signature_ip?: string | null
+          signature_user_agent?: string | null
+          signed_at?: string | null
+          status?: string | null
+          telephone?: string | null
+          token_invalidated_at?: string | null
+          type_bien?: string | null
+          type_permis?: string | null
+          type_recherche?: string | null
+          updated_at?: string | null
+          ville?: string | null
+          zone_recherche?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           attachment_name: string | null
@@ -6355,7 +6821,29 @@ export type Database = {
         Args: { _proprietaire_id: string }
         Returns: boolean
       }
+      log_mandate_event: {
+        Args: {
+          p_actor_id?: string
+          p_actor_type?: string
+          p_event_description: string
+          p_event_type: string
+          p_ip_address?: string
+          p_is_client_visible?: boolean
+          p_mandate_id: string
+          p_metadata?: Json
+          p_user_agent?: string
+        }
+        Returns: string
+      }
       mark_inactive_users_offline: { Args: never; Returns: number }
+      record_signature_checkpoint: {
+        Args: {
+          p_checkpoint_key: string
+          p_ip_address?: string
+          p_mandate_id: string
+        }
+        Returns: string
+      }
       search_annonces_radius: {
         Args: {
           category_id?: string

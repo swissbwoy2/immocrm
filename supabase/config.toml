@@ -128,3 +128,9 @@ verify_jwt = false
 
 [functions.send-calendar-invite]
 verify_jwt = false
+
+[functions.mandate-submit-signature]
+verify_jwt = false
+
+[functions.mandate-get-status]
+verify_jwt = false
