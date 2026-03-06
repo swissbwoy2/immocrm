@@ -61,6 +61,7 @@ type FormStep = 'qualification' | 'info' | 'garant';
 
 export function QuickLeadForm() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { searchType, isAchat } = useSearchType();
   const utmParams = useUTMParams();
   
