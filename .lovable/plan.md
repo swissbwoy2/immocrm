@@ -1,42 +1,41 @@
 
 
-## Envoi automatique d'invitations ICS par email lors de la création d'une visite
+## Plan — 3 corrections landing page
 
-### Probleme
-Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
+### 1. Réintégrer SocialProofBar (widget Google Reviews)
 
-### Solution
-Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
+**Fichier : `src/pages/Landing.tsx`**
+- Ajouter l'import : `import { SocialProofBar } from '@/components/landing/SocialProofBar';`
+- Insérer `<SocialProofBar />` entre `<PremiumHero />` et `<TeamSection />` (ligne 85)
 
-### Modifications
+### 2. Renforcer l'étape 3 de HowItWorksSection
 
-1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
-   - Un pour le **client** (email depuis `profiles`)
-   - Un pour l'**agent** (email depuis `profiles` via `agents`)
-   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
-   
-   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
+**Fichier : `src/components/landing/premium/HowItWorksSection.tsx`**
+- Remplacer l'étape 3 (lignes 16-20) :
+  - **Titre** : `"Vous visitez… ou nous visitons pour vous"`
+  - **Texte** : `"Quand vous êtes au travail, en vacances ou indisponible, nous visitons pour vous et vous faisons un retour complet. Dossier optimisé, candidature déposée, suivi auprès de la régie — vous n'avez qu'à choisir votre futur logement."`
 
-2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
+### 3. Nouveau hero location (pénurie du logement)
 
-### Detail technique
+**Fichier : `src/components/landing/premium/PremiumHero.tsx`**
 
-```sql
--- Dans notify_on_new_visit, après les notifications existantes :
--- Envoi ICS au client
-PERFORM net.http_post(
-  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
-  headers := jsonb_build_object(...),
-  body := jsonb_build_object(
-    'title', 'Visite - ' || NEW.adresse,
-    'start_date', NEW.date_visite,
-    'location', NEW.adresse,
-    'recipient_email', v_client_email
-  )
-);
--- Idem pour agent et admins
-```
+Remplacer les constantes headlines (lignes 10-16) :
+- **A** : `"Vous n'êtes plus seul face à la pénurie du logement."`
+- **B** : `"Seulement 1% de logements disponibles : faites enfin équipe avec Immo-Rama."`
+- **C** : `"Dans un marché bloqué, Immo-Rama devient votre allié incontournable pour trouver plus vite."`
 
-### Resultat
-Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
+Remplacer le bloc location (lignes 123-147) :
+- **Eyebrow** : `"AGENCE N°1 DE RELOCATION EN SUISSE ROMANDE"` (font-semibold)
+- **H1** : `{ACTIVE_HEADLINE}` (inchangé structurellement)
+- **Sous-titre** : `"Avec à peine 1% de logements disponibles en Suisse romande, Immo-Rama devient votre allié incontournable pour rechercher, cibler et décrocher plus rapidement le bon appartement."`
+- **Nouveau bloc de soutien** (ajouté entre sous-titre et social proof) : `"Recherche ciblée · Dossier optimisé · Visites déléguées · Accompagnement jusqu'au bail"` — affiché en `font-medium text-foreground/80` avec séparateurs `·` en `text-primary`
+- Social proof, mini-form, CTAs et bloc offre restent identiques
+
+### Fichiers modifiés (3)
+
+| Fichier | Changement |
+|---|---|
+| `src/pages/Landing.tsx` | Import + render SocialProofBar après PremiumHero |
+| `src/components/landing/premium/PremiumHero.tsx` | Nouveaux headlines, eyebrow, sous-titre, bloc de soutien |
+| `src/components/landing/premium/HowItWorksSection.tsx` | Étape 3 : visite déléguée |
 
