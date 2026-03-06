@@ -15,8 +15,8 @@ const steps = [
   },
   {
     num: '03',
-    title: 'Vous visitez, on gère le reste',
-    description: "Dossier optimisé, candidature déposée, suivi auprès de la régie. Vous n'avez qu'à choisir votre futur logement.",
+    title: 'Vous visitez… ou nous visitons pour vous',
+    description: "Quand vous êtes au travail, en vacances ou indisponible, nous visitons pour vous et vous faisons un retour complet. Dossier optimisé, candidature déposée, suivi auprès de la régie — vous n'avez qu'à choisir votre futur logement.",
   },
 ];
 
