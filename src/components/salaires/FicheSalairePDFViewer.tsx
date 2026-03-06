@@ -144,6 +144,14 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
     page.drawLine({ start: { x: lm, y: y + 5 }, end: { x: rm, y: y + 5 }, thickness: 0.5, color: gray });
     const totalLabel = isIndependant ? 'Total honoraires' : 'Total commissions';
     drawRow(totalLabel, '', '', '', formatCHF(fiche.montant_commissions || fiche.salaire_brut || 0), true);
+
+    if (fiche.primes > 0) drawRow('Primes / Bonus', '', '', formatCHF(fiche.primes));
+    if (fiche.heures_supplementaires > 0) drawRow('Heures supplémentaires', '', '', formatCHF(fiche.heures_supplementaires));
+
+    if (fiche.primes > 0 || fiche.heures_supplementaires > 0) {
+      page.drawLine({ start: { x: lm, y: y + 5 }, end: { x: rm, y: y + 5 }, thickness: 0.5, color: gray });
+      drawRow('Salaire brut', '', '', '', formatCHF(fiche.salaire_brut), true);
+    }
     y -= 5;
   } else {
     // Standard salary table header
