@@ -138,7 +138,7 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
 }
 
 export default function FicheSalairePDFViewer({ open, onOpenChange, fiche }: Props) {
-  const { downloadBytes } = useFileDownload();
+  const { downloadBlob } = useFileDownload();
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   const { data: employe } = useQuery({
@@ -156,7 +156,7 @@ export default function FicheSalairePDFViewer({ open, onOpenChange, fiche }: Pro
     if (!fiche || !employe || !open) return;
     let url: string;
     generateSalaryPDF(fiche, employe).then((bytes) => {
-      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
       url = URL.createObjectURL(blob);
       setPdfUrl(url);
     });
@@ -168,7 +168,7 @@ export default function FicheSalairePDFViewer({ open, onOpenChange, fiche }: Pro
     const bytes = await generateSalaryPDF(fiche, employe);
     const moisLabel = MOIS_LABELS[(fiche.mois || 1) - 1];
     const filename = `Fiche_salaire_${employe.nom}_${moisLabel}_${fiche.annee}.pdf`;
-    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
     const result = await downloadBlob(blob, { filename, mimeType: 'application/pdf' });
     if (result.success) toast.success('PDF téléchargé');
     else toast.error('Erreur lors du téléchargement');
