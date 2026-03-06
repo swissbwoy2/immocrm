@@ -137,8 +137,8 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
   // Pre-fill when employee loaded
   useEffect(() => {
     if (employeData && !fiche) {
-      if (mode === 'commission' || mode === 'independant') {
-        setValue('salaire_base', totalCommissions);
+      if (mode === 'commission' || mode === 'independant' || mode === 'coursier') {
+        setValue('salaire_base', salaireBaseAuto);
       } else if (mode === 'horaire') {
         setValue('salaire_base', 0);
       } else {
@@ -153,14 +153,14 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
       setValue('taux_impot_source', 0);
       setValue('nombre_heures', 0);
     }
-  }, [employeData, fiche, setValue, mode, totalCommissions]);
+  }, [employeData, fiche, setValue, mode, salaireBaseAuto]);
 
-  // Auto-update salaire_base when commissions change (commission mode)
+  // Auto-update salaire_base when commissions/missions change
   useEffect(() => {
-    if (!fiche && (mode === 'commission' || mode === 'independant')) {
-      setValue('salaire_base', totalCommissions);
+    if (!fiche && (mode === 'commission' || mode === 'independant' || mode === 'coursier')) {
+      setValue('salaire_base', salaireBaseAuto);
     }
-  }, [totalCommissions, mode, fiche, setValue]);
+  }, [salaireBaseAuto, mode, fiche, setValue]);
 
   useEffect(() => {
     if (fiche) {
