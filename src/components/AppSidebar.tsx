@@ -44,6 +44,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Propriétaires', icon: Home, path: '/admin/proprietaires', notifKey: 'new_proprietaire_invited' },
         { name: 'Demandes activation', icon: UserPlus, path: '/admin/demandes-activation', notifKey: 'activation_request' },
         { name: 'Factures AbaNinja', icon: Receipt, path: '/admin/factures-abaninja', notifKey: null },
+        { name: 'Salaires', icon: Wallet, path: '/admin/salaires', notifKey: null },
         { name: 'Statistiques Agents', icon: TrendingUp, path: '/admin/statistiques-agents', notifKey: null },
         { name: 'Analytics Marketing', icon: TrendingUp, path: '/admin/analytics', notifKey: null },
         { name: 'Candidatures', icon: FileCheck, path: '/admin/candidatures', notifKey: 'candidature_admin' },
