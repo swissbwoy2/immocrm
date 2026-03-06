@@ -1,36 +1,42 @@
 
 
-## Plan — Ajustements query params hero → tunnel
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-### Résumé
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
-Le mapping `zone→localite`, `budget→budget`, `permis→permisNationalite` est validé. Deux ajustements seront appliqués lors de l'implémentation :
+### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
-### Ajustement 1 — `encodeURIComponent()` sur chaque valeur
+### Modifications
 
-Dans `PremiumHero.tsx`, chaque valeur sera encodée avant insertion dans l'URL :
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
 
-```typescript
-const params = new URLSearchParams();
-if (zone) params.set('zone', zone);
-if (budget) params.set('budget', budget);
-if (permis) params.set('permis', permis);
-navigate(`/nouveau-mandat${params.toString() ? '?' + params.toString() : ''}`);
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
+
+### Detail technique
+
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
 ```
 
-`URLSearchParams` gère automatiquement l'encodage — plus fiable que `encodeURIComponent()` manuel.
-
-### Ajustement 2 — Aucun param vide dans l'URL
-
-Les `if (value)` ci-dessus garantissent qu'un champ non rempli n'apparaît pas dans l'URL. Résultat possible :
-
-- 3 champs remplis : `/nouveau-mandat?zone=Lausanne&budget=2000-2500&permis=B`
-- 1 seul champ : `/nouveau-mandat?zone=Lausanne`
-- Aucun champ : `/nouveau-mandat`
-
-### Côté réception (`QuickLeadForm.tsx`)
-
-Pas de changement : `searchParams.get('zone')` retourne `null` si absent, le `if` existant ne set rien. `URLSearchParams` décode automatiquement.
-
-Ces ajustements seront intégrés lors de l'exécution globale de la refonte premium (création de `PremiumHero.tsx` + modification de `QuickLeadForm.tsx`).
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 

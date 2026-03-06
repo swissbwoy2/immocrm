@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -61,6 +61,7 @@ type FormStep = 'qualification' | 'info' | 'garant';
 
 export function QuickLeadForm() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { searchType, isAchat } = useSearchType();
   const utmParams = useUTMParams();
   
@@ -87,6 +88,18 @@ export function QuickLeadForm() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<'qualified' | 'not_qualified' | null>(null);
+
+  // Hydrate form from PremiumHero query params
+  // Mapping: zone → localite, budget → budget, permis → permisNationalite
+  useEffect(() => {
+    const zoneParam = searchParams.get('zone');
+    const budgetParam = searchParams.get('budget');
+    const permisParam = searchParams.get('permis');
+    
+    if (zoneParam) setLocalite(zoneParam);              // zone → localite
+    if (budgetParam) setBudget(budgetParam);             // budget → budget
+    if (permisParam) setPermisNationalite(permisParam);  // permis → permisNationalite
+  }, [searchParams]);
 
   // Validation for each step
   const isQualificationValidLocation = statutEmploi && permisNationalite;
