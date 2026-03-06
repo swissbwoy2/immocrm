@@ -69,7 +69,6 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
     queryKey: ['transactions-commission', selectedEmployeId, mois, annee],
     queryFn: async () => {
       if (!employeData?.user_id) return [];
-      // Get agent_id from user_id
       const { data: agent } = await supabase
         .from('agents')
         .select('id')
@@ -95,7 +94,45 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
     enabled: !!employeData?.user_id && (mode === 'commission' || mode === 'independant'),
   });
 
+  // Fetch missions for coursier mode
+  const { data: missions = [], isLoading: loadingMissions } = useQuery<MissionCoursier[]>({
+    queryKey: ['missions-coursier', selectedEmployeId, mois, annee],
+    queryFn: async () => {
+      if (!employeData?.user_id) return [];
+      const { data: coursier } = await supabase
+        .from('coursiers')
+        .select('id')
+        .eq('user_id', employeData.user_id)
+        .single();
+      if (!coursier) return [];
+
+      const startDate = `${annee}-${String(mois).padStart(2, '0')}-01`;
+      const endMonth = Number(mois) === 12 ? 1 : Number(mois) + 1;
+      const endYear = Number(mois) === 12 ? Number(annee) + 1 : Number(annee);
+      const endDate = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
+
+      const { data, error } = await supabase
+        .from('visites')
+        .select('id, adresse, date_visite, paye_coursier')
+        .eq('coursier_id', coursier.id)
+        .eq('statut_coursier', 'termine')
+        .gte('date_visite', startDate)
+        .lt('date_visite', endDate);
+      if (error) throw error;
+      return (data || []).map(v => ({
+        id: v.id,
+        adresse: v.adresse || 'Adresse N/A',
+        date_visite: v.date_visite,
+        montant: TARIF_COURSIER,
+        paye_coursier: v.paye_coursier || false,
+      }));
+    },
+    enabled: !!employeData?.user_id && mode === 'coursier',
+  });
+
   const totalCommissions = transactions.reduce((s, t) => s + (t.part_agent || 0), 0);
+  const totalMissions = missions.reduce((s, m) => s + m.montant, 0);
+  const salaireBaseAuto = mode === 'coursier' ? totalMissions : totalCommissions;
 
   // Pre-fill when employee loaded
   useEffect(() => {
