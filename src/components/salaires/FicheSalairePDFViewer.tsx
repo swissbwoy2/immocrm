@@ -38,6 +38,18 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
   const isIndependant = mode === 'independant';
   const isCommission = mode === 'commission' || isIndependant;
 
+  // Logo — top right
+  try {
+    const logoResponse = await fetch(logoImmoRama);
+    const logoBytes = new Uint8Array(await logoResponse.arrayBuffer());
+    const logoImage = await pdfDoc.embedPng(logoBytes);
+    const logoScale = 50 / logoImage.height;
+    const logoWidth = logoImage.width * logoScale;
+    page.drawImage(logoImage, { x: rm - logoWidth, y: height - 55, width: logoWidth, height: 50 });
+  } catch (e) {
+    console.warn('Could not embed logo in PDF', e);
+  }
+
   // Header - Employee info (left)
   const fullName = `${employe.prenom} ${employe.nom}`;
   page.drawText(fullName, { x: lm, y, font: fontBold, size: 11, color: black });
@@ -48,17 +60,17 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
     y -= 13;
   }
 
-  // Header - Company info (right)
+  // Header - Company info (right, below logo)
   const companyLines = [
-    "L'agence Immo-Rama",
-    'Chemin du Bochet 12',
-    '1024 Ecublens VD',
+    'IMMO-RAMA.CH',
+    "Chemin de l'Esparcette 5",
+    '1023 Crissier',
     '',
-    'Responsable: Immo-Rama Ecublens',
+    'IDE: CHE-442.303.796',
     'Téléphone: 021 634 28 39',
     'E-Mail: info@immo-rama.ch',
   ];
-  let cy = height - 50;
+  let cy = height - 110;
   for (const line of companyLines) {
     if (line) {
       const tw = font.widthOfTextAtSize(line, 9);
@@ -67,8 +79,11 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
     cy -= 13;
   }
 
+  // Header separator
+  y = height - 200;
+  page.drawLine({ start: { x: lm, y: y + 10 }, end: { x: rm, y: y + 10 }, thickness: 0.5, color: gray });
+
   // Title
-  y = height - 180;
   const moisLabel = MOIS_LABELS[(fiche.mois || 1) - 1];
   const titlePrefix = isIndependant ? "Décompte d'honoraires" : 'Décompte de salaire';
   const title = `${titlePrefix} ${moisLabel.toLowerCase()} ${fiche.annee}`;
@@ -77,9 +92,9 @@ async function generateSalaryPDF(fiche: any, employe: any): Promise<Uint8Array> 
 
   // Date
   const now = new Date();
-  const dateStr = `Ecublens VD, ${now.toLocaleDateString('fr-CH')}`;
+  const dateStr = `Crissier, ${now.toLocaleDateString('fr-CH')}`;
   page.drawText(dateStr, { x: lm, y, font, size: 9, color: gray });
-  y -= 35;
+  y -= 30;
 
   // Helper to draw a row
   const drawRow = (label: string, nombre: string, taux: string, sousTotal: string, total: string = '', bold = false) => {
