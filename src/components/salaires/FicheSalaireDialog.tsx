@@ -423,7 +423,8 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
                       </div>
                     </div>
                   </div>
-                )}
+              </div>
+            )}
 
             {/* Hourly mode: show hours input */}
             {mode === 'horaire' && selectedEmployeId && (
