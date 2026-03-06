@@ -18,7 +18,7 @@ interface EmployeDialogProps {
   employe: any | null;
 }
 
-const NATIONALITES = ['Suisse', 'France', 'Italie', 'Allemagne', 'Portugal', 'Espagne', 'Autre'];
+import { NATIONALITES } from '@/components/mandat/types';
 const PERMIS = [
   { value: 'Suisse', label: 'Suisse (pas de permis)' },
   { value: 'B', label: 'B - Séjour' },

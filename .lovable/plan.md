@@ -1,20 +1,42 @@
 
 
-## Plan — Ajouter toutes les nationalités de A à Z
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-### Problème
-La constante `NATIONALITES` dans `src/components/mandat/types.ts` ne contient que 10 entrées (Suisse, France, Italie, etc.). Il faut une liste complète de tous les pays du monde, triée alphabétiquement, avec "Suisse" en premier (pays principal des utilisateurs).
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
-### Modification
+### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
-**Fichier unique** : `src/components/mandat/types.ts`
+### Modifications
 
-Remplacer le tableau `NATIONALITES` (lignes 98-100) par une liste complète d'environ 195 nationalités/pays, organisée ainsi :
-- "Suisse" en première position (accès rapide)
-- Puis tous les pays de A à Z par ordre alphabétique (Afghanistan → Zimbabwe)
-- Supprimer "Autre" comme entrée séparée ou le garder en dernière position
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
 
-Cette constante est importée par 4 composants (MandatFormStep1, MandatFormStep5, MandatV3Step1Identity, MandatV3Step3RelatedParties) — tous bénéficieront automatiquement de la mise à jour.
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
 
-Le composant `EmployeDialog.tsx` a sa propre liste locale qui devra aussi être mise à jour pour cohérence.
+### Detail technique
+
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
+```
+
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 
