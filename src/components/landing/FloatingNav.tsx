@@ -1,13 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogIn, Rocket, Building2, Home } from 'lucide-react';
+import { Rocket } from 'lucide-react';
 import logo from '@/assets/logo-immo-rama-new.png';
-import { useSearchType } from '@/contexts/SearchTypeContext';
 
 export function FloatingNav() {
   const [isVisible, setIsVisible] = useState(false);
-  const { isAchat } = useSearchType();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -30,7 +28,6 @@ export function FloatingNav() {
       <div className="bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-lg shadow-black/5">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            {/* Logo */}
             <Link 
               to="/" 
               className="flex items-center gap-2"
@@ -43,58 +40,16 @@ export function FloatingNav() {
               />
             </Link>
 
-            {/* Boutons */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Button
-                asChild 
-                variant="ghost" 
-                size="sm"
-                className="text-muted-foreground hover:text-foreground hidden md:inline-flex"
-              >
-                <Link to="/annonces">
-                  <Building2 className="h-4 w-4 mr-2" />
-                  <span>Annonces</span>
-                </Link>
-              </Button>
-
-              <Button
-                asChild 
-                variant="ghost" 
-                size="sm"
-                className="text-muted-foreground hover:text-foreground hidden md:inline-flex"
-              >
-                <Link to="/vendre-mon-bien">
-                  <Home className="h-4 w-4 mr-2" />
-                  <span>Vendre</span>
-                </Link>
-              </Button>
-              
-              <Button
-                asChild 
-                variant="ghost" 
-                size="sm"
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <Link to="/login">
-                  <LogIn className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Se connecter</span>
-                </Link>
-              </Button>
-              
-              <Button 
-                asChild 
-                size="sm"
-                className="shadow-md shadow-primary/20 bg-gradient-to-r from-primary to-primary/90"
-              >
-                <Link to="/nouveau-mandat">
-                  <Rocket className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden xs:inline">
-                    {isAchat ? 'Trouver mon bien' : 'Activer ma recherche'}
-                  </span>
-                  <span className="xs:hidden">Démarrer</span>
-                </Link>
-              </Button>
-            </div>
+            <Button 
+              asChild 
+              size="sm"
+              className="shadow-md shadow-primary/20 bg-gradient-to-r from-primary to-primary/90"
+            >
+              <Link to="/nouveau-mandat">
+                <Rocket className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Activer ma recherche</span>
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
