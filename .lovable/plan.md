@@ -1,47 +1,42 @@
 
 
-## Bug: Agent activation blocked by RLS policy
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-### Root Cause
-The `agents` table has an UPDATE RLS policy: `"Admins can update agents"` which only allows users with the `admin` role. When an agent logs in and the AuthContext tries to update their status from `en_attente` to `actif`, the update is silently rejected by RLS (Supabase returns no error, just 0 rows affected).
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
-### Fix (2 parts)
+### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
-**1. Database: Create a SECURITY DEFINER function to activate agents**
+### Modifications
+
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
+
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
+
+### Detail technique
 
 ```sql
-CREATE OR REPLACE FUNCTION public.activate_agent_on_login()
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-BEGIN
-  UPDATE agents
-  SET statut = 'actif', updated_at = now()
-  WHERE user_id = auth.uid()
-    AND statut = 'en_attente';
-END;
-$$;
-```
-
-Same pattern for `activate_apporteur_on_login()` and `activate_coursier_on_login()` since they have the same logic.
-
-**2. Code: Update AuthContext to use the RPC function instead of direct update**
-
-In `src/contexts/AuthContext.tsx`, replace the direct `.update()` calls with `.rpc('activate_agent_on_login')` (and similar for apporteur/coursier). This bypasses RLS via SECURITY DEFINER.
-
-**3. Manually activate Carina and Oriane now**
-
-Run a migration to set their status to `actif`:
-```sql
-UPDATE agents SET statut = 'actif' WHERE user_id IN (
-  'a45396b5-d95c-4680-9cf3-e9b2332b63de',
-  '9c2f4153-8526-443a-9753-be680ed93ed1'
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
 );
+-- Idem pour agent et admins
 ```
 
-### Files
-- **Database migration**: Create 3 SECURITY DEFINER functions + fix Carina/Oriane
-- `src/contexts/AuthContext.tsx`: Replace direct updates with RPC calls
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 

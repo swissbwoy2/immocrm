@@ -65,70 +65,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       setUserRole(data.role as UserRole);
 
-      // If this is an agent, activate them on first login
+      // Activate user on first login via SECURITY DEFINER RPC (bypasses RLS)
       if (data.role === 'agent') {
-        const { data: agentData } = await supabase
-          .from('agents')
-          .select('statut')
-          .eq('user_id', userId)
-          .single();
-
-        if (agentData?.statut === 'en_attente') {
-          const { error: updateError } = await supabase
-            .from('agents')
-            .update({ statut: 'actif', updated_at: new Date().toISOString() })
-            .eq('user_id', userId);
-          
-          if (updateError) {
-            console.error('Failed to activate agent on first login:', updateError);
-          } else {
-            console.log('Agent activated successfully on first login:', userId);
-          }
-        }
-      }
-
-      // If this is an apporteur, activate them on first login
-      if (data.role === 'apporteur') {
-        const { data: apporteurData } = await supabase
-          .from('apporteurs')
-          .select('statut')
-          .eq('user_id', userId)
-          .single();
-
-        if (apporteurData?.statut === 'en_attente') {
-          const { error: updateError } = await supabase
-            .from('apporteurs')
-            .update({ statut: 'actif', updated_at: new Date().toISOString() })
-            .eq('user_id', userId);
-          
-          if (updateError) {
-            console.error('Failed to activate apporteur on first login:', updateError);
-          } else {
-            console.log('Apporteur activated successfully on first login:', userId);
-          }
-        }
-      }
-
-      // If this is a coursier, activate them on first login
-      if (data.role === 'coursier') {
-        const { data: coursierData } = await supabase
-          .from('coursiers')
-          .select('statut')
-          .eq('user_id', userId)
-          .single();
-
-        if (coursierData?.statut === 'en_attente') {
-          const { error: updateError } = await supabase
-            .from('coursiers')
-            .update({ statut: 'actif', updated_at: new Date().toISOString() })
-            .eq('user_id', userId);
-          
-          if (updateError) {
-            console.error('Failed to activate coursier on first login:', updateError);
-          } else {
-            console.log('Coursier activated successfully on first login:', userId);
-          }
-        }
+        await supabase.rpc('activate_agent_on_login');
+      } else if (data.role === 'apporteur') {
+        await supabase.rpc('activate_apporteur_on_login');
+      } else if (data.role === 'coursier') {
+        await supabase.rpc('activate_coursier_on_login');
       }
     } catch (error) {
       console.error('Error fetching user role:', error);

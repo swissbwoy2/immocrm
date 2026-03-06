@@ -6276,6 +6276,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_agent_on_login: { Args: never; Returns: undefined }
+      activate_apporteur_on_login: { Args: never; Returns: undefined }
+      activate_coursier_on_login: { Args: never; Returns: undefined }
       can_agent_create_conversation: {
         Args: { _agent_id: string; _client_id: string }
         Returns: boolean
