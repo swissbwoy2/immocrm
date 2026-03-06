@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,15 @@ const PERMIS = [
 ];
 const ETATS_CIVILS = ['Célibataire', 'Marié(e)', 'Divorcé(e)', 'Veuf/Veuve', 'Séparé(e)'];
 
+interface LinkableUser {
+  user_id: string;
+  prenom: string;
+  nom: string;
+  email: string;
+  telephone: string | null;
+  type: 'agent' | 'coursier';
+}
+
 export default function EmployeDialog({ open, onOpenChange, employe }: EmployeDialogProps) {
   const queryClient = useQueryClient();
   const { register, handleSubmit, setValue, watch, reset } = useForm({
@@ -40,12 +49,52 @@ export default function EmployeDialog({ open, onOpenChange, employe }: EmployeDi
       date_engagement: '', taux_activite: 100, salaire_mensuel: 0, salaire_horaire: 0,
       type_contrat: 'fixe', poste: '', canton_travail: 'VD', canton_domicile: 'VD',
       bareme_impot_source: '', is_independant: false, statut: 'actif', notes: '',
+      user_id: '' as string,
     },
   });
 
   const typePermis = watch('type_permis');
   const isIndependant = watch('is_independant');
   const needsSourceTax = isSubjectToSourceTax(typePermis);
+
+  // Fetch linkable agents & coursiers not yet in employes
+  const { data: linkableUsers = [] } = useQuery<LinkableUser[]>({
+    queryKey: ['linkable-users'],
+    queryFn: async () => {
+      const { data: existingEmployes } = await supabase.from('employes').select('user_id');
+      const linkedIds = new Set((existingEmployes || []).map(e => e.user_id).filter(Boolean));
+
+      const { data: agents } = await supabase
+        .from('agents')
+        .select('user_id, profiles:user_id(prenom, nom, email, telephone)')
+        .eq('statut', 'actif');
+
+      const { data: coursiers } = await supabase
+        .from('coursiers')
+        .select('user_id, profiles:user_id(prenom, nom, email, telephone)')
+        .eq('statut', 'actif');
+
+      const users: LinkableUser[] = [];
+
+      for (const a of agents || []) {
+        // Allow if editing this employe's user_id or not yet linked
+        if (linkedIds.has(a.user_id) && a.user_id !== employe?.user_id) continue;
+        const p = a.profiles as any;
+        if (!p) continue;
+        users.push({ user_id: a.user_id, prenom: p.prenom || '', nom: p.nom || '', email: p.email || '', telephone: p.telephone, type: 'agent' });
+      }
+
+      for (const c of coursiers || []) {
+        if (linkedIds.has(c.user_id) && c.user_id !== employe?.user_id) continue;
+        const p = c.profiles as any;
+        if (!p) continue;
+        users.push({ user_id: c.user_id, prenom: p.prenom || '', nom: p.nom || '', email: p.email || '', telephone: p.telephone, type: 'coursier' });
+      }
+
+      return users;
+    },
+    enabled: open,
+  });
 
   useEffect(() => {
     if (employe) {
@@ -59,15 +108,31 @@ export default function EmployeDialog({ open, onOpenChange, employe }: EmployeDi
     }
   }, [employe, setValue, reset]);
 
+  const handleLinkUser = (userId: string) => {
+    if (userId === '_none') {
+      setValue('user_id', '');
+      return;
+    }
+    const user = linkableUsers.find(u => u.user_id === userId);
+    if (user) {
+      setValue('user_id', user.user_id);
+      setValue('prenom', user.prenom);
+      setValue('nom', user.nom);
+      setValue('email', user.email);
+      if (user.telephone) setValue('telephone', user.telephone);
+      setValue('poste', user.type === 'agent' ? 'Agent immobilier' : 'Coursier');
+    }
+  };
+
   const mutation = useMutation({
     mutationFn: async (data: any) => {
-      // Clean numeric fields
       const cleaned = {
         ...data,
         nombre_enfants: Number(data.nombre_enfants) || 0,
         taux_activite: Number(data.taux_activite) || 100,
         salaire_mensuel: Number(data.salaire_mensuel) || 0,
         salaire_horaire: Number(data.salaire_horaire) || null,
+        user_id: data.user_id || null,
       };
 
       if (employe?.id) {
@@ -80,6 +145,7 @@ export default function EmployeDialog({ open, onOpenChange, employe }: EmployeDi
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employes'] });
+      queryClient.invalidateQueries({ queryKey: ['linkable-users'] });
       toast.success(employe ? 'Employé modifié' : 'Employé ajouté');
       onOpenChange(false);
     },
@@ -94,6 +160,24 @@ export default function EmployeDialog({ open, onOpenChange, employe }: EmployeDi
         </DialogHeader>
         <ScrollArea className="max-h-[70vh] pr-4">
           <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-6">
+            {/* Link to agent/coursier */}
+            {linkableUsers.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Lier à un agent / coursier</h3>
+                <Select value={watch('user_id') || '_none'} onValueChange={handleLinkUser}>
+                  <SelectTrigger><SelectValue placeholder="Aucun (saisie manuelle)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">Aucun (saisie manuelle)</SelectItem>
+                    {linkableUsers.map((u) => (
+                      <SelectItem key={u.user_id} value={u.user_id}>
+                        {u.prenom} {u.nom} ({u.type === 'agent' ? 'Agent' : 'Coursier'})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Identity */}
             <div className="space-y-3">
               <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Identité</h3>
