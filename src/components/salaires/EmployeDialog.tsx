@@ -150,6 +150,8 @@ export default function EmployeDialog({ open, onOpenChange, employe }: EmployeDi
         salaire_horaire: Number(data.salaire_horaire) || null,
         user_id: data.user_id || null,
         mode_remuneration: data.mode_remuneration || 'commission',
+        date_naissance: data.date_naissance || null,
+        date_engagement: data.date_engagement || null,
       };
 
       if (employe?.id) {
