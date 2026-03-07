@@ -40,6 +40,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Apporteurs', icon: Handshake, path: '/admin/apporteurs', notifKey: null },
         { name: 'Referrals', icon: Link, path: '/admin/referrals', notifKey: null },
         { name: 'Leads Shortlist', icon: Target, path: '/admin/leads', notifKey: null },
+        { name: 'Leads Meta Ads', icon: Tag, path: '/admin/meta-leads', notifKey: null },
         { name: 'Clients', icon: Users, path: '/admin/clients', notifKey: 'new_client_activated' },
         { name: 'Propriétaires', icon: Home, path: '/admin/proprietaires', notifKey: 'new_proprietaire_invited' },
         { name: 'Demandes activation', icon: UserPlus, path: '/admin/demandes-activation', notifKey: 'activation_request' },
