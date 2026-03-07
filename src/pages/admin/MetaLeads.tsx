@@ -4,13 +4,18 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, Tag, ExternalLink, Leaf, RefreshCw } from 'lucide-react';
+import { Search, Tag, ExternalLink, Leaf, RefreshCw, Download } from 'lucide-react';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -76,6 +81,7 @@ export default function MetaLeads() {
   const [editStatus, setEditStatus] = useState('');
   const [editAssigned, setEditAssigned] = useState('');
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     fetchLeads();
@@ -133,6 +139,60 @@ export default function MetaLeads() {
     setSaving(false);
   };
 
+  const handleBackfill = async () => {
+    setSyncing(true);
+    try {
+      // Auto-detect page_id
+      const { data: recentLead } = await supabase
+        .from('meta_leads')
+        .select('page_id')
+        .not('page_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const pageId = recentLead?.page_id;
+      if (!pageId) {
+        toast.error('Aucun page_id détecté. Importez au moins un lead via le webhook avant de lancer le backfill.');
+        setSyncing(false);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('meta-leads-backfill', {
+        body: { page_id: pageId },
+      });
+
+      if (error) {
+        const msg = (error as any)?.message || '';
+        if (msg.includes('409') || msg.includes('déjà en cours')) {
+          toast.error('Un import est déjà en cours. Réessayez dans quelques minutes.');
+        } else if (msg.includes('403') || msg.includes('Accès refusé')) {
+          toast.error('Accès refusé — admin uniquement.');
+        } else {
+          toast.error('Erreur lors du backfill: ' + msg);
+        }
+        setSyncing(false);
+        return;
+      }
+
+      if (data?.error) {
+        if (data.error.includes('déjà en cours')) {
+          toast.error('Un import est déjà en cours. Réessayez dans quelques minutes.');
+        } else {
+          toast.error('Erreur: ' + data.error);
+        }
+      } else {
+        toast.success(
+          `Import terminé : ${data?.imported || 0} importé(s), ${data?.skipped || 0} ignoré(s), ${data?.errors || 0} erreur(s)`
+        );
+        fetchLeads();
+      }
+    } catch (err: any) {
+      toast.error('Erreur inattendue: ' + (err.message || 'inconnue'));
+    }
+    setSyncing(false);
+  };
+
   const filtered = leads.filter((l) => {
     const matchesSearch =
       !search ||
@@ -163,10 +223,32 @@ export default function MetaLeads() {
             {filtered.length} lead{filtered.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchLeads} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Actualiser
-        </Button>
+        <div className="flex gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" disabled={syncing}>
+                <Download className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Import en cours...' : 'Synchroniser Meta'}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Importer les leads Meta existants</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Voulez-vous importer tous les leads Meta existants ? Cette opération peut prendre quelques minutes. Les doublons seront automatiquement ignorés.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction onClick={handleBackfill}>Lancer l'import</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Button variant="outline" size="sm" onClick={fetchLeads} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Actualiser
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
