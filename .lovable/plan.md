@@ -1,42 +1,21 @@
 
 
-## Envoi automatique d'invitations ICS par email lors de la création d'une visite
+## Plan — Test direct du backfill et diagnostic automatique
 
 ### Probleme
-Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
+Le backfill n'a jamais ete execute. Les leads existent dans Meta (visibles dans Logisorama) mais la table `meta_leads` est vide. On doit verifier que le token, le page_id et les permissions fonctionnent.
 
-### Solution
-Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
+### Etape 1 : Test direct de l'edge function via `curl_edge_functions`
+Appeler `meta-leads-backfill` directement avec le page_id fourni par l'utilisateur pour obtenir un vrai diagnostic (token valide, permissions, nombre de formulaires, leads importes ou erreurs).
 
-### Modifications
+### Etape 2 : Selon le resultat
+- **Succes** : Les leads apparaitront immediatement dans `/admin/meta-leads`. Aucune modification code necessaire.
+- **Erreur 400 (page_id manquant)** : Demander le page_id Facebook a l'utilisateur.
+- **Erreur Graph API (token/permissions)** : Diagnostiquer le token Meta (`META_PAGE_ACCESS_TOKEN`) — expiration, scopes manquants (`leads_retrieval`, `pages_read_engagement`).
+- **Erreur 403** : Verifier que l'utilisateur connecte a bien le role admin.
 
-1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
-   - Un pour le **client** (email depuis `profiles`)
-   - Un pour l'**agent** (email depuis `profiles` via `agents`)
-   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
-   
-   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
+### Action requise de l'utilisateur
+Fournir le **Page ID Facebook** (le numero visible dans les parametres de la page Facebook, ex: `123456789012345`) pour que je puisse lancer le test directement.
 
-2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
-
-### Detail technique
-
-```sql
--- Dans notify_on_new_visit, après les notifications existantes :
--- Envoi ICS au client
-PERFORM net.http_post(
-  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
-  headers := jsonb_build_object(...),
-  body := jsonb_build_object(
-    'title', 'Visite - ' || NEW.adresse,
-    'start_date', NEW.date_visite,
-    'location', NEW.adresse,
-    'recipient_email', v_client_email
-  )
-);
--- Idem pour agent et admins
-```
-
-### Resultat
-Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
+Alternativement, se connecter en admin dans le preview, aller sur `/admin/meta-leads`, cliquer "Synchroniser Meta", saisir le Page ID et confirmer.
 
