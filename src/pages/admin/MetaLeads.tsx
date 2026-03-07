@@ -223,10 +223,32 @@ export default function MetaLeads() {
             {filtered.length} lead{filtered.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchLeads} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Actualiser
-        </Button>
+        <div className="flex gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" size="sm" disabled={syncing}>
+                <Download className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Import en cours...' : 'Synchroniser Meta'}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Importer les leads Meta existants</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Voulez-vous importer tous les leads Meta existants ? Cette opération peut prendre quelques minutes. Les doublons seront automatiquement ignorés.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction onClick={handleBackfill}>Lancer l'import</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Button variant="outline" size="sm" onClick={fetchLeads} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Actualiser
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
