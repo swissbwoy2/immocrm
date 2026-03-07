@@ -81,6 +81,7 @@ export default function MetaLeads() {
   const [editStatus, setEditStatus] = useState('');
   const [editAssigned, setEditAssigned] = useState('');
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     fetchLeads();
