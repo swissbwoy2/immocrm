@@ -139,6 +139,60 @@ export default function MetaLeads() {
     setSaving(false);
   };
 
+  const handleBackfill = async () => {
+    setSyncing(true);
+    try {
+      // Auto-detect page_id
+      const { data: recentLead } = await supabase
+        .from('meta_leads')
+        .select('page_id')
+        .not('page_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const pageId = recentLead?.page_id;
+      if (!pageId) {
+        toast.error('Aucun page_id détecté. Importez au moins un lead via le webhook avant de lancer le backfill.');
+        setSyncing(false);
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('meta-leads-backfill', {
+        body: { page_id: pageId },
+      });
+
+      if (error) {
+        const msg = (error as any)?.message || '';
+        if (msg.includes('409') || msg.includes('déjà en cours')) {
+          toast.error('Un import est déjà en cours. Réessayez dans quelques minutes.');
+        } else if (msg.includes('403') || msg.includes('Accès refusé')) {
+          toast.error('Accès refusé — admin uniquement.');
+        } else {
+          toast.error('Erreur lors du backfill: ' + msg);
+        }
+        setSyncing(false);
+        return;
+      }
+
+      if (data?.error) {
+        if (data.error.includes('déjà en cours')) {
+          toast.error('Un import est déjà en cours. Réessayez dans quelques minutes.');
+        } else {
+          toast.error('Erreur: ' + data.error);
+        }
+      } else {
+        toast.success(
+          `Import terminé : ${data?.imported || 0} importé(s), ${data?.skipped || 0} ignoré(s), ${data?.errors || 0} erreur(s)`
+        );
+        fetchLeads();
+      }
+    } catch (err: any) {
+      toast.error('Erreur inattendue: ' + (err.message || 'inconnue'));
+    }
+    setSyncing(false);
+  };
+
   const filtered = leads.filter((l) => {
     const matchesSearch =
       !search ||
