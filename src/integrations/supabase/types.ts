@@ -4974,6 +4974,150 @@ export type Database = {
           },
         ]
       }
+      meta_lead_logs: {
+        Row: {
+          ad_id: string | null
+          created_at: string | null
+          error_message: string | null
+          event_type: string
+          form_id: string | null
+          id: string
+          leadgen_id: string | null
+          page_id: string | null
+          payload: Json | null
+          status: string
+        }
+        Insert: {
+          ad_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          event_type: string
+          form_id?: string | null
+          id?: string
+          leadgen_id?: string | null
+          page_id?: string | null
+          payload?: Json | null
+          status: string
+        }
+        Update: {
+          ad_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          event_type?: string
+          form_id?: string | null
+          id?: string
+          leadgen_id?: string | null
+          page_id?: string | null
+          payload?: Json | null
+          status?: string
+        }
+        Relationships: []
+      }
+      meta_leads: {
+        Row: {
+          ad_id: string | null
+          ad_name: string | null
+          ad_reference_label: string | null
+          ad_reference_url: string | null
+          adset_id: string | null
+          adset_name: string | null
+          assigned_to: string | null
+          campaign_id: string | null
+          campaign_name: string | null
+          city: string | null
+          created_at: string | null
+          email: string | null
+          first_name: string | null
+          form_id: string | null
+          form_name: string | null
+          full_name: string | null
+          id: string
+          imported_at: string | null
+          is_organic: boolean | null
+          last_name: string | null
+          lead_created_time_meta: string | null
+          lead_status: string
+          leadgen_id: string
+          notes: string | null
+          page_id: string | null
+          page_name: string | null
+          phone: string | null
+          postal_code: string | null
+          raw_answers: Json | null
+          raw_meta_payload: Json | null
+          source: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          ad_id?: string | null
+          ad_name?: string | null
+          ad_reference_label?: string | null
+          ad_reference_url?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          assigned_to?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          city?: string | null
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          form_id?: string | null
+          form_name?: string | null
+          full_name?: string | null
+          id?: string
+          imported_at?: string | null
+          is_organic?: boolean | null
+          last_name?: string | null
+          lead_created_time_meta?: string | null
+          lead_status?: string
+          leadgen_id: string
+          notes?: string | null
+          page_id?: string | null
+          page_name?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          raw_answers?: Json | null
+          raw_meta_payload?: Json | null
+          source?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          ad_id?: string | null
+          ad_name?: string | null
+          ad_reference_label?: string | null
+          ad_reference_url?: string | null
+          adset_id?: string | null
+          adset_name?: string | null
+          assigned_to?: string | null
+          campaign_id?: string | null
+          campaign_name?: string | null
+          city?: string | null
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          form_id?: string | null
+          form_name?: string | null
+          full_name?: string | null
+          id?: string
+          imported_at?: string | null
+          is_organic?: boolean | null
+          last_name?: string | null
+          lead_created_time_meta?: string | null
+          lead_status?: string
+          leadgen_id?: string
+          notes?: string | null
+          page_id?: string | null
+          page_name?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          raw_answers?: Json | null
+          raw_meta_payload?: Json | null
+          source?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string | null
