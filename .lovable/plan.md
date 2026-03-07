@@ -1,42 +1,49 @@
 
 
-## Envoi automatique d'invitations ICS par email lors de la création d'une visite
+## Implementation Plan — Meta Lead Ads Integration
 
-### Probleme
-Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
+The plan has been validated. Here is the execution order:
 
-### Solution
-Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
+### Step 1 — Request 4 Meta Secrets
+Use `add_secret` for each:
+- `META_APP_ID` — Meta App identifier
+- `META_APP_SECRET` — SHA256 webhook signature validation
+- `META_VERIFY_TOKEN` — Webhook handshake verification (user-chosen value)
+- `META_PAGE_ACCESS_TOKEN` — Long-lived token for Graph API lead retrieval
 
-### Modifications
+### Step 2 — SQL Migration
+Create two tables with RLS, indexes, and trigger:
 
-1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
-   - Un pour le **client** (email depuis `profiles`)
-   - Un pour l'**agent** (email depuis `profiles` via `agents`)
-   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
-   
-   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
+**`meta_leads`** — all specified columns including `is_organic boolean`, `notes text`, `ad_reference_label`, `ad_reference_url`, `raw_answers jsonb`, `raw_meta_payload jsonb`, `lead_status text default 'new'`, `assigned_to uuid`, plus all campaign/adset/ad/form/page IDs and names.
 
-2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
+**`meta_lead_logs`** — enriched with `leadgen_id`, `page_id`, `form_id`, `ad_id`, `event_type`, `status`, `payload jsonb`, `error_message`.
 
-### Detail technique
+**Indexes**: `leadgen_id`, `created_at`, `lead_status`, `campaign_id`, `ad_id`, `form_id` on meta_leads; `leadgen_id` on meta_lead_logs.
 
-```sql
--- Dans notify_on_new_visit, après les notifications existantes :
--- Envoi ICS au client
-PERFORM net.http_post(
-  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
-  headers := jsonb_build_object(...),
-  body := jsonb_build_object(
-    'title', 'Visite - ' || NEW.adresse,
-    'start_date', NEW.date_visite,
-    'location', NEW.adresse,
-    'recipient_email', v_client_email
-  )
-);
--- Idem pour agent et admins
-```
+**RLS**: SELECT/UPDATE admin-only via `has_role(auth.uid(), 'admin')`. No public INSERT.
 
-### Resultat
-Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
+**Trigger**: `updated_at` on meta_leads.
+
+### Step 3 — Edge Function `meta-leads-webhook`
+File: `supabase/functions/meta-leads-webhook/index.ts`
+Config: `verify_jwt = false`
+
+- **GET**: Validate `hub.verify_token` → return `hub.challenge`
+- **POST**: Validate SHA256 signature → log raw payload with all IDs → deduplicate by `leadgen_id` → fetch lead via Graph API (`/{leadgen_id}?fields=field_data,created_time,ad_id,campaign_id,form_id,is_organic`) → enrich ad/adset/campaign/form/page names via separate Graph calls → build `ad_reference_label` → insert via `service_role` → notify admins via `create_notification` → retry 1x on failure
+
+### Step 4 — Admin Page `MetaLeads.tsx`
+File: `src/pages/admin/MetaLeads.tsx`
+
+**List view**: search, filters (status, campaign, form, date range), columns (date, nom, email, phone, formulaire, campagne, adset, publicité, statut Badge, assigné à), sorted by date desc.
+
+**Detail Dialog** (4 blocks):
+1. Contact (nom, email, phone, city, postal_code)
+2. Origine Meta (source, page_name, form, campaign, adset, ad, is_organic, all IDs, ad_reference_label)
+3. Réponses formulaire (raw_answers key→value)
+4. Suivi CRM (status select, agent assignment, notes textarea)
+
+### Step 5 — Routing + Sidebar
+- **App.tsx** line ~79: add `const AdminMetaLeads = lazy(() => import("./pages/admin/MetaLeads"));`
+- **App.tsx** line ~289: add route `<Route path="/admin/meta-leads" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMetaLeads /></AppLayout></ProtectedRoute>} />`
+- **AppSidebar.tsx** line 42: add `{ name: 'Leads Meta Ads', icon: Tag, path: '/admin/meta-leads', notifKey: null }` after "Leads Shortlist"
 
