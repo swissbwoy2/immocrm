@@ -142,4 +142,4 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.meta-leads-backfill]
-verify_jwt = false
+verify_jwt = true
