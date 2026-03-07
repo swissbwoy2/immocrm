@@ -82,6 +82,11 @@ export default function MetaLeads() {
   const [editAssigned, setEditAssigned] = useState('');
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [manualPageId, setManualPageId] = useState(() => localStorage.getItem('meta_backfill_page_id') || '');
+  const [detectedPageId, setDetectedPageId] = useState<string | null>(null);
+  const [showBackfillDialog, setShowBackfillDialog] = useState(false);
+  const [checkingPageId, setCheckingPageId] = useState(false);
+  const [pageIdError, setPageIdError] = useState('');
 
   useEffect(() => {
     fetchLeads();
@@ -139,27 +144,49 @@ export default function MetaLeads() {
     setSaving(false);
   };
 
+  const handlePreCheck = async () => {
+    setCheckingPageId(true);
+    setPageIdError('');
+    const { data: recentLead } = await supabase
+      .from('meta_leads')
+      .select('page_id')
+      .not('page_id', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setDetectedPageId(recentLead?.page_id || null);
+    setCheckingPageId(false);
+    setShowBackfillDialog(true);
+  };
+
+  const handleCloseBackfillDialog = (open: boolean) => {
+    if (!open) {
+      setShowBackfillDialog(false);
+      setPageIdError('');
+    }
+  };
+
+  const trimmedManualPageId = manualPageId.trim();
+  const isManualPageIdValid = /^\d+$/.test(trimmedManualPageId);
+  const resolvedPageId = detectedPageId || (isManualPageIdValid ? trimmedManualPageId : null);
+  const canLaunchBackfill = !!resolvedPageId && !syncing;
+
+  const handleManualPageIdChange = (value: string) => {
+    setManualPageId(value);
+    const trimmed = value.trim();
+    if (trimmed && !/^\d+$/.test(trimmed)) {
+      setPageIdError('Le Page ID doit contenir uniquement des chiffres');
+    } else {
+      setPageIdError('');
+    }
+  };
+
   const handleBackfill = async () => {
+    if (!resolvedPageId) return;
     setSyncing(true);
     try {
-      // Auto-detect page_id
-      const { data: recentLead } = await supabase
-        .from('meta_leads')
-        .select('page_id')
-        .not('page_id', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const pageId = recentLead?.page_id;
-      if (!pageId) {
-        toast.error('Aucun page_id détecté. Importez au moins un lead via le webhook avant de lancer le backfill.');
-        setSyncing(false);
-        return;
-      }
-
       const { data, error } = await supabase.functions.invoke('meta-leads-backfill', {
-        body: { page_id: pageId },
+        body: { page_id: resolvedPageId },
       });
 
       if (error) {
@@ -182,9 +209,11 @@ export default function MetaLeads() {
           toast.error('Erreur: ' + data.error);
         }
       } else {
+        localStorage.setItem('meta_backfill_page_id', resolvedPageId);
         toast.success(
           `Import terminé : ${data?.imported || 0} importé(s), ${data?.skipped || 0} ignoré(s), ${data?.errors || 0} erreur(s)`
         );
+        setShowBackfillDialog(false);
         fetchLeads();
       }
     } catch (err: any) {
@@ -224,13 +253,11 @@ export default function MetaLeads() {
           </p>
         </div>
         <div className="flex gap-2">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" disabled={syncing}>
-                <Download className={`h-4 w-4 mr-2 ${syncing ? 'animate-spin' : ''}`} />
-                {syncing ? 'Import en cours...' : 'Synchroniser Meta'}
-              </Button>
-            </AlertDialogTrigger>
+          <Button variant="outline" size="sm" disabled={syncing || checkingPageId} onClick={handlePreCheck}>
+            <Download className={`h-4 w-4 mr-2 ${syncing || checkingPageId ? 'animate-spin' : ''}`} />
+            {syncing ? 'Import en cours...' : checkingPageId ? 'Vérification...' : 'Synchroniser Meta'}
+          </Button>
+          <AlertDialog open={showBackfillDialog} onOpenChange={handleCloseBackfillDialog}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Importer les leads Meta existants</AlertDialogTitle>
@@ -238,9 +265,34 @@ export default function MetaLeads() {
                   Voulez-vous importer tous les leads Meta existants ? Cette opération peut prendre quelques minutes. Les doublons seront automatiquement ignorés.
                 </AlertDialogDescription>
               </AlertDialogHeader>
+              <div className="py-2 space-y-3">
+                {detectedPageId ? (
+                  <div className="flex items-center gap-2 p-3 rounded-md bg-green-50 border border-green-200">
+                    <Badge className="bg-green-100 text-green-800 border-green-300">Détecté</Badge>
+                    <span className="text-sm font-mono text-green-900">{detectedPageId}</span>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Page ID Facebook</label>
+                    <Input
+                      placeholder="Ex: 123456789012345"
+                      value={manualPageId}
+                      onChange={(e) => handleManualPageIdChange(e.target.value)}
+                    />
+                    {pageIdError && (
+                      <p className="text-xs text-destructive">{pageIdError}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      L'ID numérique de votre page Facebook qui reçoit les Lead Ads (visible dans les paramètres de la page).
+                    </p>
+                  </div>
+                )}
+              </div>
               <AlertDialogFooter>
                 <AlertDialogCancel>Annuler</AlertDialogCancel>
-                <AlertDialogAction onClick={handleBackfill}>Lancer l'import</AlertDialogAction>
+                <AlertDialogAction onClick={handleBackfill} disabled={!canLaunchBackfill}>
+                  Lancer l'import
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
