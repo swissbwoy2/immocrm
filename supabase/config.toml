@@ -140,3 +140,6 @@ verify_jwt = false
 
 [functions.mandate-update-draft]
 verify_jwt = false
+
+[functions.meta-leads-backfill]
+verify_jwt = false
