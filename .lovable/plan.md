@@ -1,42 +1,39 @@
 
 
-## Envoi automatique d'invitations ICS par email lors de la création d'une visite
+## Plan — Saisie manuelle du page_id avec tous les ajustements validés
 
-### Probleme
-Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
+### Fichier modifié : `src/pages/admin/MetaLeads.tsx`
 
-### Solution
-Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
+### Changements
 
-### Modifications
+**Nouveaux states (lignes ~84) :**
+- `manualPageId` — initialisé depuis `localStorage.getItem('meta_backfill_page_id') || ''`
+- `detectedPageId: string | null`
+- `showBackfillDialog: boolean`
+- `checkingPageId: boolean`
+- `pageIdError: string` — message d'erreur de validation
 
-1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
-   - Un pour le **client** (email depuis `profiles`)
-   - Un pour l'**agent** (email depuis `profiles` via `agents`)
-   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
-   
-   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
+**Bouton "Synchroniser Meta" (lignes 227-246) :**
+- Remplacer l'AlertDialog non contrôlé par un Dialog contrôlé via `showBackfillDialog`
+- Le bouton lance un pré-check async : requête `meta_leads` pour détecter un `page_id`
+- Résultat stocké dans `detectedPageId`, puis `showBackfillDialog = true`
 
-2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
+**Contenu du dialog :**
+- Si `detectedPageId` : afficher un badge vert "Page ID détecté : {detectedPageId}"
+- Si pas de `detectedPageId` : afficher un `<Input>` avec :
+  - `trim()` appliqué sur la valeur avant validation et stockage
+  - Validation : `/^\d+$/` après trim — message d'erreur "Le Page ID doit contenir uniquement des chiffres" si invalide
+  - Aide : "L'ID numérique de votre page Facebook qui reçoit les Lead Ads (visible dans les paramètres de la page)."
+  - Bouton "Lancer l'import" désactivé si champ vide ou invalide
+- `pageIdError` réinitialisé à `''` quand le dialog se ferme (`onOpenChange`)
 
-### Detail technique
+**`handleBackfill` modifié :**
+- Utilise `detectedPageId || manualPageId.trim()` comme `page_id`
+- Sauvegarde dans `localStorage` après invocation réussie
+- Reste de la logique (appel edge function, gestion erreurs, toasts) inchangé
 
-```sql
--- Dans notify_on_new_visit, après les notifications existantes :
--- Envoi ICS au client
-PERFORM net.http_post(
-  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
-  headers := jsonb_build_object(...),
-  body := jsonb_build_object(
-    'title', 'Visite - ' || NEW.adresse,
-    'start_date', NEW.date_visite,
-    'location', NEW.adresse,
-    'recipient_email', v_client_email
-  )
-);
--- Idem pour agent et admins
-```
+**Reset propre à la fermeture du dialog :**
+- `onOpenChange(false)` → `setPageIdError('')`, `setShowBackfillDialog(false)`
 
-### Resultat
-Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
+### Aucune modification backend
 
