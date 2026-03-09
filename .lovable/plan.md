@@ -1,21 +1,39 @@
 
 
-## Plan — Test direct du backfill et diagnostic automatique
+## Plan — Diagnostic direct Meta avec le Page ID 108746365315870
 
 ### Probleme
-Le backfill n'a jamais ete execute. Les leads existent dans Meta (visibles dans Logisorama) mais la table `meta_leads` est vide. On doit verifier que le token, le page_id et les permissions fonctionnent.
+Le backfill n'a jamais ete execute car il requiert un JWT admin. On doit tester le token Meta et les permissions directement.
 
-### Etape 1 : Test direct de l'edge function via `curl_edge_functions`
-Appeler `meta-leads-backfill` directement avec le page_id fourni par l'utilisateur pour obtenir un vrai diagnostic (token valide, permissions, nombre de formulaires, leads importes ou erreurs).
+### Solution
+Creer une edge function temporaire `meta-leads-diagnostic` (verify_jwt = false, protegee par un secret interne) qui :
 
-### Etape 2 : Selon le resultat
-- **Succes** : Les leads apparaitront immediatement dans `/admin/meta-leads`. Aucune modification code necessaire.
-- **Erreur 400 (page_id manquant)** : Demander le page_id Facebook a l'utilisateur.
-- **Erreur Graph API (token/permissions)** : Diagnostiquer le token Meta (`META_PAGE_ACCESS_TOKEN`) — expiration, scopes manquants (`leads_retrieval`, `pages_read_engagement`).
-- **Erreur 403** : Verifier que l'utilisateur connecte a bien le role admin.
+1. Appelle `GET /{page_id}?fields=name,id` pour verifier le token et le page_id
+2. Appelle `GET /{page_id}/leadgen_forms?fields=id,name,status&limit=100` pour lister les formulaires
+3. Pour chaque formulaire, appelle `GET /{form_id}/leads?limit=1` pour compter les leads disponibles
+4. Retourne un rapport JSON complet : validite du token, nom de la page, nombre de formulaires, nombre de leads par formulaire, erreurs eventuelles
 
-### Action requise de l'utilisateur
-Fournir le **Page ID Facebook** (le numero visible dans les parametres de la page Facebook, ex: `123456789012345`) pour que je puisse lancer le test directement.
+### Fichiers
 
-Alternativement, se connecter en admin dans le preview, aller sur `/admin/meta-leads`, cliquer "Synchroniser Meta", saisir le Page ID et confirmer.
+**Nouveau : `supabase/functions/meta-leads-diagnostic/index.ts`**
+- Endpoint POST protege par un header secret (`x-diagnostic-key` = valeur hardcodee interne)
+- Utilise `META_PAGE_ACCESS_TOKEN` depuis les secrets
+- Page ID hardcode : `108746365315870`
+- Retourne un diagnostic structure :
+  - `token_valid: boolean`
+  - `page_name: string | null`
+  - `page_id: string`
+  - `forms: Array<{id, name, status, lead_count}>`
+  - `total_leads: number`
+  - `errors: string[]`
+  - `permissions_ok: boolean`
+
+**Modifie : `supabase/config.toml`**
+- Ajouter `[functions.meta-leads-diagnostic]` avec `verify_jwt = false`
+
+### Execution
+Apres deploiement, appeler la fonction via `curl_edge_functions` pour obtenir le diagnostic complet immediatement, sans besoin de se connecter en admin.
+
+### Nettoyage
+La fonction sera supprimee apres le diagnostic.
 
