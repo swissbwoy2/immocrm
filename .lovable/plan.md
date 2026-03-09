@@ -1,19 +1,24 @@
 
 
-## Plan — Mettre a jour le token Meta et lancer le backfill
+## Plan — Permettre la delegation coursier sans attendre la reponse du client
 
-Je vois sur votre capture d'ecran que vous avez genere un nouveau token dans le Graph API Explorer pour la page **Immo-rama.ch** avec les permissions necessaires (`leads_retrieval`, `pages_show_list`, etc.).
+### Probleme identifie
 
-### Etape 1 : Mettre a jour le secret `META_PAGE_ACCESS_TOKEN`
-Remplacer l'ancien token (invalide — session expiree) par le nouveau token que vous avez fourni precedemment.
+Deux endroits bloquent la delegation aux coursiers :
 
-### Etape 2 : Deployer et executer la fonction de diagnostic
-Recreer temporairement `meta-leads-diagnostic` (verify_jwt = false) pour verifier que le nouveau token fonctionne avec le Page ID `108746365315870`.
+1. **Page Admin Coursiers** (`src/pages/admin/Coursiers.tsx`, ligne 36) : La requete des visites eligibles filtre sur `statut = 'planifiee'` uniquement. Les visites avec statut `proposee` (creneaux proposes par l'agent, pas encore confirmes par le client) ou `confirmee` sont exclues.
 
-### Etape 3 : Selon le resultat du diagnostic
-- **Succes** : Lancer le backfill complet via `meta-leads-backfill` pour importer tous les leads historiques.
-- **Echec** : Diagnostiquer l'erreur precise (permissions manquantes, token pas lie a la bonne page, etc.)
+2. **Page Agent Visites** (`src/pages/agent/Visites.tsx`, lignes 610-613) : Les listes de visites affichees dans les onglets excluent les visites `proposee`. Le bouton "Deleguer a un coursier" n'apparait donc pas pour ces visites.
 
-### Note importante
-Le token genere via le Graph API Explorer est un **token de courte duree** (expire en ~1h). Il faudra ensuite le convertir en token longue duree pour que le webhook fonctionne en continu.
+### Modifications
+
+#### 1. `src/pages/admin/Coursiers.tsx`
+- Elargir le filtre des visites eligibles : remplacer `.eq('statut', 'planifiee')` par `.in('statut', ['planifiee', 'confirmee', 'proposee'])` pour inclure toutes les visites futures non annulees/effectuees.
+
+#### 2. `src/pages/agent/Visites.tsx`  
+- Ajouter les visites `proposee` dans la liste "Visites a venir" (`visitesAVenir`) pour qu'elles apparaissent avec le bouton de delegation coursier.
+- Actuellement la liste exclut les visites proposees — il faut ajouter `v.statut === 'proposee'` dans le filtre.
+
+### Resultat
+Les agents et admins pourront deleguer n'importe quelle visite future a un coursier, meme si le client n'a pas encore confirme le creneau. Cela permet de comptabiliser correctement les courses et d'eviter la gestion manuelle/orale.
 
