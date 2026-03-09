@@ -1,24 +1,42 @@
 
 
-## Plan — Permettre la delegation coursier sans attendre la reponse du client
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-### Probleme identifie
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
-Deux endroits bloquent la delegation aux coursiers :
-
-1. **Page Admin Coursiers** (`src/pages/admin/Coursiers.tsx`, ligne 36) : La requete des visites eligibles filtre sur `statut = 'planifiee'` uniquement. Les visites avec statut `proposee` (creneaux proposes par l'agent, pas encore confirmes par le client) ou `confirmee` sont exclues.
-
-2. **Page Agent Visites** (`src/pages/agent/Visites.tsx`, lignes 610-613) : Les listes de visites affichees dans les onglets excluent les visites `proposee`. Le bouton "Deleguer a un coursier" n'apparait donc pas pour ces visites.
+### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
 ### Modifications
 
-#### 1. `src/pages/admin/Coursiers.tsx`
-- Elargir le filtre des visites eligibles : remplacer `.eq('statut', 'planifiee')` par `.in('statut', ['planifiee', 'confirmee', 'proposee'])` pour inclure toutes les visites futures non annulees/effectuees.
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
 
-#### 2. `src/pages/agent/Visites.tsx`  
-- Ajouter les visites `proposee` dans la liste "Visites a venir" (`visitesAVenir`) pour qu'elles apparaissent avec le bouton de delegation coursier.
-- Actuellement la liste exclut les visites proposees — il faut ajouter `v.statut === 'proposee'` dans le filtre.
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
+
+### Detail technique
+
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
+```
 
 ### Resultat
-Les agents et admins pourront deleguer n'importe quelle visite future a un coursier, meme si le client n'a pas encore confirme le creneau. Cela permet de comptabiliser correctement les courses et d'eviter la gestion manuelle/orale.
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 
