@@ -1,39 +1,19 @@
 
 
-## Plan — Diagnostic direct Meta avec le Page ID 108746365315870
+## Plan — Mettre a jour le token Meta et lancer le backfill
 
-### Probleme
-Le backfill n'a jamais ete execute car il requiert un JWT admin. On doit tester le token Meta et les permissions directement.
+Je vois sur votre capture d'ecran que vous avez genere un nouveau token dans le Graph API Explorer pour la page **Immo-rama.ch** avec les permissions necessaires (`leads_retrieval`, `pages_show_list`, etc.).
 
-### Solution
-Creer une edge function temporaire `meta-leads-diagnostic` (verify_jwt = false, protegee par un secret interne) qui :
+### Etape 1 : Mettre a jour le secret `META_PAGE_ACCESS_TOKEN`
+Remplacer l'ancien token (invalide — session expiree) par le nouveau token que vous avez fourni precedemment.
 
-1. Appelle `GET /{page_id}?fields=name,id` pour verifier le token et le page_id
-2. Appelle `GET /{page_id}/leadgen_forms?fields=id,name,status&limit=100` pour lister les formulaires
-3. Pour chaque formulaire, appelle `GET /{form_id}/leads?limit=1` pour compter les leads disponibles
-4. Retourne un rapport JSON complet : validite du token, nom de la page, nombre de formulaires, nombre de leads par formulaire, erreurs eventuelles
+### Etape 2 : Deployer et executer la fonction de diagnostic
+Recreer temporairement `meta-leads-diagnostic` (verify_jwt = false) pour verifier que le nouveau token fonctionne avec le Page ID `108746365315870`.
 
-### Fichiers
+### Etape 3 : Selon le resultat du diagnostic
+- **Succes** : Lancer le backfill complet via `meta-leads-backfill` pour importer tous les leads historiques.
+- **Echec** : Diagnostiquer l'erreur precise (permissions manquantes, token pas lie a la bonne page, etc.)
 
-**Nouveau : `supabase/functions/meta-leads-diagnostic/index.ts`**
-- Endpoint POST protege par un header secret (`x-diagnostic-key` = valeur hardcodee interne)
-- Utilise `META_PAGE_ACCESS_TOKEN` depuis les secrets
-- Page ID hardcode : `108746365315870`
-- Retourne un diagnostic structure :
-  - `token_valid: boolean`
-  - `page_name: string | null`
-  - `page_id: string`
-  - `forms: Array<{id, name, status, lead_count}>`
-  - `total_leads: number`
-  - `errors: string[]`
-  - `permissions_ok: boolean`
-
-**Modifie : `supabase/config.toml`**
-- Ajouter `[functions.meta-leads-diagnostic]` avec `verify_jwt = false`
-
-### Execution
-Apres deploiement, appeler la fonction via `curl_edge_functions` pour obtenir le diagnostic complet immediatement, sans besoin de se connecter en admin.
-
-### Nettoyage
-La fonction sera supprimee apres le diagnostic.
+### Note importante
+Le token genere via le Graph API Explorer est un **token de courte duree** (expire en ~1h). Il faudra ensuite le convertir en token longue duree pour que le webhook fonctionne en continu.
 
