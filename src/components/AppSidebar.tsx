@@ -68,7 +68,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Annonceurs', icon: Megaphone, path: '/admin/annonceurs', notifKey: null },
         { name: 'Rappels', icon: AlarmClock, path: '/admin/rappels', notifKey: null },
         { name: 'Coursiers', icon: Bike, path: '/admin/coursiers', notifKey: null },
-        { name: 'Agent IA OpenClaw', icon: Bot, path: '/admin/openclaw', notifKey: null },
+        { name: 'Agent IA Relocation', icon: Bot, path: '/admin/agent-ia', notifKey: null },
         { name: 'Notifications', icon: Bell, path: '/admin/notifications', notifKey: 'total' },
         { name: 'Paramètres', icon: Settings, path: '/admin/parametres', notifKey: null },
       ];
