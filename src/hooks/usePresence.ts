@@ -6,7 +6,7 @@ const PRESENCE_INTERVAL = 60000; // 60 seconds
 
 export function usePresence() {
   const { user } = useAuth();
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isActiveRef = useRef(true);
 
   useEffect(() => {
