@@ -80,7 +80,7 @@ export function GooglePlacesAutocomplete({
   const containerRef = useRef<HTMLDivElement>(null);
   const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
   const sessionTokenRef = useRef<google.maps.places.AutocompleteSessionToken | null>(null);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingInputRef = useRef<string>("");
 
   // Determine if we're in manual mode (fallback or not loaded)
