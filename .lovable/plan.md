@@ -1,17 +1,15 @@
 
 
-## Plan: Cleanup and Secret Configuration
+## Plan: Configure AI_RELOCATION_WEBHOOK_SECRET
 
-Two actions to perform:
+### Action
 
-### 1. Delete orphaned file
-Delete `supabase/functions/_shared/result-ingestion.ts` — it is the only file in `_shared/` and is not imported by any function (logic was inlined into both edge functions).
+Use the `add_secret` tool to store the webhook secret with:
 
-### 2. Add `AI_RELOCATION_WEBHOOK_SECRET` secret
-Use the `add_secret` tool to prompt for the webhook secret value. This is required before the `ai-relocation-webhook` function can authenticate incoming requests.
+- **Name**: `AI_RELOCATION_WEBHOOK_SECRET`  
+- **Value**: `1ad850b6a6ff50271ac8266a4029ef71d84c3e5bcf77fc890d094fe22d09b337`
 
-Generate a strong value with: `openssl rand -hex 32`
+This will make the secret available to both `ai-relocation-api` and `ai-relocation-webhook` edge functions via `Deno.env.get('AI_RELOCATION_WEBHOOK_SECRET')`.
 
-### Technical note (no action now)
-The duplicated inline shared logic (`ingestResults`, `buildCriteriaSnapshot`) in both `ai-relocation-api` and `ai-relocation-webhook` is accepted for now. A refactoring to deduplicate this should be planned for a future step to prevent drift.
+No code changes required — the webhook function already reads this env var.
 
