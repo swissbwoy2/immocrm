@@ -144,8 +144,8 @@ verify_jwt = false
 [functions.meta-leads-backfill]
 verify_jwt = true
 
-[functions.openclaw-api]
+[functions.ai-relocation-api]
 verify_jwt = false
 
-[functions.openclaw-webhook]
+[functions.ai-relocation-webhook]
 verify_jwt = false
