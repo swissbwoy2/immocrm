@@ -15,7 +15,7 @@ export function AgentIADashboard({ agentId }: Props) {
   const { data: counts, isLoading, isError, refetch } = useQuery({
     queryKey: ['ai-dashboard-counts', agentId],
     queryFn: async () => {
-      const [assignments, missions, runsToday, results, offers, visits, pendingApprovals, errors] = await Promise.all([
+      const results = await Promise.all([
         supabase.from('ai_agent_assignments').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId).eq('status', 'active'),
         supabase.from('search_missions').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId).eq('status', 'active'),
         supabase.from('mission_execution_runs').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId).gte('started_at', new Date().toISOString().split('T')[0]),
@@ -27,14 +27,14 @@ export function AgentIADashboard({ agentId }: Props) {
       ]);
 
       return {
-        assignments: assignments.count ?? 0,
-        missions: missions.count ?? 0,
-        runsToday: runsToday.count ?? 0,
-        newResults: results.count ?? 0,
-        offers: offers.count ?? 0,
-        visits: visits.count ?? 0,
-        pendingApprovals: pendingApprovals.count ?? 0,
-        errors: errors.count ?? 0,
+        assignments: results[0].count ?? 0,
+        missions: results[1].count ?? 0,
+        runsToday: results[2].count ?? 0,
+        newResults: results[3].count ?? 0,
+        offers: results[4].count ?? 0,
+        visits: results[5].count ?? 0,
+        pendingApprovals: results[6].count ?? 0,
+        errors: results[7].count ?? 0,
       };
     },
     refetchOnWindowFocus: false,
@@ -88,7 +88,6 @@ export function AgentIADashboard({ agentId }: Props) {
         <PremiumKPICard title="Erreurs" value={counts?.errors ?? 0} icon={AlertTriangle} variant="danger" delay={350} />
       </div>
 
-      {/* Recent Activity */}
       <div className="rounded-xl border border-border bg-card p-4">
         <h3 className="font-semibold mb-3 flex items-center gap-2">
           <Activity className="w-4 h-4 text-primary" />

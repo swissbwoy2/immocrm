@@ -10,6 +10,9 @@ import { StatusBadge } from './statusBadges';
 import { ResultDetailDrawer } from './ResultDetailDrawer';
 import { toast } from 'sonner';
 import { AlertTriangle, FileText, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
+
+type ResultStatus = Database['public']['Enums']['property_result_status'];
 
 interface Props {
   agentId: string;
@@ -17,7 +20,7 @@ interface Props {
 
 const PAGE_SIZE = 50;
 
-const RESULT_STATUSES = [
+const RESULT_STATUSES: { value: string; label: string }[] = [
   { value: 'all', label: 'Tous' },
   { value: 'nouveau', label: 'Nouveau' },
   { value: 'retenu', label: 'Retenu' },
@@ -48,7 +51,7 @@ export function SearchResultsTab({ agentId }: Props) {
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (statusFilter !== 'all') {
-        query = query.eq('result_status', statusFilter);
+        query = query.eq('result_status', statusFilter as ResultStatus);
       }
       if (searchTerm.trim()) {
         const term = `%${searchTerm.trim()}%`;
@@ -63,7 +66,7 @@ export function SearchResultsTab({ agentId }: Props) {
   });
 
   const statusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+    mutationFn: async ({ id, status }: { id: string; status: ResultStatus }) => {
       const { error } = await supabase
         .from('property_results')
         .update({ result_status: status })
@@ -101,7 +104,6 @@ export function SearchResultsTab({ agentId }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -181,7 +183,6 @@ export function SearchResultsTab({ agentId }: Props) {
             </Table>
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2">
               <Button size="sm" variant="outline" disabled={page === 0} onClick={() => setPage(page - 1)}>

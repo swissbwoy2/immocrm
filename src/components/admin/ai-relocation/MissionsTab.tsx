@@ -10,6 +10,9 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AlertTriangle, Search, Pause, Play, Zap, XCircle } from 'lucide-react';
+import type { Database } from '@/integrations/supabase/types';
+
+type MissionStatus = Database['public']['Enums']['mission_status'];
 
 interface Props {
   agentId: string;
@@ -34,7 +37,7 @@ export function MissionsTab({ agentId }: Props) {
   });
 
   const statusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+    mutationFn: async ({ id, status }: { id: string; status: MissionStatus }) => {
       const { error } = await supabase
         .from('search_missions')
         .update({ status })
