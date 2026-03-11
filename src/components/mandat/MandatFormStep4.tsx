@@ -272,7 +272,7 @@ export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props)
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="region_recherche">Région(s) *</Label>
+          <Label htmlFor="region_recherche">Région(s)</Label>
           <GooglePlacesAutocomplete
             value={data.region_recherche}
             onChange={(value) => onChange({ region_recherche: value })}
