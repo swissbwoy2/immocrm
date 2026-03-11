@@ -32,7 +32,7 @@ export function AgentIADashboard({ agentId }: Props) {
         countQuery('client_offer_messages', { ai_agent_id: agentId }),
         countQuery('visit_requests', { ai_agent_id: agentId }),
         countQuery('approval_requests', { ai_agent_id: agentId, status: 'pending' }),
-        supabase.from('ai_agent_activity_logs').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId).not('error_message', 'is', null).then(r => r.count ?? 0),
+        (supabase.from('ai_agent_activity_logs').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId) as any).not('error_message', 'is', null).then((r: any) => r.count ?? 0),
       ]);
 
       return { assignments, missions, runsToday, newResults, offers, visits, pendingApprovals, errors };
