@@ -281,6 +281,451 @@ export type Database = {
           },
         ]
       }
+      ai_agent_actions: {
+        Row: {
+          action_payload: Json | null
+          action_type: string
+          ai_agent_id: string
+          approved_at: string | null
+          approved_by: string | null
+          channel: string | null
+          client_id: string | null
+          created_at: string
+          draft_content: string | null
+          error_message: string | null
+          executed_at: string | null
+          execution_result: Json | null
+          id: string
+          property_id: string | null
+          rejected_reason: string | null
+          requires_approval: boolean
+          source_type: string
+          status: string
+        }
+        Insert: {
+          action_payload?: Json | null
+          action_type: string
+          ai_agent_id: string
+          approved_at?: string | null
+          approved_by?: string | null
+          channel?: string | null
+          client_id?: string | null
+          created_at?: string
+          draft_content?: string | null
+          error_message?: string | null
+          executed_at?: string | null
+          execution_result?: Json | null
+          id?: string
+          property_id?: string | null
+          rejected_reason?: string | null
+          requires_approval?: boolean
+          source_type?: string
+          status?: string
+        }
+        Update: {
+          action_payload?: Json | null
+          action_type?: string
+          ai_agent_id?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          channel?: string | null
+          client_id?: string | null
+          created_at?: string
+          draft_content?: string | null
+          error_message?: string | null
+          executed_at?: string | null
+          execution_result?: Json | null
+          id?: string
+          property_id?: string | null
+          rejected_reason?: string | null
+          requires_approval?: boolean
+          source_type?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_actions_ai_agent_id_fkey"
+            columns: ["ai_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_actions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_actions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_agent_assignments: {
+        Row: {
+          ai_agent_id: string
+          assigned_at: string
+          assigned_by: string | null
+          client_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          priority: string | null
+          status: string
+        }
+        Insert: {
+          ai_agent_id: string
+          assigned_at?: string
+          assigned_by?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          priority?: string | null
+          status?: string
+        }
+        Update: {
+          ai_agent_id?: string
+          assigned_at?: string
+          assigned_by?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          priority?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_assignments_ai_agent_id_fkey"
+            columns: ["ai_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_agent_call_logs: {
+        Row: {
+          agency_name: string | null
+          ai_agent_id: string
+          call_notes: string | null
+          call_result: string | null
+          call_script: string | null
+          client_id: string | null
+          contact_name: string | null
+          created_at: string
+          id: string
+          next_callback_at: string | null
+          phone_number: string | null
+          status: string | null
+        }
+        Insert: {
+          agency_name?: string | null
+          ai_agent_id: string
+          call_notes?: string | null
+          call_result?: string | null
+          call_script?: string | null
+          client_id?: string | null
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          next_callback_at?: string | null
+          phone_number?: string | null
+          status?: string | null
+        }
+        Update: {
+          agency_name?: string | null
+          ai_agent_id?: string
+          call_notes?: string | null
+          call_result?: string | null
+          call_script?: string | null
+          client_id?: string | null
+          contact_name?: string | null
+          created_at?: string
+          id?: string
+          next_callback_at?: string | null
+          phone_number?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_call_logs_ai_agent_id_fkey"
+            columns: ["ai_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_call_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_agent_drafts: {
+        Row: {
+          ai_agent_id: string
+          approved_at: string | null
+          approved_by: string | null
+          attachments: Json | null
+          body: string | null
+          channel: string | null
+          client_id: string | null
+          created_at: string
+          draft_type: string
+          id: string
+          property_match_id: string | null
+          recipient_email: string | null
+          recipient_name: string | null
+          sent_at: string | null
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_agent_id: string
+          approved_at?: string | null
+          approved_by?: string | null
+          attachments?: Json | null
+          body?: string | null
+          channel?: string | null
+          client_id?: string | null
+          created_at?: string
+          draft_type: string
+          id?: string
+          property_match_id?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_agent_id?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          attachments?: Json | null
+          body?: string | null
+          channel?: string | null
+          client_id?: string | null
+          created_at?: string
+          draft_type?: string
+          id?: string
+          property_match_id?: string | null
+          recipient_email?: string | null
+          recipient_name?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_drafts_ai_agent_id_fkey"
+            columns: ["ai_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_drafts_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_drafts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_drafts_property_match_id_fkey"
+            columns: ["property_match_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agent_property_matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_agent_property_matches: {
+        Row: {
+          address: string | null
+          ai_agent_id: string
+          client_id: string
+          created_at: string
+          description: string | null
+          id: string
+          images: Json | null
+          location: string | null
+          match_details: Json | null
+          match_score: number | null
+          price: number | null
+          property_type: string | null
+          rooms: number | null
+          source_platform: string | null
+          source_url: string | null
+          status: string
+          surface: number | null
+          title: string
+        }
+        Insert: {
+          address?: string | null
+          ai_agent_id: string
+          client_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: Json | null
+          location?: string | null
+          match_details?: Json | null
+          match_score?: number | null
+          price?: number | null
+          property_type?: string | null
+          rooms?: number | null
+          source_platform?: string | null
+          source_url?: string | null
+          status?: string
+          surface?: number | null
+          title: string
+        }
+        Update: {
+          address?: string | null
+          ai_agent_id?: string
+          client_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          images?: Json | null
+          location?: string | null
+          match_details?: Json | null
+          match_score?: number | null
+          price?: number | null
+          property_type?: string | null
+          rooms?: number | null
+          source_platform?: string | null
+          source_url?: string | null
+          status?: string
+          surface?: number | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_property_matches_ai_agent_id_fkey"
+            columns: ["ai_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_property_matches_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_agents: {
+        Row: {
+          allowed_actions: Json
+          api_token_hash: string | null
+          assigned_manager: string | null
+          audit_log_enabled: boolean
+          created_at: string
+          display_name: string
+          email_channel: string | null
+          id: string
+          last_activity_at: string | null
+          name: string
+          requires_validation: boolean
+          security_level: string
+          status: string
+          type: string
+          updated_at: string
+          user_id: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          allowed_actions?: Json
+          api_token_hash?: string | null
+          assigned_manager?: string | null
+          audit_log_enabled?: boolean
+          created_at?: string
+          display_name: string
+          email_channel?: string | null
+          id?: string
+          last_activity_at?: string | null
+          name: string
+          requires_validation?: boolean
+          security_level?: string
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          allowed_actions?: Json
+          api_token_hash?: string | null
+          assigned_manager?: string | null
+          audit_log_enabled?: boolean
+          created_at?: string
+          display_name?: string
+          email_channel?: string | null
+          id?: string
+          last_activity_at?: string | null
+          name?: string
+          requires_validation?: boolean
+          security_level?: string
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agents_assigned_manager_fkey"
+            columns: ["assigned_manager"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_matches: {
         Row: {
           agent_id: string | null
@@ -7113,6 +7558,7 @@ export type Database = {
         | "proprietaire"
         | "annonceur"
         | "coursier"
+        | "agent_ia"
       contact_type:
         | "proprietaire"
         | "gerant_regie"
@@ -7257,6 +7703,7 @@ export const Constants = {
         "proprietaire",
         "annonceur",
         "coursier",
+        "agent_ia",
       ],
       contact_type: [
         "proprietaire",
