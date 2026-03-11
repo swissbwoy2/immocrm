@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
   allowedRoles?: ('admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier' | 'agent_ia')[];
 }
 
-const VALID_ROLES = ['admin', 'agent', 'client', 'apporteur', 'proprietaire', 'coursier'] as const;
+const VALID_ROLES = ['admin', 'agent', 'client', 'apporteur', 'proprietaire', 'coursier', 'agent_ia'] as const;
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { user, userRole, loading, session } = useAuth();
