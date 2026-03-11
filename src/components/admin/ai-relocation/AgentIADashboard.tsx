@@ -15,11 +15,14 @@ export function AgentIADashboard({ agentId }: Props) {
   const { data: counts, isLoading, isError, refetch } = useQuery({
     queryKey: ['ai-dashboard-counts', agentId],
     queryFn: async () => {
-      const countQuery = async (table: string, filters: Record<string, string> = {}) => {
-        let q = supabase.from(table as any).select('id', { count: 'exact', head: true });
+      const countQuery = async (table: string, filters: Record<string, string> = {}): Promise<number> => {
+        let q: any = supabase.from(table as any).select('id', { count: 'exact', head: true });
         for (const [key, val] of Object.entries(filters)) {
-          q = q.eq(key, val) as any;
+          q = q.eq(key, val);
         }
+        const { count } = await q;
+        return (count as number) ?? 0;
+      };
         const { count } = await q;
         return count ?? 0;
       };
