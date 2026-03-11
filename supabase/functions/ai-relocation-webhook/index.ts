@@ -1,5 +1,86 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { ingestResults, buildCriteriaSnapshot } from "../_shared/result-ingestion.ts";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+
+// === SHARED: Result Ingestion ===
+
+interface ResultRow {
+  source_name?: string; source_url?: string; external_listing_id?: string; title?: string;
+  address?: string; postal_code?: string; city?: string; canton?: string;
+  rent_amount?: number; charges_amount?: number; total_amount?: number;
+  number_of_rooms?: number; living_area?: number; availability_date?: string;
+  description?: string; images?: unknown[]; contact_name?: string; contact_email?: string;
+  contact_phone?: string; visit_booking_link?: string; application_channel?: string;
+  extraction_timestamp?: string;
+}
+
+interface IngestParams {
+  mission_id: string; client_id: string; ai_agent_id: string;
+  results: ResultRow[]; criteria?: Record<string, unknown> | null;
+}
+
+interface IngestResult { inserted: number; duplicates: number; failed: number; ids: string[]; errors: string[]; }
+
+async function ingestResults(adminClient: SupabaseClient, params: IngestParams): Promise<IngestResult> {
+  const { mission_id, client_id, ai_agent_id, results, criteria } = params;
+  const out: IngestResult = { inserted: 0, duplicates: 0, failed: 0, ids: [], errors: [] };
+  for (const row of results) {
+    try {
+      if (row.external_listing_id) {
+        const { data: existing } = await adminClient.from('property_results').select('id')
+          .eq('source_name', row.source_name ?? '').eq('external_listing_id', row.external_listing_id)
+          .eq('client_id', client_id).maybeSingle();
+        if (existing) { out.duplicates++; continue; }
+      }
+      const { data: inserted, error } = await adminClient.from('property_results').insert({
+        mission_id, client_id, ai_agent_id, source_name: row.source_name, source_url: row.source_url,
+        external_listing_id: row.external_listing_id, title: row.title, address: row.address,
+        postal_code: row.postal_code, city: row.city, canton: row.canton, rent_amount: row.rent_amount,
+        charges_amount: row.charges_amount, total_amount: row.total_amount, number_of_rooms: row.number_of_rooms,
+        living_area: row.living_area, availability_date: row.availability_date, description: row.description,
+        images: row.images ?? [], contact_name: row.contact_name, contact_email: row.contact_email,
+        contact_phone: row.contact_phone, visit_booking_link: row.visit_booking_link,
+        application_channel: row.application_channel, extraction_timestamp: row.extraction_timestamp,
+        result_status: 'nouveau',
+      }).select('id').single();
+      if (error) { out.failed++; out.errors.push(`Insert failed for "${row.title}": ${error.message}`); continue; }
+      out.inserted++; out.ids.push(inserted.id);
+      if (criteria && inserted.id) {
+        try { await adminClient.rpc('calculate_match_score', { p_property_result_id: inserted.id, p_criteria: criteria }); }
+        catch (scoreErr) { console.error(`Score calc failed for ${inserted.id}:`, scoreErr); }
+      }
+    } catch (err) { out.failed++; out.errors.push(`Unexpected error for "${row.title}": ${String(err)}`); }
+  }
+  return out;
+}
+
+async function buildCriteriaSnapshot(adminClient: SupabaseClient, clientId: string): Promise<Record<string, unknown>> {
+  const { data: client } = await adminClient.from('clients')
+    .select('budget_max, pieces, region_recherche, type_bien, souhaits_particuliers, nombre_occupants, demande_mandat_id')
+    .eq('id', clientId).single();
+  if (!client) return {};
+  let mandatData: Record<string, unknown> | null = null;
+  if (client.demande_mandat_id) {
+    const { data } = await adminClient.from('demandes_mandat')
+      .select('budget_max, pieces_recherche, region_recherche, type_bien, type_recherche, nombre_occupants, souhaits_particuliers')
+      .eq('id', client.demande_mandat_id).single();
+    mandatData = data;
+  }
+  let mandatRooms: number | null = null;
+  if (mandatData?.pieces_recherche && typeof mandatData.pieces_recherche === 'string') {
+    const match = (mandatData.pieces_recherche as string).match(/(\d+)/);
+    if (match) mandatRooms = parseInt(match[1], 10);
+  }
+  return {
+    budget_max: client.budget_max ?? mandatData?.budget_max ?? null,
+    city: client.region_recherche ?? mandatData?.region_recherche ?? null,
+    rooms: client.pieces ?? mandatRooms ?? null,
+    surface_min: null, type_bien: client.type_bien ?? mandatData?.type_bien ?? null,
+    canton: null, type_recherche: (mandatData?.type_recherche as string) ?? null,
+    nombre_occupants: client.nombre_occupants ?? mandatData?.nombre_occupants ?? null,
+    souhaits_particuliers: client.souhaits_particuliers ?? mandatData?.souhaits_particuliers ?? null,
+  };
+}
+
+// === END SHARED ===
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
