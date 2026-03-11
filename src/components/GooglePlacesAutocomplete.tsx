@@ -378,34 +378,48 @@ export function GooglePlacesAutocomplete({
           ))}
 
         {/* Input field */}
-        <div className="relative flex-1 min-w-[150px]">
-          <MapPin className={cn(
-            "absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4",
-            isManualMode ? "text-amber-500" : "text-muted-foreground"
-          )} />
-          <Input
-            ref={inputRef}
-            type="text"
-            value={inputValue}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onFocus={() => !isManualMode && inputValue.length >= 2 && fetchPredictions(inputValue)}
-            onBlur={handleBlur}
-            placeholder={
-              multiSelect && selectedRegions.length > 0 
-                ? "Ajouter une localité..." 
-                : isManualMode 
-                  ? "Saisie manuelle..." 
-                  : placeholder
-            }
-            disabled={disabled}
-            className={cn("pl-8 pr-8 border-0 shadow-none focus-visible:ring-0")}
-          />
-          {isSearching && (
-            <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-          )}
-          {mapsLoading && (
-            <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+        <div className="relative flex-1 min-w-[150px] flex items-center gap-1">
+          <div className="relative flex-1">
+            <MapPin className={cn(
+              "absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4",
+              isManualMode ? "text-amber-500" : "text-muted-foreground"
+            )} />
+            <Input
+              ref={inputRef}
+              type="text"
+              value={inputValue}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              onFocus={() => !isManualMode && inputValue.length >= 2 && fetchPredictions(inputValue)}
+              onBlur={handleBlur}
+              placeholder={
+                multiSelect && selectedRegions.length > 0 
+                  ? "Ajouter une localité..." 
+                  : isManualMode 
+                    ? "Ex: Vaud, Genève... puis Entrée ou Ajouter" 
+                    : placeholder
+              }
+              disabled={disabled}
+              className={cn("pl-8 pr-8 border-0 shadow-none focus-visible:ring-0")}
+            />
+            {isSearching && (
+              <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+            {mapsLoading && (
+              <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+          </div>
+          {/* Visible "Ajouter" button in manual mode or when Google is not available */}
+          {(isManualMode || (!isLoaded && !mapsLoading)) && inputValue.trim().length > 0 && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleManualAdd}
+              className="h-7 text-xs shrink-0"
+            >
+              Ajouter
+            </Button>
           )}
         </div>
 
