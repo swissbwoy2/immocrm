@@ -4,7 +4,7 @@ import { AlertTriangle } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: ('admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier')[];
+  allowedRoles?: ('admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier' | 'agent_ia')[];
 }
 
 const VALID_ROLES = ['admin', 'agent', 'client', 'apporteur', 'proprietaire', 'coursier'] as const;
