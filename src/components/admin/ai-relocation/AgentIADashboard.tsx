@@ -23,9 +23,8 @@ export function AgentIADashboard({ agentId }: Props) {
         const { count } = await q;
         return (count as number) ?? 0;
       };
-        const { count } = await q;
-        return count ?? 0;
-      };
+
+
 
       const [assignments, missions, runsToday, newResults, offers, visits, pendingApprovals, errors] = await Promise.all([
         countQuery('ai_agent_assignments', { ai_agent_id: agentId, status: 'active' }),
