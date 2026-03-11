@@ -15,29 +15,27 @@ export function AgentIADashboard({ agentId }: Props) {
   const { data: counts, isLoading, isError, refetch } = useQuery({
     queryKey: ['ai-dashboard-counts', agentId],
     queryFn: async () => {
-      const assignmentsP = supabase.from('ai_agent_assignments').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId).eq('status', 'active');
-      const missionsP = supabase.from('search_missions').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId).eq('status', 'active');
-      const runsTodayP = supabase.from('mission_execution_runs').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId).gte('started_at', new Date().toISOString().split('T')[0]);
-      const resultsP = supabase.from('property_results').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId).eq('result_status', 'nouveau');
-      const offersP = supabase.from('client_offer_messages').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId);
-      const visitsP = supabase.from('visit_requests').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId);
-      const pendingP = supabase.from('approval_requests').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId).eq('status', 'pending');
-      const errorsP = supabase.from('ai_agent_activity_logs').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId).not('error_message', 'is', null);
-
-      const [assignments, missions, runsToday, results, offers, visits, pending, errors] = await Promise.all([
-        assignmentsP, missionsP, runsTodayP, resultsP, offersP, visitsP, pendingP, errorsP
-      ] as const);
-
-      return {
-        assignments: assignments.count ?? 0,
-        missions: missions.count ?? 0,
-        runsToday: runsToday.count ?? 0,
-        newResults: results.count ?? 0,
-        offers: offers.count ?? 0,
-        visits: visits.count ?? 0,
-        pendingApprovals: pending.count ?? 0,
-        errors: errors.count ?? 0,
+      const countQuery = async (table: string, filters: Record<string, string> = {}) => {
+        let q = supabase.from(table as any).select('id', { count: 'exact', head: true });
+        for (const [key, val] of Object.entries(filters)) {
+          q = q.eq(key, val) as any;
+        }
+        const { count } = await q;
+        return count ?? 0;
       };
+
+      const [assignments, missions, runsToday, newResults, offers, visits, pendingApprovals, errors] = await Promise.all([
+        countQuery('ai_agent_assignments', { ai_agent_id: agentId, status: 'active' }),
+        countQuery('search_missions', { ai_agent_id: agentId, status: 'active' }),
+        supabase.from('mission_execution_runs').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId).gte('started_at', new Date().toISOString().split('T')[0]).then(r => r.count ?? 0),
+        countQuery('property_results', { ai_agent_id: agentId, result_status: 'nouveau' }),
+        countQuery('client_offer_messages', { ai_agent_id: agentId }),
+        countQuery('visit_requests', { ai_agent_id: agentId }),
+        countQuery('approval_requests', { ai_agent_id: agentId, status: 'pending' }),
+        supabase.from('ai_agent_activity_logs').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId).not('error_message', 'is', null).then(r => r.count ?? 0),
+      ]);
+
+      return { assignments, missions, runsToday, newResults, offers, visits, pendingApprovals, errors };
     },
     refetchOnWindowFocus: false,
   });
