@@ -77,7 +77,7 @@ const AdminContacts = lazy(() => import("./pages/admin/Contacts"));
 const AdminAnalytics = lazy(() => import("./pages/admin/Analytics"));
 const AdminSalaires = lazy(() => import("./pages/admin/Salaires"));
 const AdminMetaLeads = lazy(() => import("./pages/admin/MetaLeads"));
-const AdminOpenClaw = lazy(() => import("./pages/admin/OpenClaw"));
+const AdminAgentIA = lazy(() => import("./pages/admin/AgentIA"));
 
 // Agent pages
 const AgentDashboard = lazy(() => import("./pages/agent/Dashboard"));
