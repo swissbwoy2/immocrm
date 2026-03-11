@@ -43,12 +43,15 @@ export default function MandatV3Step2Search({ data, onChange }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Zone / Région</Label>
-          <Select value={data.zone_recherche} onValueChange={(v) => onChange({ zone_recherche: v })}>
-            <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
-            <SelectContent>
-              {REGIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Input
+            list="regions-list"
+            value={data.zone_recherche}
+            onChange={(e) => onChange({ zone_recherche: e.target.value })}
+            placeholder="Tapez ou sélectionnez une région (ex: Vaud)"
+          />
+          <datalist id="regions-list">
+            {REGIONS.map((r) => <option key={r} value={r} />)}
+          </datalist>
         </div>
         <div className="space-y-2">
           <Label>Nombre de pièces minimum</Label>
