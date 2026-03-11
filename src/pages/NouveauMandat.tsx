@@ -74,7 +74,7 @@ export default function NouveauMandat() {
         return true; // Candidats optionnels
       case 4: {
         const baseValid = !!(formData.decouverte_agence && formData.type_bien &&
-          formData.region_recherche && formData.budget_max > 0);
+          formData.budget_max > 0);
         if (formData.type_bien === 'Local commercial') {
           return baseValid && !!(formData.surface_souhaitee && formData.surface_souhaitee > 0 &&
             formData.affectation_commerciale && formData.etage_souhaite);
