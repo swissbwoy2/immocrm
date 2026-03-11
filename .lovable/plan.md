@@ -1,47 +1,42 @@
 
 
-## Step 1 — SQL Migration: Logisorama AI Relocation Module
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-### Summary
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
-Single SQL migration creating 10 enums, 9 tables, ALTER on `ai_agent_assignments`, indexes, RLS policies, 3 DB functions, and triggers. No frontend or edge function changes.
+### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
-### Migration details
+### Modifications
 
-**10 enums** as specified (mission_status, mission_frequency, execution_run_status, property_result_status, score_label, offer_status, visit_request_status, approval_status, approval_type, connector_type).
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
 
-**9 tables** — all with `ENABLE ROW LEVEL SECURITY`, `created_at timestamptz default now()`, and `updated_at` where mutable:
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
 
-1. `source_connectors` (standalone, no FK deps)
-2. `search_missions` (FK clients, ai_agents, ai_agent_assignments)
-3. `mission_execution_runs` (FK search_missions)
-4. `property_results` (FK search_missions, clients, ai_agents; self-ref duplicate_of_id; monetary as numeric; images as jsonb)
-5. `property_result_scores` (FK property_results, unique on property_result_id)
-6. `client_offer_messages` (FK clients, ai_agents; property_result_ids uuid[])
-7. `visit_requests` (FK property_results, clients, ai_agents, search_missions)
-8. `approval_requests` (generic reference_id + reference_table)
-9. `ai_agent_activity_logs` (full audit, nullable FKs)
+### Detail technique
 
-**ALTER `ai_agent_assignments`** — add 7 columns: `urgency_level text`, `allowed_sources text[]`, `allowed_actions jsonb`, `approval_required_for_offers bool default true`, `approval_required_for_visits bool default true`, `auto_send_enabled bool default false`, `auto_visit_booking_enabled bool default false`.
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
+```
 
-**Indexes on `property_results`**: client_id, mission_id, ai_agent_id, external_listing_id, source_name, result_status, plus unique constraint on (source_name, external_listing_id, client_id) for dedup.
-
-**RLS** — per table:
-- Admin: full CRUD via `has_role(auth.uid(), 'admin')`
-- Agent IA: SELECT (+ INSERT on property_results, activity_logs, execution_runs) scoped via `EXISTS (SELECT 1 FROM ai_agents WHERE id = <table>.ai_agent_id AND user_id = auth.uid())`
-- source_connectors: admin CRUD only, authenticated SELECT for all (reference data)
-
-**3 DB functions** (SECURITY DEFINER, plpgsql):
-1. `calculate_match_score(p_property_result_id uuid, p_criteria jsonb)` — reads property, scores per criteria dimension, upserts score row, updates property_results
-2. `log_ai_activity(...)` — simple INSERT wrapper
-3. `create_approval_request(...)` — INSERT + returns uuid
-
-**Triggers**:
-- `update_updated_at` reusing existing `update_updated_at_column()` on search_missions, visit_requests, property_results, client_offer_messages, approval_requests
-- `trg_ai_activity_log_activity` on ai_agent_activity_logs INSERT calling existing `update_ai_agent_last_activity()`
-
-### No changes
-- No edge functions
-- No frontend
-- Legacy tables untouched
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 
