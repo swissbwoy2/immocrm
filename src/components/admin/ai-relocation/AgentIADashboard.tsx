@@ -27,7 +27,7 @@ export function AgentIADashboard({ agentId }: Props) {
       const [assignments, missions, runsToday, newResults, offers, visits, pendingApprovals, errors] = await Promise.all([
         countQuery('ai_agent_assignments', { ai_agent_id: agentId, status: 'active' }),
         countQuery('search_missions', { ai_agent_id: agentId, status: 'active' }),
-        supabase.from('mission_execution_runs').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId).gte('started_at', new Date().toISOString().split('T')[0]).then(r => r.count ?? 0),
+        (supabase.from('mission_execution_runs').select('id', { count: 'exact', head: true }).eq('ai_agent_id', agentId) as any).gte('started_at', new Date().toISOString().split('T')[0]).then((r: any) => r.count ?? 0),
         countQuery('property_results', { ai_agent_id: agentId, result_status: 'nouveau' }),
         countQuery('client_offer_messages', { ai_agent_id: agentId }),
         countQuery('visit_requests', { ai_agent_id: agentId }),
