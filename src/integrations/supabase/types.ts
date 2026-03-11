@@ -366,39 +366,150 @@ export type Database = {
           },
         ]
       }
+      ai_agent_activity_logs: {
+        Row: {
+          action_source: string | null
+          action_type: string
+          ai_agent_id: string
+          client_id: string | null
+          connector_used: string | null
+          content_generated: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          mission_id: string | null
+          property_result_id: string | null
+          validated_by: string | null
+          validation_required: boolean | null
+          validation_result: string | null
+        }
+        Insert: {
+          action_source?: string | null
+          action_type: string
+          ai_agent_id: string
+          client_id?: string | null
+          connector_used?: string | null
+          content_generated?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          mission_id?: string | null
+          property_result_id?: string | null
+          validated_by?: string | null
+          validation_required?: boolean | null
+          validation_result?: string | null
+        }
+        Update: {
+          action_source?: string | null
+          action_type?: string
+          ai_agent_id?: string
+          client_id?: string | null
+          connector_used?: string | null
+          content_generated?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          mission_id?: string | null
+          property_result_id?: string | null
+          validated_by?: string | null
+          validation_required?: boolean | null
+          validation_result?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_activity_logs_ai_agent_id_fkey"
+            columns: ["ai_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_activity_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_activity_logs_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "search_missions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_activity_logs_property_result_id_fkey"
+            columns: ["property_result_id"]
+            isOneToOne: false
+            referencedRelation: "property_results"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_activity_logs_validated_by_fkey"
+            columns: ["validated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_agent_assignments: {
         Row: {
           ai_agent_id: string
+          allowed_actions: Json | null
+          allowed_sources: string[] | null
+          approval_required_for_offers: boolean
+          approval_required_for_visits: boolean
           assigned_at: string
           assigned_by: string | null
+          auto_send_enabled: boolean
+          auto_visit_booking_enabled: boolean
           client_id: string
           created_at: string
           id: string
           notes: string | null
           priority: string | null
           status: string
+          urgency_level: string | null
         }
         Insert: {
           ai_agent_id: string
+          allowed_actions?: Json | null
+          allowed_sources?: string[] | null
+          approval_required_for_offers?: boolean
+          approval_required_for_visits?: boolean
           assigned_at?: string
           assigned_by?: string | null
+          auto_send_enabled?: boolean
+          auto_visit_booking_enabled?: boolean
           client_id: string
           created_at?: string
           id?: string
           notes?: string | null
           priority?: string | null
           status?: string
+          urgency_level?: string | null
         }
         Update: {
           ai_agent_id?: string
+          allowed_actions?: Json | null
+          allowed_sources?: string[] | null
+          approval_required_for_offers?: boolean
+          approval_required_for_visits?: boolean
           assigned_at?: string
           assigned_by?: string | null
+          auto_send_enabled?: boolean
+          auto_visit_booking_enabled?: boolean
           client_id?: string
           created_at?: string
           id?: string
           notes?: string | null
           priority?: string | null
           status?: string
+          urgency_level?: string | null
         }
         Relationships: [
           {
@@ -1367,6 +1478,82 @@ export type Database = {
         }
         Relationships: []
       }
+      approval_requests: {
+        Row: {
+          ai_agent_id: string | null
+          client_id: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_notes: string | null
+          description: string | null
+          id: string
+          payload: Json | null
+          reference_id: string
+          reference_table: string
+          request_type: Database["public"]["Enums"]["approval_type"]
+          status: Database["public"]["Enums"]["approval_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          ai_agent_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_notes?: string | null
+          description?: string | null
+          id?: string
+          payload?: Json | null
+          reference_id: string
+          reference_table: string
+          request_type: Database["public"]["Enums"]["approval_type"]
+          status?: Database["public"]["Enums"]["approval_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          ai_agent_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_notes?: string | null
+          description?: string | null
+          id?: string
+          payload?: Json | null
+          reference_id?: string
+          reference_table?: string
+          request_type?: Database["public"]["Enums"]["approval_type"]
+          status?: Database["public"]["Enums"]["approval_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_requests_ai_agent_id_fkey"
+            columns: ["ai_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assurances_immeuble: {
         Row: {
           assureur: string
@@ -2288,6 +2475,82 @@ export type Database = {
           },
           {
             foreignKeyName: "client_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_offer_messages: {
+        Row: {
+          ai_agent_id: string
+          approval_required: boolean
+          approved_at: string | null
+          approved_by: string | null
+          channel: string | null
+          client_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          message_body: string | null
+          message_subject: string | null
+          property_result_ids: string[] | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["offer_status"]
+          updated_at: string
+        }
+        Insert: {
+          ai_agent_id: string
+          approval_required?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          channel?: string | null
+          client_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_body?: string | null
+          message_subject?: string | null
+          property_result_ids?: string[] | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["offer_status"]
+          updated_at?: string
+        }
+        Update: {
+          ai_agent_id?: string
+          approval_required?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          channel?: string | null
+          client_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_body?: string | null
+          message_subject?: string | null
+          property_result_ids?: string[] | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["offer_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_offer_messages_ai_agent_id_fkey"
+            columns: ["ai_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_offer_messages_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_offer_messages_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
@@ -5563,6 +5826,59 @@ export type Database = {
         }
         Relationships: []
       }
+      mission_execution_runs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          duplicates_detected: number
+          error_message: string | null
+          execution_metadata: Json | null
+          id: string
+          mission_id: string
+          results_found: number
+          results_new: number
+          sources_searched: string[] | null
+          started_at: string
+          status: Database["public"]["Enums"]["execution_run_status"]
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          duplicates_detected?: number
+          error_message?: string | null
+          execution_metadata?: Json | null
+          id?: string
+          mission_id: string
+          results_found?: number
+          results_new?: number
+          sources_searched?: string[] | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["execution_run_status"]
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          duplicates_detected?: number
+          error_message?: string | null
+          execution_metadata?: Json | null
+          id?: string
+          mission_id?: string
+          results_found?: number
+          results_new?: number
+          sources_searched?: string[] | null
+          started_at?: string
+          status?: Database["public"]["Enums"]["execution_run_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mission_execution_runs_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "search_missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -6177,6 +6493,202 @@ export type Database = {
           },
         ]
       }
+      property_result_scores: {
+        Row: {
+          availability_score: number | null
+          budget_score: number | null
+          calculated_at: string
+          id: string
+          location_score: number | null
+          mandatory_criteria_score: number | null
+          overall_score: number | null
+          preferred_criteria_score: number | null
+          property_result_id: string
+          rooms_score: number | null
+          score_explanation: string | null
+          score_label: Database["public"]["Enums"]["score_label"] | null
+          surface_score: number | null
+          type_score: number | null
+        }
+        Insert: {
+          availability_score?: number | null
+          budget_score?: number | null
+          calculated_at?: string
+          id?: string
+          location_score?: number | null
+          mandatory_criteria_score?: number | null
+          overall_score?: number | null
+          preferred_criteria_score?: number | null
+          property_result_id: string
+          rooms_score?: number | null
+          score_explanation?: string | null
+          score_label?: Database["public"]["Enums"]["score_label"] | null
+          surface_score?: number | null
+          type_score?: number | null
+        }
+        Update: {
+          availability_score?: number | null
+          budget_score?: number | null
+          calculated_at?: string
+          id?: string
+          location_score?: number | null
+          mandatory_criteria_score?: number | null
+          overall_score?: number | null
+          preferred_criteria_score?: number | null
+          property_result_id?: string
+          rooms_score?: number | null
+          score_explanation?: string | null
+          score_label?: Database["public"]["Enums"]["score_label"] | null
+          surface_score?: number | null
+          type_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_result_scores_property_result_id_fkey"
+            columns: ["property_result_id"]
+            isOneToOne: true
+            referencedRelation: "property_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_results: {
+        Row: {
+          address: string | null
+          ai_agent_id: string
+          application_channel: string | null
+          availability_date: string | null
+          canton: string | null
+          charges_amount: number | null
+          city: string | null
+          client_id: string
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          description: string | null
+          duplicate_of_id: string | null
+          duplicate_status: boolean
+          external_listing_id: string | null
+          extraction_timestamp: string | null
+          id: string
+          images: Json | null
+          living_area: number | null
+          match_reason: string | null
+          match_score: number | null
+          mission_id: string | null
+          number_of_rooms: number | null
+          postal_code: string | null
+          rent_amount: number | null
+          result_status: Database["public"]["Enums"]["property_result_status"]
+          source_name: string | null
+          source_url: string | null
+          title: string
+          total_amount: number | null
+          updated_at: string
+          visit_booking_link: string | null
+        }
+        Insert: {
+          address?: string | null
+          ai_agent_id: string
+          application_channel?: string | null
+          availability_date?: string | null
+          canton?: string | null
+          charges_amount?: number | null
+          city?: string | null
+          client_id: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          duplicate_of_id?: string | null
+          duplicate_status?: boolean
+          external_listing_id?: string | null
+          extraction_timestamp?: string | null
+          id?: string
+          images?: Json | null
+          living_area?: number | null
+          match_reason?: string | null
+          match_score?: number | null
+          mission_id?: string | null
+          number_of_rooms?: number | null
+          postal_code?: string | null
+          rent_amount?: number | null
+          result_status?: Database["public"]["Enums"]["property_result_status"]
+          source_name?: string | null
+          source_url?: string | null
+          title: string
+          total_amount?: number | null
+          updated_at?: string
+          visit_booking_link?: string | null
+        }
+        Update: {
+          address?: string | null
+          ai_agent_id?: string
+          application_channel?: string | null
+          availability_date?: string | null
+          canton?: string | null
+          charges_amount?: number | null
+          city?: string | null
+          client_id?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          description?: string | null
+          duplicate_of_id?: string | null
+          duplicate_status?: boolean
+          external_listing_id?: string | null
+          extraction_timestamp?: string | null
+          id?: string
+          images?: Json | null
+          living_area?: number | null
+          match_reason?: string | null
+          match_score?: number | null
+          mission_id?: string | null
+          number_of_rooms?: number | null
+          postal_code?: string | null
+          rent_amount?: number | null
+          result_status?: Database["public"]["Enums"]["property_result_status"]
+          source_name?: string | null
+          source_url?: string | null
+          title?: string
+          total_amount?: number | null
+          updated_at?: string
+          visit_booking_link?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_results_ai_agent_id_fkey"
+            columns: ["ai_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_results_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_results_duplicate_of_id_fkey"
+            columns: ["duplicate_of_id"]
+            isOneToOne: false
+            referencedRelation: "property_results"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_results_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "search_missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proprietaires: {
         Row: {
           adresse: string | null
@@ -6533,6 +7045,85 @@ export type Database = {
           },
         ]
       }
+      search_missions: {
+        Row: {
+          ai_agent_id: string
+          allowed_sources: string[] | null
+          assignment_id: string | null
+          client_id: string
+          created_at: string
+          criteria_snapshot: Json
+          frequency: Database["public"]["Enums"]["mission_frequency"]
+          id: string
+          last_run_at: string | null
+          next_run_at: string | null
+          offers_sent: number
+          results_found: number
+          results_retained: number
+          status: Database["public"]["Enums"]["mission_status"]
+          updated_at: string
+          visits_proposed: number
+        }
+        Insert: {
+          ai_agent_id: string
+          allowed_sources?: string[] | null
+          assignment_id?: string | null
+          client_id: string
+          created_at?: string
+          criteria_snapshot?: Json
+          frequency?: Database["public"]["Enums"]["mission_frequency"]
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string | null
+          offers_sent?: number
+          results_found?: number
+          results_retained?: number
+          status?: Database["public"]["Enums"]["mission_status"]
+          updated_at?: string
+          visits_proposed?: number
+        }
+        Update: {
+          ai_agent_id?: string
+          allowed_sources?: string[] | null
+          assignment_id?: string | null
+          client_id?: string
+          created_at?: string
+          criteria_snapshot?: Json
+          frequency?: Database["public"]["Enums"]["mission_frequency"]
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string | null
+          offers_sent?: number
+          results_found?: number
+          results_retained?: number
+          status?: Database["public"]["Enums"]["mission_status"]
+          updated_at?: string
+          visits_proposed?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_missions_ai_agent_id_fkey"
+            columns: ["ai_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "search_missions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agent_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "search_missions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sent_emails: {
         Row: {
           attachments: Json | null
@@ -6689,6 +7280,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      source_connectors: {
+        Row: {
+          base_url: string | null
+          config: Json | null
+          connector_type: Database["public"]["Enums"]["connector_type"]
+          created_at: string
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          name: string
+          rate_limit_per_hour: number | null
+        }
+        Insert: {
+          base_url?: string | null
+          config?: Json | null
+          connector_type?: Database["public"]["Enums"]["connector_type"]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name: string
+          rate_limit_per_hour?: number | null
+        }
+        Update: {
+          base_url?: string | null
+          config?: Json | null
+          connector_type?: Database["public"]["Enums"]["connector_type"]
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name?: string
+          rate_limit_per_hour?: number | null
+        }
+        Relationships: []
       }
       tickets_techniques: {
         Row: {
@@ -7111,6 +7738,115 @@ export type Database = {
           },
         ]
       }
+      visit_requests: {
+        Row: {
+          ai_agent_id: string
+          approval_required: boolean
+          approved_at: string | null
+          approved_by: string | null
+          assigned_to: string | null
+          client_id: string
+          confirmed_date: string | null
+          contact_message: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          mission_id: string | null
+          property_result_id: string
+          proposed_slots: Json | null
+          response_received_at: string | null
+          sent_at: string | null
+          source_response: string | null
+          status: Database["public"]["Enums"]["visit_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          ai_agent_id: string
+          approval_required?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_to?: string | null
+          client_id: string
+          confirmed_date?: string | null
+          contact_message?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          mission_id?: string | null
+          property_result_id: string
+          proposed_slots?: Json | null
+          response_received_at?: string | null
+          sent_at?: string | null
+          source_response?: string | null
+          status?: Database["public"]["Enums"]["visit_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          ai_agent_id?: string
+          approval_required?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          assigned_to?: string | null
+          client_id?: string
+          confirmed_date?: string | null
+          contact_message?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          mission_id?: string | null
+          property_result_id?: string
+          proposed_slots?: Json | null
+          response_received_at?: string | null
+          sent_at?: string | null
+          source_response?: string | null
+          status?: Database["public"]["Enums"]["visit_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visit_requests_ai_agent_id_fkey"
+            columns: ["ai_agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_requests_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_requests_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "search_missions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_requests_property_result_id_fkey"
+            columns: ["property_result_id"]
+            isOneToOne: false
+            referencedRelation: "property_results"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visites: {
         Row: {
           adresse: string
@@ -7334,6 +8070,10 @@ export type Database = {
       activate_agent_on_login: { Args: never; Returns: undefined }
       activate_apporteur_on_login: { Args: never; Returns: undefined }
       activate_coursier_on_login: { Args: never; Returns: undefined }
+      calculate_match_score: {
+        Args: { p_criteria: Json; p_property_result_id: string }
+        Returns: undefined
+      }
       can_agent_create_conversation: {
         Args: { _agent_id: string; _client_id: string }
         Returns: boolean
@@ -7341,6 +8081,19 @@ export type Database = {
       check_demande_by_email: {
         Args: { check_email: string }
         Returns: boolean
+      }
+      create_approval_request: {
+        Args: {
+          p_ai_agent_id?: string
+          p_client_id?: string
+          p_description?: string
+          p_payload?: Json
+          p_reference_id: string
+          p_reference_table: string
+          p_request_type: Database["public"]["Enums"]["approval_type"]
+          p_title: string
+        }
+        Returns: string
       }
       create_notification: {
         Args: {
@@ -7409,6 +8162,22 @@ export type Database = {
       is_proprietaire_owner: {
         Args: { _proprietaire_id: string }
         Returns: boolean
+      }
+      log_ai_activity: {
+        Args: {
+          p_action_source?: string
+          p_action_type: string
+          p_ai_agent_id: string
+          p_client_id?: string
+          p_connector_used?: string
+          p_content_generated?: string
+          p_error_message?: string
+          p_metadata?: Json
+          p_mission_id?: string
+          p_property_result_id?: string
+          p_validation_required?: boolean
+        }
+        Returns: string
       }
       log_mandate_event: {
         Args: {
@@ -7559,6 +8328,15 @@ export type Database = {
         | "annonceur"
         | "coursier"
         | "agent_ia"
+      approval_status: "pending" | "approved" | "rejected" | "modified"
+      approval_type: "offer" | "visit" | "external_action"
+      connector_type:
+        | "web_scraper"
+        | "api"
+        | "flatfox"
+        | "homegate"
+        | "immoscout"
+        | "autre"
       contact_type:
         | "proprietaire"
         | "gerant_regie"
@@ -7568,6 +8346,44 @@ export type Database = {
         | "regie"
         | "notaire"
         | "autre"
+      execution_run_status: "running" | "completed" | "failed"
+      mission_frequency: "quotidien" | "hebdomadaire" | "manuel"
+      mission_status:
+        | "en_attente"
+        | "active"
+        | "en_pause"
+        | "terminee"
+        | "suspendue"
+        | "erreur"
+      offer_status:
+        | "brouillon"
+        | "pret"
+        | "en_attente_validation"
+        | "envoye"
+        | "refuse"
+        | "erreur"
+      property_result_status:
+        | "nouveau"
+        | "retenu"
+        | "rejete"
+        | "envoye_au_client"
+        | "candidature_preparee"
+        | "visite_proposee"
+        | "visite_demandee"
+        | "visite_confirmee"
+        | "archive"
+      score_label: "excellent" | "bon" | "moyen" | "faible"
+      visit_request_status:
+        | "non_traite"
+        | "a_proposer"
+        | "demande_prete"
+        | "en_attente_validation"
+        | "demande_envoyee"
+        | "en_attente_reponse"
+        | "visite_confirmee"
+        | "visite_refusee"
+        | "visite_annulee"
+        | "visite_a_effectuer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -7705,6 +8521,16 @@ export const Constants = {
         "coursier",
         "agent_ia",
       ],
+      approval_status: ["pending", "approved", "rejected", "modified"],
+      approval_type: ["offer", "visit", "external_action"],
+      connector_type: [
+        "web_scraper",
+        "api",
+        "flatfox",
+        "homegate",
+        "immoscout",
+        "autre",
+      ],
       contact_type: [
         "proprietaire",
         "gerant_regie",
@@ -7714,6 +8540,48 @@ export const Constants = {
         "regie",
         "notaire",
         "autre",
+      ],
+      execution_run_status: ["running", "completed", "failed"],
+      mission_frequency: ["quotidien", "hebdomadaire", "manuel"],
+      mission_status: [
+        "en_attente",
+        "active",
+        "en_pause",
+        "terminee",
+        "suspendue",
+        "erreur",
+      ],
+      offer_status: [
+        "brouillon",
+        "pret",
+        "en_attente_validation",
+        "envoye",
+        "refuse",
+        "erreur",
+      ],
+      property_result_status: [
+        "nouveau",
+        "retenu",
+        "rejete",
+        "envoye_au_client",
+        "candidature_preparee",
+        "visite_proposee",
+        "visite_demandee",
+        "visite_confirmee",
+        "archive",
+      ],
+      score_label: ["excellent", "bon", "moyen", "faible"],
+      visit_request_status: [
+        "non_traite",
+        "a_proposer",
+        "demande_prete",
+        "en_attente_validation",
+        "demande_envoyee",
+        "en_attente_reponse",
+        "visite_confirmee",
+        "visite_refusee",
+        "visite_annulee",
+        "visite_a_effectuer",
       ],
     },
   },
