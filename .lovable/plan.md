@@ -1,20 +1,42 @@
 
 
-## Correction — Permettre la saisie manuelle de la région dans les formulaires client
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-### Problème
-Les formulaires de mandat client (inscription/critères de recherche) utilisent soit un `Select` fermé avec une liste fixe de régions, soit le `GooglePlacesAutocomplete` qui dépend de l'API Google (actuellement en pause). Les clients ne peuvent pas taper manuellement une région comme "Vaud".
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
-### Fichiers à modifier
+### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
-1. **`src/components/mandat-v3/MandatV3Step2Search.tsx`** (formulaire mandat V3)
-   - Remplacer le `Select` pour "Zone / Région" par un `Input` texte libre avec une `datalist` HTML contenant les suggestions REGIONS
-   - Le client peut taper librement ou choisir dans la liste
+### Modifications
 
-2. **`src/components/mandat/MandatFormStep4.tsx`** (formulaire mandat classique)
-   - Le `GooglePlacesAutocomplete` est déjà modifié avec un bouton "Ajouter" mais dépend toujours de Google
-   - Ajouter un fallback : si Google n'est pas disponible, afficher un `Input` avec `datalist` des régions prédéfinies pour que le client puisse taper librement
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
 
-### Approche technique
-Utiliser un simple `<Input>` + `<datalist>` natif HTML : le client voit les suggestions mais peut taper n'importe quoi (ex: "Vaud", "Canton de Vaud", etc.). Pas de dépendance API.
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
+
+### Detail technique
+
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
+```
+
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 
