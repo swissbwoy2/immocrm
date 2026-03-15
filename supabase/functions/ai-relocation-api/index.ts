@@ -728,7 +728,7 @@ async function handleMissionsRun(
 
     await adminClient
       .from('mission_execution_runs')
-      .update({ status: 'failed', completed_at: new Date().toISOString() })
+      .update({ status: 'failed', completed_at: new Date().toISOString(), error_message: String(err) })
       .eq('id', run.id);
 
     return jsonResponse({
