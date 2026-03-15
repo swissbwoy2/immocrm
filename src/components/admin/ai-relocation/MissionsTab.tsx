@@ -125,7 +125,7 @@ export function MissionsTab({ agentId }: Props) {
                 <TableRow key={m.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedMission(m)}>
                   <TableCell className="font-medium">{getClientName(m)}</TableCell>
                   <TableCell className="capitalize">{m.frequency || '—'}</TableCell>
-                  <TableCell className="text-xs max-w-[150px] truncate">{m.sources?.join(', ') || '—'}</TableCell>
+                  <TableCell className="text-xs max-w-[150px] truncate">{m.allowed_sources?.join(', ') || '—'}</TableCell>
                   <TableCell><StatusBadge type="mission" value={m.status} /></TableCell>
                   <TableCell className="text-xs">
                     {m.last_run_at ? format(new Date(m.last_run_at), 'dd/MM HH:mm', { locale: fr }) : '—'}

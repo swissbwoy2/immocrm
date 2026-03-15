@@ -159,12 +159,14 @@ export function SearchResultsTab({ agentId }: Props) {
                     <TableCell className="text-xs">{getClientName(r)}</TableCell>
                     <TableCell className="text-xs">{r.source_name || '—'}</TableCell>
                     <TableCell className="text-xs">{r.city || '—'}</TableCell>
-                    <TableCell className="text-xs">{r.rent ? `${r.rent} CHF` : '—'}</TableCell>
-                    <TableCell className="text-xs">{r.rooms ?? '—'}</TableCell>
+                    <TableCell className="text-xs">{r.rent_amount ? `${r.rent_amount} CHF` : '—'}</TableCell>
+                    <TableCell className="text-xs">{r.number_of_rooms ?? '—'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        {r.total_score != null && <span className="text-xs font-medium">{r.total_score}</span>}
-                        <StatusBadge type="score" value={r.score_label} />
+                        {((r as any).property_result_scores?.overall_score ?? r.match_score) != null && (
+                          <span className="text-xs font-medium">{(r as any).property_result_scores?.overall_score ?? r.match_score}</span>
+                        )}
+                        <StatusBadge type="score" value={(r as any).property_result_scores?.score_label} />
                       </div>
                     </TableCell>
                     <TableCell><StatusBadge type="result" value={r.result_status} /></TableCell>
