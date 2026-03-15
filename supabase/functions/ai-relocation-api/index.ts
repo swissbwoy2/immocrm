@@ -663,7 +663,7 @@ async function handleMissionsRun(
       mission_id: missionId,
       status: 'running',
       started_at: new Date().toISOString(),
-      sources_used: body.sources_used ?? [],
+      sources_searched: body.sources_searched ?? body.sources_used ?? [],
     })
     .select()
     .single();
