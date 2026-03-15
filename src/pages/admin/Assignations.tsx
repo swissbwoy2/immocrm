@@ -88,7 +88,8 @@ export default function Assignations() {
       const { data: clientProfilesData, error: clientProfilesError } = await supabase
         .from('profiles')
         .select('*')
-        .in('id', clientUserIds);
+        .in('id', clientUserIds)
+        .limit(15000);
 
       if (clientProfilesError) throw clientProfilesError;
 
