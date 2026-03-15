@@ -371,6 +371,53 @@ async function handleMissionsCreate(
 
 // === SCRAPING & AI EXTRACTION ENGINE ===
 
+// --- Error classification ---
+type ErrorType = 'timeout' | 'network' | 'source_invalid' | 'scraper_error'
+  | 'ai_extraction_error' | 'empty_result' | 'rate_limited' | 'unknown';
+
+function classifyError(err: unknown, httpStatus?: number): { type: ErrorType; message: string; retryable: boolean } {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (err instanceof DOMException && err.name === 'AbortError') return { type: 'timeout', message: 'Request timed out', retryable: true };
+  if (err instanceof TypeError && msg.includes('fetch')) return { type: 'network', message: msg, retryable: true };
+  if (httpStatus === 429) return { type: 'rate_limited', message: 'Rate limited (429)', retryable: true };
+  if (httpStatus && httpStatus >= 500) return { type: 'scraper_error', message: `Server error (${httpStatus})`, retryable: true };
+  if (httpStatus && httpStatus >= 400) return { type: 'scraper_error', message: `Client error (${httpStatus})`, retryable: false };
+  return { type: 'unknown', message: msg, retryable: false };
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function isValidUrl(urlStr: string): boolean {
+  try { new URL(urlStr); return true; } catch { return false; }
+}
+
+// --- Types ---
+interface ScrapeResult {
+  markdown: string | null;
+  status: number;
+  error_type?: ErrorType;
+  error_message?: string;
+}
+
+interface ExtractionResult {
+  listings: ResultRow[];
+  error_type?: ErrorType;
+  error_message?: string;
+}
+
+interface SourceExecMeta {
+  name: string;
+  url: string;
+  status: 'success' | 'failed' | 'empty';
+  error_type?: ErrorType;
+  error_message?: string;
+  listings_count: number;
+  duration_ms: number;
+  retried: boolean;
+}
+
 interface SearchPortal {
   name: string;
   buildUrl: (city: string, rooms: number | null, budget: number | null, type: string | null) => string;
@@ -448,9 +495,18 @@ const SEARCH_PORTALS: SearchPortal[] = [
   },
 ];
 
-async function scrapeUrl(url: string): Promise<string | null> {
+const SCRAPE_TIMEOUT_MS = 30_000;
+const AI_EXTRACTION_TIMEOUT_MS = 60_000;
+const INTER_SOURCE_DELAY_MS = 1500;
+
+async function scrapeUrl(url: string): Promise<ScrapeResult> {
   const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
-  if (!apiKey) { console.error('FIRECRAWL_API_KEY not configured'); return null; }
+  if (!apiKey) {
+    return { markdown: null, status: 0, error_type: 'scraper_error', error_message: 'FIRECRAWL_API_KEY not configured' };
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SCRAPE_TIMEOUT_MS);
 
   try {
     const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
@@ -466,23 +522,32 @@ async function scrapeUrl(url: string): Promise<string | null> {
         waitFor: 3000,
         location: { country: 'CH', languages: ['fr'] },
       }),
+      signal: controller.signal,
     });
 
-    const data = await response.json();
+    clearTimeout(timer);
+
     if (!response.ok) {
-      console.error(`Firecrawl error for ${url}:`, data);
-      return null;
+      const errData = await response.json().catch(() => ({}));
+      const classified = classifyError(new Error(errData?.error || `HTTP ${response.status}`), response.status);
+      return { markdown: null, status: response.status, error_type: classified.type, error_message: classified.message };
     }
-    return data?.data?.markdown || data?.markdown || null;
+
+    const data = await response.json();
+    const markdown = data?.data?.markdown || data?.markdown || null;
+    return { markdown, status: response.status };
   } catch (err) {
-    console.error(`Firecrawl exception for ${url}:`, err);
-    return null;
+    clearTimeout(timer);
+    const classified = classifyError(err);
+    return { markdown: null, status: 0, error_type: classified.type, error_message: classified.message };
   }
 }
 
-async function extractListingsWithAI(markdown: string, sourceName: string, sourceUrl: string): Promise<ResultRow[]> {
+async function extractListingsWithAI(markdown: string, sourceName: string, sourceUrl: string): Promise<ExtractionResult> {
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-  if (!lovableApiKey) { console.error('LOVABLE_API_KEY not configured'); return []; }
+  if (!lovableApiKey) {
+    return { listings: [], error_type: 'ai_extraction_error', error_message: 'LOVABLE_API_KEY not configured' };
+  }
 
   const prompt = `Analyse ce contenu markdown d'une page de résultats immobiliers du site "${sourceName}" et extrais TOUTES les annonces de location trouvées.
 
@@ -507,6 +572,9 @@ Pour chaque annonce, extrais:
 
 Si une information n'est pas disponible, mets null.
 Extrais uniquement des annonces réelles, pas des publicités ou suggestions.`;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), AI_EXTRACTION_TIMEOUT_MS);
 
   try {
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -563,17 +631,21 @@ Extrais uniquement des annonces réelles, pas des publicités ou suggestions.`;
         }],
         tool_choice: { type: 'function', function: { name: 'extract_listings' } },
       }),
+      signal: controller.signal,
     });
+
+    clearTimeout(timer);
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error(`AI extraction failed [${response.status}]:`, errText);
-      return [];
+      return { listings: [], error_type: 'ai_extraction_error', error_message: `AI API error [${response.status}]: ${errText.substring(0, 200)}` };
     }
 
     const data = await response.json();
     const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) return [];
+    if (!toolCall?.function?.arguments) {
+      return { listings: [], error_type: 'ai_extraction_error', error_message: 'No tool call in AI response' };
+    }
 
     const parsed = JSON.parse(toolCall.function.arguments);
     const listings: ResultRow[] = (parsed.listings || []).map((l: Record<string, unknown>) => ({
@@ -598,10 +670,11 @@ Extrais uniquement des annonces réelles, pas des publicités ou suggestions.`;
       extraction_timestamp: new Date().toISOString(),
     }));
 
-    return listings;
+    return { listings };
   } catch (err) {
-    console.error('AI extraction exception:', err);
-    return [];
+    clearTimeout(timer);
+    const classified = classifyError(err);
+    return { listings: [], error_type: classified.type, error_message: classified.message };
   }
 }
 
@@ -637,30 +710,101 @@ async function runAutonomousSearch(
   let totalDuplicates = 0;
   let totalFailed = 0;
   const sourcesUsed: string[] = [];
+  const sourcesMeta: SourceExecMeta[] = [];
 
-  for (const portal of portalsToUse) {
+  for (let i = 0; i < portalsToUse.length; i++) {
+    const portal = portalsToUse[i];
+
+    // Inter-source throttling (skip before first)
+    if (i > 0) {
+      await delay(INTER_SOURCE_DELAY_MS);
+    }
+
+    const startTime = Date.now();
+    const meta: SourceExecMeta = {
+      name: portal.name,
+      url: '',
+      status: 'failed',
+      listings_count: 0,
+      duration_ms: 0,
+      retried: false,
+    };
+
     try {
       const url = portal.buildUrl(city, rooms, budget, typeBien);
-      console.log(`[${portal.name}] Scraping: ${url}`);
+      meta.url = url;
 
-      const markdown = await scrapeUrl(url);
-      if (!markdown) {
-        console.warn(`[${portal.name}] No content returned`);
+      // A3: URL validation
+      if (!isValidUrl(url)) {
+        meta.error_type = 'source_invalid';
+        meta.error_message = `Malformed URL: ${url}`;
+        meta.duration_ms = Date.now() - startTime;
+        sourcesMeta.push(meta);
+        console.warn(`[${portal.name}] Invalid URL: ${url}`);
         continue;
       }
 
-      console.log(`[${portal.name}] Got ${markdown.length} chars, extracting listings...`);
-      const listings = await extractListingsWithAI(markdown, portal.name, url);
-      console.log(`[${portal.name}] Extracted ${listings.length} listings`);
+      console.log(`[${portal.name}] Scraping: ${url}`);
 
-      if (listings.length === 0) continue;
+      // Scrape with possible retry
+      let scrapeResult = await scrapeUrl(url);
+
+      // Retry once if transient
+      if (scrapeResult.error_type && classifyError(new Error(scrapeResult.error_message || ''), scrapeResult.status).retryable) {
+        console.log(`[${portal.name}] Retrying after transient error: ${scrapeResult.error_type}`);
+        meta.retried = true;
+        await delay(2000);
+        scrapeResult = await scrapeUrl(url);
+      }
+
+      if (scrapeResult.error_type || !scrapeResult.markdown) {
+        meta.error_type = scrapeResult.error_type || 'empty_result';
+        meta.error_message = scrapeResult.error_message || 'No content returned';
+        meta.duration_ms = Date.now() - startTime;
+        sourcesMeta.push(meta);
+        console.warn(`[${portal.name}] Scrape failed: ${meta.error_type} - ${meta.error_message}`);
+        continue;
+      }
+
+      console.log(`[${portal.name}] Got ${scrapeResult.markdown.length} chars, extracting listings...`);
+
+      // AI extraction with possible retry
+      let extraction = await extractListingsWithAI(scrapeResult.markdown, portal.name, url);
+
+      if (extraction.error_type && classifyError(new Error(extraction.error_message || '')).retryable) {
+        console.log(`[${portal.name}] Retrying AI extraction after: ${extraction.error_type}`);
+        meta.retried = true;
+        await delay(2000);
+        extraction = await extractListingsWithAI(scrapeResult.markdown, portal.name, url);
+      }
+
+      if (extraction.error_type) {
+        meta.error_type = extraction.error_type;
+        meta.error_message = extraction.error_message;
+        meta.duration_ms = Date.now() - startTime;
+        sourcesMeta.push(meta);
+        console.warn(`[${portal.name}] Extraction failed: ${meta.error_type}`);
+        continue;
+      }
+
+      if (extraction.listings.length === 0) {
+        meta.status = 'empty';
+        meta.error_type = 'empty_result';
+        meta.error_message = 'No listings extracted';
+        meta.duration_ms = Date.now() - startTime;
+        sourcesMeta.push(meta);
+        console.log(`[${portal.name}] No listings extracted`);
+        continue;
+      }
+
+      console.log(`[${portal.name}] Extracted ${extraction.listings.length} listings`);
 
       sourcesUsed.push(portal.name);
       const result = await ingestResults(adminClient, {
         mission_id: missionId,
         client_id: clientId,
         ai_agent_id: aiAgentId,
-        results: listings,
+        results: extraction.listings,
         criteria,
       });
 
@@ -668,14 +812,39 @@ async function runAutonomousSearch(
       totalDuplicates += result.duplicates;
       totalFailed += result.failed;
 
+      meta.status = 'success';
+      meta.listings_count = extraction.listings.length;
+      meta.duration_ms = Date.now() - startTime;
+      sourcesMeta.push(meta);
+
       console.log(`[${portal.name}] Ingested: ${result.inserted} new, ${result.duplicates} dupes, ${result.failed} failed`);
     } catch (err) {
+      const classified = classifyError(err);
+      meta.error_type = classified.type;
+      meta.error_message = classified.message;
+      meta.duration_ms = Date.now() - startTime;
+      sourcesMeta.push(meta);
       console.error(`[${portal.name}] Error:`, err);
       totalFailed++;
     }
   }
 
-  // Update run with results
+  // Build structured execution metadata
+  const executionMetadata = {
+    sources: sourcesMeta,
+    totals: {
+      sources_attempted: portalsToUse.length,
+      sources_succeeded: sourcesMeta.filter(s => s.status === 'success').length,
+      sources_failed: sourcesMeta.filter(s => s.status === 'failed').length,
+      sources_empty: sourcesMeta.filter(s => s.status === 'empty').length,
+      raw_listings_found: sourcesMeta.reduce((sum, s) => sum + s.listings_count, 0),
+      inserted_results: totalInserted,
+      duplicates: totalDuplicates,
+      failed_results: totalFailed,
+    },
+  };
+
+  // Update run with results + metadata
   await adminClient
     .from('mission_execution_runs')
     .update({
@@ -685,6 +854,7 @@ async function runAutonomousSearch(
       results_new: totalInserted,
       duplicates_detected: totalDuplicates,
       sources_searched: sourcesUsed,
+      execution_metadata: executionMetadata,
     })
     .eq('id', runId);
 
