@@ -44,8 +44,8 @@ export function AssignmentDialog({ open, onOpenChange, agentId, assignment }: Pr
       setCreateMission(false);
     } else {
       setClientId('');
-      setPriority('normal');
-      setUrgencyLevel('normal');
+      setPriority('moyenne');
+      setUrgencyLevel('normale');
       setApprovalOffers(true);
       setApprovalVisits(true);
       setAutoSend(false);
