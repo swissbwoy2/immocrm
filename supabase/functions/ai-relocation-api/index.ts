@@ -236,6 +236,24 @@ Deno.serve(async (req) => {
       return await handleLog(adminClient, aiAgent, req);
     }
 
+    // POST /offers/:id/send
+    const offerSendMatch = path.match(/^\/offers\/([^/]+)\/send$/);
+    if (req.method === 'POST' && offerSendMatch) {
+      return await handleOfferSend(adminClient, aiAgent, offerSendMatch[1], authHeader, req);
+    }
+
+    // POST /approvals/:id/approve
+    const approveMatch = path.match(/^\/approvals\/([^/]+)\/approve$/);
+    if (req.method === 'POST' && approveMatch) {
+      return await handleApprovalDecision(adminClient, userId, approveMatch[1], 'approved', req);
+    }
+
+    // POST /approvals/:id/reject
+    const rejectMatch = path.match(/^\/approvals\/([^/]+)\/reject$/);
+    if (req.method === 'POST' && rejectMatch) {
+      return await handleApprovalDecision(adminClient, userId, rejectMatch[1], 'rejected', req);
+    }
+
     return errorResponse(`Unknown endpoint: ${req.method} ${path}`, 404);
   } catch (error) {
     console.error('AI Relocation API error:', error);
@@ -1006,6 +1024,243 @@ async function handleLog(
   });
 
   return jsonResponse({ data: { logged: true } });
+}
+
+// === OFFER SEND HANDLER ===
+
+async function handleOfferSend(
+  adminClient: ReturnType<typeof createClient>,
+  aiAgent: Record<string, unknown>,
+  offerId: string,
+  callerAuthHeader: string,
+  req: Request,
+) {
+  // 1. Fetch offer
+  const { data: offer, error: offerErr } = await adminClient
+    .from('client_offer_messages')
+    .select('*')
+    .eq('id', offerId)
+    .single();
+
+  if (offerErr || !offer) return errorResponse('Offer not found', 404);
+  if (offer.ai_agent_id !== aiAgent.id) return errorResponse('Offer does not belong to this agent', 403);
+  if (offer.status !== 'pret') return errorResponse('Offer must be in "pret" status to send', 400);
+
+  // 2. Parse body
+  const body = await req.json().catch(() => ({}));
+  const selectedPropertyIds: string[] | undefined = body.selected_property_ids;
+  const customMessage: string | undefined = body.custom_message;
+
+  // 3. Fetch client email
+  const { data: client } = await adminClient
+    .from('clients')
+    .select('id, user_id, profiles:user_id(prenom, nom, email)')
+    .eq('id', offer.client_id)
+    .single();
+
+  const clientProfile = (client as any)?.profiles;
+  const clientEmail = clientProfile?.email;
+  const clientName = [clientProfile?.prenom, clientProfile?.nom].filter(Boolean).join(' ') || 'Client';
+
+  if (!clientEmail) return errorResponse('Client email not found', 400);
+
+  // 4. Fetch properties
+  const allPropertyIds: string[] = Array.isArray(offer.property_result_ids) ? offer.property_result_ids : [];
+  let propertyIdsToSend: string[];
+
+  if (selectedPropertyIds && selectedPropertyIds.length > 0) {
+    // Validated subset: only IDs that exist in the offer's property_result_ids
+    propertyIdsToSend = selectedPropertyIds.filter(id => allPropertyIds.includes(id));
+    if (propertyIdsToSend.length === 0) {
+      return errorResponse('None of the selected property IDs match the offer', 400);
+    }
+  } else {
+    propertyIdsToSend = allPropertyIds;
+  }
+
+  let properties: any[] = [];
+  if (propertyIdsToSend.length > 0) {
+    const { data: props } = await adminClient
+      .from('property_results')
+      .select('id, title, address, rent_amount, living_area, number_of_rooms, source_name')
+      .in('id', propertyIdsToSend);
+    properties = props ?? [];
+  }
+
+  // 5. Build HTML email
+  const messageText = customMessage || (offer as any).message_body || '';
+
+  const propertiesHtml = properties.map((p: any) => `
+    <div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:12px;">
+      <h3 style="margin:0 0 8px;color:#1f2937;">${p.title || 'Bien immobilier'}</h3>
+      ${p.address ? `<p style="margin:4px 0;color:#6b7280;">📍 ${p.address}</p>` : ''}
+      <div style="display:flex;gap:16px;margin-top:8px;">
+        ${p.rent_amount ? `<span style="font-weight:600;color:#059669;">CHF ${Number(p.rent_amount).toLocaleString()}</span>` : ''}
+        ${p.living_area ? `<span style="color:#6b7280;">${p.living_area} m²</span>` : ''}
+        ${p.number_of_rooms ? `<span style="color:#6b7280;">${p.number_of_rooms} pièces</span>` : ''}
+      </div>
+      ${p.source_name ? `<p style="margin:8px 0 0;color:#9ca3af;font-size:12px;">Source: ${p.source_name}</p>` : ''}
+    </div>
+  `).join('');
+
+  const emailBody = `
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
+      <h2 style="color:#1f2937;">Bonjour ${clientName},</h2>
+      <p style="color:#4b5563;">Nous avons trouvé des biens correspondant à vos critères de recherche :</p>
+      ${messageText ? `<p style="color:#4b5563;background:#f3f4f6;padding:12px;border-radius:6px;">${messageText}</p>` : ''}
+      ${propertiesHtml}
+      <p style="color:#4b5563;margin-top:24px;">N'hésitez pas à nous contacter pour organiser des visites.</p>
+      <p style="color:#6b7280;">Cordialement,<br/>L'équipe Logisorama</p>
+    </div>
+  `;
+
+  // 6. Call send-smtp-email with caller's JWT
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  try {
+    const smtpResponse = await fetch(`${supabaseUrl}/functions/v1/send-smtp-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': callerAuthHeader,
+      },
+      body: JSON.stringify({
+        recipient_email: clientEmail,
+        recipient_name: clientName,
+        subject: 'Nouvelles offres immobilières pour vous',
+        body_html: emailBody,
+      }),
+    });
+
+    const smtpResult = await smtpResponse.json();
+
+    if (!smtpResponse.ok || !smtpResult.success) {
+      // 7b. On failure
+      await adminClient
+        .from('client_offer_messages')
+        .update({ status: 'erreur' as any, error_message: smtpResult.error || 'Email sending failed' })
+        .eq('id', offerId);
+
+      await logActivity(adminClient, aiAgent.id as string, {
+        action_type: 'offer_send_failed',
+        client_id: offer.client_id,
+        metadata: { offer_id: offerId, error: smtpResult.error },
+      });
+
+      return errorResponse(smtpResult.error || 'Email sending failed', 502);
+    }
+
+    // 7a. On success
+    await adminClient
+      .from('client_offer_messages')
+      .update({ status: 'envoye' as any, sent_at: new Date().toISOString() })
+      .eq('id', offerId);
+
+    // Update only validated subset of property_results
+    if (propertyIdsToSend.length > 0) {
+      await adminClient
+        .from('property_results')
+        .update({ result_status: 'envoye_au_client' })
+        .in('id', propertyIdsToSend);
+    }
+
+    // Create client notification
+    if ((client as any)?.user_id) {
+      await adminClient.from('notifications').insert({
+        user_id: (client as any).user_id,
+        type: 'new_offer',
+        title: '🏠 Nouvelles offres disponibles',
+        message: `${properties.length} bien(s) correspondant à vos critères vous ont été envoyés.`,
+        link: '/client/offres-recues',
+      });
+    }
+
+    await logActivity(adminClient, aiAgent.id as string, {
+      action_type: 'offer_sent',
+      client_id: offer.client_id,
+      metadata: { offer_id: offerId, properties_sent: propertyIdsToSend.length },
+    });
+
+    return jsonResponse({ success: true, properties_sent: propertyIdsToSend.length });
+  } catch (err) {
+    await adminClient
+      .from('client_offer_messages')
+      .update({ status: 'erreur' as any, error_message: String(err) })
+      .eq('id', offerId);
+
+    await logActivity(adminClient, aiAgent.id as string, {
+      action_type: 'offer_send_failed',
+      client_id: offer.client_id,
+      metadata: { offer_id: offerId, error: String(err) },
+    });
+
+    return errorResponse('Email sending failed: ' + String(err), 502);
+  }
+}
+
+// === APPROVAL DECISION HANDLER ===
+
+async function handleApprovalDecision(
+  adminClient: ReturnType<typeof createClient>,
+  userId: string,
+  approvalId: string,
+  decision: 'approved' | 'rejected',
+  req: Request,
+) {
+  const body = await req.json().catch(() => ({}));
+  const notes: string = body.notes || '';
+
+  // 1. Fetch approval
+  const { data: approval, error: approvalErr } = await adminClient
+    .from('approval_requests')
+    .select('*')
+    .eq('id', approvalId)
+    .single();
+
+  if (approvalErr || !approval) return errorResponse('Approval request not found', 404);
+  if (approval.status !== 'pending') return errorResponse('Approval is not pending', 400);
+
+  // 2. Update approval
+  const { error: updateErr } = await adminClient
+    .from('approval_requests')
+    .update({
+      status: decision,
+      decided_at: new Date().toISOString(),
+      decided_by: userId,
+      decision_notes: notes || null,
+    })
+    .eq('id', approvalId);
+
+  if (updateErr) return errorResponse(updateErr.message, 500);
+
+  // 3. Cascade based on reference_table
+  if (approval.reference_table && approval.reference_id) {
+    try {
+      if (approval.reference_table === 'client_offer_messages') {
+        const newStatus = decision === 'approved' ? 'pret' : 'refuse';
+        await adminClient
+          .from('client_offer_messages')
+          .update({ status: newStatus as any })
+          .eq('id', approval.reference_id);
+      } else if (approval.reference_table === 'visit_requests') {
+        const newStatus = decision === 'approved' ? 'demande_prete' : 'visite_refusee';
+        await adminClient
+          .from('visit_requests')
+          .update({ status: newStatus as any })
+          .eq('id', approval.reference_id);
+      }
+    } catch (cascadeErr) {
+      console.error('Cascade update error:', cascadeErr);
+    }
+  }
+
+  // 4. Log activity
+  await logActivity(adminClient, approval.ai_agent_id as string, {
+    action_type: decision === 'approved' ? 'approval_approved' : 'approval_rejected',
+    client_id: approval.client_id as string,
+    metadata: { approval_id: approvalId, reference_table: approval.reference_table, reference_id: approval.reference_id },
+  });
+
+  return jsonResponse({ success: true, decision });
 }
 
 // === HELPERS ===
