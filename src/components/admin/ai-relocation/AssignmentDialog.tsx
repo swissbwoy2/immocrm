@@ -22,8 +22,8 @@ export function AssignmentDialog({ open, onOpenChange, agentId, assignment }: Pr
   const isEdit = !!assignment;
 
   const [clientId, setClientId] = useState('');
-  const [priority, setPriority] = useState('normal');
-  const [urgencyLevel, setUrgencyLevel] = useState('normal');
+  const [priority, setPriority] = useState('moyenne');
+  const [urgencyLevel, setUrgencyLevel] = useState('normale');
   const [approvalOffers, setApprovalOffers] = useState(true);
   const [approvalVisits, setApprovalVisits] = useState(true);
   const [autoSend, setAutoSend] = useState(false);
