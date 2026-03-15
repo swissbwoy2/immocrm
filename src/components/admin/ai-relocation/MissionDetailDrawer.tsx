@@ -55,7 +55,7 @@ export function MissionDetailDrawer({ mission, open, onOpenChange, agentId }: Pr
               </div>
               <div className="text-sm">
                 <span className="text-muted-foreground">Sources:</span>{' '}
-                {mission.sources?.join(', ') || '—'}
+                {mission.allowed_sources?.join(', ') || '—'}
               </div>
               {mission.last_run_at && (
                 <div className="text-sm">
