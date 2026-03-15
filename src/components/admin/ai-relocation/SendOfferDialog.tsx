@@ -112,7 +112,7 @@ export function SendOfferDialog({ offer, open, onOpenChange, onSent }: Props) {
         await supabase
           .from('property_results')
           .update({ result_status: 'envoye_au_client' })
-          .in('id', selectedProps.map(p => p.id));
+          .in('id', selectedProps.map((p: any) => p.id));
       }
 
       // Create notification for client
