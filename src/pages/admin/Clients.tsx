@@ -153,7 +153,8 @@ const Clients = () => {
         const { data: candidatesData, error: candidatesError } = await supabase
           .from('client_candidates')
           .select('id, client_id, type, revenus_mensuels, type_permis, nationalite, poursuites')
-          .in('client_id', clientIds);
+          .in('client_id', clientIds)
+          .limit(15000);
 
         if (!candidatesError && candidatesData) {
           const candidatesMap = new Map<string, ClientCandidate[]>();
