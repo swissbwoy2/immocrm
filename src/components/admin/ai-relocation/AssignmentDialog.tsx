@@ -34,8 +34,8 @@ export function AssignmentDialog({ open, onOpenChange, agentId, assignment }: Pr
   useEffect(() => {
     if (assignment) {
       setClientId(assignment.client_id || '');
-      setPriority(assignment.priority || 'normal');
-      setUrgencyLevel(assignment.urgency_level || 'normal');
+      setPriority(assignment.priority || 'moyenne');
+      setUrgencyLevel(assignment.urgency_level || 'normale');
       setApprovalOffers(assignment.approval_required_for_offers ?? true);
       setApprovalVisits(assignment.approval_required_for_visits ?? true);
       setAutoSend(assignment.auto_send_enabled ?? false);
