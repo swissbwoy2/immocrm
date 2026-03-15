@@ -627,7 +627,7 @@ Extrais uniquement des annonces réelles, pas des publicités ou suggestions.`;
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: 'Tu es un expert en extraction de données immobilières. Tu retournes uniquement des données structurées via tool calling.' },
-          { role: 'user', content: `${prompt}\n\n---\n\n${markdown.substring(0, 30000)}` },
+          { role: 'user', content: `${prompt}\n\n---\n\n${markdown.substring(0, MAX_MARKDOWN_CHARS)}` },
         ],
         tools: [{
           type: 'function',
