@@ -74,8 +74,8 @@ export default function AdminCalendrier() {
 
       // Load all data in parallel including candidatures with important dates
       const [eventsRes, visitesRes, agentsRes, clientsRes, candidaturesRes] = await Promise.all([
-        supabase.from('calendar_events').select('*').order('event_date', { ascending: true }).limit(5000),
-        supabase.from('visites').select('*, offres(*)').order('date_visite', { ascending: true }).limit(5000),
+        supabase.from('calendar_events').select('*').order('event_date', { ascending: true }).limit(15000),
+        supabase.from('visites').select('*, offres(*)').order('date_visite', { ascending: true }).limit(15000),
         supabase.from('agents').select('id, user_id, profiles!agents_user_id_fkey(prenom, nom)'),
         supabase.from('clients').select('id, user_id, profiles!clients_user_id_fkey(prenom, nom)'),
         supabase.from('candidatures')
