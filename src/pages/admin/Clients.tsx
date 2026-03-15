@@ -136,7 +136,8 @@ const Clients = () => {
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('id, nom, prenom, email, telephone, actif, last_seen_at, is_online')
-          .in('id', clientUserIds);
+          .in('id', clientUserIds)
+          .limit(15000);
 
         if (profilesError) throw profilesError;
 
