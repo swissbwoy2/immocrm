@@ -43,10 +43,49 @@ interface IngestResult {
   errors: string[];
 }
 
+function isValidUrl(url: string): boolean {
+  try { new URL(url); return true; } catch { return false; }
+}
+
+function normalizePositiveNumber(val: unknown): number | undefined {
+  if (val === null || val === undefined) return undefined;
+  const n = parseFloat(String(val));
+  return (!isNaN(n) && n >= 0) ? n : undefined;
+}
+
+function capitalizeFirst(str: string): string {
+  const trimmed = str.trim();
+  if (!trimmed) return trimmed;
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+}
+
+function normalizeResultRow(row: ResultRow): ResultRow {
+  return {
+    ...row,
+    title: row.title?.trim().replace(/\s+/g, ' '),
+    address: row.address?.trim(),
+    city: row.city ? capitalizeFirst(row.city) : row.city,
+    postal_code: row.postal_code ? row.postal_code.trim().replace(/[^\d]/g, '') || undefined : row.postal_code,
+    canton: row.canton?.trim(),
+    rent_amount: normalizePositiveNumber(row.rent_amount),
+    charges_amount: normalizePositiveNumber(row.charges_amount),
+    total_amount: normalizePositiveNumber(row.total_amount),
+    number_of_rooms: normalizePositiveNumber(row.number_of_rooms),
+    living_area: normalizePositiveNumber(row.living_area),
+    contact_email: row.contact_email?.trim().toLowerCase(),
+    contact_phone: row.contact_phone?.trim(),
+    contact_name: row.contact_name?.trim(),
+    external_listing_id: row.external_listing_id?.trim(),
+    source_url: (row.source_url?.trim() && isValidUrl(row.source_url.trim())) ? row.source_url.trim() : undefined,
+    visit_booking_link: (row.visit_booking_link?.trim() && isValidUrl(row.visit_booking_link.trim())) ? row.visit_booking_link.trim() : undefined,
+  };
+}
+
 async function ingestResults(adminClient: SupabaseClient, params: IngestParams): Promise<IngestResult> {
   const { mission_id, client_id, ai_agent_id, results, criteria } = params;
   const out: IngestResult = { inserted: 0, duplicates: 0, failed: 0, ids: [], errors: [] };
-  for (const row of results) {
+  for (const rawRow of results) {
+    const row = normalizeResultRow(rawRow);
     try {
       if (row.external_listing_id) {
         const { data: existing } = await adminClient.from('property_results').select('id')
