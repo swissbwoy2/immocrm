@@ -542,10 +542,10 @@ async function runAutonomousSearch(
   allowedSources?: string[] | null,
   overrides?: { city?: string; budget?: number; rooms?: number },
 ): Promise<{ totalInserted: number; totalDuplicates: number; totalFailed: number; sourcesUsed: string[] }> {
-  const city = overrides?.city || (criteria.city as string) || (criteria.region_recherche as string) || 'Genève';
-  const rooms = overrides?.rooms || (criteria.rooms as number) || null;
+  const city = overrides?.city || (criteria.city as string) || (criteria.location as string) || (criteria.region_recherche as string) || 'Genève';
+  const rooms = overrides?.rooms || (criteria.rooms as number) || (criteria.min_rooms as number) || null;
   const budget = overrides?.budget || (criteria.budget_max as number) || null;
-  const typeBien = (criteria.type_bien as string) || null;
+  const typeBien = (criteria.type_bien as string) || (criteria.property_type as string) || null;
 
   // Filter portals by allowed_sources
   let portalsToUse = SEARCH_PORTALS;
