@@ -43,9 +43,9 @@ interface ExecMetadata {
 }
 
 function SourceStatusIcon({ status }: { status: string }) {
-  if (status === 'success') return <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />;
+  if (status === 'success') return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />;
   if (status === 'failed') return <XCircle className="w-3.5 h-3.5 text-destructive" />;
-  return <MinusCircle className="w-3.5 h-3.5 text-yellow-500" />;
+  return <MinusCircle className="w-3.5 h-3.5 text-amber-500" />;
 }
 
 export function MissionDetailDrawer({ mission, open, onOpenChange, agentId }: Props) {
