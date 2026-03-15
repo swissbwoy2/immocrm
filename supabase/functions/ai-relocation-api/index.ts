@@ -143,11 +143,15 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Auth: use getUser() (correct supabase-js v2 method)
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Auth: extract token explicitly for Deno edge function compatibility
+    const token = authHeader.replace('Bearer ', '');
+    console.log('[ai-relocation-api] Authenticating user...');
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
+      console.error('[ai-relocation-api] Auth failed:', userError?.message);
       return errorResponse('Invalid token', 401);
     }
+    console.log('[ai-relocation-api] Authenticated as', user.email);
     const userId = user.id;
 
     // Service role client for privileged queries (bypasses RLS)
