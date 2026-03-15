@@ -9,9 +9,8 @@ import { StatusBadge } from './statusBadges';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { AlertTriangle, Send, Eye, Mail } from 'lucide-react';
+import { AlertTriangle, Send, Eye } from 'lucide-react';
 import { OfferPreviewDialog } from './OfferPreviewDialog';
-import { SendOfferDialog } from './SendOfferDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type OfferStatus = Database['public']['Enums']['offer_status'];
@@ -23,7 +22,7 @@ interface Props {
 export function OffersTab({ agentId }: Props) {
   const queryClient = useQueryClient();
   const [selectedOffer, setSelectedOffer] = useState<any>(null);
-  const [sendOffer, setSendOffer] = useState<any>(null);
+  
   const [statusFilter, setStatusFilter] = useState('all');
 
   const { data: offers, isLoading, isError, refetch } = useQuery({
@@ -145,11 +144,6 @@ export function OffersTab({ agentId }: Props) {
                     <Button size="sm" variant="outline" onClick={() => setSelectedOffer(o)}>
                       <Eye className="w-3 h-3" />
                     </Button>
-                    {o.status === 'pret' && (
-                      <Button size="sm" variant="default" onClick={() => setSendOffer(o)}>
-                        <Mail className="w-3 h-3 mr-1" /> Envoyer
-                      </Button>
-                    )}
                     {o.status === 'en_attente_validation' && (
                       <>
                         <Button size="sm" variant="outline" onClick={() => statusMutation.mutate({ id: o.id, status: 'pret' })}>
@@ -174,15 +168,6 @@ export function OffersTab({ agentId }: Props) {
         onOpenChange={(open) => { if (!open) setSelectedOffer(null); }}
       />
 
-      <SendOfferDialog
-        offer={sendOffer}
-        open={!!sendOffer}
-        onOpenChange={(open) => { if (!open) setSendOffer(null); }}
-        onSent={() => {
-          queryClient.invalidateQueries({ queryKey: ['ai-offers'] });
-          setSendOffer(null);
-        }}
-      />
     </div>
   );
 }

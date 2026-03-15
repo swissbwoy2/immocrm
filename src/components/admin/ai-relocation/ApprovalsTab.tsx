@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ const PAGE_SIZE = 50;
 
 export function ApprovalsTab() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [page, setPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -53,7 +55,7 @@ export function ApprovalsTab() {
     mutationFn: async ({ id, status, notes, approval }: { id: string; status: ApprovalStatus; notes: string; approval: any }) => {
       const { error } = await supabase
         .from('approval_requests')
-        .update({ status, decision_notes: notes || null, decided_at: new Date().toISOString() })
+        .update({ status, decision_notes: notes || null, decided_at: new Date().toISOString(), decided_by: user?.id || null })
         .eq('id', id);
       if (error) throw error;
 
@@ -131,8 +133,8 @@ export function ApprovalsTab() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les types</SelectItem>
-            <SelectItem value="offer_send">Envoi offre</SelectItem>
-            <SelectItem value="visit_request">Demande visite</SelectItem>
+            <SelectItem value="offer">Envoi offre</SelectItem>
+            <SelectItem value="visit">Demande visite</SelectItem>
             <SelectItem value="external_action">Action externe</SelectItem>
           </SelectContent>
         </Select>

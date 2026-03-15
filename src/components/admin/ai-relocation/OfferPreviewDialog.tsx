@@ -57,10 +57,10 @@ export function OfferPreviewDialog({ offer, open, onOpenChange }: Props) {
               {offer.channel && <span className="text-xs text-muted-foreground capitalize">{offer.channel}</span>}
             </div>
 
-            {offer.subject && (
+            {offer.message_subject && (
               <div>
                 <Label className="text-xs text-muted-foreground">Sujet</Label>
-                <p className="text-sm font-medium">{offer.subject}</p>
+                <p className="text-sm font-medium">{offer.message_subject}</p>
               </div>
             )}
 
