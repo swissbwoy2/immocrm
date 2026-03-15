@@ -639,7 +639,7 @@ async function handleMissionsRun(
   // Validate mission is active and belongs to this agent
   const { data: mission } = await adminClient
     .from('search_missions')
-    .select('id, client_id, status, criteria_snapshot')
+    .select('id, client_id, status, criteria_snapshot, allowed_sources')
     .eq('id', missionId)
     .eq('ai_agent_id', aiAgent.id)
     .single();
@@ -679,6 +679,13 @@ async function handleMissionsRun(
   // Build criteria (use snapshot or fetch fresh)
   const criteria = (mission.criteria_snapshot as Record<string, unknown>) || await buildCriteriaSnapshot(adminClient, mission.client_id);
 
+  // Body overrides for testing
+  const overrides = {
+    city: body.city as string | undefined,
+    budget: body.budget as number | undefined,
+    rooms: body.rooms as number | undefined,
+  };
+
   // Launch autonomous search (runs inline, edge function has 150s timeout)
   try {
     const searchResult = await runAutonomousSearch(
@@ -688,6 +695,8 @@ async function handleMissionsRun(
       mission.client_id,
       run.id,
       criteria,
+      mission.allowed_sources as string[] | null,
+      overrides,
     );
 
     await logActivity(adminClient, aiAgent.id as string, {
