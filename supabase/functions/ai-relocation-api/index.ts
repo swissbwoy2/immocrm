@@ -611,7 +611,7 @@ async function runAutonomousSearch(
       results_found: totalInserted + totalDuplicates,
       results_new: totalInserted,
       duplicates_detected: totalDuplicates,
-      sources_used: sourcesUsed,
+      sources_searched: sourcesUsed,
     })
     .eq('id', runId);
 
