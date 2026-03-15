@@ -251,7 +251,7 @@ async function handleMissionsCreate(
   req: Request,
 ) {
   const body = await req.json();
-  const { client_id, frequency, allowed_sources, name } = body;
+  const { client_id, frequency, allowed_sources } = body;
 
   if (!client_id) return errorResponse('client_id required', 400);
 
