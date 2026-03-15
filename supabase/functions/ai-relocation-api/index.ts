@@ -532,18 +532,33 @@ async function runAutonomousSearch(
   clientId: string,
   runId: string,
   criteria: Record<string, unknown>,
+  allowedSources?: string[] | null,
+  overrides?: { city?: string; budget?: number; rooms?: number },
 ): Promise<{ totalInserted: number; totalDuplicates: number; totalFailed: number; sourcesUsed: string[] }> {
-  const city = (criteria.city as string) || 'Genève';
-  const rooms = (criteria.rooms as number) || null;
-  const budget = (criteria.budget_max as number) || null;
+  const city = overrides?.city || (criteria.city as string) || (criteria.region_recherche as string) || 'Genève';
+  const rooms = overrides?.rooms || (criteria.rooms as number) || null;
+  const budget = overrides?.budget || (criteria.budget_max as number) || null;
   const typeBien = (criteria.type_bien as string) || null;
+
+  // Filter portals by allowed_sources
+  let portalsToUse = SEARCH_PORTALS;
+  if (allowedSources && allowedSources.length > 0) {
+    const resolvedNames = allowedSources.map(s => SOURCE_ALIASES[s.toLowerCase()] || s.toLowerCase());
+    portalsToUse = SEARCH_PORTALS.filter(p => resolvedNames.includes(p.name));
+    if (portalsToUse.length === 0) {
+      console.warn('No matching portals for allowed_sources:', allowedSources, '→ using all portals');
+      portalsToUse = SEARCH_PORTALS;
+    }
+  }
+
+  console.log(`Search params: city=${city}, rooms=${rooms}, budget=${budget}, portals=${portalsToUse.map(p => p.name).join(',')}`);
 
   let totalInserted = 0;
   let totalDuplicates = 0;
   let totalFailed = 0;
   const sourcesUsed: string[] = [];
 
-  for (const portal of SEARCH_PORTALS) {
+  for (const portal of portalsToUse) {
     try {
       const url = portal.buildUrl(city, rooms, budget, typeBien);
       console.log(`[${portal.name}] Scraping: ${url}`);
