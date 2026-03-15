@@ -1,20 +1,33 @@
 
 
-## Creer l'agent IA actif dans la base
+## Diagnostic
 
-### Probleme
-La table `ai_agents` est vide. La page `/admin/agent-ia` cherche un agent avec `status = 'active'` et affiche l'etat vide.
+L'erreur "Erreur lors de la sauvegarde" vient d'une **incompatibilite entre les valeurs du formulaire et la contrainte CHECK de la base**.
 
-### Solution
-Inserer un enregistrement d'agent IA actif via une migration SQL.
-
-### Implementation
-
-**Migration SQL** : Inserer un agent IA avec les valeurs par defaut :
-```sql
-INSERT INTO ai_agents (display_name, status, config)
-VALUES ('Agent IA Relocation', 'active', '{"auto_search": true, "approval_required": true}'::jsonb);
+La table `ai_agent_assignments` a une contrainte:
+```
+priority IN ('basse', 'moyenne', 'haute', 'urgente')
 ```
 
-Aucun changement frontend necessaire -- le code existant chargera automatiquement cet agent et affichera le dashboard complet avec les 8 onglets.
+Mais le formulaire `AssignmentDialog.tsx` envoie des valeurs en anglais: `low`, `normal`, `high`, `urgent`.
+
+## Correction
+
+**Fichier: `src/components/admin/ai-relocation/AssignmentDialog.tsx`**
+
+Aligner les valeurs du Select "Priorite" avec la contrainte DB:
+
+| Actuel (anglais) | Corrige (francais) | Label |
+|---|---|---|
+| `low` | `basse` | Basse |
+| `normal` | `moyenne` | Normale |
+| `high` | `haute` | Haute |
+| `urgent` | `urgente` | Urgente |
+
+- Changer le state initial de `priority` de `'normal'` a `'moyenne'`
+- Mettre a jour les 4 `SelectItem` values
+- Pour `urgencyLevel`, pas de contrainte CHECK en base donc les valeurs actuelles passent, mais par coherence, les aligner aussi en francais (`basse`, `normale`, `haute`, `critique`)
+- Mettre a jour le `useEffect` pour le mode edition (les valeurs lues de la DB sont deja en francais)
+
+Aucune migration DB necessaire.
 
