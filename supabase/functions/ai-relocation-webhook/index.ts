@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
             .from('mission_execution_runs')
             .update({
               started_at: new Date().toISOString(),
-              sources_used: sources_used ?? [],
+              sources_searched: sources_used ?? [],
             })
             .eq('id', existingRun.id);
           result = { run_id: existingRun.id, action: 'updated' };
