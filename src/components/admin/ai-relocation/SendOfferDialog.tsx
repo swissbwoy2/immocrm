@@ -63,7 +63,7 @@ export function SendOfferDialog({ offer, open, onOpenChange, onSent }: Props) {
       if (!clientEmail) throw new Error('Email client introuvable');
 
       // Get selected property details
-      const selectedProps = properties?.filter(p => selectedProperties.includes(p.id)) ?? [];
+      const selectedProps = (properties as any[])?.filter((p: any) => selectedProperties.includes(p.id)) ?? [];
 
       // Build email body
       const propertiesHtml = selectedProps.map((p: any) => `
