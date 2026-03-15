@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
             .from('mission_execution_runs')
             .insert({
               mission_id,
-              status: 'running',
+              status: 'running' as const,
               started_at: new Date().toISOString(),
               sources_used: sources_used ?? [],
             })
