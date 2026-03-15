@@ -9,9 +9,8 @@ import { StatusBadge } from './statusBadges';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { AlertTriangle, Send, Eye, Mail } from 'lucide-react';
+import { AlertTriangle, Send, Eye } from 'lucide-react';
 import { OfferPreviewDialog } from './OfferPreviewDialog';
-import { SendOfferDialog } from './SendOfferDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type OfferStatus = Database['public']['Enums']['offer_status'];
