@@ -144,11 +144,6 @@ export function OffersTab({ agentId }: Props) {
                     <Button size="sm" variant="outline" onClick={() => setSelectedOffer(o)}>
                       <Eye className="w-3 h-3" />
                     </Button>
-                    {o.status === 'pret' && (
-                      <Button size="sm" variant="default" onClick={() => setSendOffer(o)}>
-                        <Mail className="w-3 h-3 mr-1" /> Envoyer
-                      </Button>
-                    )}
                     {o.status === 'en_attente_validation' && (
                       <>
                         <Button size="sm" variant="outline" onClick={() => statusMutation.mutate({ id: o.id, status: 'pret' })}>
