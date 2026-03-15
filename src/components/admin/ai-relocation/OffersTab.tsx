@@ -168,15 +168,6 @@ export function OffersTab({ agentId }: Props) {
         onOpenChange={(open) => { if (!open) setSelectedOffer(null); }}
       />
 
-      <SendOfferDialog
-        offer={sendOffer}
-        open={!!sendOffer}
-        onOpenChange={(open) => { if (!open) setSendOffer(null); }}
-        onSent={() => {
-          queryClient.invalidateQueries({ queryKey: ['ai-offers'] });
-          setSendOffer(null);
-        }}
-      />
     </div>
   );
 }

@@ -55,7 +55,7 @@ export function ApprovalsTab() {
     mutationFn: async ({ id, status, notes, approval }: { id: string; status: ApprovalStatus; notes: string; approval: any }) => {
       const { error } = await supabase
         .from('approval_requests')
-        .update({ status, decision_notes: notes || null, decided_at: new Date().toISOString() })
+        .update({ status, decision_notes: notes || null, decided_at: new Date().toISOString(), decided_by: user?.id || null })
         .eq('id', id);
       if (error) throw error;
 
