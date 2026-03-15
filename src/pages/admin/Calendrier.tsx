@@ -65,41 +65,39 @@ export default function AdminCalendrier() {
   const [filterEventType, setFilterEventType] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
-      // Load all data in parallel including candidatures with important dates
+      // Use paginated fetch to bypass 1000-row server limit
       const [eventsRes, visitesRes, agentsRes, clientsRes, candidaturesRes] = await Promise.all([
-        supabase.from('calendar_events').select('*').order('event_date', { ascending: true }).limit(15000),
-        supabase.from('visites').select('*, offres(*)').order('date_visite', { ascending: true }).limit(15000),
+        fetchAllPaginated(() =>
+          supabase.from('calendar_events').select('*').order('event_date', { ascending: true })
+        ),
+        fetchAllPaginated(() =>
+          supabase.from('visites').select('*, offres(*)').order('date_visite', { ascending: true })
+        ),
         supabase.from('agents').select('id, user_id, profiles!agents_user_id_fkey(prenom, nom)'),
-        supabase.from('clients').select('id, user_id, profiles!clients_user_id_fkey(prenom, nom)'),
-        supabase.from('candidatures')
-          .select('id, client_id, offre_id, date_etat_lieux, heure_etat_lieux, date_signature_choisie, statut, clients(id, profiles!clients_user_id_fkey(prenom, nom)), offres(adresse, agent_id)')
-          .or('date_etat_lieux.not.is.null,date_signature_choisie.not.is.null')
-          .limit(15000),
+        supabase.from('clients').select('id, user_id, profiles!clients_user_id_fkey(prenom, nom)').limit(15000),
+        fetchAllPaginated(() =>
+          supabase.from('candidatures')
+            .select('id, client_id, offre_id, date_etat_lieux, heure_etat_lieux, date_signature_choisie, statut, clients(id, profiles!clients_user_id_fkey(prenom, nom)), offres(adresse, agent_id)')
+            .or('date_etat_lieux.not.is.null,date_signature_choisie.not.is.null')
+        ),
       ]);
 
       // Log results for debugging
-      console.log('Calendar data loaded:', {
+      console.log('📅 Calendar data loaded (paginated):', {
         events: eventsRes.data?.length || 0,
-        eventsError: eventsRes.error,
         visites: visitesRes.data?.length || 0,
-        visitesError: visitesRes.error,
         agents: agentsRes.data?.length || 0,
-        agentsError: agentsRes.error,
         clients: clientsRes.data?.length || 0,
-        clientsError: clientsRes.error,
         candidatures: candidaturesRes.data?.length || 0,
-        candidaturesError: candidaturesRes.error,
+        lastVisite: visitesRes.data?.length ? visitesRes.data[visitesRes.data.length - 1]?.date_visite : 'none',
       });
 
-      // Handle errors but continue with available data
       if (eventsRes.error) {
         console.error('Events error:', eventsRes.error);
         toast.error('Erreur chargement événements: ' + eventsRes.error.message);
@@ -129,7 +127,6 @@ export default function AdminCalendrier() {
           : 'Client';
         const adresse = candidature.offres?.adresse || 'Adresse inconnue';
         
-        // Add état des lieux event
         if (candidature.date_etat_lieux) {
           candidatureEvents.push({
             id: `etat-lieux-${candidature.id}`,
@@ -143,7 +140,6 @@ export default function AdminCalendrier() {
           });
         }
         
-        // Add signature event
         if (candidature.date_signature_choisie) {
           candidatureEvents.push({
             id: `signature-${candidature.id}`,
@@ -158,15 +154,13 @@ export default function AdminCalendrier() {
         }
       });
 
-      // Set data even if some queries failed
       setEvents([...(eventsRes.data || []), ...candidatureEvents]);
       setVisites(visitesRes.data || []);
       setAgents((agentsRes.data as any) || []);
       setClients((clientsRes.data as any) || []);
       
-      // Show success with counts
       if (!eventsRes.error && !visitesRes.error) {
-        console.log(`Calendrier chargé: ${(eventsRes.data || []).length + candidatureEvents.length} événements, ${visitesRes.data?.length || 0} visites`);
+        console.log(`✅ Calendrier chargé: ${(eventsRes.data || []).length + candidatureEvents.length} événements, ${visitesRes.data?.length || 0} visites`);
       }
     } catch (error: any) {
       console.error('Error loading calendar data:', error);
@@ -174,7 +168,50 @@ export default function AdminCalendrier() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Debounced reload for realtime events
+  const debouncedReload = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      loadData();
+    }, 1500);
+  }, [loadData]);
+
+  // Initial load + realtime subscriptions + polling fallback
+  useEffect(() => {
+    loadData();
+
+    // Realtime subscriptions
+    const channel = supabase
+      .channel('admin-calendar-sync')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'visites' }, () => {
+        console.log('🔄 Realtime: visites change detected');
+        debouncedReload();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_events' }, () => {
+        console.log('🔄 Realtime: calendar_events change detected');
+        debouncedReload();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'candidatures' }, () => {
+        console.log('🔄 Realtime: candidatures change detected');
+        debouncedReload();
+      })
+      .subscribe((status) => {
+        console.log('📡 Calendar realtime status:', status);
+      });
+
+    // Polling fallback every 30s
+    const pollInterval = setInterval(() => {
+      loadData();
+    }, 30000);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      clearInterval(pollInterval);
+      supabase.removeChannel(channel);
+    };
+  }, [loadData, debouncedReload]);
 
   // Filter events
   const filteredEvents = useMemo(() => {
