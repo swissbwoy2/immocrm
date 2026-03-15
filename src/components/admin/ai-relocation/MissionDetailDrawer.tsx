@@ -111,7 +111,7 @@ export function MissionDetailDrawer({ mission, open, onOpenChange, agentId }: Pr
                         </span>
                       </div>
                       {run.results_found != null && (
-                        <div>Résultats: {run.results_found} trouvés, {run.new_results ?? 0} nouveaux, {run.duplicates_skipped ?? 0} doublons</div>
+                        <div>Résultats: {run.results_found} trouvés, {run.results_new ?? 0} nouveaux, {run.duplicates_detected ?? 0} doublons</div>
                       )}
                       {run.error_message && (
                         <div className="text-destructive">⚠ {run.error_message}</div>

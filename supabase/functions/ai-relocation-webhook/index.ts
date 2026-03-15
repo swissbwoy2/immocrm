@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
               mission_id,
               status: 'running' as const,
               started_at: new Date().toISOString(),
-              sources_used: sources_used ?? [],
+              sources_searched: sources_used ?? [],
             })
             .select('id')
             .single();

@@ -901,7 +901,7 @@ async function handleVisitsRequest(
   req: Request,
 ) {
   const body = await req.json();
-  const { client_id, property_result_id, preferred_dates, notes } = body;
+  const { client_id, property_result_id, preferred_dates, proposed_slots, notes, contact_message } = body;
 
   if (!client_id || !property_result_id) {
     return errorResponse('client_id and property_result_id required', 400);
@@ -928,8 +928,8 @@ async function handleVisitsRequest(
       ai_agent_id: aiAgent.id,
       status: 'non_traite',
       approval_required: needsApproval,
-      preferred_dates: preferred_dates ?? [],
-      notes: notes ?? null,
+      proposed_slots: proposed_slots ?? preferred_dates ?? [],
+      contact_message: contact_message ?? notes ?? null,
     })
     .select()
     .single();
