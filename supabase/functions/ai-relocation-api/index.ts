@@ -96,6 +96,7 @@ async function buildCriteriaSnapshot(adminClient: SupabaseClient, clientId: stri
   return {
     budget_max: client.budget_max ?? mandatData?.budget_max ?? null,
     city: client.region_recherche ?? mandatData?.region_recherche ?? null,
+    region_recherche: client.region_recherche ?? mandatData?.region_recherche ?? null,
     rooms: client.pieces ?? mandatRooms ?? null,
     surface_min: null,
     type_bien: client.type_bien ?? mandatData?.type_bien ?? null,
@@ -165,12 +166,27 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const adminClient = createClient(supabaseUrl, serviceKey);
 
-    const { data: aiAgent } = await adminClient
-      .from('ai_agents')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .single();
+    let aiAgent: Record<string, unknown> | null = null;
+
+    if (userRoles.includes('admin')) {
+      // Admins can use any active AI agent (agent may not have a user_id)
+      const { data } = await adminClient
+        .from('ai_agents')
+        .select('*')
+        .eq('status', 'active')
+        .limit(1)
+        .single();
+      aiAgent = data;
+    } else {
+      // agent_ia role: must match user_id
+      const { data } = await adminClient
+        .from('ai_agents')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .single();
+      aiAgent = data;
+    }
 
     if (!aiAgent) {
       return errorResponse('AI agent not found or inactive', 403);
@@ -281,6 +297,17 @@ interface SearchPortal {
   buildUrl: (city: string, rooms: number | null, budget: number | null, type: string | null) => string;
 }
 
+// Mapping from short alias (used in allowed_sources) to portal name
+const SOURCE_ALIASES: Record<string, string> = {
+  immoscout: 'immoscout24.ch',
+  immoscout24: 'immoscout24.ch',
+  homegate: 'homegate.ch',
+  flatfox: 'flatfox.ch',
+  immobilier: 'immobilier.ch',
+  'acheter-louer': 'acheter-louer.ch',
+  comparis: 'comparis.ch',
+};
+
 const SEARCH_PORTALS: SearchPortal[] = [
   {
     name: 'immoscout24.ch',
@@ -328,6 +355,16 @@ const SEARCH_PORTALS: SearchPortal[] = [
       if (rooms) params.set('rooms', String(rooms));
       if (budget) params.set('maxprice', String(budget));
       return `https://www.acheter-louer.ch/fr/louer?${params}`;
+    },
+  },
+  {
+    name: 'comparis.ch',
+    buildUrl: (city, rooms, budget) => {
+      const params = new URLSearchParams();
+      params.set('requestobject.cityname', city);
+      if (rooms) params.set('requestobject.numberofrooms', String(rooms));
+      if (budget) params.set('requestobject.priceto', String(budget));
+      return `https://www.comparis.ch/immobilien/result/list?${params}`;
     },
   },
 ];
@@ -496,18 +533,33 @@ async function runAutonomousSearch(
   clientId: string,
   runId: string,
   criteria: Record<string, unknown>,
+  allowedSources?: string[] | null,
+  overrides?: { city?: string; budget?: number; rooms?: number },
 ): Promise<{ totalInserted: number; totalDuplicates: number; totalFailed: number; sourcesUsed: string[] }> {
-  const city = (criteria.city as string) || 'Genève';
-  const rooms = (criteria.rooms as number) || null;
-  const budget = (criteria.budget_max as number) || null;
+  const city = overrides?.city || (criteria.city as string) || (criteria.region_recherche as string) || 'Genève';
+  const rooms = overrides?.rooms || (criteria.rooms as number) || null;
+  const budget = overrides?.budget || (criteria.budget_max as number) || null;
   const typeBien = (criteria.type_bien as string) || null;
+
+  // Filter portals by allowed_sources
+  let portalsToUse = SEARCH_PORTALS;
+  if (allowedSources && allowedSources.length > 0) {
+    const resolvedNames = allowedSources.map(s => SOURCE_ALIASES[s.toLowerCase()] || s.toLowerCase());
+    portalsToUse = SEARCH_PORTALS.filter(p => resolvedNames.includes(p.name));
+    if (portalsToUse.length === 0) {
+      console.warn('No matching portals for allowed_sources:', allowedSources, '→ using all portals');
+      portalsToUse = SEARCH_PORTALS;
+    }
+  }
+
+  console.log(`Search params: city=${city}, rooms=${rooms}, budget=${budget}, portals=${portalsToUse.map(p => p.name).join(',')}`);
 
   let totalInserted = 0;
   let totalDuplicates = 0;
   let totalFailed = 0;
   const sourcesUsed: string[] = [];
 
-  for (const portal of SEARCH_PORTALS) {
+  for (const portal of portalsToUse) {
     try {
       const url = portal.buildUrl(city, rooms, budget, typeBien);
       console.log(`[${portal.name}] Scraping: ${url}`);
@@ -588,7 +640,7 @@ async function handleMissionsRun(
   // Validate mission is active and belongs to this agent
   const { data: mission } = await adminClient
     .from('search_missions')
-    .select('id, client_id, status, criteria_snapshot')
+    .select('id, client_id, status, criteria_snapshot, allowed_sources')
     .eq('id', missionId)
     .eq('ai_agent_id', aiAgent.id)
     .single();
@@ -628,6 +680,13 @@ async function handleMissionsRun(
   // Build criteria (use snapshot or fetch fresh)
   const criteria = (mission.criteria_snapshot as Record<string, unknown>) || await buildCriteriaSnapshot(adminClient, mission.client_id);
 
+  // Body overrides for testing
+  const overrides = {
+    city: body.city as string | undefined,
+    budget: body.budget as number | undefined,
+    rooms: body.rooms as number | undefined,
+  };
+
   // Launch autonomous search (runs inline, edge function has 150s timeout)
   try {
     const searchResult = await runAutonomousSearch(
@@ -637,6 +696,8 @@ async function handleMissionsRun(
       mission.client_id,
       run.id,
       criteria,
+      mission.allowed_sources as string[] | null,
+      overrides,
     );
 
     await logActivity(adminClient, aiAgent.id as string, {

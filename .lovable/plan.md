@@ -1,45 +1,42 @@
 
 
-## Diagnostic: 3 problemes bloquants
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-### 1. Auth bloquee — l'agent IA n'a pas de `user_id`
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
-L'agent IA actif (`19eb372b...`) a `user_id = null`. Or le code edge function filtre par `ai_agents.user_id = userId` (ligne 171). Resultat: un admin qui clique "Run" recoit toujours `403 - AI agent not found`.
+### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
-**Correction**: Pour les admins, charger l'agent IA actif sans filtrer par `user_id`:
+### Modifications
+
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
+
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
+
+### Detail technique
+
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
 ```
-if admin role → load first active agent (no user_id filter)
-if agent_ia role → filter by user_id (existing logic)
-```
 
-### 2. Criteres incomplets — pas de ville
-
-Le `criteria_snapshot` de la mission est `{budget_max: 2000, min_rooms: 1, property_type: "Appartement"}`. Le client Philip Owusu a `region_recherche = ""` (vide). Le code lit `criteria.city` qui n'existe pas et fallback sur "Geneve".
-
-**Correction**: 
-- Dans `buildCriteriaSnapshot`, renommer `city` → garder la logique mais aussi stocker `region_recherche` 
-- Dans `runAutonomousSearch`, lire `criteria.city || criteria.region_recherche`
-- Permettre de passer une ville en parametre du body de la requete `/run` pour override
-
-### 3. Aucun filtrage par `allowed_sources`
-
-La mission a `allowed_sources: ['immoscout', 'homegate', 'comparis']` mais `runAutonomousSearch` scrape les 5 portails sans filtrer. De plus les noms ne matchent pas (mission: `immoscout` vs code: `immoscout24.ch`).
-
-**Correction**: 
-- Ajouter un mapping court → complet: `{immoscout: 'immoscout24.ch', homegate: 'homegate.ch', ...}`
-- Filtrer `SEARCH_PORTALS` par `allowed_sources` de la mission
-- Ajouter `comparis.ch` comme portail (manquant)
-
----
-
-## Plan de correction
-
-**Fichier: `supabase/functions/ai-relocation-api/index.ts`**
-
-1. **Auth admin**: si le role est `admin`, charger le premier agent IA actif sans filtre `user_id`
-2. **Source mapping**: ajouter `SOURCE_ALIASES` + filtrage par `allowed_sources` + portail Comparis
-3. **Criteres ville**: fallback robuste `city || region_recherche || body.city`
-4. **Override body**: accepter `{city, budget, rooms}` dans le body de POST `/run` pour pouvoir tester facilement
-
-Aucune migration DB necessaire.
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 
