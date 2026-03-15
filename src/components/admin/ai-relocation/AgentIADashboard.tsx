@@ -42,6 +42,14 @@ export function AgentIADashboard({ agentId }: Props) {
         runsToday = count ?? 0;
       }
 
+      // Count scheduled missions (active with next_run_at set)
+      const { count: scheduledCount } = await supabase
+        .from('search_missions')
+        .select('id', { count: 'exact', head: true })
+        .eq('ai_agent_id', agentId)
+        .eq('status', 'active')
+        .not('next_run_at', 'is', null);
+
       const [assignments, missions, newResults, offers, offersSent, visits, visitsCreated, pendingApprovals, errors] = await Promise.all([
         countQuery('ai_agent_assignments', { ai_agent_id: agentId, status: 'active' }),
         countQuery('search_missions', { ai_agent_id: agentId, status: 'active' }),
@@ -54,7 +62,8 @@ export function AgentIADashboard({ agentId }: Props) {
         errQ.eq('ai_agent_id', agentId).not('error_message', 'is', null).then((r: any) => r.count ?? 0),
       ]);
 
-      return { assignments, missions, runsToday, newResults, offers, offersSent, visits, visitsCreated, pendingApprovals, errors };
+      const scheduledMissions = scheduledCount ?? 0;
+      return { assignments, missions, runsToday, newResults, offers, offersSent, visits, visitsCreated, pendingApprovals, errors, scheduledMissions };
     },
     refetchOnWindowFocus: false,
   });
