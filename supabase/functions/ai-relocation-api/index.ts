@@ -296,6 +296,17 @@ interface SearchPortal {
   buildUrl: (city: string, rooms: number | null, budget: number | null, type: string | null) => string;
 }
 
+// Mapping from short alias (used in allowed_sources) to portal name
+const SOURCE_ALIASES: Record<string, string> = {
+  immoscout: 'immoscout24.ch',
+  immoscout24: 'immoscout24.ch',
+  homegate: 'homegate.ch',
+  flatfox: 'flatfox.ch',
+  immobilier: 'immobilier.ch',
+  'acheter-louer': 'acheter-louer.ch',
+  comparis: 'comparis.ch',
+};
+
 const SEARCH_PORTALS: SearchPortal[] = [
   {
     name: 'immoscout24.ch',
@@ -343,6 +354,16 @@ const SEARCH_PORTALS: SearchPortal[] = [
       if (rooms) params.set('rooms', String(rooms));
       if (budget) params.set('maxprice', String(budget));
       return `https://www.acheter-louer.ch/fr/louer?${params}`;
+    },
+  },
+  {
+    name: 'comparis.ch',
+    buildUrl: (city, rooms, budget) => {
+      const params = new URLSearchParams();
+      params.set('requestobject.cityname', city);
+      if (rooms) params.set('requestobject.numberofrooms', String(rooms));
+      if (budget) params.set('requestobject.priceto', String(budget));
+      return `https://www.comparis.ch/immobilien/result/list?${params}`;
     },
   },
 ];
