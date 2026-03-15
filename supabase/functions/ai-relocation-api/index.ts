@@ -268,14 +268,17 @@ async function handleMissionsCreate(
 
   const criteria = await buildCriteriaSnapshot(adminClient, client_id);
 
+  // Map frequency to valid DB enum (quotidien|hebdomadaire|manuel)
+  const freqMap: Record<string, string> = { daily: 'quotidien', weekly: 'hebdomadaire', manual: 'manuel' };
+  const mappedFrequency = freqMap[frequency] || frequency || 'manuel';
+
   const { data: mission, error } = await adminClient
     .from('search_missions')
     .insert({
       ai_agent_id: aiAgent.id,
       client_id,
-      name: name ?? 'Recherche automatique',
       criteria_snapshot: criteria,
-      frequency: frequency ?? 'daily',
+      frequency: mappedFrequency,
       allowed_sources: allowed_sources ?? [],
       status: 'active',
     })
