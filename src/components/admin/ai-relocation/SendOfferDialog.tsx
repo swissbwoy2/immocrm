@@ -66,14 +66,14 @@ export function SendOfferDialog({ offer, open, onOpenChange, onSent }: Props) {
       const selectedProps = properties?.filter(p => selectedProperties.includes(p.id)) ?? [];
 
       // Build email body
-      const propertiesHtml = selectedProps.map(p => `
+      const propertiesHtml = selectedProps.map((p: any) => `
         <div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:12px;">
           <h3 style="margin:0 0 8px;color:#1f2937;">${p.title || 'Bien immobilier'}</h3>
           ${p.address ? `<p style="margin:4px 0;color:#6b7280;">📍 ${p.address}</p>` : ''}
           <div style="display:flex;gap:16px;margin-top:8px;">
-            ${p.price ? `<span style="font-weight:600;color:#059669;">CHF ${p.price.toLocaleString()}</span>` : ''}
-            ${p.surface ? `<span style="color:#6b7280;">${p.surface} m²</span>` : ''}
-            ${p.rooms ? `<span style="color:#6b7280;">${p.rooms} pièces</span>` : ''}
+            ${p.rent_amount ? `<span style="font-weight:600;color:#059669;">CHF ${p.rent_amount.toLocaleString()}</span>` : ''}
+            ${p.living_area ? `<span style="color:#6b7280;">${p.living_area} m²</span>` : ''}
+            ${p.number_of_rooms ? `<span style="color:#6b7280;">${p.number_of_rooms} pièces</span>` : ''}
           </div>
           ${p.source_name ? `<p style="margin:8px 0 0;color:#9ca3af;font-size:12px;">Source: ${p.source_name}</p>` : ''}
         </div>
