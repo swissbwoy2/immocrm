@@ -1,42 +1,149 @@
 
 
-## Envoi automatique d'invitations ICS par email lors de la création d'une visite
+## Analysis: Pass 2 — What's done vs. what's missing
 
-### Probleme
-Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
+All 6 files exist and are functional. The core structure is solid. Below are the **gaps** between the spec and the current implementation.
 
-### Solution
-Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
+---
 
-### Modifications
+### 1. OffersTab.tsx — 3 gaps
 
-1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
-   - Un pour le **client** (email depuis `profiles`)
-   - Un pour l'**agent** (email depuis `profiles` via `agents`)
-   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
-   
-   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
+| Spec requirement | Status |
+|---|---|
+| Client column | Done |
+| Properties count | **Missing** — `property_result_ids` array length not shown |
+| Channel column | Done |
+| Status column | Done |
+| Approval required | Done |
+| **Approved by** | **Missing** |
+| **Approved at** | **Missing** |
+| Created at | Done |
+| **Status filter** | **Missing** |
+| Preview / Edit / Approve / Reject actions | Done |
+| Loading / empty / error states | Done |
 
-2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
+**Fix**: Add `property_result_ids` count column, `approved_by`/`approved_at` columns (if those fields exist on the table), and a status `Select` filter like ApprovalsTab has.
 
-### Detail technique
+---
 
-```sql
--- Dans notify_on_new_visit, après les notifications existantes :
--- Envoi ICS au client
-PERFORM net.http_post(
-  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
-  headers := jsonb_build_object(...),
-  body := jsonb_build_object(
-    'title', 'Visite - ' || NEW.adresse,
-    'start_date', NEW.date_visite,
-    'location', NEW.adresse,
-    'recipient_email', v_client_email
-  )
-);
--- Idem pour agent et admins
-```
+### 2. VisitsTab.tsx — 2 gaps
 
-### Resultat
-Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
+| Spec requirement | Status |
+|---|---|
+| Client | Done |
+| Property | Done |
+| Status | Done |
+| Approval required | Done |
+| **Sent at** | **Missing column** |
+| Confirmed date | Done |
+| **Assigned to** | **Missing column** |
+| **Created at** | **Missing column** |
+| **Status filter** | **Missing** |
+| Approve/Reject/Cancel actions | Done |
+| CRM visit creation | Done (bonus) |
+
+**Fix**: Add `sent_at`, `assigned_to`, `created_at` columns to the table and a status `Select` filter.
+
+---
+
+### 3. VisitDetailDrawer.tsx — 1 gap
+
+| Spec requirement | Status |
+|---|---|
+| contact_message | Done |
+| proposed_slots | Done |
+| source_response | Done |
+| confirmed_date | Done |
+| assigned_to | Done |
+| **error_message** | **Missing** |
+
+**Fix**: Add `error_message` display section (like `notes`).
+
+---
+
+### 4. ApprovalsTab.tsx — 3 gaps
+
+| Spec requirement | Status |
+|---|---|
+| Server-side pagination | Done |
+| Status filter | Done |
+| **Request type filter** | **Missing** |
+| **Client column** | **Missing** — no client join |
+| **Decided by column** | **Missing** |
+| **Decided at column** | **Missing** |
+| Decision notes dialog | Done |
+| Downstream actions (offers/visits) | Done (bonus) |
+
+**Fix**: Add `request_type` filter, join client data if `client_id` exists on the table, and add `decided_by`/`decided_at` columns.
+
+---
+
+### 5. ActivityLogTab.tsx — 4 gaps
+
+| Spec requirement | Status |
+|---|---|
+| Pagination | Done |
+| Action type filter | Done |
+| Error search | Done |
+| Client column | Done |
+| Action source | Done |
+| Connector used | Done |
+| Error message | Done |
+| Validation result | Done |
+| **Mission column** | **Missing** — `mission_id` not shown |
+| **Property result column** | **Missing** — `property_result_id` not shown |
+| **Validation required column** | **Missing** |
+| **Validation result filter** | **Missing** |
+| **Connector used filter** | **Missing** |
+| **Date range filter** | **Missing** |
+| **Error row visual emphasis** | **Missing** — text is red but no row-level highlight |
+
+**Fix**: Add missing columns (`mission_id`, `property_result_id`, `validation_required`), add `validation_result` and `connector_used` Select filters, add date range inputs, and highlight rows with errors.
+
+---
+
+### 6. OfferPreviewDialog.tsx — Complete
+
+No gaps found. Draft editing, status display, linked properties count, save mutation all present.
+
+---
+
+### 7. SendOfferDialog.tsx — Bonus (not in spec)
+
+Already implemented with property selection, email sending via `send-smtp-email`, and notification creation. No changes needed.
+
+---
+
+### 8. AgentIA.tsx — Complete
+
+All 8 tabs wired. No changes needed.
+
+---
+
+## Implementation plan
+
+### Phase 1 — OffersTab: add missing columns + status filter
+- Add `Select` for status filtering (brouillon, pret, en_attente_validation, envoye, refuse)
+- Add property count column: `Array.isArray(o.property_result_ids) ? o.property_result_ids.length : 0`
+- Add `approved_by` and `approved_at` columns (display if present on the record)
+
+### Phase 2 — VisitsTab: add missing columns + status filter
+- Add `sent_at`, `assigned_to`, `created_at` columns
+- Add `Select` for status filtering
+
+### Phase 3 — VisitDetailDrawer: add error_message
+- Add `error_message` section below notes
+
+### Phase 4 — ApprovalsTab: add request_type filter + missing columns
+- Add `Select` for `request_type` filtering
+- Add `decided_by` and `decided_at` columns
+- Add client join if `client_id` column exists on `approval_requests`
+
+### Phase 5 — ActivityLogTab: add missing columns + filters
+- Add `mission_id`, `property_result_id`, `validation_required` columns
+- Add `validation_result` and `connector_used` Select filters
+- Add date range filter (two date inputs)
+- Add row-level highlight for entries with `error_message`
+
+All changes are UI-only. No schema changes, no new edge functions.
 
