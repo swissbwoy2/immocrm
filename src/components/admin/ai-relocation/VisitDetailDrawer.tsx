@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { CalendarPlus, Loader2 } from 'lucide-react';
+import { CalendarPlus, Loader2, AlertTriangle } from 'lucide-react';
 
 interface Props {
   visit: any;
@@ -141,6 +141,17 @@ export function VisitDetailDrawer({ visit, open, onOpenChange, onCreateVisit, is
               <div>
                 <h4 className="font-semibold text-sm mb-1">Notes</h4>
                 <p className="text-sm text-muted-foreground">{visit.notes}</p>
+              </div>
+            )}
+
+            {/* Error message */}
+            {visit.error_message && (
+              <div className="border border-destructive/20 rounded-lg p-3 bg-destructive/5">
+                <h4 className="font-semibold text-sm mb-1 flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="w-4 h-4" />
+                  Erreur
+                </h4>
+                <p className="text-sm text-destructive">{visit.error_message}</p>
               </div>
             )}
           </div>

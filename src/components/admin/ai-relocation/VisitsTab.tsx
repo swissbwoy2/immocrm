@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StatusBadge } from './statusBadges';
 import { VisitDetailDrawer } from './VisitDetailDrawer';
 import { toast } from 'sonner';
@@ -21,15 +22,22 @@ interface Props {
 export function VisitsTab({ agentId }: Props) {
   const queryClient = useQueryClient();
   const [selectedVisit, setSelectedVisit] = useState<any>(null);
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const { data: visits, isLoading, isError, refetch } = useQuery({
-    queryKey: ['ai-visits', agentId],
+    queryKey: ['ai-visits', agentId, statusFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('visit_requests')
         .select('*, clients:client_id(id, user_id, profiles:user_id(prenom, nom, email)), property_results:property_result_id(title, address)')
         .eq('ai_agent_id', agentId)
         .order('created_at', { ascending: false });
+
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter as VisitStatus);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -56,7 +64,6 @@ export function VisitsTab({ agentId }: Props) {
       const address = visit.property_results?.address || visit.property_results?.title || 'Adresse inconnue';
       const visitDate = visit.confirmed_date || new Date().toISOString();
 
-      // Create CRM visit entry - the notify_on_new_visit trigger handles notifications + ICS
       const { error: insertError } = await supabase.from('visites').insert({
         client_id: visit.client_id,
         adresse: address,
@@ -68,13 +75,11 @@ export function VisitsTab({ agentId }: Props) {
 
       if (insertError) throw insertError;
 
-      // Update visit_request status
       await supabase
         .from('visit_requests')
         .update({ status: 'visite_a_effectuer' as any })
         .eq('id', visit.id);
 
-      // Update property_result status if linked
       if (visit.property_result_id) {
         await supabase
           .from('property_results')
@@ -112,7 +117,24 @@ export function VisitsTab({ agentId }: Props) {
 
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold">Demandes de visite ({visits?.length ?? 0})</h3>
+      <div className="flex flex-wrap gap-3 items-center">
+        <h3 className="font-semibold">Demandes de visite ({visits?.length ?? 0})</h3>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v)}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous</SelectItem>
+            <SelectItem value="non_traite">Non traité</SelectItem>
+            <SelectItem value="a_proposer">À proposer</SelectItem>
+            <SelectItem value="demande_prete">Demande prête</SelectItem>
+            <SelectItem value="en_attente_validation">En validation</SelectItem>
+            <SelectItem value="visite_confirmee">Confirmée</SelectItem>
+            <SelectItem value="visite_refusee">Refusée</SelectItem>
+            <SelectItem value="visite_annulee">Annulée</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       {!visits?.length ? (
         <div className="flex flex-col items-center py-12">
@@ -128,7 +150,10 @@ export function VisitsTab({ agentId }: Props) {
                 <TableHead>Bien</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead>Validation</TableHead>
+                <TableHead>Envoyée le</TableHead>
                 <TableHead>Date confirmée</TableHead>
+                <TableHead>Assignée à</TableHead>
+                <TableHead>Créée le</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -142,7 +167,14 @@ export function VisitsTab({ agentId }: Props) {
                   <TableCell><StatusBadge type="visit" value={v.status} /></TableCell>
                   <TableCell className="text-xs">{v.approval_required ? 'Oui' : 'Non'}</TableCell>
                   <TableCell className="text-xs">
+                    {v.sent_at ? format(new Date(v.sent_at), 'dd/MM HH:mm', { locale: fr }) : '—'}
+                  </TableCell>
+                  <TableCell className="text-xs">
                     {v.confirmed_date ? format(new Date(v.confirmed_date), 'dd/MM HH:mm', { locale: fr }) : '—'}
+                  </TableCell>
+                  <TableCell className="text-xs">{v.assigned_to || '—'}</TableCell>
+                  <TableCell className="text-xs">
+                    {v.created_at ? format(new Date(v.created_at), 'dd/MM HH:mm', { locale: fr }) : '—'}
                   </TableCell>
                   <TableCell className="text-right space-x-1" onClick={(e) => e.stopPropagation()}>
                     {(v.status === 'demande_prete' || v.status === 'visite_confirmee') && (
