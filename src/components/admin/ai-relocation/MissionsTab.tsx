@@ -53,16 +53,29 @@ export function MissionsTab({ agentId }: Props) {
 
   const runMutation = useMutation({
     mutationFn: async (missionId: string) => {
-      const { error } = await supabase.functions.invoke('ai-relocation-api', {
-        body: { action: 'run_mission', mission_id: missionId },
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Non authentifié');
+      const res = await fetch(`${supabaseUrl}/functions/v1/ai-relocation-api/missions/${missionId}/run`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({}),
       });
-      if (error) throw error;
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Erreur ${res.status}`);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-missions'] });
       toast.success('Exécution lancée');
     },
-    onError: () => toast.error('Erreur lors du lancement'),
+    onError: (e: Error) => toast.error(e.message || 'Erreur lors du lancement'),
   });
 
   const getClientName = (m: any) => {
