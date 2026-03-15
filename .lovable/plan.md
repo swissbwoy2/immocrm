@@ -1,64 +1,42 @@
 
-Objectif: arrêter la boucle d’erreurs “Invalid token” / “ça ne marche pas” et remettre le run mission en état stable.
 
-Constat (investigation profonde)
-1) Le 401 n’est plus le blocage principal
-- Historique des appels edge: v8/v9 = 401, puis v10 = 500.
-- Les logs auth montrent des GET /user en 200 au même moment que les runs récents.
-- Conclusion: l’auth a progressé; le blocage actuel est ailleurs.
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-2) Blocage actuel confirmé: mismatch schéma DB vs code
-- Le run échoue maintenant avec:
-  `Could not find the 'sources_used' column of 'mission_execution_runs'`
-- Table réelle `mission_execution_runs`: colonne `sources_searched` (pas `sources_used`).
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
-3) Drift plus large détecté (risques de prochains bugs)
-- `ai-relocation-api`:
-  - `handleMissionsCreate` insère `name` (colonne inexistante) + fallback `frequency='daily'` (enum invalide).
-  - `runAutonomousSearch` lit `criteria.city/rooms`, mais les missions existantes ont souvent `location/min_rooms`.
-  - `handleOffersPrepare` utilise `property_result_id` au lieu de `property_result_ids`.
-  - `handleVisitsRequest` utilise `preferred_dates/notes` au lieu de `proposed_slots/contact_message`.
-- `ai-relocation-webhook` réutilise aussi `sources_used` (même bug potentiel).
-- UI:
-  - `MissionDetailDrawer` lit des champs non alignés (`sources`, `new_results`, `duplicates_skipped`, etc.).
-  - `AgentIADashboard` filtre `mission_execution_runs` par `ai_agent_id` (colonne inexistante).
+### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
-Plan d’implémentation
-Phase 1 — Hotfix immédiat “Run mission”
-1) Corriger `sources_used` -> `sources_searched` dans:
-   - `supabase/functions/ai-relocation-api/index.ts`
-   - `supabase/functions/ai-relocation-webhook/index.ts`
-2) Garder la compatibilité des critères existants:
-   - ville: `overrides.city || criteria.city || criteria.location || criteria.region_recherche || 'Genève'`
-   - pièces: `overrides.rooms || criteria.rooms || criteria.min_rooms || null`
-   - type: `criteria.type_bien || criteria.property_type || null`
-3) En cas d’échec de run, écrire `error_message` dans `mission_execution_runs` pour debug immédiat.
+### Modifications
 
-Phase 2 — Alignement API/back-end (éviter les prochains incidents)
-4) `handleMissionsCreate`
-   - retirer `name`
-   - mapper fréquence vers enum DB (`quotidien|hebdomadaire|manuel`)
-5) `handleOffersPrepare`
-   - écrire `property_result_ids: [id]` (ou batch direct) au lieu de `property_result_id`
-6) `handleVisitsRequest`
-   - mapper `preferred_dates -> proposed_slots`
-   - mapper `notes -> contact_message`
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
 
-Phase 3 — Alignement UI (cohérence admin)
-7) `MissionDetailDrawer`
-   - `allowed_sources` (au lieu de `sources`)
-   - `results_new` / `duplicates_detected` (au lieu de `new_results` / `duplicates_skipped`)
-   - compteurs mission: `results_found` / `results_retained`
-8) `AgentIADashboard`
-   - compter les runs via jointure `mission_execution_runs -> search_missions(ai_agent_id)` au lieu de filtrer `ai_agent_id` directement sur `mission_execution_runs`.
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
 
-Validation (à exécuter après implémentation)
-- Test 1: clic ⚡ Run => réponse 200, plus de “Invalid token”.
-- Test 2: une ligne créée dans `mission_execution_runs` avec `status`, `sources_searched`, timestamps.
-- Test 3: `search_missions.last_run_at` mis à jour.
-- Test 4: missions avec anciens snapshots (`location/min_rooms`) utilisent bien la bonne ville/pièces.
-- Test 5: UI Missions/Drawer affiche les compteurs réels sans erreurs de colonnes.
+### Detail technique
 
-Détails techniques
-- Aucune migration DB requise pour le hotfix (on aligne le code sur le schéma existant).
-- Si souhaité, on peut aussi faire une migration de compatibilité (alias/colonnes), mais ce n’est pas nécessaire pour remettre le run en service rapidement.
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
+```
+
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
+

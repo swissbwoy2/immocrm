@@ -251,7 +251,7 @@ async function handleMissionsCreate(
   req: Request,
 ) {
   const body = await req.json();
-  const { client_id, frequency, allowed_sources, name } = body;
+  const { client_id, frequency, allowed_sources } = body;
 
   if (!client_id) return errorResponse('client_id required', 400);
 
@@ -268,14 +268,17 @@ async function handleMissionsCreate(
 
   const criteria = await buildCriteriaSnapshot(adminClient, client_id);
 
+  // Map frequency to valid DB enum (quotidien|hebdomadaire|manuel)
+  const freqMap: Record<string, string> = { daily: 'quotidien', weekly: 'hebdomadaire', manual: 'manuel' };
+  const mappedFrequency = freqMap[frequency] || frequency || 'manuel';
+
   const { data: mission, error } = await adminClient
     .from('search_missions')
     .insert({
       ai_agent_id: aiAgent.id,
       client_id,
-      name: name ?? 'Recherche automatique',
       criteria_snapshot: criteria,
-      frequency: frequency ?? 'daily',
+      frequency: mappedFrequency,
       allowed_sources: allowed_sources ?? [],
       status: 'active',
     })
@@ -539,10 +542,10 @@ async function runAutonomousSearch(
   allowedSources?: string[] | null,
   overrides?: { city?: string; budget?: number; rooms?: number },
 ): Promise<{ totalInserted: number; totalDuplicates: number; totalFailed: number; sourcesUsed: string[] }> {
-  const city = overrides?.city || (criteria.city as string) || (criteria.region_recherche as string) || 'Genève';
-  const rooms = overrides?.rooms || (criteria.rooms as number) || null;
+  const city = overrides?.city || (criteria.city as string) || (criteria.location as string) || (criteria.region_recherche as string) || 'Genève';
+  const rooms = overrides?.rooms || (criteria.rooms as number) || (criteria.min_rooms as number) || null;
   const budget = overrides?.budget || (criteria.budget_max as number) || null;
-  const typeBien = (criteria.type_bien as string) || null;
+  const typeBien = (criteria.type_bien as string) || (criteria.property_type as string) || null;
 
   // Filter portals by allowed_sources
   let portalsToUse = SEARCH_PORTALS;
@@ -608,7 +611,7 @@ async function runAutonomousSearch(
       results_found: totalInserted + totalDuplicates,
       results_new: totalInserted,
       duplicates_detected: totalDuplicates,
-      sources_used: sourcesUsed,
+      sources_searched: sourcesUsed,
     })
     .eq('id', runId);
 
@@ -660,7 +663,7 @@ async function handleMissionsRun(
       mission_id: missionId,
       status: 'running',
       started_at: new Date().toISOString(),
-      sources_used: body.sources_used ?? [],
+      sources_searched: body.sources_searched ?? body.sources_used ?? [],
     })
     .select()
     .single();
@@ -725,7 +728,7 @@ async function handleMissionsRun(
 
     await adminClient
       .from('mission_execution_runs')
-      .update({ status: 'failed', completed_at: new Date().toISOString() })
+      .update({ status: 'failed', completed_at: new Date().toISOString(), error_message: String(err) })
       .eq('id', run.id);
 
     return jsonResponse({
@@ -898,7 +901,7 @@ async function handleVisitsRequest(
   req: Request,
 ) {
   const body = await req.json();
-  const { client_id, property_result_id, preferred_dates, notes } = body;
+  const { client_id, property_result_id, preferred_dates, proposed_slots, notes, contact_message } = body;
 
   if (!client_id || !property_result_id) {
     return errorResponse('client_id and property_result_id required', 400);
@@ -925,8 +928,8 @@ async function handleVisitsRequest(
       ai_agent_id: aiAgent.id,
       status: 'non_traite',
       approval_required: needsApproval,
-      preferred_dates: preferred_dates ?? [],
-      notes: notes ?? null,
+      proposed_slots: proposed_slots ?? preferred_dates ?? [],
+      contact_message: contact_message ?? notes ?? null,
     })
     .select()
     .single();

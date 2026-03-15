@@ -24,13 +24,27 @@ export function AgentIADashboard({ agentId }: Props) {
         return (count as number) ?? 0;
       };
 
-      const runsQ: any = supabase.from('mission_execution_runs').select('id', { count: 'exact', head: true });
       const errQ: any = supabase.from('ai_agent_activity_logs').select('id', { count: 'exact', head: true });
 
-      const [assignments, missions, runsToday, newResults, offers, offersSent, visits, visitsCreated, pendingApprovals, errors] = await Promise.all([
+      // Count runs today via search_missions join (mission_execution_runs has no ai_agent_id)
+      const { data: agentMissions } = await supabase
+        .from('search_missions')
+        .select('id')
+        .eq('ai_agent_id', agentId);
+      const missionIds = (agentMissions ?? []).map((m: any) => m.id);
+      let runsToday = 0;
+      if (missionIds.length > 0) {
+        const { count } = await supabase
+          .from('mission_execution_runs')
+          .select('id', { count: 'exact', head: true })
+          .in('mission_id', missionIds)
+          .gte('started_at', new Date().toISOString().split('T')[0]);
+        runsToday = count ?? 0;
+      }
+
+      const [assignments, missions, newResults, offers, offersSent, visits, visitsCreated, pendingApprovals, errors] = await Promise.all([
         countQuery('ai_agent_assignments', { ai_agent_id: agentId, status: 'active' }),
         countQuery('search_missions', { ai_agent_id: agentId, status: 'active' }),
-        runsQ.eq('ai_agent_id', agentId).gte('started_at', new Date().toISOString().split('T')[0]).then((r: any) => r.count ?? 0),
         countQuery('property_results', { ai_agent_id: agentId, result_status: 'nouveau' }),
         countQuery('client_offer_messages', { ai_agent_id: agentId }),
         countQuery('client_offer_messages', { ai_agent_id: agentId, status: 'envoye' }),
