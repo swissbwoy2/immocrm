@@ -143,16 +143,19 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    // Auth: use getUser() (correct supabase-js v2 method)
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return errorResponse('Invalid token', 401);
     }
+    const userId = user.id;
 
-    const userId = claimsData.claims.sub as string;
+    // Service role client for privileged queries (bypasses RLS)
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const adminClient = createClient(supabaseUrl, serviceKey);
 
-    // Role check: agent_ia or admin
-    const { data: roles } = await supabase
+    // Role check via adminClient to bypass RLS on user_roles
+    const { data: roles } = await adminClient
       .from('user_roles')
       .select('role')
       .eq('user_id', userId);
@@ -161,10 +164,6 @@ Deno.serve(async (req) => {
     if (!userRoles.includes('agent_ia') && !userRoles.includes('admin')) {
       return errorResponse('Forbidden: agent_ia or admin role required', 403);
     }
-
-    // Load AI agent profile
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const adminClient = createClient(supabaseUrl, serviceKey);
 
     let aiAgent: Record<string, unknown> | null = null;
 
