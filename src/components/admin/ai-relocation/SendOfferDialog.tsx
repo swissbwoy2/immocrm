@@ -165,7 +165,7 @@ export function SendOfferDialog({ offer, open, onOpenChange, onSent }: Props) {
             ) : (
               <ScrollArea className="h-[200px] border rounded-md p-2 mt-1">
                 <div className="space-y-2">
-                  {properties.map((p) => (
+                  {(properties as any[]).map((p: any) => (
                     <div key={p.id} className="flex items-start gap-2 p-2 rounded hover:bg-muted/50">
                       <Checkbox
                         checked={selectedProperties.includes(p.id)}
@@ -174,7 +174,7 @@ export function SendOfferDialog({ offer, open, onOpenChange, onSent }: Props) {
                       <div className="text-sm min-w-0">
                         <p className="font-medium truncate">{p.title || 'Sans titre'}</p>
                         <p className="text-muted-foreground text-xs">
-                          {[p.address, p.price ? `CHF ${p.price.toLocaleString()}` : null, p.rooms ? `${p.rooms}p` : null].filter(Boolean).join(' · ')}
+                          {[p.address, p.rent_amount ? `CHF ${p.rent_amount.toLocaleString()}` : null, p.number_of_rooms ? `${p.number_of_rooms}p` : null].filter(Boolean).join(' · ')}
                         </p>
                       </div>
                     </div>

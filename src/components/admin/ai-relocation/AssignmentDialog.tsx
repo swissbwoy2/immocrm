@@ -103,24 +103,23 @@ export function AssignmentDialog({ open, onOpenChange, agentId, assignment }: Pr
             // Get client criteria from their profile
             const { data: client } = await supabase
               .from('clients')
-              .select('id, user_id, budget_max, ville_recherche, type_bien_recherche, nombre_pieces_souhaite, surface_min')
+              .select('id, user_id, budget_max, region_recherche, type_bien, pieces')
               .eq('id', clientId)
               .single();
 
             const criteria: Record<string, any> = {};
             if (client?.budget_max) criteria.budget_max = client.budget_max;
-            if (client?.ville_recherche) criteria.location = client.ville_recherche;
-            if (client?.type_bien_recherche) criteria.property_type = client.type_bien_recherche;
-            if (client?.nombre_pieces_souhaite) criteria.min_rooms = client.nombre_pieces_souhaite;
-            if (client?.surface_min) criteria.min_surface = client.surface_min;
+            if (client?.region_recherche) criteria.location = client.region_recherche;
+            if (client?.type_bien) criteria.property_type = client.type_bien;
+            if (client?.pieces) criteria.min_rooms = client.pieces;
 
             await supabase.from('search_missions').insert({
               ai_agent_id: agentId,
               client_id: clientId,
               status: 'active',
               criteria_snapshot: criteria,
-              sources: ['immoscout', 'homegate', 'comparis'],
-              frequency: 'daily',
+              allowed_sources: ['immoscout', 'homegate', 'comparis'],
+              frequency: 'quotidien',
             });
 
             toast.success('Mission de recherche créée automatiquement');
