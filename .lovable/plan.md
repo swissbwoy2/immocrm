@@ -1,42 +1,29 @@
 
 
-## Envoi automatique d'invitations ICS par email lors de la création d'une visite
+## Fix: 401 "Invalid token" still occurring
 
-### Probleme
-Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
+### Root cause
 
-### Solution
-Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
+The `getUser()` call on line 147 doesn't pass the JWT token explicitly. While the client is created with the Authorization header, in `@supabase/supabase-js@2.7.1` (old version used by this function), `getUser()` without a token argument may not use the global headers correctly in Deno edge functions. No error logs appear because there's no `console.log` before the 401 return.
 
-### Modifications
+### Fix
 
-1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
-   - Un pour le **client** (email depuis `profiles`)
-   - Un pour l'**agent** (email depuis `profiles` via `agents`)
-   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
-   
-   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
+**File: `supabase/functions/ai-relocation-api/index.ts`**
 
-2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
+1. Extract the JWT token from the auth header
+2. Pass it explicitly to `getUser(token)` 
+3. Add `console.error` logging so failures are visible in logs
 
-### Detail technique
-
-```sql
--- Dans notify_on_new_visit, après les notifications existantes :
--- Envoi ICS au client
-PERFORM net.http_post(
-  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
-  headers := jsonb_build_object(...),
-  body := jsonb_build_object(
-    'title', 'Visite - ' || NEW.adresse,
-    'start_date', NEW.date_visite,
-    'location', NEW.adresse,
-    'recipient_email', v_client_email
-  )
-);
--- Idem pour agent et admins
+```ts
+const token = authHeader.replace('Bearer ', '');
+console.log('[ai-relocation-api] Authenticating user...');
+const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+if (userError || !user) {
+  console.error('[ai-relocation-api] Auth failed:', userError?.message);
+  return errorResponse('Invalid token', 401);
+}
+console.log('[ai-relocation-api] Authenticated as', user.email);
 ```
 
-### Resultat
-Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
+Single file change, ~5 lines modified.
 
