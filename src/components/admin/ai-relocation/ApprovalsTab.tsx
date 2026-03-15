@@ -131,8 +131,8 @@ export function ApprovalsTab() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les types</SelectItem>
-            <SelectItem value="offer_send">Envoi offre</SelectItem>
-            <SelectItem value="visit_request">Demande visite</SelectItem>
+            <SelectItem value="offer">Envoi offre</SelectItem>
+            <SelectItem value="visit">Demande visite</SelectItem>
             <SelectItem value="external_action">Action externe</SelectItem>
           </SelectContent>
         </Select>
