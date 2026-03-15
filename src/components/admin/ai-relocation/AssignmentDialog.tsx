@@ -175,10 +175,10 @@ export function AssignmentDialog({ open, onOpenChange, agentId, assignment }: Pr
               <Select value={priority} onValueChange={setPriority}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Basse</SelectItem>
-                  <SelectItem value="normal">Normale</SelectItem>
-                  <SelectItem value="high">Haute</SelectItem>
-                  <SelectItem value="urgent">Urgente</SelectItem>
+                  <SelectItem value="basse">Basse</SelectItem>
+                  <SelectItem value="moyenne">Normale</SelectItem>
+                  <SelectItem value="haute">Haute</SelectItem>
+                  <SelectItem value="urgente">Urgente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
