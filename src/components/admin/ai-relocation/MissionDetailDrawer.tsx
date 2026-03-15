@@ -84,16 +84,12 @@ export function MissionDetailDrawer({ mission, open, onOpenChange, agentId }: Pr
             {/* Counters */}
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div className="bg-muted/50 rounded-lg p-3">
-                <span className="text-muted-foreground">Total résultats:</span>
-                <span className="block font-bold">{mission.total_results_found ?? 0}</span>
+                <span className="text-muted-foreground">Total trouvés:</span>
+                <span className="block font-bold">{mission.results_found ?? 0}</span>
               </div>
               <div className="bg-muted/50 rounded-lg p-3">
-                <span className="text-muted-foreground">Nouveaux:</span>
-                <span className="block font-bold">{mission.new_results_count ?? 0}</span>
-              </div>
-              <div className="bg-muted/50 rounded-lg p-3">
-                <span className="text-muted-foreground">Doublons:</span>
-                <span className="block font-bold">{mission.duplicate_results_count ?? 0}</span>
+                <span className="text-muted-foreground">Retenus:</span>
+                <span className="block font-bold">{mission.results_retained ?? 0}</span>
               </div>
             </div>
 
