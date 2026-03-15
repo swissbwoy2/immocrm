@@ -122,7 +122,8 @@ const Clients = () => {
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(15000);
 
       if (clientsError) throw clientsError;
       setClients(clientsData || []);
