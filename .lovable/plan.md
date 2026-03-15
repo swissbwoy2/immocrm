@@ -1,42 +1,69 @@
 
 
-## Envoi automatique d'invitations ICS par email lors de la création d'une visite
+## Plan: Recherche autonome sur les sites immobiliers suisses
 
-### Probleme
-Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
+### Situation actuelle
 
-### Solution
-Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
+Le bouton "Run" (eclair) dans l'onglet Missions cree un `mission_execution_run` mais **ne fait aucune recherche reelle**. Il manque le moteur de scraping qui va chercher les annonces sur les portails immobiliers.
 
-### Modifications
+### Architecture proposee
 
-1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
-   - Un pour le **client** (email depuis `profiles`)
-   - Un pour l'**agent** (email depuis `profiles` via `agents`)
-   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
-   
-   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
-
-2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
-
-### Detail technique
-
-```sql
--- Dans notify_on_new_visit, après les notifications existantes :
--- Envoi ICS au client
-PERFORM net.http_post(
-  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
-  headers := jsonb_build_object(...),
-  body := jsonb_build_object(
-    'title', 'Visite - ' || NEW.adresse,
-    'start_date', NEW.date_visite,
-    'location', NEW.adresse,
-    'recipient_email', v_client_email
-  )
-);
--- Idem pour agent et admins
+```text
+Admin clique "Run"
+    → handleMissionsRun (edge function)
+    → Construit les URLs de recherche par site (criteres client)
+    → Firecrawl scrape chaque page de resultats
+    → Gemini Flash extrait les annonces structurees du markdown
+    → ingestResults() insere + score matching
+    → Run mis a jour (completed, compteurs)
 ```
 
-### Resultat
-Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
+### Pre-requis: Connecter Firecrawl
+
+Firecrawl est necessaire pour scraper les sites immobiliers. Il faut connecter le service via le connecteur Lovable.
+
+### Implementation
+
+#### 1. Connecter Firecrawl (connecteur)
+
+Utiliser le connecteur Firecrawl pour obtenir la cle API injectee automatiquement dans les edge functions.
+
+#### 2. Modifier `handleMissionsRun` dans `ai-relocation-api/index.ts`
+
+Transformer la fonction pour qu'elle execute reellement la recherche:
+
+**a) Construire les URLs de recherche** pour chaque portail selon les criteres client:
+
+| Site | Pattern URL |
+|---|---|
+| immoscout24.ch | `/fr/immobilier/louer/lieu-{city}?nrf={rooms}&prf={budget}` |
+| homegate.ch | `/fr/louer/immobilier/{city}/correspondant?ac={rooms}&ah={budget}` |
+| flatfox.ch | `/fr/search/?city={city}&rooms_min={rooms}&price_max={budget}` |
+| immobilier.ch | `/fr/annonces/louer?location={city}&rooms={rooms}&price_to={budget}` |
+| acheter-louer.ch | `/fr/louer?location={city}&rooms={rooms}&maxprice={budget}` |
+
+**b) Scraper avec Firecrawl** : Pour chaque URL, appeler l'API Firecrawl (`/v1/scrape`) en format markdown pour obtenir le contenu textuel des pages de resultats.
+
+**c) Extraire les annonces avec Gemini Flash** : Envoyer le markdown a `google/gemini-2.5-flash` via Lovable AI pour extraire un JSON structure par annonce (titre, adresse, loyer, pieces, surface, lien, ID externe).
+
+**d) Ingerer via `ingestResults()`** : Les annonces extraites passent par le pipeline existant (deduplication, scoring, insertion).
+
+**e) Mettre a jour le run** : Statut `completed`, compteurs `results_found`, `results_new`, `duplicates_detected`.
+
+#### 3. Gestion des erreurs et limites
+
+- Timeout: scraper max 5 sites, 2 pages par site
+- Chaque site dans un try/catch pour ne pas bloquer les autres
+- Si Firecrawl echoue sur un site, log l'erreur et continue
+- Run marque `failed` si tous les sites echouent
+
+### Fichiers modifies
+
+| Fichier | Action |
+|---|---|
+| `supabase/functions/ai-relocation-api/index.ts` | Enrichir `handleMissionsRun` avec scraping Firecrawl + extraction IA + ingestion |
+
+### Etape prealable
+
+Avant l'implementation, il faut **connecter Firecrawl** au projet pour que la cle API soit disponible dans les edge functions. Voulez-vous que je lance la connexion Firecrawl maintenant?
 
