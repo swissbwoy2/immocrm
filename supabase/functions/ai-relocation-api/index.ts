@@ -165,12 +165,27 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const adminClient = createClient(supabaseUrl, serviceKey);
 
-    const { data: aiAgent } = await adminClient
-      .from('ai_agents')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .single();
+    let aiAgent: Record<string, unknown> | null = null;
+
+    if (userRoles.includes('admin')) {
+      // Admins can use any active AI agent (agent may not have a user_id)
+      const { data } = await adminClient
+        .from('ai_agents')
+        .select('*')
+        .eq('status', 'active')
+        .limit(1)
+        .single();
+      aiAgent = data;
+    } else {
+      // agent_ia role: must match user_id
+      const { data } = await adminClient
+        .from('ai_agents')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'active')
+        .single();
+      aiAgent = data;
+    }
 
     if (!aiAgent) {
       return errorResponse('AI agent not found or inactive', 403);
