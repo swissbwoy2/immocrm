@@ -893,7 +893,8 @@ async function runAutonomousSearch(
       results_found: totalInserted + totalDuplicates,
       results_new: totalInserted,
       duplicates_detected: totalDuplicates,
-      sources_searched: sourcesUsed,
+      // sources_searched = all attempted portals. Source-level success/failure detail lives in execution_metadata.sources
+      sources_searched: sourcesMeta.map(s => s.name),
       execution_metadata: executionMetadata,
     })
     .eq('id', runId);
