@@ -24,7 +24,6 @@ export function AgentIADashboard({ agentId }: Props) {
         return (count as number) ?? 0;
       };
 
-      const runsQ: any = supabase.from('mission_execution_runs').select('id', { count: 'exact', head: true });
       const errQ: any = supabase.from('ai_agent_activity_logs').select('id', { count: 'exact', head: true });
 
       const [assignments, missions, runsToday, newResults, offers, offersSent, visits, visitsCreated, pendingApprovals, errors] = await Promise.all([
