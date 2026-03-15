@@ -536,7 +536,8 @@ const SEARCH_PORTALS: SearchPortal[] = [
 
 const SCRAPE_TIMEOUT_MS = 30_000;
 const AI_EXTRACTION_TIMEOUT_MS = 60_000;
-const INTER_SOURCE_DELAY_MS = 1500;
+const INTER_SOURCE_DELAY_MS = 1_500;
+const MAX_MARKDOWN_CHARS = 30_000;
 
 async function scrapeUrl(url: string): Promise<ScrapeResult> {
   const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
