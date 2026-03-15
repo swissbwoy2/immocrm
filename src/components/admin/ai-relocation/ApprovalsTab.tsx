@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -21,7 +20,6 @@ const PAGE_SIZE = 50;
 
 export function ApprovalsTab() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
   const [page, setPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -52,32 +50,30 @@ export function ApprovalsTab() {
   });
 
   const decideMutation = useMutation({
-    mutationFn: async ({ id, status, notes, approval }: { id: string; status: ApprovalStatus; notes: string; approval: any }) => {
-      const { error } = await supabase
-        .from('approval_requests')
-        .update({ status, decision_notes: notes || null, decided_at: new Date().toISOString(), decided_by: user?.id || null })
-        .eq('id', id);
-      if (error) throw error;
+    mutationFn: async ({ id, action, notes }: { id: string; action: 'approved' | 'rejected'; notes: string }) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Session expirée');
 
-      if (approval?.reference_table && approval?.reference_id) {
-        try {
-          if (approval.reference_table === 'client_offer_messages') {
-            const newStatus = status === 'approved' ? 'pret' : 'refuse';
-            await supabase
-              .from('client_offer_messages')
-              .update({ status: newStatus as any })
-              .eq('id', approval.reference_id);
-          } else if (approval.reference_table === 'visit_requests') {
-            const newStatus = status === 'approved' ? 'demande_prete' : 'visite_refusee';
-            await supabase
-              .from('visit_requests')
-              .update({ status: newStatus as any })
-              .eq('id', approval.reference_id);
-          }
-        } catch (downstreamErr) {
-          console.error('Downstream update error:', downstreamErr);
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const endpoint = action === 'approved' ? 'approve' : 'reject';
+
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/ai-relocation-api/approvals/${id}/${endpoint}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ notes: notes || undefined }),
         }
+      );
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || `Erreur ${response.status}`);
       }
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-approvals'] });
@@ -87,7 +83,7 @@ export function ApprovalsTab() {
       setDecisionDialog(null);
       setDecisionNotes('');
     },
-    onError: () => toast.error('Erreur'),
+    onError: (e: any) => toast.error(`Erreur: ${e.message}`),
   });
 
   const getClientName = (a: any) => {
@@ -235,9 +231,8 @@ export function ApprovalsTab() {
             <Button
               onClick={() => decisionDialog && decideMutation.mutate({
                 id: decisionDialog.id,
-                status: decisionDialog.action,
+                action: decisionDialog.action,
                 notes: decisionNotes,
-                approval: decisionDialog.approval,
               })}
               disabled={decideMutation.isPending}
             >

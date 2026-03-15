@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -20,121 +20,72 @@ interface Props {
 export function SendOfferDialog({ offer, open, onOpenChange, onSent }: Props) {
   const [customMessage, setCustomMessage] = useState('');
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
+  const [isSending, setIsSending] = useState(false);
 
-  // Fetch property results linked to this offer's client
+  // Fetch property results linked to this offer
   const { data: properties } = useQuery({
-    queryKey: ['offer-properties', offer?.client_id, offer?.ai_agent_id],
+    queryKey: ['offer-properties', offer?.id, offer?.property_result_ids],
     queryFn: async () => {
+      const ids: string[] = Array.isArray(offer?.property_result_ids) ? offer.property_result_ids : [];
+      if (ids.length === 0) return [];
       const { data, error } = await supabase
         .from('property_results')
-        .select('id, title, address, rent_amount, living_area, number_of_rooms, source_name, result_status')
-        .eq('client_id', offer.client_id)
-        .eq('ai_agent_id', offer.ai_agent_id)
-        .in('result_status', ['retenu', 'nouveau'])
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .select('id, title, address, rent_amount, living_area, number_of_rooms, source_name')
+        .in('id', ids)
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
-    enabled: open && !!offer?.client_id,
+    enabled: open && !!offer?.property_result_ids?.length,
   });
 
-  // Initialize selection when properties load
   const toggleProperty = (id: string) => {
     setSelectedProperties(prev =>
       prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
     );
   };
 
-  const sendMutation = useMutation({
-    mutationFn: async () => {
-      if (!offer) throw new Error('No offer');
+  const handleSend = async () => {
+    if (!offer || selectedProperties.length === 0) return;
+    setIsSending(true);
 
-      // Get client info
-      const { data: client } = await supabase
-        .from('clients')
-        .select('id, user_id, profiles:user_id(prenom, nom, email)')
-        .eq('id', offer.client_id)
-        .single();
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('Session expirée');
 
-      const clientEmail = (client as any)?.profiles?.email;
-      const clientName = [(client as any)?.profiles?.prenom, (client as any)?.profiles?.nom].filter(Boolean).join(' ') || 'Client';
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/ai-relocation-api/offers/${offer.id}/send`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            selected_property_ids: selectedProperties,
+            custom_message: customMessage || undefined,
+          }),
+        }
+      );
 
-      if (!clientEmail) throw new Error('Email client introuvable');
+      const result = await response.json();
 
-      // Get selected property details
-      const selectedProps = (properties as any[])?.filter((p: any) => selectedProperties.includes(p.id)) ?? [];
-
-      // Build email body
-      const propertiesHtml = selectedProps.map((p: any) => `
-        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:12px;">
-          <h3 style="margin:0 0 8px;color:#1f2937;">${p.title || 'Bien immobilier'}</h3>
-          ${p.address ? `<p style="margin:4px 0;color:#6b7280;">📍 ${p.address}</p>` : ''}
-          <div style="display:flex;gap:16px;margin-top:8px;">
-            ${p.rent_amount ? `<span style="font-weight:600;color:#059669;">CHF ${p.rent_amount.toLocaleString()}</span>` : ''}
-            ${p.living_area ? `<span style="color:#6b7280;">${p.living_area} m²</span>` : ''}
-            ${p.number_of_rooms ? `<span style="color:#6b7280;">${p.number_of_rooms} pièces</span>` : ''}
-          </div>
-          ${p.source_name ? `<p style="margin:8px 0 0;color:#9ca3af;font-size:12px;">Source: ${p.source_name}</p>` : ''}
-        </div>
-      `).join('');
-
-      const emailBody = `
-        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-          <h2 style="color:#1f2937;">Bonjour ${clientName},</h2>
-          <p style="color:#4b5563;">Nous avons trouvé des biens correspondant à vos critères de recherche :</p>
-          ${customMessage ? `<p style="color:#4b5563;background:#f3f4f6;padding:12px;border-radius:6px;">${customMessage}</p>` : ''}
-          ${propertiesHtml}
-          <p style="color:#4b5563;margin-top:24px;">N'hésitez pas à nous contacter pour organiser des visites.</p>
-          <p style="color:#6b7280;">Cordialement,<br/>L'équipe Logisorama</p>
-        </div>
-      `;
-
-      // Send email
-      const { error: emailError } = await supabase.functions.invoke('send-smtp-email', {
-        body: {
-          recipient_email: clientEmail,
-          subject: `Nouvelles offres immobilières pour vous`,
-          html_body: emailBody,
-        },
-      });
-
-      if (emailError) throw emailError;
-
-      // Update offer status to 'envoye'
-      await supabase
-        .from('client_offer_messages')
-        .update({ status: 'envoye' as any })
-        .eq('id', offer.id);
-
-      // Update property_results to 'envoye_au_client'
-      if (selectedProps.length > 0) {
-        await supabase
-          .from('property_results')
-          .update({ result_status: 'envoye_au_client' })
-          .in('id', selectedProps.map((p: any) => p.id));
+      if (!response.ok) {
+        throw new Error(result.error || `Erreur ${response.status}`);
       }
 
-      // Create notification for client
-      if ((client as any)?.user_id) {
-        await supabase.from('notifications').insert({
-          user_id: (client as any).user_id,
-          type: 'new_offer',
-          title: '🏠 Nouvelles offres disponibles',
-          message: `${selectedProps.length} bien(s) correspondant à vos critères vous ont été envoyés.`,
-          link: '/client/offres-recues',
-        });
-      }
-    },
-    onSuccess: () => {
-      toast.success('Offre envoyée au client par email');
+      toast.success(`Offre envoyée (${result.properties_sent} bien${result.properties_sent > 1 ? 's' : ''})`);
       onOpenChange(false);
       setCustomMessage('');
       setSelectedProperties([]);
       onSent();
-    },
-    onError: (e) => toast.error(`Erreur d'envoi: ${e.message}`),
-  });
+    } catch (e: any) {
+      toast.error(`Erreur d'envoi: ${e.message}`);
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   if (!offer) return null;
 
@@ -161,7 +112,7 @@ export function SendOfferDialog({ offer, open, onOpenChange, onSent }: Props) {
           <div>
             <Label>Biens à inclure dans l'offre</Label>
             {!properties?.length ? (
-              <p className="text-sm text-muted-foreground py-2">Aucun bien retenu trouvé pour ce client.</p>
+              <p className="text-sm text-muted-foreground py-2">Aucun bien trouvé pour cette offre.</p>
             ) : (
               <ScrollArea className="h-[200px] border rounded-md p-2 mt-1">
                 <div className="space-y-2">
@@ -188,10 +139,10 @@ export function SendOfferDialog({ offer, open, onOpenChange, onSent }: Props) {
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
           <Button
-            onClick={() => sendMutation.mutate()}
-            disabled={sendMutation.isPending || selectedProperties.length === 0}
+            onClick={handleSend}
+            disabled={isSending || selectedProperties.length === 0}
           >
-            {sendMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Send className="w-4 h-4 mr-1" />}
+            {isSending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Send className="w-4 h-4 mr-1" />}
             Envoyer ({selectedProperties.length} bien{selectedProperties.length > 1 ? 's' : ''})
           </Button>
         </DialogFooter>
