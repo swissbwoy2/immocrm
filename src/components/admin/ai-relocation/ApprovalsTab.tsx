@@ -21,6 +21,7 @@ const PAGE_SIZE = 50;
 
 export function ApprovalsTab() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [page, setPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
