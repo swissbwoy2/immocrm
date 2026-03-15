@@ -22,7 +22,7 @@ interface Props {
 export function OffersTab({ agentId }: Props) {
   const queryClient = useQueryClient();
   const [selectedOffer, setSelectedOffer] = useState<any>(null);
-  const [sendOffer, setSendOffer] = useState<any>(null);
+  
   const [statusFilter, setStatusFilter] = useState('all');
 
   const { data: offers, isLoading, isError, refetch } = useQuery({
