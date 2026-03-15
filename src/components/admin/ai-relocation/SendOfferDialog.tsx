@@ -27,7 +27,7 @@ export function SendOfferDialog({ offer, open, onOpenChange, onSent }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('property_results')
-        .select('id, title, address, price, surface, rooms, source_name, result_status')
+        .select('id, title, address, rent_amount, living_area, number_of_rooms, source_name, result_status')
         .eq('client_id', offer.client_id)
         .eq('ai_agent_id', offer.ai_agent_id)
         .in('result_status', ['retenu', 'nouveau'])
