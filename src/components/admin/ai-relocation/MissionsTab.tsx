@@ -117,6 +117,7 @@ export function MissionsTab({ agentId }: Props) {
                 <TableHead>Sources</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead>Dernière exécution</TableHead>
+                <TableHead>Prochaine exécution</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
