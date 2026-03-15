@@ -22,8 +22,8 @@ export function AssignmentDialog({ open, onOpenChange, agentId, assignment }: Pr
   const isEdit = !!assignment;
 
   const [clientId, setClientId] = useState('');
-  const [priority, setPriority] = useState('normal');
-  const [urgencyLevel, setUrgencyLevel] = useState('normal');
+  const [priority, setPriority] = useState('moyenne');
+  const [urgencyLevel, setUrgencyLevel] = useState('normale');
   const [approvalOffers, setApprovalOffers] = useState(true);
   const [approvalVisits, setApprovalVisits] = useState(true);
   const [autoSend, setAutoSend] = useState(false);
@@ -34,8 +34,8 @@ export function AssignmentDialog({ open, onOpenChange, agentId, assignment }: Pr
   useEffect(() => {
     if (assignment) {
       setClientId(assignment.client_id || '');
-      setPriority(assignment.priority || 'normal');
-      setUrgencyLevel(assignment.urgency_level || 'normal');
+      setPriority(assignment.priority || 'moyenne');
+      setUrgencyLevel(assignment.urgency_level || 'normale');
       setApprovalOffers(assignment.approval_required_for_offers ?? true);
       setApprovalVisits(assignment.approval_required_for_visits ?? true);
       setAutoSend(assignment.auto_send_enabled ?? false);
@@ -44,8 +44,8 @@ export function AssignmentDialog({ open, onOpenChange, agentId, assignment }: Pr
       setCreateMission(false);
     } else {
       setClientId('');
-      setPriority('normal');
-      setUrgencyLevel('normal');
+      setPriority('moyenne');
+      setUrgencyLevel('normale');
       setApprovalOffers(true);
       setApprovalVisits(true);
       setAutoSend(false);
@@ -175,10 +175,10 @@ export function AssignmentDialog({ open, onOpenChange, agentId, assignment }: Pr
               <Select value={priority} onValueChange={setPriority}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Basse</SelectItem>
-                  <SelectItem value="normal">Normale</SelectItem>
-                  <SelectItem value="high">Haute</SelectItem>
-                  <SelectItem value="urgent">Urgente</SelectItem>
+                  <SelectItem value="basse">Basse</SelectItem>
+                  <SelectItem value="moyenne">Normale</SelectItem>
+                  <SelectItem value="haute">Haute</SelectItem>
+                  <SelectItem value="urgente">Urgente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -187,10 +187,10 @@ export function AssignmentDialog({ open, onOpenChange, agentId, assignment }: Pr
               <Select value={urgencyLevel} onValueChange={setUrgencyLevel}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="low">Basse</SelectItem>
-                  <SelectItem value="normal">Normale</SelectItem>
-                  <SelectItem value="high">Haute</SelectItem>
-                  <SelectItem value="critical">Critique</SelectItem>
+                  <SelectItem value="basse">Basse</SelectItem>
+                  <SelectItem value="normale">Normale</SelectItem>
+                  <SelectItem value="haute">Haute</SelectItem>
+                  <SelectItem value="critique">Critique</SelectItem>
                 </SelectContent>
               </Select>
             </div>
