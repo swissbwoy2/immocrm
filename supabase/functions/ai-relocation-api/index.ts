@@ -96,6 +96,7 @@ async function buildCriteriaSnapshot(adminClient: SupabaseClient, clientId: stri
   return {
     budget_max: client.budget_max ?? mandatData?.budget_max ?? null,
     city: client.region_recherche ?? mandatData?.region_recherche ?? null,
+    region_recherche: client.region_recherche ?? mandatData?.region_recherche ?? null,
     rooms: client.pieces ?? mandatRooms ?? null,
     surface_min: null,
     type_bien: client.type_bien ?? mandatData?.type_bien ?? null,
