@@ -75,7 +75,8 @@ export function OffresAchatSection({
           )
         `)
         .eq('immeuble_id', immeubleId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(15000);
 
       if (error) throw error;
       setOffres(data || []);

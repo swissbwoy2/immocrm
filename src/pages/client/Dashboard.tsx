@@ -136,7 +136,8 @@ export default function ClientDashboard() {
       const { data: offresData } = await supabase
         .from('offres')
         .select('*')
-        .eq('client_id', clientData.id);
+        .eq('client_id', clientData.id)
+        .limit(15000);
 
       setOffres(offresData || []);
 
@@ -144,7 +145,8 @@ export default function ClientDashboard() {
         .from('visites')
         .select('*, offres(*)')
         .eq('client_id', clientData.id)
-        .order('date_visite', { ascending: true });
+        .order('date_visite', { ascending: true })
+        .limit(15000);
 
       setVisites(visitesData || []);
 
@@ -152,7 +154,8 @@ export default function ClientDashboard() {
         .from('candidatures')
         .select('*, offres(adresse, prix, pieces, surface)')
         .eq('client_id', clientData.id)
-        .order('updated_at', { ascending: false });
+        .order('updated_at', { ascending: false })
+        .limit(15000);
 
       setCandidatures(candidaturesData || []);
 

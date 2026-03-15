@@ -202,7 +202,8 @@ const Clients = () => {
         .from('offres')
         .select('client_id')
         .gte('date_envoi', `${today}T00:00:00`)
-        .lt('date_envoi', `${today}T23:59:59`);
+        .lt('date_envoi', `${today}T23:59:59`)
+        .limit(15000);
 
       const offresMap = new Map<string, number>();
       offresData?.forEach(offre => {

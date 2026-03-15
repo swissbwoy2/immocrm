@@ -277,7 +277,8 @@ export default function AdminOffresEnvoyees() {
           .from('visites')
           .select('id, offre_id, date_visite, statut, notes, feedback_agent')
           .in('offre_id', offreIds)
-          .order('date_visite', { ascending: true });
+          .order('date_visite', { ascending: true })
+          .limit(15000);
         
         if (!visitesError && visitesData) {
           const newVisitesMap = new Map<string, Visite[]>();

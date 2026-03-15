@@ -99,7 +99,8 @@ export default function Assignations() {
       // Load client_agents
       const { data: clientAgentsData, error: clientAgentsError } = await supabase
         .from('client_agents')
-        .select('*');
+        .select('*')
+        .limit(15000);
 
       if (clientAgentsError) throw clientAgentsError;
       setClientAgents(clientAgentsData || []);

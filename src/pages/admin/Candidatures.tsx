@@ -175,7 +175,8 @@ export default function AdminCandidatures() {
           offres (adresse, prix, pieces, surface, agent_id),
           clients (user_id, agent_id)
         `)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(15000);
 
       if (error) throw error;
       setCandidatures(candidaturesData || []);

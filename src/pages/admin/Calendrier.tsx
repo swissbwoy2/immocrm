@@ -81,7 +81,7 @@ export default function AdminCalendrier() {
         supabase.from('candidatures')
           .select('id, client_id, offre_id, date_etat_lieux, heure_etat_lieux, date_signature_choisie, statut, clients(id, profiles!clients_user_id_fkey(prenom, nom)), offres(adresse, agent_id)')
           .or('date_etat_lieux.not.is.null,date_signature_choisie.not.is.null')
-          .limit(5000),
+          .limit(15000),
       ]);
 
       // Log results for debugging

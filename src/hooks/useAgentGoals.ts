@@ -144,7 +144,8 @@ export function useAgentGoals(agentId: string | undefined) {
               .select('date_visite, adresse')
               .eq('agent_id', agentId)
               .gte('date_visite', start.toISOString())
-              .lte('date_visite', end.toISOString());
+              .lte('date_visite', end.toISOString())
+              .limit(15000);
             // Count unique visits (same date + address = 1 visit)
             current = countUniqueVisites(visitesData || []);
             break;

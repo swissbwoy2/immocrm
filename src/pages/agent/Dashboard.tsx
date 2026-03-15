@@ -93,7 +93,8 @@ export default function AgentDashboard() {
           .from('offres')
           .select('*, clients(user_id)')
           .eq('agent_id', agentData.id)
-          .order('date_envoi', { ascending: false });
+          .order('date_envoi', { ascending: false })
+          .limit(15000);
         
         setOffres(offresData || []);
       }
