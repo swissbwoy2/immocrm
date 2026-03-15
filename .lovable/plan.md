@@ -1,59 +1,42 @@
 
 
-## Fix: Augmenter la limite de requetes a 15000 dans toute l'app
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
 ### Probleme
-Supabase retourne par defaut un maximum de 1000 lignes par requete. Plusieurs pages chargent des donnees sans `.limit()` explicite, ce qui tronque silencieusement les resultats au-dela de 1000 lignes. Les tables `offres` et `visites` depassent deja 1000 lignes.
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
-### Fichiers a modifier
+### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
-Les fichiers ci-dessous contiennent des requetes qui chargent toutes les lignes d'une table sans limite explicite. J'ajouterai `.limit(15000)` a chaque requete concernee.
+### Modifications
 
-**Pages Admin (priorite haute - gros volumes):**
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
 
-| Fichier | Requetes a limiter |
-|---|---|
-| `src/pages/admin/OffresEnvoyees.tsx` | `offres` (l.264-267), `visites` in offre_ids (l.275-279) |
-| `src/pages/admin/Candidatures.tsx` | `candidatures` (l.171-178) |
-| `src/pages/admin/Assignations.tsx` | `clients` (l.77-80), `profiles` (l.87-90), `client_agents` (l.98-100) |
-| `src/pages/admin/Clients.tsx` | `clients` (implicite), `profiles` (l.135-138), `client_candidates` (l.151-154), `offres` today (l.198-202) |
-| `src/pages/admin/AgentDetail.tsx` | `offres` (l.113-116), `transactions` (l.120-123), `visites` (l.127-130) |
-| `src/pages/admin/ClientDetail.tsx` | `offres` (l.264-268) |
-| `src/pages/admin/Calendrier.tsx` | Deja corrige a 5000 → passer a 15000 |
-| `src/pages/admin/Coursiers.tsx` | Deja limite a 100/50 → OK |
-| `src/pages/admin/Rappels.tsx` | Deja limite a 500 → OK |
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
 
-**Pages Agent:**
+### Detail technique
 
-| Fichier | Requetes a limiter |
-|---|---|
-| `src/pages/agent/Dashboard.tsx` | `offres` par agent (l.92-96) |
-| `src/pages/agent/Carte.tsx` | `visites` par agent (l.38-43) |
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
+```
 
-**Pages Client:**
-
-| Fichier | Requetes a limiter |
-|---|---|
-| `src/pages/client/OffresRecues.tsx` | `offres` par client (l.194-210), `visites` par client (l.256-259) |
-| `src/pages/client/Dashboard.tsx` | `offres` par client, `visites` par client |
-| `src/pages/client/Carte.tsx` | `visites` par client |
-
-**Components:**
-
-| Fichier | Requetes a limiter |
-|---|---|
-| `src/components/admin/ClientActivityStats.tsx` | `offres`, `visites`, `candidatures` par client |
-| `src/components/proprietaire/OffresAchatSection.tsx` | `offres_achat` par immeuble |
-
-**Hooks:**
-
-| Fichier | Requetes a limiter |
-|---|---|
-| `src/hooks/useAgentGoals.ts` | `offres` par agent (l.98-103), `visites` par agent (l.141-146) |
-
-### Approche technique
-
-Pour chaque requete listee, ajouter `.limit(15000)` juste avant l'appel terminal. Les requetes qui utilisent deja `{ count: 'exact', head: true }` (comptage seul) ou `.single()` / `.maybeSingle()` ne sont pas concernees.
-
-Environ 25-30 requetes a modifier dans ~15 fichiers.
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 

@@ -207,7 +207,8 @@ const OffresRecues = () => {
           )
         `)
         .eq('client_id', clientData.id)
-        .order('date_envoi', { ascending: false });
+        .order('date_envoi', { ascending: false })
+        .limit(15000);
 
       if (error) throw error;
 
@@ -256,7 +257,8 @@ const OffresRecues = () => {
       const { data, error } = await supabase
         .from('visites')
         .select('*')
-        .eq('client_id', clientData.id);
+        .eq('client_id', clientData.id)
+        .limit(15000);
 
       if (error) throw error;
       setVisites(data || []);

@@ -265,7 +265,8 @@ export default function ClientDetail() {
         .from('offres')
         .select('*')
         .eq('client_id', id)
-        .order('date_envoi', { ascending: false });
+        .order('date_envoi', { ascending: false })
+        .limit(15000);
 
       if (offresError) throw offresError;
       setOffres(offresData || []);

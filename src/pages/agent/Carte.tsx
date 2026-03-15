@@ -40,7 +40,8 @@ export default function AgentCarte() {
         .select('*')
         .eq('agent_id', agentData.id)
         .gte('date_visite', new Date().toISOString())
-        .order('date_visite', { ascending: true });
+        .order('date_visite', { ascending: true })
+        .limit(15000);
 
       setVisites(data || []);
     } catch (error) {

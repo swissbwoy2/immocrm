@@ -77,7 +77,8 @@ export default function Assignations() {
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(15000);
 
       if (clientsError) throw clientsError;
       setClients(clientsData || []);
@@ -87,7 +88,8 @@ export default function Assignations() {
       const { data: clientProfilesData, error: clientProfilesError } = await supabase
         .from('profiles')
         .select('*')
-        .in('id', clientUserIds);
+        .in('id', clientUserIds)
+        .limit(15000);
 
       if (clientProfilesError) throw clientProfilesError;
 
@@ -97,7 +99,8 @@ export default function Assignations() {
       // Load client_agents
       const { data: clientAgentsData, error: clientAgentsError } = await supabase
         .from('client_agents')
-        .select('*');
+        .select('*')
+        .limit(15000);
 
       if (clientAgentsError) throw clientAgentsError;
       setClientAgents(clientAgentsData || []);

@@ -122,7 +122,8 @@ const Clients = () => {
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(15000);
 
       if (clientsError) throw clientsError;
       setClients(clientsData || []);
@@ -135,7 +136,8 @@ const Clients = () => {
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('id, nom, prenom, email, telephone, actif, last_seen_at, is_online')
-          .in('id', clientUserIds);
+          .in('id', clientUserIds)
+          .limit(15000);
 
         if (profilesError) throw profilesError;
 
@@ -151,7 +153,8 @@ const Clients = () => {
         const { data: candidatesData, error: candidatesError } = await supabase
           .from('client_candidates')
           .select('id, client_id, type, revenus_mensuels, type_permis, nationalite, poursuites')
-          .in('client_id', clientIds);
+          .in('client_id', clientIds)
+          .limit(15000);
 
         if (!candidatesError && candidatesData) {
           const candidatesMap = new Map<string, ClientCandidate[]>();
@@ -199,7 +202,8 @@ const Clients = () => {
         .from('offres')
         .select('client_id')
         .gte('date_envoi', `${today}T00:00:00`)
-        .lt('date_envoi', `${today}T23:59:59`);
+        .lt('date_envoi', `${today}T23:59:59`)
+        .limit(15000);
 
       const offresMap = new Map<string, number>();
       offresData?.forEach(offre => {

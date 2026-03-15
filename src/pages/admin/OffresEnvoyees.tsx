@@ -264,7 +264,8 @@ export default function AdminOffresEnvoyees() {
       const { data: offresData, error: offresError } = await supabase
         .from('offres')
         .select('*')
-        .order('date_envoi', { ascending: false });
+        .order('date_envoi', { ascending: false })
+        .limit(15000);
       
       if (offresError) throw offresError;
       setOffres(offresData || []);
@@ -276,7 +277,8 @@ export default function AdminOffresEnvoyees() {
           .from('visites')
           .select('id, offre_id, date_visite, statut, notes, feedback_agent')
           .in('offre_id', offreIds)
-          .order('date_visite', { ascending: true });
+          .order('date_visite', { ascending: true })
+          .limit(15000);
         
         if (!visitesError && visitesData) {
           const newVisitesMap = new Map<string, Visite[]>();

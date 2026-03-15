@@ -113,21 +113,24 @@ const AgentDetail = () => {
       const { data: offresData } = await supabase
         .from('offres')
         .select('*')
-        .eq('agent_id', agentId);
+        .eq('agent_id', agentId)
+        .limit(15000);
       setOffres(offresData || []);
 
       // Fetch all transactions for this agent
       const { data: transactionsData } = await supabase
         .from('transactions')
         .select('*')
-        .eq('agent_id', agentId);
+        .eq('agent_id', agentId)
+        .limit(15000);
       setTransactions(transactionsData || []);
 
       // Fetch all visites for this agent (need adresse for unique counting)
       const { data: visitesData } = await supabase
         .from('visites')
         .select('*')
-        .eq('agent_id', agentId);
+        .eq('agent_id', agentId)
+        .limit(15000);
       setVisites(visitesData || []);
 
       // Fetch all candidatures for clients assigned to this agent

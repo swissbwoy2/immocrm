@@ -99,9 +99,9 @@ export function ClientActivityStats({ clientId, clientUserId }: ClientActivitySt
       
       // Charger toutes les données en parallèle
       const [offresRes, visitesRes, candidaturesRes, notificationsRes] = await Promise.all([
-        supabase.from('offres').select('*').eq('client_id', clientId),
-        supabase.from('visites').select('*').eq('client_id', clientId),
-        supabase.from('candidatures').select('*, offres(*)').eq('client_id', clientId),
+        supabase.from('offres').select('*').eq('client_id', clientId).limit(15000),
+        supabase.from('visites').select('*').eq('client_id', clientId).limit(15000),
+        supabase.from('candidatures').select('*, offres(*)').eq('client_id', clientId).limit(15000),
         supabase.from('notifications')
           .select('*')
           .eq('user_id', clientUserId)
