@@ -1,63 +1,42 @@
 
 
-## Corrections for MissionsTab.tsx and SearchResultsTab.tsx
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-### 1. MissionsTab.tsx — 2 fixes
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
-**Fix 1: Edge function invocation pattern is wrong.**
-The `ai-relocation-api` uses path-based routing (e.g. `POST /missions/:id/run`), not `body.action`. The current code:
-```ts
-supabase.functions.invoke('ai-relocation-api', {
-  body: { action: 'run_mission', mission_id: missionId },
-})
+### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
+
+### Modifications
+
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
+
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
+
+### Detail technique
+
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
 ```
-Must be changed to construct the full URL and use `fetch()` directly:
-```ts
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const session = await supabase.auth.getSession();
-const token = session.data.session?.access_token;
-await fetch(`${supabaseUrl}/functions/v1/ai-relocation-api/missions/${missionId}/run`, {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
-    'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-  },
-  body: JSON.stringify({}),
-});
-```
 
-**Fix 2: Wrong field name `sources` → `allowed_sources`.**
-Confirmed from schema: `search_missions` has `allowed_sources: string[] | null`. Line displaying `m.sources?.join(', ')` must become `m.allowed_sources?.join(', ')`.
-
-### 2. SearchResultsTab.tsx — 4 fixes
-
-**Fix 1: Wrong column names.** Confirmed from `property_results` schema:
-- `rent` → `rent_amount`
-- `rooms` → `number_of_rooms`
-- `total_score` → `match_score`
-
-**Fix 2: `score_label` does not exist on `property_results`.** It lives only on `property_result_scores` (oneToOne relation via `property_result_id`). Two options:
-- **Option A**: Add a nested select to load it: `property_result_scores:property_result_scores(score_label, overall_score)`
-- **Option B**: Remove the score_label badge from the table listing, only show `match_score`.
-
-Recommended: **Option A** — add the join in the select, then reference `r.property_result_scores?.score_label`. This gives us both `overall_score` and `score_label` from the proper source. Replace `match_score` display with `overall_score` from the scores table for consistency, and keep `match_score` as a fallback.
-
-**Fix 3: Display corrections in table cells:**
-```
-{r.rent_amount ? `${r.rent_amount} CHF` : '—'}
-{r.number_of_rooms ?? '—'}
-```
-For score: use `r.property_result_scores?.overall_score ?? r.match_score` and `r.property_result_scores?.score_label`.
-
-**Fix 4: `.or()` search pattern** — add basic sanitization by escaping `%` and `_` in the search term to prevent PostgREST injection. Not critical but good practice.
-
-### Files changed
-
-| File | Changes |
-|------|---------|
-| `MissionsTab.tsx` | Fix edge function call to use path-based `fetch()`. Fix `sources` → `allowed_sources`. |
-| `SearchResultsTab.tsx` | Fix column names. Add `property_result_scores` join. Fix score display. Sanitize search input. |
-
-No other files affected.
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 

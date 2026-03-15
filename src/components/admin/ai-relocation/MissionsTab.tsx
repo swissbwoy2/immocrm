@@ -53,16 +53,29 @@ export function MissionsTab({ agentId }: Props) {
 
   const runMutation = useMutation({
     mutationFn: async (missionId: string) => {
-      const { error } = await supabase.functions.invoke('ai-relocation-api', {
-        body: { action: 'run_mission', mission_id: missionId },
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Non authentifié');
+      const res = await fetch(`${supabaseUrl}/functions/v1/ai-relocation-api/missions/${missionId}/run`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({}),
       });
-      if (error) throw error;
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Erreur ${res.status}`);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-missions'] });
       toast.success('Exécution lancée');
     },
-    onError: () => toast.error('Erreur lors du lancement'),
+    onError: (e: Error) => toast.error(e.message || 'Erreur lors du lancement'),
   });
 
   const getClientName = (m: any) => {
@@ -112,7 +125,7 @@ export function MissionsTab({ agentId }: Props) {
                 <TableRow key={m.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedMission(m)}>
                   <TableCell className="font-medium">{getClientName(m)}</TableCell>
                   <TableCell className="capitalize">{m.frequency || '—'}</TableCell>
-                  <TableCell className="text-xs max-w-[150px] truncate">{m.sources?.join(', ') || '—'}</TableCell>
+                  <TableCell className="text-xs max-w-[150px] truncate">{m.allowed_sources?.join(', ') || '—'}</TableCell>
                   <TableCell><StatusBadge type="mission" value={m.status} /></TableCell>
                   <TableCell className="text-xs">
                     {m.last_run_at ? format(new Date(m.last_run_at), 'dd/MM HH:mm', { locale: fr }) : '—'}
