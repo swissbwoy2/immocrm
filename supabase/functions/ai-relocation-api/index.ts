@@ -274,6 +274,311 @@ async function handleMissionsCreate(
   return jsonResponse({ data: mission });
 }
 
+// === SCRAPING & AI EXTRACTION ENGINE ===
+
+interface SearchPortal {
+  name: string;
+  buildUrl: (city: string, rooms: number | null, budget: number | null, type: string | null) => string;
+}
+
+const SEARCH_PORTALS: SearchPortal[] = [
+  {
+    name: 'immoscout24.ch',
+    buildUrl: (city, rooms, budget) => {
+      const params = new URLSearchParams();
+      if (rooms) params.set('nrf', String(rooms));
+      if (budget) params.set('prf', String(budget));
+      return `https://www.immoscout24.ch/fr/immobilier/louer/lieu-${encodeURIComponent(city)}?${params}`;
+    },
+  },
+  {
+    name: 'homegate.ch',
+    buildUrl: (city, rooms, budget) => {
+      const params = new URLSearchParams();
+      if (rooms) params.set('ac', String(rooms));
+      if (budget) params.set('ah', String(budget));
+      return `https://www.homegate.ch/fr/louer/immobilier/${encodeURIComponent(city)}/correspondant?${params}`;
+    },
+  },
+  {
+    name: 'flatfox.ch',
+    buildUrl: (city, rooms, budget) => {
+      const params = new URLSearchParams();
+      params.set('city', city);
+      if (rooms) params.set('rooms_min', String(rooms));
+      if (budget) params.set('price_max', String(budget));
+      return `https://flatfox.ch/fr/search/?${params}`;
+    },
+  },
+  {
+    name: 'immobilier.ch',
+    buildUrl: (city, rooms, budget) => {
+      const params = new URLSearchParams();
+      params.set('location', city);
+      if (rooms) params.set('rooms', String(rooms));
+      if (budget) params.set('price_to', String(budget));
+      return `https://www.immobilier.ch/fr/annonces/louer?${params}`;
+    },
+  },
+  {
+    name: 'acheter-louer.ch',
+    buildUrl: (city, rooms, budget) => {
+      const params = new URLSearchParams();
+      params.set('location', city);
+      if (rooms) params.set('rooms', String(rooms));
+      if (budget) params.set('maxprice', String(budget));
+      return `https://www.acheter-louer.ch/fr/louer?${params}`;
+    },
+  },
+];
+
+async function scrapeUrl(url: string): Promise<string | null> {
+  const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
+  if (!apiKey) { console.error('FIRECRAWL_API_KEY not configured'); return null; }
+
+  try {
+    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        url,
+        formats: ['markdown'],
+        onlyMainContent: true,
+        waitFor: 3000,
+        location: { country: 'CH', languages: ['fr'] },
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error(`Firecrawl error for ${url}:`, data);
+      return null;
+    }
+    return data?.data?.markdown || data?.markdown || null;
+  } catch (err) {
+    console.error(`Firecrawl exception for ${url}:`, err);
+    return null;
+  }
+}
+
+async function extractListingsWithAI(markdown: string, sourceName: string, sourceUrl: string): Promise<ResultRow[]> {
+  const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+  if (!lovableApiKey) { console.error('LOVABLE_API_KEY not configured'); return []; }
+
+  const prompt = `Analyse ce contenu markdown d'une page de résultats immobiliers du site "${sourceName}" et extrais TOUTES les annonces de location trouvées.
+
+Pour chaque annonce, extrais:
+- title: titre de l'annonce
+- address: adresse complète si disponible
+- city: ville
+- postal_code: code postal
+- canton: canton suisse (2 lettres)
+- rent_amount: loyer net mensuel (nombre)
+- charges_amount: charges mensuelles (nombre)
+- total_amount: loyer total charges comprises (nombre)
+- number_of_rooms: nombre de pièces (nombre décimal, ex: 3.5)
+- living_area: surface habitable en m² (nombre)
+- availability_date: date de disponibilité (format YYYY-MM-DD)
+- description: brève description
+- external_listing_id: identifiant unique de l'annonce sur le site (numéro de référence, ID dans l'URL, etc.)
+- source_url: URL directe vers l'annonce si trouvée dans le contenu
+- contact_name: nom de l'agence ou du contact
+- contact_phone: téléphone
+- contact_email: email
+
+Si une information n'est pas disponible, mets null.
+Extrais uniquement des annonces réelles, pas des publicités ou suggestions.`;
+
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: 'Tu es un expert en extraction de données immobilières. Tu retournes uniquement des données structurées via tool calling.' },
+          { role: 'user', content: `${prompt}\n\n---\n\n${markdown.substring(0, 30000)}` },
+        ],
+        tools: [{
+          type: 'function',
+          function: {
+            name: 'extract_listings',
+            description: 'Extraire les annonces immobilières structurées depuis le contenu de la page',
+            parameters: {
+              type: 'object',
+              properties: {
+                listings: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      title: { type: 'string' },
+                      address: { type: 'string', nullable: true },
+                      city: { type: 'string', nullable: true },
+                      postal_code: { type: 'string', nullable: true },
+                      canton: { type: 'string', nullable: true },
+                      rent_amount: { type: 'number', nullable: true },
+                      charges_amount: { type: 'number', nullable: true },
+                      total_amount: { type: 'number', nullable: true },
+                      number_of_rooms: { type: 'number', nullable: true },
+                      living_area: { type: 'number', nullable: true },
+                      availability_date: { type: 'string', nullable: true },
+                      description: { type: 'string', nullable: true },
+                      external_listing_id: { type: 'string', nullable: true },
+                      source_url: { type: 'string', nullable: true },
+                      contact_name: { type: 'string', nullable: true },
+                      contact_phone: { type: 'string', nullable: true },
+                      contact_email: { type: 'string', nullable: true },
+                    },
+                    required: ['title'],
+                  },
+                },
+              },
+              required: ['listings'],
+              additionalProperties: false,
+            },
+          },
+        }],
+        tool_choice: { type: 'function', function: { name: 'extract_listings' } },
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error(`AI extraction failed [${response.status}]:`, errText);
+      return [];
+    }
+
+    const data = await response.json();
+    const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall?.function?.arguments) return [];
+
+    const parsed = JSON.parse(toolCall.function.arguments);
+    const listings: ResultRow[] = (parsed.listings || []).map((l: Record<string, unknown>) => ({
+      source_name: sourceName,
+      source_url: (l.source_url as string) || sourceUrl,
+      external_listing_id: (l.external_listing_id as string) || null,
+      title: l.title as string,
+      address: (l.address as string) || null,
+      postal_code: (l.postal_code as string) || null,
+      city: (l.city as string) || null,
+      canton: (l.canton as string) || null,
+      rent_amount: (l.rent_amount as number) || null,
+      charges_amount: (l.charges_amount as number) || null,
+      total_amount: (l.total_amount as number) || null,
+      number_of_rooms: (l.number_of_rooms as number) || null,
+      living_area: (l.living_area as number) || null,
+      availability_date: (l.availability_date as string) || null,
+      description: (l.description as string) || null,
+      contact_name: (l.contact_name as string) || null,
+      contact_email: (l.contact_email as string) || null,
+      contact_phone: (l.contact_phone as string) || null,
+      extraction_timestamp: new Date().toISOString(),
+    }));
+
+    return listings;
+  } catch (err) {
+    console.error('AI extraction exception:', err);
+    return [];
+  }
+}
+
+async function runAutonomousSearch(
+  adminClient: SupabaseClient,
+  aiAgentId: string,
+  missionId: string,
+  clientId: string,
+  runId: string,
+  criteria: Record<string, unknown>,
+): Promise<{ totalInserted: number; totalDuplicates: number; totalFailed: number; sourcesUsed: string[] }> {
+  const city = (criteria.city as string) || 'Genève';
+  const rooms = (criteria.rooms as number) || null;
+  const budget = (criteria.budget_max as number) || null;
+  const typeBien = (criteria.type_bien as string) || null;
+
+  let totalInserted = 0;
+  let totalDuplicates = 0;
+  let totalFailed = 0;
+  const sourcesUsed: string[] = [];
+
+  for (const portal of SEARCH_PORTALS) {
+    try {
+      const url = portal.buildUrl(city, rooms, budget, typeBien);
+      console.log(`[${portal.name}] Scraping: ${url}`);
+
+      const markdown = await scrapeUrl(url);
+      if (!markdown) {
+        console.warn(`[${portal.name}] No content returned`);
+        continue;
+      }
+
+      console.log(`[${portal.name}] Got ${markdown.length} chars, extracting listings...`);
+      const listings = await extractListingsWithAI(markdown, portal.name, url);
+      console.log(`[${portal.name}] Extracted ${listings.length} listings`);
+
+      if (listings.length === 0) continue;
+
+      sourcesUsed.push(portal.name);
+      const result = await ingestResults(adminClient, {
+        mission_id: missionId,
+        client_id: clientId,
+        ai_agent_id: aiAgentId,
+        results: listings,
+        criteria,
+      });
+
+      totalInserted += result.inserted;
+      totalDuplicates += result.duplicates;
+      totalFailed += result.failed;
+
+      console.log(`[${portal.name}] Ingested: ${result.inserted} new, ${result.duplicates} dupes, ${result.failed} failed`);
+    } catch (err) {
+      console.error(`[${portal.name}] Error:`, err);
+      totalFailed++;
+    }
+  }
+
+  // Update run with results
+  await adminClient
+    .from('mission_execution_runs')
+    .update({
+      status: sourcesUsed.length > 0 ? 'completed' : 'failed',
+      completed_at: new Date().toISOString(),
+      results_found: totalInserted + totalDuplicates,
+      results_new: totalInserted,
+      duplicates_detected: totalDuplicates,
+      sources_used: sourcesUsed,
+    })
+    .eq('id', runId);
+
+  // Update mission counters
+  const { data: currentMission } = await adminClient
+    .from('search_missions')
+    .select('results_found, results_retained')
+    .eq('id', missionId)
+    .single();
+
+  if (currentMission) {
+    await adminClient
+      .from('search_missions')
+      .update({
+        results_found: (currentMission.results_found ?? 0) + totalInserted + totalDuplicates,
+        results_retained: (currentMission.results_retained ?? 0) + totalInserted,
+      })
+      .eq('id', missionId);
+  }
+
+  return { totalInserted, totalDuplicates, totalFailed, sourcesUsed };
+}
+
+// === END SCRAPING ENGINE ===
+
 async function handleMissionsRun(
   adminClient: ReturnType<typeof createClient>,
   aiAgent: Record<string, unknown>,
@@ -283,7 +588,7 @@ async function handleMissionsRun(
   // Validate mission is active and belongs to this agent
   const { data: mission } = await adminClient
     .from('search_missions')
-    .select('id, client_id, status')
+    .select('id, client_id, status, criteria_snapshot')
     .eq('id', missionId)
     .eq('ai_agent_id', aiAgent.id)
     .single();
@@ -320,7 +625,53 @@ async function handleMissionsRun(
     metadata: { run_id: run.id },
   });
 
-  return jsonResponse({ data: run });
+  // Build criteria (use snapshot or fetch fresh)
+  const criteria = (mission.criteria_snapshot as Record<string, unknown>) || await buildCriteriaSnapshot(adminClient, mission.client_id);
+
+  // Launch autonomous search (runs inline, edge function has 150s timeout)
+  try {
+    const searchResult = await runAutonomousSearch(
+      adminClient,
+      aiAgent.id as string,
+      missionId,
+      mission.client_id,
+      run.id,
+      criteria,
+    );
+
+    await logActivity(adminClient, aiAgent.id as string, {
+      action_type: 'mission_run_completed',
+      client_id: mission.client_id,
+      mission_id: missionId,
+      metadata: {
+        run_id: run.id,
+        ...searchResult,
+      },
+    });
+
+    return jsonResponse({
+      data: {
+        run_id: run.id,
+        status: searchResult.sourcesUsed.length > 0 ? 'completed' : 'failed',
+        ...searchResult,
+      },
+    });
+  } catch (err) {
+    console.error('Autonomous search failed:', err);
+
+    await adminClient
+      .from('mission_execution_runs')
+      .update({ status: 'failed', completed_at: new Date().toISOString() })
+      .eq('id', run.id);
+
+    return jsonResponse({
+      data: {
+        run_id: run.id,
+        status: 'failed',
+        error: String(err),
+      },
+    });
+  }
 }
 
 async function handleResultsBatch(
