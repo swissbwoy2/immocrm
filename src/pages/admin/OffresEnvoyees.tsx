@@ -264,7 +264,8 @@ export default function AdminOffresEnvoyees() {
       const { data: offresData, error: offresError } = await supabase
         .from('offres')
         .select('*')
-        .order('date_envoi', { ascending: false });
+        .order('date_envoi', { ascending: false })
+        .limit(15000);
       
       if (offresError) throw offresError;
       setOffres(offresData || []);
