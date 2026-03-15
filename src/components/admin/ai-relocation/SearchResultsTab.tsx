@@ -45,7 +45,7 @@ export function SearchResultsTab({ agentId }: Props) {
     queryFn: async () => {
       let query = supabase
         .from('property_results')
-        .select('*, clients:client_id(id, user_id, profiles:user_id(prenom, nom, email))', { count: 'exact' })
+        .select('*, property_result_scores(score_label, overall_score), clients:client_id(id, user_id, profiles:user_id(prenom, nom, email))', { count: 'exact' })
         .eq('ai_agent_id', agentId)
         .order('created_at', { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
@@ -54,8 +54,11 @@ export function SearchResultsTab({ agentId }: Props) {
         query = query.eq('result_status', statusFilter as ResultStatus);
       }
       if (searchTerm.trim()) {
-        const term = `%${searchTerm.trim()}%`;
-        query = query.or(`title.ilike.${term},address.ilike.${term},city.ilike.${term}`);
+        const sanitized = searchTerm.trim().replace(/[%_]/g, '');
+        if (sanitized) {
+          const term = `%${sanitized}%`;
+          query = query.or(`title.ilike.${term},address.ilike.${term},city.ilike.${term}`);
+        }
       }
 
       const { data, error, count } = await query;
