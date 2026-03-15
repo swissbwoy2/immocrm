@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { StatusBadge } from './statusBadges';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -23,15 +24,22 @@ export function OffersTab({ agentId }: Props) {
   const queryClient = useQueryClient();
   const [selectedOffer, setSelectedOffer] = useState<any>(null);
   const [sendOffer, setSendOffer] = useState<any>(null);
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const { data: offers, isLoading, isError, refetch } = useQuery({
-    queryKey: ['ai-offers', agentId],
+    queryKey: ['ai-offers', agentId, statusFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('client_offer_messages')
         .select('*, clients:client_id(id, user_id, profiles:user_id(prenom, nom, email))')
         .eq('ai_agent_id', agentId)
         .order('created_at', { ascending: false });
+
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter as OfferStatus);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -59,6 +67,11 @@ export function OffersTab({ agentId }: Props) {
     return [p.prenom, p.nom].filter(Boolean).join(' ') || p.email || '—';
   };
 
+  const getPropertyCount = (o: any) => {
+    if (Array.isArray(o.property_result_ids)) return o.property_result_ids.length;
+    return 0;
+  };
+
   if (isLoading) {
     return <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12" />)}</div>;
   }
@@ -75,7 +88,22 @@ export function OffersTab({ agentId }: Props) {
 
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold">Offres ({offers?.length ?? 0})</h3>
+      <div className="flex flex-wrap gap-3 items-center">
+        <h3 className="font-semibold">Offres ({offers?.length ?? 0})</h3>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v)}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous</SelectItem>
+            <SelectItem value="brouillon">Brouillon</SelectItem>
+            <SelectItem value="pret">Prêt</SelectItem>
+            <SelectItem value="en_attente_validation">En validation</SelectItem>
+            <SelectItem value="envoye">Envoyé</SelectItem>
+            <SelectItem value="refuse">Refusé</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
       {!offers?.length ? (
         <div className="flex flex-col items-center py-12">
@@ -88,9 +116,12 @@ export function OffersTab({ agentId }: Props) {
             <TableHeader>
               <TableRow>
                 <TableHead>Client</TableHead>
+                <TableHead>Biens</TableHead>
                 <TableHead>Canal</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead>Validation</TableHead>
+                <TableHead>Approuvé par</TableHead>
+                <TableHead>Approuvé le</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -99,9 +130,14 @@ export function OffersTab({ agentId }: Props) {
               {offers.map((o: any) => (
                 <TableRow key={o.id}>
                   <TableCell className="font-medium">{getClientName(o)}</TableCell>
+                  <TableCell className="text-xs">{getPropertyCount(o)}</TableCell>
                   <TableCell className="capitalize text-xs">{o.channel || '—'}</TableCell>
                   <TableCell><StatusBadge type="offer" value={o.status} /></TableCell>
                   <TableCell className="text-xs">{o.approval_required ? 'Oui' : 'Non'}</TableCell>
+                  <TableCell className="text-xs">{o.approved_by || '—'}</TableCell>
+                  <TableCell className="text-xs">
+                    {o.approved_at ? format(new Date(o.approved_at), 'dd/MM HH:mm', { locale: fr }) : '—'}
+                  </TableCell>
                   <TableCell className="text-xs">
                     {o.created_at ? format(new Date(o.created_at), 'dd/MM HH:mm', { locale: fr }) : '—'}
                   </TableCell>

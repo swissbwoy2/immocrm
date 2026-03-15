@@ -22,20 +22,24 @@ export function ApprovalsTab() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [decisionDialog, setDecisionDialog] = useState<{ id: string; action: 'approved' | 'rejected'; approval: any } | null>(null);
   const [decisionNotes, setDecisionNotes] = useState('');
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ['ai-approvals', page, statusFilter],
+    queryKey: ['ai-approvals', page, statusFilter, typeFilter],
     queryFn: async () => {
       let query = supabase
         .from('approval_requests')
-        .select('*', { count: 'exact' })
+        .select('*, clients:client_id(id, user_id, profiles:user_id(prenom, nom, email))', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (statusFilter !== 'all') {
         query = query.eq('status', statusFilter as ApprovalStatus);
+      }
+      if (typeFilter !== 'all') {
+        query = query.eq('request_type', typeFilter as any);
       }
 
       const { data, error, count } = await query;
@@ -47,14 +51,12 @@ export function ApprovalsTab() {
 
   const decideMutation = useMutation({
     mutationFn: async ({ id, status, notes, approval }: { id: string; status: ApprovalStatus; notes: string; approval: any }) => {
-      // Update approval_request status
       const { error } = await supabase
         .from('approval_requests')
         .update({ status, decision_notes: notes || null, decided_at: new Date().toISOString() })
         .eq('id', id);
       if (error) throw error;
 
-      // Downstream actions based on approval type
       if (approval?.reference_table && approval?.reference_id) {
         try {
           if (approval.reference_table === 'client_offer_messages') {
@@ -86,6 +88,12 @@ export function ApprovalsTab() {
     onError: () => toast.error('Erreur'),
   });
 
+  const getClientName = (a: any) => {
+    const p = a.clients?.profiles;
+    if (!p) return '—';
+    return [p.prenom, p.nom].filter(Boolean).join(' ') || p.email || '—';
+  };
+
   const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE);
 
   if (isLoading && page === 0) {
@@ -111,10 +119,21 @@ export function ApprovalsTab() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tous</SelectItem>
+            <SelectItem value="all">Tous les statuts</SelectItem>
             <SelectItem value="pending">En attente</SelectItem>
             <SelectItem value="approved">Approuvé</SelectItem>
             <SelectItem value="rejected">Rejeté</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(0); }}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous les types</SelectItem>
+            <SelectItem value="offer_send">Envoi offre</SelectItem>
+            <SelectItem value="visit_request">Demande visite</SelectItem>
+            <SelectItem value="external_action">Action externe</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -133,7 +152,10 @@ export function ApprovalsTab() {
                   <TableHead>Type</TableHead>
                   <TableHead>Titre</TableHead>
                   <TableHead>Description</TableHead>
+                  <TableHead>Client</TableHead>
                   <TableHead>Statut</TableHead>
+                  <TableHead>Décidé par</TableHead>
+                  <TableHead>Décidé le</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -144,7 +166,12 @@ export function ApprovalsTab() {
                     <TableCell className="text-xs capitalize">{a.request_type}</TableCell>
                     <TableCell className="font-medium max-w-[200px] truncate">{a.title}</TableCell>
                     <TableCell className="text-xs max-w-[200px] truncate">{a.description || '—'}</TableCell>
+                    <TableCell className="text-xs">{getClientName(a)}</TableCell>
                     <TableCell><StatusBadge type="approval" value={a.status} /></TableCell>
+                    <TableCell className="text-xs">{a.decided_by || '—'}</TableCell>
+                    <TableCell className="text-xs">
+                      {a.decided_at ? format(new Date(a.decided_at), 'dd/MM HH:mm', { locale: fr }) : '—'}
+                    </TableCell>
                     <TableCell className="text-xs">
                       {format(new Date(a.created_at), 'dd/MM HH:mm', { locale: fr })}
                     </TableCell>
