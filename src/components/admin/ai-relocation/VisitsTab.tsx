@@ -9,7 +9,7 @@ import { VisitDetailDrawer } from './VisitDetailDrawer';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { AlertTriangle, CalendarCheck, CheckCircle, XCircle } from 'lucide-react';
+import { AlertTriangle, CalendarCheck, CheckCircle, XCircle, CalendarPlus } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type VisitStatus = Database['public']['Enums']['visit_request_status'];
@@ -49,6 +49,45 @@ export function VisitsTab({ agentId }: Props) {
       toast.success('Statut mis à jour');
     },
     onError: () => toast.error('Erreur'),
+  });
+
+  const createCrmVisitMutation = useMutation({
+    mutationFn: async (visit: any) => {
+      const address = visit.property_results?.address || visit.property_results?.title || 'Adresse inconnue';
+      const visitDate = visit.confirmed_date || new Date().toISOString();
+
+      // Create CRM visit entry - the notify_on_new_visit trigger handles notifications + ICS
+      const { error: insertError } = await supabase.from('visites').insert({
+        client_id: visit.client_id,
+        adresse: address,
+        date_visite: visitDate,
+        statut: 'planifiee',
+        type_visite: 'visite',
+        notes: `Visite créée depuis Agent IA - ${visit.property_results?.title || ''}`,
+      });
+
+      if (insertError) throw insertError;
+
+      // Update visit_request status
+      await supabase
+        .from('visit_requests')
+        .update({ status: 'visite_a_effectuer' as any })
+        .eq('id', visit.id);
+
+      // Update property_result status if linked
+      if (visit.property_result_id) {
+        await supabase
+          .from('property_results')
+          .update({ result_status: 'visite_confirmee' })
+          .eq('id', visit.property_result_id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-visits'] });
+      queryClient.invalidateQueries({ queryKey: ['visites'] });
+      toast.success('Visite CRM créée avec succès ! Notifications et invitations ICS envoyées.');
+    },
+    onError: (e) => toast.error(`Erreur: ${e.message}`),
   });
 
   const getClientName = (v: any) => {
@@ -106,6 +145,16 @@ export function VisitsTab({ agentId }: Props) {
                     {v.confirmed_date ? format(new Date(v.confirmed_date), 'dd/MM HH:mm', { locale: fr }) : '—'}
                   </TableCell>
                   <TableCell className="text-right space-x-1" onClick={(e) => e.stopPropagation()}>
+                    {(v.status === 'demande_prete' || v.status === 'visite_confirmee') && (
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={() => createCrmVisitMutation.mutate(v)}
+                        disabled={createCrmVisitMutation.isPending}
+                      >
+                        <CalendarPlus className="w-3 h-3 mr-1" /> Créer visite
+                      </Button>
+                    )}
                     {v.status === 'en_attente_validation' && (
                       <>
                         <Button size="sm" variant="outline" onClick={() => statusMutation.mutate({ id: v.id, status: 'demande_prete' })}>
@@ -133,6 +182,8 @@ export function VisitsTab({ agentId }: Props) {
         visit={selectedVisit}
         open={!!selectedVisit}
         onOpenChange={(open) => { if (!open) setSelectedVisit(null); }}
+        onCreateVisit={(v) => createCrmVisitMutation.mutate(v)}
+        isCreating={createCrmVisitMutation.isPending}
       />
     </div>
   );

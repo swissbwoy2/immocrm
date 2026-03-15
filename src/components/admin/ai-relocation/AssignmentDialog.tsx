@@ -3,11 +3,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 
 interface Props {
@@ -29,6 +29,7 @@ export function AssignmentDialog({ open, onOpenChange, agentId, assignment }: Pr
   const [autoSend, setAutoSend] = useState(false);
   const [autoVisit, setAutoVisit] = useState(false);
   const [notes, setNotes] = useState('');
+  const [createMission, setCreateMission] = useState(true);
 
   useEffect(() => {
     if (assignment) {
@@ -40,6 +41,7 @@ export function AssignmentDialog({ open, onOpenChange, agentId, assignment }: Pr
       setAutoSend(assignment.auto_send_enabled ?? false);
       setAutoVisit(assignment.auto_visit_booking_enabled ?? false);
       setNotes(assignment.notes || '');
+      setCreateMission(false);
     } else {
       setClientId('');
       setPriority('normal');
@@ -49,6 +51,7 @@ export function AssignmentDialog({ open, onOpenChange, agentId, assignment }: Pr
       setAutoSend(false);
       setAutoVisit(false);
       setNotes('');
+      setCreateMission(true);
     }
   }, [assignment, open]);
 
@@ -93,10 +96,44 @@ export function AssignmentDialog({ open, onOpenChange, agentId, assignment }: Pr
           .from('ai_agent_assignments')
           .insert(payload);
         if (error) throw error;
+
+        // Auto-create search mission if checked
+        if (createMission && clientId) {
+          try {
+            // Get client criteria from their profile
+            const { data: client } = await supabase
+              .from('clients')
+              .select('id, user_id, budget_max, ville_recherche, type_bien_recherche, nombre_pieces_souhaite, surface_min')
+              .eq('id', clientId)
+              .single();
+
+            const criteria: Record<string, any> = {};
+            if (client?.budget_max) criteria.budget_max = client.budget_max;
+            if (client?.ville_recherche) criteria.location = client.ville_recherche;
+            if (client?.type_bien_recherche) criteria.property_type = client.type_bien_recherche;
+            if (client?.nombre_pieces_souhaite) criteria.min_rooms = client.nombre_pieces_souhaite;
+            if (client?.surface_min) criteria.min_surface = client.surface_min;
+
+            await supabase.from('search_missions').insert({
+              ai_agent_id: agentId,
+              client_id: clientId,
+              status: 'active',
+              criteria_snapshot: criteria,
+              sources: ['immoscout', 'homegate', 'comparis'],
+              frequency: 'daily',
+            });
+
+            toast.success('Mission de recherche créée automatiquement');
+          } catch (missionErr) {
+            console.error('Auto-mission creation error:', missionErr);
+            toast.warning('Assignation créée mais la mission auto n\'a pas pu être créée');
+          }
+        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['ai-missions'] });
       toast.success(isEdit ? 'Assignation mise à jour' : 'Client assigné');
       onOpenChange(false);
     },
@@ -178,6 +215,19 @@ export function AssignmentDialog({ open, onOpenChange, agentId, assignment }: Pr
               <Switch checked={autoVisit} onCheckedChange={setAutoVisit} />
             </div>
           </div>
+
+          {!isEdit && (
+            <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-muted/30">
+              <Checkbox
+                checked={createMission}
+                onCheckedChange={(v) => setCreateMission(!!v)}
+                id="auto-mission"
+              />
+              <Label htmlFor="auto-mission" className="text-sm cursor-pointer">
+                Créer automatiquement une mission de recherche avec les critères du client
+              </Label>
+            </div>
+          )}
 
           <div>
             <Label>Notes</Label>

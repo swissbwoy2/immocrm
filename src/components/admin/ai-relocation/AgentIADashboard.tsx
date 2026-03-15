@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Search, Zap, FileText, Send, CalendarCheck, Shield, AlertTriangle, Activity } from 'lucide-react';
+import { Users, Search, Zap, FileText, Send, CalendarCheck, Shield, AlertTriangle, Activity, Mail, CalendarPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -24,23 +24,23 @@ export function AgentIADashboard({ agentId }: Props) {
         return (count as number) ?? 0;
       };
 
-
-
       const runsQ: any = supabase.from('mission_execution_runs').select('id', { count: 'exact', head: true });
       const errQ: any = supabase.from('ai_agent_activity_logs').select('id', { count: 'exact', head: true });
 
-      const [assignments, missions, runsToday, newResults, offers, visits, pendingApprovals, errors] = await Promise.all([
+      const [assignments, missions, runsToday, newResults, offers, offersSent, visits, visitsCreated, pendingApprovals, errors] = await Promise.all([
         countQuery('ai_agent_assignments', { ai_agent_id: agentId, status: 'active' }),
         countQuery('search_missions', { ai_agent_id: agentId, status: 'active' }),
         runsQ.eq('ai_agent_id', agentId).gte('started_at', new Date().toISOString().split('T')[0]).then((r: any) => r.count ?? 0),
         countQuery('property_results', { ai_agent_id: agentId, result_status: 'nouveau' }),
         countQuery('client_offer_messages', { ai_agent_id: agentId }),
+        countQuery('client_offer_messages', { ai_agent_id: agentId, status: 'envoye' }),
         countQuery('visit_requests', { ai_agent_id: agentId }),
+        countQuery('visit_requests', { ai_agent_id: agentId, status: 'visite_a_effectuer' }),
         countQuery('approval_requests', { ai_agent_id: agentId, status: 'pending' }),
         errQ.eq('ai_agent_id', agentId).not('error_message', 'is', null).then((r: any) => r.count ?? 0),
       ]);
 
-      return { assignments, missions, runsToday, newResults, offers, visits, pendingApprovals, errors };
+      return { assignments, missions, runsToday, newResults, offers, offersSent, visits, visitsCreated, pendingApprovals, errors };
     },
     refetchOnWindowFocus: false,
   });
@@ -63,8 +63,8 @@ export function AgentIADashboard({ agentId }: Props) {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          {Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>
       </div>
     );
@@ -82,15 +82,17 @@ export function AgentIADashboard({ agentId }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         <PremiumKPICard title="Clients assignés" value={counts?.assignments ?? 0} icon={Users} variant="default" delay={0} />
         <PremiumKPICard title="Missions actives" value={counts?.missions ?? 0} icon={Search} variant="default" delay={50} />
         <PremiumKPICard title="Runs aujourd'hui" value={counts?.runsToday ?? 0} icon={Zap} variant="success" delay={100} />
         <PremiumKPICard title="Nouveaux résultats" value={counts?.newResults ?? 0} icon={FileText} variant="warning" delay={150} />
-        <PremiumKPICard title="Offres" value={counts?.offers ?? 0} icon={Send} variant="default" delay={200} />
-        <PremiumKPICard title="Visites" value={counts?.visits ?? 0} icon={CalendarCheck} variant="default" delay={250} />
-        <PremiumKPICard title="En attente validation" value={counts?.pendingApprovals ?? 0} icon={Shield} variant="warning" delay={300} />
-        <PremiumKPICard title="Erreurs" value={counts?.errors ?? 0} icon={AlertTriangle} variant="danger" delay={350} />
+        <PremiumKPICard title="En attente validation" value={counts?.pendingApprovals ?? 0} icon={Shield} variant="warning" delay={200} />
+        <PremiumKPICard title="Offres total" value={counts?.offers ?? 0} icon={Send} variant="default" delay={250} />
+        <PremiumKPICard title="Offres envoyées" value={counts?.offersSent ?? 0} icon={Mail} variant="success" delay={300} />
+        <PremiumKPICard title="Visites total" value={counts?.visits ?? 0} icon={CalendarCheck} variant="default" delay={350} />
+        <PremiumKPICard title="Visites planifiées" value={counts?.visitsCreated ?? 0} icon={CalendarPlus} variant="success" delay={400} />
+        <PremiumKPICard title="Erreurs" value={counts?.errors ?? 0} icon={AlertTriangle} variant="danger" delay={450} />
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4">

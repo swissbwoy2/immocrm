@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -23,7 +22,7 @@ export function ApprovalsTab() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [decisionDialog, setDecisionDialog] = useState<{ id: string; action: 'approved' | 'rejected' } | null>(null);
+  const [decisionDialog, setDecisionDialog] = useState<{ id: string; action: 'approved' | 'rejected'; approval: any } | null>(null);
   const [decisionNotes, setDecisionNotes] = useState('');
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -47,16 +46,40 @@ export function ApprovalsTab() {
   });
 
   const decideMutation = useMutation({
-    mutationFn: async ({ id, status, notes }: { id: string; status: ApprovalStatus; notes: string }) => {
+    mutationFn: async ({ id, status, notes, approval }: { id: string; status: ApprovalStatus; notes: string; approval: any }) => {
+      // Update approval_request status
       const { error } = await supabase
         .from('approval_requests')
         .update({ status, decision_notes: notes || null, decided_at: new Date().toISOString() })
         .eq('id', id);
       if (error) throw error;
+
+      // Downstream actions based on approval type
+      if (approval?.reference_table && approval?.reference_id) {
+        try {
+          if (approval.reference_table === 'client_offer_messages') {
+            const newStatus = status === 'approved' ? 'pret' : 'refuse';
+            await supabase
+              .from('client_offer_messages')
+              .update({ status: newStatus as any })
+              .eq('id', approval.reference_id);
+          } else if (approval.reference_table === 'visit_requests') {
+            const newStatus = status === 'approved' ? 'demande_prete' : 'visite_refusee';
+            await supabase
+              .from('visit_requests')
+              .update({ status: newStatus as any })
+              .eq('id', approval.reference_id);
+          }
+        } catch (downstreamErr) {
+          console.error('Downstream update error:', downstreamErr);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-approvals'] });
-      toast.success('Décision enregistrée');
+      queryClient.invalidateQueries({ queryKey: ['ai-offers'] });
+      queryClient.invalidateQueries({ queryKey: ['ai-visits'] });
+      toast.success('Décision enregistrée et statut mis à jour');
       setDecisionDialog(null);
       setDecisionNotes('');
     },
@@ -128,10 +151,10 @@ export function ApprovalsTab() {
                     <TableCell className="text-right space-x-1">
                       {a.status === 'pending' && (
                         <>
-                          <Button size="sm" variant="outline" onClick={() => setDecisionDialog({ id: a.id, action: 'approved' })}>
+                          <Button size="sm" variant="outline" onClick={() => setDecisionDialog({ id: a.id, action: 'approved', approval: a })}>
                             <CheckCircle className="w-3 h-3" />
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => setDecisionDialog({ id: a.id, action: 'rejected' })}>
+                          <Button size="sm" variant="outline" onClick={() => setDecisionDialog({ id: a.id, action: 'rejected', approval: a })}>
                             <XCircle className="w-3 h-3" />
                           </Button>
                         </>
@@ -163,6 +186,13 @@ export function ApprovalsTab() {
           <DialogHeader>
             <DialogTitle>{decisionDialog?.action === 'approved' ? 'Approuver' : 'Rejeter'}</DialogTitle>
           </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {decisionDialog?.approval?.reference_table === 'client_offer_messages'
+              ? `L'offre sera marquée comme "${decisionDialog.action === 'approved' ? 'prête à envoyer' : 'refusée'}".`
+              : decisionDialog?.approval?.reference_table === 'visit_requests'
+              ? `La visite sera marquée comme "${decisionDialog.action === 'approved' ? 'demande prête' : 'refusée'}".`
+              : 'La décision sera enregistrée.'}
+          </p>
           <div className="py-2">
             <Textarea
               placeholder="Notes de décision (optionnel)"
@@ -174,7 +204,12 @@ export function ApprovalsTab() {
           <DialogFooter>
             <Button variant="outline" onClick={() => { setDecisionDialog(null); setDecisionNotes(''); }}>Annuler</Button>
             <Button
-              onClick={() => decisionDialog && decideMutation.mutate({ id: decisionDialog.id, status: decisionDialog.action, notes: decisionNotes })}
+              onClick={() => decisionDialog && decideMutation.mutate({
+                id: decisionDialog.id,
+                status: decisionDialog.action,
+                notes: decisionNotes,
+                approval: decisionDialog.approval,
+              })}
               disabled={decideMutation.isPending}
             >
               Confirmer

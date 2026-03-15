@@ -1,17 +1,35 @@
+import { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { StatusBadge } from './statusBadges';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { CalendarPlus, Loader2 } from 'lucide-react';
 
 interface Props {
   visit: any;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCreateVisit?: (visit: any) => void;
+  isCreating?: boolean;
 }
 
-export function VisitDetailDrawer({ visit, open, onOpenChange }: Props) {
+export function VisitDetailDrawer({ visit, open, onOpenChange, onCreateVisit, isCreating }: Props) {
+  const [visitDate, setVisitDate] = useState('');
+
   if (!visit) return null;
+
+  const canCreateVisit = visit.status === 'demande_prete' || visit.status === 'visite_confirmee';
+
+  const handleCreateVisit = () => {
+    const visitWithDate = visitDate
+      ? { ...visit, confirmed_date: new Date(visitDate).toISOString() }
+      : visit;
+    onCreateVisit?.(visitWithDate);
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -58,6 +76,39 @@ export function VisitDetailDrawer({ visit, open, onOpenChange }: Props) {
                 </div>
               )}
             </div>
+
+            {/* CRM Visit Creation Section */}
+            {canCreateVisit && (
+              <div className="border border-primary/20 rounded-lg p-4 bg-primary/5 space-y-3">
+                <h4 className="font-semibold text-sm flex items-center gap-2">
+                  <CalendarPlus className="w-4 h-4 text-primary" />
+                  Créer la visite dans le CRM
+                </h4>
+                <div>
+                  <Label className="text-xs">Date et heure de visite</Label>
+                  <Input
+                    type="datetime-local"
+                    value={visitDate}
+                    onChange={(e) => setVisitDate(e.target.value)}
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Si vide, la date confirmée existante sera utilisée.
+                  </p>
+                </div>
+                <Button
+                  onClick={handleCreateVisit}
+                  disabled={isCreating}
+                  className="w-full"
+                >
+                  {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <CalendarPlus className="w-4 h-4 mr-1" />}
+                  Créer la visite CRM
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Les notifications et invitations calendrier seront envoyées automatiquement.
+                </p>
+              </div>
+            )}
 
             {/* Proposed slots */}
             {visit.proposed_slots && (
