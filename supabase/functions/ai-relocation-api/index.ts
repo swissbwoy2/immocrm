@@ -131,19 +131,66 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // === AUTH ===
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // === SCHEDULER INTERNAL AUTH PATH ===
+    // The scheduler sends only x-scheduler-secret (no Bearer token).
+    // This path creates its own service role client and only allows /missions/:id/run.
+    const schedulerSecret = req.headers.get('x-scheduler-secret');
+    if (schedulerSecret) {
+      const expectedSecret = Deno.env.get('AI_RELOCATION_WEBHOOK_SECRET');
+      if (!expectedSecret || schedulerSecret !== expectedSecret) {
+        return errorResponse('Invalid scheduler secret', 401);
+      }
+
+      console.log('[ai-relocation-api] Scheduler internal auth path');
+      const adminClient = createClient(supabaseUrl, serviceKey);
+
+      const url = new URL(req.url);
+      const path = url.pathname.replace(/^\/ai-relocation-api\/?/, '/');
+      const runMatch = path.match(/^\/missions\/([^/]+)\/run$/);
+
+      if (!runMatch || req.method !== 'POST') {
+        return errorResponse('Scheduler can only call POST /missions/:id/run', 403);
+      }
+
+      const missionId = runMatch[1];
+
+      // Look up mission to get ai_agent_id
+      const { data: mission, error: missionErr } = await adminClient
+        .from('search_missions')
+        .select('ai_agent_id')
+        .eq('id', missionId)
+        .single();
+      if (missionErr || !mission) {
+        return errorResponse('Mission not found', 404);
+      }
+
+      // Fetch the AI agent record
+      const { data: aiAgent } = await adminClient
+        .from('ai_agents')
+        .select('*')
+        .eq('id', mission.ai_agent_id)
+        .single();
+      if (!aiAgent) {
+        return errorResponse('AI agent not found', 404);
+      }
+
+      return await handleMissionsRun(adminClient, aiAgent, missionId, req);
+    }
+
+    // === STANDARD USER AUTH ===
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return errorResponse('Unauthorized', 401);
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Auth: extract token explicitly for Deno edge function compatibility
     const token = authHeader.replace('Bearer ', '');
     console.log('[ai-relocation-api] Authenticating user...');
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
@@ -154,8 +201,6 @@ Deno.serve(async (req) => {
     console.log('[ai-relocation-api] Authenticated as', user.email);
     const userId = user.id;
 
-    // Service role client for privileged queries (bypasses RLS)
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const adminClient = createClient(supabaseUrl, serviceKey);
 
     // Role check via adminClient to bypass RLS on user_roles
@@ -172,7 +217,6 @@ Deno.serve(async (req) => {
     let aiAgent: Record<string, unknown> | null = null;
 
     if (userRoles.includes('admin')) {
-      // Admins can use any active AI agent (agent may not have a user_id)
       const { data } = await adminClient
         .from('ai_agents')
         .select('*')
@@ -181,7 +225,6 @@ Deno.serve(async (req) => {
         .single();
       aiAgent = data;
     } else {
-      // agent_ia role: must match user_id
       const { data } = await adminClient
         .from('ai_agents')
         .select('*')
@@ -305,10 +348,22 @@ async function handleMissionsCreate(
 
   if (error) return errorResponse(error.message, 500);
 
+  // Set next_run_at based on frequency for scheduling
+  if (mappedFrequency === 'quotidien') {
+    await adminClient.from('search_missions')
+      .update({ next_run_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() })
+      .eq('id', mission.id);
+  } else if (mappedFrequency === 'hebdomadaire') {
+    await adminClient.from('search_missions')
+      .update({ next_run_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() })
+      .eq('id', mission.id);
+  }
+  // manuel → next_run_at stays null (default)
+
   await logActivity(adminClient, aiAgent.id as string, {
     action_type: 'mission_created',
     client_id,
-    metadata: { mission_id: mission.id },
+    metadata: { mission_id: mission.id, next_run_at: mappedFrequency !== 'manuel' ? 'set' : null },
   });
 
   return jsonResponse({ data: mission });

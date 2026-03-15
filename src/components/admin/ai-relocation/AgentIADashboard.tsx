@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Search, Zap, FileText, Send, CalendarCheck, Shield, AlertTriangle, Activity, Mail, CalendarPlus } from 'lucide-react';
+import { Users, Search, Zap, FileText, Send, CalendarCheck, Shield, AlertTriangle, Activity, Mail, CalendarPlus, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,14 @@ export function AgentIADashboard({ agentId }: Props) {
         runsToday = count ?? 0;
       }
 
+      // Count scheduled missions (active with next_run_at set)
+      const { count: scheduledCount } = await supabase
+        .from('search_missions')
+        .select('id', { count: 'exact', head: true })
+        .eq('ai_agent_id', agentId)
+        .eq('status', 'active')
+        .not('next_run_at', 'is', null);
+
       const [assignments, missions, newResults, offers, offersSent, visits, visitsCreated, pendingApprovals, errors] = await Promise.all([
         countQuery('ai_agent_assignments', { ai_agent_id: agentId, status: 'active' }),
         countQuery('search_missions', { ai_agent_id: agentId, status: 'active' }),
@@ -54,7 +62,8 @@ export function AgentIADashboard({ agentId }: Props) {
         errQ.eq('ai_agent_id', agentId).not('error_message', 'is', null).then((r: any) => r.count ?? 0),
       ]);
 
-      return { assignments, missions, runsToday, newResults, offers, offersSent, visits, visitsCreated, pendingApprovals, errors };
+      const scheduledMissions = scheduledCount ?? 0;
+      return { assignments, missions, runsToday, newResults, offers, offersSent, visits, visitsCreated, pendingApprovals, errors, scheduledMissions };
     },
     refetchOnWindowFocus: false,
   });
@@ -106,7 +115,8 @@ export function AgentIADashboard({ agentId }: Props) {
         <PremiumKPICard title="Offres envoyées" value={counts?.offersSent ?? 0} icon={Mail} variant="success" delay={300} />
         <PremiumKPICard title="Visites total" value={counts?.visits ?? 0} icon={CalendarCheck} variant="default" delay={350} />
         <PremiumKPICard title="Visites planifiées" value={counts?.visitsCreated ?? 0} icon={CalendarPlus} variant="success" delay={400} />
-        <PremiumKPICard title="Erreurs" value={counts?.errors ?? 0} icon={AlertTriangle} variant="danger" delay={450} />
+        <PremiumKPICard title="Missions planifiées" value={counts?.scheduledMissions ?? 0} icon={Clock} variant="default" delay={450} />
+        <PremiumKPICard title="Erreurs" value={counts?.errors ?? 0} icon={AlertTriangle} variant="danger" delay={500} />
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4">

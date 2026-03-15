@@ -147,5 +147,8 @@ verify_jwt = true
 [functions.ai-relocation-api]
 verify_jwt = false
 
+[functions.ai-relocation-scheduler]
+verify_jwt = false
+
 [functions.ai-relocation-webhook]
 verify_jwt = false
