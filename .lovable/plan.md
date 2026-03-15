@@ -1,42 +1,59 @@
 
 
-## Envoi automatique d'invitations ICS par email lors de la création d'une visite
+## Phase 4C Final Adjustments
 
-### Probleme
-Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
+### 1. Replace hardcoded markdown truncation with named constant
 
-### Solution
-Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
+**File**: `supabase/functions/ai-relocation-api/index.ts`
 
-### Modifications
-
-1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
-   - Un pour le **client** (email depuis `profiles`)
-   - Un pour l'**agent** (email depuis `profiles` via `agents`)
-   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
-   
-   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
-
-2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
-
-### Detail technique
-
-```sql
--- Dans notify_on_new_visit, après les notifications existantes :
--- Envoi ICS au client
-PERFORM net.http_post(
-  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
-  headers := jsonb_build_object(...),
-  body := jsonb_build_object(
-    'title', 'Visite - ' || NEW.adresse,
-    'start_date', NEW.date_visite,
-    'location', NEW.adresse,
-    'recipient_email', v_client_email
-  )
-);
--- Idem pour agent et admins
+Add constant near line 498 (alongside other constants):
+```typescript
+const MAX_MARKDOWN_CHARS = 30_000;
 ```
 
-### Resultat
-Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
+Replace line 591's `markdown.substring(0, 30000)` with `markdown.substring(0, MAX_MARKDOWN_CHARS)`.
+
+---
+
+### 2. Add field normalization in `ingestResults()`
+
+**File**: `supabase/functions/ai-relocation-api/index.ts`
+
+Add a `normalizeResultRow(row: ResultRow): ResultRow` helper before `ingestResults`. Apply it to each row at the top of the loop (line 50).
+
+Normalization rules:
+- **title**: trim whitespace, collapse internal whitespace
+- **address**: trim
+- **city**: trim, capitalize first letter (e.g. "genève" → "Genève")
+- **postal_code**: trim, keep only digits (Swiss format)
+- **rent_amount / charges_amount / total_amount**: coerce to number via `parseFloat`, reject `NaN` → `null`; reject negative → `null`
+- **number_of_rooms**: coerce to number, reject `NaN`/negative → `null`
+- **living_area**: coerce to number, reject `NaN`/negative → `null`
+- **contact_email**: trim, lowercase
+- **contact_phone**: trim
+- **contact_name**: trim
+- **source_url / visit_booking_link**: trim; validate with `isValidUrl()`, set `null` if invalid
+- **external_listing_id**: trim
+
+---
+
+### 3. Make `sources_searched` reflect all attempted sources
+
+**File**: `supabase/functions/ai-relocation-api/index.ts`
+
+Line 856: change `sources_searched: sourcesUsed` to `sources_searched: sourcesMeta.map(s => s.name)` so it reflects all attempted portals. Add a code comment:
+
+```typescript
+// sources_searched = all attempted portals. Source-level success/failure detail lives in execution_metadata.sources
+```
+
+The existing `sourcesUsed` array (only successful) continues to drive the run status check on line 851.
+
+---
+
+### Files modified
+
+| File | Changes |
+|---|---|
+| `supabase/functions/ai-relocation-api/index.ts` | Add `MAX_MARKDOWN_CHARS` constant, add `normalizeResultRow()` helper, update `sources_searched` to all attempted |
 
