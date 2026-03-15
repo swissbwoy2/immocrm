@@ -236,6 +236,24 @@ Deno.serve(async (req) => {
       return await handleLog(adminClient, aiAgent, req);
     }
 
+    // POST /offers/:id/send
+    const offerSendMatch = path.match(/^\/offers\/([^/]+)\/send$/);
+    if (req.method === 'POST' && offerSendMatch) {
+      return await handleOfferSend(adminClient, aiAgent, offerSendMatch[1], authHeader, req);
+    }
+
+    // POST /approvals/:id/approve
+    const approveMatch = path.match(/^\/approvals\/([^/]+)\/approve$/);
+    if (req.method === 'POST' && approveMatch) {
+      return await handleApprovalDecision(adminClient, userId, approveMatch[1], 'approved', req);
+    }
+
+    // POST /approvals/:id/reject
+    const rejectMatch = path.match(/^\/approvals\/([^/]+)\/reject$/);
+    if (req.method === 'POST' && rejectMatch) {
+      return await handleApprovalDecision(adminClient, userId, rejectMatch[1], 'rejected', req);
+    }
+
     return errorResponse(`Unknown endpoint: ${req.method} ${path}`, 404);
   } catch (error) {
     console.error('AI Relocation API error:', error);
