@@ -100,7 +100,8 @@ export function useAgentGoals(agentId: string | undefined) {
               .select('date_envoi, adresse')
               .eq('agent_id', agentId)
               .gte('date_envoi', start.toISOString())
-              .lte('date_envoi', end.toISOString());
+              .lte('date_envoi', end.toISOString())
+              .limit(15000);
             // Count unique offers (same date + address = 1 offer)
             current = countUniqueOffres(offresData || []);
             break;
