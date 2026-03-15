@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Search, Zap, FileText, Send, CalendarCheck, Shield, AlertTriangle, Activity, Mail, CalendarPlus } from 'lucide-react';
+import { Users, Search, Zap, FileText, Send, CalendarCheck, Shield, AlertTriangle, Activity, Mail, CalendarPlus, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
