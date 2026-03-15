@@ -115,7 +115,8 @@ export function AgentIADashboard({ agentId }: Props) {
         <PremiumKPICard title="Offres envoyées" value={counts?.offersSent ?? 0} icon={Mail} variant="success" delay={300} />
         <PremiumKPICard title="Visites total" value={counts?.visits ?? 0} icon={CalendarCheck} variant="default" delay={350} />
         <PremiumKPICard title="Visites planifiées" value={counts?.visitsCreated ?? 0} icon={CalendarPlus} variant="success" delay={400} />
-        <PremiumKPICard title="Erreurs" value={counts?.errors ?? 0} icon={AlertTriangle} variant="danger" delay={450} />
+        <PremiumKPICard title="Missions planifiées" value={counts?.scheduledMissions ?? 0} icon={Clock} variant="default" delay={450} />
+        <PremiumKPICard title="Erreurs" value={counts?.errors ?? 0} icon={AlertTriangle} variant="danger" delay={500} />
       </div>
 
       <div className="rounded-xl border border-border bg-card p-4">

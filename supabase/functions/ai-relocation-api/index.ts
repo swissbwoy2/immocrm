@@ -348,10 +348,22 @@ async function handleMissionsCreate(
 
   if (error) return errorResponse(error.message, 500);
 
+  // Set next_run_at based on frequency for scheduling
+  if (mappedFrequency === 'quotidien') {
+    await adminClient.from('search_missions')
+      .update({ next_run_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() })
+      .eq('id', mission.id);
+  } else if (mappedFrequency === 'hebdomadaire') {
+    await adminClient.from('search_missions')
+      .update({ next_run_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() })
+      .eq('id', mission.id);
+  }
+  // manuel → next_run_at stays null (default)
+
   await logActivity(adminClient, aiAgent.id as string, {
     action_type: 'mission_created',
     client_id,
-    metadata: { mission_id: mission.id },
+    metadata: { mission_id: mission.id, next_run_at: mappedFrequency !== 'manuel' ? 'set' : null },
   });
 
   return jsonResponse({ data: mission });

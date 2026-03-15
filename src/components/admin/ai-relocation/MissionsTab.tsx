@@ -131,6 +131,9 @@ export function MissionsTab({ agentId }: Props) {
                   <TableCell className="text-xs">
                     {m.last_run_at ? format(new Date(m.last_run_at), 'dd/MM HH:mm', { locale: fr }) : '—'}
                   </TableCell>
+                  <TableCell className="text-xs">
+                    {m.next_run_at ? format(new Date(m.next_run_at), 'dd/MM HH:mm', { locale: fr }) : '—'}
+                  </TableCell>
                   <TableCell className="text-right space-x-1" onClick={(e) => e.stopPropagation()}>
                     {m.status === 'active' && (
                       <>
