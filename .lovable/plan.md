@@ -1,42 +1,39 @@
 
 
-## Envoi automatique d'invitations ICS par email lors de la création d'une visite
+## Diagnostic
 
-### Probleme
-Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
+Le rechargement au changement d'onglet est cause par **deux mecanismes agressifs** qui se declenchent quand le navigateur reactive l'onglet :
 
-### Solution
-Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
-
-### Modifications
-
-1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
-   - Un pour le **client** (email depuis `profiles`)
-   - Un pour l'**agent** (email depuis `profiles` via `agents`)
-   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
-   
-   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
-
-2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
-
-### Detail technique
-
-```sql
--- Dans notify_on_new_visit, après les notifications existantes :
--- Envoi ICS au client
-PERFORM net.http_post(
-  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
-  headers := jsonb_build_object(...),
-  body := jsonb_build_object(
-    'title', 'Visite - ' || NEW.adresse,
-    'start_date', NEW.date_visite,
-    'location', NEW.adresse,
-    'recipient_email', v_client_email
-  )
-);
--- Idem pour agent et admins
+### 1. Service Worker (`main.tsx` ligne 9-11)
+```js
+onNeedRefresh() {
+  updateSW(true); // Force reload IMMEDIAT sans demander
+}
 ```
+Quand l'utilisateur revient sur l'onglet, le navigateur re-evalue le Service Worker. Si le hash des assets a change (meme legerement), `onNeedRefresh` se declenche et force un rechargement instantane.
 
-### Resultat
-Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
+### 2. `useAppVersionCheck.ts`
+- `hasRefreshed` est un `useRef(false)` — il se reinitialise a chaque remontage du composant
+- Le check de version tourne toutes les 2 minutes ET au montage initial
+- Si le composant se remonte (apres un rechargement SW), il re-verifie et peut re-declencher un reload
+
+### 3. SW update check toutes les 2 min (`main.tsx` ligne 32-35)
+Le `registration.update()` periodique peut detecter un "nouveau" SW pendant que l'onglet est en arriere-plan, puis declencher le reload au retour.
+
+---
+
+## Corrections
+
+### `src/main.tsx`
+- **Ne plus forcer le reload dans `onNeedRefresh`** — a la place, seulement logger. Le mecanisme `useAppVersionCheck` (base sur la version en BDD) est suffisant et plus fiable pour gerer les vraies mises a jour.
+- **Arreter les checks SW quand l'onglet est cache** — ne lancer `registration.update()` que si `!document.hidden`
+
+### `src/hooks/useAppVersionCheck.ts`
+- **Ne pas checker quand l'onglet est cache** — ajouter `if (document.hidden) return;` au debut de `checkVersion`
+- **Ne pas recharger au retour d'onglet** — seulement mettre a jour la version locale sans reload si la page vient juste de redevenir visible
+
+| Fichier | Changement | Effet |
+|---|---|---|
+| `main.tsx` | Supprimer `updateSW(true)` dans `onNeedRefresh`, ajouter check `document.hidden` | Plus de reload intempestif au changement d'onglet |
+| `useAppVersionCheck.ts` | Skip check si `document.hidden`, ne pas reload au retour d'onglet sauf broadcast explicite | Seules les vraies MAJ (via admin broadcast) declenchent un reload |
 
