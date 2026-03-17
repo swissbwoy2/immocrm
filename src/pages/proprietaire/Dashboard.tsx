@@ -97,86 +97,85 @@ export default function ProprietaireDashboard() {
         }
       }
 
-      // Load immeubles
-      const { data: immeublesData } = await supabase
-        .from('immeubles')
-        .select('*')
-        .eq('proprietaire_id', proprioData.id)
-        .order('created_at', { ascending: false });
-
-      setImmeubles(immeublesData || []);
-
-      // Calculate stats
-      let totalLots = 0;
-      let totalLocataires = 0;
-      let etatLocatifTotal = 0;
-      let tauxVacanceSum = 0;
-
-      for (const immeuble of immeublesData || []) {
-        etatLocatifTotal += immeuble.etat_locatif_annuel || 0;
-        tauxVacanceSum += immeuble.taux_vacance || 0;
-
-        // Count lots
-        const { count: lotsCount } = await supabase
-          .from('lots')
-          .select('*', { count: 'exact', head: true })
-          .eq('immeuble_id', immeuble.id);
-        totalLots += lotsCount || 0;
-
-        // Count locataires
-        const { data: lotsData } = await supabase
-          .from('lots')
-          .select('id')
-          .eq('immeuble_id', immeuble.id);
-
-        if (lotsData) {
-          for (const lot of lotsData) {
-            const { count: locCount } = await supabase
-              .from('locataires_immeuble')
-              .select('*', { count: 'exact', head: true })
-              .eq('lot_id', lot.id)
-              .eq('statut', 'actif');
-            totalLocataires += locCount || 0;
-          }
-        }
-      }
-
-      // Load tickets ouverts
-      const immeublesIds = (immeublesData || []).map(i => i.id);
-      let ticketsData: any[] = [];
-      if (immeublesIds.length > 0) {
-        const { data } = await supabase
-          .from('tickets_techniques')
+      // === PARALLEL: Load immeubles, tickets, projets simultaneously ===
+      const [immeublesResult, ticketsBaseResult, projetsResult] = await Promise.all([
+        supabase
+          .from('immeubles')
           .select('*')
-          .in('immeuble_id', immeublesIds)
-          .not('statut', 'in', '("clos","annule","resolu")')
+          .eq('proprietaire_id', proprioData.id)
+          .order('created_at', { ascending: false }),
+        // We'll filter tickets after getting immeuble IDs
+        Promise.resolve(null),
+        supabase
+          .from('projets_developpement')
+          .select('*')
+          .eq('proprietaire_id', proprioData.id)
           .order('created_at', { ascending: false })
-          .limit(5);
-        ticketsData = data || [];
-      }
+          .limit(3),
+      ]);
+
+      const immeublesData = immeublesResult.data || [];
+      setImmeubles(immeublesData);
+
+      const immeublesIds = immeublesData.map(i => i.id);
+
+      // === PARALLEL: Load lots count, locataires count, and tickets in bulk ===
+      const [lotsResult, locatairesResult, ticketsResult] = await Promise.all([
+        // Bulk lots count
+        immeublesIds.length > 0
+          ? supabase
+              .from('lots')
+              .select('id, immeuble_id', { count: 'exact' })
+              .in('immeuble_id', immeublesIds)
+          : Promise.resolve({ data: [], count: 0 }),
+        // Bulk locataires count via lots
+        immeublesIds.length > 0
+          ? supabase
+              .from('locataires_immeuble')
+              .select('id, lot_id, lots!inner(immeuble_id)')
+              .eq('statut', 'actif')
+              .in('lots.immeuble_id', immeublesIds)
+          : Promise.resolve({ data: [] }),
+        // Tickets ouverts
+        immeublesIds.length > 0
+          ? supabase
+              .from('tickets_techniques')
+              .select('*')
+              .in('immeuble_id', immeublesIds)
+              .not('statut', 'in', '("clos","annule","resolu")')
+              .order('created_at', { ascending: false })
+              .limit(5)
+          : Promise.resolve({ data: [] }),
+      ]);
+
+      const totalLots = lotsResult.count || (lotsResult.data || []).length;
+      const totalLocataires = (locatairesResult.data || []).length;
+      const ticketsData = ticketsResult.data || [];
       setTickets(ticketsData);
 
-      // Load projets de développement
-      const { data: projetsData } = await supabase
-        .from('projets_developpement')
-        .select('*')
-        .eq('proprietaire_id', proprioData.id)
-        .order('created_at', { ascending: false })
-        .limit(3);
-      setProjets(projetsData || []);
+      const projetsData = projetsResult.data || [];
+      setProjets(projetsData);
 
-      const projetsEnCours = (projetsData || []).filter(
+      const projetsEnCours = projetsData.filter(
         p => !['termine', 'projet_refuse'].includes(p.statut)
       ).length;
 
+      // Calculate financial stats
+      let etatLocatifTotal = 0;
+      let tauxVacanceSum = 0;
+      for (const immeuble of immeublesData) {
+        etatLocatifTotal += immeuble.etat_locatif_annuel || 0;
+        tauxVacanceSum += immeuble.taux_vacance || 0;
+      }
+
       setStats({
-        totalImmeubles: (immeublesData || []).length,
+        totalImmeubles: immeublesData.length,
         totalLots,
         totalLocataires,
         ticketsOuverts: ticketsData.length,
         etatLocatifTotal,
-        tauxVacanceMoyen: (immeublesData || []).length > 0 
-          ? tauxVacanceSum / (immeublesData || []).length 
+        tauxVacanceMoyen: immeublesData.length > 0 
+          ? tauxVacanceSum / immeublesData.length 
           : 0,
         projetsEnCours
       });

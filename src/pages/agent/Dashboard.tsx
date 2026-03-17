@@ -78,7 +78,7 @@ export default function AgentDashboard() {
 
       // Récupérer les profils des clients
       const clientUserIds = clientsData.map(c => c.user_id).filter(Boolean);
-      let profilesPromise = Promise.resolve(new Map<string, any>());
+      let profilesPromise: Promise<Map<string, any>> = Promise.resolve(new Map<string, any>());
       if (clientUserIds.length > 0) {
         profilesPromise = supabase
           .from('profiles')
