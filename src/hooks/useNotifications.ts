@@ -103,6 +103,11 @@ const calculateCounts = (notifs: Notification[]): NotificationCounts => {
     candidature_admin: unread.filter(n => n.type.includes('_admin') || n.type.startsWith('candidature_')).length,
     visit_confirmed: countByType('visit_confirmed'),
     visit_refused: countByType('visit_refused'),
+    client_interesse: unread.filter(n => n.type === 'client_interesse' || n.type === 'client_visite_planifiee' || n.type === 'client_candidature').length,
+    new_proprietaire_invited: countByType('new_proprietaire_invited'),
+    new_interet_acheteur: countByType('new_interet_acheteur'),
+    new_projet_developpement: countByType('new_projet_developpement'),
+    projet_statut_change: countByType('projet_statut_change'),
   };
 };
 
