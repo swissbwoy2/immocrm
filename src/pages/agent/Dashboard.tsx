@@ -287,6 +287,7 @@ export default function AgentDashboard() {
     });
 
 
+  return (
     <PullToRefresh onRefresh={loadAgentData} className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8 space-y-6">
           {/* Header avec dégradé animé */}
