@@ -410,7 +410,18 @@ export default function AgentDashboard() {
                 />
               );
             })()}
+            <PremiumKPICard 
+              title="Réactions clients" 
+              value={clientReactions.length} 
+              icon={Heart}
+              onClick={() => navigate('/agent/offres-envoyees')}
+              variant={clientReactions.length > 0 ? 'danger' : 'default'}
+              subtitle="en attente"
+            />
           </div>
+
+          {/* Widget Réactions clients */}
+          <ClientReactionsWidget reactions={clientReactions} basePath="/agent" />
 
           {/* Section Statistiques détaillées avec glassmorphism */}
           <div className="animate-fade-in" style={{ animationDelay: '450ms' }}>
