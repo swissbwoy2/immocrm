@@ -210,11 +210,12 @@ export function AppSidebar() {
     }
   };
 
+  const menu = useMemo(() => getMenuForRole(userRole || ''), [userRole]);
+
   if (!user || !userRole) {
     return null;
   }
 
-  const menu = useMemo(() => getMenuForRole(userRole), [userRole]);
   const userName = profile ? `${profile.prenom} ${profile.nom}` : 'Chargement...';
   const userEmail = profile?.email || user.email || '';
 
