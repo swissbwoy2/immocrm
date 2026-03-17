@@ -81,6 +81,11 @@ const Clients = () => {
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedPieces, setSelectedPieces] = useState<string[]>([]);
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
+  const [selectedTypeRecherche, setSelectedTypeRecherche] = useState<'all' | 'Louer' | 'Acheter'>('all');
+  const [selectedTypePermis, setSelectedTypePermis] = useState<string>('all');
+  const [selectedStatut, setSelectedStatut] = useState<string>('all');
+  const [budgetMin, setBudgetMin] = useState<string>('');
+  const [budgetMax, setBudgetMax] = useState<string>('');
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [loading, setLoading] = useState(true);
@@ -90,6 +95,7 @@ const Clients = () => {
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const [invitingClientId, setInvitingClientId] = useState<string | null>(null);
   const [offresToday, setOffresToday] = useState<Map<string, number>>(new Map());
+  const [displayCount, setDisplayCount] = useState(50);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
