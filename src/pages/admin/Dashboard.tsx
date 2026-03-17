@@ -136,10 +136,10 @@ export default function AdminDashboard() {
       if (clientAgentsError) throw clientAgentsError;
       setClientAgents(clientAgentsData || []);
 
-      // Load transactions
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from('transactions')
-        .select('*');
+      // Load transactions (paginated to bypass 1000 row limit)
+      const { data: transactionsData, error: transactionsError } = await fetchAllPaginated(
+        () => supabase.from('transactions').select('*')
+      );
 
       if (transactionsError) throw transactionsError;
 
@@ -152,10 +152,10 @@ export default function AdminDashboard() {
 
       setTransactions(transformedTransactions);
 
-      // Load offres
-      const { data: offresData, error: offresError } = await supabase
-        .from('offres')
-        .select('*');
+      // Load offres (paginated to bypass 1000 row limit)
+      const { data: offresData, error: offresError } = await fetchAllPaginated(
+        () => supabase.from('offres').select('*')
+      );
 
       if (offresError) throw offresError;
 
