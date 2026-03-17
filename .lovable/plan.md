@@ -1,105 +1,61 @@
 
 
-## Phase 5A — Hybrid Browser Agent Integration
+## Plan — Fix 3 Urgent Issues
 
-### Summary
+### Issue 1: Offres count stuck at 1000
 
-Add `POST /missions/:id/browser-run` to the existing `ai-relocation-api` Edge Function, a Globe trigger button in admin, and browser diagnostics in the drawer. Includes all approved safeguards: multi-layer validation, partial success, empty valid runs, Lausanne geographic grouping, flexible criteria interpretation, mandatory direct URLs, and domain consistency checks.
+**Root cause**: Several pages fetch offres without `.limit()` or pagination, hitting Supabase's default 1000-row cap.
 
-### Prerequisites — 2 New Secrets
+**Affected files**:
+- `src/pages/admin/Dashboard.tsx` (line 155): `.from('offres').select('*')` — no limit at all
+- `src/pages/admin/OffresEnvoyees.tsx` (line 264): has `.limit(15000)` — already fixed but loads ALL offre columns
+- `src/pages/admin/Clients.tsx` (line 201): has `.limit(15000)` for today's offres — OK
 
-- `AI_BROWSER_AGENT_URL` — base URL of external browser worker
-- `AI_BROWSER_AGENT_SECRET` — shared auth secret
-
-Neither exists yet. Will request via `add_secret` before implementation.
-
----
-
-### File Changes
-
-#### 1. `supabase/functions/ai-relocation-api/index.ts`
-
-**Add after line 539** (after existing constants):
-
-Browser constants:
-- `BROWSER_AGENT_TIMEOUT_MS = 150_000`
-- `BROWSER_MAX_PAGES = 3`, `BROWSER_MAX_CARDS = 50`, `BROWSER_MAX_DETAIL_PAGES = 15`, `BROWSER_MAX_DURATION_MS = 120_000`
-
-Browser adapter registry (`BROWSER_ADAPTER_REGISTRY` Map) for 6 portals: `immobilier.ch`, `flatfox.ch`, `immoscout24.ch`, `homegate.ch`, `acheter-louer.ch`, `dreamo.ch` — each with domain, status, priority.
-
-`BROWSER_ADAPTER_NAMES` set (excluding disabled).
-
-`isDomainConsistent(sourceUrl, sourceName)` helper — extracts hostname, checks it contains the adapter's registered domain.
-
-`LAUSANNE_LIMITROPHES` array (Renens, Chavannes, Ecublens, Crissier, Prilly, Pully, Belmont, La Conversion, Saint-Sulpice, Le Mont, Epalinges, Cheseaux).
-
-Add `dreamo` to `SOURCE_ALIASES` (line ~474).
-
-**Add route after line 293** (after existing `/missions/:id/run`):
-
-```typescript
-const browserRunMatch = path.match(/^\/missions\/([^/]+)\/browser-run$/);
-if (req.method === 'POST' && browserRunMatch) {
-  return await handleMissionsBrowserRun(adminClient, aiAgent, browserRunMatch[1], req);
-}
-```
-
-**New `handleMissionsBrowserRun` handler** — follows the exact same pattern as `handleMissionsRun` (line 924) but proxies to external worker instead of calling `runAutonomousSearch`:
-
-1. Validate mission is active + belongs to agent
-2. Check `AI_BROWSER_AGENT_URL` + `AI_BROWSER_AGENT_SECRET` → 503 if missing
-3. Filter `mission.allowed_sources` to `BROWSER_ADAPTER_NAMES` → 400 if empty
-4. Create `mission_execution_runs` with `status: 'running'`
-5. Update `mission.last_run_at`, log `mission_browser_run_started`
-6. Fetch worker at `POST {URL}/browser-agent/run` with `AbortController` timeout + `X-Browser-Agent-Secret` header
-7. Error handling:
-   - `AbortError` → `browser_worker_timeout`, run = failed
-   - `!response.ok` → safe body read, `browser_worker_error_{status}`, run = failed
-   - JSON parse failure → `browser_worker_invalid_response`, run = failed
-8. Source validation: reject sources not in both `allowed_sources` AND `BROWSER_ADAPTER_NAMES`
-9. Listing validation: reject if `source_name` not allowed, `title` empty, `source_url` missing/invalid, or domain inconsistent with `source_name`. Normalize `external_listing_id`.
-10. Outcome logic:
-    - Zero listings + no hard failure = valid empty run (`completed`)
-    - Some rejected + valid subset = continue with valid, record rejections
-    - Only hard worker errors = `failed`
-11. Ingest valid listings via existing `ingestResults()`
-12. Store `execution_metadata` with: `execution_mode: "browser"`, `sources_attempted/validated/rejected_sources`, `browser_listings_returned/validated`, `rejected_listings`, `inserted_results`, `duplicates`, per-source browser fields, `interpreted_criteria`, `geo_groups`
-13. Update run + mission counters, log completion
-
-Worker payload: `{ mission_id, client_id, run_id, criteria, allowed_sources, caps, geo_hints }`.
-
-Worker must prioritize direct canonical listing URLs and never intentionally return search-result URLs when listing-detail URLs are available. Geographic scope hints (Lausanne extended basin) are guidance for the worker, but final results must still be validated and returned with explicit grouping metadata.
+**Fix**:
+- In `Dashboard.tsx`: use `fetchAllPaginated` for the offres query (same pattern already used in `Calendrier.tsx`), or add `.limit(15000)` as a minimum fix. Since Dashboard only needs `offres.length` (total count), switch to a `count: 'exact', head: true` query instead of fetching all rows — much faster.
+- In `OffresEnvoyees.tsx`: use `fetchAllPaginated` to properly paginate through all offres instead of relying on a high `.limit()`.
 
 ---
 
-#### 2. `src/components/admin/ai-relocation/MissionsTab.tsx`
+### Issue 2: Slow client-side page loads
 
-- Import `Globe` from lucide-react
-- Add `browserRunMutation` calling `POST /missions/:id/browser-run` (same pattern as existing `runMutation` at line ~64)
-- Add Globe button next to Zap for active missions
-- Both buttons disabled while either mutation is pending
+**Root cause**: Pages like `client/Dashboard.tsx`, `admin/Dashboard.tsx`, `admin/Clients.tsx`, and `agent/MesClients.tsx` make 4-7 sequential/parallel large queries fetching entire tables into memory before rendering.
 
----
-
-#### 3. `src/components/admin/ai-relocation/MissionDetailDrawer.tsx`
-
-Extend `SourceMeta` with optional browser fields: `adapter`, `filters_requested`, `filters_applied`, `cards_seen`, `detail_pages_opened`, `canonical_urls_extracted`, `pagination_depth`.
-
-Extend `ExecMetadata` with: `execution_mode`, `browser_listings_returned`, `browser_listings_validated`, `rejected_listings`, `rejected_sources`, `sources_attempted`, `sources_validated`, `interpreted_criteria`, `geo_groups`.
-
-UI per run card:
-- Execution mode badge ("Standard" / "Navigateur")
-- For browser runs: pipeline "Retournés → Validés → Insérés"
-- Rejected counts in amber if > 0
-- Browser source details in collapsible
-- Graceful fallback for standard/old runs
+**Fixes**:
+- **Admin Dashboard**: Replace `select('*')` on offres with `select('id', { count: 'exact', head: true })` since only the count is used. Same for transactions — only stats are computed, use count queries where possible.
+- **Client Dashboard**: Already scoped to a single client, so this is less of an issue. Ensure queries use proper indexes (they already filter by `client_id`).
+- **Admin Clients page**: The biggest bottleneck — loads ALL clients + ALL profiles + ALL candidates + today's offres. Add server-side pagination: show 50 clients per page with a "Load more" or pagination component.
+- **Agent MesClients**: Already scoped by agent, likely manageable. Add `.limit()` where missing.
 
 ---
 
-### Implementation Order
+### Issue 3: Optimize client filtering for grouped search by criteria
 
-1. Request 2 secrets (`AI_BROWSER_AGENT_URL`, `AI_BROWSER_AGENT_SECRET`)
-2. Add constants + registry + helpers + `dreamo` alias + route + handler to `index.ts`
-3. Update `MissionsTab.tsx` with Globe button
-4. Update `MissionDetailDrawer.tsx` with browser diagnostics
+**Root cause**: Admin `Clients.tsx` already has region and pieces filters, but filtering is entirely client-side after loading all data. Need better grouped/criteria-based search.
+
+**Fixes**:
+- Add additional filter options: `budget range`, `type_recherche` (Louer/Acheter), `type_permis`, `statut`, `type_contrat`
+- Add a budget range filter (slider or min/max inputs)
+- Add type_recherche filter (Louer/Acheter/Tous)
+- Add type_permis filter dropdown
+- Apply these same filter improvements to `agent/MesClients.tsx` for consistency
+- Add a result counter showing "X client(s) trouvé(s)" (already a known pattern per memory)
+
+---
+
+### Files to modify
+
+| File | Changes |
+|---|---|
+| `src/pages/admin/Dashboard.tsx` | Replace offres `select('*')` with count-only query |
+| `src/pages/admin/OffresEnvoyees.tsx` | Use `fetchAllPaginated` for offres loading |
+| `src/pages/admin/Clients.tsx` | Add budget/type_recherche/type_permis/statut filters, add pagination (50 per page), add result counter |
+| `src/pages/agent/MesClients.tsx` | Add budget/type_permis filters for consistency, add result counter |
+
+### Implementation order
+
+1. Fix Dashboard offres count (count-only query)
+2. Fix OffresEnvoyees pagination with `fetchAllPaginated`
+3. Add advanced filters + pagination to admin Clients
+4. Add matching filters to agent MesClients
 
