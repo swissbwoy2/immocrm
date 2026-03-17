@@ -246,6 +246,10 @@ const Clients = () => {
     );
   };
 
+  const typePermisOptions = ['B', 'C', 'L', 'F', 'N', 'G', 'Suisse'];
+  const statutOptions = ['actif', 'en_attente', 'reloge', 'inactif'];
+  const statutLabels: Record<string, string> = { actif: 'Actif', en_attente: 'En attente', reloge: 'Relogé', inactif: 'Inactif' };
+
   const filteredClients = clients.filter(client => {
     const profile = clientProfiles.get(client.user_id);
     const matchesSearch = profile 
@@ -262,13 +266,31 @@ const Clients = () => {
       selectedPieces.some(p => {
         if (client.pieces == null) return false;
         if (p === '5+') return client.pieces >= 5;
-
         const pieceNum = Number(p);
         return !Number.isNaN(pieceNum) && Math.abs(client.pieces - pieceNum) < 0.01;
       });
+
+    const matchTypeRecherche = selectedTypeRecherche === 'all' || 
+      (client as any).type_recherche === selectedTypeRecherche;
+
+    const matchTypePermis = selectedTypePermis === 'all' || 
+      client.type_permis === selectedTypePermis;
+
+    const matchStatut = selectedStatut === 'all' || 
+      (client as any).statut === selectedStatut;
+
+    const bMin = budgetMin ? Number(budgetMin) : 0;
+    const bMax = budgetMax ? Number(budgetMax) : Infinity;
+    const clientBudget = client.budget_max || 0;
+    const matchBudget = clientBudget >= bMin && clientBudget <= bMax;
     
-    return matchesSearch && matchesAgent && matchesUnassigned && matchRegion && matchPieces;
+    return matchesSearch && matchesAgent && matchesUnassigned && matchRegion && matchPieces && matchTypeRecherche && matchTypePermis && matchStatut && matchBudget;
   });
+
+  const activeFilterCount = selectedRegions.length + selectedPieces.length + 
+    (showUnassignedOnly ? 1 : 0) + (filterAgent !== 'all' ? 1 : 0) + 
+    (selectedTypeRecherche !== 'all' ? 1 : 0) + (selectedTypePermis !== 'all' ? 1 : 0) + 
+    (selectedStatut !== 'all' ? 1 : 0) + (budgetMin ? 1 : 0) + (budgetMax ? 1 : 0);
 
   const getAgentName = (agentId?: string) => {
     if (!agentId) return "Non assigné";
