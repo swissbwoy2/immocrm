@@ -646,6 +646,74 @@ const Clients = () => {
                 ))}
               </div>
             </div>
+
+            {/* Type de recherche filter - desktop */}
+            <div className="hidden sm:block">
+              <p className="text-xs font-medium mb-2 text-muted-foreground">Type de recherche</p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant={selectedTypeRecherche === 'all' ? "default" : "outline"} size="sm" onClick={() => setSelectedTypeRecherche('all')} className="text-xs transition-all duration-300 hover:scale-105">
+                  Tous
+                </Button>
+                <Button variant={selectedTypeRecherche === 'Louer' ? "default" : "outline"} size="sm" onClick={() => setSelectedTypeRecherche('Louer')} className={cn("text-xs transition-all duration-300 hover:scale-105", selectedTypeRecherche === 'Louer' && "bg-blue-600 hover:bg-blue-700")}>
+                  <Key className="w-3 h-3 mr-1" /> Location
+                </Button>
+                <Button variant={selectedTypeRecherche === 'Acheter' ? "default" : "outline"} size="sm" onClick={() => setSelectedTypeRecherche('Acheter')} className={cn("text-xs transition-all duration-300 hover:scale-105", selectedTypeRecherche === 'Acheter' && "bg-emerald-600 hover:bg-emerald-700")}>
+                  <Home className="w-3 h-3 mr-1" /> Achat
+                </Button>
+              </div>
+            </div>
+
+            {/* Type permis + Statut + Budget filters - desktop */}
+            <div className="hidden sm:flex flex-wrap gap-4">
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Permis</p>
+                <Select value={selectedTypePermis} onValueChange={setSelectedTypePermis}>
+                  <SelectTrigger className="w-[130px] bg-background/50 border-border/50 h-8 text-xs">
+                    <SelectValue placeholder="Tous" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    {typePermisOptions.map(p => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Statut</p>
+                <Select value={selectedStatut} onValueChange={setSelectedStatut}>
+                  <SelectTrigger className="w-[130px] bg-background/50 border-border/50 h-8 text-xs">
+                    <SelectValue placeholder="Tous" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    {statutOptions.map(s => (
+                      <SelectItem key={s} value={s}>{statutLabels[s] || s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Budget (CHF)</p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={budgetMin}
+                    onChange={(e) => setBudgetMin(e.target.value)}
+                    className="w-[90px] bg-background/50 border-border/50 h-8 text-xs"
+                  />
+                  <span className="text-muted-foreground text-xs">–</span>
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={budgetMax}
+                    onChange={(e) => setBudgetMax(e.target.value)}
+                    className="w-[90px] bg-background/50 border-border/50 h-8 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
