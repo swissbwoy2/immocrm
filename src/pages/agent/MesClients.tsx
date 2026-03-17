@@ -28,6 +28,10 @@ const MesClients = () => {
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedPieces, setSelectedPieces] = useState<string[]>([]);
   const [selectedTypeRecherche, setSelectedTypeRecherche] = useState<'all' | 'Louer' | 'Acheter'>('all');
+  const [selectedTypePermis, setSelectedTypePermis] = useState<string>('all');
+  const [selectedStatut, setSelectedStatut] = useState<string>('all');
+  const [budgetMin, setBudgetMin] = useState<string>('');
+  const [budgetMax, setBudgetMax] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState<'recent' | 'ancien'>('recent');
   const [loading, setLoading] = useState(true);
