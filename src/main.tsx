@@ -31,7 +31,9 @@ const updateSW = registerSW({
     // Check for updates every 2 minutes (more aggressive)
     if (registration) {
       setInterval(() => {
-        registration.update();
+        if (!document.hidden) {
+          registration.update();
+        }
       }, 2 * 60 * 1000);
     }
   },
