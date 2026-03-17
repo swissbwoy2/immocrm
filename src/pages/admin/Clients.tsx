@@ -509,9 +509,9 @@ const Clients = () => {
             <div className="flex items-center gap-2 mb-4">
               <Filter className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium">Filtres de recherche</span>
-              {(selectedRegions.length > 0 || selectedPieces.length > 0 || showUnassignedOnly || filterAgent !== 'all') && (
+             {activeFilterCount > 0 && (
                 <Badge className="bg-primary/20 text-primary border-0 text-[10px] animate-scale-in">
-                  {selectedRegions.length + selectedPieces.length + (showUnassignedOnly ? 1 : 0) + (filterAgent !== 'all' ? 1 : 0)} actifs
+                  {activeFilterCount} actifs
                 </Badge>
               )}
             </div>
