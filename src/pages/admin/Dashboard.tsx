@@ -34,6 +34,7 @@ export default function AdminDashboard() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [offres, setOffres] = useState<any[]>([]);
   const [clientAgents, setClientAgents] = useState<any[]>([]);
+  const [reactionsCount, setReactionsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
