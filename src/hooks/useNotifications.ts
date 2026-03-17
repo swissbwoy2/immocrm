@@ -68,6 +68,11 @@ const INITIAL_COUNTS: NotificationCounts = {
   candidature_admin: 0,
   visit_confirmed: 0,
   visit_refused: 0,
+  client_interesse: 0,
+  new_proprietaire_invited: 0,
+  new_interet_acheteur: 0,
+  new_projet_developpement: 0,
+  projet_statut_change: 0,
 };
 
 // Helper function to calculate counts - defined outside hook for stability
