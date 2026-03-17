@@ -541,6 +541,58 @@ const MesClients = () => {
               </div>
             </div>
 
+            {/* Permis + Statut + Budget filters */}
+            <div className="flex flex-wrap gap-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
+              <div>
+                <p className="text-sm font-medium mb-2">Permis</p>
+                <Select value={selectedTypePermis} onValueChange={setSelectedTypePermis}>
+                  <SelectTrigger className="w-[130px] bg-background/50 border-border/50 h-8 text-xs">
+                    <SelectValue placeholder="Tous" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    {typePermisOptions.map(p => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-sm font-medium mb-2">Statut</p>
+                <Select value={selectedStatut} onValueChange={setSelectedStatut}>
+                  <SelectTrigger className="w-[130px] bg-background/50 border-border/50 h-8 text-xs">
+                    <SelectValue placeholder="Tous" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    {statutOptions.map(s => (
+                      <SelectItem key={s} value={s}>{statutLabels[s] || s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-sm font-medium mb-2">Budget (CHF)</p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={budgetMin}
+                    onChange={(e) => setBudgetMin(e.target.value)}
+                    className="w-[90px] bg-background/50 border-border/50 h-8 text-xs"
+                  />
+                  <span className="text-muted-foreground text-xs">–</span>
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={budgetMax}
+                    onChange={(e) => setBudgetMax(e.target.value)}
+                    className="w-[90px] bg-background/50 border-border/50 h-8 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Tri par date */}
             <div className="flex items-center gap-2 pt-2 border-t border-border/50">
               <p className="text-sm font-medium">Trier par :</p>
