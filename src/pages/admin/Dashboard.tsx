@@ -73,7 +73,7 @@ export default function AdminDashboard() {
       setAgents(transformedAgents);
 
       // === PARALLEL: Load clients, client_agents, transactions, offres simultaneously ===
-      const [clientsResult, clientAgentsResult, transactionsCountResult, transactionsRecentResult, offresCountResult] = await Promise.all([
+      const [clientsResult, clientAgentsResult, transactionsCountResult, transactionsRecentResult, offresCountResult, reactionsResult] = await Promise.all([
         // Clients with reduced columns
         supabase
           .from('clients')
