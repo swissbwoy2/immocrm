@@ -178,7 +178,7 @@ export default function ClientDashboard() {
   useEffect(() => {
     loadData();
     
-    // Écouter les changements en temps réel sur les visites
+    // Écouter les changements en temps réel sur les visites (scoped by client)
     const channel = supabase
       .channel('client-visites-changes')
       .on(
@@ -187,6 +187,7 @@ export default function ClientDashboard() {
           event: '*',
           schema: 'public',
           table: 'visites',
+          filter: client ? `client_id=eq.${client.id}` : undefined,
         },
         () => {
           loadData();
