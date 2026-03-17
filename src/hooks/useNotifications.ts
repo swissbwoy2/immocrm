@@ -38,6 +38,11 @@ export interface NotificationCounts {
   candidature_admin: number;
   visit_confirmed: number;
   visit_refused: number;
+  client_interesse: number;
+  new_proprietaire_invited: number;
+  new_interet_acheteur: number;
+  new_projet_developpement: number;
+  projet_statut_change: number;
 }
 
 const INITIAL_COUNTS: NotificationCounts = {
