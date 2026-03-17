@@ -1,61 +1,42 @@
 
 
-## Plan — Fix 3 Urgent Issues
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-### Issue 1: Offres count stuck at 1000
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
-**Root cause**: Several pages fetch offres without `.limit()` or pagination, hitting Supabase's default 1000-row cap.
+### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
-**Affected files**:
-- `src/pages/admin/Dashboard.tsx` (line 155): `.from('offres').select('*')` — no limit at all
-- `src/pages/admin/OffresEnvoyees.tsx` (line 264): has `.limit(15000)` — already fixed but loads ALL offre columns
-- `src/pages/admin/Clients.tsx` (line 201): has `.limit(15000)` for today's offres — OK
+### Modifications
 
-**Fix**:
-- In `Dashboard.tsx`: use `fetchAllPaginated` for the offres query (same pattern already used in `Calendrier.tsx`), or add `.limit(15000)` as a minimum fix. Since Dashboard only needs `offres.length` (total count), switch to a `count: 'exact', head: true` query instead of fetching all rows — much faster.
-- In `OffresEnvoyees.tsx`: use `fetchAllPaginated` to properly paginate through all offres instead of relying on a high `.limit()`.
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
 
----
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
 
-### Issue 2: Slow client-side page loads
+### Detail technique
 
-**Root cause**: Pages like `client/Dashboard.tsx`, `admin/Dashboard.tsx`, `admin/Clients.tsx`, and `agent/MesClients.tsx` make 4-7 sequential/parallel large queries fetching entire tables into memory before rendering.
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
+```
 
-**Fixes**:
-- **Admin Dashboard**: Replace `select('*')` on offres with `select('id', { count: 'exact', head: true })` since only the count is used. Same for transactions — only stats are computed, use count queries where possible.
-- **Client Dashboard**: Already scoped to a single client, so this is less of an issue. Ensure queries use proper indexes (they already filter by `client_id`).
-- **Admin Clients page**: The biggest bottleneck — loads ALL clients + ALL profiles + ALL candidates + today's offres. Add server-side pagination: show 50 clients per page with a "Load more" or pagination component.
-- **Agent MesClients**: Already scoped by agent, likely manageable. Add `.limit()` where missing.
-
----
-
-### Issue 3: Optimize client filtering for grouped search by criteria
-
-**Root cause**: Admin `Clients.tsx` already has region and pieces filters, but filtering is entirely client-side after loading all data. Need better grouped/criteria-based search.
-
-**Fixes**:
-- Add additional filter options: `budget range`, `type_recherche` (Louer/Acheter), `type_permis`, `statut`, `type_contrat`
-- Add a budget range filter (slider or min/max inputs)
-- Add type_recherche filter (Louer/Acheter/Tous)
-- Add type_permis filter dropdown
-- Apply these same filter improvements to `agent/MesClients.tsx` for consistency
-- Add a result counter showing "X client(s) trouvé(s)" (already a known pattern per memory)
-
----
-
-### Files to modify
-
-| File | Changes |
-|---|---|
-| `src/pages/admin/Dashboard.tsx` | Replace offres `select('*')` with count-only query |
-| `src/pages/admin/OffresEnvoyees.tsx` | Use `fetchAllPaginated` for offres loading |
-| `src/pages/admin/Clients.tsx` | Add budget/type_recherche/type_permis/statut filters, add pagination (50 per page), add result counter |
-| `src/pages/agent/MesClients.tsx` | Add budget/type_permis filters for consistency, add result counter |
-
-### Implementation order
-
-1. Fix Dashboard offres count (count-only query)
-2. Fix OffresEnvoyees pagination with `fetchAllPaginated`
-3. Add advanced filters + pagination to admin Clients
-4. Add matching filters to agent MesClients
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 

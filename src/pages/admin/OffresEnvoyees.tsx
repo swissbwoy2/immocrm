@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllPaginated } from "@/lib/fetchAllWithRange";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -260,12 +261,10 @@ export default function AdminOffresEnvoyees() {
 
   const loadData = async () => {
     try {
-      // Charger toutes les offres avec tous les champs
-      const { data: offresData, error: offresError } = await supabase
-        .from('offres')
-        .select('*')
-        .order('date_envoi', { ascending: false })
-        .limit(15000);
+      // Charger toutes les offres avec pagination (bypass 1000 row limit)
+      const { data: offresData, error: offresError } = await fetchAllPaginated(
+        () => supabase.from('offres').select('*').order('date_envoi', { ascending: false })
+      );
       
       if (offresError) throw offresError;
       setOffres(offresData || []);

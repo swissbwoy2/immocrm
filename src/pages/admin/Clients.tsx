@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Calendar, Users, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield, UserX, ChevronRight, Sparkles, Filter } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield, UserX, ChevronRight, Sparkles, Filter, Home, Key, Wallet } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { useNavigate } from "react-router-dom";
@@ -81,6 +81,11 @@ const Clients = () => {
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
   const [selectedPieces, setSelectedPieces] = useState<string[]>([]);
   const [showUnassignedOnly, setShowUnassignedOnly] = useState(false);
+  const [selectedTypeRecherche, setSelectedTypeRecherche] = useState<'all' | 'Louer' | 'Acheter'>('all');
+  const [selectedTypePermis, setSelectedTypePermis] = useState<string>('all');
+  const [selectedStatut, setSelectedStatut] = useState<string>('all');
+  const [budgetMin, setBudgetMin] = useState<string>('');
+  const [budgetMax, setBudgetMax] = useState<string>('');
   const [sortField, setSortField] = useState<SortField>('date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [loading, setLoading] = useState(true);
@@ -90,6 +95,7 @@ const Clients = () => {
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const [invitingClientId, setInvitingClientId] = useState<string | null>(null);
   const [offresToday, setOffresToday] = useState<Map<string, number>>(new Map());
+  const [displayCount, setDisplayCount] = useState(50);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
@@ -240,6 +246,10 @@ const Clients = () => {
     );
   };
 
+  const typePermisOptions = ['B', 'C', 'L', 'F', 'N', 'G', 'Suisse'];
+  const statutOptions = ['actif', 'en_attente', 'reloge', 'inactif'];
+  const statutLabels: Record<string, string> = { actif: 'Actif', en_attente: 'En attente', reloge: 'Relogé', inactif: 'Inactif' };
+
   const filteredClients = clients.filter(client => {
     const profile = clientProfiles.get(client.user_id);
     const matchesSearch = profile 
@@ -256,13 +266,31 @@ const Clients = () => {
       selectedPieces.some(p => {
         if (client.pieces == null) return false;
         if (p === '5+') return client.pieces >= 5;
-
         const pieceNum = Number(p);
         return !Number.isNaN(pieceNum) && Math.abs(client.pieces - pieceNum) < 0.01;
       });
+
+    const matchTypeRecherche = selectedTypeRecherche === 'all' || 
+      (client as any).type_recherche === selectedTypeRecherche;
+
+    const matchTypePermis = selectedTypePermis === 'all' || 
+      client.type_permis === selectedTypePermis;
+
+    const matchStatut = selectedStatut === 'all' || 
+      (client as any).statut === selectedStatut;
+
+    const bMin = budgetMin ? Number(budgetMin) : 0;
+    const bMax = budgetMax ? Number(budgetMax) : Infinity;
+    const clientBudget = client.budget_max || 0;
+    const matchBudget = clientBudget >= bMin && clientBudget <= bMax;
     
-    return matchesSearch && matchesAgent && matchesUnassigned && matchRegion && matchPieces;
+    return matchesSearch && matchesAgent && matchesUnassigned && matchRegion && matchPieces && matchTypeRecherche && matchTypePermis && matchStatut && matchBudget;
   });
+
+  const activeFilterCount = selectedRegions.length + selectedPieces.length + 
+    (showUnassignedOnly ? 1 : 0) + (filterAgent !== 'all' ? 1 : 0) + 
+    (selectedTypeRecherche !== 'all' ? 1 : 0) + (selectedTypePermis !== 'all' ? 1 : 0) + 
+    (selectedStatut !== 'all' ? 1 : 0) + (budgetMin ? 1 : 0) + (budgetMax ? 1 : 0);
 
   const getAgentName = (agentId?: string) => {
     if (!agentId) return "Non assigné";
@@ -481,9 +509,9 @@ const Clients = () => {
             <div className="flex items-center gap-2 mb-4">
               <Filter className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium">Filtres de recherche</span>
-              {(selectedRegions.length > 0 || selectedPieces.length > 0 || showUnassignedOnly || filterAgent !== 'all') && (
+             {activeFilterCount > 0 && (
                 <Badge className="bg-primary/20 text-primary border-0 text-[10px] animate-scale-in">
-                  {selectedRegions.length + selectedPieces.length + (showUnassignedOnly ? 1 : 0) + (filterAgent !== 'all' ? 1 : 0)} actifs
+                  {activeFilterCount} actifs
                 </Badge>
               )}
             </div>
@@ -618,6 +646,74 @@ const Clients = () => {
                 ))}
               </div>
             </div>
+
+            {/* Type de recherche filter - desktop */}
+            <div className="hidden sm:block">
+              <p className="text-xs font-medium mb-2 text-muted-foreground">Type de recherche</p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant={selectedTypeRecherche === 'all' ? "default" : "outline"} size="sm" onClick={() => setSelectedTypeRecherche('all')} className="text-xs transition-all duration-300 hover:scale-105">
+                  Tous
+                </Button>
+                <Button variant={selectedTypeRecherche === 'Louer' ? "default" : "outline"} size="sm" onClick={() => setSelectedTypeRecherche('Louer')} className={cn("text-xs transition-all duration-300 hover:scale-105", selectedTypeRecherche === 'Louer' && "bg-blue-600 hover:bg-blue-700")}>
+                  <Key className="w-3 h-3 mr-1" /> Location
+                </Button>
+                <Button variant={selectedTypeRecherche === 'Acheter' ? "default" : "outline"} size="sm" onClick={() => setSelectedTypeRecherche('Acheter')} className={cn("text-xs transition-all duration-300 hover:scale-105", selectedTypeRecherche === 'Acheter' && "bg-emerald-600 hover:bg-emerald-700")}>
+                  <Home className="w-3 h-3 mr-1" /> Achat
+                </Button>
+              </div>
+            </div>
+
+            {/* Type permis + Statut + Budget filters - desktop */}
+            <div className="hidden sm:flex flex-wrap gap-4">
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Permis</p>
+                <Select value={selectedTypePermis} onValueChange={setSelectedTypePermis}>
+                  <SelectTrigger className="w-[130px] bg-background/50 border-border/50 h-8 text-xs">
+                    <SelectValue placeholder="Tous" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    {typePermisOptions.map(p => (
+                      <SelectItem key={p} value={p}>{p}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Statut</p>
+                <Select value={selectedStatut} onValueChange={setSelectedStatut}>
+                  <SelectTrigger className="w-[130px] bg-background/50 border-border/50 h-8 text-xs">
+                    <SelectValue placeholder="Tous" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous</SelectItem>
+                    {statutOptions.map(s => (
+                      <SelectItem key={s} value={s}>{statutLabels[s] || s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <p className="text-xs font-medium mb-2 text-muted-foreground">Budget (CHF)</p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={budgetMin}
+                    onChange={(e) => setBudgetMin(e.target.value)}
+                    className="w-[90px] bg-background/50 border-border/50 h-8 text-xs"
+                  />
+                  <span className="text-muted-foreground text-xs">–</span>
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={budgetMax}
+                    onChange={(e) => setBudgetMax(e.target.value)}
+                    className="w-[90px] bg-background/50 border-border/50 h-8 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -678,7 +774,7 @@ const Clients = () => {
 
         {/* Premium Grid de clients */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-          {sortedClients.map((client, index) => {
+          {sortedClients.slice(0, displayCount).map((client, index) => {
             const profile = clientProfiles.get(client.user_id);
             const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
             const progressPercent = (daysElapsed / 90) * 100;
@@ -1054,6 +1150,19 @@ const Clients = () => {
             );
           })}
         </div>
+
+        {/* Load more button */}
+        {sortedClients.length > displayCount && (
+          <div className="flex justify-center mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setDisplayCount(prev => prev + 50)}
+              className="gap-2"
+            >
+              Afficher plus ({sortedClients.length - displayCount} restants)
+            </Button>
+          </div>
+        )}
 
         {sortedClients.length === 0 && (
           <div className="text-center py-8 md:py-12">
