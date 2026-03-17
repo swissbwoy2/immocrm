@@ -265,8 +265,28 @@ export default function AgentDashboard() {
     return calculateDaysElapsed(dateB) - calculateDaysElapsed(dateA);
   });
 
+  // Réactions clients aux offres (statuts nécessitant une action agent)
+  const REACTION_STATUTS = ['interesse', 'visite_planifiee', 'candidature_deposee', 'demande_postulation'];
+  const clientReactions = offres
+    .filter(o => REACTION_STATUTS.includes(o.statut))
+    .map(o => {
+      const client = clients.find(c => c.id === o.client_id);
+      const profile = client ? profiles.get(client.user_id) : null;
+      return {
+        id: o.id,
+        adresse: o.adresse,
+        prix: o.prix,
+        pieces: o.pieces,
+        surface: o.surface,
+        statut: o.statut,
+        statut_client: o.statut_client,
+        date_envoi: o.date_envoi,
+        clientName: profile ? `${profile.prenom} ${profile.nom}` : 'Client',
+        client_id: o.client_id,
+      };
+    });
 
-  return (
+
     <PullToRefresh onRefresh={loadAgentData} className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8 space-y-6">
           {/* Header avec dégradé animé */}
