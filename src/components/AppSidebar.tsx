@@ -52,7 +52,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Mandats', icon: Clipboard, path: '/admin/mandats', notifKey: null },
         { name: 'Transactions', icon: DollarSign, path: '/admin/transactions', notifKey: null },
         { name: 'Envoyer une offre', icon: Send, path: '/admin/envoyer-offre', notifKey: null },
-        { name: 'Offres envoyées', icon: Mail, path: '/admin/offres-envoyees', notifKey: null },
+        { name: 'Offres envoyées', icon: Mail, path: '/admin/offres-envoyees', notifKey: 'client_interesse' },
         { name: 'Assignations', icon: UserCog, path: '/admin/assignations', notifKey: null },
         { name: 'Envoyer Email', icon: MailPlus, path: '/admin/envoyer-email', notifKey: null },
         { name: 'Historique Emails', icon: History, path: '/admin/historique-emails', notifKey: null },
