@@ -344,6 +344,9 @@ const MesClients = () => {
 
   const regions = ['Chablais', 'Fribourg', 'Gros-de-Vaud', 'Lausanne et région', 'Ouest-lausannois', 'Lavaux', 'Nord-vaudois', 'Nyon et région', 'Riviera', 'Valais', 'Genève', 'Autre'];
   const nombrePieces = ['1', '1.5', '2', '2.5', '3', '3.5', '4', '4.5', '5', '5+'];
+  const typePermisOptions = ['B', 'C', 'L', 'F', 'N', 'G', 'Suisse'];
+  const statutOptions = ['actif', 'en_attente', 'reloge', 'inactif'];
+  const statutLabels: Record<string, string> = { actif: 'Actif', en_attente: 'En attente', reloge: 'Relogé', inactif: 'Inactif' };
 
   const toggleRegion = (region: string) => {
     setSelectedRegions(prev => 
@@ -371,19 +374,28 @@ const MesClients = () => {
         const clientNum = Number.parseFloat(client.nombrePiecesSouhaite?.toString() || '');
         if (Number.isNaN(clientNum)) return false;
         if (p === '5+') return clientNum >= 5;
-
         const pieceNum = Number(p);
         return !Number.isNaN(pieceNum) && Math.abs(clientNum - pieceNum) < 0.01;
       });
     
     const matchTypeRecherche = selectedTypeRecherche === 'all' || 
       client.typeRecherche === selectedTypeRecherche;
+
+    const matchTypePermis = selectedTypePermis === 'all' || 
+      client.typePermis === selectedTypePermis;
+
+    const matchStatut = selectedStatut === 'all' || 
+      client.statut === selectedStatut;
+
+    const bMin = budgetMin ? Number(budgetMin) : 0;
+    const bMax = budgetMax ? Number(budgetMax) : Infinity;
+    const clientBudget = client.budgetMax || 0;
+    const matchBudget = clientBudget >= bMin && clientBudget <= bMax;
     
-    return matchSearch && matchRegion && matchPieces && matchTypeRecherche;
+    return matchSearch && matchRegion && matchPieces && matchTypeRecherche && matchTypePermis && matchStatut && matchBudget;
   });
 
   // Compteurs par type (exclure les clients relogés des statistiques actives)
-  // Note: Les clients relogés restent visibles dans la liste mais ne comptent pas dans les KPIs
   const clientsActifsOnly = allClients.filter(c => c.statut !== 'reloge');
   const clientsLocation = clientsActifsOnly.filter(c => c.typeRecherche !== 'Acheter').length;
   const clientsAchat = clientsActifsOnly.filter(c => c.typeRecherche === 'Acheter').length;
