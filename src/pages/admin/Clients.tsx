@@ -1151,6 +1151,19 @@ const Clients = () => {
           })}
         </div>
 
+        {/* Load more button */}
+        {sortedClients.length > displayCount && (
+          <div className="flex justify-center mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setDisplayCount(prev => prev + 50)}
+              className="gap-2"
+            >
+              Afficher plus ({sortedClients.length - displayCount} restants)
+            </Button>
+          </div>
+        )}
+
         {sortedClients.length === 0 && (
           <div className="text-center py-8 md:py-12">
             <p className="text-sm md:text-base text-muted-foreground">Aucun client ne correspond aux filtres sélectionnés</p>
