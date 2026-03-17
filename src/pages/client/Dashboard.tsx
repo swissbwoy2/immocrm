@@ -133,38 +133,35 @@ export default function ClientDashboard() {
         }
       }
 
-      const { data: offresData } = await supabase
-        .from('offres')
-        .select('*')
-        .eq('client_id', clientData.id)
-        .limit(15000);
+      // === PARALLEL: Load offres, visites, candidatures, documents simultaneously ===
+      const [offresResult, visitesResult, candidaturesResult, docsResult] = await Promise.all([
+        supabase
+          .from('offres')
+          .select('id, adresse, prix, pieces, surface, date_envoi, source, lien, statut, statut_client, client_id, note_interet')
+          .eq('client_id', clientData.id)
+          .limit(15000),
+        supabase
+          .from('visites')
+          .select('*, offres(*)')
+          .eq('client_id', clientData.id)
+          .order('date_visite', { ascending: true })
+          .limit(15000),
+        supabase
+          .from('candidatures')
+          .select('*, offres(adresse, prix, pieces, surface)')
+          .eq('client_id', clientData.id)
+          .order('updated_at', { ascending: false })
+          .limit(15000),
+        supabase
+          .from('documents')
+          .select('*')
+          .eq('client_id', clientData.id),
+      ]);
 
-      setOffres(offresData || []);
-
-      const { data: visitesData } = await supabase
-        .from('visites')
-        .select('*, offres(*)')
-        .eq('client_id', clientData.id)
-        .order('date_visite', { ascending: true })
-        .limit(15000);
-
-      setVisites(visitesData || []);
-
-      const { data: candidaturesData } = await supabase
-        .from('candidatures')
-        .select('*, offres(adresse, prix, pieces, surface)')
-        .eq('client_id', clientData.id)
-        .order('updated_at', { ascending: false })
-        .limit(15000);
-
-      setCandidatures(candidaturesData || []);
-
-      const { data: docsData } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('client_id', clientData.id);
-
-      setDocuments(docsData || []);
+      setOffres(offresResult.data || []);
+      setVisites(visitesResult.data || []);
+      setCandidatures(candidaturesResult.data || []);
+      setDocuments(docsResult.data || []);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -181,7 +178,7 @@ export default function ClientDashboard() {
   useEffect(() => {
     loadData();
     
-    // Écouter les changements en temps réel sur les visites
+    // Écouter les changements en temps réel sur les visites (scoped by client)
     const channel = supabase
       .channel('client-visites-changes')
       .on(
@@ -190,6 +187,7 @@ export default function ClientDashboard() {
           event: '*',
           schema: 'public',
           table: 'visites',
+          filter: client ? `client_id=eq.${client.id}` : undefined,
         },
         () => {
           loadData();

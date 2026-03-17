@@ -52,105 +52,93 @@ export default function AgentDashboard() {
       
       setAgent(agentData);
 
+      if (!agentData) {
+        setLoading(false);
+        return;
+      }
+
       // Récupérer les clients via client_agents (source de vérité)
+      const { data: clientAgentsData } = await supabase
+        .from('client_agents')
+        .select('client_id')
+        .eq('agent_id', agentData.id);
+
+      const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
+
       let clientsData: any[] = [];
-      if (agentData) {
-        const { data: clientAgentsData } = await supabase
-          .from('client_agents')
-          .select('client_id')
-          .eq('agent_id', agentData.id);
-
-        const clientIds = clientAgentsData?.map(ca => ca.client_id) || [];
-
-        if (clientIds.length > 0) {
-          const { data } = await supabase
-            .from('clients')
-            .select('*')
-            .in('id', clientIds);
-          clientsData = data || [];
-        }
+      if (clientIds.length > 0) {
+        const { data } = await supabase
+          .from('clients')
+          .select('*')
+          .in('id', clientIds);
+        clientsData = data || [];
       }
       
       setClients(clientsData);
 
       // Récupérer les profils des clients
-      if (clientsData && clientsData.length > 0) {
-        const clientUserIds = clientsData.map(c => c.user_id);
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('id, prenom, nom')
-          .in('id', clientUserIds);
-        
-        if (profilesData) {
-          const profilesMap = new Map(profilesData.map(p => [p.id, p]));
-          setProfiles(profilesMap);
-        }
-      }
+      const clientUserIds = clientsData.map(c => c.user_id).filter(Boolean);
+      const profilesPromise: Promise<Map<string, any>> = clientUserIds.length > 0
+        ? (async () => {
+            const { data } = await supabase
+              .from('profiles')
+              .select('id, prenom, nom')
+              .in('id', clientUserIds);
+            return new Map((data || []).map(p => [p.id, p]));
+          })()
+        : Promise.resolve(new Map<string, any>());
 
-      // Récupérer les offres de l'agent
-      if (agentData) {
-        const { data: offresData } = await supabase
+      // === PARALLEL: Launch all remaining queries simultaneously ===
+      const [
+        profilesMap,
+        offresResult,
+        documentsResult,
+        renouvResult,
+        candidaturesResult,
+        transactionsResult,
+        visitesResult,
+      ] = await Promise.all([
+        profilesPromise,
+        // Offres with reduced columns
+        supabase
           .from('offres')
-          .select('*, clients(user_id)')
+          .select('id, date_envoi, adresse, client_id, prix, pieces, surface, source, lien, agent_id, statut, statut_client, note_interet, clients(user_id)')
           .eq('agent_id', agentData.id)
           .order('date_envoi', { ascending: false })
-          .limit(15000);
-        
-        setOffres(offresData || []);
-      }
-
-      // Récupérer les documents des clients
-      const clientUserIds = clientsData?.map(c => c.user_id) || [];
-      if (clientUserIds.length > 0) {
-        const { data: documentsData } = await supabase
-          .from('documents')
-          .select('*, clients!documents_client_id_fkey(*)')
-          .in('user_id', clientUserIds)
-          .order('created_at', { ascending: false })
-          .limit(10);
-        
-        setDocuments(documentsData || []);
-
-        // Récupérer les renouvellements
-        const clientIds = clientsData?.map(c => c.id) || [];
-        const { data: renouvData } = await supabase
-          .from('renouvellements_mandat')
-          .select('*')
-          .in('client_id', clientIds)
-          .order('created_at', { ascending: false });
-        
-        setRenouvellements(renouvData || []);
-
-        // Récupérer les candidatures des clients
-        const { data: candidaturesData } = await supabase
-          .from('candidatures')
-          .select('*, offres(adresse, prix, pieces)')
-          .in('client_id', clientIds)
-          .order('created_at', { ascending: false });
-        
-        setCandidatures(candidaturesData || []);
-      }
-
-      // Récupérer les transactions de l'agent
-      if (agentData) {
-        const { data: transactionsData } = await supabase
+          .limit(15000),
+        // Documents
+        clientUserIds.length > 0
+          ? supabase
+              .from('documents')
+              .select('*, clients!documents_client_id_fkey(*)')
+              .in('user_id', clientUserIds)
+              .order('created_at', { ascending: false })
+              .limit(10)
+          : Promise.resolve({ data: [] }),
+        // Renouvellements
+        clientIds.length > 0
+          ? supabase
+              .from('renouvellements_mandat')
+              .select('*')
+              .in('client_id', clientIds)
+              .order('created_at', { ascending: false })
+          : Promise.resolve({ data: [] }),
+        // Candidatures
+        clientIds.length > 0
+          ? supabase
+              .from('candidatures')
+              .select('*, offres(adresse, prix, pieces)')
+              .in('client_id', clientIds)
+              .order('created_at', { ascending: false })
+          : Promise.resolve({ data: [] }),
+        // Transactions
+        supabase
           .from('transactions')
           .select('*')
           .eq('agent_id', agentData.id)
-          .order('date_transaction', { ascending: false });
-        
-        setTransactions(transactionsData || []);
-
-        // Récupérer toutes les visites de l'agent
-        const { data: allVisitesData } = await supabase
-          .from('visites')
-          .select('*')
-          .eq('agent_id', agentData.id);
-        
-        setVisites(allVisitesData || []);
-
-        // Récupérer les visites déléguées
-        const { data: visitesData } = await supabase
+          .order('date_transaction', { ascending: false }),
+        // All visites (single query, filter delegated client-side)
+        supabase
           .from('visites')
           .select(`
             *,
@@ -164,13 +152,24 @@ export default function AgentDashboard() {
               user_id
             )
           `)
-          .eq('agent_id', agentData.id)
-          .eq('est_deleguee', true)
-          .eq('statut', 'planifiee')
-          .order('date_visite', { ascending: true });
-        
-        setVisitesDelegues(visitesData || []);
-      }
+          .eq('agent_id', agentData.id),
+      ]);
+
+      setProfiles(profilesMap);
+      setOffres(offresResult.data || []);
+      setDocuments(documentsResult.data || []);
+      setRenouvellements(renouvResult.data || []);
+      setCandidatures(candidaturesResult.data || []);
+      setTransactions(transactionsResult.data || []);
+      
+      const allVisites = visitesResult.data || [];
+      setVisites(allVisites);
+      
+      // Filter delegated visits client-side
+      const delegated = allVisites.filter(
+        v => v.est_deleguee && v.statut === 'planifiee'
+      ).sort((a, b) => new Date(a.date_visite).getTime() - new Date(b.date_visite).getTime());
+      setVisitesDelegues(delegated);
     } catch (error) {
       console.error('Erreur chargement données agent:', error);
     } finally {

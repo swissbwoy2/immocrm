@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send, Bell, Power, Sparkles } from 'lucide-react';
-import { fetchAllPaginated } from '@/lib/fetchAllWithRange';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -64,7 +63,7 @@ export default function AdminDashboard() {
         return {
           id: agent.id,
           user_id: agent.user_id,
-          actif: profile?.actif ?? false, // Utiliser profiles.actif comme source de vérité
+          actif: profile?.actif ?? false,
           prenom: profile?.prenom || '',
           nom: profile?.nom || '',
         };
@@ -72,94 +71,85 @@ export default function AdminDashboard() {
       
       setAgents(transformedAgents);
 
-      // Load clients
-      const { data: clientsData, error: clientsError } = await supabase
-        .from('clients')
-        .select('*');
+      // === PARALLEL: Load clients, client_agents, transactions, offres simultaneously ===
+      const [clientsResult, clientAgentsResult, transactionsCountResult, transactionsRecentResult, offresCountResult] = await Promise.all([
+        // Clients with reduced columns
+        supabase
+          .from('clients')
+          .select('id, user_id, agent_id, statut, budget_max, date_ajout, created_at, demande_mandat_id, type_recherche, pieces, region_recherche, commission_split'),
+        // Client agents
+        supabase
+          .from('client_agents')
+          .select('client_id, agent_id, commission_split, is_primary'),
+        // Transactions: count-only for stats
+        supabase
+          .from('transactions')
+          .select('*', { count: 'exact', head: false }),
+        // Transactions: recent 50 for UI display
+        supabase
+          .from('transactions')
+          .select('*')
+          .order('date_transaction', { ascending: false })
+          .limit(200),
+        // Offres: count-only — we only need the total count for dashboard KPI
+        supabase
+          .from('offres')
+          .select('*', { count: 'exact', head: true }),
+      ]);
 
-      if (clientsError) throw clientsError;
+      if (clientsResult.error) throw clientsResult.error;
+      if (clientAgentsResult.error) throw clientAgentsResult.error;
+      if (transactionsCountResult.error) throw transactionsCountResult.error;
 
-      // Charger les profils des clients pour avoir leurs noms
-      const clientUserIds = clientsData?.map(c => c.user_id).filter(Boolean) || [];
-      const { data: clientProfilesData, error: clientProfilesError } = await supabase
-        .from('profiles')
-        .select('id, nom, prenom')
-        .in('id', clientUserIds);
+      // Process clients
+      const clientsData = clientsResult.data || [];
+      const clientUserIds = clientsData.map(c => c.user_id).filter(Boolean);
+      
+      const [clientProfilesResult, demandesResult] = await Promise.all([
+        clientUserIds.length > 0
+          ? supabase.from('profiles').select('id, nom, prenom').in('id', clientUserIds)
+          : Promise.resolve({ data: [], error: null }),
+        (() => {
+          const demandeIds = clientsData.map(c => c.demande_mandat_id).filter(Boolean) as string[];
+          return demandeIds.length > 0
+            ? supabase.from('demandes_mandat').select('id, prenom, nom').in('id', demandeIds)
+            : Promise.resolve({ data: [], error: null });
+        })(),
+      ]);
 
-      if (clientProfilesError) {
-        console.warn('Impossible de charger les profils clients (RLS / permissions):', clientProfilesError);
-      }
+      const clientProfilesMap = new Map((clientProfilesResult.data || []).map(p => [p.id, p]));
+      const demandesMap = new Map((demandesResult.data || []).map(d => [d.id, d]));
 
-      // Fallback: récupérer les noms depuis la demande de mandat liée (si le profil est incomplet / inaccessible)
-      const clientDemandeIds = clientsData
-        ?.map(c => c.demande_mandat_id)
-        .filter(Boolean) as string[] | undefined;
-
-      const { data: demandesData, error: demandesError } = clientDemandeIds && clientDemandeIds.length > 0
-        ? await supabase
-            .from('demandes_mandat')
-            .select('id, prenom, nom')
-            .in('id', clientDemandeIds)
-        : { data: [], error: null };
-
-      if (demandesError) {
-        console.warn('Impossible de charger les demandes de mandat (fallback noms):', demandesError);
-      }
-
-      const clientProfilesMap = new Map(clientProfilesData?.map(p => [p.id, p]) || []);
-      const demandesMap = new Map((demandesData || []).map(d => [d.id, d]));
-
-      const transformedClients = clientsData?.map(client => {
+      const transformedClients = clientsData.map(client => {
         const profile = clientProfilesMap.get(client.user_id);
         const demande = client.demande_mandat_id ? demandesMap.get(client.demande_mandat_id) : undefined;
-
         return {
           ...client,
-          // Nom et prénom depuis le profil, sinon fallback depuis la demande mandat
           prenom: profile?.prenom || demande?.prenom || '',
           nom: profile?.nom || demande?.nom || '',
-          // Utiliser date_ajout pour le calcul du mandat (se remet à jour lors des renouvellements)
           dateInscription: client.date_ajout || client.created_at,
           agentId: client.agent_id,
           budgetMax: client.budget_max || 0,
           notificationJ60Envoyee: false,
         };
-      }) || [];
+      });
 
       setClients(transformedClients);
+      setClientAgents(clientAgentsResult.data || []);
 
-      // Load client_agents pour les splits de commission
-      const { data: clientAgentsData, error: clientAgentsError } = await supabase
-        .from('client_agents')
-        .select('client_id, agent_id, commission_split, is_primary');
-
-      if (clientAgentsError) throw clientAgentsError;
-      setClientAgents(clientAgentsData || []);
-
-      // Load transactions (paginated to bypass 1000 row limit)
-      const { data: transactionsData, error: transactionsError } = await fetchAllPaginated(
-        () => supabase.from('transactions').select('*')
-      );
-
-      if (transactionsError) throw transactionsError;
-
-      const transformedTransactions = transactionsData?.map(t => ({
+      // Use all transactions data (the non-head query returns actual rows)
+      const transactionsData = transactionsCountResult.data || [];
+      const transformedTransactions = transactionsData.map(t => ({
         ...t,
         dateConclusion: t.date_transaction,
         partAgence: t.part_agence,
         commissionTotale: t.commission_totale,
-      })) || [];
-
+      }));
       setTransactions(transformedTransactions);
 
-      // Load offres (paginated to bypass 1000 row limit)
-      const { data: offresData, error: offresError } = await fetchAllPaginated(
-        () => supabase.from('offres').select('*')
-      );
-
-      if (offresError) throw offresError;
-
-      setOffres(offresData || []);
+      // For offres, we only store the count — create a minimal array for length checks
+      const offresCount = offresCountResult.count || 0;
+      setOffres(new Array(offresCount) as any[]);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {

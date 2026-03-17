@@ -23,7 +23,7 @@ import {
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { NotificationBadge } from './NotificationBadge';
 import { NotificationBell } from './NotificationBell';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -210,11 +210,12 @@ export function AppSidebar() {
     }
   };
 
+  const menu = useMemo(() => getMenuForRole(userRole || ''), [userRole]);
+
   if (!user || !userRole) {
     return null;
   }
 
-  const menu = getMenuForRole(userRole);
   const userName = profile ? `${profile.prenom} ${profile.nom}` : 'Chargement...';
   const userEmail = profile?.email || user.email || '';
 

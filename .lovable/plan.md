@@ -1,93 +1,42 @@
 
 
-## Plan — Optimisation performance globale (tous les profils)
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-### Transversal (tous les profils)
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
-| Fichier | Changement |
-|---|---|
-| `src/components/PageTransition.tsx` | Supprimer `AnimatePresence` + `motion.div`, remplacer par un simple `<div>`. Gain ~150ms par navigation. |
-| `src/components/AppSidebar.tsx` | Envelopper `getMenuForRole(userRole)` dans `useMemo` keyed sur `userRole`. |
+### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
----
+### Modifications
 
-### Admin Dashboard (`src/pages/admin/Dashboard.tsx`)
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
 
-**Probleme** : `fetchAllPaginated` sur `offres` et `transactions` telecharge des milliers de lignes.
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
 
-**Fix** :
-- **Offres** : remplacer par `select('*', { count: 'exact', head: true })` — seul le count est utilise dans le dashboard
-- **Transactions** : idem count-only pour les stats, + un `select('*').order(...).limit(50)` pour les transactions recentes affichees dans l'UI
-- **Clients** : reduire les colonnes a `id, user_id, agent_id, statut, budget_max, date_ajout, created_at, demande_mandat_id, type_recherche, pieces, region_recherche`
-- **Paralleliser** : lancer clients + client_agents + transactions + offres en `Promise.all` au lieu de sequentiel
+### Detail technique
 
----
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
+```
 
-### Agent Dashboard (`src/pages/agent/Dashboard.tsx`)
-
-**Probleme** : ~10 requetes sequentielles (agent → clients → profiles → offres → documents → renouvellements → candidatures → transactions → visites → visites deleguees).
-
-**Fix** :
-- Apres recuperation de `agentData` et `clientsData`/`profiles`, lancer en `Promise.all` : offres, documents, renouvellements, candidatures, transactions, visites
-- **Fusionner les 2 requetes visites** (toutes + deleguees) en une seule requete avec jointures, puis filtrer cote client pour `est_deleguee`
-- **Offres** : reduire colonnes de `select('*, clients(user_id)')` a `select('id, date_envoi, adresse, client_id, prix, pieces, surface, source, lien, clients(user_id)')` — seuls les champs utilises par `AgentStatsSection`
-
----
-
-### Client Dashboard (`src/pages/client/Dashboard.tsx`)
-
-**Probleme** : 5 requetes sequentielles (profile → client → agent → offres → visites → candidatures → documents). Realtime non filtre recharge tout.
-
-**Fix** :
-- Apres `clientData`, lancer offres + visites + candidatures + documents en `Promise.all`
-- **Realtime scope** : ajouter `filter: 'client_id=eq.${clientData.id}'` a la subscription pour eviter les recharges inutiles
-- Reduire colonnes offres a `id, adresse, prix, pieces, surface, date_envoi, source, lien, statut_client`
-
----
-
-### Proprietaire Dashboard (`src/pages/proprietaire/Dashboard.tsx`)
-
-**Probleme critique** : boucle N+1 — pour chaque immeuble, 2 requetes (lots count + locataires par lot). Un proprio avec 10 immeubles et 50 lots = ~60 requetes.
-
-**Fix** :
-- Remplacer la boucle par 2 requetes groupees :
-  - `select('*', { count: 'exact' }).in('immeuble_id', immeublesIds)` pour les lots
-  - `select('*, lots!inner(immeuble_id)').in('lots.immeuble_id', immeublesIds).eq('statut', 'actif')` pour les locataires
-- Lancer immeubles, tickets, projets en `Promise.all`
-- Lancer lots + locataires en `Promise.all` apres immeubles
-
----
-
-### Apporteur Dashboard (`src/pages/apporteur/Dashboard.tsx`)
-
-**Deja optimise** : seulement 2 requetes (apporteur + referrals), scope par user. Pas de changement necessaire.
-
----
-
-### Coursier Dashboard (`src/pages/coursier/Dashboard.tsx`)
-
-**Deja optimise** : 2 requetes (coursier + visites), scope par coursier. Pas de changement necessaire.
-
----
-
-### Resume des fichiers modifies
-
-| Fichier | Changement principal | Gain estime |
-|---|---|---|
-| `PageTransition.tsx` | Supprimer animation | ~150ms/navigation |
-| `AppSidebar.tsx` | `useMemo` menu | Re-renders reduits |
-| `admin/Dashboard.tsx` | Count-only + `Promise.all` | ~70% plus rapide |
-| `agent/Dashboard.tsx` | `Promise.all` + fusion visites + colonnes reduites | ~60% plus rapide |
-| `client/Dashboard.tsx` | `Promise.all` + realtime scope | ~50% plus rapide |
-| `proprietaire/Dashboard.tsx` | Eliminer boucle N+1 + `Promise.all` | ~80% plus rapide |
-| `apporteur/Dashboard.tsx` | Aucun | Deja optimal |
-| `coursier/Dashboard.tsx` | Aucun | Deja optimal |
-
-### Ordre d'implementation
-
-1. PageTransition + AppSidebar (transversal, rapide)
-2. Admin Dashboard (count-only + parallelisation)
-3. Agent Dashboard (parallelisation + fusion visites)
-4. Client Dashboard (parallelisation + realtime scope)
-5. Proprietaire Dashboard (elimination N+1)
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 
