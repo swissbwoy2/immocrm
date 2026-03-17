@@ -96,6 +96,11 @@ export default function AdminDashboard() {
         supabase
           .from('offres')
           .select('*', { count: 'exact', head: true }),
+        // Offres with client reactions (count only)
+        supabase
+          .from('offres')
+          .select('id', { count: 'exact', head: true })
+          .in('statut', ['interesse', 'visite_planifiee', 'candidature_deposee', 'demande_postulation']),
       ]);
 
       if (clientsResult.error) throw clientsResult.error;
