@@ -371,6 +371,15 @@ export default function AdminDashboard() {
             onClick={() => navigate('/admin/transactions')}
             delay={350}
           />
+          <PremiumKPICard 
+            title="Réactions clients" 
+            value={reactionsCount} 
+            icon={Heart} 
+            variant={reactionsCount > 0 ? 'danger' : 'default'}
+            subtitle="en attente"
+            onClick={() => navigate('/admin/offres-envoyees')}
+            delay={400}
+          />
         </div>
 
         {/* Section Statistiques détaillées avec glassmorphism */}
