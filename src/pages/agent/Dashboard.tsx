@@ -78,14 +78,15 @@ export default function AgentDashboard() {
 
       // Récupérer les profils des clients
       const clientUserIds = clientsData.map(c => c.user_id).filter(Boolean);
-      let profilesPromise: Promise<Map<string, any>> = Promise.resolve(new Map<string, any>());
-      if (clientUserIds.length > 0) {
-        profilesPromise = supabase
-          .from('profiles')
-          .select('id, prenom, nom')
-          .in('id', clientUserIds)
-          .then(({ data }) => new Map((data || []).map(p => [p.id, p])));
-      }
+      const profilesPromise: Promise<Map<string, any>> = clientUserIds.length > 0
+        ? (async () => {
+            const { data } = await supabase
+              .from('profiles')
+              .select('id, prenom, nom')
+              .in('id', clientUserIds);
+            return new Map((data || []).map(p => [p.id, p]));
+          })()
+        : Promise.resolve(new Map<string, any>());
 
       // === PARALLEL: Launch all remaining queries simultaneously ===
       const [
