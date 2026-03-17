@@ -23,7 +23,7 @@ import {
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { NotificationBadge } from './NotificationBadge';
 import { NotificationBell } from './NotificationBell';
 import { useNotifications } from '@/hooks/useNotifications';
