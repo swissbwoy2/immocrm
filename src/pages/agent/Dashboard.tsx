@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download, Calendar, FileCheck, Home, Key, Sparkles, Bike } from 'lucide-react';
+import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download, Calendar, FileCheck, Home, Key, Sparkles, Bike, Heart } from 'lucide-react';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +16,7 @@ import { AgentBadges } from '@/components/stats/AgentBadges';
 import { PremiumCandidaturesTraitementSection } from '@/components/premium/PremiumCandidaturesTraitementSection';
 import { PremiumProjectionFinanciereSection } from '@/components/premium/PremiumProjectionFinanciereSection';
 import { countUniqueOffres } from '@/utils/visitesCalculator';
+import { ClientReactionsWidget } from '@/components/premium/ClientReactionsWidget';
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
@@ -264,6 +265,27 @@ export default function AgentDashboard() {
     return calculateDaysElapsed(dateB) - calculateDaysElapsed(dateA);
   });
 
+  // Réactions clients aux offres (statuts nécessitant une action agent)
+  const REACTION_STATUTS = ['interesse', 'visite_planifiee', 'candidature_deposee', 'demande_postulation'];
+  const clientReactions = offres
+    .filter(o => REACTION_STATUTS.includes(o.statut))
+    .map(o => {
+      const client = clients.find(c => c.id === o.client_id);
+      const profile = client ? profiles.get(client.user_id) : null;
+      return {
+        id: o.id,
+        adresse: o.adresse,
+        prix: o.prix,
+        pieces: o.pieces,
+        surface: o.surface,
+        statut: o.statut,
+        statut_client: o.statut_client,
+        date_envoi: o.date_envoi,
+        clientName: profile ? `${profile.prenom} ${profile.nom}` : 'Client',
+        client_id: o.client_id,
+      };
+    });
+
 
   return (
     <PullToRefresh onRefresh={loadAgentData} className="flex-1 overflow-y-auto">
@@ -388,7 +410,18 @@ export default function AgentDashboard() {
                 />
               );
             })()}
+            <PremiumKPICard 
+              title="Réactions clients" 
+              value={clientReactions.length} 
+              icon={Heart}
+              onClick={() => navigate('/agent/offres-envoyees')}
+              variant={clientReactions.length > 0 ? 'danger' : 'default'}
+              subtitle="en attente"
+            />
           </div>
+
+          {/* Widget Réactions clients */}
+          <ClientReactionsWidget reactions={clientReactions} basePath="/agent" />
 
           {/* Section Statistiques détaillées avec glassmorphism */}
           <div className="animate-fade-in" style={{ animationDelay: '450ms' }}>

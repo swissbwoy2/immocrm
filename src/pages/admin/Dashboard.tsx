@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send, Bell, Power, Sparkles } from 'lucide-react';
+import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send, Bell, Power, Sparkles, Heart } from 'lucide-react';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ export default function AdminDashboard() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [offres, setOffres] = useState<any[]>([]);
   const [clientAgents, setClientAgents] = useState<any[]>([]);
+  const [reactionsCount, setReactionsCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
@@ -72,7 +73,7 @@ export default function AdminDashboard() {
       setAgents(transformedAgents);
 
       // === PARALLEL: Load clients, client_agents, transactions, offres simultaneously ===
-      const [clientsResult, clientAgentsResult, transactionsCountResult, transactionsRecentResult, offresCountResult] = await Promise.all([
+      const [clientsResult, clientAgentsResult, transactionsCountResult, transactionsRecentResult, offresCountResult, reactionsResult] = await Promise.all([
         // Clients with reduced columns
         supabase
           .from('clients')
@@ -95,6 +96,11 @@ export default function AdminDashboard() {
         supabase
           .from('offres')
           .select('*', { count: 'exact', head: true }),
+        // Offres with client reactions (count only)
+        supabase
+          .from('offres')
+          .select('id', { count: 'exact', head: true })
+          .in('statut', ['interesse', 'visite_planifiee', 'candidature_deposee', 'demande_postulation']),
       ]);
 
       if (clientsResult.error) throw clientsResult.error;
@@ -150,6 +156,7 @@ export default function AdminDashboard() {
       // For offres, we only store the count — create a minimal array for length checks
       const offresCount = offresCountResult.count || 0;
       setOffres(new Array(offresCount) as any[]);
+      setReactionsCount(reactionsResult.count || 0);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -363,6 +370,15 @@ export default function AdminDashboard() {
             subtitle="CHF total"
             onClick={() => navigate('/admin/transactions')}
             delay={350}
+          />
+          <PremiumKPICard 
+            title="Réactions clients" 
+            value={reactionsCount} 
+            icon={Heart} 
+            variant={reactionsCount > 0 ? 'danger' : 'default'}
+            subtitle="en attente"
+            onClick={() => navigate('/admin/offres-envoyees')}
+            delay={400}
           />
         </div>
 

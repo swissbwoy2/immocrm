@@ -38,6 +38,11 @@ export interface NotificationCounts {
   candidature_admin: number;
   visit_confirmed: number;
   visit_refused: number;
+  client_interesse: number;
+  new_proprietaire_invited: number;
+  new_interet_acheteur: number;
+  new_projet_developpement: number;
+  projet_statut_change: number;
 }
 
 const INITIAL_COUNTS: NotificationCounts = {
@@ -63,6 +68,11 @@ const INITIAL_COUNTS: NotificationCounts = {
   candidature_admin: 0,
   visit_confirmed: 0,
   visit_refused: 0,
+  client_interesse: 0,
+  new_proprietaire_invited: 0,
+  new_interet_acheteur: 0,
+  new_projet_developpement: 0,
+  projet_statut_change: 0,
 };
 
 // Helper function to calculate counts - defined outside hook for stability
@@ -93,6 +103,11 @@ const calculateCounts = (notifs: Notification[]): NotificationCounts => {
     candidature_admin: unread.filter(n => n.type.includes('_admin') || n.type.startsWith('candidature_')).length,
     visit_confirmed: countByType('visit_confirmed'),
     visit_refused: countByType('visit_refused'),
+    client_interesse: unread.filter(n => n.type === 'client_interesse' || n.type === 'client_visite_planifiee' || n.type === 'client_candidature').length,
+    new_proprietaire_invited: countByType('new_proprietaire_invited'),
+    new_interet_acheteur: countByType('new_interet_acheteur'),
+    new_projet_developpement: countByType('new_projet_developpement'),
+    projet_statut_change: countByType('projet_statut_change'),
   };
 };
 
