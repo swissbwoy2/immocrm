@@ -16,6 +16,7 @@ import { AgentBadges } from '@/components/stats/AgentBadges';
 import { PremiumCandidaturesTraitementSection } from '@/components/premium/PremiumCandidaturesTraitementSection';
 import { PremiumProjectionFinanciereSection } from '@/components/premium/PremiumProjectionFinanciereSection';
 import { countUniqueOffres } from '@/utils/visitesCalculator';
+import { ClientReactionsWidget } from '@/components/premium/ClientReactionsWidget';
 
 export default function AgentDashboard() {
   const navigate = useNavigate();
