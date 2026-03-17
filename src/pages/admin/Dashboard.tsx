@@ -156,6 +156,7 @@ export default function AdminDashboard() {
       // For offres, we only store the count — create a minimal array for length checks
       const offresCount = offresCountResult.count || 0;
       setOffres(new Array(offresCount) as any[]);
+      setReactionsCount(reactionsResult.count || 0);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
