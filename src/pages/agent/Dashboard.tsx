@@ -103,7 +103,7 @@ export default function AgentDashboard() {
         // Offres with reduced columns
         supabase
           .from('offres')
-          .select('id, date_envoi, adresse, client_id, prix, pieces, surface, source, lien, agent_id, statut, statut_client, note_interet, clients(user_id)')
+          .select('id, date_envoi, adresse, client_id, prix, pieces, surface, lien_annonce, agent_id, statut, titre, type_bien, clients(user_id)')
           .eq('agent_id', agentData.id)
           .order('date_envoi', { ascending: false })
           .limit(15000),
