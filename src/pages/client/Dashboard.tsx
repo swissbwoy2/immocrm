@@ -137,7 +137,7 @@ export default function ClientDashboard() {
       const [offresResult, visitesResult, candidaturesResult, docsResult] = await Promise.all([
         supabase
           .from('offres')
-          .select('id, adresse, prix, pieces, surface, date_envoi, source, lien, statut, statut_client, client_id, note_interet')
+          .select('id, adresse, prix, pieces, surface, date_envoi, lien_annonce, statut, client_id, titre, type_bien')
           .eq('client_id', clientData.id)
           .limit(15000),
         supabase

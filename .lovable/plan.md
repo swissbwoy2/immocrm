@@ -1,36 +1,42 @@
 
 
-## Diagnostic — Pourquoi tout est a zero sur le dashboard Agent (et Client)
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-### Cause racine
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
-Lors de l'optimisation de performance precedente, les colonnes des requetes `offres` ont ete reduites pour gagner en rapidite. Mais **4 colonnes inexistantes** ont ete incluses dans le `select`, ce qui fait echouer silencieusement la requete PostgREST (erreur 400, zero resultats retournes) :
+### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
-| Colonne demandee | Existe ? | Correction |
-|---|---|---|
-| `source` | Non | Supprimer |
-| `lien` | Non | Remplacer par `lien_annonce` |
-| `statut_client` | Non | Supprimer |
-| `note_interet` | Non (existe sur `visites_vente`, pas sur `offres`) | Supprimer |
+### Modifications
 
-### Fichiers impactes
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
 
-| Fichier | Ligne | Correction |
-|---|---|---|
-| `src/pages/agent/Dashboard.tsx` | ~106 | Corriger le `.select()` : retirer `source, lien, statut_client, note_interet`, ajouter `lien_annonce` |
-| `src/pages/client/Dashboard.tsx` | ~140 | Meme correction |
-| `src/pages/agent/Dashboard.tsx` | ~269-287 | Le filtre `clientReactions` qui utilise `o.statut` pour les reactions (interesse, visite_planifiee, etc.) doit etre revise — ces valeurs sont probablement dans `statut` directement |
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
 
-### Impact
+### Detail technique
 
-- **Dashboard Agent** : offres = 0, stats = 0, reactions = 0, taux de conversion = 0
-- **Dashboard Client** : offres recues = 0
-- Candidatures et commissions restent corrects (requetes separees qui ne touchent pas la table `offres`)
-
-### Correction
-
-Remplacer les selects par les colonnes reelles de la table `offres` :
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
 ```
-'id, date_envoi, adresse, client_id, prix, pieces, surface, lien_annonce, agent_id, statut, titre, type_bien, clients(user_id)'
-```
+
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 
