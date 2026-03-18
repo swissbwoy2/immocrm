@@ -9,6 +9,7 @@ export const useAppVersionCheck = () => {
 
   useEffect(() => {
     const checkVersion = async () => {
+      if (document.hidden) return;
       try {
         const { data, error } = await supabase
           .from('app_config')

@@ -7,8 +7,8 @@ import "./index.css";
 // Register Service Worker with aggressive auto-update
 const updateSW = registerSW({
   onNeedRefresh() {
-    console.log('New version available, forcing update...');
-    updateSW(true);
+    console.log('New version available — update will apply on next manual reload');
+    // Don't force reload here; useAppVersionCheck handles real version updates
   },
   onOfflineReady() {
     console.log('App ready for offline use');
@@ -31,7 +31,9 @@ const updateSW = registerSW({
     // Check for updates every 2 minutes (more aggressive)
     if (registration) {
       setInterval(() => {
-        registration.update();
+        if (!document.hidden) {
+          registration.update();
+        }
       }, 2 * 60 * 1000);
     }
   },
