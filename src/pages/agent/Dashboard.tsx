@@ -279,7 +279,7 @@ export default function AgentDashboard() {
         pieces: o.pieces,
         surface: o.surface,
         statut: o.statut,
-        statut_client: o.statut_client,
+        statut_client: o.statut,
         date_envoi: o.date_envoi,
         clientName: profile ? `${profile.prenom} ${profile.nom}` : 'Client',
         client_id: o.client_id,
