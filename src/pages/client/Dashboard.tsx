@@ -158,6 +158,12 @@ export default function ClientDashboard() {
           .eq('client_id', clientData.id),
       ]);
 
+      // Error logging for silent query failures
+      if (offresResult.error) console.error('Offres query error:', offresResult.error);
+      if (visitesResult.error) console.error('Visites query error:', visitesResult.error);
+      if (candidaturesResult.error) console.error('Candidatures query error:', candidaturesResult.error);
+      if (docsResult.error) console.error('Documents query error:', docsResult.error);
+
       setOffres(offresResult.data || []);
       setVisites(visitesResult.data || []);
       setCandidatures(candidaturesResult.data || []);
