@@ -1,36 +1,42 @@
 
 
-## Diagnostic
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-J'ai analysé en profondeur le code et la base de données. Voici ce que j'ai trouvé :
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
-1. **Les données existent** : 1118 offres en base, la plus récente date d'hier (17 mars 2026)
-2. **Les requêtes sont correctes** : les colonnes invalides ont été corrigées dans le message précédent
-3. **Les clés étrangères sont valides** : toutes les FK utilisées dans les `select()` existent
+### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
-### Cause probable : le Service Worker force la déconnexion
+### Modifications
 
-Tu es actuellement redirigé sur `/login` — ce qui signifie que la session d'authentification a été perdue. Le Service Worker contient encore du code agressif (lignes 20-29 de `main.tsx`) qui force l'activation immédiate d'un nouveau SW via `SKIP_WAITING`. Quand un nouveau SW s'active, il peut invalider le cache et perdre la session, ce qui :
-- Redirige vers `/login`
-- Fait que toutes les requêtes protégées par RLS retournent 0 résultats
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
 
-### Corrections à appliquer
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
 
-| Fichier | Changement |
-|---|---|
-| `src/main.tsx` | Supprimer les blocs `SKIP_WAITING` (lignes 19-29) qui forcent l'activation immédiate du nouveau SW et causent la perte de session |
-| `src/main.tsx` | Garder uniquement le check périodique avec `!document.hidden` (déjà en place) |
+### Detail technique
 
-### Ce qui change
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
+```
 
-- Plus de `SKIP_WAITING` → le nouveau SW ne s'active qu'au prochain chargement complet (comportement normal)
-- La session auth n'est plus perdue au changement d'onglet
-- Les stats ne seront plus à zéro car l'utilisateur reste connecté
-
-### Résultat attendu
-
-Après cette correction + reconnexion + hard refresh :
-- La session persiste entre les changements d'onglets
-- Les offres, transactions, candidatures se chargent normalement
-- Les stats affichent les vraies valeurs
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 

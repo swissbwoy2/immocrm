@@ -16,17 +16,8 @@ const updateSW = registerSW({
   onRegisteredSW(swUrl, registration) {
     console.log('Service Worker registered:', swUrl);
     
-    // If there's a waiting SW, force it to activate immediately
-    if (registration?.waiting) {
-      console.log('Found waiting SW, forcing activation...');
-      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-    }
-    
-    // Listen for new SW waiting
-    registration?.addEventListener('waiting', () => {
-      console.log('New SW waiting, forcing activation...');
-      registration.waiting?.postMessage({ type: 'SKIP_WAITING' });
-    });
+    // Let the new SW activate naturally on next full page load
+    // to avoid invalidating the auth session
     
     // Check for updates every 2 minutes (more aggressive)
     if (registration) {
