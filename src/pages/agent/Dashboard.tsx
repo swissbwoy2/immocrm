@@ -158,9 +158,10 @@ export default function AgentDashboard() {
 
       // Error logging for silent query failures
       if (offresResult.error) console.error('Offres query error:', offresResult.error);
-      if (documentsResult.error) console.error('Documents query error:', documentsResult.error);
-      if (candidaturesResult.error) console.error('Candidatures query error:', candidaturesResult.error);
+      if ('error' in documentsResult && documentsResult.error) console.error('Documents query error:', documentsResult.error);
+      if ('error' in candidaturesResult && candidaturesResult.error) console.error('Candidatures query error:', candidaturesResult.error);
       if (transactionsResult.error) console.error('Transactions query error:', transactionsResult.error);
+      if (visitesResult.error) console.error('Visites query error:', visitesResult.error);
       if (visitesResult.error) console.error('Visites query error:', visitesResult.error);
 
       setProfiles(profilesMap);
