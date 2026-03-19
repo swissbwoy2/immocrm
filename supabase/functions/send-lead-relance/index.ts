@@ -7,7 +7,82 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-function generateMarketingEmail(prenom: string, localite: string, budget: string): string {
+interface Offre {
+  adresse: string;
+  prix: number;
+  pieces: number;
+  surface: number;
+  statut: string;
+}
+
+const UNSPLASH_IMAGES = [
+  'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=200&fit=crop',
+  'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=200&fit=crop',
+  'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=200&fit=crop',
+  'https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=400&h=200&fit=crop',
+  'https://images.unsplash.com/photo-1554995207-c18c203602cb?w=400&h=200&fit=crop',
+  'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=400&h=200&fit=crop',
+];
+
+function formatPrix(prix: number): string {
+  return prix.toLocaleString('fr-CH').replace(/,/g, "'");
+}
+
+function generateOffreCard(offre: Offre, imageUrl: string): string {
+  const piecesLabel = offre.pieces <= 1.5 ? 'Studio' : `${offre.pieces} pièces`;
+  const surfaceLabel = offre.surface ? `${offre.surface}m²` : '';
+  const badge = offre.statut === 'envoyee' ? '<span style="display:inline-block;background:#dcfce7;color:#15803d;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;">Disponible</span>'
+    : '<span style="display:inline-block;background:#fef9c3;color:#a16207;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;">En cours</span>';
+
+  return `<td width="50%" style="padding:8px;vertical-align:top;">
+  <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+    <img src="${imageUrl}" alt="Appartement" style="width:100%;height:140px;object-fit:cover;display:block;" />
+    <div style="padding:12px;">
+      <div style="font-size:16px;font-weight:800;color:#1e3a5f;">CHF ${formatPrix(offre.prix)}/mois</div>
+      <div style="font-size:13px;color:#374151;font-weight:600;margin-top:4px;">📍 ${offre.adresse || 'Suisse romande'}</div>
+      <div style="font-size:12px;color:#6b7280;margin-top:4px;">${piecesLabel}${surfaceLabel ? ' • ' + surfaceLabel : ''}</div>
+      <div style="margin-top:8px;">${badge}</div>
+    </div>
+  </div>
+</td>`;
+}
+
+function generateOffresSection(offres: Offre[]): string {
+  if (offres.length === 0) return '';
+
+  const shuffledImages = [...UNSPLASH_IMAGES].sort(() => Math.random() - 0.5);
+  let rows = '';
+  
+  for (let i = 0; i < offres.length; i += 2) {
+    const card1 = generateOffreCard(offres[i], shuffledImages[i % shuffledImages.length]);
+    const card2 = i + 1 < offres.length 
+      ? generateOffreCard(offres[i + 1], shuffledImages[(i + 1) % shuffledImages.length])
+      : '<td width="50%" style="padding:8px;"></td>';
+    rows += `<tr>${card1}${card2}</tr>`;
+  }
+
+  return `
+<!-- SECTION OFFRES -->
+<tr><td style="padding:25px 40px 10px;text-align:center;">
+  <h2 style="margin:0;font-size:20px;font-weight:700;color:#1e3a5f;">📬 Offres déjà envoyées à nos clients</h2>
+  <p style="margin:6px 0 0;font-size:13px;color:#6b7280;">Voici un extrait des biens que nos agents ont proposés cette semaine</p>
+</td></tr>
+<tr><td style="padding:15px 20px;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+    ${rows}
+  </table>
+</td></tr>
+
+<!-- CTA SECONDAIRE -->
+<tr><td style="padding:10px 40px 25px;text-align:center;">
+  <a href="https://logisorama.ch/nouveau-mandat?utm_source=relance&utm_medium=email&utm_content=offres"
+     style="display:inline-block;border:2px solid #1e3a5f;color:#1e3a5f;font-size:15px;font-weight:700;padding:12px 32px;border-radius:10px;text-decoration:none;">
+    Voir toutes les offres disponibles →
+  </a>
+</td></tr>`;
+}
+
+function generateMarketingEmail(prenom: string, localite: string, budget: string, offres: Offre[]): string {
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -20,7 +95,7 @@ function generateMarketingEmail(prenom: string, localite: string, budget: string
 <tr><td align="center" style="padding:30px 15px;">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
 
-<!-- HEADER WITH NAV -->
+<!-- HEADER -->
 <tr><td style="background:linear-gradient(135deg,#1e3a5f 0%,#2d5f8a 50%,#3b82b8 100%);padding:20px 40px;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
     <tr>
@@ -29,20 +104,20 @@ function generateMarketingEmail(prenom: string, localite: string, budget: string
         <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px;letter-spacing:1px;">by Immo-rama.ch</div>
       </td>
       <td style="text-align:right;vertical-align:middle;">
-        <a href="tel:+41215880145" style="color:rgba(255,255,255,0.9);text-decoration:none;font-size:13px;font-weight:600;">📞 021 588 01 45</a>
+        <a href="tel:+41764839199" style="color:rgba(255,255,255,0.9);text-decoration:none;font-size:13px;font-weight:600;">📞 +41 76 483 91 99</a>
       </td>
     </tr>
   </table>
 </td></tr>
 
-<!-- HERO SECTION -->
+<!-- HERO -->
 <tr><td style="padding:40px 40px 15px;text-align:center;">
   <h1 style="margin:0;font-size:26px;font-weight:800;color:#1e3a5f;line-height:1.3;">
     ${prenom}, tu as déjà trouvé<br>ton futur logement ? 🤔
   </h1>
 </td></tr>
 
-<!-- PARAGRAPHE ENGAGEANT -->
+<!-- PARAGRAPHE -->
 <tr><td style="padding:10px 40px 25px;">
   <p style="margin:0;font-size:15px;color:#444;line-height:1.7;text-align:center;">
     On sait que la recherche d'un logement en Suisse romande, c'est <strong>un vrai parcours du combattant</strong>. Avec un taux de vacance inférieur à 1%${localite ? ' dans la région de <strong>' + localite + '</strong>' : ''}, les bons appartements partent en quelques heures.
@@ -53,11 +128,9 @@ function generateMarketingEmail(prenom: string, localite: string, budget: string
 </td></tr>
 
 <!-- SEPARATOR -->
-<tr><td style="padding:0 40px;">
-  <div style="height:1px;background:linear-gradient(to right,transparent,#e0e6ed,transparent);"></div>
-</td></tr>
+<tr><td style="padding:0 40px;"><div style="height:1px;background:linear-gradient(to right,transparent,#e0e6ed,transparent);"></div></td></tr>
 
-<!-- STATS BLOCKS -->
+<!-- STATS -->
 <tr><td style="padding:25px 30px;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
     <tr>
@@ -112,9 +185,7 @@ function generateMarketingEmail(prenom: string, localite: string, budget: string
 </td></tr>
 
 <!-- SEPARATOR -->
-<tr><td style="padding:0 40px;">
-  <div style="height:1px;background:linear-gradient(to right,transparent,#e0e6ed,transparent);"></div>
-</td></tr>
+<tr><td style="padding:0 40px;"><div style="height:1px;background:linear-gradient(to right,transparent,#e0e6ed,transparent);"></div></td></tr>
 
 <!-- AVANTAGES -->
 <tr><td style="padding:20px 40px 5px;">
@@ -150,7 +221,7 @@ function generateMarketingEmail(prenom: string, localite: string, budget: string
   </table>
 </td></tr>
 
-<!-- CTA BUTTON PRINCIPAL -->
+<!-- CTA PRINCIPAL -->
 <tr><td style="padding:10px 40px 30px;text-align:center;">
   <a href="https://logisorama.ch/nouveau-mandat?utm_source=relance&utm_medium=email"
      style="display:inline-block;background:linear-gradient(135deg,#1e3a5f,#2d5f8a);color:#ffffff;font-size:17px;font-weight:700;padding:16px 40px;border-radius:12px;text-decoration:none;letter-spacing:0.3px;box-shadow:0 4px 14px rgba(30,58,95,0.3);">
@@ -159,93 +230,12 @@ function generateMarketingEmail(prenom: string, localite: string, budget: string
 </td></tr>
 
 <!-- SEPARATOR -->
-<tr><td style="padding:0 40px;">
-  <div style="height:1px;background:linear-gradient(to right,transparent,#e0e6ed,transparent);"></div>
-</td></tr>
+<tr><td style="padding:0 40px;"><div style="height:1px;background:linear-gradient(to right,transparent,#e0e6ed,transparent);"></div></td></tr>
 
-<!-- SECTION OFFRES -->
-<tr><td style="padding:25px 40px 10px;text-align:center;">
-  <h2 style="margin:0;font-size:20px;font-weight:700;color:#1e3a5f;">📬 Offres déjà envoyées à nos clients</h2>
-  <p style="margin:6px 0 0;font-size:13px;color:#6b7280;">Voici un extrait des biens que nos agents ont proposés cette semaine</p>
-</td></tr>
-
-<tr><td style="padding:15px 20px;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-    <tr>
-      <!-- Offre 1 -->
-      <td width="50%" style="padding:8px;vertical-align:top;">
-        <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
-          <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=400&h=200&fit=crop" alt="Appartement Lausanne" style="width:100%;height:140px;object-fit:cover;display:block;" />
-          <div style="padding:12px;">
-            <div style="font-size:16px;font-weight:800;color:#1e3a5f;">CHF 1'850/mois</div>
-            <div style="font-size:13px;color:#374151;font-weight:600;margin-top:4px;">📍 Lausanne — Sous-Gare</div>
-            <div style="font-size:12px;color:#6b7280;margin-top:4px;">3.5 pièces • 72m² • 2ème étage</div>
-            <div style="margin-top:8px;">
-              <span style="display:inline-block;background:#dcfce7;color:#15803d;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;">Disponible</span>
-            </div>
-          </div>
-        </div>
-      </td>
-      <!-- Offre 2 -->
-      <td width="50%" style="padding:8px;vertical-align:top;">
-        <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
-          <img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=400&h=200&fit=crop" alt="Appartement Genève" style="width:100%;height:140px;object-fit:cover;display:block;" />
-          <div style="padding:12px;">
-            <div style="font-size:16px;font-weight:800;color:#1e3a5f;">CHF 2'400/mois</div>
-            <div style="font-size:13px;color:#374151;font-weight:600;margin-top:4px;">📍 Genève — Plainpalais</div>
-            <div style="font-size:12px;color:#6b7280;margin-top:4px;">4.5 pièces • 95m² • 4ème étage</div>
-            <div style="margin-top:8px;">
-              <span style="display:inline-block;background:#fef9c3;color:#a16207;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;">Dernières visites</span>
-            </div>
-          </div>
-        </div>
-      </td>
-    </tr>
-    <tr>
-      <!-- Offre 3 -->
-      <td width="50%" style="padding:8px;vertical-align:top;">
-        <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
-          <img src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400&h=200&fit=crop" alt="Appartement Morges" style="width:100%;height:140px;object-fit:cover;display:block;" />
-          <div style="padding:12px;">
-            <div style="font-size:16px;font-weight:800;color:#1e3a5f;">CHF 1'650/mois</div>
-            <div style="font-size:13px;color:#374151;font-weight:600;margin-top:4px;">📍 Morges — Centre</div>
-            <div style="font-size:12px;color:#6b7280;margin-top:4px;">3 pièces • 65m² • Rez-de-chaussée</div>
-            <div style="margin-top:8px;">
-              <span style="display:inline-block;background:#dcfce7;color:#15803d;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;">Nouveau</span>
-            </div>
-          </div>
-        </div>
-      </td>
-      <!-- Offre 4 -->
-      <td width="50%" style="padding:8px;vertical-align:top;">
-        <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
-          <img src="https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=400&h=200&fit=crop" alt="Appartement Nyon" style="width:100%;height:140px;object-fit:cover;display:block;" />
-          <div style="padding:12px;">
-            <div style="font-size:16px;font-weight:800;color:#1e3a5f;">CHF 2'100/mois</div>
-            <div style="font-size:13px;color:#374151;font-weight:600;margin-top:4px;">📍 Nyon — Gare</div>
-            <div style="font-size:12px;color:#6b7280;margin-top:4px;">4 pièces • 85m² • 3ème étage</div>
-            <div style="margin-top:8px;">
-              <span style="display:inline-block;background:#dbeafe;color:#1e3a5f;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;">Visite possible</span>
-            </div>
-          </div>
-        </div>
-      </td>
-    </tr>
-  </table>
-</td></tr>
-
-<!-- CTA SECONDAIRE -->
-<tr><td style="padding:10px 40px 25px;text-align:center;">
-  <a href="https://logisorama.ch/nouveau-mandat?utm_source=relance&utm_medium=email&utm_content=offres"
-     style="display:inline-block;border:2px solid #1e3a5f;color:#1e3a5f;font-size:15px;font-weight:700;padding:12px 32px;border-radius:10px;text-decoration:none;">
-    Voir toutes les offres disponibles →
-  </a>
-</td></tr>
+${generateOffresSection(offres)}
 
 <!-- SEPARATOR -->
-<tr><td style="padding:0 40px;">
-  <div style="height:1px;background:linear-gradient(to right,transparent,#e0e6ed,transparent);"></div>
-</td></tr>
+<tr><td style="padding:0 40px;"><div style="height:1px;background:linear-gradient(to right,transparent,#e0e6ed,transparent);"></div></td></tr>
 
 <!-- AVIS GOOGLE -->
 <tr><td style="padding:25px 40px;text-align:center;">
@@ -257,11 +247,9 @@ function generateMarketingEmail(prenom: string, localite: string, budget: string
 </td></tr>
 
 <!-- SEPARATOR -->
-<tr><td style="padding:0 40px;">
-  <div style="height:1px;background:linear-gradient(to right,transparent,#e0e6ed,transparent);"></div>
-</td></tr>
+<tr><td style="padding:0 40px;"><div style="height:1px;background:linear-gradient(to right,transparent,#e0e6ed,transparent);"></div></td></tr>
 
-<!-- SIGNATURE AGENT -->
+<!-- SIGNATURE -->
 <tr><td style="padding:25px 40px;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
     <tr>
@@ -274,10 +262,10 @@ function generateMarketingEmail(prenom: string, localite: string, budget: string
         <div style="font-size:16px;font-weight:700;color:#1e3a5f;">Christ Ramazani</div>
         <div style="font-size:13px;color:#6b7280;margin-top:2px;">Fondateur & CEO — Immo-rama.ch</div>
         <div style="margin-top:8px;">
-          <a href="tel:+41215880145" style="font-size:13px;color:#374151;text-decoration:none;">📞 +41 21 588 01 45</a>
+          <a href="tel:+41764839199" style="font-size:13px;color:#374151;text-decoration:none;">📞 +41 76 483 91 99</a>
         </div>
         <div style="margin-top:3px;">
-          <a href="mailto:christ@immo-rama.ch" style="font-size:13px;color:#374151;text-decoration:none;">✉️ christ@immo-rama.ch</a>
+          <a href="mailto:info@immo-rama.ch" style="font-size:13px;color:#374151;text-decoration:none;">✉️ info@immo-rama.ch</a>
         </div>
         <div style="margin-top:8px;">
           <a href="https://www.linkedin.com/company/immo-rama" style="text-decoration:none;font-size:13px;color:#0077b5;margin-right:12px;">LinkedIn</a>
@@ -307,6 +295,34 @@ function generateMarketingEmail(prenom: string, localite: string, budget: string
 </html>`;
 }
 
+async function fetchRandomOffres(supabase: ReturnType<typeof createClient>): Promise<Offre[]> {
+  const categories = [
+    { min: 0, max: 1.5 },    // Studio
+    { min: 2, max: 2.5 },    // 2.5 pièces
+    { min: 3, max: 3.5 },    // 3.5 pièces
+  ];
+
+  const offres: Offre[] = [];
+
+  for (const cat of categories) {
+    const { data, error } = await supabase
+      .from('offres')
+      .select('adresse, prix, pieces, surface, statut')
+      .gte('pieces', cat.min)
+      .lte('pieces', cat.max)
+      .not('prix', 'is', null)
+      .limit(10);
+
+    if (!error && data && data.length > 0) {
+      // Pick random from results
+      const randomIndex = Math.floor(Math.random() * data.length);
+      offres.push(data[randomIndex] as Offre);
+    }
+  }
+
+  return offres;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -324,7 +340,6 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify user
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
@@ -358,6 +373,9 @@ serve(async (req) => {
       throw new Error('Aucun lead trouvé');
     }
 
+    // Fetch random offres from DB
+    const offres = await fetchRandomOffres(supabase);
+
     // Setup SMTP
     const port = emailConfig.smtp_port || 465;
     const useTLS = port === 465;
@@ -382,7 +400,6 @@ serve(async (req) => {
     let errorCount = 0;
     const errors: string[] = [];
 
-    // Send in batches of 10 with 1s delay
     for (let i = 0; i < leads.length; i++) {
       const lead = leads[i];
       const prenom = lead.prenom || 'Bonjour';
@@ -391,7 +408,7 @@ serve(async (req) => {
 
       try {
         const subject = `${prenom}, tu as déjà trouvé ton futur logement ?`;
-        const html = generateMarketingEmail(prenom, localite, budget);
+        const html = generateMarketingEmail(prenom, localite, budget, offres);
 
         await smtpClient.send({
           from: fromAddress,
@@ -400,7 +417,6 @@ serve(async (req) => {
           html,
         });
 
-        // Mark as contacted
         await supabase
           .from('leads')
           .update({ contacted: true })
@@ -413,7 +429,6 @@ serve(async (req) => {
         console.error(`Failed to send to ${lead.email}:`, err);
       }
 
-      // Rate limiting: pause every 10 emails
       if ((i + 1) % 10 === 0 && i + 1 < leads.length) {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
@@ -423,16 +438,15 @@ serve(async (req) => {
     smtpClient = null;
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        sent: sentCount, 
+      JSON.stringify({
+        success: true,
+        sent: sentCount,
         errors: errorCount,
         error_details: errors.length > 0 ? errors : undefined,
-        message: `${sentCount} email(s) envoyé(s) sur ${leads.length}` 
+        message: `${sentCount} email(s) envoyé(s) sur ${leads.length}`,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error in send-lead-relance:', error);
