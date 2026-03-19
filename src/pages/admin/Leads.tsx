@@ -475,21 +475,26 @@ export default function Leads() {
             </div>
 
             <div className="text-sm font-medium">Aperçu de l'email :</div>
-            <ScrollArea className="h-[300px] rounded-lg border">
+            <ScrollArea className="h-[400px] rounded-lg border">
               <div className="p-4 bg-[#f4f6f9]">
                 <div className="max-w-[500px] mx-auto bg-white rounded-xl overflow-hidden shadow-sm">
-                  {/* Mini header */}
-                  <div className="bg-gradient-to-r from-[#1e3a5f] to-[#3b82b8] p-6 text-center">
-                    <div className="text-xl font-bold text-white">🏠 Logisorama</div>
-                    <div className="text-xs text-white/60 mt-1">by Immo-rama.ch</div>
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-[#1e3a5f] to-[#3b82b8] p-5">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <div className="text-xl font-bold text-white">🏠 Logisorama</div>
+                        <div className="text-[10px] text-white/60 mt-0.5">by Immo-rama.ch</div>
+                      </div>
+                      <div className="text-xs text-white/80">📞 021 588 01 45</div>
+                    </div>
                   </div>
-                  {/* Content preview */}
+                  {/* Content */}
                   <div className="p-6 space-y-4">
                     <h3 className="text-lg font-bold text-[#1e3a5f] text-center">
                       {"{prenom}"}, tu as déjà trouvé ton futur logement ? 🤔
                     </h3>
-                    <p className="text-sm text-gray-500 text-center">
-                      Si ce n'est pas encore fait, pas de panique. On a de bonnes nouvelles pour toi.
+                    <p className="text-xs text-gray-500 text-center leading-relaxed">
+                      On sait que la recherche d'un logement en Suisse romande, c'est <strong>un vrai parcours du combattant</strong>. Avec un taux de vacance inférieur à 1%, les bons appartements partent en quelques heures.
                     </p>
                     {/* Stats */}
                     <div className="grid grid-cols-3 gap-2">
@@ -506,14 +511,60 @@ export default function Leads() {
                         <div className="text-[10px] text-gray-500 uppercase">Délai</div>
                       </div>
                     </div>
+                    {/* Comment ça marche */}
+                    <div className="text-center">
+                      <div className="text-sm font-bold text-[#1e3a5f] mb-2">Comment ça marche ?</div>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div>
+                          <div className="text-xl">🔍</div>
+                          <div className="text-[10px] font-bold text-[#1e3a5f]">On cherche</div>
+                        </div>
+                        <div>
+                          <div className="text-xl">🏠</div>
+                          <div className="text-[10px] font-bold text-[#1e3a5f]">Tu visites</div>
+                        </div>
+                        <div>
+                          <div className="text-xl">🔑</div>
+                          <div className="text-[10px] font-bold text-[#1e3a5f]">Tu emménages</div>
+                        </div>
+                      </div>
+                    </div>
                     {/* CTA */}
                     <div className="text-center pt-2">
                       <div className="inline-block bg-gradient-to-r from-[#1e3a5f] to-[#2d5f8a] text-white px-6 py-3 rounded-xl font-semibold text-sm">
                         Activer ma recherche →
                       </div>
                     </div>
+                    {/* Offres section */}
+                    <div className="border-t pt-4">
+                      <div className="text-sm font-bold text-[#1e3a5f] text-center mb-2">📬 Offres déjà envoyées à nos clients</div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="border rounded-lg overflow-hidden">
+                          <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=300&h=120&fit=crop" alt="Apt" className="w-full h-16 object-cover" />
+                          <div className="p-2">
+                            <div className="text-xs font-bold text-[#1e3a5f]">CHF 1'850/mois</div>
+                            <div className="text-[10px] text-gray-500">📍 Lausanne • 3.5p • 72m²</div>
+                          </div>
+                        </div>
+                        <div className="border rounded-lg overflow-hidden">
+                          <img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=300&h=120&fit=crop" alt="Apt" className="w-full h-16 object-cover" />
+                          <div className="p-2">
+                            <div className="text-xs font-bold text-[#1e3a5f]">CHF 2'400/mois</div>
+                            <div className="text-[10px] text-gray-500">📍 Genève • 4.5p • 95m²</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                     {/* Stars */}
                     <div className="text-center text-lg">⭐⭐⭐⭐⭐</div>
+                    {/* Signature */}
+                    <div className="border-t pt-3 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-sm font-bold">CR</div>
+                      <div>
+                        <div className="text-xs font-bold text-[#1e3a5f]">Christ Ramazani</div>
+                        <div className="text-[10px] text-gray-500">Fondateur & CEO — Immo-rama.ch</div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
