@@ -1,42 +1,75 @@
 
 
-## Envoi automatique d'invitations ICS par email lors de la création d'une visite
+## Upgrade du template email marketing — Style DreamHome immobilier
 
-### Probleme
-Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
+### Ce qui change
 
-### Solution
-Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
+Le template email actuel est trop simple. Il faut le transformer en un email marketing complet inspiré du style "DreamHome" (screenshots Stripo), avec :
 
-### Modifications
+1. **Plus de texte engageant** — sections narratives entre les blocs visuels
+2. **Section "Extraits d'offres"** — 3 faux listings immobiliers stylisés (images placeholder depuis Unsplash, prix, localité, pièces, surface) avec boutons "Voir l'offre"
+3. **Signature personnelle** — photo de Christ Ramazani (hébergée depuis `src/assets/team/christ-ramazani.png`, uploadée sur un CDN public ou encodée en base64) avec nom, titre "Fondateur & CEO", téléphone, email, réseaux sociaux
 
-1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
-   - Un pour le **client** (email depuis `profiles`)
-   - Un pour l'**agent** (email depuis `profiles` via `agents`)
-   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
-   
-   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
+### Structure du nouvel email
 
-2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
-
-### Detail technique
-
-```sql
--- Dans notify_on_new_visit, après les notifications existantes :
--- Envoi ICS au client
-PERFORM net.http_post(
-  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
-  headers := jsonb_build_object(...),
-  body := jsonb_build_object(
-    'title', 'Visite - ' || NEW.adresse,
-    'start_date', NEW.date_visite,
-    'location', NEW.adresse,
-    'recipient_email', v_client_email
-  )
-);
--- Idem pour agent et admins
+```text
+┌─────────────────────────────────────┐
+│  GRADIENT HEADER — Logisorama       │
+│  + numéro de tel + "Mon compte"     │
+├─────────────────────────────────────┤
+│  {prenom}, tu as déjà trouvé        │
+│  ton futur logement ? 🤔            │
+│                                     │
+│  Paragraphe engageant (marché       │
+│  tendu, taux vacance <1%, etc.)     │
+├─────────────────────────────────────┤
+│  3 blocs stats (1100+ | 95% | 48h) │
+├─────────────────────────────────────┤
+│  "Comment ça marche" — 3 étapes     │
+│  icônes : Chercher → Visiter →     │
+│  Emménager                          │
+├─────────────────────────────────────┤
+│  Ce qu'on fait pour toi (4 points)  │
+├─────────────────────────────────────┤
+│  CTA : Activer ma recherche →       │
+├─────────────────────────────────────┤
+│  "Offres déjà envoyées à nos        │
+│   clients cette semaine"            │
+│  ┌──────────┐ ┌──────────┐         │
+│  │ 📸 Photo │ │ 📸 Photo │         │
+│  │ CHF 1800 │ │ CHF 2200 │         │
+│  │ Lausanne │ │ Genève   │         │
+│  │ 3.5p 75m²│ │ 4.5p 90m²│         │
+│  │[Voir off.]│ │[Voir off.]│        │
+│  └──────────┘ └──────────┘         │
+├─────────────────────────────────────┤
+│  CTA secondaire : Voir plus →      │
+├─────────────────────────────────────┤
+│  ⭐⭐⭐⭐⭐ Avis Google              │
+├─────────────────────────────────────┤
+│  SIGNATURE AGENT                    │
+│  ┌──────┐ Christ Ramazani           │
+│  │ 📸   │ Fondateur & CEO           │
+│  │photo │ +41 XX XXX XX XX          │
+│  └──────┘ christ@immo-rama.ch       │
+│           🔗 LinkedIn Instagram     │
+├─────────────────────────────────────┤
+│  Footer Immo-rama.ch • Crissier     │
+│  STOP désinscription                │
+└─────────────────────────────────────┘
 ```
 
-### Resultat
-Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
+### Fichiers modifiés
+
+| Fichier | Action |
+|---|---|
+| `supabase/functions/send-lead-relance/index.ts` | Remplacement complet du template HTML `generateMarketingEmail()` avec le nouveau design enrichi |
+| `src/pages/admin/Leads.tsx` | Mise à jour de l'aperçu dans le dialog de relance pour refléter le nouveau design |
+
+### Détails techniques
+
+- **Images des offres** : URLs Unsplash libres de droits pour les photos d'appartements (pas besoin d'upload)
+- **Photo Christ Ramazani** : Le fichier existe dans `src/assets/team/christ-ramazani.png`. Pour l'email HTML, il faut une URL publique — on utilisera un placeholder ou une URL hébergée sur le domaine public (logisorama.ch ou immo-rama.ch). On mettra une URL placeholder configurable.
+- **Offres fictives réalistes** : 2-3 listings avec des prix en CHF, localités suisses romandes (Lausanne, Genève, Morges), surfaces et pièces réalistes
+- **Le template reste responsive** avec des tables HTML compatibles tous clients email
 
