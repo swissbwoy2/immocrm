@@ -1,46 +1,42 @@
 
 
-## Relance marketing graphique — Tous les leads non-clients
+## Envoi automatique d'invitations ICS par email lors de la création d'une visite
 
-### Résumé
+### Probleme
+Quand une visite est créée (depuis Messagerie, OffresRecues, ou ailleurs), aucune invitation calendrier (.ics) n'est envoyée par email aux parties concernées (client, agent, admin).
 
-Créer un système de relance email marketing avec un template HTML professionnel (style newsletter graphique), incluant le texte demandé "Tu as déjà trouvé ton futur logement ?" comme accroche de réengagement. Bouton "⚡ Relancer tous" dans la page Leads + preview avant envoi.
+### Solution
+Modifier le trigger existant `notify_on_new_visit` pour qu'il envoie aussi des invitations calendrier via l'edge function `send-calendar-invite`, en plus des notifications in-app qu'il crée déjà.
 
----
+### Modifications
 
-### Template email marketing (contenu)
+1. **Migration SQL** : Mettre a jour la fonction `notify_on_new_visit` pour ajouter 3 appels HTTP vers `send-calendar-invite` :
+   - Un pour le **client** (email depuis `profiles`)
+   - Un pour l'**agent** (email depuis `profiles` via `agents`)
+   - Un pour chaque **admin** (emails depuis `user_roles` + `profiles`)
+   
+   Chaque appel envoie le titre, l'adresse, la date de visite, et l'email du destinataire. Les appels sont dans des blocs `BEGIN...EXCEPTION` pour ne pas bloquer l'insertion en cas d'erreur.
 
-**Objet** : `{prenom}, tu as déjà trouvé ton futur logement ?`
+2. **Aucun changement frontend** : tout se passe au niveau du trigger DB, donc toutes les sources de création de visites (Messagerie, OffresRecues, agent, admin) bénéficient automatiquement de l'envoi ICS.
 
-**Structure visuelle** :
-1. **Header gradient** bleu Immo-Rama + logo
-2. **Accroche personnalisée** : "Bonjour {prenom}, tu as déjà trouvé ton futur logement ?" — ton direct et engageant
-3. **Texte de relance** : "Si ce n'est pas encore fait, pas de panique. On a de bonnes nouvelles pour toi à {localite}."
-4. **3 blocs stats visuels** : `1100+ offres` | `95% satisfaction` | `48h délai moyen`
-5. **4 avantages** avec icônes checkmark stylisées
-6. **CTA principal** : bouton gradient "Activer ma recherche →" vers `https://logisorama.ch/nouveau-mandat?utm_source=relance&utm_medium=email`
-7. **Avis Google** : bloc étoiles + témoignage court
-8. **Footer** : adresse Crissier + lien désinscription
+### Detail technique
 
----
+```sql
+-- Dans notify_on_new_visit, après les notifications existantes :
+-- Envoi ICS au client
+PERFORM net.http_post(
+  url := 'https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-calendar-invite',
+  headers := jsonb_build_object(...),
+  body := jsonb_build_object(
+    'title', 'Visite - ' || NEW.adresse,
+    'start_date', NEW.date_visite,
+    'location', NEW.adresse,
+    'recipient_email', v_client_email
+  )
+);
+-- Idem pour agent et admins
+```
 
-### Implémentation technique
-
-**1. Edge function `send-lead-relance/index.ts`** (nouveau)
-- Reçoit `lead_ids: string[]` en body
-- Récupère la config SMTP active depuis `email_configurations`
-- Pour chaque lead : génère le HTML marketing personnalisé ({prenom}, {localite}, {budget})
-- Envoie via SMTP (même pattern que `send-smtp-email`)
-- Met à jour `contacted = true` dans la table `leads`
-- Rate limiting : batch de 10, délai 1s entre chaque
-- Auth : vérifie le token utilisateur
-
-**2. `src/pages/admin/Leads.tsx`** (modifié)
-- Bouton "⚡ Relancer tous les non-contactés" dans le header (à côté d'Exporter CSV)
-- Dialog de confirmation avec : preview HTML de l'email + compteur de leads ciblés
-- Bouton individuel "Relancer" par lead (icône Send)
-- Toast de succès avec nombre d'emails envoyés
-- Mutation qui appelle `send-lead-relance` via `supabase.functions.invoke()`
-
-**3. Config TOML** : ajouter `[functions.send-lead-relance]` avec `verify_jwt = false`
+### Resultat
+Chaque nouvelle visite insérée en base déclenche automatiquement l'envoi d'un email avec fichier .ics en pièce jointe au client, à l'agent assigné, et à tous les admins.
 
