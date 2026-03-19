@@ -29,7 +29,10 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   CheckCircle, 
   Circle, 
@@ -42,7 +45,10 @@ import {
   Phone,
   User,
   ShieldCheck,
-  ShieldX
+  ShieldX,
+  Zap,
+  Send,
+  Loader2,
 } from "lucide-react";
 
 type Lead = {
@@ -69,6 +75,8 @@ export default function Leads() {
   const [filter, setFilter] = useState<"all" | "contacted" | "not_contacted" | "qualified" | "not_qualified">("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState("");
+  const [showRelanceDialog, setShowRelanceDialog] = useState(false);
+  const [relanceSending, setRelanceSending] = useState(false);
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["leads", filter],
@@ -134,6 +142,48 @@ export default function Leads() {
     },
   });
 
+  const sendRelance = async (leadIds: string[]) => {
+    setRelanceSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-lead-relance', {
+        body: { lead_ids: leadIds },
+      });
+
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+
+      toast.success(`${data.sent} email(s) de relance envoyé(s) !`, {
+        description: data.errors > 0 ? `${data.errors} erreur(s)` : undefined,
+      });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      setShowRelanceDialog(false);
+    } catch (err) {
+      toast.error("Erreur lors de l'envoi", {
+        description: err instanceof Error ? err.message : "Erreur inconnue",
+      });
+    } finally {
+      setRelanceSending(false);
+    }
+  };
+
+  const sendSingleRelance = async (lead: Lead) => {
+    toast.loading(`Envoi à ${lead.prenom || lead.email}...`, { id: `relance-${lead.id}` });
+    try {
+      const { data, error } = await supabase.functions.invoke('send-lead-relance', {
+        body: { lead_ids: [lead.id] },
+      });
+      if (error) throw error;
+      if (!data.success) throw new Error(data.error);
+      toast.success(`Email envoyé à ${lead.prenom || lead.email}`, { id: `relance-${lead.id}` });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    } catch (err) {
+      toast.error(`Erreur pour ${lead.email}`, { 
+        id: `relance-${lead.id}`,
+        description: err instanceof Error ? err.message : "Erreur inconnue",
+      });
+    }
+  };
+
   const exportCSV = () => {
     const headers = ["Prénom", "Nom", "Email", "Téléphone", "Localité", "Budget", "Statut Emploi", "Permis", "Poursuites", "Garant", "Qualifié", "Date", "Contacté", "Notes"];
     const rows = leads.map((lead) => [
@@ -164,7 +214,8 @@ export default function Leads() {
     link.click();
   };
 
-  const notContactedCount = leads.filter((l) => !l.contacted).length;
+  const notContactedLeads = leads.filter((l) => !l.contacted);
+  const notContactedCount = notContactedLeads.length;
   const qualifiedCount = leads.filter((l) => l.is_qualified).length;
 
   return (
@@ -188,10 +239,21 @@ export default function Leads() {
           </SelectContent>
         </Select>
 
-        <Button variant="outline" onClick={exportCSV} className="gap-2">
-          <Download className="h-4 w-4" />
-          Exporter CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="default" 
+            onClick={() => setShowRelanceDialog(true)} 
+            className="gap-2"
+            disabled={notContactedCount === 0}
+          >
+            <Zap className="h-4 w-4" />
+            Relancer tous ({notContactedCount})
+          </Button>
+          <Button variant="outline" onClick={exportCSV} className="gap-2">
+            <Download className="h-4 w-4" />
+            Exporter CSV
+          </Button>
+        </div>
       </div>
 
       <PremiumTable>
@@ -304,7 +366,17 @@ export default function Leads() {
                   )}
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center justify-end gap-1">
+                    {!lead.contacted && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => sendSingleRelance(lead)}
+                        title="Envoyer email de relance"
+                      >
+                        <Send className="h-4 w-4 text-primary" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -348,6 +420,7 @@ export default function Leads() {
         </TableBody>
       </PremiumTable>
 
+      {/* Notes Dialog */}
       <Dialog open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
         <DialogContent>
           <DialogHeader>
@@ -373,6 +446,108 @@ export default function Leads() {
               Enregistrer
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Relance Dialog */}
+      <Dialog open={showRelanceDialog} onOpenChange={setShowRelanceDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5 text-primary" />
+              Relance marketing — {notContactedCount} lead(s)
+            </DialogTitle>
+            <DialogDescription>
+              Un email marketing professionnel sera envoyé à tous les leads non contactés.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{notContactedCount}</div>
+                <div className="text-xs text-muted-foreground">Destinataires</div>
+              </div>
+              <div className="h-10 w-px bg-border" />
+              <div className="text-sm text-muted-foreground">
+                <strong>Objet :</strong> {"{prenom}"}, tu as déjà trouvé ton futur logement ?
+              </div>
+            </div>
+
+            <div className="text-sm font-medium">Aperçu de l'email :</div>
+            <ScrollArea className="h-[300px] rounded-lg border">
+              <div className="p-4 bg-[#f4f6f9]">
+                <div className="max-w-[500px] mx-auto bg-white rounded-xl overflow-hidden shadow-sm">
+                  {/* Mini header */}
+                  <div className="bg-gradient-to-r from-[#1e3a5f] to-[#3b82b8] p-6 text-center">
+                    <div className="text-xl font-bold text-white">🏠 Logisorama</div>
+                    <div className="text-xs text-white/60 mt-1">by Immo-rama.ch</div>
+                  </div>
+                  {/* Content preview */}
+                  <div className="p-6 space-y-4">
+                    <h3 className="text-lg font-bold text-[#1e3a5f] text-center">
+                      {"{prenom}"}, tu as déjà trouvé ton futur logement ? 🤔
+                    </h3>
+                    <p className="text-sm text-gray-500 text-center">
+                      Si ce n'est pas encore fait, pas de panique. On a de bonnes nouvelles pour toi.
+                    </p>
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-blue-50 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-[#1e3a5f]">1100+</div>
+                        <div className="text-[10px] text-gray-500 uppercase">Offres</div>
+                      </div>
+                      <div className="bg-green-50 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-green-700">95%</div>
+                        <div className="text-[10px] text-gray-500 uppercase">Satisfaction</div>
+                      </div>
+                      <div className="bg-yellow-50 rounded-lg p-3 text-center">
+                        <div className="text-lg font-bold text-amber-600">48h</div>
+                        <div className="text-[10px] text-gray-500 uppercase">Délai</div>
+                      </div>
+                    </div>
+                    {/* CTA */}
+                    <div className="text-center pt-2">
+                      <div className="inline-block bg-gradient-to-r from-[#1e3a5f] to-[#2d5f8a] text-white px-6 py-3 rounded-xl font-semibold text-sm">
+                        Activer ma recherche →
+                      </div>
+                    </div>
+                    {/* Stars */}
+                    <div className="text-center text-lg">⭐⭐⭐⭐⭐</div>
+                  </div>
+                </div>
+              </div>
+            </ScrollArea>
+
+            {notContactedCount > 0 && (
+              <div className="text-xs text-muted-foreground">
+                💡 Les leads seront automatiquement marqués comme "contactés" après l'envoi.
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRelanceDialog(false)} disabled={relanceSending}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={() => sendRelance(notContactedLeads.map(l => l.id))}
+              disabled={relanceSending || notContactedCount === 0}
+              className="gap-2"
+            >
+              {relanceSending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Envoi en cours...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  Envoyer à {notContactedCount} lead(s)
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
