@@ -485,7 +485,7 @@ export default function Leads() {
                         <div className="text-xl font-bold text-white">🏠 Logisorama</div>
                         <div className="text-[10px] text-white/60 mt-0.5">by Immo-rama.ch</div>
                       </div>
-                      <div className="text-xs text-white/80">📞 021 588 01 45</div>
+                      <div className="text-xs text-white/80">📞 +41 76 483 91 99</div>
                     </div>
                   </div>
                   {/* Content */}
