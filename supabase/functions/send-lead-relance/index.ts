@@ -432,9 +432,7 @@ serve(async (req) => {
         console.error(`Failed to send to ${lead.email}:`, err);
       }
 
-      if ((i + 1) % 10 === 0 && i + 1 < leads.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
+      // No sleep needed with small batches
     }
 
     await smtpClient.close();
