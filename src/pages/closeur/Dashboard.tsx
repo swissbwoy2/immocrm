@@ -297,11 +297,20 @@ export default function CloseurDashboard() {
                   )}
                 </TableCell>
                 <TableCell>
-                  {lead.contacted ? (
-                    <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Contacté</Badge>
-                  ) : (
-                    <Badge variant="secondary">Non contacté</Badge>
-                  )}
+                  <div className="flex flex-col gap-1">
+                    {lead.contacted ? (
+                      <Badge className="bg-green-500/20 text-green-600 border-green-500/30">Contacté</Badge>
+                    ) : (
+                      <Badge variant="secondary">Non contacté</Badge>
+                    )}
+                    {lead.is_qualified === true ? (
+                      <Badge className="bg-green-500/20 text-green-600 border-green-500/30 text-xs">Qualifié</Badge>
+                    ) : lead.is_qualified === false ? (
+                      <Badge variant="destructive" className="text-xs">Non qualifié</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">À évaluer</Badge>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-1">

@@ -77,7 +77,7 @@ type Lead = {
 
 export default function Leads() {
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<"all" | "contacted" | "not_contacted" | "qualified" | "not_qualified">("all");
+  const [filter, setFilter] = useState<"all" | "contacted" | "not_contacted" | "qualified" | "not_qualified" | "to_evaluate">("all");
   const [formulaireFilter, setFormulaireFilter] = useState<string>("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState("");
@@ -103,6 +103,8 @@ export default function Leads() {
         query = query.eq("is_qualified", true);
       } else if (filter === "not_qualified") {
         query = query.eq("is_qualified", false);
+      } else if (filter === "to_evaluate") {
+        query = query.is("is_qualified", null);
       }
 
       if (formulaireFilter !== "all") {
@@ -332,6 +334,7 @@ export default function Leads() {
               <SelectItem value="all">Tous les leads</SelectItem>
               <SelectItem value="qualified">Qualifiés uniquement</SelectItem>
               <SelectItem value="not_qualified">Non qualifiés</SelectItem>
+              <SelectItem value="to_evaluate">À évaluer</SelectItem>
               <SelectItem value="not_contacted">Non contactés</SelectItem>
               <SelectItem value="contacted">Contactés</SelectItem>
             </SelectContent>
@@ -437,15 +440,20 @@ export default function Leads() {
                 </TableCell>
                 <TableCell>
                   <div className="space-y-2">
-                    {lead.is_qualified ? (
+                    {lead.is_qualified === true ? (
                       <Badge className="bg-green-500/20 text-green-600 border-green-500/30 gap-1">
                         <ShieldCheck className="h-3 w-3" />
                         Qualifié
                       </Badge>
-                    ) : (
+                    ) : lead.is_qualified === false ? (
                       <Badge variant="destructive" className="gap-1">
                         <ShieldX className="h-3 w-3" />
                         Non qualifié
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="gap-1">
+                        <Circle className="h-3 w-3" />
+                        À évaluer
                       </Badge>
                     )}
                     <div className="text-xs text-muted-foreground space-y-0.5">
