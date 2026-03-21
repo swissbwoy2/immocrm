@@ -15,6 +15,7 @@ import {
 } from "@/components/premium/PremiumTable";
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 import { Badge } from "@/components/ui/badge";
+import { ClientTypeBadge } from "@/components/ClientTypeBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -280,14 +281,19 @@ export default function CloseurDashboard() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  {lead.formulaire ? (
-                    <Badge variant="outline" className="gap-1">
-                      <Target className="h-3 w-3" />
-                      {lead.formulaire}
-                    </Badge>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">—</span>
-                  )}
+                  <div className="space-y-1">
+                    {lead.formulaire ? (
+                      <Badge variant="outline" className="gap-1">
+                        <Target className="h-3 w-3" />
+                        {lead.formulaire}
+                      </Badge>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                    <div className="mt-1">
+                      <ClientTypeBadge typeRecherche={lead.type_recherche} size="sm" />
+                    </div>
+                  </div>
                 </TableCell>
                 <TableCell>
                   {lead.created_at && (

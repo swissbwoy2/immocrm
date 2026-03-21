@@ -72,15 +72,29 @@ Deno.serve(async (req) => {
       const rows = batch.map((lead: any) => {
         const source = lead.source || 'CSV Import';
         const isQualified = source.toLowerCase() === 'payé' ? true : null;
+        const formulaire = lead.formulaire || formulaire_name || null;
+        
+        // Déduire type_recherche depuis le nom du formulaire
+        let typeRecherche = 'Louer'; // défaut
+        if (formulaire) {
+          const formLower = formulaire.toLowerCase();
+          if (formLower.includes('acheteur') || formLower.includes('acheter') || formLower.includes('achat')) {
+            typeRecherche = 'Acheter';
+          } else if (formLower.includes('vendeur') || formLower.includes('vendre') || formLower.includes('estimation') || formLower.includes('mandat')) {
+            typeRecherche = 'Vendre';
+          }
+        }
+        
         return {
           email: lead.email?.toLowerCase()?.trim(),
           prenom: lead.prenom || null,
           nom: lead.nom || null,
           telephone: lead.telephone || null,
           source,
-          formulaire: lead.formulaire || formulaire_name || null,
+          formulaire,
           contacted: false,
           is_qualified: isQualified,
+          type_recherche: typeRecherche,
         };
       }).filter((r: any) => r.email);
 

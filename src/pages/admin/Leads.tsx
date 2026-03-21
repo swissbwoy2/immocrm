@@ -54,6 +54,7 @@ import {
   FileText as FileTextIcon,
   Target,
 } from "lucide-react";
+import { ClientTypeBadge } from "@/components/ClientTypeBadge";
 
 type Lead = {
   id: string;
@@ -73,12 +74,14 @@ type Lead = {
   contacted: boolean | null;
   notes: string | null;
   formulaire: string | null;
+  type_recherche: string | null;
 };
 
 export default function Leads() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<"all" | "contacted" | "not_contacted" | "qualified" | "not_qualified" | "to_evaluate">("all");
   const [formulaireFilter, setFormulaireFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState("");
   const [showRelanceDialog, setShowRelanceDialog] = useState(false);
@@ -88,7 +91,7 @@ export default function Leads() {
   const [importing, setImporting] = useState(false);
 
   const { data: leads = [], isLoading } = useQuery({
-    queryKey: ["leads", filter, formulaireFilter],
+    queryKey: ["leads", filter, formulaireFilter, typeFilter],
     queryFn: async () => {
       let query = supabase
         .from("leads")
@@ -109,6 +112,14 @@ export default function Leads() {
 
       if (formulaireFilter !== "all") {
         query = query.eq("formulaire", formulaireFilter);
+      }
+
+      if (typeFilter !== "all") {
+        if (typeFilter === "none") {
+          query = query.is("type_recherche", null);
+        } else {
+          query = query.eq("type_recherche", typeFilter);
+        }
       }
 
       const { data, error } = await query;
@@ -317,11 +328,14 @@ export default function Leads() {
   const notContactedCount = notContactedLeads.length;
   const qualifiedCount = leads.filter((l) => l.is_qualified).length;
 
+  const chercheurCount = leads.filter((l) => l.type_recherche === 'Louer' || l.type_recherche === 'Acheter').length;
+  const vendeurCount = leads.filter((l) => l.type_recherche === 'Vendre').length;
+
   return (
     <div className="space-y-6">
       <PremiumPageHeader
         title="Leads Shortlist"
-        subtitle={`${leads.length} leads • ${qualifiedCount} qualifiés • ${notContactedCount} non contactés`}
+        subtitle={`${leads.length} leads • ${chercheurCount} chercheurs • ${vendeurCount} vendeurs • ${qualifiedCount} qualifiés • ${notContactedCount} non contactés`}
       />
 
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
@@ -337,6 +351,18 @@ export default function Leads() {
               <SelectItem value="to_evaluate">À évaluer</SelectItem>
               <SelectItem value="not_contacted">Non contactés</SelectItem>
               <SelectItem value="contacted">Contactés</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Type de lead" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les types</SelectItem>
+              <SelectItem value="Louer">🔑 Location</SelectItem>
+              <SelectItem value="Acheter">🏠 Achat</SelectItem>
+              <SelectItem value="Vendre">🏢 Vendeur</SelectItem>
+              <SelectItem value="none">❓ À classifier</SelectItem>
             </SelectContent>
           </Select>
           {formulaires.length > 0 && (
@@ -423,7 +449,8 @@ export default function Leads() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
+                    <ClientTypeBadge typeRecherche={lead.type_recherche} size="sm" />
                     {lead.localite && (
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -434,6 +461,12 @@ export default function Leads() {
                       <div className="flex items-center gap-2">
                         <Wallet className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">{lead.budget}</span>
+                      </div>
+                    )}
+                    {lead.formulaire && (
+                      <div className="flex items-center gap-2">
+                        <Target className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">{lead.formulaire}</span>
                       </div>
                     )}
                   </div>
@@ -456,21 +489,31 @@ export default function Leads() {
                         À évaluer
                       </Badge>
                     )}
-                    <div className="text-xs text-muted-foreground space-y-0.5">
-                      {lead.statut_emploi && (
-                        <div>{lead.statut_emploi === 'salarie' ? '✓ Salarié' : '✗ Non salarié'}</div>
-                      )}
-                      {lead.permis_nationalite && (
-                        <div>{['B', 'C', 'Suisse'].includes(lead.permis_nationalite) ? '✓' : '✗'} Permis {lead.permis_nationalite}</div>
-                      )}
-                      {lead.poursuites !== null && (
-                        <div>
-                          {lead.poursuites ? (
-                            lead.a_garant ? '✓ Poursuites + Garant' : '✗ Poursuites sans garant'
-                          ) : '✓ Pas de poursuites'}
-                        </div>
-                      )}
-                    </div>
+                    {lead.type_recherche !== 'Vendre' && (
+                      <div className="text-xs text-muted-foreground space-y-0.5">
+                        {lead.type_recherche === 'Acheter' ? (
+                          <>
+                            {lead.budget && <div>💰 Budget : {lead.budget}</div>}
+                          </>
+                        ) : (
+                          <>
+                            {lead.statut_emploi && (
+                              <div>{lead.statut_emploi === 'salarie' ? '✓ Salarié' : '✗ Non salarié'}</div>
+                            )}
+                            {lead.permis_nationalite && (
+                              <div>{['B', 'C', 'Suisse'].includes(lead.permis_nationalite) ? '✓' : '✗'} Permis {lead.permis_nationalite}</div>
+                            )}
+                            {lead.poursuites !== null && (
+                              <div>
+                                {lead.poursuites ? (
+                                  lead.a_garant ? '✓ Poursuites + Garant' : '✗ Poursuites sans garant'
+                                ) : '✓ Pas de poursuites'}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -550,12 +593,40 @@ export default function Leads() {
           <DialogHeader>
             <DialogTitle>Notes pour {selectedLead?.prenom} {selectedLead?.nom || selectedLead?.email}</DialogTitle>
           </DialogHeader>
-          <Textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Ajouter des notes de suivi..."
-            rows={4}
-          />
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Type de lead</label>
+              <Select 
+                value={selectedLead?.type_recherche || "none"} 
+                onValueChange={(v) => {
+                  if (selectedLead) {
+                    const newType = v === "none" ? null : v;
+                    supabase.from("leads").update({ type_recherche: newType }).eq("id", selectedLead.id).then(() => {
+                      queryClient.invalidateQueries({ queryKey: ["leads"] });
+                      setSelectedLead({ ...selectedLead, type_recherche: newType });
+                      toast.success("Type mis à jour");
+                    });
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Louer">🔑 Location</SelectItem>
+                  <SelectItem value="Acheter">🏠 Achat</SelectItem>
+                  <SelectItem value="Vendre">🏢 Vendeur</SelectItem>
+                  <SelectItem value="none">❓ Non défini</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Ajouter des notes de suivi..."
+              rows={4}
+            />
+          </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setSelectedLead(null)}>
               Annuler
