@@ -153,6 +153,11 @@ const getMenuForRole = (role: string) => {
         { name: 'Historique & gains', icon: Wallet, path: '/coursier/historique', notifKey: null },
         { name: 'Paramètres', icon: Settings, path: '/coursier/parametres', notifKey: null },
       ];
+    case 'closeur':
+      return [
+        { name: 'Tableau de bord', icon: LayoutDashboard, path: '/closeur', notifKey: null },
+        { name: 'Leads', icon: Target, path: '/closeur', notifKey: null },
+      ];
     default:
       return [];
   }
