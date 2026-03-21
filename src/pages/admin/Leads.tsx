@@ -440,15 +440,20 @@ export default function Leads() {
                 </TableCell>
                 <TableCell>
                   <div className="space-y-2">
-                    {lead.is_qualified ? (
+                    {lead.is_qualified === true ? (
                       <Badge className="bg-green-500/20 text-green-600 border-green-500/30 gap-1">
                         <ShieldCheck className="h-3 w-3" />
                         Qualifié
                       </Badge>
-                    ) : (
+                    ) : lead.is_qualified === false ? (
                       <Badge variant="destructive" className="gap-1">
                         <ShieldX className="h-3 w-3" />
                         Non qualifié
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="gap-1">
+                        <Circle className="h-3 w-3" />
+                        À évaluer
                       </Badge>
                     )}
                     <div className="text-xs text-muted-foreground space-y-0.5">

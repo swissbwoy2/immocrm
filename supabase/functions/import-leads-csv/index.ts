@@ -69,16 +69,20 @@ Deno.serve(async (req) => {
     for (let i = 0; i < leads.length; i += batchSize) {
       const batch = leads.slice(i, i + batchSize);
       
-      const rows = batch.map((lead: any) => ({
-        email: lead.email?.toLowerCase()?.trim(),
-        prenom: lead.prenom || null,
-        nom: lead.nom || null,
-        telephone: lead.telephone || null,
-        source: lead.source || 'CSV Import',
-        formulaire: lead.formulaire || formulaire_name || null,
-        contacted: false,
-        is_qualified: null,
-      })).filter((r: any) => r.email);
+      const rows = batch.map((lead: any) => {
+        const source = lead.source || 'CSV Import';
+        const isQualified = source.toLowerCase() === 'payé' ? true : null;
+        return {
+          email: lead.email?.toLowerCase()?.trim(),
+          prenom: lead.prenom || null,
+          nom: lead.nom || null,
+          telephone: lead.telephone || null,
+          source,
+          formulaire: lead.formulaire || formulaire_name || null,
+          contacted: false,
+          is_qualified: isQualified,
+        };
+      }).filter((r: any) => r.email);
 
       for (const row of rows) {
         const { error } = await supabase
