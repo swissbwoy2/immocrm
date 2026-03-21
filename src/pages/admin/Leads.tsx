@@ -113,6 +113,14 @@ export default function Leads() {
         query = query.eq("formulaire", formulaireFilter);
       }
 
+      if (typeFilter !== "all") {
+        if (typeFilter === "none") {
+          query = query.is("type_recherche", null);
+        } else {
+          query = query.eq("type_recherche", typeFilter);
+        }
+      }
+
       const { data, error } = await query;
       if (error) throw error;
       return data as Lead[];
