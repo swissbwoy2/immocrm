@@ -71,6 +71,7 @@ type Lead = {
   created_at: string | null;
   contacted: boolean | null;
   notes: string | null;
+  formulaire: string | null;
 };
 
 export default function Leads() {
