@@ -449,7 +449,8 @@ export default function Leads() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
+                    <ClientTypeBadge typeRecherche={lead.type_recherche} size="sm" />
                     {lead.localite && (
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -460,6 +461,12 @@ export default function Leads() {
                       <div className="flex items-center gap-2">
                         <Wallet className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">{lead.budget}</span>
+                      </div>
+                    )}
+                    {lead.formulaire && (
+                      <div className="flex items-center gap-2">
+                        <Target className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">{lead.formulaire}</span>
                       </div>
                     )}
                   </div>
