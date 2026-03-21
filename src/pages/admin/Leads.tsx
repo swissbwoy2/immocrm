@@ -54,6 +54,7 @@ import {
   FileText as FileTextIcon,
   Target,
 } from "lucide-react";
+import { ClientTypeBadge } from "@/components/ClientTypeBadge";
 
 type Lead = {
   id: string;
