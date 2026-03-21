@@ -8328,6 +8328,7 @@ export type Database = {
         | "annonceur"
         | "coursier"
         | "agent_ia"
+        | "closeur"
       approval_status: "pending" | "approved" | "rejected" | "modified"
       approval_type: "offer" | "visit" | "external_action"
       connector_type:
@@ -8520,6 +8521,7 @@ export const Constants = {
         "annonceur",
         "coursier",
         "agent_ia",
+        "closeur",
       ],
       approval_status: ["pending", "approved", "rejected", "modified"],
       approval_type: ["offer", "visit", "external_action"],
