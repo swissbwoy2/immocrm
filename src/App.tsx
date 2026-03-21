@@ -116,6 +116,9 @@ const CoursierCalendrier = lazy(() => import("./pages/coursier/Calendrier"));
 const CoursierHistorique = lazy(() => import("./pages/coursier/Historique"));
 const CoursierParametres = lazy(() => import("./pages/coursier/Parametres"));
 
+// Closeur pages
+const CloseurDashboard = lazy(() => import("./pages/closeur/Dashboard"));
+
 // Client pages
 const ClientDashboard = lazy(() => import("./pages/client/Dashboard"));
 const ClientDossier = lazy(() => import("./pages/client/Dossier"));
