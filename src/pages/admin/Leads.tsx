@@ -489,21 +489,31 @@ export default function Leads() {
                         À évaluer
                       </Badge>
                     )}
-                    <div className="text-xs text-muted-foreground space-y-0.5">
-                      {lead.statut_emploi && (
-                        <div>{lead.statut_emploi === 'salarie' ? '✓ Salarié' : '✗ Non salarié'}</div>
-                      )}
-                      {lead.permis_nationalite && (
-                        <div>{['B', 'C', 'Suisse'].includes(lead.permis_nationalite) ? '✓' : '✗'} Permis {lead.permis_nationalite}</div>
-                      )}
-                      {lead.poursuites !== null && (
-                        <div>
-                          {lead.poursuites ? (
-                            lead.a_garant ? '✓ Poursuites + Garant' : '✗ Poursuites sans garant'
-                          ) : '✓ Pas de poursuites'}
-                        </div>
-                      )}
-                    </div>
+                    {lead.type_recherche !== 'Vendre' && (
+                      <div className="text-xs text-muted-foreground space-y-0.5">
+                        {lead.type_recherche === 'Acheter' ? (
+                          <>
+                            {lead.budget && <div>💰 Budget : {lead.budget}</div>}
+                          </>
+                        ) : (
+                          <>
+                            {lead.statut_emploi && (
+                              <div>{lead.statut_emploi === 'salarie' ? '✓ Salarié' : '✗ Non salarié'}</div>
+                            )}
+                            {lead.permis_nationalite && (
+                              <div>{['B', 'C', 'Suisse'].includes(lead.permis_nationalite) ? '✓' : '✗'} Permis {lead.permis_nationalite}</div>
+                            )}
+                            {lead.poursuites !== null && (
+                              <div>
+                                {lead.poursuites ? (
+                                  lead.a_garant ? '✓ Poursuites + Garant' : '✗ Poursuites sans garant'
+                                ) : '✓ Pas de poursuites'}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
