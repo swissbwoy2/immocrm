@@ -351,6 +351,9 @@ serve(async (req) => {
       throw new Error('lead_ids array is required');
     }
 
+    // Limit to 3 leads per invocation to avoid CPU timeout
+    const limitedIds = lead_ids.slice(0, 3);
+
     // Get SMTP config
     const { data: emailConfig, error: configError } = await supabase
       .from('email_configurations')
@@ -367,7 +370,7 @@ serve(async (req) => {
     const { data: leads, error: leadsError } = await supabase
       .from('leads')
       .select('id, email, prenom, nom, localite, budget')
-      .in('id', lead_ids);
+      .in('id', limitedIds);
 
     if (leadsError || !leads || leads.length === 0) {
       throw new Error('Aucun lead trouvé');
@@ -429,9 +432,7 @@ serve(async (req) => {
         console.error(`Failed to send to ${lead.email}:`, err);
       }
 
-      if ((i + 1) % 10 === 0 && i + 1 < leads.length) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
+      // No sleep needed with small batches
     }
 
     await smtpClient.close();
