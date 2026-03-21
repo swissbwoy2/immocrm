@@ -16,6 +16,7 @@ import {
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { 
   Select,
@@ -49,6 +50,9 @@ import {
   Zap,
   Send,
   Loader2,
+  Upload,
+  FileText as FileTextIcon,
+  Target,
 } from "lucide-react";
 
 type Lead = {
@@ -68,18 +72,23 @@ type Lead = {
   created_at: string | null;
   contacted: boolean | null;
   notes: string | null;
+  formulaire: string | null;
 };
 
 export default function Leads() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<"all" | "contacted" | "not_contacted" | "qualified" | "not_qualified">("all");
+  const [formulaireFilter, setFormulaireFilter] = useState<string>("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState("");
   const [showRelanceDialog, setShowRelanceDialog] = useState(false);
   const [relanceSending, setRelanceSending] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const { data: leads = [], isLoading } = useQuery({
-    queryKey: ["leads", filter],
+    queryKey: ["leads", filter, formulaireFilter],
     queryFn: async () => {
       let query = supabase
         .from("leads")
@@ -96,9 +105,26 @@ export default function Leads() {
         query = query.eq("is_qualified", false);
       }
 
+      if (formulaireFilter !== "all") {
+        query = query.eq("formulaire", formulaireFilter);
+      }
+
       const { data, error } = await query;
       if (error) throw error;
       return data as Lead[];
+    },
+  });
+
+  const { data: formulaires = [] } = useQuery({
+    queryKey: ["lead-formulaires"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("leads")
+        .select("formulaire")
+        .not("formulaire", "is", null);
+      if (error) throw error;
+      const unique = [...new Set((data as any[]).map((d) => d.formulaire).filter(Boolean))];
+      return unique as string[];
     },
   });
 
@@ -214,6 +240,69 @@ export default function Leads() {
     link.click();
   };
 
+  const handleImportCSV = async () => {
+    if (!importFile) return;
+    setImporting(true);
+    try {
+      const text = await importFile.text();
+      const cleanText = text.replace(/^\uFEFF/, '');
+      const lines = cleanText.split('\n').filter(l => l.trim());
+      if (lines.length < 2) throw new Error('CSV vide');
+
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+      
+      const nameIdx = headers.findIndex(h => h.includes('nom') && !h.includes('famille'));
+      const emailIdx = headers.findIndex(h => h.includes('e-mail') || h.includes('email') || h.includes('adresse e'));
+      const sourceIdx = headers.findIndex(h => h === 'source');
+      const formulaireIdx = headers.findIndex(h => h.includes('formulaire'));
+      const phoneIdx = headers.findIndex(h => h.includes('téléphone') || h.includes('telephone') || h.includes('phone'));
+
+      if (emailIdx === -1) throw new Error('Colonne email non trouvée');
+
+      const parsedLeads = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        const email = cols[emailIdx]?.trim();
+        if (!email || !email.includes('@')) continue;
+
+        const fullName = nameIdx >= 0 ? cols[nameIdx] : '';
+        const parts = fullName.split(' ');
+        const prenom = parts[0] || '';
+        const nom = parts.slice(1).join(' ') || '';
+
+        parsedLeads.push({
+          email,
+          prenom: prenom || null,
+          nom: nom || null,
+          telephone: phoneIdx >= 0 ? cols[phoneIdx] || null : null,
+          source: sourceIdx >= 0 ? cols[sourceIdx] || 'CSV Import' : 'CSV Import',
+          formulaire: formulaireIdx >= 0 ? cols[formulaireIdx] || null : null,
+        });
+      }
+
+      const { data, error } = await supabase.functions.invoke('import-leads-csv', {
+        body: { leads: parsedLeads, formulaire_name: importFile.name },
+      });
+
+      if (error) throw error;
+      
+      toast.success(`${data.inserted} leads importés`, {
+        description: data.duplicates > 0 ? `${data.duplicates} doublons ignorés` : undefined,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["lead-formulaires"] });
+      setShowImportDialog(false);
+      setImportFile(null);
+    } catch (err) {
+      toast.error("Erreur d'import", {
+        description: err instanceof Error ? err.message : "Erreur inconnue",
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const notContactedLeads = leads.filter((l) => !l.contacted);
   const notContactedCount = notContactedLeads.length;
   const qualifiedCount = leads.filter((l) => l.is_qualified).length;
@@ -226,18 +315,33 @@ export default function Leads() {
       />
 
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
-        <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-          <SelectTrigger className="w-[220px]">
-            <SelectValue placeholder="Filtrer par statut" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les leads</SelectItem>
-            <SelectItem value="qualified">Qualifiés uniquement</SelectItem>
-            <SelectItem value="not_qualified">Non qualifiés</SelectItem>
-            <SelectItem value="not_contacted">Non contactés</SelectItem>
-            <SelectItem value="contacted">Contactés</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2 flex-wrap">
+          <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrer par statut" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les leads</SelectItem>
+              <SelectItem value="qualified">Qualifiés uniquement</SelectItem>
+              <SelectItem value="not_qualified">Non qualifiés</SelectItem>
+              <SelectItem value="not_contacted">Non contactés</SelectItem>
+              <SelectItem value="contacted">Contactés</SelectItem>
+            </SelectContent>
+          </Select>
+          {formulaires.length > 0 && (
+            <Select value={formulaireFilter} onValueChange={setFormulaireFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filtrer par formulaire" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les formulaires</SelectItem>
+                {formulaires.map((f) => (
+                  <SelectItem key={f} value={f}>{f}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
 
         <div className="flex gap-2">
           <Button 
@@ -248,6 +352,10 @@ export default function Leads() {
           >
             <Zap className="h-4 w-4" />
             Relancer tous ({notContactedCount})
+          </Button>
+          <Button variant="outline" onClick={() => setShowImportDialog(true)} className="gap-2">
+            <Upload className="h-4 w-4" />
+            Importer CSV
           </Button>
           <Button variant="outline" onClick={exportCSV} className="gap-2">
             <Download className="h-4 w-4" />
@@ -597,6 +705,43 @@ export default function Leads() {
                   Envoyer à {notContactedCount} lead(s)
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Import CSV Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-primary" />
+              Importer un fichier CSV
+            </DialogTitle>
+            <DialogDescription>
+              Format Wix accepté. Les doublons (même email + formulaire) seront automatiquement ignorés.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="border-2 border-dashed rounded-lg p-6 text-center">
+              <Input
+                type="file"
+                accept=".csv"
+                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                className="mx-auto"
+              />
+              {importFile && (
+                <div className="mt-2 flex items-center gap-2 justify-center text-sm text-muted-foreground">
+                  <FileTextIcon className="h-4 w-4" />
+                  {importFile.name}
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowImportDialog(false); setImportFile(null); }} disabled={importing}>Annuler</Button>
+            <Button onClick={handleImportCSV} disabled={!importFile || importing} className="gap-2">
+              {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {importing ? "Import en cours..." : "Importer"}
             </Button>
           </DialogFooter>
         </DialogContent>

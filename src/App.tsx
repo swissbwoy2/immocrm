@@ -116,6 +116,9 @@ const CoursierCalendrier = lazy(() => import("./pages/coursier/Calendrier"));
 const CoursierHistorique = lazy(() => import("./pages/coursier/Historique"));
 const CoursierParametres = lazy(() => import("./pages/coursier/Parametres"));
 
+// Closeur pages
+const CloseurDashboard = lazy(() => import("./pages/closeur/Dashboard"));
+
 // Client pages
 const ClientDashboard = lazy(() => import("./pages/client/Dashboard"));
 const ClientDossier = lazy(() => import("./pages/client/Dossier"));
@@ -376,6 +379,9 @@ const App = () => (
               <Route path="/coursier/calendrier" element={<ProtectedRoute allowedRoles={['coursier']}><AppLayout><CoursierCalendrier /></AppLayout></ProtectedRoute>} />
               <Route path="/coursier/historique" element={<ProtectedRoute allowedRoles={['coursier']}><AppLayout><CoursierHistorique /></AppLayout></ProtectedRoute>} />
               <Route path="/coursier/parametres" element={<ProtectedRoute allowedRoles={['coursier']}><AppLayout><CoursierParametres /></AppLayout></ProtectedRoute>} />
+
+              {/* Closeur Routes */}
+              <Route path="/closeur" element={<ProtectedRoute allowedRoles={['closeur']}><AppLayout><CloseurDashboard /></AppLayout></ProtectedRoute>} />
               {/* Proprietaire Routes */}
               <Route path="/proprietaire" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireDashboard /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/immeubles" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireMesImmeubles /></AppLayout></ProtectedRoute>} />

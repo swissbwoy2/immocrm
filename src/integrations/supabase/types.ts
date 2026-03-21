@@ -4829,6 +4829,7 @@ export type Database = {
           contacted: boolean | null
           created_at: string | null
           email: string
+          formulaire: string | null
           id: string
           is_qualified: boolean | null
           localite: string | null
@@ -4856,6 +4857,7 @@ export type Database = {
           contacted?: boolean | null
           created_at?: string | null
           email: string
+          formulaire?: string | null
           id?: string
           is_qualified?: boolean | null
           localite?: string | null
@@ -4883,6 +4885,7 @@ export type Database = {
           contacted?: boolean | null
           created_at?: string | null
           email?: string
+          formulaire?: string | null
           id?: string
           is_qualified?: boolean | null
           localite?: string | null
@@ -8069,6 +8072,7 @@ export type Database = {
     Functions: {
       activate_agent_on_login: { Args: never; Returns: undefined }
       activate_apporteur_on_login: { Args: never; Returns: undefined }
+      activate_closeur_on_login: { Args: never; Returns: undefined }
       activate_coursier_on_login: { Args: never; Returns: undefined }
       calculate_match_score: {
         Args: { p_criteria: Json; p_property_result_id: string }
@@ -8328,6 +8332,7 @@ export type Database = {
         | "annonceur"
         | "coursier"
         | "agent_ia"
+        | "closeur"
       approval_status: "pending" | "approved" | "rejected" | "modified"
       approval_type: "offer" | "visit" | "external_action"
       connector_type:
@@ -8520,6 +8525,7 @@ export const Constants = {
         "annonceur",
         "coursier",
         "agent_ia",
+        "closeur",
       ],
       approval_status: ["pending", "approved", "rejected", "modified"],
       approval_type: ["offer", "visit", "external_action"],

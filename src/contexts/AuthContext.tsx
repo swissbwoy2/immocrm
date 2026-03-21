@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
-type UserRole = 'admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier' | 'agent_ia';
+type UserRole = 'admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier' | 'agent_ia' | 'closeur';
 
 interface AuthContextType {
   user: User | null;
@@ -72,6 +72,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await supabase.rpc('activate_apporteur_on_login');
       } else if (data.role === 'coursier') {
         await supabase.rpc('activate_coursier_on_login');
+      } else if (data.role === 'closeur') {
+        await supabase.rpc('activate_closeur_on_login');
       }
     } catch (error) {
       console.error('Error fetching user role:', error);
