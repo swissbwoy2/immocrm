@@ -334,6 +334,7 @@ export default function Leads() {
               <SelectItem value="all">Tous les leads</SelectItem>
               <SelectItem value="qualified">Qualifiés uniquement</SelectItem>
               <SelectItem value="not_qualified">Non qualifiés</SelectItem>
+              <SelectItem value="to_evaluate">À évaluer</SelectItem>
               <SelectItem value="not_contacted">Non contactés</SelectItem>
               <SelectItem value="contacted">Contactés</SelectItem>
             </SelectContent>
