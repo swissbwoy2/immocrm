@@ -314,18 +314,33 @@ export default function Leads() {
       />
 
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
-        <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-          <SelectTrigger className="w-[220px]">
-            <SelectValue placeholder="Filtrer par statut" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les leads</SelectItem>
-            <SelectItem value="qualified">Qualifiés uniquement</SelectItem>
-            <SelectItem value="not_qualified">Non qualifiés</SelectItem>
-            <SelectItem value="not_contacted">Non contactés</SelectItem>
-            <SelectItem value="contacted">Contactés</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2 flex-wrap">
+          <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filtrer par statut" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les leads</SelectItem>
+              <SelectItem value="qualified">Qualifiés uniquement</SelectItem>
+              <SelectItem value="not_qualified">Non qualifiés</SelectItem>
+              <SelectItem value="not_contacted">Non contactés</SelectItem>
+              <SelectItem value="contacted">Contactés</SelectItem>
+            </SelectContent>
+          </Select>
+          {formulaires.length > 0 && (
+            <Select value={formulaireFilter} onValueChange={setFormulaireFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filtrer par formulaire" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les formulaires</SelectItem>
+                {formulaires.map((f) => (
+                  <SelectItem key={f} value={f}>{f}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
 
         <div className="flex gap-2">
           <Button 
