@@ -328,11 +328,14 @@ export default function Leads() {
   const notContactedCount = notContactedLeads.length;
   const qualifiedCount = leads.filter((l) => l.is_qualified).length;
 
+  const chercheurCount = leads.filter((l) => l.type_recherche === 'Louer' || l.type_recherche === 'Acheter').length;
+  const vendeurCount = leads.filter((l) => l.type_recherche === 'Vendre').length;
+
   return (
     <div className="space-y-6">
       <PremiumPageHeader
         title="Leads Shortlist"
-        subtitle={`${leads.length} leads • ${qualifiedCount} qualifiés • ${notContactedCount} non contactés`}
+        subtitle={`${leads.length} leads • ${chercheurCount} chercheurs • ${vendeurCount} vendeurs • ${qualifiedCount} qualifiés • ${notContactedCount} non contactés`}
       />
 
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
