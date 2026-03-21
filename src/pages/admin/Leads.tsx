@@ -364,6 +364,7 @@ export default function Leads() {
               <SelectItem value="Vendre">🏢 Vendeur</SelectItem>
               <SelectItem value="none">❓ À classifier</SelectItem>
             </SelectContent>
+          </Select>
           {formulaires.length > 0 && (
             <Select value={formulaireFilter} onValueChange={setFormulaireFilter}>
               <SelectTrigger className="w-[200px]">
