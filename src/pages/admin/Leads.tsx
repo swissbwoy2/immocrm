@@ -77,10 +77,14 @@ type Lead = {
 export default function Leads() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<"all" | "contacted" | "not_contacted" | "qualified" | "not_qualified">("all");
+  const [formulaireFilter, setFormulaireFilter] = useState<string>("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState("");
   const [showRelanceDialog, setShowRelanceDialog] = useState(false);
   const [relanceSending, setRelanceSending] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["leads", filter],
