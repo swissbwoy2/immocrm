@@ -103,6 +103,8 @@ export default function Leads() {
         query = query.eq("is_qualified", true);
       } else if (filter === "not_qualified") {
         query = query.eq("is_qualified", false);
+      } else if (filter === "to_evaluate") {
+        query = query.is("is_qualified", null);
       }
 
       if (formulaireFilter !== "all") {
