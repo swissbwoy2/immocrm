@@ -281,14 +281,19 @@ export default function CloseurDashboard() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  {lead.formulaire ? (
-                    <Badge variant="outline" className="gap-1">
-                      <Target className="h-3 w-3" />
-                      {lead.formulaire}
-                    </Badge>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">—</span>
-                  )}
+                  <div className="space-y-1">
+                    {lead.formulaire ? (
+                      <Badge variant="outline" className="gap-1">
+                        <Target className="h-3 w-3" />
+                        {lead.formulaire}
+                      </Badge>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
+                    )}
+                    <div className="mt-1">
+                      <ClientTypeBadge typeRecherche={lead.type_recherche} size="sm" />
+                    </div>
+                  </div>
                 </TableCell>
                 <TableCell>
                   {lead.created_at && (

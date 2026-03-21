@@ -593,12 +593,40 @@ export default function Leads() {
           <DialogHeader>
             <DialogTitle>Notes pour {selectedLead?.prenom} {selectedLead?.nom || selectedLead?.email}</DialogTitle>
           </DialogHeader>
-          <Textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Ajouter des notes de suivi..."
-            rows={4}
-          />
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Type de lead</label>
+              <Select 
+                value={selectedLead?.type_recherche || "none"} 
+                onValueChange={(v) => {
+                  if (selectedLead) {
+                    const newType = v === "none" ? null : v;
+                    supabase.from("leads").update({ type_recherche: newType }).eq("id", selectedLead.id).then(() => {
+                      queryClient.invalidateQueries({ queryKey: ["leads"] });
+                      setSelectedLead({ ...selectedLead, type_recherche: newType });
+                      toast.success("Type mis à jour");
+                    });
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Louer">🔑 Location</SelectItem>
+                  <SelectItem value="Acheter">🏠 Achat</SelectItem>
+                  <SelectItem value="Vendre">🏢 Vendeur</SelectItem>
+                  <SelectItem value="none">❓ Non défini</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Ajouter des notes de suivi..."
+              rows={4}
+            />
+          </div>
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setSelectedLead(null)}>
               Annuler
