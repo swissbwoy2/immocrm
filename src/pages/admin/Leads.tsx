@@ -49,6 +49,9 @@ import {
   Zap,
   Send,
   Loader2,
+  Upload,
+  FileText as FileTextIcon,
+  Target,
 } from "lucide-react";
 
 type Lead = {
