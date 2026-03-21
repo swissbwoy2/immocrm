@@ -73,6 +73,7 @@ type Lead = {
   contacted: boolean | null;
   notes: string | null;
   formulaire: string | null;
+  type_recherche: string | null;
 };
 
 export default function Leads() {
