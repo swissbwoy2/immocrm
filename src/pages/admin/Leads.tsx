@@ -239,6 +239,69 @@ export default function Leads() {
     link.click();
   };
 
+  const handleImportCSV = async () => {
+    if (!importFile) return;
+    setImporting(true);
+    try {
+      const text = await importFile.text();
+      const cleanText = text.replace(/^\uFEFF/, '');
+      const lines = cleanText.split('\n').filter(l => l.trim());
+      if (lines.length < 2) throw new Error('CSV vide');
+
+      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+      
+      const nameIdx = headers.findIndex(h => h.includes('nom') && !h.includes('famille'));
+      const emailIdx = headers.findIndex(h => h.includes('e-mail') || h.includes('email') || h.includes('adresse e'));
+      const sourceIdx = headers.findIndex(h => h === 'source');
+      const formulaireIdx = headers.findIndex(h => h.includes('formulaire'));
+      const phoneIdx = headers.findIndex(h => h.includes('téléphone') || h.includes('telephone') || h.includes('phone'));
+
+      if (emailIdx === -1) throw new Error('Colonne email non trouvée');
+
+      const parsedLeads = [];
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        const email = cols[emailIdx]?.trim();
+        if (!email || !email.includes('@')) continue;
+
+        const fullName = nameIdx >= 0 ? cols[nameIdx] : '';
+        const parts = fullName.split(' ');
+        const prenom = parts[0] || '';
+        const nom = parts.slice(1).join(' ') || '';
+
+        parsedLeads.push({
+          email,
+          prenom: prenom || null,
+          nom: nom || null,
+          telephone: phoneIdx >= 0 ? cols[phoneIdx] || null : null,
+          source: sourceIdx >= 0 ? cols[sourceIdx] || 'CSV Import' : 'CSV Import',
+          formulaire: formulaireIdx >= 0 ? cols[formulaireIdx] || null : null,
+        });
+      }
+
+      const { data, error } = await supabase.functions.invoke('import-leads-csv', {
+        body: { leads: parsedLeads, formulaire_name: importFile.name },
+      });
+
+      if (error) throw error;
+      
+      toast.success(`${data.inserted} leads importés`, {
+        description: data.duplicates > 0 ? `${data.duplicates} doublons ignorés` : undefined,
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["lead-formulaires"] });
+      setShowImportDialog(false);
+      setImportFile(null);
+    } catch (err) {
+      toast.error("Erreur d'import", {
+        description: err instanceof Error ? err.message : "Erreur inconnue",
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const notContactedLeads = leads.filter((l) => !l.contacted);
   const notContactedCount = notContactedLeads.length;
   const qualifiedCount = leads.filter((l) => l.is_qualified).length;
