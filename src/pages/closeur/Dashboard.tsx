@@ -15,6 +15,7 @@ import {
 } from "@/components/premium/PremiumTable";
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 import { Badge } from "@/components/ui/badge";
+import { ClientTypeBadge } from "@/components/ClientTypeBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
