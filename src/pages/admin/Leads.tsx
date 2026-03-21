@@ -90,7 +90,7 @@ export default function Leads() {
   const [importing, setImporting] = useState(false);
 
   const { data: leads = [], isLoading } = useQuery({
-    queryKey: ["leads", filter, formulaireFilter],
+    queryKey: ["leads", filter, formulaireFilter, typeFilter],
     queryFn: async () => {
       let query = supabase
         .from("leads")
