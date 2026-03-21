@@ -87,7 +87,7 @@ export default function Leads() {
   const [importing, setImporting] = useState(false);
 
   const { data: leads = [], isLoading } = useQuery({
-    queryKey: ["leads", filter],
+    queryKey: ["leads", filter, formulaireFilter],
     queryFn: async () => {
       let query = supabase
         .from("leads")
@@ -104,9 +104,26 @@ export default function Leads() {
         query = query.eq("is_qualified", false);
       }
 
+      if (formulaireFilter !== "all") {
+        query = query.eq("formulaire", formulaireFilter);
+      }
+
       const { data, error } = await query;
       if (error) throw error;
       return data as Lead[];
+    },
+  });
+
+  const { data: formulaires = [] } = useQuery({
+    queryKey: ["lead-formulaires"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("leads")
+        .select("formulaire")
+        .not("formulaire", "is", null);
+      if (error) throw error;
+      const unique = [...new Set((data as any[]).map((d) => d.formulaire).filter(Boolean))];
+      return unique as string[];
     },
   });
 
