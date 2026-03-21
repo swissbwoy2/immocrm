@@ -1,39 +1,72 @@
 
 
-## Corrections et offres dynamiques depuis la base de données
+## Ajout du rôle "closeur" + Import CSV leads avec dédoublonnage par formulaire/pub
 
-### Corrections de contact
-- Email : `info@immo-rama.ch` (pas christ@immo-rama.ch)
-- Téléphone : `+41 76 483 91 99` (pas +41 21 588 01 45) — dans le header ET la signature
+### Contexte
 
-### Offres réelles depuis la base de données
+- La table `leads` n'a pas de colonne `formulaire` pour différencier les campagnes/pubs
+- Le rôle "closeur" n'existe pas encore dans l'enum `app_role`
+- Les RLS sur `leads` n'autorisent que les admins
+- Le CSV Wix contient : Nom, Email, Source, **Formulaire** (ex: "Logisorama futur", "LOGISORAMA5.0", "NEW ACHETEUR-copy"), Canal, Téléphone
 
-Au lieu de faux listings en dur, l'edge function va :
-1. Requêter la table `offres` pour récupérer 3 offres aléatoires :
-   - 1 studio (pieces <= 1.5)
-   - 1 x 2.5 pièces (pieces entre 2 et 2.5)
-   - 1 x 3.5 pièces (pieces entre 3 et 3.5)
-2. Utiliser `ORDER BY random() LIMIT 1` pour chaque catégorie
-3. Injecter les données réelles (adresse, prix, pièces, surface) dans le template HTML
-4. Si aucune offre n'existe pour une catégorie, elle est simplement omise
-5. Les photos restent des images Unsplash génériques (la table `offres` n'a pas de colonne photo)
+### Modifications
 
-### Fichiers modifiés
+#### 1. Migration DB
 
-| Fichier | Changement |
+- Ajouter `'closeur'` à l'enum `app_role`
+- Ajouter colonne `formulaire TEXT` à la table `leads` (pour stocker la campagne/pub d'origine)
+- Ajouter RLS sur `leads` : SELECT pour les closeurs (`has_role(auth.uid(), 'closeur')`)
+- Créer un index unique `(email, formulaire)` pour empêcher les doublons par formulaire
+
+#### 2. AuthContext + ProtectedRoute
+
+- Ajouter `'closeur'` au type `UserRole` et à `VALID_ROLES`
+- Ajouter activation closeur on login (comme coursier/agent)
+
+#### 3. Edge function `import-leads-csv/index.ts` (nouveau)
+
+- Reçoit le contenu CSV parsé (array de leads) + le nom du fichier
+- Parse les colonnes Wix : Nom → prenom/nom, Adresse e-mail → email, Formulaire → formulaire, Téléphone → telephone, Source → source
+- Utilise `INSERT ... ON CONFLICT (email, formulaire) DO NOTHING` pour éviter les doublons
+- Retourne le nombre d'insérés vs ignorés (doublons)
+
+#### 4. Page Closeur (`src/pages/closeur/Dashboard.tsx`)
+
+- Dashboard simple avec la liste des leads (même vue que admin/Leads mais en lecture + relance)
+- Accès aux leads Facebook (filtre par formulaire)
+- Bouton d'import CSV (visible admin + closeur)
+
+#### 5. Import CSV dans `src/pages/admin/Leads.tsx`
+
+- Bouton "📥 Importer CSV" dans le header
+- Dialog avec drag & drop de fichier CSV
+- Parsing côté client (Papa Parse déjà utilisé dans le projet ?)
+- Mapping automatique des colonnes Wix
+- Preview des données avant import
+- Appel à l'edge function pour l'insertion avec dédoublonnage
+- Toast avec résultat : "85 leads importés, 24 doublons ignorés"
+- Filtre par formulaire dans la liste des leads
+
+#### 6. Routes `App.tsx`
+
+- Ajouter routes `/closeur` et `/closeur/leads` avec `allowedRoles={['closeur']}`
+- Ajouter `'closeur'` aux routes admin leads (`allowedRoles={['admin', 'closeur']}`) — non, closeur a sa propre page
+- Route admin leads reste admin-only, mais on ajoute le bouton d'import CSV
+
+#### 7. Navigation closeur
+
+- Sidebar avec : Dashboard, Leads, Relancer
+
+### Fichiers modifiés/créés
+
+| Fichier | Action |
 |---|---|
-| `supabase/functions/send-lead-relance/index.ts` | Corriger email/tel, transformer `generateMarketingEmail()` pour accepter les offres en paramètre, ajouter la requête DB pour récupérer les 3 offres aléatoires avant l'envoi |
-| `src/pages/admin/Leads.tsx` | Mettre à jour l'aperçu dans le dialog avec les bonnes coordonnées |
-
-### Détail technique
-
-La fonction `generateMarketingEmail` recevra un nouveau paramètre `offres: Array<{adresse, prix, pieces, surface}>` et générera dynamiquement les cartes d'offres. Avant la boucle d'envoi, on fait 3 requêtes :
-
-```text
-SELECT * FROM offres WHERE pieces <= 1.5 ORDER BY random() LIMIT 1
-SELECT * FROM offres WHERE pieces >= 2 AND pieces <= 2.5 ORDER BY random() LIMIT 1
-SELECT * FROM offres WHERE pieces >= 3 AND pieces <= 3.5 ORDER BY random() LIMIT 1
-```
-
-Chaque email aura donc des offres différentes (le random est par exécution de la function, pas par lead — pour simplifier on peut aussi randomiser par batch).
+| Migration SQL | Enum + colonne formulaire + RLS closeur + index unique |
+| `supabase/functions/import-leads-csv/index.ts` | Nouveau — import CSV avec dédoublonnage |
+| `src/contexts/AuthContext.tsx` | Ajouter 'closeur' au type + activation |
+| `src/components/ProtectedRoute.tsx` | Ajouter 'closeur' à VALID_ROLES |
+| `src/pages/closeur/Dashboard.tsx` | Nouveau — dashboard closeur |
+| `src/pages/admin/Leads.tsx` | Ajouter import CSV + filtre formulaire |
+| `src/App.tsx` | Routes closeur |
+| `src/components/AppLayout.tsx` | Nav closeur dans la sidebar |
 
