@@ -351,6 +351,9 @@ serve(async (req) => {
       throw new Error('lead_ids array is required');
     }
 
+    // Limit to 3 leads per invocation to avoid CPU timeout
+    const limitedIds = lead_ids.slice(0, 3);
+
     // Get SMTP config
     const { data: emailConfig, error: configError } = await supabase
       .from('email_configurations')
