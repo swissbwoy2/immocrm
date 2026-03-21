@@ -370,7 +370,7 @@ serve(async (req) => {
     const { data: leads, error: leadsError } = await supabase
       .from('leads')
       .select('id, email, prenom, nom, localite, budget')
-      .in('id', lead_ids);
+      .in('id', limitedIds);
 
     if (leadsError || !leads || leads.length === 0) {
       throw new Error('Aucun lead trouvé');
