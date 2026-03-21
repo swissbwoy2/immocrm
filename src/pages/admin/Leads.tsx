@@ -353,6 +353,17 @@ export default function Leads() {
               <SelectItem value="contacted">Contactés</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Type de lead" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les types</SelectItem>
+              <SelectItem value="Louer">🔑 Location</SelectItem>
+              <SelectItem value="Acheter">🏠 Achat</SelectItem>
+              <SelectItem value="Vendre">🏢 Vendeur</SelectItem>
+              <SelectItem value="none">❓ À classifier</SelectItem>
+            </SelectContent>
           {formulaires.length > 0 && (
             <Select value={formulaireFilter} onValueChange={setFormulaireFilter}>
               <SelectTrigger className="w-[200px]">
