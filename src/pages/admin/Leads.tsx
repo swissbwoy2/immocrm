@@ -171,15 +171,23 @@ export default function Leads() {
   const sendRelance = async (leadIds: string[]) => {
     setRelanceSending(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-lead-relance', {
-        body: { lead_ids: leadIds },
-      });
+      let totalSent = 0;
+      let totalErrors = 0;
+      const batchSize = 3;
 
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
+      for (let i = 0; i < leadIds.length; i += batchSize) {
+        const batch = leadIds.slice(i, i + batchSize);
+        const { data, error } = await supabase.functions.invoke('send-lead-relance', {
+          body: { lead_ids: batch },
+        });
+        if (error) throw error;
+        if (!data.success) throw new Error(data.error);
+        totalSent += data.sent || 0;
+        totalErrors += data.errors || 0;
+      }
 
-      toast.success(`${data.sent} email(s) de relance envoyé(s) !`, {
-        description: data.errors > 0 ? `${data.errors} erreur(s)` : undefined,
+      toast.success(`${totalSent} email(s) de relance envoyé(s) !`, {
+        description: totalErrors > 0 ? `${totalErrors} erreur(s)` : undefined,
       });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       setShowRelanceDialog(false);
