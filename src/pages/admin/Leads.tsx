@@ -352,6 +352,10 @@ export default function Leads() {
             <Zap className="h-4 w-4" />
             Relancer tous ({notContactedCount})
           </Button>
+          <Button variant="outline" onClick={() => setShowImportDialog(true)} className="gap-2">
+            <Upload className="h-4 w-4" />
+            Importer CSV
+          </Button>
           <Button variant="outline" onClick={exportCSV} className="gap-2">
             <Download className="h-4 w-4" />
             Exporter CSV
