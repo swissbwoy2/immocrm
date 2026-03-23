@@ -99,7 +99,7 @@ export function GenerateDocumentsSection({ immeuble }: GenerateDocumentsSectionP
       if (error) throw error;
 
       if (data?.pdf_base64) {
-        downloadPdf(data.pdf_base64, data.filename || `dossier-complet-${immeuble.nom}.pdf`);
+        downloadFile(data.pdf_base64, data.filename || `dossier-complet-${immeuble.nom}.pdf`, 'application/pdf');
         toast.success('Dossier complet généré avec succès');
       }
     } catch (error) {
