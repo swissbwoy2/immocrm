@@ -133,8 +133,8 @@ export function GenerateDocumentsSection({ immeuble }: GenerateDocumentsSectionP
 
   const documents = [
     {
-      title: 'Brochure de vente',
-      description: 'Document commercial professionnel avec photos et description du bien pour les acheteurs potentiels.',
+      title: 'Brochure de vente (DOCX)',
+      description: 'Dossier Off-Market professionnel basé sur le template Immo-Rama avec KPIs, visuels et analyse investissement.',
       icon: Building2,
       action: handleGenerateBrochure,
       loading: generatingBrochure,
