@@ -208,7 +208,7 @@ export function GenerateDocumentsSection({ immeuble }: GenerateDocumentsSectionP
                         ) : (
                           <>
                             <Download className="h-4 w-4 mr-2" />
-                            {doc.available ? 'Générer PDF' : 'Estimation requise'}
+                            {doc.available ? (doc.title.includes('DOCX') ? 'Générer DOCX' : 'Générer PDF') : 'Estimation requise'}
                           </>
                         )}
                       </Button>
