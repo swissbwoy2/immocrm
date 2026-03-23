@@ -24,14 +24,14 @@ export function GenerateDocumentsSection({ immeuble }: GenerateDocumentsSectionP
   const [generatingDossier, setGeneratingDossier] = useState(false);
   const [generatingAnalysis, setGeneratingAnalysis] = useState(false);
 
-  const downloadPdf = (pdfBase64: string, filename: string) => {
-    const byteCharacters = atob(pdfBase64);
+  const downloadFile = (base64: string, filename: string, mimeType: string) => {
+    const byteCharacters = atob(base64);
     const byteNumbers = new Array(byteCharacters.length);
     for (let i = 0; i < byteCharacters.length; i++) {
       byteNumbers[i] = byteCharacters.charCodeAt(i);
     }
     const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: 'application/pdf' });
+    const blob = new Blob([byteArray], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

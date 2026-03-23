@@ -1,65 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import JSZip from "https://esm.sh/jszip@3.10.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-function uint8ArrayToBase64(bytes: Uint8Array): string {
-  let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
+function formatCHF(amount: number | null): string {
+  if (!amount) return 'Prix sur demande';
+  return `CHF ${amount.toLocaleString('fr-CH')}`;
 }
 
-function sanitizeText(text: string | null | undefined): string {
-  if (!text) return '';
-  return text
-    // Remove newlines and carriage returns first (WinAnsi cannot encode these)
-    .replace(/[\r\n]+/g, ' ')
-    .replace(/[\u2018\u2019]/g, "'")
-    .replace(/[\u201C\u201D]/g, '"')
-    .replace(/\u2026/g, '...')
-    .replace(/\u2013/g, '-')
-    .replace(/\u2014/g, '-')
-    .replace(/[^\x00-\x7F]/g, (char) => {
-      const replacements: Record<string, string> = {
-        'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
-        'à': 'a', 'â': 'a', 'ä': 'a',
-        'ù': 'u', 'û': 'u', 'ü': 'u',
-        'ô': 'o', 'ö': 'o',
-        'î': 'i', 'ï': 'i',
-        'ç': 'c',
-        'É': 'E', 'È': 'E', 'Ê': 'E', 'Ë': 'E',
-        'À': 'A', 'Â': 'A', 'Ä': 'A',
-        'Ù': 'U', 'Û': 'U', 'Ü': 'U',
-        'Ô': 'O', 'Ö': 'O',
-        'Î': 'I', 'Ï': 'I',
-        'Ç': 'C',
-        '°': 'o', '²': '2', '³': '3',
-        '€': 'EUR', '£': 'GBP', '¥': 'JPY',
-        '«': '"', '»': '"',
-        '•': '-', '·': '-',
-      };
-      return replacements[char] || '';
-    })
-    // Clean up multiple spaces
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function formatCurrency(amount: number | null): string {
-  if (amount === null || amount === undefined) return 'Prix sur demande';
-  return new Intl.NumberFormat('fr-CH', {
-    style: 'currency',
-    currency: 'CHF',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
+function formatNumber(n: number | null | undefined, suffix = ''): string {
+  if (n === null || n === undefined) return 'N/A';
+  return `${n.toLocaleString('fr-CH')}${suffix}`;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -77,29 +32,16 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log('Generating brochure PDF for immeuble:', immeuble_id);
+    console.log('Generating brochure DOCX for immeuble:', immeuble_id);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch immeuble data with proprietaire and agent
+    // Fetch immeuble data
     const { data: immeuble, error: immeubleError } = await supabase
       .from('immeubles')
-      .select(`
-        *,
-        proprietaire:proprietaires(
-          id,
-          user_id,
-          agent_id,
-          profiles:user_id(prenom, nom, email, telephone),
-          agents:agent_id(
-            id,
-            user_id,
-            profiles:user_id(prenom, nom, email, telephone)
-          )
-        )
-      `)
+      .select('*')
       .eq('id', immeuble_id)
       .single();
 
@@ -111,444 +53,155 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Fetch public photos only
-    const { data: photos } = await supabase
-      .from('photos_immeuble')
-      .select('*')
-      .eq('immeuble_id', immeuble_id)
-      .eq('niveau_confidentialite', 'public')
-      .order('ordre', { ascending: true })
-      .limit(6);
+    // Download the DOCX template from storage
+    const { data: templateData, error: templateError } = await supabase.storage
+      .from('brochure-templates')
+      .download('brochure-vente-template.docx');
 
-    // Create PDF document
-    const pdfDoc = await PDFDocument.create();
-    const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-
-    const pageWidth = 595.28; // A4 width in points
-    const pageHeight = 841.89; // A4 height in points
-    const margin = 50;
-
-    // Page 1: Cover page
-    let page = pdfDoc.addPage([pageWidth, pageHeight]);
-    let y = pageHeight - margin;
-
-    // Header
-    page.drawText('Immo-rama.ch', {
-      x: margin,
-      y: y,
-      size: 28,
-      font: helveticaBold,
-      color: rgb(0.2, 0.4, 0.6),
-    });
-    y -= 50;
-
-    // Property type and title
-    const typeBien = sanitizeText(immeuble.type_bien || 'Bien immobilier');
-    page.drawText(typeBien.toUpperCase(), {
-      x: margin,
-      y: y,
-      size: 14,
-      font: helvetica,
-      color: rgb(0.5, 0.5, 0.5),
-    });
-    y -= 30;
-
-    // Property name
-    const propertyName = sanitizeText(immeuble.nom || 'Propriete a vendre');
-    page.drawText(propertyName, {
-      x: margin,
-      y: y,
-      size: 24,
-      font: helveticaBold,
-      color: rgb(0.1, 0.1, 0.1),
-    });
-    y -= 40;
-
-    // Location (city/canton only - no exact address for public brochure)
-    const location = sanitizeText(`${immeuble.ville || ''}, ${immeuble.canton || 'Suisse'}`);
-    page.drawText(location, {
-      x: margin,
-      y: y,
-      size: 16,
-      font: helvetica,
-      color: rgb(0.3, 0.3, 0.3),
-    });
-    y -= 60;
-
-    // Price
-    const price = formatCurrency(immeuble.prix_vente_demande);
-    page.drawText(sanitizeText(price), {
-      x: margin,
-      y: y,
-      size: 32,
-      font: helveticaBold,
-      color: rgb(0.2, 0.4, 0.6),
-    });
-    y -= 80;
-
-    // Key features box
-    page.drawRectangle({
-      x: margin,
-      y: y - 100,
-      width: pageWidth - 2 * margin,
-      height: 100,
-      borderColor: rgb(0.8, 0.8, 0.8),
-      borderWidth: 1,
-    });
-
-    // Calculate price per m2
-    const prixM2 = immeuble.surface_totale && immeuble.prix_vente_demande 
-      ? Math.round(immeuble.prix_vente_demande / immeuble.surface_totale)
-      : null;
-
-    const features = [
-      { label: 'Surface', value: immeuble.surface_totale ? `${immeuble.surface_totale} m2` : 'N/A' },
-      { label: 'Pieces', value: immeuble.nombre_pieces ? `${immeuble.nombre_pieces} pieces` : 'N/A' },
-      { label: 'Prix / m2', value: prixM2 ? `CHF ${prixM2.toLocaleString('fr-CH')}/m2` : 'N/A' },
-      { label: 'Annee', value: immeuble.annee_construction ? `${immeuble.annee_construction}` : 'N/A' },
-    ];
-
-    const featureWidth = (pageWidth - 2 * margin) / features.length;
-    features.forEach((feature, index) => {
-      const featureX = margin + index * featureWidth + 20;
-      page.drawText(sanitizeText(feature.label), {
-        x: featureX,
-        y: y - 30,
-        size: 10,
-        font: helvetica,
-        color: rgb(0.5, 0.5, 0.5),
-      });
-      page.drawText(sanitizeText(feature.value), {
-        x: featureX,
-        y: y - 50,
-        size: 14,
-        font: helveticaBold,
-        color: rgb(0.1, 0.1, 0.1),
-      });
-    });
-
-    y -= 140;
-
-    // Energy class indicator
-    if (immeuble.classe_energetique) {
-      page.drawText('CLASSE ENERGETIQUE', {
-        x: margin,
-        y: y,
-        size: 12,
-        font: helveticaBold,
-        color: rgb(0.2, 0.4, 0.6),
-      });
-      
-      const energyColors: Record<string, [number, number, number]> = {
-        'A': [0.2, 0.7, 0.3],
-        'B': [0.4, 0.8, 0.3],
-        'C': [0.6, 0.8, 0.2],
-        'D': [0.9, 0.8, 0.2],
-        'E': [0.9, 0.6, 0.2],
-        'F': [0.9, 0.4, 0.2],
-        'G': [0.8, 0.2, 0.2],
-      };
-      const energyColor = energyColors[immeuble.classe_energetique.toUpperCase()] || [0.5, 0.5, 0.5];
-      
-      page.drawRectangle({
-        x: margin + 150,
-        y: y - 8,
-        width: 30,
-        height: 25,
-        color: rgb(energyColor[0], energyColor[1], energyColor[2]),
-      });
-      
-      page.drawText(sanitizeText(immeuble.classe_energetique.toUpperCase()), {
-        x: margin + 158,
-        y: y - 2,
-        size: 16,
-        font: helveticaBold,
-        color: rgb(1, 1, 1),
-      });
-      
-      if (immeuble.indice_energetique) {
-        page.drawText(sanitizeText(`${immeuble.indice_energetique} kWh/m2/an`), {
-          x: margin + 190,
-          y: y - 2,
-          size: 10,
-          font: helvetica,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-      }
-      
-      y -= 50;
+    if (templateError || !templateData) {
+      console.error('Error downloading template:', templateError);
+      return new Response(
+        JSON.stringify({ error: 'Template not found' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    // Technical details section
-    page.drawText('DETAILS TECHNIQUES', {
-      x: margin,
-      y: y,
-      size: 14,
-      font: helveticaBold,
-      color: rgb(0.2, 0.4, 0.6),
-    });
-    y -= 25;
+    console.log('Template downloaded, size:', templateData.size);
 
-    const technicalDetails = [
-      { label: 'Chambres', value: immeuble.nb_chambres?.toString() || 'N/A' },
-      { label: 'Salles de bain', value: immeuble.nb_salles_eau?.toString() || 'N/A' },
-      { label: 'WC', value: immeuble.nb_wc?.toString() || 'N/A' },
-      { label: 'Etage', value: immeuble.etage !== null ? immeuble.etage.toString() : 'N/A' },
-      { label: 'Etages batiment', value: immeuble.nb_etages_batiment?.toString() || 'N/A' },
-      { label: 'Chauffage', value: immeuble.type_chauffage || 'N/A' },
-      { label: 'Garages', value: immeuble.nb_garages?.toString() || '0' },
-      { label: 'Places int.', value: immeuble.nb_places_int?.toString() || '0' },
-      { label: 'Places ext.', value: immeuble.nb_places_ext?.toString() || '0' },
-    ];
+    // Load the DOCX (ZIP) file
+    const zip = await JSZip.loadAsync(await templateData.arrayBuffer());
 
-    const colWidth = (pageWidth - 2 * margin) / 3;
-    technicalDetails.forEach((detail, index) => {
-      const col = index % 3;
-      const row = Math.floor(index / 3);
-      const detailX = margin + col * colWidth;
-      const detailY = y - row * 22;
+    // Read document.xml
+    const docXmlFile = zip.file('word/document.xml');
+    if (!docXmlFile) {
+      throw new Error('document.xml not found in template');
+    }
+    let docXml = await docXmlFile.async('string');
 
-      page.drawText(sanitizeText(detail.label + ':'), {
-        x: detailX,
-        y: detailY,
-        size: 9,
-        font: helvetica,
-        color: rgb(0.5, 0.5, 0.5),
-      });
-      page.drawText(sanitizeText(detail.value), {
-        x: detailX + 70,
-        y: detailY,
-        size: 10,
-        font: helveticaBold,
-        color: rgb(0.1, 0.1, 0.1),
-      });
-    });
+    // Prepare replacement values
+    const localisation = [immeuble.ville, immeuble.canton].filter(Boolean).join(' - ').toUpperCase() || 'LOCALISATION';
+    const prix = formatCHF(immeuble.prix_vente_demande);
+    const surfaceHab = immeuble.surface_totale ? `env. ${formatNumber(immeuble.surface_totale)} m²` : 'N/A';
+    const volumeEca = immeuble.volume_eca ? `${formatNumber(immeuble.volume_eca)} m³` : 'N/A';
+    const surfaceParcelle = immeuble.surface_parcelle ? `${formatNumber(immeuble.surface_parcelle)} m²` : 'N/A';
+    const chauffage = immeuble.type_chauffage || immeuble.combustible || 'N/A';
+    const cecb = immeuble.classe_energetique || 'N/A';
+    const statut = immeuble.est_loue ? 'Loué' : 'Libre';
+    const nbLogements = immeuble.nb_logements?.toString() || immeuble.nb_unites?.toString() || '—';
+    const typologie = immeuble.nb_logements ? `${immeuble.nb_logements} logements` : (immeuble.nombre_pieces ? `${immeuble.nombre_pieces} pièces` : 'N/A');
+    const potentiel = immeuble.potentiel_developpement || 'À étudier';
+    const descCourte = immeuble.description_commerciale?.substring(0, 80) || immeuble.type_bien || 'Bien immobilier avec potentiel';
 
-    y -= Math.ceil(technicalDetails.length / 3) * 22 + 20;
+    // Calculate KPIs
+    const prixM2 = (immeuble.prix_vente_demande && immeuble.surface_totale)
+      ? `${formatNumber(Math.round(immeuble.prix_vente_demande / immeuble.surface_totale))} CHF`
+      : 'N/A';
+    const prixM3 = (immeuble.prix_vente_demande && immeuble.volume_eca)
+      ? `${formatNumber(Math.round(immeuble.prix_vente_demande / immeuble.volume_eca))} CHF`
+      : 'N/A';
 
-    // Description
-    if (immeuble.description_commerciale || immeuble.description) {
-      page.drawText('DESCRIPTION', {
-        x: margin,
-        y: y,
-        size: 14,
-        font: helveticaBold,
-        color: rgb(0.2, 0.4, 0.6),
-      });
-      y -= 25;
+    // Executive summary paragraphs
+    const desc = immeuble.description_commerciale || '';
+    const sentences = desc.split(/(?<=[.!?])\s+/).filter(Boolean);
+    const summary1 = sentences.slice(0, 2).join(' ') || `Bien situé à ${immeuble.ville || 'emplacement de choix'}.`;
+    const summary2 = sentences.slice(2, 5).join(' ') || 'Description détaillée disponible sur demande.';
+    const summary3 = sentences.slice(5, 8).join(' ') || '';
 
-      const description = sanitizeText(immeuble.description_commerciale || immeuble.description || '');
-      const words = description.split(' ');
-      let line = '';
-      const maxWidth = pageWidth - 2 * margin;
-      
-      for (const word of words) {
-        const testLine = line + (line ? ' ' : '') + word;
-        const textWidth = helvetica.widthOfTextAtSize(testLine, 11);
-        
-        if (textWidth > maxWidth) {
-          if (y < margin + 50) {
-            page = pdfDoc.addPage([pageWidth, pageHeight]);
-            y = pageHeight - margin;
-          }
-          page.drawText(line, {
-            x: margin,
-            y: y,
-            size: 11,
-            font: helvetica,
-            color: rgb(0.2, 0.2, 0.2),
-          });
-          y -= 16;
-          line = word;
-        } else {
-          line = testLine;
-        }
-      }
-      if (line) {
-        page.drawText(line, {
-          x: margin,
-          y: y,
-          size: 11,
-          font: helvetica,
-          color: rgb(0.2, 0.2, 0.2),
-        });
-        y -= 40;
-      }
+    const titreSummary = `Actif ${immeuble.type_bien ? immeuble.type_bien.toLowerCase() : 'immobilier'} à ${immeuble.ville || 'localisation premium'}`;
+
+    // Points forts as potentiel items
+    const pointsForts = immeuble.points_forts || [];
+    const potentiel1 = pointsForts[0] || `Bien situé à ${immeuble.ville || 'un emplacement stratégique'}.`;
+    const potentiel2 = pointsForts[1] || 'Potentiel de valorisation à étudier.';
+    const potentiel3 = pointsForts[2] || '';
+    const potentiel4 = pointsForts[3] || '';
+
+    // Nb leviers
+    const leviers = [];
+    if (immeuble.potentiel_developpement) leviers.push('développement');
+    if (immeuble.classe_energetique && ['E', 'F', 'G'].includes(immeuble.classe_energetique.toUpperCase())) leviers.push('énergie');
+    if (immeuble.est_loue === false) leviers.push('libre');
+    const nbLeviers = leviers.length > 0 ? `${leviers.length} leviers` : '—';
+
+    // Replace all placeholders
+    const replacements: Record<string, string> = {
+      '{{LOCALISATION}}': localisation,
+      '{{DESCRIPTION_COURTE}}': descCourte,
+      '{{PRIX}}': prix,
+      '{{NB_LOGEMENTS}}': nbLogements,
+      '{{SURFACE_HABITABLE}}': surfaceHab,
+      '{{VOLUME_ECA}}': volumeEca,
+      '{{STATUT}}': statut,
+      '{{CECB}}': cecb,
+      '{{POTENTIEL}}': potentiel,
+      '{{TITRE_SUMMARY}}': titreSummary,
+      '{{EXECUTIVE_SUMMARY_1}}': summary1,
+      '{{EXECUTIVE_SUMMARY_2}}': summary2,
+      '{{EXECUTIVE_SUMMARY_3}}': summary3,
+      '{{SURFACE_PARCELLE}}': surfaceParcelle,
+      '{{CHAUFFAGE}}': chauffage,
+      '{{PRIX_M2}}': prixM2,
+      '{{PRIX_M3}}': prixM3,
+      '{{TYPOLOGIE}}': typologie,
+      '{{NB_LEVIERS}}': nbLeviers,
+      '{{POTENTIEL_1}}': potentiel1,
+      '{{POTENTIEL_2}}': potentiel2,
+      '{{POTENTIEL_3}}': potentiel3,
+      '{{POTENTIEL_4}}': potentiel4,
+      '{{ETUDE_TITRE}}': 'Points clés du bien :',
+      '{{ETUDE_1}}': pointsForts[0] ? `• ${pointsForts[0]}` : '',
+      '{{ETUDE_2}}': pointsForts[1] ? `• ${pointsForts[1]}` : '',
+      '{{ETUDE_3}}': pointsForts[2] ? `• ${pointsForts[2]}` : '',
+      '{{ETUDE_4}}': pointsForts[3] ? `• ${pointsForts[3]}` : '',
+    };
+
+    for (const [placeholder, value] of Object.entries(replacements)) {
+      docXml = docXml.replaceAll(placeholder, escapeXml(value));
     }
 
-    // Points forts
-    if (immeuble.points_forts && Array.isArray(immeuble.points_forts) && immeuble.points_forts.length > 0) {
-      if (y < margin + 150) {
-        page = pdfDoc.addPage([pageWidth, pageHeight]);
-        y = pageHeight - margin;
-      }
+    // Write back document.xml
+    zip.file('word/document.xml', docXml);
 
-      page.drawText('POINTS FORTS', {
-        x: margin,
-        y: y,
-        size: 14,
-        font: helveticaBold,
-        color: rgb(0.2, 0.4, 0.6),
-      });
-      y -= 25;
+    // Generate the final DOCX
+    const docxBuffer = await zip.generateAsync({ type: 'uint8array' });
 
-      for (const point of immeuble.points_forts) {
-        if (y < margin + 30) {
-          page = pdfDoc.addPage([pageWidth, pageHeight]);
-          y = pageHeight - margin;
-        }
-        page.drawText(`- ${sanitizeText(point)}`, {
-          x: margin + 10,
-          y: y,
-          size: 11,
-          font: helvetica,
-          color: rgb(0.2, 0.2, 0.2),
-        });
-        y -= 18;
-      }
-      y -= 20;
-    }
+    // Convert to base64
+    const base64 = uint8ArrayToBase64(docxBuffer);
 
-    // Rental information (if rented)
-    if (immeuble.est_loue) {
-      if (y < margin + 100) {
-        page = pdfDoc.addPage([pageWidth, pageHeight]);
-        y = pageHeight - margin;
-      }
+    const filename = `brochure-${(immeuble.nom || 'bien').replace(/[^a-zA-Z0-9]/g, '-')}.docx`;
 
-      page.drawRectangle({
-        x: margin,
-        y: y - 80,
-        width: pageWidth - 2 * margin,
-        height: 80,
-        color: rgb(0.95, 0.95, 0.98),
-        borderColor: rgb(0.7, 0.7, 0.8),
-        borderWidth: 1,
-      });
-
-      page.drawText('BIEN ACTUELLEMENT LOUE', {
-        x: margin + 15,
-        y: y - 20,
-        size: 12,
-        font: helveticaBold,
-        color: rgb(0.2, 0.4, 0.6),
-      });
-
-      if (immeuble.loyer_actuel) {
-        page.drawText(sanitizeText(`Loyer actuel: CHF ${immeuble.loyer_actuel.toLocaleString('fr-CH')}/mois`), {
-          x: margin + 15,
-          y: y - 45,
-          size: 11,
-          font: helvetica,
-          color: rgb(0.2, 0.2, 0.2),
-        });
-      }
-
-      if (immeuble.locataire_actuel) {
-        page.drawText(sanitizeText(`Locataire: ${immeuble.locataire_actuel}`), {
-          x: margin + 15,
-          y: y - 65,
-          size: 10,
-          font: helvetica,
-          color: rgb(0.4, 0.4, 0.4),
-        });
-      }
-
-      y -= 100;
-    }
-
-    // Agent contact section
-    const agent = immeuble.proprietaire?.agents;
-    const agentProfile = agent?.profiles;
-    
-    if (agentProfile) {
-      if (y < margin + 100) {
-        page = pdfDoc.addPage([pageWidth, pageHeight]);
-        y = pageHeight - margin;
-      }
-
-      page.drawText('VOTRE CONTACT', {
-        x: margin,
-        y: y,
-        size: 14,
-        font: helveticaBold,
-        color: rgb(0.2, 0.4, 0.6),
-      });
-      y -= 30;
-
-      const agentName = sanitizeText(`${agentProfile.prenom || ''} ${agentProfile.nom || ''}`);
-      page.drawText(agentName, {
-        x: margin,
-        y: y,
-        size: 14,
-        font: helveticaBold,
-        color: rgb(0.1, 0.1, 0.1),
-      });
-      y -= 20;
-
-      if (agentProfile.telephone) {
-        page.drawText(sanitizeText(`Tel: ${agentProfile.telephone}`), {
-          x: margin,
-          y: y,
-          size: 11,
-          font: helvetica,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-        y -= 16;
-      }
-
-      if (agentProfile.email) {
-        page.drawText(sanitizeText(`Email: ${agentProfile.email}`), {
-          x: margin,
-          y: y,
-          size: 11,
-          font: helvetica,
-          color: rgb(0.3, 0.3, 0.3),
-        });
-      }
-    }
-
-    // Footer on each page
-    const pages = pdfDoc.getPages();
-    pages.forEach((p, index) => {
-      p.drawText(`Immo-Rama - Brochure generee le ${new Date().toLocaleDateString('fr-CH')}`, {
-        x: margin,
-        y: 30,
-        size: 8,
-        font: helvetica,
-        color: rgb(0.6, 0.6, 0.6),
-      });
-      p.drawText(`Page ${index + 1} / ${pages.length}`, {
-        x: pageWidth - margin - 50,
-        y: 30,
-        size: 8,
-        font: helvetica,
-        color: rgb(0.6, 0.6, 0.6),
-      });
-    });
-
-    // Save PDF
-    const pdfBytes = await pdfDoc.save();
-    const pdfBase64 = uint8ArrayToBase64(pdfBytes);
-
-    const filename = `brochure-${sanitizeText(immeuble.nom || 'bien').replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.pdf`;
-
-    console.log('Brochure PDF generated successfully:', filename);
+    console.log('Brochure DOCX generated successfully, size:', docxBuffer.length);
 
     return new Response(
-      JSON.stringify({ pdf_base64: pdfBase64, filename }),
+      JSON.stringify({ docx_base64: base64, filename }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
-  } catch (error: unknown) {
-    console.error('Error generating brochure PDF:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  } catch (error) {
+    console.error('Error generating brochure:', error);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 };
+
+function escapeXml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
 
 serve(handler);
