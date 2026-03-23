@@ -24,14 +24,14 @@ export function GenerateDocumentsSection({ immeuble }: GenerateDocumentsSectionP
   const [generatingDossier, setGeneratingDossier] = useState(false);
   const [generatingAnalysis, setGeneratingAnalysis] = useState(false);
 
-  const downloadPdf = (pdfBase64: string, filename: string) => {
-    const byteCharacters = atob(pdfBase64);
+  const downloadFile = (base64: string, filename: string, mimeType: string) => {
+    const byteCharacters = atob(base64);
     const byteNumbers = new Array(byteCharacters.length);
     for (let i = 0; i < byteCharacters.length; i++) {
       byteNumbers[i] = byteCharacters.charCodeAt(i);
     }
     const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], { type: 'application/pdf' });
+    const blob = new Blob([byteArray], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -51,9 +51,9 @@ export function GenerateDocumentsSection({ immeuble }: GenerateDocumentsSectionP
 
       if (error) throw error;
 
-      if (data?.pdf_base64) {
-        downloadPdf(data.pdf_base64, data.filename || `brochure-${immeuble.nom}.pdf`);
-        toast.success('Brochure générée avec succès');
+      if (data?.docx_base64) {
+        downloadFile(data.docx_base64, data.filename || `brochure-${immeuble.nom}.docx`, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        toast.success('Brochure DOCX générée avec succès');
       }
     } catch (error) {
       console.error('Error generating brochure:', error);
@@ -78,7 +78,7 @@ export function GenerateDocumentsSection({ immeuble }: GenerateDocumentsSectionP
       if (error) throw error;
 
       if (data?.pdf_base64) {
-        downloadPdf(data.pdf_base64, data.filename || `rapport-estimation-${immeuble.nom}.pdf`);
+        downloadFile(data.pdf_base64, data.filename || `rapport-estimation-${immeuble.nom}.pdf`, 'application/pdf');
         toast.success('Rapport d\'estimation généré avec succès');
       }
     } catch (error) {
@@ -99,7 +99,7 @@ export function GenerateDocumentsSection({ immeuble }: GenerateDocumentsSectionP
       if (error) throw error;
 
       if (data?.pdf_base64) {
-        downloadPdf(data.pdf_base64, data.filename || `dossier-complet-${immeuble.nom}.pdf`);
+        downloadFile(data.pdf_base64, data.filename || `dossier-complet-${immeuble.nom}.pdf`, 'application/pdf');
         toast.success('Dossier complet généré avec succès');
       }
     } catch (error) {
@@ -120,7 +120,7 @@ export function GenerateDocumentsSection({ immeuble }: GenerateDocumentsSectionP
       if (error) throw error;
 
       if (data?.pdf_base64) {
-        downloadPdf(data.pdf_base64, data.filename || `analyse-marche-${immeuble.nom}.pdf`);
+        downloadFile(data.pdf_base64, data.filename || `analyse-marche-${immeuble.nom}.pdf`, 'application/pdf');
         toast.success('Analyse de marché générée avec succès');
       }
     } catch (error) {
@@ -133,8 +133,8 @@ export function GenerateDocumentsSection({ immeuble }: GenerateDocumentsSectionP
 
   const documents = [
     {
-      title: 'Brochure de vente',
-      description: 'Document commercial professionnel avec photos et description du bien pour les acheteurs potentiels.',
+      title: 'Brochure de vente (DOCX)',
+      description: 'Dossier Off-Market professionnel basé sur le template Immo-Rama avec KPIs, visuels et analyse investissement.',
       icon: Building2,
       action: handleGenerateBrochure,
       loading: generatingBrochure,
@@ -208,7 +208,7 @@ export function GenerateDocumentsSection({ immeuble }: GenerateDocumentsSectionP
                         ) : (
                           <>
                             <Download className="h-4 w-4 mr-2" />
-                            {doc.available ? 'Générer PDF' : 'Estimation requise'}
+                            {doc.available ? (doc.title.includes('DOCX') ? 'Générer DOCX' : 'Générer PDF') : 'Estimation requise'}
                           </>
                         )}
                       </Button>
