@@ -51,9 +51,9 @@ export function GenerateDocumentsSection({ immeuble }: GenerateDocumentsSectionP
 
       if (error) throw error;
 
-      if (data?.pdf_base64) {
-        downloadPdf(data.pdf_base64, data.filename || `brochure-${immeuble.nom}.pdf`);
-        toast.success('Brochure générée avec succès');
+      if (data?.docx_base64) {
+        downloadFile(data.docx_base64, data.filename || `brochure-${immeuble.nom}.docx`, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        toast.success('Brochure DOCX générée avec succès');
       }
     } catch (error) {
       console.error('Error generating brochure:', error);
