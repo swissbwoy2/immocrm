@@ -78,7 +78,7 @@ export function GenerateDocumentsSection({ immeuble }: GenerateDocumentsSectionP
       if (error) throw error;
 
       if (data?.pdf_base64) {
-        downloadPdf(data.pdf_base64, data.filename || `rapport-estimation-${immeuble.nom}.pdf`);
+        downloadFile(data.pdf_base64, data.filename || `rapport-estimation-${immeuble.nom}.pdf`, 'application/pdf');
         toast.success('Rapport d\'estimation généré avec succès');
       }
     } catch (error) {
