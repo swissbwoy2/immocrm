@@ -11,7 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { calculateSalary, formatCHF, MOIS_LABELS, isSubjectToSourceTax, DEFAULT_EMPLOYEE_RATES, ModeRemuneration, MODE_REMUNERATION_LABELS } from '@/lib/swissPayroll';
+import { calculateSalary, formatCHF, MOIS_LABELS, isSubjectToSourceTax, DEFAULT_EMPLOYEE_RATES, BAREMES_IMPOT_SOURCE, ModeRemuneration, MODE_REMUNERATION_LABELS } from '@/lib/swissPayroll';
 import { AlertCircle, CheckCircle } from 'lucide-react';
 
 interface Props {
