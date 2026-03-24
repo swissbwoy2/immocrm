@@ -263,17 +263,32 @@ export default function EmployeDialog({ open, onOpenChange, employe }: EmployeDi
                 </div>
               </div>
               {needsSourceTax && (
-                <div>
-                  <Label>Barème impôt à la source</Label>
-                  <Select value={watch('bareme_impot_source')} onValueChange={(v) => setValue('bareme_impot_source', v)}>
-                    <SelectTrigger><SelectValue placeholder="Sélectionner le barème" /></SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(BAREMES_IMPOT_SOURCE).map(([code, label]) => (
-                        <SelectItem key={code} value={code}>{code} - {label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-destructive mt-1">⚠ Permis {typePermis}: soumis à l'impôt à la source</p>
+                <div className="col-span-2 space-y-3 p-3 border border-destructive/30 rounded-lg bg-destructive/5">
+                  <p className="text-sm font-medium text-destructive">⚠ Permis {typePermis} : soumis à l'impôt à la source</p>
+                  <div>
+                    <Label>Barème impôt à la source (situation familiale)</Label>
+                    <Select value={watch('bareme_impot_source')} onValueChange={(v) => setValue('bareme_impot_source', v)}>
+                      <SelectTrigger><SelectValue placeholder="Sélectionner la situation familiale" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A0">A0 — Célibataire sans enfant</SelectItem>
+                        <SelectItem value="A1">A1 — Célibataire avec 1 enfant</SelectItem>
+                        <SelectItem value="A2">A2 — Célibataire avec 2 enfants</SelectItem>
+                        <SelectItem value="B0">B0 — Marié(e), 1 seul revenu, sans enfant</SelectItem>
+                        <SelectItem value="B1">B1 — Marié(e), 1 seul revenu, 1 enfant</SelectItem>
+                        <SelectItem value="B2">B2 — Marié(e), 1 seul revenu, 2 enfants</SelectItem>
+                        <SelectItem value="B3">B3 — Marié(e), 1 seul revenu, 3+ enfants</SelectItem>
+                        <SelectItem value="C0">C0 — Marié(e), 2 revenus, sans enfant</SelectItem>
+                        <SelectItem value="C1">C1 — Marié(e), 2 revenus, 1 enfant</SelectItem>
+                        <SelectItem value="C2">C2 — Marié(e), 2 revenus, 2 enfants</SelectItem>
+                        <SelectItem value="D">D — Revenu accessoire</SelectItem>
+                        <SelectItem value="H1">H1 — Famille monoparentale, 1 enfant</SelectItem>
+                        <SelectItem value="H2">H2 — Famille monoparentale, 2 enfants</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Le taux exact sera appliqué sur la fiche de salaire selon les barèmes cantonaux.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
