@@ -1,67 +1,57 @@
 
 
-## Utiliser le template DOCX pour la génération de brochures de vente
+## Déductions de base fixes + barème impôt source selon situation familiale
 
-### Contexte
+### Constat
 
-Le template DOCX uploadé est une brochure luxe "Dossier Off-Market" avec :
-- Page 1 : Cover (header doré IMMO-RAMA, photo, localisation, prix, tableau KPIs 6 cases)
-- Page 2 : Executive Summary (description, photo, stats surface/parcelle/chauffage/CECB)
-- Pages 3-4 : Visuels (photos pleine page)
-- Page 5 : Lecture Investissement (KPIs prix/m2, statut, typologie) + Potentiel
-- Pages 6+ : Plans architecturaux, annexes (police ECA, registre foncier, CECB)
+D'après la fiche salaire Pereira Tavares (février 2026), les taux de déduction sont **toujours les mêmes** pour tous les employés :
 
-Le PDF actuel généré avec pdf-lib est basique (texte noir sur fond blanc). Il faut le remplacer par une génération DOCX basée sur ce template.
-
-### Approche technique
-
-**Stratégie : Template DOCX avec placeholders + remplacement XML dans l'Edge Function**
-
-1. **Préparer le template** : Modifier le DOCX pour remplacer les données spécifiques (Lausanne, CHF 5'199'000, etc.) par des placeholders : `{{NOM_BIEN}}`, `{{PRIX}}`, `{{SURFACE}}`, etc.
-2. **Stocker le template** dans un bucket Supabase Storage `brochure-templates`
-3. **Edge Function** : Télécharge le template, décompresse le ZIP (DOCX = ZIP), remplace les placeholders dans `word/document.xml`, recompresse, retourne le DOCX en base64
-
-### Placeholders dans le template
-
-| Placeholder | Donnée |
+| Déduction | Taux |
 |---|---|
-| `{{LOCALISATION}}` | ville + quartier |
-| `{{DESCRIPTION_COURTE}}` | "Immeuble de rendement avec fort potentiel..." |
-| `{{PRIX}}` | CHF formaté |
-| `{{NB_LOGEMENTS}}` | nombre de logements |
-| `{{SURFACE_HABITABLE}}` | surface totale |
-| `{{VOLUME_ECA}}` | volume ECA si dispo |
-| `{{STATUT}}` | Libre / Loué |
-| `{{CECB}}` | classe énergétique |
-| `{{POTENTIEL}}` | potentiel de transformation |
-| `{{EXECUTIVE_SUMMARY}}` | description commerciale longue |
-| `{{SURFACE_PARCELLE}}` | surface parcelle |
-| `{{CHAUFFAGE}}` | type chauffage |
-| `{{PRIX_M2}}` | prix / m2 calculé |
-| `{{PRIX_M3}}` | prix / m3 si volume dispo |
-| `{{TYPOLOGIE}}` | type de bien |
-| `{{NB_LEVIERS}}` | création de valeur |
+| AVS/AI/APG | 5.3% |
+| AC | 1.1% |
+| LPCFam VD | 0.06% |
+| ANP | 1.2% |
+| IJM | 0.8% |
 
-### Fichiers modifiés / créés
+Seul l'**impôt à la source** varie selon la situation familiale de l'employé (ex: Pereira = 8.93%, barème selon état civil + enfants).
 
-| Fichier | Action |
+### Modifications
+
+#### 1. `src/lib/swissPayroll.ts` — Rendre les taux non modifiables
+- Les taux sont déjà corrects dans `DEFAULT_EMPLOYEE_RATES`, pas de changement nécessaire.
+
+#### 2. `src/components/salaires/FicheSalaireDialog.tsx` — Verrouiller les déductions
+- Rendre les champs AVS, AC, AANP, IJM, LPCFam en **lecture seule** (grisés, non éditables)
+- Ils sont toujours pré-remplis avec les valeurs par défaut
+- Seul le champ **Impôt à la source** reste éditable (pour les permis B/F/N/L)
+
+#### 3. `src/components/salaires/EmployeDialog.tsx` — Améliorer le sélecteur de barème
+- Remplacer le select actuel `bareme_impot_source` par un sélecteur plus clair basé sur la **situation familiale** :
+  - **A0** : Célibataire sans enfant
+  - **A1** : Célibataire avec 1 enfant
+  - **A2** : Célibataire avec 2 enfants
+  - **B0** : Marié, 1 seul revenu, sans enfant
+  - **B1** : Marié, 1 seul revenu, 1 enfant
+  - **B2** : Marié, 1 seul revenu, 2 enfants
+  - **B3** : Marié, 1 seul revenu, 3 enfants
+  - **C0** : Marié, 2 revenus, sans enfant
+  - **C1** : Marié, 2 revenus, 1 enfant
+  - **C2** : Marié, 2 revenus, 2 enfants
+  - **H1** : Famille monoparentale avec 1 enfant
+  - **H2** : Famille monoparentale avec 2 enfants
+  - **D** : Revenu accessoire
+- Afficher ce sélecteur **pour tous les permis soumis** (B, F, N, L), avec une description claire
+
+#### 4. `src/components/salaires/FicheSalaireDialog.tsx` — Auto-afficher le barème
+- Quand un employé avec permis B est sélectionné, afficher automatiquement son barème dans la section impôt source
+- Le taux reste à saisir manuellement (car il dépend du salaire annualisé dans les tables cantonales)
+
+### Fichiers modifiés
+
+| Fichier | Changement |
 |---|---|
-| Migration SQL | Créer bucket `brochure-templates` (privé) |
-| Template DOCX | Préparer avec placeholders, uploader dans le bucket via l'Edge Function ou manuellement |
-| `supabase/functions/generate-brochure-pdf/index.ts` | Réécrire : télécharger template depuis storage, dézipper avec JSZip, remplacer placeholders dans document.xml, rezipper, retourner en base64 DOCX |
-| `src/components/biens-vente/GenerateDocumentsSection.tsx` | Changer le nom du bouton "Générer Brochure DOCX", adapter le download (MIME type `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, extension `.docx`) |
-
-### Limites Edge Function
-
-- La manipulation ZIP/XML est légère (le template fait ~2-3 Mo max)
-- JSZip est disponible via esm.sh en Deno
-- Les photos du bien ne seront PAS intégrées dynamiquement dans le DOCX (trop lourd pour l'Edge Function) — les placeholders photos resteront ceux du template ou seront des pages vides à remplir manuellement
-- Alternative : si on veut les photos dynamiques, on peut les récupérer depuis le storage et les injecter dans le ZIP mais c'est risqué pour la mémoire
-
-### Etapes d'implémentation
-
-1. Copier le DOCX template dans le projet, le modifier pour y mettre les placeholders
-2. Créer le bucket storage + uploader le template
-3. Réécrire l'edge function avec JSZip
-4. Adapter le frontend pour télécharger un .docx au lieu d'un .pdf
+| `src/components/salaires/FicheSalaireDialog.tsx` | Champs déductions en readonly + affichage barème |
+| `src/components/salaires/EmployeDialog.tsx` | Sélecteur barème amélioré avec descriptions claires |
+| `src/lib/swissPayroll.ts` | Étendre `BAREMES_IMPOT_SOURCE` si nécessaire (déjà quasi complet) |
 
