@@ -488,20 +488,21 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
                 <Separator />
                 <div className="space-y-3">
                   <h3 className="font-semibold text-sm text-muted-foreground uppercase">Déductions employé</h3>
+                  <p className="text-xs text-muted-foreground">Les taux de cotisations sont fixes et appliqués automatiquement.</p>
                   <div className="grid grid-cols-3 gap-3">
-                    <div><Label>Taux AVS/AI/APG (%)</Label><Input type="number" step="0.01" {...register('taux_avs')} /></div>
+                    <div><Label>AVS/AI/APG (%)</Label><Input type="number" step="0.01" value={DEFAULT_EMPLOYEE_RATES.avs} readOnly className="bg-muted cursor-not-allowed" /></div>
                     <div className="col-span-2 flex items-end"><span className="text-sm text-muted-foreground pb-2">= {formatCHF(calc.montant_avs)}</span></div>
                     
-                    <div><Label>Taux AC (%)</Label><Input type="number" step="0.01" {...register('taux_ac')} /></div>
+                    <div><Label>AC (%)</Label><Input type="number" step="0.01" value={DEFAULT_EMPLOYEE_RATES.ac} readOnly className="bg-muted cursor-not-allowed" /></div>
                     <div className="col-span-2 flex items-end"><span className="text-sm text-muted-foreground pb-2">= {formatCHF(calc.montant_ac)}</span></div>
                     
-                    <div><Label>Taux AANP (%)</Label><Input type="number" step="0.01" {...register('taux_aanp')} /></div>
+                    <div><Label>AANP (%)</Label><Input type="number" step="0.01" value={DEFAULT_EMPLOYEE_RATES.aanp} readOnly className="bg-muted cursor-not-allowed" /></div>
                     <div className="col-span-2 flex items-end"><span className="text-sm text-muted-foreground pb-2">= {formatCHF(calc.montant_aanp)}</span></div>
                     
-                    <div><Label>Taux IJM (%)</Label><Input type="number" step="0.01" {...register('taux_ijm')} /></div>
+                    <div><Label>IJM (%)</Label><Input type="number" step="0.01" value={DEFAULT_EMPLOYEE_RATES.ijm} readOnly className="bg-muted cursor-not-allowed" /></div>
                     <div className="col-span-2 flex items-end"><span className="text-sm text-muted-foreground pb-2">= {formatCHF(calc.montant_ijm)}</span></div>
                     
-                    <div><Label>Taux LPCFam (%)</Label><Input type="number" step="0.01" {...register('taux_lpcfam')} /></div>
+                    <div><Label>LPCFam (%)</Label><Input type="number" step="0.01" value={DEFAULT_EMPLOYEE_RATES.lpcfam} readOnly className="bg-muted cursor-not-allowed" /></div>
                     <div className="col-span-2 flex items-end"><span className="text-sm text-muted-foreground pb-2">= {formatCHF(calc.montant_lpcfam)}</span></div>
                     
                     <div><Label>LPP fixe (CHF)</Label><Input type="number" step="0.05" {...register('montant_lpp')} /></div>
@@ -509,12 +510,22 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
                   </div>
 
                   {needsIS && (
-                    <div className="p-3 border border-destructive/30 rounded-lg bg-destructive/5">
+                    <div className="p-3 border border-destructive/30 rounded-lg bg-destructive/5 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-destructive border-destructive/30">
+                          Permis {employeData?.type_permis}
+                        </Badge>
+                        {employeData?.bareme_impot_source && (
+                          <Badge variant="secondary">
+                            Barème {employeData.bareme_impot_source} — {BAREMES_IMPOT_SOURCE[employeData.bareme_impot_source] || ''}
+                          </Badge>
+                        )}
+                      </div>
                       <Label className="text-destructive">Taux impôt à la source (%)</Label>
-                      <Input type="number" step="0.01" {...register('taux_impot_source')} className="mt-1" />
-                      <p className="text-xs text-destructive mt-1">
-                        Permis {employeData?.type_permis} — Barème: {employeData?.bareme_impot_source || 'Non défini'}
-                        {' '}→ {formatCHF(calc.montant_impot_source)}
+                      <Input type="number" step="0.01" {...register('taux_impot_source')} />
+                      <p className="text-xs text-muted-foreground">
+                        Montant IS: {formatCHF(calc.montant_impot_source)}
+                        {!employeData?.bareme_impot_source && ' — ⚠ Barème non défini dans la fiche employé'}
                       </p>
                     </div>
                   )}
