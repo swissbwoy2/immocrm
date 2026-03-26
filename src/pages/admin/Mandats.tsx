@@ -293,6 +293,10 @@ const Mandats = () => {
 
   const filteredAndSortedClients = useMemo(() => {
     let filtered = clients.filter(client => {
+      // Exclude non-activated clients
+      const isActivated = ['actif', 'reloge', 'stoppe', 'suspendu'].includes(client.statut);
+      if (!isActivated) return false;
+      
       // Filtre recherche
       const clientName = client.profiles ? `${client.profiles.prenom} ${client.profiles.nom}`.toLowerCase() : '';
       const matchSearch = clientName.includes(searchTerm.toLowerCase()) || 
@@ -374,14 +378,14 @@ const Mandats = () => {
           <Card className="p-3 md:p-4">
             <p className="text-xs text-muted-foreground">Nouveaux (≤30j)</p>
             <p className="text-xl md:text-2xl font-bold text-primary">
-              {clients.filter(c => c.statut !== 'reloge' && c.statut !== 'suspendu' && c.statut !== 'stoppe' && calculateDaysElapsed(c.date_ajout || c.created_at) <= 30).length}
+              {clients.filter(c => ['actif'].includes(c.statut) && calculateDaysElapsed(c.date_ajout || c.created_at) <= 30).length}
             </p>
           </Card>
           <Card className="p-3 md:p-4">
             <p className="text-xs text-muted-foreground">En cours (30-60j)</p>
             <p className="text-xl md:text-2xl font-bold text-muted-foreground">
               {clients.filter(c => {
-                if (c.statut === 'reloge' || c.statut === 'suspendu' || c.statut === 'stoppe') return false;
+                if (c.statut !== 'actif') return false;
                 const days = calculateDaysElapsed(c.date_ajout || c.created_at);
                 return days > 30 && days <= 60;
               }).length}
@@ -391,7 +395,7 @@ const Mandats = () => {
             <p className="text-xs text-muted-foreground">Critiques (60-89j)</p>
             <p className="text-xl md:text-2xl font-bold text-warning">
               {clients.filter(c => {
-                if (c.statut === 'reloge' || c.statut === 'suspendu' || c.statut === 'stoppe') return false;
+                if (c.statut !== 'actif') return false;
                 const days = calculateDaysElapsed(c.date_ajout || c.created_at);
                 return days > 60 && days < 90;
               }).length}
@@ -400,7 +404,7 @@ const Mandats = () => {
           <Card className="p-3 md:p-4">
             <p className="text-xs text-muted-foreground">Expirés (90+j)</p>
             <p className="text-xl md:text-2xl font-bold text-destructive">
-              {clients.filter(c => c.statut !== 'reloge' && c.statut !== 'suspendu' && c.statut !== 'stoppe' && calculateDaysElapsed(c.date_ajout || c.created_at) >= 90).length}
+              {clients.filter(c => c.statut === 'actif' && calculateDaysElapsed(c.date_ajout || c.created_at) >= 90).length}
             </p>
           </Card>
           <Card className="p-3 md:p-4">

@@ -754,8 +754,9 @@ export default function ClientDetail() {
     );
   }
 
-  // Déterminer la date de fin du mandat si le client est relogé/stoppé/suspendu
+   // Déterminer la date de fin du mandat si le client est relogé/stoppé/suspendu
   const clientStatut = client.statut;
+  const isActivated = ['actif', 'reloge', 'stoppe', 'suspendu'].includes(clientStatut || '');
   const isFrozenStatus = ['reloge', 'stoppe', 'suspendu'].includes(clientStatut || '');
   
   const reloggedCandidatureForCalc = candidatures.find(c => 
@@ -767,9 +768,9 @@ export default function ClientDetail() {
        reloggedCandidatureForCalc?.signature_effectuee_at || 
        reloggedCandidatureForCalc?.date_etat_lieux || null);
   
-  const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at, mandatEndDate);
-  const daysRemaining = 90 - daysElapsed;
-  const progressPercentage = (daysElapsed / 90) * 100;
+  const daysElapsed = isActivated ? calculateDaysElapsed(client.date_ajout || client.created_at, mandatEndDate) : 0;
+  const daysRemaining = isActivated ? 90 - daysElapsed : 90;
+  const progressPercentage = isActivated ? (daysElapsed / 90) * 100 : 0;
   const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);
 
   const calculateAnciennete = (dateEngagement?: string) => {
@@ -952,6 +953,30 @@ export default function ClientDetail() {
 
               {/* Premium Progress bar - Show frozen state for relogged/stopped/suspended */}
               {(() => {
+                // Not activated yet — show waiting state
+                if (!isActivated) {
+                  return (
+                    <div className="mt-6 max-w-2xl">
+                      <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 rounded-full bg-muted">
+                            <Clock className="w-5 h-5 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-muted-foreground">⏳ En attente d'activation</p>
+                            <p className="text-sm text-muted-foreground">
+                              Le mandat démarrera lorsque le client sera activé par l'admin
+                            </p>
+                          </div>
+                        </div>
+                        <div className="mt-3 relative h-3 bg-muted/50 rounded-full overflow-hidden">
+                          <div className="absolute inset-y-0 left-0 rounded-full bg-muted" style={{ width: '0%' }} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                
                 const isRelogged = clientStatut === 'reloge' || candidatures.some(c => ['signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(c.statut));
                 const reloggedCandidature = candidatures.find(c => ['cles_remises', 'etat_lieux_fixe', 'signature_effectuee'].includes(c.statut));
                 

@@ -777,10 +777,11 @@ const Clients = () => {
           {sortedClients.slice(0, displayCount).map((client, index) => {
             const profile = clientProfiles.get(client.user_id);
             const clientStatut = (client as any).statut;
+            const isActivated = ['actif', 'reloge', 'stoppe', 'suspendu'].includes(clientStatut);
             const isFrozen = ['reloge', 'stoppe', 'suspendu'].includes(clientStatut);
             const frozenEndDate = isFrozen ? ((client as any).date_changement_statut || (client as any).updated_at) : undefined;
-            const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at, frozenEndDate);
-            const progressPercent = (daysElapsed / 90) * 100;
+            const daysElapsed = isActivated ? calculateDaysElapsed(client.date_ajout || client.created_at, frozenEndDate) : 0;
+            const progressPercent = isActivated ? (daysElapsed / 90) * 100 : 0;
             const candidates = clientCandidates.get(client.id) || [];
 
             // Calculate solvability
@@ -963,6 +964,11 @@ const Clients = () => {
                             Sans agent
                           </Badge>
                         )}
+                         {!isActivated && (
+                          <Badge className="bg-gray-500/20 text-gray-600 border border-gray-500/30 text-[10px]">
+                            ⏳ En attente
+                          </Badge>
+                        )}
                         {clientStatut === 'reloge' && (
                           <Badge className="bg-emerald-500/20 text-emerald-600 border border-emerald-500/30 text-[10px]">
                             ✅ Relogé
@@ -1131,19 +1137,21 @@ const Clients = () => {
                     </div>
                     <div className={cn(
                       "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold transition-all",
-                      isFrozen
-                        ? clientStatut === 'reloge'
-                          ? 'bg-emerald-500/20 text-emerald-600'
-                          : clientStatut === 'suspendu'
-                            ? 'bg-amber-500/20 text-amber-600'
-                            : 'bg-red-500/20 text-red-600'
-                        : daysElapsed < 60 
-                          ? 'bg-green-500/20 text-green-600 shadow-[0_0_10px_rgba(34,197,94,0.2)]' 
-                          : daysElapsed < 90 
-                            ? 'bg-orange-500/20 text-orange-600 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
-                            : 'bg-red-500/20 text-red-600 shadow-[0_0_10px_rgba(239,68,68,0.2)] animate-pulse-soft'
+                      !isActivated
+                        ? 'bg-gray-500/20 text-gray-500'
+                        : isFrozen
+                          ? clientStatut === 'reloge'
+                            ? 'bg-emerald-500/20 text-emerald-600'
+                            : clientStatut === 'suspendu'
+                              ? 'bg-amber-500/20 text-amber-600'
+                              : 'bg-red-500/20 text-red-600'
+                          : daysElapsed < 60 
+                            ? 'bg-green-500/20 text-green-600 shadow-[0_0_10px_rgba(34,197,94,0.2)]' 
+                            : daysElapsed < 90 
+                              ? 'bg-orange-500/20 text-orange-600 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
+                              : 'bg-red-500/20 text-red-600 shadow-[0_0_10px_rgba(239,68,68,0.2)] animate-pulse-soft'
                     )}>
-                      <span>J+{Math.floor(daysElapsed)}{isFrozen ? ' ■' : ''}</span>
+                      <span>{isActivated ? `J+${Math.floor(daysElapsed)}${isFrozen ? ' ■' : ''}` : '—'}</span>
                     </div>
                   </div>
 
