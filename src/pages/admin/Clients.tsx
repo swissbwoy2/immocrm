@@ -247,8 +247,8 @@ const Clients = () => {
   };
 
   const typePermisOptions = ['B', 'C', 'L', 'F', 'N', 'G', 'Suisse'];
-  const statutOptions = ['actif', 'en_attente', 'reloge', 'inactif'];
-  const statutLabels: Record<string, string> = { actif: 'Actif', en_attente: 'En attente', reloge: 'Relogé', inactif: 'Inactif' };
+  const statutOptions = ['actif', 'en_attente', 'reloge', 'stoppe', 'suspendu', 'inactif'];
+  const statutLabels: Record<string, string> = { actif: 'Actif', en_attente: 'En attente', reloge: 'Relogé', stoppe: 'Stoppé', suspendu: 'Suspendu', inactif: 'Inactif' };
 
   const filteredClients = clients.filter(client => {
     const profile = clientProfiles.get(client.user_id);
