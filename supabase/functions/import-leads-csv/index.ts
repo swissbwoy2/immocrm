@@ -71,36 +71,29 @@ Deno.serve(async (req) => {
       
       const rows = batch.map((lead: any) => {
         const source = lead.source || 'CSV Import';
-        const isQualified = source.toLowerCase() === 'payé' ? true : null;
+        const leadStatus = source.toLowerCase() === 'payé' ? 'qualified' : 'new';
         const formulaire = lead.formulaire || formulaire_name || null;
-        
-        // Déduire type_recherche depuis le nom du formulaire
-        let typeRecherche = 'Louer'; // défaut
-        if (formulaire) {
-          const formLower = formulaire.toLowerCase();
-          if (formLower.includes('acheteur') || formLower.includes('acheter') || formLower.includes('achat')) {
-            typeRecherche = 'Acheter';
-          } else if (formLower.includes('vendeur') || formLower.includes('vendre') || formLower.includes('estimation') || formLower.includes('mandat')) {
-            typeRecherche = 'Vendre';
-          }
-        }
+        const prenom = lead.prenom || '';
+        const nom = lead.nom || '';
+        const fullName = [prenom, nom].filter(Boolean).join(' ') || null;
         
         return {
-          email: lead.email?.toLowerCase()?.trim(),
-          prenom: lead.prenom || null,
-          nom: lead.nom || null,
-          telephone: lead.telephone || null,
+          leadgen_id: `csv-import-${crypto.randomUUID()}`,
+          email: lead.email?.toLowerCase()?.trim() || null,
+          first_name: prenom || null,
+          last_name: nom || null,
+          full_name: fullName,
+          phone: lead.telephone || null,
           source,
-          formulaire,
-          contacted: false,
-          is_qualified: isQualified,
-          type_recherche: typeRecherche,
+          form_name: formulaire,
+          lead_status: leadStatus,
+          imported_at: new Date().toISOString(),
         };
       }).filter((r: any) => r.email);
 
       for (const row of rows) {
         const { error } = await supabase
-          .from('leads')
+          .from('meta_leads')
           .insert(row);
 
         if (error) {
