@@ -754,8 +754,9 @@ export default function ClientDetail() {
     );
   }
 
-  // Déterminer la date de fin du mandat si le client est relogé/stoppé/suspendu
+   // Déterminer la date de fin du mandat si le client est relogé/stoppé/suspendu
   const clientStatut = client.statut;
+  const isActivated = ['actif', 'reloge', 'stoppe', 'suspendu'].includes(clientStatut || '');
   const isFrozenStatus = ['reloge', 'stoppe', 'suspendu'].includes(clientStatut || '');
   
   const reloggedCandidatureForCalc = candidatures.find(c => 
@@ -767,9 +768,9 @@ export default function ClientDetail() {
        reloggedCandidatureForCalc?.signature_effectuee_at || 
        reloggedCandidatureForCalc?.date_etat_lieux || null);
   
-  const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at, mandatEndDate);
-  const daysRemaining = 90 - daysElapsed;
-  const progressPercentage = (daysElapsed / 90) * 100;
+  const daysElapsed = isActivated ? calculateDaysElapsed(client.date_ajout || client.created_at, mandatEndDate) : 0;
+  const daysRemaining = isActivated ? 90 - daysElapsed : 90;
+  const progressPercentage = isActivated ? (daysElapsed / 90) * 100 : 0;
   const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);
 
   const calculateAnciennete = (dateEngagement?: string) => {
