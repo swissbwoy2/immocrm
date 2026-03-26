@@ -202,7 +202,8 @@ export default function AdminDashboard() {
     );
   }
 
-  const clientsActifs = clients.filter(c => calculateDaysElapsed(c.dateInscription) <= 90).length;
+  const activatedStatuses = ['actif', 'reloge', 'stoppe', 'suspendu'];
+  const clientsActifs = clients.filter(c => activatedStatuses.includes(c.statut) && calculateDaysElapsed(c.dateInscription) <= 90).length;
   const totalAgents = agents.length;
   const agentsActifs = agents.filter(a => a.actif).length;
   const totalOffresEnvoyees = offres.length;
@@ -216,12 +217,16 @@ export default function AdminDashboard() {
   
   // Clients critiques = 30 jours ou moins restants avant expiration (60-89 jours écoulés)
   const clientsCritiques = clients.filter(c => {
+    if (!activatedStatuses.includes(c.statut)) return false;
     const days = calculateDaysElapsed(c.dateInscription);
     return days >= 60 && days < 90;
   });
   
   // Clients expirés = mandat dépassé (90+ jours)
-  const clientsExpires = clients.filter(c => calculateDaysElapsed(c.dateInscription) >= 90);
+  const clientsExpires = clients.filter(c => {
+    if (!activatedStatuses.includes(c.statut)) return false;
+    return calculateDaysElapsed(c.dateInscription) >= 90;
+  });
   
   const revenusAgenceMois = transactions
     .filter(t => {

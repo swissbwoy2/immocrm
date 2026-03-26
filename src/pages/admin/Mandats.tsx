@@ -293,6 +293,10 @@ const Mandats = () => {
 
   const filteredAndSortedClients = useMemo(() => {
     let filtered = clients.filter(client => {
+      // Exclude non-activated clients
+      const isActivated = ['actif', 'reloge', 'stoppe', 'suspendu'].includes(client.statut);
+      if (!isActivated) return false;
+      
       // Filtre recherche
       const clientName = client.profiles ? `${client.profiles.prenom} ${client.profiles.nom}`.toLowerCase() : '';
       const matchSearch = clientName.includes(searchTerm.toLowerCase()) || 
