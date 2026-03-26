@@ -1,6 +1,4 @@
 import christPhoto from '@/assets/team/christ-ramazani.png';
-import maurinePhoto from '@/assets/team/maurine-perret.jpg';
-import thibaultPhoto from '@/assets/team/thibault-depraz.jpg';
 import { Badge } from '@/components/ui/badge';
 
 const teamMembers = [
@@ -8,16 +6,6 @@ const teamMembers = [
     name: 'Christ Ramazani',
     role: "Directeur d'agence – Courtier location et vente",
     photo: christPhoto,
-  },
-  {
-    name: 'Maurine Perret',
-    role: 'Courtière Location et Vente',
-    photo: maurinePhoto,
-  },
-  {
-    name: 'Thibault Dépraz',
-    role: 'Courtier Location et Vente',
-    photo: thibaultPhoto,
   },
 ];
 
