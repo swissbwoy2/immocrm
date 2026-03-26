@@ -900,10 +900,22 @@ export default function ClientDetail() {
                   </h1>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     {/* Badge Relogé */}
-                    {(client.statut === 'reloge' || candidatures.some(c => ['signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(c.statut))) && (
-                      <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 backdrop-blur-sm animate-pulse-soft">
+                    {clientStatut === 'reloge' && (
+                      <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 backdrop-blur-sm">
                         <Home className="w-3 h-3 mr-1" />
-                        🏠 Relogé
+                        ✅ Relogé
+                      </Badge>
+                    )}
+                    {clientStatut === 'stoppe' && (
+                      <Badge className="bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 backdrop-blur-sm">
+                        <StopCircle className="w-3 h-3 mr-1" />
+                        ⛔ Stoppé
+                      </Badge>
+                    )}
+                    {clientStatut === 'suspendu' && (
+                      <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30 backdrop-blur-sm">
+                        <Pause className="w-3 h-3 mr-1" />
+                        ⏸️ Suspendu
                       </Badge>
                     )}
                     {!profile.actif && (
