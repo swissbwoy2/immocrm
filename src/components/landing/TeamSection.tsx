@@ -24,7 +24,7 @@ export function TeamSection() {
         </div>
 
         {/* Team grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 max-w-3xl mx-auto">
+        <div className="flex justify-center">
           {teamMembers.map((member, index) => (
             <div
               key={member.name}
