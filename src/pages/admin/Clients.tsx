@@ -1131,13 +1131,19 @@ const Clients = () => {
                     </div>
                     <div className={cn(
                       "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold transition-all",
-                      daysElapsed < 60 
-                        ? 'bg-green-500/20 text-green-600 shadow-[0_0_10px_rgba(34,197,94,0.2)]' 
-                        : daysElapsed < 90 
-                          ? 'bg-orange-500/20 text-orange-600 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
-                          : 'bg-red-500/20 text-red-600 shadow-[0_0_10px_rgba(239,68,68,0.2)] animate-pulse-soft'
+                      isFrozen
+                        ? clientStatut === 'reloge'
+                          ? 'bg-emerald-500/20 text-emerald-600'
+                          : clientStatut === 'suspendu'
+                            ? 'bg-amber-500/20 text-amber-600'
+                            : 'bg-red-500/20 text-red-600'
+                        : daysElapsed < 60 
+                          ? 'bg-green-500/20 text-green-600 shadow-[0_0_10px_rgba(34,197,94,0.2)]' 
+                          : daysElapsed < 90 
+                            ? 'bg-orange-500/20 text-orange-600 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
+                            : 'bg-red-500/20 text-red-600 shadow-[0_0_10px_rgba(239,68,68,0.2)] animate-pulse-soft'
                     )}>
-                      <span>J+{Math.floor(daysElapsed)}</span>
+                      <span>J+{Math.floor(daysElapsed)}{isFrozen ? ' ■' : ''}</span>
                     </div>
                   </div>
 
