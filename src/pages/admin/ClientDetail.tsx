@@ -1124,6 +1124,109 @@ export default function ClientDetail() {
                   <span className="sm:hidden">Facture</span>
                 </Button>
               )}
+              {/* Status Action Buttons */}
+              {(!clientStatut || clientStatut === 'actif' || clientStatut === 'en_attente') && (
+                <>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="w-full sm:w-auto group bg-amber-500/10 backdrop-blur-sm border-amber-500/30 text-amber-600 hover:bg-amber-500/20 transition-all duration-300"
+                      >
+                        <Pause className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">Suspendre</span>
+                        <span className="sm:hidden">⏸️</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Suspendre la recherche ?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          La barre de progression sera figée et le compteur J+ arrêté. Vous pourrez réactiver la recherche plus tard.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction 
+                          className="bg-amber-500 text-white hover:bg-amber-600"
+                          onClick={async () => {
+                            const { error } = await supabase.from('clients').update({ statut: 'suspendu', date_changement_statut: new Date().toISOString() }).eq('id', client.id);
+                            if (!error) { toast({ title: 'Recherche suspendue' }); loadClientData(); }
+                          }}
+                        >
+                          Suspendre
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="w-full sm:w-auto group bg-red-500/10 backdrop-blur-sm border-red-500/30 text-red-600 hover:bg-red-500/20 transition-all duration-300"
+                      >
+                        <StopCircle className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">Stopper</span>
+                        <span className="sm:hidden">⛔</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Stopper la recherche ?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Le client arrête sa recherche. La barre de progression sera figée définitivement. Le client restera dans la base de données.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction 
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={async () => {
+                            const { error } = await supabase.from('clients').update({ statut: 'stoppe', date_changement_statut: new Date().toISOString() }).eq('id', client.id);
+                            if (!error) { toast({ title: 'Recherche stoppée' }); loadClientData(); }
+                          }}
+                        >
+                          Stopper
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
+              )}
+              {(clientStatut === 'stoppe' || clientStatut === 'suspendu') && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="w-full sm:w-auto group bg-green-500/10 backdrop-blur-sm border-green-500/30 text-green-600 hover:bg-green-500/20 transition-all duration-300"
+                    >
+                      <RotateCcw className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
+                      <span className="hidden sm:inline">Réactiver</span>
+                      <span className="sm:hidden">🔄</span>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Réactiver la recherche ?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Le compteur J+ reprendra là où il s'était arrêté. La barre de progression recommencera à avancer.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                      <AlertDialogAction 
+                        className="bg-green-500 text-white hover:bg-green-600"
+                        onClick={async () => {
+                          const { error } = await supabase.from('clients').update({ statut: 'actif', date_changement_statut: null }).eq('id', client.id);
+                          if (!error) { toast({ title: 'Recherche réactivée' }); loadClientData(); }
+                        }}
+                      >
+                        Réactiver
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button 
