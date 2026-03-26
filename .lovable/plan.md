@@ -1,33 +1,42 @@
 
 
-## Rediriger l'import CSV vers la table `meta_leads`
+## Corriger le comptage des affaires conclues — dès la signature
 
 ### Problème
-Les leads importés par CSV (provenant de Meta Ads) sont actuellement insérés dans la table `leads` (Leads Shortlist) au lieu de `meta_leads` (Leads Meta Ads).
+Le trigger `create_transaction_on_cles_remises` ne passe la transaction en `conclue` que lors de la remise des clés. Mais pour les agents, une affaire est conclue dès que le bail est signé (`signature_effectuee = true`). Carina a 2 affaires signées mais voit 0 car ses transactions sont encore en statut `en_cours`.
 
-### Modifications
+### Solution
 
-#### 1. `supabase/functions/import-leads-csv/index.ts` — Insérer dans `meta_leads`
-- Remplacer l'insertion dans `leads` par `meta_leads`
-- Mapper les champs CSV vers le schéma `meta_leads` :
-  - `email` → `email`
-  - `prenom` → `first_name`
-  - `nom` → `last_name`
-  - `telephone` → `phone`
-  - `source` → `source` (garder "CSV Import" ou la valeur du CSV)
-  - `formulaire` → `form_name`
-  - `full_name` → concaténation prenom + nom
-  - `leadgen_id` → générer un ID unique (ex: `csv-import-{uuid}`) car ce champ est requis
-  - `lead_status` → "new" (ou "qualified" si source = "payé")
-  - `imported_at` → `new Date().toISOString()`
+#### 1. Migration SQL — Ajouter un CASE 3 au trigger
+Modifier `create_transaction_on_cles_remises()` pour aussi passer la transaction en `conclue` quand `signature_effectuee` passe à `true` :
 
-#### 2. `src/pages/admin/Leads.tsx` et `src/pages/closeur/Dashboard.tsx`
-- Aucun changement nécessaire côté UI (l'appel à la function reste le même)
-- Les leads importés apparaîtront automatiquement dans la page Meta Leads (`/admin/meta-leads`)
+```sql
+-- CASE 3: signature_effectuee -> update transaction to 'conclue'
+IF NEW.signature_effectuee = true AND (OLD.signature_effectuee IS NULL OR OLD.signature_effectuee = false) THEN
+  UPDATE transactions SET statut = 'conclue', updated_at = now()
+  WHERE offre_id = NEW.offre_id AND client_id = NEW.client_id;
+END IF;
+```
+
+#### 2. Migration SQL — Rattraper les transactions existantes de Carina
+Mettre à jour les transactions existantes liées à des candidatures déjà signées :
+
+```sql
+UPDATE transactions t
+SET statut = 'conclue', updated_at = now()
+FROM candidatures c
+WHERE t.offre_id = c.offre_id
+  AND t.client_id = c.client_id
+  AND c.signature_effectuee = true
+  AND t.statut = 'en_cours';
+```
+
+#### 3. Aucun changement côté frontend
+Le dashboard filtre déjà `t.statut === 'conclue'` — une fois les transactions mises à jour, les KPIs "Affaires conclues" et "Ce mois" s'afficheront correctement.
 
 ### Fichiers modifiés
 
 | Fichier | Changement |
 |---|---|
-| `supabase/functions/import-leads-csv/index.ts` | Insertion dans `meta_leads` au lieu de `leads`, mapping des champs |
+| Nouvelle migration SQL | Ajout CASE signature_effectuee au trigger + rattrapage données |
 
