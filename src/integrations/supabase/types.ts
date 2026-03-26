@@ -2641,6 +2641,7 @@ export type Database = {
           created_at: string | null
           curatelle: boolean | null
           date_ajout: string | null
+          date_changement_statut: string | null
           date_engagement: string | null
           date_naissance: string | null
           decouverte_agence: string | null
@@ -2704,6 +2705,7 @@ export type Database = {
           created_at?: string | null
           curatelle?: boolean | null
           date_ajout?: string | null
+          date_changement_statut?: string | null
           date_engagement?: string | null
           date_naissance?: string | null
           decouverte_agence?: string | null
@@ -2767,6 +2769,7 @@ export type Database = {
           created_at?: string | null
           curatelle?: boolean | null
           date_ajout?: string | null
+          date_changement_statut?: string | null
           date_engagement?: string | null
           date_naissance?: string | null
           decouverte_agence?: string | null
