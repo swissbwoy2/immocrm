@@ -777,10 +777,11 @@ const Clients = () => {
           {sortedClients.slice(0, displayCount).map((client, index) => {
             const profile = clientProfiles.get(client.user_id);
             const clientStatut = (client as any).statut;
+            const isActivated = ['actif', 'reloge', 'stoppe', 'suspendu'].includes(clientStatut);
             const isFrozen = ['reloge', 'stoppe', 'suspendu'].includes(clientStatut);
             const frozenEndDate = isFrozen ? ((client as any).date_changement_statut || (client as any).updated_at) : undefined;
-            const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at, frozenEndDate);
-            const progressPercent = (daysElapsed / 90) * 100;
+            const daysElapsed = isActivated ? calculateDaysElapsed(client.date_ajout || client.created_at, frozenEndDate) : 0;
+            const progressPercent = isActivated ? (daysElapsed / 90) * 100 : 0;
             const candidates = clientCandidates.get(client.id) || [];
 
             // Calculate solvability
