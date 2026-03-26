@@ -38,6 +38,70 @@ export type Database = {
         }
         Relationships: []
       }
+      acomptes: {
+        Row: {
+          agent_id: string | null
+          client_id: string | null
+          created_at: string
+          date_paiement: string | null
+          date_ristourne: string | null
+          demande_mandat_id: string | null
+          id: string
+          montant: number
+          notes: string | null
+          statut: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          date_paiement?: string | null
+          date_ristourne?: string | null
+          demande_mandat_id?: string | null
+          id?: string
+          montant?: number
+          notes?: string | null
+          statut?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          date_paiement?: string | null
+          date_ristourne?: string | null
+          demande_mandat_id?: string | null
+          id?: string
+          montant?: number
+          notes?: string | null
+          statut?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acomptes_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acomptes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acomptes_demande_mandat_id_fkey"
+            columns: ["demande_mandat_id"]
+            isOneToOne: false
+            referencedRelation: "demandes_mandat"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       actes_vente: {
         Row: {
           acheteur_id: string | null
