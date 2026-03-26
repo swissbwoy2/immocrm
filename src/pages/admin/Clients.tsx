@@ -776,7 +776,10 @@ const Clients = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {sortedClients.slice(0, displayCount).map((client, index) => {
             const profile = clientProfiles.get(client.user_id);
-            const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
+            const clientStatut = (client as any).statut;
+            const isFrozen = ['reloge', 'stoppe', 'suspendu'].includes(clientStatut);
+            const frozenEndDate = isFrozen ? ((client as any).date_changement_statut || (client as any).updated_at) : undefined;
+            const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at, frozenEndDate);
             const progressPercent = (daysElapsed / 90) * 100;
             const candidates = clientCandidates.get(client.id) || [];
 
