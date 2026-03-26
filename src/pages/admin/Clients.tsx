@@ -247,8 +247,8 @@ const Clients = () => {
   };
 
   const typePermisOptions = ['B', 'C', 'L', 'F', 'N', 'G', 'Suisse'];
-  const statutOptions = ['actif', 'en_attente', 'reloge', 'inactif'];
-  const statutLabels: Record<string, string> = { actif: 'Actif', en_attente: 'En attente', reloge: 'Relogé', inactif: 'Inactif' };
+  const statutOptions = ['actif', 'en_attente', 'reloge', 'stoppe', 'suspendu', 'inactif'];
+  const statutLabels: Record<string, string> = { actif: 'Actif', en_attente: 'En attente', reloge: 'Relogé', stoppe: 'Stoppé', suspendu: 'Suspendu', inactif: 'Inactif' };
 
   const filteredClients = clients.filter(client => {
     const profile = clientProfiles.get(client.user_id);
@@ -776,7 +776,10 @@ const Clients = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
           {sortedClients.slice(0, displayCount).map((client, index) => {
             const profile = clientProfiles.get(client.user_id);
-            const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
+            const clientStatut = (client as any).statut;
+            const isFrozen = ['reloge', 'stoppe', 'suspendu'].includes(clientStatut);
+            const frozenEndDate = isFrozen ? ((client as any).date_changement_statut || (client as any).updated_at) : undefined;
+            const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at, frozenEndDate);
             const progressPercent = (daysElapsed / 90) * 100;
             const candidates = clientCandidates.get(client.id) || [];
 
@@ -955,9 +958,24 @@ const Clients = () => {
                             Non activé
                           </Badge>
                         )}
-                        {!client.agent_id && (
+                         {!client.agent_id && (
                           <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30 text-[10px] animate-pulse-soft">
                             Sans agent
+                          </Badge>
+                        )}
+                        {clientStatut === 'reloge' && (
+                          <Badge className="bg-emerald-500/20 text-emerald-600 border border-emerald-500/30 text-[10px]">
+                            ✅ Relogé
+                          </Badge>
+                        )}
+                        {clientStatut === 'stoppe' && (
+                          <Badge className="bg-red-500/20 text-red-600 border border-red-500/30 text-[10px]">
+                            ⛔ Stoppé
+                          </Badge>
+                        )}
+                        {clientStatut === 'suspendu' && (
+                          <Badge className="bg-amber-500/20 text-amber-600 border border-amber-500/30 text-[10px]">
+                            ⏸️ Suspendu
                           </Badge>
                         )}
                         {isSolvable ? (
@@ -1113,13 +1131,19 @@ const Clients = () => {
                     </div>
                     <div className={cn(
                       "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold transition-all",
-                      daysElapsed < 60 
-                        ? 'bg-green-500/20 text-green-600 shadow-[0_0_10px_rgba(34,197,94,0.2)]' 
-                        : daysElapsed < 90 
-                          ? 'bg-orange-500/20 text-orange-600 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
-                          : 'bg-red-500/20 text-red-600 shadow-[0_0_10px_rgba(239,68,68,0.2)] animate-pulse-soft'
+                      isFrozen
+                        ? clientStatut === 'reloge'
+                          ? 'bg-emerald-500/20 text-emerald-600'
+                          : clientStatut === 'suspendu'
+                            ? 'bg-amber-500/20 text-amber-600'
+                            : 'bg-red-500/20 text-red-600'
+                        : daysElapsed < 60 
+                          ? 'bg-green-500/20 text-green-600 shadow-[0_0_10px_rgba(34,197,94,0.2)]' 
+                          : daysElapsed < 90 
+                            ? 'bg-orange-500/20 text-orange-600 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
+                            : 'bg-red-500/20 text-red-600 shadow-[0_0_10px_rgba(239,68,68,0.2)] animate-pulse-soft'
                     )}>
-                      <span>J+{Math.floor(daysElapsed)}</span>
+                      <span>J+{Math.floor(daysElapsed)}{isFrozen ? ' ■' : ''}</span>
                     </div>
                   </div>
 
@@ -1128,11 +1152,17 @@ const Clients = () => {
                     <div
                       className={cn(
                         "h-full rounded-full transition-all duration-500",
-                        daysElapsed < 60 
-                          ? 'bg-gradient-to-r from-green-500 to-green-400 shadow-[0_0_8px_rgba(34,197,94,0.4)]' 
-                          : daysElapsed < 90 
-                            ? 'bg-gradient-to-r from-orange-500 to-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.4)]' 
-                            : 'bg-gradient-to-r from-red-500 to-red-400 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
+                        isFrozen
+                          ? clientStatut === 'reloge'
+                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
+                            : clientStatut === 'suspendu'
+                              ? 'bg-gradient-to-r from-amber-500 to-amber-400'
+                              : 'bg-gradient-to-r from-red-500 to-red-400'
+                          : daysElapsed < 60 
+                            ? 'bg-gradient-to-r from-green-500 to-green-400 shadow-[0_0_8px_rgba(34,197,94,0.4)]' 
+                            : daysElapsed < 90 
+                              ? 'bg-gradient-to-r from-orange-500 to-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.4)]' 
+                              : 'bg-gradient-to-r from-red-500 to-red-400 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
                       )}
                       style={{ width: `${Math.min(progressPercent, 100)}%` }}
                     />

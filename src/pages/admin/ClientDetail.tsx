@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send, RefreshCw, FileCheck, FileDown, Receipt, Loader2 } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send, RefreshCw, FileCheck, FileDown, Receipt, Loader2, Pause, StopCircle, RotateCcw } from 'lucide-react';
 import { DownloadClientPDFButton } from '@/components/DownloadClientPDFButton';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
 import { ClientActivityStats } from '@/components/admin/ClientActivityStats';
@@ -754,13 +754,18 @@ export default function ClientDetail() {
     );
   }
 
-  // Déterminer la date de fin du mandat si le client est relogé
+  // Déterminer la date de fin du mandat si le client est relogé/stoppé/suspendu
+  const clientStatut = client.statut;
+  const isFrozenStatus = ['reloge', 'stoppe', 'suspendu'].includes(clientStatut || '');
+  
   const reloggedCandidatureForCalc = candidatures.find(c => 
     ['signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(c.statut)
   );
-  const mandatEndDate = reloggedCandidatureForCalc?.cles_remises_at || 
-                        reloggedCandidatureForCalc?.signature_effectuee_at || 
-                        reloggedCandidatureForCalc?.date_etat_lieux || null;
+  const mandatEndDate = isFrozenStatus 
+    ? ((client as any).date_changement_statut || (client as any).updated_at || null)
+    : (reloggedCandidatureForCalc?.cles_remises_at || 
+       reloggedCandidatureForCalc?.signature_effectuee_at || 
+       reloggedCandidatureForCalc?.date_etat_lieux || null);
   
   const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at, mandatEndDate);
   const daysRemaining = 90 - daysElapsed;
@@ -895,10 +900,22 @@ export default function ClientDetail() {
                   </h1>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     {/* Badge Relogé */}
-                    {(client.statut === 'reloge' || candidatures.some(c => ['signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(c.statut))) && (
-                      <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 backdrop-blur-sm animate-pulse-soft">
+                    {clientStatut === 'reloge' && (
+                      <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 backdrop-blur-sm">
                         <Home className="w-3 h-3 mr-1" />
-                        🏠 Relogé
+                        ✅ Relogé
+                      </Badge>
+                    )}
+                    {clientStatut === 'stoppe' && (
+                      <Badge className="bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 backdrop-blur-sm">
+                        <StopCircle className="w-3 h-3 mr-1" />
+                        ⛔ Stoppé
+                      </Badge>
+                    )}
+                    {clientStatut === 'suspendu' && (
+                      <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30 backdrop-blur-sm">
+                        <Pause className="w-3 h-3 mr-1" />
+                        ⏸️ Suspendu
                       </Badge>
                     )}
                     {!profile.actif && (
@@ -933,10 +950,45 @@ export default function ClientDetail() {
                 </div>
               </div>
 
-              {/* Premium Progress bar - Show success state if relogged */}
+              {/* Premium Progress bar - Show frozen state for relogged/stopped/suspended */}
               {(() => {
-                const isRelogged = client.statut === 'reloge' || candidatures.some(c => ['signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(c.statut));
+                const isRelogged = clientStatut === 'reloge' || candidatures.some(c => ['signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(c.statut));
                 const reloggedCandidature = candidatures.find(c => ['cles_remises', 'etat_lieux_fixe', 'signature_effectuee'].includes(c.statut));
+                
+                // Show frozen state for stoppe/suspendu
+                if (clientStatut === 'stoppe' || clientStatut === 'suspendu') {
+                  const frozenConfig = clientStatut === 'stoppe' 
+                    ? { icon: StopCircle, label: '⛔ Recherche stoppée', color: 'red', bgClass: 'bg-red-500/10 border-red-500/30', textClass: 'text-red-600 dark:text-red-400', iconBg: 'bg-red-500/20', iconColor: 'text-red-500' }
+                    : { icon: Pause, label: '⏸️ Recherche suspendue', color: 'amber', bgClass: 'bg-amber-500/10 border-amber-500/30', textClass: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-500/20', iconColor: 'text-amber-500' };
+                  const FrozenIcon = frozenConfig.icon;
+                  
+                  return (
+                    <div className="mt-6 max-w-2xl">
+                      <div className={`p-4 rounded-xl border ${frozenConfig.bgClass}`}>
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-full ${frozenConfig.iconBg}`}>
+                            <FrozenIcon className={`w-5 h-5 ${frozenConfig.iconColor}`} />
+                          </div>
+                          <div className="flex-1">
+                            <p className={`font-semibold ${frozenConfig.textClass}`}>{frozenConfig.label}</p>
+                            <p className="text-sm text-muted-foreground">
+                              Figé à J+{Math.floor(daysElapsed)} sur 90 jours
+                            </p>
+                          </div>
+                        </div>
+                        {/* Frozen progress bar */}
+                        <div className="mt-3 relative h-3 bg-muted/50 rounded-full overflow-hidden">
+                          <div 
+                            className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${
+                              clientStatut === 'stoppe' ? 'from-red-500 to-red-400' : 'from-amber-500 to-amber-400'
+                            }`}
+                            style={{ width: `${Math.min(progressPercentage, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
                 
                 if (isRelogged && reloggedCandidature) {
                   const statusLabel = reloggedCandidature.statut === 'cles_remises' ? '🏠 Relogé' : 
@@ -952,7 +1004,7 @@ export default function ClientDetail() {
                           <div>
                             <p className="font-semibold text-emerald-600 dark:text-emerald-400">{statusLabel}</p>
                             <p className="text-sm text-muted-foreground">
-                              Mandat terminé avec succès
+                              Mandat terminé avec succès — Figé à J+{Math.floor(daysElapsed)}
                               {reloggedCandidature.signature_effectuee_at && (
                                 <> le {new Date(reloggedCandidature.signature_effectuee_at).toLocaleDateString('fr-CH')}</>
                               )}
@@ -1071,6 +1123,109 @@ export default function ClientDetail() {
                   <span className="hidden sm:inline">Créer facture</span>
                   <span className="sm:hidden">Facture</span>
                 </Button>
+              )}
+              {/* Status Action Buttons */}
+              {(!clientStatut || clientStatut === 'actif' || clientStatut === 'en_attente') && (
+                <>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="w-full sm:w-auto group bg-amber-500/10 backdrop-blur-sm border-amber-500/30 text-amber-600 hover:bg-amber-500/20 transition-all duration-300"
+                      >
+                        <Pause className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">Suspendre</span>
+                        <span className="sm:hidden">⏸️</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Suspendre la recherche ?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          La barre de progression sera figée et le compteur J+ arrêté. Vous pourrez réactiver la recherche plus tard.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction 
+                          className="bg-amber-500 text-white hover:bg-amber-600"
+                          onClick={async () => {
+                            const { error } = await supabase.from('clients').update({ statut: 'suspendu', date_changement_statut: new Date().toISOString() }).eq('id', client.id);
+                            if (!error) { toast({ title: 'Recherche suspendue' }); loadClientData(); }
+                          }}
+                        >
+                          Suspendre
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="w-full sm:w-auto group bg-red-500/10 backdrop-blur-sm border-red-500/30 text-red-600 hover:bg-red-500/20 transition-all duration-300"
+                      >
+                        <StopCircle className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
+                        <span className="hidden sm:inline">Stopper</span>
+                        <span className="sm:hidden">⛔</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Stopper la recherche ?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Le client arrête sa recherche. La barre de progression sera figée définitivement. Le client restera dans la base de données.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction 
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={async () => {
+                            const { error } = await supabase.from('clients').update({ statut: 'stoppe', date_changement_statut: new Date().toISOString() }).eq('id', client.id);
+                            if (!error) { toast({ title: 'Recherche stoppée' }); loadClientData(); }
+                          }}
+                        >
+                          Stopper
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
+              )}
+              {(clientStatut === 'stoppe' || clientStatut === 'suspendu') && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="w-full sm:w-auto group bg-green-500/10 backdrop-blur-sm border-green-500/30 text-green-600 hover:bg-green-500/20 transition-all duration-300"
+                    >
+                      <RotateCcw className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
+                      <span className="hidden sm:inline">Réactiver</span>
+                      <span className="sm:hidden">🔄</span>
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Réactiver la recherche ?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Le compteur J+ reprendra là où il s'était arrêté. La barre de progression recommencera à avancer.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Annuler</AlertDialogCancel>
+                      <AlertDialogAction 
+                        className="bg-green-500 text-white hover:bg-green-600"
+                        onClick={async () => {
+                          const { error } = await supabase.from('clients').update({ statut: 'actif', date_changement_statut: null }).eq('id', client.id);
+                          if (!error) { toast({ title: 'Recherche réactivée' }); loadClientData(); }
+                        }}
+                      >
+                        Réactiver
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
               <AlertDialog>
                 <AlertDialogTrigger asChild>
