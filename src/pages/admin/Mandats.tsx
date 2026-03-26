@@ -396,7 +396,7 @@ const Mandats = () => {
             <p className="text-xs text-muted-foreground">Critiques (60-89j)</p>
             <p className="text-xl md:text-2xl font-bold text-warning">
               {clients.filter(c => {
-                if (c.statut === 'reloge' || c.statut === 'suspendu' || c.statut === 'stoppe') return false;
+                if (c.statut !== 'actif') return false;
                 const days = calculateDaysElapsed(c.date_ajout || c.created_at);
                 return days > 60 && days < 90;
               }).length}
