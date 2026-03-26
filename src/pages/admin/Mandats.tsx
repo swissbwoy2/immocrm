@@ -380,7 +380,6 @@ const Mandats = () => {
             <p className="text-xl md:text-2xl font-bold text-primary">
               {clients.filter(c => ['actif'].includes(c.statut) && calculateDaysElapsed(c.date_ajout || c.created_at) <= 30).length}
             </p>
-            </p>
           </Card>
           <Card className="p-3 md:p-4">
             <p className="text-xs text-muted-foreground">En cours (30-60j)</p>
