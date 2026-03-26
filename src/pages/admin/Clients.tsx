@@ -964,6 +964,11 @@ const Clients = () => {
                             Sans agent
                           </Badge>
                         )}
+                         {!isActivated && (
+                          <Badge className="bg-gray-500/20 text-gray-600 border border-gray-500/30 text-[10px]">
+                            ⏳ En attente
+                          </Badge>
+                        )}
                         {clientStatut === 'reloge' && (
                           <Badge className="bg-emerald-500/20 text-emerald-600 border border-emerald-500/30 text-[10px]">
                             ✅ Relogé
