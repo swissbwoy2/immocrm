@@ -1,42 +1,52 @@
 
 
-## Corriger le comptage des affaires conclues — dès la signature
+## Afficher les acomptes dans les Transactions admin + gestion des ristournes
 
 ### Problème
-Le trigger `create_transaction_on_cles_remises` ne passe la transaction en `conclue` que lors de la remise des clés. Mais pour les agents, une affaire est conclue dès que le bail est signé (`signature_effectuee = true`). Carina a 2 affaires signées mais voit 0 car ses transactions sont encore en statut `en_cours`.
+Les acomptes de 300 CHF payés à l'activation du mandat ne sont pas visibles dans la page Transactions admin. Ils ne sont suivis que dans `demandes_mandat`. Des clients comme Pedro, Tiago et Bintou ont payé leur acompte mais arrêté leur recherche — ces montants doivent apparaître comme revenus acquis. De plus, il faut pouvoir ristourner l'acompte après 3 mois sans succès (comme pour El Hadi).
 
 ### Solution
 
-#### 1. Migration SQL — Ajouter un CASE 3 au trigger
-Modifier `create_transaction_on_cles_remises()` pour aussi passer la transaction en `conclue` quand `signature_effectuee` passe à `true` :
+#### 1. Nouvelle table `acomptes` (migration SQL)
+Créer une table dédiée pour centraliser le suivi des acomptes :
 
-```sql
--- CASE 3: signature_effectuee -> update transaction to 'conclue'
-IF NEW.signature_effectuee = true AND (OLD.signature_effectuee IS NULL OR OLD.signature_effectuee = false) THEN
-  UPDATE transactions SET statut = 'conclue', updated_at = now()
-  WHERE offre_id = NEW.offre_id AND client_id = NEW.client_id;
-END IF;
-```
+| Colonne | Type | Description |
+|---|---|---|
+| `id` | UUID | PK |
+| `client_id` | UUID | FK vers clients |
+| `agent_id` | UUID | FK vers agents (nullable) |
+| `montant` | NUMERIC | 300 CHF par défaut |
+| `date_paiement` | TIMESTAMPTZ | Date de paiement de l'acompte |
+| `statut` | TEXT | `paye`, `acquis`, `ristourne` |
+| `date_ristourne` | TIMESTAMPTZ | Date du remboursement (si applicable) |
+| `notes` | TEXT | Notes libres |
+| `demande_mandat_id` | UUID | FK vers demandes_mandat |
+| `created_at` | TIMESTAMPTZ | Auto |
 
-#### 2. Migration SQL — Rattraper les transactions existantes de Carina
-Mettre à jour les transactions existantes liées à des candidatures déjà signées :
++ RLS policies pour admin uniquement
++ Migration de rattrapage : insérer les acomptes existants depuis `demandes_mandat` (clients avec `date_paiement` renseignée)
 
-```sql
-UPDATE transactions t
-SET statut = 'conclue', updated_at = now()
-FROM candidatures c
-WHERE t.offre_id = c.offre_id
-  AND t.client_id = c.client_id
-  AND c.signature_effectuee = true
-  AND t.statut = 'en_cours';
-```
+#### 2. `src/pages/admin/Transactions.tsx` — Ajouter section Acomptes
+- Charger les acomptes depuis la nouvelle table
+- Ajouter des KPIs en haut :
+  - **Acomptes encaissés** : total des acomptes payés
+  - **Acomptes acquis** : ceux des clients ayant arrêté sans ristourne
+  - **Ristournes** : total remboursé
+- Ajouter un onglet/section "Acomptes" listant chaque acompte avec :
+  - Nom du client + agent
+  - Date de paiement
+  - Statut (Payé / Acquis / Ristourné)
+  - Bouton **"Ristourner"** : passe le statut à `ristourne` avec date
 
-#### 3. Aucun changement côté frontend
-Le dashboard filtre déjà `t.statut === 'conclue'` — une fois les transactions mises à jour, les KPIs "Affaires conclues" et "Ce mois" s'afficheront correctement.
+#### 3. Bouton Ristourne
+- Dialog de confirmation avec sélection de date
+- Met à jour `statut = 'ristourne'` et `date_ristourne`
+- Logique métier : proposé automatiquement si le mandat a expiré (3 mois écoulés) sans renouvellement et sans bail signé
 
 ### Fichiers modifiés
 
 | Fichier | Changement |
 |---|---|
-| Nouvelle migration SQL | Ajout CASE signature_effectuee au trigger + rattrapage données |
+| Nouvelle migration SQL | Table `acomptes` + RLS + rattrapage données |
+| `src/pages/admin/Transactions.tsx` | Section acomptes avec KPIs, liste et bouton ristourne |
 
