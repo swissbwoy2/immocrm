@@ -1,52 +1,39 @@
 
 
-## Afficher les acomptes dans les Transactions admin + gestion des ristournes
+## Figer la barre de progression et ajouter des boutons de gestion de statut (Clients admin)
 
 ### Problème
-Les acomptes de 300 CHF payés à l'activation du mandat ne sont pas visibles dans la page Transactions admin. Ils ne sont suivis que dans `demandes_mandat`. Des clients comme Pedro, Tiago et Bintou ont payé leur acompte mais arrêté leur recherche — ces montants doivent apparaître comme revenus acquis. De plus, il faut pouvoir ristourner l'acompte après 3 mois sans succès (comme pour El Hadi).
+Dans `/admin/clients` (liste) et `/admin/clients/:id` (détail), la barre de progression et le compteur J+ continuent d'avancer même pour les clients relogés, stoppés ou suspendus. De plus, il n'y a pas de boutons d'action pour changer le statut d'un client (stopper, suspendre, marquer relogé). La page Mandats a déjà cette logique — il faut l'étendre aux pages Clients.
 
 ### Solution
 
-#### 1. Nouvelle table `acomptes` (migration SQL)
-Créer une table dédiée pour centraliser le suivi des acomptes :
+#### 1. `src/pages/admin/Clients.tsx` — Figer la barre + badges statut
 
-| Colonne | Type | Description |
-|---|---|---|
-| `id` | UUID | PK |
-| `client_id` | UUID | FK vers clients |
-| `agent_id` | UUID | FK vers agents (nullable) |
-| `montant` | NUMERIC | 300 CHF par défaut |
-| `date_paiement` | TIMESTAMPTZ | Date de paiement de l'acompte |
-| `statut` | TEXT | `paye`, `acquis`, `ristourne` |
-| `date_ristourne` | TIMESTAMPTZ | Date du remboursement (si applicable) |
-| `notes` | TEXT | Notes libres |
-| `demande_mandat_id` | UUID | FK vers demandes_mandat |
-| `created_at` | TIMESTAMPTZ | Auto |
+- **Calcul figé** : Quand `client.statut` est `reloge`, `stoppe` ou `suspendu`, utiliser `client.updated_at` (ou date de changement de statut) comme `endDate` dans `calculateDaysElapsed` pour figer le compteur J+
+- **Couleur de la barre** : emerald pour relogé, amber pour suspendu, rouge pour stoppé (même logique que Mandats)
+- **Badge statut** sur la carte : afficher un badge ✅ Relogé / ⏸️ Suspendu / ⛔ Stoppé comme dans Mandats
+- **Ajouter `stoppe` et `suspendu`** aux `statutOptions` et `statutLabels` pour le filtrage
 
-+ RLS policies pour admin uniquement
-+ Migration de rattrapage : insérer les acomptes existants depuis `demandes_mandat` (clients avec `date_paiement` renseignée)
+#### 2. `src/pages/admin/ClientDetail.tsx` — Figer la barre + boutons d'action
 
-#### 2. `src/pages/admin/Transactions.tsx` — Ajouter section Acomptes
-- Charger les acomptes depuis la nouvelle table
-- Ajouter des KPIs en haut :
-  - **Acomptes encaissés** : total des acomptes payés
-  - **Acomptes acquis** : ceux des clients ayant arrêté sans ristourne
-  - **Ristournes** : total remboursé
-- Ajouter un onglet/section "Acomptes" listant chaque acompte avec :
-  - Nom du client + agent
-  - Date de paiement
-  - Statut (Payé / Acquis / Ristourné)
-  - Bouton **"Ristourner"** : passe le statut à `ristourne` avec date
+- **Étendre la logique de freeze** : Actuellement seul le statut `reloge` (via candidature) fige la barre. Ajouter `stoppe` et `suspendu` : si `client.statut` est l'un de ces deux, figer la barre avec la même UI que relogé (avec couleur différente)
+- **Ajouter 3 boutons d'action** dans la zone des boutons existants :
+  - **Suspendre** (⏸️ amber) : met `statut = 'suspendu'`
+  - **Stopper** (⛔ destructive) : met `statut = 'stoppe'`  
+  - **Réactiver** (🔄 vert) : remet `statut = 'actif'` (visible uniquement si suspendu/stoppé)
+- Chaque bouton avec un dialog de confirmation
+- Mise à jour via `supabase.from('clients').update({ statut })` + toast de succès
 
-#### 3. Bouton Ristourne
-- Dialog de confirmation avec sélection de date
-- Met à jour `statut = 'ristourne'` et `date_ristourne`
-- Logique métier : proposé automatiquement si le mandat a expiré (3 mois écoulés) sans renouvellement et sans bail signé
+#### 3. Ajout d'un champ `date_changement_statut` (migration SQL)
+
+- Ajouter une colonne `date_changement_statut TIMESTAMPTZ` à la table `clients` pour enregistrer précisément quand le statut a changé (utilisé comme `endDate` pour figer le compteur)
+- Migration de rattrapage : pour les clients déjà `reloge`/`stoppe`/`suspendu`, remplir avec `updated_at`
 
 ### Fichiers modifiés
 
 | Fichier | Changement |
 |---|---|
-| Nouvelle migration SQL | Table `acomptes` + RLS + rattrapage données |
-| `src/pages/admin/Transactions.tsx` | Section acomptes avec KPIs, liste et bouton ristourne |
+| Nouvelle migration SQL | Ajout colonne `date_changement_statut` + rattrapage |
+| `src/pages/admin/Clients.tsx` | Figer barre/J+ pour statuts spéciaux, badges, filtres étendus |
+| `src/pages/admin/ClientDetail.tsx` | Figer barre pour stoppe/suspendu, boutons Suspendre/Stopper/Réactiver |
 
