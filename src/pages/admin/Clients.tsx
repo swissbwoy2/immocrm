@@ -1152,11 +1152,17 @@ const Clients = () => {
                     <div
                       className={cn(
                         "h-full rounded-full transition-all duration-500",
-                        daysElapsed < 60 
-                          ? 'bg-gradient-to-r from-green-500 to-green-400 shadow-[0_0_8px_rgba(34,197,94,0.4)]' 
-                          : daysElapsed < 90 
-                            ? 'bg-gradient-to-r from-orange-500 to-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.4)]' 
-                            : 'bg-gradient-to-r from-red-500 to-red-400 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
+                        isFrozen
+                          ? clientStatut === 'reloge'
+                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
+                            : clientStatut === 'suspendu'
+                              ? 'bg-gradient-to-r from-amber-500 to-amber-400'
+                              : 'bg-gradient-to-r from-red-500 to-red-400'
+                          : daysElapsed < 60 
+                            ? 'bg-gradient-to-r from-green-500 to-green-400 shadow-[0_0_8px_rgba(34,197,94,0.4)]' 
+                            : daysElapsed < 90 
+                              ? 'bg-gradient-to-r from-orange-500 to-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.4)]' 
+                              : 'bg-gradient-to-r from-red-500 to-red-400 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
                       )}
                       style={{ width: `${Math.min(progressPercent, 100)}%` }}
                     />
