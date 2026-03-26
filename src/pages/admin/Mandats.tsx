@@ -405,7 +405,7 @@ const Mandats = () => {
           <Card className="p-3 md:p-4">
             <p className="text-xs text-muted-foreground">Expirés (90+j)</p>
             <p className="text-xl md:text-2xl font-bold text-destructive">
-              {clients.filter(c => c.statut !== 'reloge' && c.statut !== 'suspendu' && c.statut !== 'stoppe' && calculateDaysElapsed(c.date_ajout || c.created_at) >= 90).length}
+              {clients.filter(c => c.statut === 'actif' && calculateDaysElapsed(c.date_ajout || c.created_at) >= 90).length}
             </p>
           </Card>
           <Card className="p-3 md:p-4">
