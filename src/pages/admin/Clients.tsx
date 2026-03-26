@@ -958,9 +958,24 @@ const Clients = () => {
                             Non activé
                           </Badge>
                         )}
-                        {!client.agent_id && (
+                         {!client.agent_id && (
                           <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30 text-[10px] animate-pulse-soft">
                             Sans agent
+                          </Badge>
+                        )}
+                        {clientStatut === 'reloge' && (
+                          <Badge className="bg-emerald-500/20 text-emerald-600 border border-emerald-500/30 text-[10px]">
+                            ✅ Relogé
+                          </Badge>
+                        )}
+                        {clientStatut === 'stoppe' && (
+                          <Badge className="bg-red-500/20 text-red-600 border border-red-500/30 text-[10px]">
+                            ⛔ Stoppé
+                          </Badge>
+                        )}
+                        {clientStatut === 'suspendu' && (
+                          <Badge className="bg-amber-500/20 text-amber-600 border border-amber-500/30 text-[10px]">
+                            ⏸️ Suspendu
                           </Badge>
                         )}
                         {isSolvable ? (
