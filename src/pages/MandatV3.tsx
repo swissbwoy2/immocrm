@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
 import { MandatV3FormData, initialMandatV3Data, LEGAL_CHECKBOXES } from '@/components/mandat-v3/types';
 import { logMandateEvent } from '@/components/mandat-v3/useMandateAudit';
@@ -36,6 +37,13 @@ export default function MandatV3() {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to top on step change
+  useEffect(() => {
+    containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step]);
 
   // Restore session from sessionStorage on mount
   useEffect(() => {
@@ -65,7 +73,6 @@ export default function MandatV3() {
     setFormData((prev) => ({ ...prev, ...partial }));
   };
 
-  // Call mandate-update-draft edge function
   const callUpdateDraft = async (action: string, data: Record<string, unknown>) => {
     const response = await fetch(getEdgeFunctionUrl('mandate-update-draft'), {
       method: 'POST',
@@ -79,46 +86,28 @@ export default function MandatV3() {
     return result;
   };
 
-  // Create mandate via edge function (step 1, first time)
   const createMandate = async () => {
     const response = await fetch(getEdgeFunctionUrl('mandate-create'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: formData.email,
-        prenom: formData.prenom,
-        nom: formData.nom,
-        telephone: formData.telephone,
-        date_naissance: formData.date_naissance,
-        nationalite: formData.nationalite,
-        adresse: formData.adresse,
-        npa: formData.npa,
-        ville: formData.ville,
-        type_permis: formData.type_permis,
-        etat_civil: formData.etat_civil,
-        profession: formData.profession,
-        employeur: formData.employeur,
-        revenus_mensuels: formData.revenus_mensuels,
-        nombre_enfants: formData.nombre_enfants,
-        animaux: formData.animaux,
+        email: formData.email, prenom: formData.prenom, nom: formData.nom,
+        telephone: formData.telephone, date_naissance: formData.date_naissance,
+        nationalite: formData.nationalite, adresse: formData.adresse,
+        npa: formData.npa, ville: formData.ville, type_permis: formData.type_permis,
+        etat_civil: formData.etat_civil, profession: formData.profession,
+        employeur: formData.employeur, revenus_mensuels: formData.revenus_mensuels,
+        nombre_enfants: formData.nombre_enfants, animaux: formData.animaux,
         notes_personnelles: formData.notes_personnelles,
-        type_recherche: formData.type_recherche,
-        type_bien: formData.type_bien,
-        zone_recherche: formData.zone_recherche,
-        pieces_min: formData.pieces_min,
-        budget_max: formData.budget_max,
-        date_entree_souhaitee: formData.date_entree_souhaitee,
+        type_recherche: formData.type_recherche, type_bien: formData.type_bien,
+        zone_recherche: formData.zone_recherche, pieces_min: formData.pieces_min,
+        budget_max: formData.budget_max, date_entree_souhaitee: formData.date_entree_souhaitee,
         criteres_obligatoires: formData.criteres_obligatoires,
         criteres_souhaites: formData.criteres_souhaites,
       }),
     });
-
     const result = await response.json();
-    if (!result.success) {
-      toast.error(result.error || 'Erreur lors de la création');
-      return null;
-    }
-
+    if (!result.success) { toast.error(result.error || 'Erreur lors de la création'); return null; }
     setMandateId(result.mandate_id);
     setAccessToken(result.access_token);
     saveSession(result.mandate_id, result.access_token);
@@ -126,64 +115,42 @@ export default function MandatV3() {
     return result.mandate_id;
   };
 
-  // Save identity (update existing)
   const saveIdentity = async () => {
     await callUpdateDraft('update_identity', {
-      email: formData.email,
-      prenom: formData.prenom,
-      nom: formData.nom,
-      telephone: formData.telephone,
-      date_naissance: formData.date_naissance,
-      nationalite: formData.nationalite,
-      adresse: formData.adresse,
-      npa: formData.npa,
-      ville: formData.ville,
-      type_permis: formData.type_permis,
-      etat_civil: formData.etat_civil,
-      profession: formData.profession,
-      employeur: formData.employeur,
-      revenus_mensuels: formData.revenus_mensuels,
-      nombre_enfants: formData.nombre_enfants,
-      animaux: formData.animaux,
+      email: formData.email, prenom: formData.prenom, nom: formData.nom,
+      telephone: formData.telephone, date_naissance: formData.date_naissance,
+      nationalite: formData.nationalite, adresse: formData.adresse,
+      npa: formData.npa, ville: formData.ville, type_permis: formData.type_permis,
+      etat_civil: formData.etat_civil, profession: formData.profession,
+      employeur: formData.employeur, revenus_mensuels: formData.revenus_mensuels,
+      nombre_enfants: formData.nombre_enfants, animaux: formData.animaux,
       notes_personnelles: formData.notes_personnelles,
     });
   };
 
-  // Save search criteria
   const saveSearch = async () => {
     await callUpdateDraft('update_search', {
-      type_recherche: formData.type_recherche,
-      type_bien: formData.type_bien,
-      zone_recherche: formData.zone_recherche,
-      pieces_min: formData.pieces_min,
-      budget_max: formData.budget_max,
-      date_entree_souhaitee: formData.date_entree_souhaitee,
+      type_recherche: formData.type_recherche, type_bien: formData.type_bien,
+      zone_recherche: formData.zone_recherche, pieces_min: formData.pieces_min,
+      budget_max: formData.budget_max, date_entree_souhaitee: formData.date_entree_souhaitee,
       criteres_obligatoires: formData.criteres_obligatoires,
       criteres_souhaites: formData.criteres_souhaites,
     });
   };
 
-  // Save related parties
   const saveRelatedParties = async () => {
     for (const party of formData.related_parties) {
       await callUpdateDraft('add_related_party', {
-        role: party.role,
-        prenom: party.prenom,
-        nom: party.nom,
-        email: party.email,
-        telephone: party.telephone,
-        date_naissance: party.date_naissance,
-        nationalite: party.nationalite,
-        type_permis: party.type_permis,
-        profession: party.profession,
-        employeur: party.employeur,
-        revenus_mensuels: party.revenus_mensuels,
+        role: party.role, prenom: party.prenom, nom: party.nom,
+        email: party.email, telephone: party.telephone,
+        date_naissance: party.date_naissance, nationalite: party.nationalite,
+        type_permis: party.type_permis, profession: party.profession,
+        employeur: party.employeur, revenus_mensuels: party.revenus_mensuels,
         lien_avec_mandant: party.lien_avec_mandant,
       });
     }
   };
 
-  // Save legal checkboxes
   const saveLegalCheckboxes = async () => {
     const legalData: Record<string, boolean> = {};
     LEGAL_CHECKBOXES.forEach((cb) => {
@@ -199,26 +166,12 @@ export default function MandatV3() {
           toast.error('Veuillez remplir les champs obligatoires');
           return;
         }
-        if (!mandateId) {
-          const mId = await createMandate();
-          if (!mId) return;
-        } else {
-          await saveIdentity();
-        }
+        if (!mandateId) { const mId = await createMandate(); if (!mId) return; }
+        else { await saveIdentity(); }
       }
-
-      if (step === 2 && mandateId) {
-        await saveSearch();
-      }
-
-      if (step === 3 && mandateId) {
-        await saveRelatedParties();
-      }
-
-      if (step === 6 && mandateId) {
-        await saveLegalCheckboxes();
-      }
-
+      if (step === 2 && mandateId) { await saveSearch(); }
+      if (step === 3 && mandateId) { await saveRelatedParties(); }
+      if (step === 6 && mandateId) { await saveLegalCheckboxes(); }
       setStep((s) => Math.min(s + 1, 7));
     } catch (err: any) {
       console.error('Step save error:', err);
@@ -228,29 +181,19 @@ export default function MandatV3() {
 
   const handleSubmitSignature = async () => {
     if (!mandateId || !accessToken || !formData.signature_data) return;
-
     setIsSubmitting(true);
     try {
-      // Save legal checkboxes first
       await saveLegalCheckboxes();
-
       const response = await fetch(getEdgeFunctionUrl('mandate-submit-signature'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          mandate_id: mandateId,
-          access_token: accessToken,
-          signature_data: formData.signature_data,
-          email: formData.email,
+          mandate_id: mandateId, access_token: accessToken,
+          signature_data: formData.signature_data, email: formData.email,
         }),
       });
-
       const result = await response.json();
-      if (!result.success) {
-        toast.error(result.error || 'Erreur lors de la signature');
-        return;
-      }
-
+      if (!result.success) { toast.error(result.error || 'Erreur lors de la signature'); return; }
       clearSession();
       setIsSubmitted(true);
       toast.success('Mandat signé avec succès !');
@@ -262,41 +205,75 @@ export default function MandatV3() {
     }
   };
 
+  const currentStepLabel = STEPS.find((s) => s.number === step)?.label || '';
+  const progressValue = ((step - 1) / (STEPS.length - 1)) * 100;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
-      <div className="max-w-3xl mx-auto px-4 py-8">
+    <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
+      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Mandat de recherche</h1>
-          <p className="text-muted-foreground mt-2">ImmoRésidence Sàrl</p>
+        <div className="text-center mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Mandat de recherche</h1>
+          <p className="text-muted-foreground mt-1 text-sm">ImmoRésidence Sàrl</p>
         </div>
 
-        {/* Stepper */}
+        {/* Mobile-friendly stepper */}
         {!isSubmitted && (
-          <div className="flex items-center justify-center gap-1 mb-8 overflow-x-auto pb-2">
-            {STEPS.map((s) => (
-              <div key={s.number} className="flex items-center">
-                <button
-                  onClick={() => s.number <= step && setStep(s.number)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                    s.number === step
-                      ? 'bg-primary text-primary-foreground'
-                      : s.number < step
-                      ? 'bg-primary/20 text-primary cursor-pointer'
-                      : 'bg-muted text-muted-foreground'
-                  }`}
-                >
-                  {s.number < step ? <Check className="h-3 w-3" /> : <span>{s.number}</span>}
-                  <span className="hidden sm:inline">{s.label}</span>
-                </button>
-                {s.number < 7 && <div className={`w-4 h-0.5 ${s.number < step ? 'bg-primary/40' : 'bg-muted'}`} />}
+          <div className="mb-6 sm:mb-8">
+            {/* Mobile: progress bar + step info */}
+            <div className="sm:hidden space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-medium text-foreground">
+                  Étape {step}/{STEPS.length}
+                </span>
+                <span className="text-muted-foreground">{currentStepLabel}</span>
               </div>
-            ))}
+              <Progress value={progressValue} className="h-2" />
+              {/* Step dots (minimal) */}
+              <div className="flex items-center justify-center gap-1.5">
+                {STEPS.map((s) => (
+                  <button
+                    key={s.number}
+                    onClick={() => s.number <= step && setStep(s.number)}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      s.number === step
+                        ? 'w-6 bg-primary'
+                        : s.number < step
+                        ? 'bg-primary/40 cursor-pointer'
+                        : 'bg-muted-foreground/20'
+                    }`}
+                    aria-label={`Étape ${s.number}: ${s.label}`}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Desktop: full stepper with labels */}
+            <div className="hidden sm:flex items-center justify-center gap-1 overflow-x-auto pb-2">
+              {STEPS.map((s) => (
+                <div key={s.number} className="flex items-center">
+                  <button
+                    onClick={() => s.number <= step && setStep(s.number)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      s.number === step
+                        ? 'bg-primary text-primary-foreground'
+                        : s.number < step
+                        ? 'bg-primary/20 text-primary cursor-pointer'
+                        : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {s.number < step ? <Check className="h-3 w-3" /> : <span>{s.number}</span>}
+                    <span>{s.label}</span>
+                  </button>
+                  {s.number < 7 && <div className={`w-4 h-0.5 ${s.number < step ? 'bg-primary/40' : 'bg-muted'}`} />}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
         {/* Step content */}
-        <div className="bg-card rounded-2xl border shadow-sm p-6 md:p-8">
+        <div className="bg-card rounded-2xl border shadow-sm p-4 sm:p-6 md:p-8">
           {step === 1 && <MandatV3Step1Identity data={formData} onChange={updateForm} />}
           {step === 2 && <MandatV3Step2Search data={formData} onChange={updateForm} />}
           {step === 3 && <MandatV3Step3RelatedParties data={formData} onChange={updateForm} />}
@@ -305,30 +282,27 @@ export default function MandatV3() {
           {step === 6 && <MandatV3Step6Legal data={formData} mandateId={mandateId} onChange={updateForm} />}
           {step === 7 && (
             <MandatV3Step7Signature
-              data={formData}
-              mandateId={mandateId}
-              onChange={updateForm}
+              data={formData} mandateId={mandateId} onChange={updateForm}
               onSubmitSignature={handleSubmitSignature}
-              isSubmitting={isSubmitting}
-              isSubmitted={isSubmitted}
+              isSubmitting={isSubmitting} isSubmitted={isSubmitted}
             />
           )}
         </div>
 
         {/* Navigation */}
         {!isSubmitted && (
-          <div className="flex justify-between mt-6">
+          <div className="flex justify-between mt-4 sm:mt-6 gap-3">
             <Button
               variant="outline"
               onClick={() => setStep((s) => Math.max(s - 1, 1))}
               disabled={step === 1}
-              className="gap-2"
+              className="gap-2 min-h-[48px] flex-1 sm:flex-none"
             >
-              <ArrowLeft className="h-4 w-4" /> Précédent
+              <ArrowLeft className="h-4 w-4" /> <span className="hidden xs:inline">Précédent</span>
             </Button>
             {step < 7 && (
-              <Button onClick={handleNext} className="gap-2">
-                Suivant <ArrowRight className="h-4 w-4" />
+              <Button onClick={handleNext} className="gap-2 min-h-[48px] flex-1 sm:flex-none">
+                <span className="hidden xs:inline">Suivant</span> <ArrowRight className="h-4 w-4" />
               </Button>
             )}
           </div>
