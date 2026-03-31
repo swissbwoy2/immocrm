@@ -531,6 +531,10 @@ const Clients = () => {
                 <Upload className="h-4 w-4 mr-1 md:mr-2" />
                 <span className="hidden sm:inline">Importer CSV</span>
               </Button>
+              <Button onClick={() => setInviteDialogOpen(true)} size="sm" variant="outline" className="border-primary/50 text-primary hover:bg-primary/10">
+                <UserPlus className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Inviter un client</span>
+              </Button>
             </div>
           }
         />
