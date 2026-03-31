@@ -467,6 +467,33 @@ export default function ClientDashboard() {
             </div>
           )}
 
+          {/* Alerte Période d'essai — client sans mandat signé */}
+          {client && !client.mandat_signature_data && !client.demande_mandat_id && (
+            <div className="mb-6 animate-fade-in">
+              <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 md:p-5">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-full bg-orange-500/20 shrink-0">
+                    <FileText className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-orange-600 dark:text-orange-400">⏳ Période d'essai</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Votre compte est en période d'essai. Pour l'activer officiellement et profiter de tous les services, complétez votre dossier.
+                    </p>
+                    <Button 
+                      size="sm" 
+                      className="mt-3"
+                      onClick={() => navigate('/mandat-v3')}
+                    >
+                      <FileCheck className="w-4 h-4 mr-2" />
+                      Compléter mon dossier
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Alerte documents manquants */}
           {profileActif !== false && (
             <div className="mb-6 animate-fade-in" style={{ animationDelay: '100ms' }}>

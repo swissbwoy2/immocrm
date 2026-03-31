@@ -79,6 +79,8 @@ interface InviteClientRequest {
   nom?: string;
   telephone?: string;
   demandeMandat?: DemandeMandat;
+  invitationLegere?: boolean;
+  typeRecherche?: string;
 }
 
 serve(async (req) => {
@@ -88,9 +90,9 @@ serve(async (req) => {
   }
 
   try {
-    const { email, clientId, prenom, nom, telephone, demandeMandat }: InviteClientRequest = await req.json();
+    const { email, clientId, prenom, nom, telephone, demandeMandat, invitationLegere, typeRecherche }: InviteClientRequest = await req.json();
 
-    console.log('Inviting client:', { email, clientId, prenom, nom, hasDemandeMandat: !!demandeMandat });
+    console.log('Inviting client:', { email, clientId, prenom, nom, hasDemandeMandat: !!demandeMandat, invitationLegere });
 
     // Initialize Supabase admin client
     const supabaseAdmin = createClient(
@@ -111,8 +113,8 @@ serve(async (req) => {
     console.log('Existing user:', existingUser ? { id: existingUser.id, email: existingUser.email } : null);
 
     // VALIDATION: Si c'est un nouvel utilisateur ET pas de demandeMandat ET pas de clientId existant
-    // → Refuser la création pour éviter les profils incomplets
-    if (!existingUser && !demandeMandat && !clientId) {
+    // → Refuser la création pour éviter les profils incomplets (sauf invitation légère)
+    if (!existingUser && !demandeMandat && !clientId && !invitationLegere) {
       console.log('Rejecting: New user without demandeMandat data');
       throw new Error('Données insuffisantes pour créer un nouveau client. Veuillez passer par le formulaire de mandat sur /nouveau-mandat.');
     }
@@ -233,13 +235,22 @@ serve(async (req) => {
     if (!existingClient) {
       console.log('Creating client record for user:', userId);
       
-      // Build client data from demande mandat
+      // Build client data — light invitation vs full mandate
       const clientData: any = {
         user_id: userId,
-        date_ajout: new Date().toISOString(),
-        statut: 'actif',
-        priorite: 'haute', // New clients from demande are high priority
       };
+
+      if (invitationLegere) {
+        // Invitation légère: statut en_attente, pas de date_ajout (barre à 0%)
+        clientData.statut = 'en_attente';
+        clientData.priorite = 'moyenne';
+        clientData.type_recherche = typeRecherche || 'Acheter';
+      } else {
+        // Full mandate: activation immédiate
+        clientData.date_ajout = new Date().toISOString();
+        clientData.statut = 'actif';
+        clientData.priorite = 'haute';
+      }
 
       // Transfer all data from demandeMandat if available
       if (demandeMandat) {

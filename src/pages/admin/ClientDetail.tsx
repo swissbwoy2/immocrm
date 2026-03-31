@@ -877,7 +877,40 @@ export default function ClientDetail() {
   return (
     <div className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-primary/5">
       <div className="p-4 md:p-8 space-y-6">
-        {/* Premium Header */}
+        {/* Trial / Activated banner */}
+        {(() => {
+          const hasSignature = !!client.mandat_signature_data;
+          const hasMandat = !!client.demande_mandat_id;
+          const isFullyActivated = hasSignature && hasMandat && client.statut === 'actif';
+          
+          if (isFullyActivated) {
+            return (
+              <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-4 flex items-center gap-3 animate-fade-in">
+                <div className="p-2 rounded-full bg-green-500/20">
+                  <CheckCircle2 className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-green-600 dark:text-green-400">✅ Compte officiellement activé</p>
+                  <p className="text-sm text-muted-foreground">Mandat signé, documents fournis.</p>
+                </div>
+              </div>
+            );
+          }
+          
+          return (
+            <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 flex items-start gap-3 animate-fade-in">
+              <div className="p-2 rounded-full bg-orange-500/20 shrink-0">
+                <Clock className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-orange-600 dark:text-orange-400">⏳ Période d'essai</p>
+                <p className="text-sm text-muted-foreground">
+                  Ce client est en période d'essai. Pour activer son compte, il doit remplir le mandat, signer et fournir ses documents.
+                </p>
+              </div>
+            </div>
+          );
+        })()}
         <div className="relative rounded-3xl bg-gradient-to-br from-card via-card to-primary/5 border border-border/50 p-6 overflow-hidden animate-fade-in">
           <FloatingParticles count={20} />
           

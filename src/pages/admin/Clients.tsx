@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Phone, MapPin, Calendar, Users, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield, UserX, ChevronRight, Sparkles, Filter, Home, Key, Wallet } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Mail, Phone, MapPin, Calendar, Users, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield, UserX, ChevronRight, Sparkles, Filter, Home, Key, Wallet, UserPlus, Loader2 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { useNavigate } from "react-router-dom";
@@ -97,6 +99,12 @@ const Clients = () => {
   const [offresToday, setOffresToday] = useState<Map<string, number>>(new Map());
   const [displayCount, setDisplayCount] = useState(50);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Light invite dialog state
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ prenom: '', nom: '', email: '', telephone: '', typeRecherche: 'Acheter' });
+  const [sendingInvite, setSendingInvite] = useState(false);
+
 
   useEffect(() => {
     loadData();
@@ -441,6 +449,37 @@ const Clients = () => {
     }
   };
 
+  const handleLightInvite = async () => {
+    if (!inviteForm.email || !inviteForm.prenom || !inviteForm.nom) {
+      toast({ title: 'Erreur', description: 'Prénom, nom et email sont requis', variant: 'destructive' });
+      return;
+    }
+    try {
+      setSendingInvite(true);
+      const { error } = await supabase.functions.invoke('invite-client', {
+        body: {
+          email: inviteForm.email,
+          prenom: inviteForm.prenom,
+          nom: inviteForm.nom,
+          telephone: inviteForm.telephone || null,
+          invitationLegere: true,
+          typeRecherche: inviteForm.typeRecherche,
+        }
+      });
+      if (error) throw error;
+      toast({ title: 'Invitation envoyée', description: `${inviteForm.prenom} ${inviteForm.nom} recevra un email d'invitation` });
+      setInviteDialogOpen(false);
+      setInviteForm({ prenom: '', nom: '', email: '', telephone: '', typeRecherche: 'Acheter' });
+      await loadData();
+    } catch (error: any) {
+      console.error('Error light invite:', error);
+      toast({ title: 'Erreur', description: error.message || "Impossible d'envoyer l'invitation", variant: 'destructive' });
+    } finally {
+      setSendingInvite(false);
+    }
+  };
+
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-screen">
@@ -491,6 +530,10 @@ const Clients = () => {
               <Button onClick={() => setShowImportDialog(true)} size="sm">
                 <Upload className="h-4 w-4 mr-1 md:mr-2" />
                 <span className="hidden sm:inline">Importer CSV</span>
+              </Button>
+              <Button onClick={() => setInviteDialogOpen(true)} size="sm" variant="outline" className="border-primary/50 text-primary hover:bg-primary/10">
+                <UserPlus className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Inviter un client</span>
               </Button>
             </div>
           }
@@ -969,6 +1012,27 @@ const Clients = () => {
                             ⏳ En attente
                           </Badge>
                         )}
+                        {/* Badge Période d'essai / Compte activé */}
+                        {(() => {
+                          const hasSignature = !!(client as any).mandat_signature_data;
+                          const hasMandat = !!(client as any).demande_mandat_id;
+                          const isFullyActivated = hasSignature && hasMandat && clientStatut === 'actif';
+                          if (isFullyActivated) {
+                            return (
+                              <Badge className="bg-green-500/20 text-green-600 border border-green-500/30 text-[10px]">
+                                ✅ Compte activé
+                              </Badge>
+                            );
+                          }
+                          if (!hasSignature || !hasMandat) {
+                            return (
+                              <Badge className="bg-orange-500/20 text-orange-600 border border-orange-500/30 text-[10px]">
+                                ⏳ Période d'essai
+                              </Badge>
+                            );
+                          }
+                          return null;
+                        })()}
                         {clientStatut === 'reloge' && (
                           <Badge className="bg-emerald-500/20 text-emerald-600 border border-emerald-500/30 text-[10px]">
                             ✅ Relogé
@@ -1217,6 +1281,61 @@ const Clients = () => {
           loadData();
         }}
       />
+
+      {/* Dialog invitation légère */}
+      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-primary" />
+              Inviter un client
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Le client recevra un email d'invitation pour créer son mot de passe. Son compte sera en <strong>période d'essai</strong> jusqu'à ce qu'il complète son dossier.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="invite-prenom">Prénom *</Label>
+                <Input id="invite-prenom" value={inviteForm.prenom} onChange={(e) => setInviteForm(f => ({ ...f, prenom: e.target.value }))} placeholder="Marie" />
+              </div>
+              <div>
+                <Label htmlFor="invite-nom">Nom *</Label>
+                <Input id="invite-nom" value={inviteForm.nom} onChange={(e) => setInviteForm(f => ({ ...f, nom: e.target.value }))} placeholder="Dupont" />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="invite-email">Email *</Label>
+              <Input id="invite-email" type="email" value={inviteForm.email} onChange={(e) => setInviteForm(f => ({ ...f, email: e.target.value }))} placeholder="marie@exemple.ch" />
+            </div>
+            <div>
+              <Label htmlFor="invite-tel">Téléphone</Label>
+              <Input id="invite-tel" value={inviteForm.telephone} onChange={(e) => setInviteForm(f => ({ ...f, telephone: e.target.value }))} placeholder="+41 79 000 00 00" />
+            </div>
+            <div>
+              <Label>Type de recherche</Label>
+              <div className="flex gap-2 mt-1">
+                <Button type="button" size="sm" variant={inviteForm.typeRecherche === 'Acheter' ? 'default' : 'outline'} onClick={() => setInviteForm(f => ({ ...f, typeRecherche: 'Acheter' }))} className="flex-1">
+                  <Home className="w-4 h-4 mr-1" /> Acheter
+                </Button>
+                <Button type="button" size="sm" variant={inviteForm.typeRecherche === 'Louer' ? 'default' : 'outline'} onClick={() => setInviteForm(f => ({ ...f, typeRecherche: 'Louer' }))} className="flex-1">
+                  <Key className="w-4 h-4 mr-1" /> Louer
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Annuler</Button>
+            </DialogClose>
+            <Button onClick={handleLightInvite} disabled={sendingInvite}>
+              {sendingInvite ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+              Envoyer l'invitation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
