@@ -449,6 +449,37 @@ const Clients = () => {
     }
   };
 
+  const handleLightInvite = async () => {
+    if (!inviteForm.email || !inviteForm.prenom || !inviteForm.nom) {
+      toast({ title: 'Erreur', description: 'Prénom, nom et email sont requis', variant: 'destructive' });
+      return;
+    }
+    try {
+      setSendingInvite(true);
+      const { error } = await supabase.functions.invoke('invite-client', {
+        body: {
+          email: inviteForm.email,
+          prenom: inviteForm.prenom,
+          nom: inviteForm.nom,
+          telephone: inviteForm.telephone || null,
+          invitationLegere: true,
+          typeRecherche: inviteForm.typeRecherche,
+        }
+      });
+      if (error) throw error;
+      toast({ title: 'Invitation envoyée', description: `${inviteForm.prenom} ${inviteForm.nom} recevra un email d'invitation` });
+      setInviteDialogOpen(false);
+      setInviteForm({ prenom: '', nom: '', email: '', telephone: '', typeRecherche: 'Acheter' });
+      await loadData();
+    } catch (error: any) {
+      console.error('Error light invite:', error);
+      toast({ title: 'Erreur', description: error.message || "Impossible d'envoyer l'invitation", variant: 'destructive' });
+    } finally {
+      setSendingInvite(false);
+    }
+  };
+
+
   if (loading) {
     return (
       <div className="flex-1 flex items-center justify-center min-h-screen">
