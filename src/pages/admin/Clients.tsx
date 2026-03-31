@@ -1281,6 +1281,61 @@ const Clients = () => {
           loadData();
         }}
       />
+
+      {/* Dialog invitation légère */}
+      <Dialog open={inviteDialogOpen} onOpenChange={setInviteDialogOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="w-5 h-5 text-primary" />
+              Inviter un client
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Le client recevra un email d'invitation pour créer son mot de passe. Son compte sera en <strong>période d'essai</strong> jusqu'à ce qu'il complète son dossier.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="invite-prenom">Prénom *</Label>
+                <Input id="invite-prenom" value={inviteForm.prenom} onChange={(e) => setInviteForm(f => ({ ...f, prenom: e.target.value }))} placeholder="Marie" />
+              </div>
+              <div>
+                <Label htmlFor="invite-nom">Nom *</Label>
+                <Input id="invite-nom" value={inviteForm.nom} onChange={(e) => setInviteForm(f => ({ ...f, nom: e.target.value }))} placeholder="Dupont" />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="invite-email">Email *</Label>
+              <Input id="invite-email" type="email" value={inviteForm.email} onChange={(e) => setInviteForm(f => ({ ...f, email: e.target.value }))} placeholder="marie@exemple.ch" />
+            </div>
+            <div>
+              <Label htmlFor="invite-tel">Téléphone</Label>
+              <Input id="invite-tel" value={inviteForm.telephone} onChange={(e) => setInviteForm(f => ({ ...f, telephone: e.target.value }))} placeholder="+41 79 000 00 00" />
+            </div>
+            <div>
+              <Label>Type de recherche</Label>
+              <div className="flex gap-2 mt-1">
+                <Button type="button" size="sm" variant={inviteForm.typeRecherche === 'Acheter' ? 'default' : 'outline'} onClick={() => setInviteForm(f => ({ ...f, typeRecherche: 'Acheter' }))} className="flex-1">
+                  <Home className="w-4 h-4 mr-1" /> Acheter
+                </Button>
+                <Button type="button" size="sm" variant={inviteForm.typeRecherche === 'Louer' ? 'default' : 'outline'} onClick={() => setInviteForm(f => ({ ...f, typeRecherche: 'Louer' }))} className="flex-1">
+                  <Key className="w-4 h-4 mr-1" /> Louer
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Annuler</Button>
+            </DialogClose>
+            <Button onClick={handleLightInvite} disabled={sendingInvite}>
+              {sendingInvite ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+              Envoyer l'invitation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
