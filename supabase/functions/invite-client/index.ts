@@ -79,6 +79,8 @@ interface InviteClientRequest {
   nom?: string;
   telephone?: string;
   demandeMandat?: DemandeMandat;
+  invitationLegere?: boolean;
+  typeRecherche?: string;
 }
 
 serve(async (req) => {
