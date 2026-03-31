@@ -235,13 +235,22 @@ serve(async (req) => {
     if (!existingClient) {
       console.log('Creating client record for user:', userId);
       
-      // Build client data from demande mandat
+      // Build client data — light invitation vs full mandate
       const clientData: any = {
         user_id: userId,
-        date_ajout: new Date().toISOString(),
-        statut: 'actif',
-        priorite: 'haute', // New clients from demande are high priority
       };
+
+      if (invitationLegere) {
+        // Invitation légère: statut en_attente, pas de date_ajout (barre à 0%)
+        clientData.statut = 'en_attente';
+        clientData.priorite = 'moyenne';
+        clientData.type_recherche = typeRecherche || 'Acheter';
+      } else {
+        // Full mandate: activation immédiate
+        clientData.date_ajout = new Date().toISOString();
+        clientData.statut = 'actif';
+        clientData.priorite = 'haute';
+      }
 
       // Transfer all data from demandeMandat if available
       if (demandeMandat) {
