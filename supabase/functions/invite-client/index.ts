@@ -113,8 +113,8 @@ serve(async (req) => {
     console.log('Existing user:', existingUser ? { id: existingUser.id, email: existingUser.email } : null);
 
     // VALIDATION: Si c'est un nouvel utilisateur ET pas de demandeMandat ET pas de clientId existant
-    // → Refuser la création pour éviter les profils incomplets
-    if (!existingUser && !demandeMandat && !clientId) {
+    // → Refuser la création pour éviter les profils incomplets (sauf invitation légère)
+    if (!existingUser && !demandeMandat && !clientId && !invitationLegere) {
       console.log('Rejecting: New user without demandeMandat data');
       throw new Error('Données insuffisantes pour créer un nouveau client. Veuillez passer par le formulaire de mandat sur /nouveau-mandat.');
     }
