@@ -1012,6 +1012,27 @@ const Clients = () => {
                             ⏳ En attente
                           </Badge>
                         )}
+                        {/* Badge Période d'essai / Compte activé */}
+                        {(() => {
+                          const hasSignature = !!(client as any).mandat_signature_data;
+                          const hasMandat = !!(client as any).demande_mandat_id;
+                          const isFullyActivated = hasSignature && hasMandat && clientStatut === 'actif';
+                          if (isFullyActivated) {
+                            return (
+                              <Badge className="bg-green-500/20 text-green-600 border border-green-500/30 text-[10px]">
+                                ✅ Compte activé
+                              </Badge>
+                            );
+                          }
+                          if (!hasSignature || !hasMandat) {
+                            return (
+                              <Badge className="bg-orange-500/20 text-orange-600 border border-orange-500/30 text-[10px]">
+                                ⏳ Période d'essai
+                              </Badge>
+                            );
+                          }
+                          return null;
+                        })()}
                         {clientStatut === 'reloge' && (
                           <Badge className="bg-emerald-500/20 text-emerald-600 border border-emerald-500/30 text-[10px]">
                             ✅ Relogé
