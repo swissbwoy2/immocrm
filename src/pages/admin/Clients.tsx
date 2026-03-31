@@ -100,6 +100,12 @@ const Clients = () => {
   const [displayCount, setDisplayCount] = useState(50);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+  // Light invite dialog state
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteForm, setInviteForm] = useState({ prenom: '', nom: '', email: '', telephone: '', typeRecherche: 'Acheter' });
+  const [sendingInvite, setSendingInvite] = useState(false);
+
+
   useEffect(() => {
     loadData();
   }, []);
