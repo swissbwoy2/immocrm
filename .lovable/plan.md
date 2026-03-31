@@ -1,33 +1,52 @@
 
 
-## Ne pas charger la barre tant que le client n'est pas activé
+## Invitation légère avec mention "Période d'essai" / "Compte activé"
 
-### Problème
-Actuellement, la barre de progression utilise `date_ajout || created_at` pour tous les clients, même ceux qui n'ont pas encore été activés par l'admin. Résultat : des clients en attente d'activation voient leur compteur J+ tourner depuis leur création dans le système.
+### Concept
+- Un client invité par email (sans mandat signé) a un **compte gratuit / période d'essai**
+- Son profil affiche clairement **"⏳ Période d'essai"** tant qu'il n'a pas signé le mandat + uploadé ses documents
+- Une fois le processus complet (signature + documents), le compte passe en **"✅ Compte activé"** et suit le flux normal (barre de progression, J+, etc.)
 
-### Logique métier
-- `invite-client` (activation admin) définit `date_ajout = now()` et `statut = 'actif'`
-- Tant que le client n'a pas `statut = 'actif'` (ou un statut post-activation comme `reloge`, `stoppe`, `suspendu`), la barre ne doit pas progresser
+### Détection automatique de l'état
+Le système détermine l'état en vérifiant sur la fiche client :
+- `mandat_signature_data` existe → contrat signé
+- `demande_mandat_id` existe → mandat rempli
+- Documents uploadés dans la table `documents`
+- Si tout est présent + statut `actif` → **Compte activé**
+- Sinon → **Période d'essai**
 
 ### Modifications
 
-#### 1. `src/pages/admin/Clients.tsx`
-- Avant de calculer `daysElapsed`, vérifier si le client a un statut activé (`actif`, `reloge`, `stoppe`, `suspendu`)
-- Si le statut est `en_attente` ou null/undefined (pas encore activé) :
-  - Afficher la barre à 0% avec un badge "⏳ En attente d'activation"
-  - Ne pas afficher de compteur J+
-- Sinon : comportement actuel (calcul depuis `date_ajout`)
+#### 1. `supabase/functions/invite-client/index.ts`
+- Ajouter paramètre `invitationLegere: boolean` au body
+- Si `invitationLegere === true` : autoriser la création sans `demandeMandat`
+- Créer profil minimal + rôle `client` + fiche client avec `type_recherche` fourni et `statut = 'en_attente'`
+- Pas de `date_ajout` → la barre reste à 0%
 
-#### 2. `src/pages/admin/ClientDetail.tsx`
-- Même logique : si client non activé, afficher "En attente d'activation" au lieu de la barre de progression
-- Masquer les boutons Suspendre/Stopper pour les clients non activés (pas pertinent)
+#### 2. `src/pages/admin/Clients.tsx`
+- Ajouter bouton **"➕ Inviter un client"** avec Dialog (Prénom, Nom, Email, Téléphone, Type recherche)
+- Appel `invite-client` avec `invitationLegere: true`
+- Dans la liste : afficher un badge **"Période d'essai"** (orange) pour les clients sans `mandat_signature_data` ni `demande_mandat_id`, et **"Compte activé"** (vert) pour ceux qui ont complété le processus
 
-#### 3. `src/pages/admin/Mandats.tsx`
-- Même vérification : exclure les clients non activés des compteurs "Nouveaux", "Critiques", "Expirés"
+#### 3. `src/pages/admin/ClientDetail.tsx`
+- En haut du profil : bannière visible indiquant l'état du compte :
+  - **Période d'essai** (orange) : "Ce client est en période d'essai. Pour activer son compte, il doit remplir le mandat, signer et fournir ses documents."
+  - **Compte activé** (vert) : "Compte officiellement activé — mandat signé, documents fournis."
+- La logique : `isFullyActivated = client.mandat_signature_data && client.demande_mandat_id && client.statut === 'actif'`
 
-#### 4. `src/pages/admin/Dashboard.tsx`
-- Ne compter que les clients avec `statut` activé dans les KPIs (clients actifs, critiques, expirés)
+#### 4. Espace client (côté client connecté)
+- Le client en période d'essai voit un message l'invitant à compléter son dossier avec un lien vers `/mandat-v3` pour remplir le formulaire complet
+- Une fois activé, accès normal à son tableau de bord
 
 ### Aucune migration nécessaire
-Le champ `statut` existe déjà. Il suffit de conditionner l'affichage de la barre au statut du client.
+Les champs `mandat_signature_data`, `demande_mandat_id` et `statut` existent déjà. On utilise leur combinaison pour déterminer l'état du compte.
+
+### Fichiers modifiés
+
+| Fichier | Changement |
+|---|---|
+| `supabase/functions/invite-client/index.ts` | Accepter `invitationLegere` pour bypass validation |
+| `src/pages/admin/Clients.tsx` | Dialog "Inviter un client" + badge Période d'essai / Activé |
+| `src/pages/admin/ClientDetail.tsx` | Bannière état du compte (essai vs activé) |
+| Espace client (page dashboard client) | Message d'invitation à compléter le dossier |
 
