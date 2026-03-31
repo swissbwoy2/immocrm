@@ -90,9 +90,9 @@ serve(async (req) => {
   }
 
   try {
-    const { email, clientId, prenom, nom, telephone, demandeMandat }: InviteClientRequest = await req.json();
+    const { email, clientId, prenom, nom, telephone, demandeMandat, invitationLegere, typeRecherche }: InviteClientRequest = await req.json();
 
-    console.log('Inviting client:', { email, clientId, prenom, nom, hasDemandeMandat: !!demandeMandat });
+    console.log('Inviting client:', { email, clientId, prenom, nom, hasDemandeMandat: !!demandeMandat, invitationLegere });
 
     // Initialize Supabase admin client
     const supabaseAdmin = createClient(
