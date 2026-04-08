@@ -1,64 +1,45 @@
 
-Objectif
+Diagnostic
+- Pour Ramadan Zumeraj, les 5 lignes `documents` existent toujours, mais `taille` est encore vide.
+- Les 5 fichiers existent réellement dans le stockage et ce sont des `image/jpeg` d’environ 2.6 MB, donc ils ne sont ni supprimés ni à 0 KB.
+- L’aperçu “image sur fond noir” montre simplement le vrai fichier stocké : ce sont des photos JPEG, pas des PDFs reconstruits.
+- Le correctif précédent n’a donc pas réparé ce client pour deux raisons :
+  1. `supabase/functions/backfill-document-sizes/index.ts` ne traite que 20 documents par appel.
+  2. `src/pages/admin/ClientDetail.tsx` affiche encore `0 B` quand la taille est absente.
 
-Corriger le faux problème “les documents se suppriment quand j’assigne un client à Carina”.
+Plan de correction
+1. Réparer réellement les anciens documents
+- Refaire `backfill-document-sizes` pour traiter tous les documents par lots, ou permettre un mode ciblé par client.
+- Renseigner la vraie taille à partir des métadonnées du fichier dans le stockage.
+- Ajouter un ciblage direct du client courant pour réparer immédiatement les cas comme Ramadan.
 
-Constat sur l’exemple Ramadan Zumeraj
+2. Corriger l’affichage trompeur
+- Remplacer la logique locale de taille dans `src/pages/admin/ClientDetail.tsx` par le helper partagé, pour ne plus afficher `0 B` quand la taille manque.
+- Aligner aussi `src/pages/admin/Documents.tsx`, `src/pages/agent/Documents.tsx` et `src/pages/client/Documents.tsx` pour un comportement unique.
 
-- Les 5 documents existent encore : la liste `documents` renvoie bien 5 lignes avec des URLs valides.
-- Le symptôme visible est `taille = null`, donc l’interface affiche `0 B`.
-- Le code d’assignation (`src/pages/admin/Assignations.tsx`) ne modifie ni le stockage ni la table `documents`.
-- La vraie source est le transfert depuis le mandat : dans `supabase/functions/invite-client/index.ts`, les documents sont insérés sans renseigner `taille`.
-- En plus, l’ancien formulaire mandat (`src/components/mandat/MandatFormStep6.tsx`) ne stocke pas la taille dans `documents_uploades`, donc le backend ne peut pas la recopier.
+3. Rendre le type de fichier explicite
+- Afficher clairement si un document est une photo (`JPEG/PNG`) ou un PDF.
+- Ajuster l’aperçu image avec un fond clair et une présentation plus neutre, pour éviter l’impression de “fichier cassé” quand le document stocké est en réalité une photo.
 
-Conclusion
+4. Gérer les vrais mauvais documents
+- Ajouter une action simple “Remplacer le document” sur les anciens dossiers.
+- Point important : si le fichier stocké est réellement une photo sombre ou un mauvais upload, on peut corriger les métadonnées et l’affichage, mais on ne peut pas recréer automatiquement un PDF propre qui n’a jamais été uploadé.
 
-Ce n’est pas la réassignation qui supprime les fichiers. Elle coïncide avec un affichage trompeur : fichiers présents, taille absente, rendu à `0 B`.
-
-Plan d’implémentation
-
-1. Enregistrer la taille dès l’upload du mandat classique
-- Étendre `DocumentData` dans `src/components/mandat/types.ts` avec `size?: number`
-- Dans `src/components/mandat/MandatFormStep6.tsx`, stocker `file.size` avec `name / url / type`
-- Laisser `src/pages/NouveauMandat.tsx` transmettre ce champ dans `documents_uploades`
-
-2. Corriger le transfert vers la table `documents`
-- Dans `supabase/functions/invite-client/index.ts`, insérer `taille: doc.size ?? doc.file_size ?? null`
-- Garder la compatibilité avec les anciens mandats qui n’ont pas encore cette donnée
-
-3. Corriger l’affichage trompeur `0 B`
-- Dans `src/pages/admin/ClientDetail.tsx`, `src/pages/admin/Documents.tsx`, `src/pages/agent/Documents.tsx` et `src/pages/client/Documents.tsx`, ne plus afficher `0 B` quand `taille` est `null`
-- Afficher soit rien, soit `Taille non disponible`
-
-4. Réparer les anciens dossiers déjà créés
-- Ajouter une routine backend admin pour recalculer `documents.taille` des anciennes lignes à partir des métadonnées réelles du fichier dans le bucket
-- Cibler en priorité les documents venant du dossier `mandat/`, comme dans l’exemple Ramadan Zumeraj
-
-5. Vérification
-- Tester Ramadan Zumeraj avant/après réassignation à Carina
-- Vérifier que le nombre de documents reste identique
-- Vérifier que la prévisualisation et le téléchargement fonctionnent
-- Vérifier que l’interface n’affiche plus `0 B` par erreur, ou affiche la vraie taille après réparation
+5. Vérification finale
+- Tester Ramadan Zumeraj en priorité.
+- Confirmer que :
+  - les 5 tailles remontent correctement,
+  - le `0 B` disparaît,
+  - l’aperçu indique bien “photo” ou “PDF”,
+  - un remplacement de document fonctionne de bout en bout.
 
 Détails techniques
-
-Fichiers principaux :
-- `supabase/functions/invite-client/index.ts`
-- `src/components/mandat/types.ts`
-- `src/components/mandat/MandatFormStep6.tsx`
-- `src/pages/NouveauMandat.tsx`
-- `src/pages/admin/ClientDetail.tsx`
-- `src/pages/admin/Documents.tsx`
-- `src/pages/agent/Documents.tsx`
-- `src/pages/client/Documents.tsx`
-
-Note importante :
-- Je ne toucherais pas au flux d’assignation dans ce correctif
-- Je ne changerais pas non plus les règles d’accès du stockage en première passe, car l’exemple montre un problème de métadonnées d’affichage, pas une suppression réelle de fichier
-
-Impact attendu
-
-- Plus de faux signal “document supprimé”
-- Les nouveaux documents auront la bonne taille
-- Les anciens documents pourront être réparés
-- L’assignation à Carina ne sera plus perçue comme la cause
+- Fichiers à modifier :
+  - `supabase/functions/backfill-document-sizes/index.ts`
+  - `src/pages/admin/ClientDetail.tsx`
+  - `src/pages/admin/Documents.tsx`
+  - `src/pages/agent/Documents.tsx`
+  - `src/pages/client/Documents.tsx`
+  - éventuellement `src/lib/documentUtils.ts` pour centraliser formatage + libellé de type
+- Aucune migration SQL n’est nécessaire.
+- Le flux d’assignation à Carina n’est toujours pas la cause : le problème restant est un mélange de métadonnées non réparées et de fichiers historiques qui sont réellement des images.
