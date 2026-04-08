@@ -23,7 +23,7 @@ serve(async (req) => {
       .from('documents')
       .select('id, url, nom')
       .is('taille', null)
-      .limit(100);
+      .limit(20);
 
     if (fetchError) throw fetchError;
     if (!docs || docs.length === 0) {
