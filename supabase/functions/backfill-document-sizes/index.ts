@@ -18,70 +18,104 @@ serve(async (req) => {
       { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Get documents with null taille
-    const { data: docs, error: fetchError } = await supabaseAdmin
-      .from('documents')
-      .select('id, url, nom')
-      .is('taille', null)
-      .limit(20);
+    // Optional: target a specific client
+    let clientId: string | null = null;
+    try {
+      const body = await req.json();
+      clientId = body?.client_id || null;
+    } catch { /* no body */ }
 
-    if (fetchError) throw fetchError;
-    if (!docs || docs.length === 0) {
-      return new Response(JSON.stringify({ success: true, message: 'No documents to backfill', updated: 0 }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    let updated = 0;
+    // Process in batches of 50
+    const batchSize = 50;
+    let totalUpdated = 0;
+    let totalProcessed = 0;
     const errors: string[] = [];
+    let hasMore = true;
 
-    for (const doc of docs) {
-      if (!doc.url || doc.url.startsWith('data:')) continue;
+    while (hasMore) {
+      let query = supabaseAdmin
+        .from('documents')
+        .select('id, url, nom')
+        .is('taille', null)
+        .limit(batchSize);
 
-      try {
-        // Extract relative path
-        let filePath = doc.url;
-        if (filePath.includes('/client-documents/')) {
-          filePath = filePath.split('/client-documents/')[1];
-        } else if (filePath.includes('/storage/v1/object/')) {
-          const match = filePath.match(/\/storage\/v1\/object\/(?:public|sign)\/([^?]+)/);
-          if (match) filePath = match[1];
-        }
+      if (clientId) {
+        query = query.eq('client_id', clientId);
+      }
 
-        // Try to download to get size
-        const { data: fileData, error: dlError } = await supabaseAdmin.storage
-          .from('client-documents')
-          .download(filePath);
+      const { data: docs, error: fetchError } = await query;
+      if (fetchError) throw fetchError;
+      if (!docs || docs.length === 0) {
+        hasMore = false;
+        break;
+      }
 
-        if (dlError) {
-          // Try mandates-private bucket
-          const { data: fileData2, error: dlError2 } = await supabaseAdmin.storage
-            .from('mandates-private')
-            .download(filePath);
+      totalProcessed += docs.length;
 
-          if (dlError2) {
-            errors.push(`${doc.nom}: file not found in storage`);
-            continue;
-          }
-          
-          const size = fileData2.size;
-          await supabaseAdmin.from('documents').update({ taille: size }).eq('id', doc.id);
-          updated++;
+      for (const doc of docs) {
+        if (!doc.url || doc.url.startsWith('data:')) {
+          // Mark data URLs with 0 so they don't loop
+          await supabaseAdmin.from('documents').update({ taille: 0 }).eq('id', doc.id);
           continue;
         }
 
-        const size = fileData.size;
-        await supabaseAdmin.from('documents').update({ taille: size }).eq('id', doc.id);
-        updated++;
-      } catch (e) {
-        errors.push(`${doc.nom}: ${e.message}`);
+        try {
+          let filePath = doc.url;
+          if (filePath.includes('/client-documents/')) {
+            filePath = filePath.split('/client-documents/')[1];
+          } else if (filePath.includes('/storage/v1/object/')) {
+            const match = filePath.match(/\/storage\/v1\/object\/(?:public|sign)\/([^?]+)/);
+            if (match) filePath = match[1];
+          }
+
+          // Remove query params
+          filePath = filePath.split('?')[0];
+
+          // Try to decode URI
+          try { filePath = decodeURIComponent(filePath); } catch {}
+
+          const buckets = ['client-documents', 'mandates-private'];
+          let downloaded = false;
+
+          for (const bucket of buckets) {
+            const cleanPath = filePath.startsWith(`${bucket}/`) 
+              ? filePath.replace(`${bucket}/`, '') 
+              : filePath;
+
+            const { data: fileData, error: dlError } = await supabaseAdmin.storage
+              .from(bucket)
+              .download(cleanPath);
+
+            if (!dlError && fileData) {
+              const size = fileData.size;
+              await supabaseAdmin.from('documents').update({ taille: size }).eq('id', doc.id);
+              totalUpdated++;
+              downloaded = true;
+              break;
+            }
+          }
+
+          if (!downloaded) {
+            // Mark as 0 to prevent infinite loop on missing files
+            await supabaseAdmin.from('documents').update({ taille: 0 }).eq('id', doc.id);
+            errors.push(`${doc.nom}: file not found in any bucket`);
+          }
+        } catch (e) {
+          await supabaseAdmin.from('documents').update({ taille: 0 }).eq('id', doc.id);
+          errors.push(`${doc.nom}: ${e.message}`);
+        }
+      }
+
+      // If we got fewer than batchSize, we're done
+      if (docs.length < batchSize) {
+        hasMore = false;
       }
     }
 
     return new Response(JSON.stringify({ 
       success: true, 
-      total: docs.length,
-      updated, 
+      total_processed: totalProcessed,
+      updated: totalUpdated, 
       errors: errors.length > 0 ? errors : undefined 
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
