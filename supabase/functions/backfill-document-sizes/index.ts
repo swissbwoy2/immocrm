@@ -53,7 +53,11 @@ serve(async (req) => {
       totalProcessed += docs.length;
 
       for (const doc of docs) {
-        if (!doc.url || doc.url.startsWith('data:')) continue;
+        if (!doc.url || doc.url.startsWith('data:')) {
+          // Mark data URLs with 0 so they don't loop
+          await supabaseAdmin.from('documents').update({ taille: 0 }).eq('id', doc.id);
+          continue;
+        }
 
         try {
           let filePath = doc.url;
@@ -67,7 +71,9 @@ serve(async (req) => {
           // Remove query params
           filePath = filePath.split('?')[0];
 
-          // Remove bucket prefix if present
+          // Try to decode URI
+          try { filePath = decodeURIComponent(filePath); } catch {}
+
           const buckets = ['client-documents', 'mandates-private'];
           let downloaded = false;
 
@@ -90,9 +96,12 @@ serve(async (req) => {
           }
 
           if (!downloaded) {
+            // Mark as 0 to prevent infinite loop on missing files
+            await supabaseAdmin.from('documents').update({ taille: 0 }).eq('id', doc.id);
             errors.push(`${doc.nom}: file not found in any bucket`);
           }
         } catch (e) {
+          await supabaseAdmin.from('documents').update({ taille: 0 }).eq('id', doc.id);
           errors.push(`${doc.nom}: ${e.message}`);
         }
       }
