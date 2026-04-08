@@ -2610,7 +2610,7 @@ export default function ClientDetail() {
                               <Badge variant="outline" className="text-xs bg-card/50">
                                 {getDocTypeLabel(doc.type_document)}
                               </Badge>
-                              <span>{formatFileSize(doc.taille)}</span>
+                              {doc.taille ? <span>{formatFileSize(doc.taille)}</span> : null}
                               <span>•</span>
                               <span>{new Date(doc.date_upload).toLocaleDateString('fr-CH')}</span>
                             </div>
