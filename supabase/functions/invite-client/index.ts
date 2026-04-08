@@ -454,6 +454,7 @@ serve(async (req) => {
             url: doc.url,
             type: mimeType,
             type_document: mappedType,
+            taille: doc.size ?? doc.file_size ?? null,
             statut: 'validé',
           });
 

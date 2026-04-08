@@ -93,6 +93,7 @@ export interface DocumentData {
   name: string;
   url: string;
   type: string;
+  size?: number;
 }
 
 export const NATIONALITES = [
