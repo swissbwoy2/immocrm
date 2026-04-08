@@ -64,6 +64,7 @@ export default function MandatFormStep6({ data, onChange }: Props) {
         name: file.name,
         url: urlData.publicUrl,
         type: currentDocKey,
+        size: file.size,
       };
 
       const updatedDocs = data.documents_uploades.filter(d => d.type !== currentDocKey);

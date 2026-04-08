@@ -324,10 +324,12 @@ export default function AdminDocuments() {
                               })}
                             </span>
                           </div>
+                          {doc.taille && (
                           <div className="flex items-center gap-2">
                             <File className="h-3 w-3" />
                             <span>{formatFileSize(doc.taille)}</span>
                           </div>
+                          )}
                         </div>
                         
                         <div className="flex gap-2">
