@@ -669,9 +669,11 @@ export default function Documents() {
                           <CardTitle className="text-sm truncate group-hover:text-primary transition-colors" title={doc.nom}>
                             {doc.nom}
                           </CardTitle>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {formatFileSize(doc.taille)}
-                          </p>
+                          {doc.taille ? (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {formatFileSize(doc.taille)}
+                            </p>
+                          ) : null}
                         </div>
                       </div>
                     </div>
