@@ -152,3 +152,6 @@ verify_jwt = false
 
 [functions.ai-relocation-webhook]
 verify_jwt = false
+
+[functions.send-document-update-reminders]
+verify_jwt = false
