@@ -1072,6 +1072,18 @@ const Clients = () => {
                             ⏸️ Suspendu
                           </Badge>
                         )}
+                        {/* Badge dossier mensuel */}
+                        {isActivated && !isFrozen && (
+                          docConfirmations.has(client.id) ? (
+                            <Badge className="bg-green-500/20 text-green-600 border border-green-500/30 text-[10px]">
+                              📋 Dossier à jour
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px]">
+                              📋 Non confirmé
+                            </Badge>
+                          )
+                        )}
                         {isSolvable ? (
                           <Badge className="bg-green-500/20 text-green-600 border border-green-500/30 text-[10px] shadow-[0_0_10px_rgba(34,197,94,0.2)]">
                             <CheckCircle className="w-3 h-3 mr-0.5" />
