@@ -3514,6 +3514,50 @@ export type Database = {
           },
         ]
       }
+      document_update_confirmations: {
+        Row: {
+          client_id: string
+          confirmed_at: string | null
+          created_at: string
+          fiches_salaire_ok: boolean
+          id: string
+          month_year: string
+          permis_ok: boolean
+          poursuites_ok: boolean
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          confirmed_at?: string | null
+          created_at?: string
+          fiches_salaire_ok?: boolean
+          id?: string
+          month_year: string
+          permis_ok?: boolean
+          poursuites_ok?: boolean
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          confirmed_at?: string | null
+          created_at?: string
+          fiches_salaire_ok?: boolean
+          id?: string
+          month_year?: string
+          permis_ok?: boolean
+          poursuites_ok?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_update_confirmations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           candidate_id: string | null
