@@ -1,45 +1,59 @@
 
-Diagnostic
-- Pour Ramadan Zumeraj, les 5 lignes `documents` existent toujours, mais `taille` est encore vide.
-- Les 5 fichiers existent réellement dans le stockage et ce sont des `image/jpeg` d’environ 2.6 MB, donc ils ne sont ni supprimés ni à 0 KB.
-- L’aperçu “image sur fond noir” montre simplement le vrai fichier stocké : ce sont des photos JPEG, pas des PDFs reconstruits.
-- Le correctif précédent n’a donc pas réparé ce client pour deux raisons :
-  1. `supabase/functions/backfill-document-sizes/index.ts` ne traite que 20 documents par appel.
-  2. `src/pages/admin/ClientDetail.tsx` affiche encore `0 B` quand la taille est absente.
 
-Plan de correction
-1. Réparer réellement les anciens documents
-- Refaire `backfill-document-sizes` pour traiter tous les documents par lots, ou permettre un mode ciblé par client.
-- Renseigner la vraie taille à partir des métadonnées du fichier dans le stockage.
-- Ajouter un ciblage direct du client courant pour réparer immédiatement les cas comme Ramadan.
+## Rappel automatique mensuel "Mettez à jour votre dossier"
 
-2. Corriger l’affichage trompeur
-- Remplacer la logique locale de taille dans `src/pages/admin/ClientDetail.tsx` par le helper partagé, pour ne plus afficher `0 B` quand la taille manque.
-- Aligner aussi `src/pages/admin/Documents.tsx`, `src/pages/agent/Documents.tsx` et `src/pages/client/Documents.tsx` pour un comportement unique.
+### Concept
+Entre le **25 et le 5** de chaque mois, tous les clients actifs voient une bannière/alerte sur leur Dashboard et leur page Documents les invitant à vérifier et confirmer la validité de leurs documents :
+- 3 dernières fiches de salaire
+- Extrait de poursuites (validité min. 2-3 mois)
+- Permis de séjour (validité)
 
-3. Rendre le type de fichier explicite
-- Afficher clairement si un document est une photo (`JPEG/PNG`) ou un PDF.
-- Ajuster l’aperçu image avec un fond clair et une présentation plus neutre, pour éviter l’impression de “fichier cassé” quand le document stocké est en réalité une photo.
+Avec des **boutons de confirmation** pour chaque catégorie.
 
-4. Gérer les vrais mauvais documents
-- Ajouter une action simple “Remplacer le document” sur les anciens dossiers.
-- Point important : si le fichier stocké est réellement une photo sombre ou un mauvais upload, on peut corriger les métadonnées et l’affichage, mais on ne peut pas recréer automatiquement un PDF propre qui n’a jamais été uploadé.
+### Composants
 
-5. Vérification finale
-- Tester Ramadan Zumeraj en priorité.
-- Confirmer que :
-  - les 5 tailles remontent correctement,
-  - le `0 B` disparaît,
-  - l’aperçu indique bien “photo” ou “PDF”,
-  - un remplacement de document fonctionne de bout en bout.
+#### 1. Nouveau composant `DocumentUpdateReminder.tsx`
+- Vérifie si la date du jour est entre le 25 et le 5 (inclus)
+- Affiche une alerte orange/ambre avec 3 sections :
+  - **Fiches de salaire** → bouton "✅ Fiches de salaire à jour"
+  - **Extrait de poursuites** → bouton "✅ Poursuites valides" 
+  - **Permis de séjour** → bouton "✅ Permis valide"
+- Chaque confirmation est stockée en base (table `document_update_confirmations`) avec le mois concerné
+- Une fois les 3 confirmés pour le mois en cours, la bannière passe en vert "Dossier à jour ✅"
 
-Détails techniques
-- Fichiers à modifier :
-  - `supabase/functions/backfill-document-sizes/index.ts`
-  - `src/pages/admin/ClientDetail.tsx`
-  - `src/pages/admin/Documents.tsx`
-  - `src/pages/agent/Documents.tsx`
-  - `src/pages/client/Documents.tsx`
-  - éventuellement `src/lib/documentUtils.ts` pour centraliser formatage + libellé de type
-- Aucune migration SQL n’est nécessaire.
-- Le flux d’assignation à Carina n’est toujours pas la cause : le problème restant est un mélange de métadonnées non réparées et de fichiers historiques qui sont réellement des images.
+#### 2. Nouvelle table `document_update_confirmations`
+- `id`, `client_id`, `month_year` (ex: "2026-04"), `fiches_salaire_ok` (bool), `poursuites_ok` (bool), `permis_ok` (bool), `confirmed_at` (timestamp)
+- RLS : le client ne peut voir/modifier que ses propres confirmations
+- Permet à l'admin de voir qui a confirmé et qui ne l'a pas fait
+
+#### 3. Edge Function `send-document-update-reminders`
+- Cron job exécuté le 25 de chaque mois
+- Envoie une notification in-app + email à tous les clients actifs
+- Message : "Mettez à jour votre dossier : vérifiez vos fiches de salaire, poursuites et permis"
+- Lien vers `/client/documents`
+
+#### 4. Intégration Dashboard client
+- Le composant `DocumentUpdateReminder` s'affiche en haut du Dashboard entre le 25 et le 5
+- Également visible sur la page Documents du client
+
+#### 5. Vue admin — suivi des confirmations
+- Dans la page Clients admin, badge ou indicateur montrant quels clients ont confirmé la mise à jour du mois en cours
+- Filtre possible "Dossier non confirmé"
+
+### Fichiers
+
+| Fichier | Action |
+|---|---|
+| `src/components/DocumentUpdateReminder.tsx` | Créer — bannière avec boutons de confirmation |
+| `src/pages/client/Dashboard.tsx` | Modifier — intégrer la bannière |
+| `src/pages/client/Documents.tsx` | Modifier — intégrer la bannière |
+| `supabase/functions/send-document-update-reminders/index.ts` | Créer — cron notification mensuelle |
+| `src/pages/admin/Clients.tsx` | Modifier — indicateur de confirmation dossier |
+| Migration SQL | Créer table `document_update_confirmations` + RLS |
+
+### Détails techniques
+- Détection de la période : `const day = new Date().getDate(); const isUpdatePeriod = day >= 25 || day <= 5;`
+- Le `month_year` est calculé comme le mois "cible" : si jour >= 25, c'est le mois suivant ; si jour <= 5, c'est le mois en cours
+- Cron job planifié via `pg_cron` le 25 à 8h (Europe/Zurich)
+- Les confirmations sont par mois : le client doit reconfirmer chaque mois
+
