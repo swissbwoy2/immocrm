@@ -33,6 +33,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getStoragePath } from '@/lib/documentUtils';
+import { DocumentUpdateReminder } from '@/components/DocumentUpdateReminder';
 
 interface DocumentRequest {
   id: string;
@@ -514,6 +515,9 @@ export default function Documents() {
   return (
     <div className="flex-1 overflow-y-auto">
       <div className="p-4 md:p-8 space-y-6">
+        {/* Rappel mise à jour mensuelle */}
+        <DocumentUpdateReminder />
+
         {/* Header animé avec glassmorphism */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 p-6 md:p-8">
           {/* Effets de fond */}
