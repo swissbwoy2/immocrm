@@ -97,6 +97,7 @@ const Clients = () => {
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
   const [invitingClientId, setInvitingClientId] = useState<string | null>(null);
   const [offresToday, setOffresToday] = useState<Map<string, number>>(new Map());
+  const [docConfirmations, setDocConfirmations] = useState<Set<string>>(new Set());
   const [displayCount, setDisplayCount] = useState(50);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -227,6 +228,29 @@ const Clients = () => {
         }
       });
       setOffresToday(offresMap);
+
+      // Load document update confirmations for current month
+      const now = new Date();
+      const day = now.getDate();
+      let targetYear = now.getFullYear();
+      let targetMonth = now.getMonth();
+      if (day >= 25) {
+        targetMonth += 1;
+        if (targetMonth > 11) { targetMonth = 0; targetYear += 1; }
+      }
+      const currentMonthYear = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`;
+      
+      const { data: confirmationsData } = await supabase
+        .from('document_update_confirmations')
+        .select('client_id')
+        .eq('month_year', currentMonthYear)
+        .eq('fiches_salaire_ok', true)
+        .eq('poursuites_ok', true)
+        .eq('permis_ok', true);
+      
+      const confirmedSet = new Set<string>();
+      confirmationsData?.forEach(c => confirmedSet.add(c.client_id));
+      setDocConfirmations(confirmedSet);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -1047,6 +1071,18 @@ const Clients = () => {
                           <Badge className="bg-amber-500/20 text-amber-600 border border-amber-500/30 text-[10px]">
                             ⏸️ Suspendu
                           </Badge>
+                        )}
+                        {/* Badge dossier mensuel */}
+                        {isActivated && !isFrozen && (
+                          docConfirmations.has(client.id) ? (
+                            <Badge className="bg-green-500/20 text-green-600 border border-green-500/30 text-[10px]">
+                              📋 Dossier à jour
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px]">
+                              📋 Non confirmé
+                            </Badge>
+                          )
                         )}
                         {isSolvable ? (
                           <Badge className="bg-green-500/20 text-green-600 border border-green-500/30 text-[10px] shadow-[0_0_10px_rgba(34,197,94,0.2)]">

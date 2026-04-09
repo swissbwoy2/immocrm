@@ -31,6 +31,7 @@ import { ClientStatsSection } from '@/components/stats/ClientStatsSection';
 import { MissingDocumentsAlert } from '@/components/MissingDocumentsAlert';
 
 import { SolvabilityAlert } from '@/components/SolvabilityAlert';
+import { DocumentUpdateReminder } from '@/components/DocumentUpdateReminder';
 import { PurchaseSolvabilityAlert } from '@/components/PurchaseSolvabilityAlert';
 import { PremiumDossierChecklistCard } from '@/components/premium';
 import { useClientCandidates } from '@/hooks/useClientCandidates';
@@ -494,10 +495,17 @@ export default function ClientDashboard() {
             </div>
           )}
 
+          {/* Rappel mise à jour mensuelle du dossier */}
+          {profileActif !== false && (
+            <div className="mb-6 animate-fade-in" style={{ animationDelay: '80ms' }}>
+              <DocumentUpdateReminder />
+            </div>
+          )}
+
           {/* Alerte documents manquants */}
           {profileActif !== false && (
             <div className="mb-6 animate-fade-in" style={{ animationDelay: '100ms' }}>
-              <MissingDocumentsAlert 
+              <MissingDocumentsAlert
                 documents={documents} 
                 candidatureStatut={candidatures[0]?.statut}
                 showPostSignature={candidatures.some(c => ['signature_effectuee', 'etat_lieux_fixe'].includes(c.statut))}
