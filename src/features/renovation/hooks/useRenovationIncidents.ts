@@ -33,7 +33,7 @@ export function useRenovationIncidents(projectId: string | undefined) {
     }) => {
       const { data, error } = await supabase
         .from('renovation_incidents')
-        .insert([{ ...payload, project_id: projectId!, status: 'reported' }])
+        .insert([{ ...payload, project_id: projectId!, status: 'reported' } as any])
         .select()
         .single();
       if (error) throw error;
