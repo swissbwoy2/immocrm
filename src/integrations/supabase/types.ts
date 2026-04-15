@@ -9860,12 +9860,44 @@ export type Database = {
         }
         Returns: string
       }
+      renovation_agent_can_access_immeuble: {
+        Args: { _immeuble_id: string }
+        Returns: boolean
+      }
       renovation_company_id_for_current_user: { Args: never; Returns: string }
       renovation_is_admin: { Args: never; Returns: boolean }
       renovation_is_agent: { Args: never; Returns: boolean }
       renovation_is_company_user_on_project: {
         Args: { _project_id: string }
         Returns: boolean
+      }
+      renovation_lock_analysis_job: {
+        Args: { _job_id: string }
+        Returns: {
+          analysis_type: string
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          file_id: string
+          id: string
+          last_error: string | null
+          locked_at: string | null
+          project_id: string
+          result: Json | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["renovation_job_status"]
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "renovation_analysis_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      renovation_replace_quote_items: {
+        Args: { _analysis_result: Json; _items: Json; _quote_id: string }
+        Returns: undefined
       }
       renovation_user_can_manage_project: {
         Args: { _project_id: string }
