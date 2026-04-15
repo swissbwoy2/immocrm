@@ -1,110 +1,63 @@
 
 
-## Lot 2 — 3 corrections finales avant exécution
+# Lot 3 — Plan d'exécution final
 
-### Correction 1 : Trigger audit budget — alignement colonnes réelles
+## Vérifications de robustesse confirmées
 
-Les colonnes réelles sont :
+### 1. `verify_jwt = true` et appels inter-Edge-Functions
+Aucune des 5 Edge Functions n'appelle une autre Edge Function. Elles utilisent toutes `SUPABASE_SERVICE_ROLE_KEY` pour les requêtes DB internes. Aucun conflit avec `verify_jwt = true`.
 
-**`renovation_budget_lines`** : `id, project_id, category, label, estimated, committed, invoiced, paid, variance (generated), currency, notes, created_at, updated_at`
-
-**`renovation_audit_logs`** : `id, project_id, user_id, action, target_table, target_id, old_data, new_data, ip_address, created_at`
-
-Le trigger corrigé :
-
-```sql
-CREATE OR REPLACE FUNCTION public.renovation_audit_budget_change()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  INSERT INTO public.renovation_audit_logs (
-    project_id, user_id, action, target_table, target_id, old_data, new_data
-  ) VALUES (
-    NEW.project_id,
-    auth.uid(),
-    'budget_updated',
-    'renovation_budget_lines',
-    NEW.id,
-    jsonb_build_object(
-      'category', OLD.category, 'label', OLD.label,
-      'estimated', OLD.estimated, 'committed', OLD.committed,
-      'invoiced', OLD.invoiced, 'paid', OLD.paid, 'notes', OLD.notes
-    ),
-    jsonb_build_object(
-      'category', NEW.category, 'label', NEW.label,
-      'estimated', NEW.estimated, 'committed', NEW.committed,
-      'invoiced', NEW.invoiced, 'paid', NEW.paid, 'notes', NEW.notes
-    )
-  );
-  RETURN NEW;
-END; $$;
-
-CREATE TRIGGER trg_audit_budget_change
-  AFTER UPDATE ON public.renovation_budget_lines
-  FOR EACH ROW EXECUTE FUNCTION public.renovation_audit_budget_change();
-```
-
-Les colonnes `ip_address` et `created_at` ont des défauts (`NULL` et `now()`), donc pas besoin de les fournir.
+### 2. `immeubles.agent_responsable_id` → `agents.user_id`
+**Bug existant identifié** : `renovation-create-project` compare `immeuble.agent_responsable_id` directement à `user.id`, mais `agent_responsable_id` est une FK vers `agents.id` (pas `auth.users.id`). La résolution correcte nécessite un JOIN : `immeubles.agent_responsable_id → agents.id → agents.user_id`. Toutes les fonctions Lot 3 utiliseront cette résolution correcte.
 
 ---
 
-### Correction 2 : RPC SECURITY DEFINER — double protection
+## Étapes d'exécution
 
-En plus du check `current_setting('request.jwt.claim.role') IS DISTINCT FROM 'service_role'` à l'intérieur des fonctions, ajout explicite de `REVOKE` après chaque création :
+### Étape 1 — Migration SQL (~200 lignes)
+- `ALTER TYPE renovation_project_status ADD VALUE 'closed'`
+- `ALTER TYPE renovation_alert_type ADD VALUE` × 5 nouvelles valeurs
+- ALTER tables : `renovation_incidents`, `renovation_reservations`, `renovation_warranties`, `renovation_ai_alerts`, `renovation_notifications_queue`, `renovation_projects` (colonnes détaillées dans le cadrage validé)
+- Triggers audit : `trg_audit_incident_change`, `trg_audit_reservation_change`
+- Fonction `renovation_check_project_closable(uuid)` RETURNS jsonb — SECURITY DEFINER
+- Index idempotency sur `renovation_ai_alerts` et `renovation_notifications_queue`
 
-```sql
--- Après création de renovation_lock_analysis_job
-REVOKE EXECUTE ON FUNCTION public.renovation_lock_analysis_job(uuid) FROM anon;
-REVOKE EXECUTE ON FUNCTION public.renovation_lock_analysis_job(uuid) FROM authenticated;
+### Étape 2 — config.toml
+5 entrées ajoutées, toutes avec `verify_jwt = true`
 
--- Après création de renovation_replace_quote_items
-REVOKE EXECUTE ON FUNCTION public.renovation_replace_quote_items(uuid, jsonb, jsonb) FROM anon;
-REVOKE EXECUTE ON FUNCTION public.renovation_replace_quote_items(uuid, jsonb, jsonb) FROM authenticated;
-```
+### Étape 3 — 5 Edge Functions
+1. **`renovation-get-history`** : whitelist actions, strip financier pour propriétaire, tri DESC LIMIT 100
+2. **`renovation-generate-alerts`** : 7 types d'alertes, upsert idempotent, résolution auto
+3. **`renovation-close-project`** : appel RPC `renovation_check_project_closable`, audit `project_closed`
+4. **`renovation-generate-final-report`** : HTML structuré, upload storage, idempotent
+5. **`renovation-dispatch-notifications`** : résolution destinataires via `agents.user_id` + `proprietaires.user_id`, idempotent
 
-Résultat : même si un utilisateur tente un appel RPC direct, PostgreSQL refuse l'exécution avant même d'entrer dans la fonction.
+Toutes suivent le pattern auth existant : `anonClient.auth.getUser()` + check `user_roles`.
 
----
+### Étape 4 — Types TypeScript
+- `'closed'` ajouté à `RenovationProjectStatus`
+- Interfaces : `RenovationIncident`, `RenovationReservation`, `RenovationWarranty`, `RenovationAlert`, `RenovationHistoryEntry`
+- `RenovationProject` étendu avec `closed_at`, `closed_by`, `final_report_path`, `warranties_not_applicable`
 
-### Correction 3 : Helper `renovation_agent_can_access_immeuble` — signature unique
+### Étape 5 — Hooks (3 créés)
+- `useRenovationIncidents.ts` — CRUD via SDK
+- `useRenovationWarranties.ts` — CRUD via SDK
+- `useRenovationHistory.ts` — appel Edge Function `renovation-get-history`
 
-Cette fonction n'existe pas encore. Une seule version sera créée, utilisée partout :
+### Étape 6 — Composants (13 créés)
+- `RenovationIncidentsList.tsx` + `RenovationIncidentForm.tsx`
+- `RenovationReservationsList.tsx` + `RenovationReservationForm.tsx`
+- `RenovationWarrantiesTable.tsx` + `RenovationWarrantyForm.tsx`
+- `RenovationHistoryFeed.tsx`
+- `RenovationAlertsPanel.tsx`
+- `RenovationCloseProjectDialog.tsx` (avec toggle "garanties non applicables" + audit)
+- `RenovationFinalReportCard.tsx`
 
-```sql
-CREATE OR REPLACE FUNCTION public.renovation_agent_can_access_immeuble(_immeuble_id uuid)
-RETURNS boolean
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  -- Admins can access all buildings
-  IF public.renovation_is_admin() THEN
-    RETURN true;
-  END IF;
-  -- Agents can only access buildings they manage
-  RETURN EXISTS (
-    SELECT 1 FROM public.immeubles
-    WHERE id = _immeuble_id
-      AND agent_responsable_id = auth.uid()
-  );
-END; $$;
-```
+### Étape 7 — Modifications existantes (2 fichiers)
+- `RenovationProjectPage.tsx` : 4 nouveaux onglets + alertes header + bouton clôture + carte dossier final
+- `RenovationStatusBadge.tsx` : ajout `closed` → "Clôturé"
 
-**Signature** : `renovation_agent_can_access_immeuble(uuid) RETURNS boolean` — un seul paramètre (`_immeuble_id`), pas de `_user_id`. Le user est déduit de `auth.uid()`.
-
-Utilisée dans :
-- `renovation-create-project` Edge Function (vérification avant INSERT)
-- Potentiellement dans les policies RLS futures si nécessaire
-
----
-
-### Résumé des actions
-
-La migration SQL Lot 2 contiendra dans cet ordre :
-
-1. Helper `renovation_agent_can_access_immeuble(uuid)`
-2. Fonction + trigger `renovation_audit_budget_change`
-3. Fonction `renovation_lock_analysis_job(uuid)` + REVOKE anon/authenticated
-4. Fonction `renovation_replace_quote_items(uuid, jsonb, jsonb)` + REVOKE anon/authenticated
-5. Index unique `idx_renovation_quotes_unique_file` sur `renovation_quotes(file_id)`
-6. 3 storage policies avec préfixe `project/`
-
-Puis les 5 nouvelles Edge Functions, 2 Edge Functions modifiées, et ~14 fichiers frontend comme validé précédemment.
+### Étape 8 — Déploiement Edge Functions + tests
+- Deploy des 5 fonctions
+- Vérification logs de déploiement
 
