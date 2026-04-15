@@ -12,8 +12,27 @@ serve(async (req) => {
   }
 
   try {
+    // Auth check
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    const anonClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authError } = await anonClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { jobId, force } = await req.json();
@@ -33,7 +52,7 @@ serve(async (req) => {
         .eq('status', 'completed');
     }
 
-    // Atomic lock via RPC (increments attempts atomically)
+    // Atomic lock via RPC
     const { data: lockedJobs, error: lockError } = await supabase
       .rpc('renovation_lock_analysis_job', { _job_id: jobId });
 
@@ -46,7 +65,6 @@ serve(async (req) => {
     }
 
     try {
-      // Get file info
       const { data: file } = await supabase
         .from('renovation_project_files')
         .select('storage_path, file_name, mime_type, category')
@@ -57,7 +75,6 @@ serve(async (req) => {
         throw new Error('File record not found');
       }
 
-      // Download file from storage
       const { data: fileData, error: dlError } = await supabase.storage
         .from('renovation-private')
         .download(file.storage_path);
@@ -116,7 +133,9 @@ Réponds uniquement en JSON valide.`
         });
 
         if (!response.ok) {
-          throw new Error(`AI API error ${response.status}: ${await response.text()}`);
+          const errBody = await response.text();
+          console.error(JSON.stringify({ event: "renovation_error", function: "renovation-analyze-file", job_id: jobId, file_id: lockedJob.file_id, error: `AI API error ${response.status}`, context: { response_body: errBody.substring(0, 500) } }));
+          throw new Error(`AI API error ${response.status}: ${errBody}`);
         }
 
         const aiResult = await response.json();
@@ -147,7 +166,9 @@ Réponds uniquement en JSON valide.`
         });
 
         if (!response.ok) {
-          throw new Error(`AI API error ${response.status}: ${await response.text()}`);
+          const errBody = await response.text();
+          console.error(JSON.stringify({ event: "renovation_error", function: "renovation-analyze-file", job_id: jobId, file_id: lockedJob.file_id, error: `AI API error ${response.status}`, context: { response_body: errBody.substring(0, 500) } }));
+          throw new Error(`AI API error ${response.status}: ${errBody}`);
         }
 
         const aiResult = await response.json();
@@ -186,13 +207,13 @@ Réponds uniquement en JSON valide.`
         })
         .eq('id', jobId);
 
-      console.error('Analysis failed:', analysisError);
+      console.error(JSON.stringify({ event: "renovation_error", function: "renovation-analyze-file", job_id: jobId, file_id: lockedJob.file_id, error: analysisError.message }));
       return new Response(JSON.stringify({ status: 'failed', error: analysisError.message }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
   } catch (err) {
-    console.error('Error:', err);
+    console.error(JSON.stringify({ event: "renovation_error", function: "renovation-analyze-file", error: err.message }));
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

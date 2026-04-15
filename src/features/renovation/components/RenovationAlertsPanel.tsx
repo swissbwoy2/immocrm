@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bell, RefreshCw, Loader2 } from 'lucide-react';
+import { Bell, RefreshCw, Loader2, BellOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 const severityVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -66,7 +66,19 @@ export function RenovationAlertsPanel({ projectId, canManage }: Props) {
           </Button>
         )}
       </CardHeader>
-      {count > 0 && (
+      {isLoading ? (
+        <CardContent className="pt-0">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" /> Chargement...
+          </div>
+        </CardContent>
+      ) : count === 0 ? (
+        <CardContent className="pt-0">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <BellOff className="h-3.5 w-3.5" /> Aucune alerte active
+          </div>
+        </CardContent>
+      ) : (
         <CardContent className="pt-0 space-y-2">
           {(alerts || []).slice(0, 5).map((a) => (
             <div key={a.id} className="flex items-start gap-2 text-sm">

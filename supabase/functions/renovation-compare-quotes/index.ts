@@ -25,15 +25,6 @@ function normalizeCategory(cat: string | null): string {
   return map[cat.toLowerCase()] || 'divers';
 }
 
-interface QuoteItem {
-  designation: string;
-  category: string | null;
-  quantity: number | null;
-  unit: string | null;
-  unit_price: number | null;
-  total_price: number | null;
-}
-
 interface GroupedComparison {
   category: string;
   items: Array<{
@@ -77,7 +68,6 @@ serve(async (req) => {
       });
     }
 
-    // Verify all quotes belong to the project and are analyzed
     const { data: quotes } = await supabase
       .from('renovation_quotes')
       .select('id, project_id, status, company_id, title, amount_ht, amount_ttc')
@@ -102,7 +92,6 @@ serve(async (req) => {
       }
     }
 
-    // Get company names
     const companyIds = [...new Set(quotes.map(q => q.company_id))];
     const { data: companies } = await supabase
       .from('renovation_companies')
@@ -111,7 +100,6 @@ serve(async (req) => {
 
     const companyMap = new Map((companies || []).map(c => [c.id, c.name]));
 
-    // Get all items for these quotes
     const { data: allItems } = await supabase
       .from('renovation_quote_items')
       .select('*')
@@ -124,7 +112,6 @@ serve(async (req) => {
       });
     }
 
-    // Group items by normalized category
     const categoryGroups = new Map<string, Map<string, Array<{ quote_id: string; item: any }>>>();
 
     for (const item of allItems) {
@@ -133,8 +120,6 @@ serve(async (req) => {
         categoryGroups.set(cat, new Map());
       }
       const catGroup = categoryGroups.get(cat)!;
-
-      // Normalize designation for grouping (lowercase, trim)
       const normDesignation = (item.designation || '').toLowerCase().trim();
       if (!catGroup.has(normDesignation)) {
         catGroup.set(normDesignation, []);
@@ -142,7 +127,6 @@ serve(async (req) => {
       catGroup.get(normDesignation)!.push({ quote_id: item.quote_id, item });
     }
 
-    // Build deterministic comparison structure
     const comparison: GroupedComparison[] = [];
 
     for (const [category, designationMap] of categoryGroups) {
@@ -171,7 +155,6 @@ serve(async (req) => {
           spread_pct: spread,
         });
 
-        // Accumulate category totals
         for (const e of quoteEntries) {
           const current = categoryTotalsByQuote.get(e.quote_id) || 0;
           categoryTotalsByQuote.set(e.quote_id, current + (e.total_price || 0));
@@ -189,7 +172,6 @@ serve(async (req) => {
       });
     }
 
-    // Global totals
     const globalTotals = quotes.map(q => ({
       quote_id: q.id,
       company_name: companyMap.get(q.company_id) || 'Inconnu',
@@ -197,7 +179,6 @@ serve(async (req) => {
       amount_ttc: q.amount_ttc || 0,
     }));
 
-    // AI synthesis (Gemini for natural language summary only)
     let aiSynthesis = '';
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
@@ -244,9 +225,12 @@ Ne produis PAS de JSON, uniquement du texte lisible.`
         if (response.ok) {
           const aiResult = await response.json();
           aiSynthesis = aiResult.choices?.[0]?.message?.content || '';
+        } else {
+          const errBody = await response.text();
+          console.error(JSON.stringify({ event: "renovation_error", function: "renovation-compare-quotes", project_id: projectId, error: `AI synthesis error ${response.status}`, context: { quote_ids: quoteIds, response_body: errBody.substring(0, 300) } }));
         }
       } catch (e) {
-        console.error('AI synthesis failed (non-blocking):', e);
+        console.error(JSON.stringify({ event: "renovation_error", function: "renovation-compare-quotes", project_id: projectId, error: `AI synthesis exception: ${e.message}`, context: { quote_ids: quoteIds } }));
       }
     }
 
@@ -261,7 +245,7 @@ Ne produis PAS de JSON, uniquement du texte lisible.`
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    console.error('Error:', err);
+    console.error(JSON.stringify({ event: "renovation_error", function: "renovation-compare-quotes", error: err.message }));
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

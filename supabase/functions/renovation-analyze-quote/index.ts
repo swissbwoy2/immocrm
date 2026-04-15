@@ -12,8 +12,27 @@ serve(async (req) => {
   }
 
   try {
+    // Auth check
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    const anonClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authError } = await anonClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { quoteId } = await req.json();
@@ -24,7 +43,6 @@ serve(async (req) => {
       });
     }
 
-    // Get quote with file info
     const { data: quote } = await supabase
       .from('renovation_quotes')
       .select('id, project_id, file_id, company_id, title, status')
@@ -43,7 +61,6 @@ serve(async (req) => {
       });
     }
 
-    // Get file info
     const { data: file } = await supabase
       .from('renovation_project_files')
       .select('storage_path, file_name, mime_type')
@@ -56,7 +73,6 @@ serve(async (req) => {
       });
     }
 
-    // Download file
     const { data: fileData, error: dlError } = await supabase.storage
       .from('renovation-private')
       .download(file.storage_path);
@@ -70,7 +86,6 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    // Prepare content for AI
     let userContent: any;
     const isPdf = file.mime_type === 'application/pdf';
     const isImage = file.mime_type?.startsWith('image/');
@@ -129,7 +144,9 @@ Réponds avec un JSON : { "items": [...], "summary": { ... } }`
     });
 
     if (!response.ok) {
-      throw new Error(`AI API error ${response.status}: ${await response.text()}`);
+      const errBody = await response.text();
+      console.error(JSON.stringify({ event: "renovation_error", function: "renovation-analyze-quote", quote_id: quoteId, project_id: quote.project_id, error: `AI API error ${response.status}`, context: { response_body: errBody.substring(0, 500) } }));
+      throw new Error(`AI API error ${response.status}: ${errBody}`);
     }
 
     const aiResult = await response.json();
@@ -146,7 +163,6 @@ Réponds avec un JSON : { "items": [...], "summary": { ... } }`
     const items = Array.isArray(parsed.items) ? parsed.items : [];
     const summary = parsed.summary || {};
 
-    // Atomic replacement via RPC
     const { error: rpcError } = await supabase.rpc('renovation_replace_quote_items', {
       _quote_id: quoteId,
       _items: JSON.stringify(items),
@@ -154,10 +170,10 @@ Réponds avec un JSON : { "items": [...], "summary": { ... } }`
     });
 
     if (rpcError) {
+      console.error(JSON.stringify({ event: "renovation_error", function: "renovation-analyze-quote", quote_id: quoteId, error: `RPC error: ${rpcError.message}` }));
       throw new Error(`RPC error: ${rpcError.message}`);
     }
 
-    // Update quote amounts from summary
     const updateData: any = {};
     if (summary.montant_ht) updateData.amount_ht = summary.montant_ht;
     if (summary.montant_ttc) updateData.amount_ttc = summary.montant_ttc;
@@ -170,10 +186,9 @@ Réponds avec un JSON : { "items": [...], "summary": { ... } }`
         .eq('id', quoteId);
     }
 
-    // Audit log
     await supabase.from('renovation_audit_logs').insert({
       project_id: quote.project_id,
-      user_id: null,
+      user_id: user.id,
       action: 'quote_analyzed',
       target_table: 'renovation_quotes',
       target_id: quoteId,
@@ -188,7 +203,7 @@ Réponds avec un JSON : { "items": [...], "summary": { ... } }`
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    console.error('Error:', err);
+    console.error(JSON.stringify({ event: "renovation_error", function: "renovation-analyze-quote", error: err.message }));
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

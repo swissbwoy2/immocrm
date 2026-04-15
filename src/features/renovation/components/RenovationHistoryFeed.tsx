@@ -1,7 +1,8 @@
 import { useRenovationHistory } from '../hooks/useRenovationHistory';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { History, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { History, Clock } from 'lucide-react';
 
 const actionLabels: Record<string, string> = {
   project_created: 'Projet créé',
@@ -16,6 +17,8 @@ const actionLabels: Record<string, string> = {
   project_closed: 'Projet clôturé',
   final_report_generated: 'Dossier final généré',
   warranties_not_applicable: 'Garanties marquées N/A',
+  quote_analyzed: 'Devis analysé',
+  file_downloaded: 'Fichier téléchargé',
 };
 
 interface Props {
@@ -26,7 +29,25 @@ export function RenovationHistoryFeed({ projectId }: Props) {
   const { data, isLoading, error } = useRenovationHistory(projectId);
 
   if (isLoading) {
-    return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-40" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="flex gap-3">
+              <Skeleton className="h-2 w-2 rounded-full mt-2 shrink-0" />
+              <div className="flex-1 space-y-1">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+              <Skeleton className="h-3 w-24 shrink-0" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
   }
 
   if (error) {
@@ -50,7 +71,13 @@ export function RenovationHistoryFeed({ projectId }: Props) {
       </CardHeader>
       <CardContent>
         {entries.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">Aucun événement enregistré.</p>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <Clock className="h-10 w-10 text-muted-foreground/40 mb-3" />
+            <p className="text-sm font-medium text-muted-foreground">Aucun événement enregistré</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">
+              L'historique des actions sur ce projet apparaîtra ici.
+            </p>
+          </div>
         ) : (
           <ScrollArea className="h-[400px]">
             <div className="space-y-3">

@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Download, RefreshCw, Loader2 } from 'lucide-react';
+import { FileText, Download, RefreshCw, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Props {
@@ -25,20 +25,30 @@ export function RenovationFinalReportCard({ projectId, finalReportPath, canManag
     },
     onSuccess: (data) => {
       setSignedUrl(data.signedUrl);
-      toast.success(data.cached ? 'Dossier existant récupéré' : 'Dossier final généré');
+      toast.success(data.cached ? 'Dossier existant récupéré' : 'Dossier final généré avec succès');
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(`Erreur de génération: ${e.message}`),
   });
 
   return (
     <Card>
       <CardContent className="pt-6">
         <div className="flex items-center gap-3">
-          <FileText className="h-8 w-8 text-muted-foreground" />
+          <div className={`p-2 rounded-lg ${finalReportPath ? 'bg-primary/10' : 'bg-muted'}`}>
+            {finalReportPath ? (
+              <CheckCircle2 className="h-6 w-6 text-primary" />
+            ) : (
+              <FileText className="h-6 w-6 text-muted-foreground" />
+            )}
+          </div>
           <div className="flex-1">
             <p className="font-medium">Dossier final de rénovation</p>
             <p className="text-sm text-muted-foreground">
-              {finalReportPath ? 'Rapport disponible' : 'Pas encore généré'}
+              {generate.isPending
+                ? 'Génération en cours...'
+                : finalReportPath
+                ? '✅ Rapport disponible'
+                : 'Pas encore généré'}
             </p>
           </div>
           <div className="flex gap-2">
@@ -52,7 +62,9 @@ export function RenovationFinalReportCard({ projectId, finalReportPath, canManag
                 {generate.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : finalReportPath ? (
-                  <RefreshCw className="h-4 w-4" />
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-1" /> Régénérer
+                  </>
                 ) : (
                   'Générer'
                 )}

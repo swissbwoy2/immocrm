@@ -40,7 +40,6 @@ Deno.serve(async (req) => {
     const userId = claimsData.claims.sub as string;
     const db = createClient(supabaseUrl, serviceKey);
 
-    // Check admin/agent
     const { data: roles } = await db
       .from("user_roles")
       .select("role")
@@ -61,13 +60,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check closability via RPC
     const { data: closableCheck, error: rpcError } = await db.rpc(
       "renovation_check_project_closable",
       { _project_id: projectId }
     );
 
     if (rpcError) {
+      console.error(JSON.stringify({ event: "renovation_error", function: "renovation-close-project", project_id: projectId, error: `RPC error: ${rpcError.message}` }));
       return new Response(JSON.stringify({ error: rpcError.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -75,10 +74,12 @@ Deno.serve(async (req) => {
     }
 
     if (!closableCheck?.canClose) {
+      const reasons = closableCheck?.blockingReasons || [];
+      console.error(JSON.stringify({ event: "renovation_error", function: "renovation-close-project", project_id: projectId, error: "Project not closable", context: { blocking_reasons: reasons } }));
       return new Response(
         JSON.stringify({
           closed: false,
-          blockingReasons: closableCheck?.blockingReasons || [],
+          blockingReasons: reasons,
         }),
         {
           status: 400,
@@ -87,7 +88,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Close the project
     const closedAt = new Date().toISOString();
     const { error: updateError } = await db
       .from("renovation_projects")
@@ -99,13 +99,13 @@ Deno.serve(async (req) => {
       .eq("id", projectId);
 
     if (updateError) {
+      console.error(JSON.stringify({ event: "renovation_error", function: "renovation-close-project", project_id: projectId, error: updateError.message }));
       return new Response(JSON.stringify({ error: updateError.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Audit log
     await db.from("renovation_audit_logs").insert({
       project_id: projectId,
       user_id: userId,
@@ -120,6 +120,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
+    console.error(JSON.stringify({ event: "renovation_error", function: "renovation-close-project", error: (err as Error).message }));
     return new Response(
       JSON.stringify({ error: (err as Error).message }),
       {

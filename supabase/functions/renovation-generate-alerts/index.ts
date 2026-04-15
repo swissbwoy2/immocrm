@@ -40,7 +40,6 @@ Deno.serve(async (req) => {
     const userId = claimsData.claims.sub as string;
     const db = createClient(supabaseUrl, serviceKey);
 
-    // Check admin/agent
     const { data: roles } = await db
       .from("user_roles")
       .select("role")
@@ -295,6 +294,7 @@ Deno.serve(async (req) => {
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    console.error(JSON.stringify({ event: "renovation_error", function: "renovation-generate-alerts", error: (err as Error).message }));
     return new Response(
       JSON.stringify({ error: (err as Error).message }),
       {

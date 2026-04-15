@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Props {
@@ -18,6 +18,7 @@ interface Props {
 export function RenovationCloseProjectDialog({ open, onClose, projectId, warrantiesNotApplicable }: Props) {
   const queryClient = useQueryClient();
   const [wna, setWna] = useState(warrantiesNotApplicable);
+  const [blockingReasons, setBlockingReasons] = useState<string[]>([]);
 
   const toggleWna = useMutation({
     mutationFn: async (value: boolean) => {
@@ -27,7 +28,6 @@ export function RenovationCloseProjectDialog({ open, onClose, projectId, warrant
         .eq('id', projectId);
       if (error) throw error;
 
-      // Audit log via insert
       await supabase.from('renovation_audit_logs').insert({
         project_id: projectId,
         action: 'warranties_not_applicable',
@@ -43,6 +43,7 @@ export function RenovationCloseProjectDialog({ open, onClose, projectId, warrant
 
   const closeProject = useMutation({
     mutationFn: async () => {
+      setBlockingReasons([]);
       const { data, error } = await supabase.functions.invoke('renovation-close-project', {
         body: { projectId },
       });
@@ -55,8 +56,10 @@ export function RenovationCloseProjectDialog({ open, onClose, projectId, warrant
         queryClient.invalidateQueries({ queryKey: ['renovation-project', projectId] });
         onClose();
       } else {
+        const reasons = data.blockingReasons || [];
+        setBlockingReasons(reasons);
         toast.error('Clôture impossible', {
-          description: (data.blockingReasons || []).join('\n'),
+          description: reasons.join('\n'),
           duration: 8000,
         });
       }
@@ -65,6 +68,7 @@ export function RenovationCloseProjectDialog({ open, onClose, projectId, warrant
       try {
         const parsed = JSON.parse(e.message);
         if (parsed.blockingReasons) {
+          setBlockingReasons(parsed.blockingReasons);
           toast.error('Clôture impossible', {
             description: parsed.blockingReasons.join('\n'),
             duration: 8000,
@@ -72,7 +76,7 @@ export function RenovationCloseProjectDialog({ open, onClose, projectId, warrant
           return;
         }
       } catch { /* not json */ }
-      toast.error(e.message);
+      toast.error(`Erreur: ${e.message}`);
     },
   });
 
@@ -100,6 +104,18 @@ export function RenovationCloseProjectDialog({ open, onClose, projectId, warrant
             </ul>
           </div>
 
+          {blockingReasons.length > 0 && (
+            <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-3">
+              <XCircle className="h-4 w-4 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium mb-1">Blocages détectés :</p>
+                <ul className="list-disc pl-4 text-xs space-y-0.5">
+                  {blockingReasons.map((r, i) => <li key={i}>{r}</li>)}
+                </ul>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between border rounded-md p-3">
             <div className="space-y-0.5">
               <Label>Garanties non applicables</Label>
@@ -121,7 +137,7 @@ export function RenovationCloseProjectDialog({ open, onClose, projectId, warrant
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button variant="outline" onClick={onClose} disabled={closeProject.isPending}>Annuler</Button>
           <Button onClick={() => closeProject.mutate()} disabled={closeProject.isPending}>
             {closeProject.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
             Clôturer

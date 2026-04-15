@@ -1,0 +1,1 @@
+ALTER TABLE renovation_projects ADD COLUMN IF NOT EXISTS email_notifications_enabled boolean DEFAULT true;

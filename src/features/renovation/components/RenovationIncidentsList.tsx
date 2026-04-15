@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertTriangle, Plus, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AlertTriangle, Plus, Loader2, ShieldAlert } from 'lucide-react';
 
 const severityVariant: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   critical: 'destructive',
@@ -24,7 +25,18 @@ export function RenovationIncidentsList({ projectId, canManage }: Props) {
   const [showForm, setShowForm] = useState(false);
 
   if (incidents.isLoading) {
-    return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-40" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-3/4" />
+        </CardContent>
+      </Card>
+    );
   }
 
   const data = incidents.data || [];
@@ -44,7 +56,13 @@ export function RenovationIncidentsList({ projectId, canManage }: Props) {
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">Aucun incident signalé.</p>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <ShieldAlert className="h-10 w-10 text-muted-foreground/40 mb-3" />
+            <p className="text-sm font-medium text-muted-foreground">Aucun incident signalé</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">
+              Les incidents apparaîtront ici une fois signalés.
+            </p>
+          </div>
         ) : (
           <Table>
             <TableHeader>
