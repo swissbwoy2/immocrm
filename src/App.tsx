@@ -331,6 +331,10 @@ const App = () => (
               <Route path="/agent/proprietaires/:id" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentProprietaireDetail /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/carte" element={<ProtectedRoute allowedRoles={['agent', 'admin']}><AppLayout><AgentCarte /></AppLayout></ProtectedRoute>} />
 
+              {/* Agent Renovation Routes */}
+              <Route path="/agent/renovation" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><RenovationProjectsPage /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/renovation/:id" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><RenovationProjectPage /></AppLayout></ProtectedRoute>} />
+
               {/* Client Routes */}
               <Route path="/client" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDashboard /></AppLayout></ProtectedRoute>} />
               <Route path="/client/dossier" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDossier /></AppLayout></ProtectedRoute>} />
