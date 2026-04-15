@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ShieldCheck, Plus, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ShieldCheck, Plus, ShieldOff } from 'lucide-react';
 
 interface Props {
   projectId: string;
@@ -18,7 +19,18 @@ export function RenovationWarrantiesTable({ projectId, canManage, warrantiesNotA
   const [showForm, setShowForm] = useState(false);
 
   if (warranties.isLoading) {
-    return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+    return (
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-40" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-3/4" />
+        </CardContent>
+      </Card>
+    );
   }
 
   const data = warranties.data || [];
@@ -42,7 +54,13 @@ export function RenovationWarrantiesTable({ projectId, canManage, warrantiesNotA
           </div>
         )}
         {data.length === 0 && !warrantiesNotApplicable ? (
-          <p className="text-sm text-muted-foreground text-center py-4">Aucune garantie enregistrée.</p>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <ShieldOff className="h-10 w-10 text-muted-foreground/40 mb-3" />
+            <p className="text-sm font-medium text-muted-foreground">Aucune garantie enregistrée</p>
+            <p className="text-xs text-muted-foreground/70 mt-1">
+              Ajoutez les garanties des équipements et travaux réalisés.
+            </p>
+          </div>
         ) : data.length > 0 ? (
           <Table>
             <TableHeader>

@@ -8162,6 +8162,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          email_notifications_enabled: boolean | null
           end_date_actual: string | null
           end_date_planned: string | null
           final_report_path: string | null
@@ -8188,6 +8189,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          email_notifications_enabled?: boolean | null
           end_date_actual?: string | null
           end_date_planned?: string | null
           final_report_path?: string | null
@@ -8214,6 +8216,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          email_notifications_enabled?: boolean | null
           end_date_actual?: string | null
           end_date_planned?: string | null
           final_report_path?: string | null
