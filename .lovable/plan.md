@@ -1,63 +1,51 @@
 
 
-# Lot 3 — Plan d'exécution final
+# Lot 3 — Recette fonctionnelle : exécution
 
-## Vérifications de robustesse confirmées
+## Prérequis : connexion admin requise
 
-### 1. `verify_jwt = true` et appels inter-Edge-Functions
-Aucune des 5 Edge Functions n'appelle une autre Edge Function. Elles utilisent toutes `SUPABASE_SERVICE_ROLE_KEY` pour les requêtes DB internes. Aucun conflit avec `verify_jwt = true`.
+Le test de connectivité montre que vous n'êtes pas actuellement connecté dans le preview. Les 5 Edge Functions ont `verify_jwt = true`, donc **vous devez vous connecter avec votre compte admin (`admin@immo-rama.ch`) dans le preview avant que je puisse exécuter la recette**.
 
-### 2. `immeubles.agent_responsable_id` → `agents.user_id`
-**Bug existant identifié** : `renovation-create-project` compare `immeuble.agent_responsable_id` directement à `user.id`, mais `agent_responsable_id` est une FK vers `agents.id` (pas `auth.users.id`). La résolution correcte nécessite un JOIN : `immeubles.agent_responsable_id → agents.id → agents.user_id`. Toutes les fonctions Lot 3 utiliseront cette résolution correcte.
+## Plan d'exécution dès connexion confirmée
+
+### Étape 1 — Seed SQL via `psql` (pas de migration)
+
+Insertion avec UUIDs déterministes dans cet ordre :
+
+| Table | UUID | Données clés |
+|---|---|---|
+| `renovation_projects` | `aaaaaaaa-0000-0000-0000-000000000001` | status=`completed`, immeuble_id=`8116a135-5b1c-4972-859b-187792ab7f70`, created_by=admin |
+| `renovation_milestones` | `aaaaaaaa-0000-0000-0000-000000000002` | status=`completed`, project_id=ci-dessus |
+| `renovation_budget_lines` | `aaaaaaaa-0000-0000-0000-000000000003` | estimated=50000, paid=45000 |
+| `renovation_incidents` | `aaaaaaaa-0000-0000-0000-000000000004` | severity=`critical`, status=`reported`, is_blocking=true |
+| `renovation_reservations` | `aaaaaaaa-0000-0000-0000-000000000005` | is_blocking=true, status=`identified` |
+| `renovation_warranties` | `aaaaaaaa-0000-0000-0000-000000000006` | warranty_type=`décennale`, start/end dates |
+
+### Étape 2 — 7 cas de recette séquentiels
+
+Exécution via `curl_edge_functions` (JWT automatique si connecté) :
+
+1. **Cas 1** : POST `renovation-close-project` → attendu 400 + incident critique
+2. **Cas 2** : UPDATE incident → resolved, POST close → attendu 400 + réserve bloquante
+3. **Cas 3** : UPDATE réserve → resolved, POST close → attendu 200 + `closed: true`
+4. **Cas 4** : Seed projet #2, 2× POST `renovation-generate-alerts` → vérif idempotence
+5. **Cas 5** : 2× POST `renovation-dispatch-notifications` → vérif pas de doublon
+6. **Cas 6** : POST `renovation-generate-final-report` × 2 → vérif cache
+7. **Cas 7** : POST `renovation-get-history` en admin → historique complet
+
+Pour 7B/7C (propriétaire/company_user), vérification SQL du filtrage dans le code Edge Function (pas de compte séparé disponible pour test live).
+
+### Étape 3 — Vérifications complémentaires
+
+Requêtes SQL pour confirmer triggers audit, absence d'accès company_user, journalisation `warranties_not_applicable`.
+
+### Étape 4 — Cleanup SQL
+
+Suppression ciblée dans l'ordre inverse des FK de toutes les données `aaaaaaaa-*`.
 
 ---
 
-## Étapes d'exécution
+## Action requise
 
-### Étape 1 — Migration SQL (~200 lignes)
-- `ALTER TYPE renovation_project_status ADD VALUE 'closed'`
-- `ALTER TYPE renovation_alert_type ADD VALUE` × 5 nouvelles valeurs
-- ALTER tables : `renovation_incidents`, `renovation_reservations`, `renovation_warranties`, `renovation_ai_alerts`, `renovation_notifications_queue`, `renovation_projects` (colonnes détaillées dans le cadrage validé)
-- Triggers audit : `trg_audit_incident_change`, `trg_audit_reservation_change`
-- Fonction `renovation_check_project_closable(uuid)` RETURNS jsonb — SECURITY DEFINER
-- Index idempotency sur `renovation_ai_alerts` et `renovation_notifications_queue`
-
-### Étape 2 — config.toml
-5 entrées ajoutées, toutes avec `verify_jwt = true`
-
-### Étape 3 — 5 Edge Functions
-1. **`renovation-get-history`** : whitelist actions, strip financier pour propriétaire, tri DESC LIMIT 100
-2. **`renovation-generate-alerts`** : 7 types d'alertes, upsert idempotent, résolution auto
-3. **`renovation-close-project`** : appel RPC `renovation_check_project_closable`, audit `project_closed`
-4. **`renovation-generate-final-report`** : HTML structuré, upload storage, idempotent
-5. **`renovation-dispatch-notifications`** : résolution destinataires via `agents.user_id` + `proprietaires.user_id`, idempotent
-
-Toutes suivent le pattern auth existant : `anonClient.auth.getUser()` + check `user_roles`.
-
-### Étape 4 — Types TypeScript
-- `'closed'` ajouté à `RenovationProjectStatus`
-- Interfaces : `RenovationIncident`, `RenovationReservation`, `RenovationWarranty`, `RenovationAlert`, `RenovationHistoryEntry`
-- `RenovationProject` étendu avec `closed_at`, `closed_by`, `final_report_path`, `warranties_not_applicable`
-
-### Étape 5 — Hooks (3 créés)
-- `useRenovationIncidents.ts` — CRUD via SDK
-- `useRenovationWarranties.ts` — CRUD via SDK
-- `useRenovationHistory.ts` — appel Edge Function `renovation-get-history`
-
-### Étape 6 — Composants (13 créés)
-- `RenovationIncidentsList.tsx` + `RenovationIncidentForm.tsx`
-- `RenovationReservationsList.tsx` + `RenovationReservationForm.tsx`
-- `RenovationWarrantiesTable.tsx` + `RenovationWarrantyForm.tsx`
-- `RenovationHistoryFeed.tsx`
-- `RenovationAlertsPanel.tsx`
-- `RenovationCloseProjectDialog.tsx` (avec toggle "garanties non applicables" + audit)
-- `RenovationFinalReportCard.tsx`
-
-### Étape 7 — Modifications existantes (2 fichiers)
-- `RenovationProjectPage.tsx` : 4 nouveaux onglets + alertes header + bouton clôture + carte dossier final
-- `RenovationStatusBadge.tsx` : ajout `closed` → "Clôturé"
-
-### Étape 8 — Déploiement Edge Functions + tests
-- Deploy des 5 fonctions
-- Vérification logs de déploiement
+**Connectez-vous dans le preview** avec `admin@immo-rama.ch`, puis confirmez **"c'est fait"**. J'exécuterai immédiatement le seed + les 7 cas + cleanup avec résultats détaillés par cas.
 
