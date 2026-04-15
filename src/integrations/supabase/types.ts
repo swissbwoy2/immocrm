@@ -7159,6 +7159,66 @@ export type Database = {
           },
         ]
       }
+      renovation_ai_alerts: {
+        Row: {
+          alert_type: Database["public"]["Enums"]["renovation_alert_type"]
+          created_at: string
+          data: Json | null
+          id: string
+          is_read: boolean
+          is_resolved: boolean
+          message: string | null
+          project_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: Database["public"]["Enums"]["renovation_alert_severity"]
+          title: string
+        }
+        Insert: {
+          alert_type: Database["public"]["Enums"]["renovation_alert_type"]
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean
+          is_resolved?: boolean
+          message?: string | null
+          project_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: Database["public"]["Enums"]["renovation_alert_severity"]
+          title: string
+        }
+        Update: {
+          alert_type?: Database["public"]["Enums"]["renovation_alert_type"]
+          created_at?: string
+          data?: Json | null
+          id?: string
+          is_read?: boolean
+          is_resolved?: boolean
+          message?: string | null
+          project_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: Database["public"]["Enums"]["renovation_alert_severity"]
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_ai_alerts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_ai_alerts_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       renovation_analysis_jobs: {
         Row: {
           analysis_type: string
@@ -7215,6 +7275,579 @@ export type Database = {
           },
           {
             foreignKeyName: "renovation_analysis_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          new_data: Json | null
+          old_data: Json | null
+          project_id: string
+          target_id: string | null
+          target_table: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          project_id: string
+          target_id?: string | null
+          target_table?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          project_id?: string
+          target_id?: string | null
+          target_table?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_audit_logs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_budget_lines: {
+        Row: {
+          category: string
+          committed: number
+          created_at: string
+          currency: string
+          estimated: number
+          id: string
+          invoiced: number
+          label: string
+          notes: string | null
+          paid: number
+          project_id: string
+          updated_at: string
+          variance: number | null
+        }
+        Insert: {
+          category: string
+          committed?: number
+          created_at?: string
+          currency?: string
+          estimated?: number
+          id?: string
+          invoiced?: number
+          label: string
+          notes?: string | null
+          paid?: number
+          project_id: string
+          updated_at?: string
+          variance?: number | null
+        }
+        Update: {
+          category?: string
+          committed?: number
+          created_at?: string
+          currency?: string
+          estimated?: number
+          id?: string
+          invoiced?: number
+          label?: string
+          notes?: string | null
+          paid?: number
+          project_id?: string
+          updated_at?: string
+          variance?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_budget_lines_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_companies: {
+        Row: {
+          address: string | null
+          city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          country: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          postal_code: string | null
+          siret: string | null
+          specialties: string[] | null
+          status: string
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          postal_code?: string | null
+          siret?: string | null
+          specialties?: string[] | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          postal_code?: string | null
+          siret?: string | null
+          specialties?: string[] | null
+          status?: string
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      renovation_company_scores: {
+        Row: {
+          company_id: string
+          created_at: string
+          final_score: number | null
+          id: string
+          project_id: string
+          score_budget: number | null
+          score_communication: number | null
+          score_deadline: number | null
+          score_explanation: string | null
+          score_quality: number | null
+          score_safety: number | null
+          scored_at: string | null
+          scored_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          final_score?: number | null
+          id?: string
+          project_id: string
+          score_budget?: number | null
+          score_communication?: number | null
+          score_deadline?: number | null
+          score_explanation?: string | null
+          score_quality?: number | null
+          score_safety?: number | null
+          scored_at?: string | null
+          scored_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          final_score?: number | null
+          id?: string
+          project_id?: string
+          score_budget?: number | null
+          score_communication?: number | null
+          score_deadline?: number | null
+          score_explanation?: string | null
+          score_quality?: number | null
+          score_safety?: number | null
+          scored_at?: string | null
+          scored_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_company_scores_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_company_scores_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_company_scores_scored_by_fkey"
+            columns: ["scored_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_company_users: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_company_users_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_company_users_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_incidents: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          project_id: string
+          reported_by: string
+          resolution: string | null
+          resolved_at: string | null
+          severity: Database["public"]["Enums"]["renovation_incident_severity"]
+          status: Database["public"]["Enums"]["renovation_incident_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          project_id: string
+          reported_by: string
+          resolution?: string | null
+          resolved_at?: string | null
+          severity?: Database["public"]["Enums"]["renovation_incident_severity"]
+          status?: Database["public"]["Enums"]["renovation_incident_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          project_id?: string
+          reported_by?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          severity?: Database["public"]["Enums"]["renovation_incident_severity"]
+          status?: Database["public"]["Enums"]["renovation_incident_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_incidents_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_incidents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_incidents_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_milestones: {
+        Row: {
+          actual_date: string | null
+          created_at: string
+          description: string | null
+          id: string
+          planned_date: string | null
+          project_id: string
+          sort_order: number
+          status: Database["public"]["Enums"]["renovation_task_status"]
+          title: string
+          updated_at: string
+          weight: number | null
+        }
+        Insert: {
+          actual_date?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          planned_date?: string | null
+          project_id: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["renovation_task_status"]
+          title: string
+          updated_at?: string
+          weight?: number | null
+        }
+        Update: {
+          actual_date?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          planned_date?: string | null
+          project_id?: string
+          sort_order?: number
+          status?: Database["public"]["Enums"]["renovation_task_status"]
+          title?: string
+          updated_at?: string
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_notifications_queue: {
+        Row: {
+          body: string | null
+          channel: string
+          created_at: string
+          data: Json | null
+          id: string
+          project_id: string
+          recipient_user_id: string
+          sent_at: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          body?: string | null
+          channel?: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          project_id: string
+          recipient_user_id: string
+          sent_at?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          body?: string | null
+          channel?: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          project_id?: string
+          recipient_user_id?: string
+          sent_at?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_notifications_queue_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_notifications_queue_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_permits: {
+        Row: {
+          approved_at: string | null
+          created_at: string
+          document_file_id: string | null
+          expires_at: string | null
+          id: string
+          issuing_authority: string | null
+          notes: string | null
+          permit_type: string
+          project_id: string
+          reference: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          created_at?: string
+          document_file_id?: string | null
+          expires_at?: string | null
+          id?: string
+          issuing_authority?: string | null
+          notes?: string | null
+          permit_type: string
+          project_id: string
+          reference?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          created_at?: string
+          document_file_id?: string | null
+          expires_at?: string | null
+          id?: string
+          issuing_authority?: string | null
+          notes?: string | null
+          permit_type?: string
+          project_id?: string
+          reference?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_permits_document_file_id_fkey"
+            columns: ["document_file_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_project_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_permits_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_project_companies: {
+        Row: {
+          company_id: string
+          contract_amount: number | null
+          created_at: string
+          end_date: string | null
+          id: string
+          lot_name: string | null
+          project_id: string
+          public_note: string | null
+          role: Database["public"]["Enums"]["renovation_company_role"]
+          start_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          contract_amount?: number | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          lot_name?: string | null
+          project_id: string
+          public_note?: string | null
+          role?: Database["public"]["Enums"]["renovation_company_role"]
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          contract_amount?: number | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          lot_name?: string | null
+          project_id?: string
+          public_note?: string | null
+          role?: Database["public"]["Enums"]["renovation_company_role"]
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_project_companies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_project_companies_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "renovation_projects"
@@ -7465,6 +8098,399 @@ export type Database = {
             columns: ["immeuble_id"]
             isOneToOne: false
             referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_quote_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          designation: string
+          id: string
+          position: number
+          quantity: number | null
+          quote_id: string
+          total_price: number | null
+          tva_rate: number | null
+          unit: string | null
+          unit_price: number | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          designation: string
+          id?: string
+          position?: number
+          quantity?: number | null
+          quote_id: string
+          total_price?: number | null
+          tva_rate?: number | null
+          unit?: string | null
+          unit_price?: number | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          designation?: string
+          id?: string
+          position?: number
+          quantity?: number | null
+          quote_id?: string
+          total_price?: number | null
+          tva_rate?: number | null
+          unit?: string | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_quotes: {
+        Row: {
+          amount_ht: number | null
+          amount_ttc: number | null
+          analysis_result: Json | null
+          analyzed_at: string | null
+          company_id: string
+          created_at: string
+          currency: string
+          file_id: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          reference: string | null
+          status: string
+          submitted_at: string | null
+          title: string
+          tva_rate: number | null
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          amount_ht?: number | null
+          amount_ttc?: number | null
+          analysis_result?: Json | null
+          analyzed_at?: string | null
+          company_id: string
+          created_at?: string
+          currency?: string
+          file_id?: string | null
+          id?: string
+          notes?: string | null
+          project_id: string
+          reference?: string | null
+          status?: string
+          submitted_at?: string | null
+          title: string
+          tva_rate?: number | null
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          amount_ht?: number | null
+          amount_ttc?: number | null
+          analysis_result?: Json | null
+          analyzed_at?: string | null
+          company_id?: string
+          created_at?: string
+          currency?: string
+          file_id?: string | null
+          id?: string
+          notes?: string | null
+          project_id?: string
+          reference?: string | null
+          status?: string
+          submitted_at?: string | null
+          title?: string
+          tva_rate?: number | null
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_quotes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_quotes_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_project_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_quotes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_reservations: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          deadline: string | null
+          description: string
+          id: string
+          location: string | null
+          notes: string | null
+          photos: string[] | null
+          project_id: string
+          resolved_at: string | null
+          severity: Database["public"]["Enums"]["renovation_incident_severity"]
+          status: Database["public"]["Enums"]["renovation_reservation_status"]
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          deadline?: string | null
+          description: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          photos?: string[] | null
+          project_id: string
+          resolved_at?: string | null
+          severity?: Database["public"]["Enums"]["renovation_incident_severity"]
+          status?: Database["public"]["Enums"]["renovation_reservation_status"]
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          deadline?: string | null
+          description?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          photos?: string[] | null
+          project_id?: string
+          resolved_at?: string | null
+          severity?: Database["public"]["Enums"]["renovation_incident_severity"]
+          status?: Database["public"]["Enums"]["renovation_reservation_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_reservations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_reservations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_tasks: {
+        Row: {
+          assigned_to: string | null
+          company_id: string | null
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          milestone_id: string | null
+          priority: Database["public"]["Enums"]["renovation_priority"]
+          project_id: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["renovation_task_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          milestone_id?: string | null
+          priority?: Database["public"]["Enums"]["renovation_priority"]
+          project_id: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["renovation_task_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          company_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          milestone_id?: string | null
+          priority?: Database["public"]["Enums"]["renovation_priority"]
+          project_id?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["renovation_task_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_tasks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_tasks_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_milestones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_updates: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          id: string
+          photos: string[] | null
+          project_id: string
+          update_type: string
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          id?: string
+          photos?: string[] | null
+          project_id: string
+          update_type?: string
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          photos?: string[] | null
+          project_id?: string
+          update_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_updates_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_updates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_warranties: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          description: string | null
+          document_file_id: string | null
+          duration_months: number | null
+          end_date: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          start_date: string | null
+          updated_at: string
+          warranty_type: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          document_file_id?: string | null
+          duration_months?: number | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          project_id: string
+          start_date?: string | null
+          updated_at?: string
+          warranty_type: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          description?: string | null
+          document_file_id?: string | null
+          duration_months?: number | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          project_id?: string
+          start_date?: string | null
+          updated_at?: string
+          warranty_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_warranties_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_warranties_document_file_id_fkey"
+            columns: ["document_file_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_project_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_warranties_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
             referencedColumns: ["id"]
           },
         ]
