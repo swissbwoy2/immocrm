@@ -278,19 +278,18 @@ Dossier généré le ${reportDate} — Logisorama by Immo-rama.ch
       });
 
     if (uploadError) {
+      console.error(JSON.stringify({ event: "renovation_error", function: "renovation-generate-final-report", project_id: projectId, error: uploadError.message }));
       return new Response(JSON.stringify({ error: uploadError.message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Update project
     await db
       .from("renovation_projects")
       .update({ final_report_path: storagePath })
       .eq("id", projectId);
 
-    // Audit log
     await db.from("renovation_audit_logs").insert({
       project_id: projectId,
       user_id: userId,
@@ -300,7 +299,6 @@ Dossier généré le ${reportDate} — Logisorama by Immo-rama.ch
       new_data: { path: storagePath },
     });
 
-    // Signed URL
     const { data: signedData } = await db.storage
       .from("renovation-private")
       .createSignedUrl(storagePath, 3600);
@@ -314,6 +312,7 @@ Dossier généré le ${reportDate} — Logisorama by Immo-rama.ch
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    console.error(JSON.stringify({ event: "renovation_error", function: "renovation-generate-final-report", error: (err as Error).message }));
     return new Response(
       JSON.stringify({ error: (err as Error).message }),
       {

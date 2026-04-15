@@ -12,8 +12,27 @@ serve(async (req) => {
   }
 
   try {
+    // Auth check
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    const anonClient = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user }, error: authError } = await anonClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { projectId, companyId } = await req.json();
@@ -56,16 +75,13 @@ serve(async (req) => {
             onTimeCount++;
           }
         } else {
-          // Completed without deadline = considered on time
           onTimeCount++;
         }
       }
     }
 
-    // Score = (on-time completions / total tasks) * 100
     const score = Math.round((onTimeCount / totalTasks) * 100);
 
-    // Upsert score
     const { error: upsertError } = await supabase
       .from('renovation_company_scores')
       .upsert({
@@ -84,7 +100,7 @@ serve(async (req) => {
       });
 
     if (upsertError) {
-      console.error('Score upsert error:', upsertError);
+      console.error(JSON.stringify({ event: "renovation_error", function: "renovation-score-companies", project_id: projectId, error: upsertError.message, context: { company_id: companyId } }));
     }
 
     return new Response(JSON.stringify({
@@ -96,7 +112,7 @@ serve(async (req) => {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
-    console.error('Error:', err);
+    console.error(JSON.stringify({ event: "renovation_error", function: "renovation-score-companies", error: err.message }));
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
