@@ -165,8 +165,8 @@ Réponds avec un JSON : { "items": [...], "summary": { ... } }`
 
     const { error: rpcError } = await supabase.rpc('renovation_replace_quote_items', {
       _quote_id: quoteId,
-      _items: JSON.stringify(items),
-      _analysis_result: JSON.stringify({ summary, item_count: items.length }),
+      _items: items,
+      _analysis_result: { summary, item_count: items.length },
     });
 
     if (rpcError) {
