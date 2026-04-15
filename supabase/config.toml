@@ -170,3 +170,18 @@ verify_jwt = false
 
 [functions.renovation-download-file]
 verify_jwt = false
+
+[functions.renovation-create-quote]
+verify_jwt = false
+
+[functions.renovation-analyze-quote]
+verify_jwt = false
+
+[functions.renovation-compare-quotes]
+verify_jwt = false
+
+[functions.renovation-score-companies]
+verify_jwt = false
+
+[functions.renovation-update-progress]
+verify_jwt = false
