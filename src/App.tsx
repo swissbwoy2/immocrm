@@ -368,6 +368,10 @@ const App = () => (
               <Route path="/admin/projets-developpement" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminProjetsDeveloppement /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/projets-developpement/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminProjetDeveloppementDetail /></AppLayout></ProtectedRoute>} />
 
+              {/* Admin Renovation Routes */}
+              <Route path="/admin/renovation" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><RenovationProjectsPage /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/renovation/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><RenovationProjectPage /></AppLayout></ProtectedRoute>} />
+
               {/* Admin Annonces Publiques & Annonceurs Routes */}
               <Route path="/admin/annonces-publiques" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAnnoncesPubliques /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/annonceurs" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAnnonceurs /></AppLayout></ProtectedRoute>} />
