@@ -33,31 +33,17 @@ serve(async (req) => {
         .eq('status', 'completed');
     }
 
-    // Idempotent lock: only process queued or failed jobs
-    const { data: lockedJob, error: lockError } = await supabase
-      .from('renovation_analysis_jobs')
-      .update({
-        status: 'processing',
-        locked_at: new Date().toISOString(),
-        attempts: undefined, // will be handled below
-        started_at: new Date().toISOString(),
-      })
-      .eq('id', jobId)
-      .in('status', ['queued', 'failed'])
-      .select('id, file_id, project_id, attempts')
-      .maybeSingle();
+    // Atomic lock via RPC (increments attempts atomically)
+    const { data: lockedJobs, error: lockError } = await supabase
+      .rpc('renovation_lock_analysis_job', { _job_id: jobId });
+
+    const lockedJob = lockedJobs?.[0];
 
     if (!lockedJob) {
       return new Response(JSON.stringify({ message: 'Job not available for processing (already processing or completed)' }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    // Increment attempts
-    await supabase
-      .from('renovation_analysis_jobs')
-      .update({ attempts: (lockedJob.attempts || 0) + 1 })
-      .eq('id', jobId);
 
     try {
       // Get file info
@@ -80,7 +66,6 @@ serve(async (req) => {
         throw new Error(`File download failed: ${dlError?.message || 'no data'}`);
       }
 
-      // For PDFs and images, we send to AI for analysis
       const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
       if (!LOVABLE_API_KEY) {
         throw new Error('LOVABLE_API_KEY not configured');
@@ -91,15 +76,22 @@ serve(async (req) => {
       const isImage = file.mime_type?.startsWith('image/');
 
       if (isPdf || isImage) {
-        // Convert to base64 for AI
         const arrayBuffer = await fileData.arrayBuffer();
         const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
         const dataUrl = `data:${file.mime_type};base64,${base64}`;
 
-        const messages: any[] = [
-          {
-            role: 'system',
-            content: `Tu es un assistant spécialisé dans l'analyse de documents immobiliers et de rénovation en Suisse. 
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              {
+                role: 'system',
+                content: `Tu es un assistant spécialisé dans l'analyse de documents immobiliers et de rénovation en Suisse. 
 Analyse le document fourni et produis un résumé structuré en JSON avec les champs suivants :
 - "type_document": type détecté (devis, facture, plan, diagnostic, contrat, photo, rapport, permis, assurance, garantie, autre)
 - "titre": titre ou objet du document
@@ -111,37 +103,25 @@ Analyse le document fourni et produis un résumé structuré en JSON avec les ch
 - "points_cles": liste de 3-5 points clés
 - "alertes": alertes éventuelles (montant anormal, clause inhabituelle, etc.)
 Réponds uniquement en JSON valide.`
-          },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: `Analyse ce document : ${file.file_name} (catégorie: ${file.category})` },
-              { type: 'image_url', image_url: { url: dataUrl } },
+              },
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: `Analyse ce document : ${file.file_name} (catégorie: ${file.category})` },
+                  { type: 'image_url', image_url: { url: dataUrl } },
+                ],
+              },
             ],
-          },
-        ];
-
-        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
-            messages,
           }),
         });
 
         if (!response.ok) {
-          const errText = await response.text();
-          throw new Error(`AI API error ${response.status}: ${errText}`);
+          throw new Error(`AI API error ${response.status}: ${await response.text()}`);
         }
 
         const aiResult = await response.json();
         analysisContent = aiResult.choices?.[0]?.message?.content || '{}';
       } else {
-        // For non-image/pdf files, extract text content
         const textContent = await fileData.text();
         const truncated = textContent.substring(0, 10000);
 
@@ -167,25 +147,21 @@ Réponds uniquement en JSON valide.`
         });
 
         if (!response.ok) {
-          const errText = await response.text();
-          throw new Error(`AI API error ${response.status}: ${errText}`);
+          throw new Error(`AI API error ${response.status}: ${await response.text()}`);
         }
 
         const aiResult = await response.json();
         analysisContent = aiResult.choices?.[0]?.message?.content || '{}';
       }
 
-      // Parse JSON result
       let parsedResult: any;
       try {
-        // Handle markdown-wrapped JSON
         const cleaned = analysisContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
         parsedResult = JSON.parse(cleaned);
       } catch {
         parsedResult = { raw_text: analysisContent };
       }
 
-      // Mark job as completed
       await supabase
         .from('renovation_analysis_jobs')
         .update({
@@ -201,7 +177,6 @@ Réponds uniquement en JSON valide.`
       });
 
     } catch (analysisError) {
-      // Mark job as failed
       await supabase
         .from('renovation_analysis_jobs')
         .update({

@@ -86,13 +86,20 @@ serve(async (req) => {
     // Verify immeuble exists
     const { data: immeuble } = await supabase
       .from('immeubles')
-      .select('id')
+      .select('id, agent_responsable_id')
       .eq('id', immeuble_id)
       .single();
 
     if (!immeuble) {
       return new Response(JSON.stringify({ error: 'Immeuble not found' }), {
         status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Agent can only create projects on buildings they manage
+    if (roleData.role === 'agent' && immeuble.agent_responsable_id !== user.id) {
+      return new Response(JSON.stringify({ error: 'Forbidden: agent does not manage this building' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
