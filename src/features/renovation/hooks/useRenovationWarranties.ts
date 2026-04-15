@@ -38,7 +38,7 @@ export function useRenovationWarranties(projectId: string | undefined) {
     }) => {
       const { data, error } = await supabase
         .from('renovation_warranties')
-        .insert({ ...payload, project_id: projectId! })
+        .insert([{ ...payload, project_id: projectId! } as any])
         .select()
         .single();
       if (error) throw error;

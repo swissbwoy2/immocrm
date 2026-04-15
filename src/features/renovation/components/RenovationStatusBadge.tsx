@@ -11,6 +11,7 @@ const statusConfig: Record<RenovationProjectStatus, { label: string; variant: 'd
   completed: { label: 'Terminé', variant: 'default' },
   cancelled: { label: 'Annulé', variant: 'destructive' },
   archived: { label: 'Archivé', variant: 'secondary' },
+  closed: { label: 'Clôturé', variant: 'default' },
 };
 
 interface Props {

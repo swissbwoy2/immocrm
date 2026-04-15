@@ -42,7 +42,7 @@ export function RenovationReservationsList({ projectId, canManage }: Props) {
     }) => {
       const { error } = await supabase
         .from('renovation_reservations')
-        .insert({ ...payload, project_id: projectId, status: 'open' });
+        .insert([{ ...payload, project_id: projectId, status: 'open', description: payload.description || '' } as any]);
       if (error) throw error;
     },
     onSuccess: () => {
