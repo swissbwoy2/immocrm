@@ -2,11 +2,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useRenovationProject } from '../hooks/useRenovationProject';
 import { RenovationStatusBadge } from '../components/RenovationStatusBadge';
 import { RenovationFilesList } from '../components/RenovationFilesList';
+import { RenovationQuotesList } from '../components/RenovationQuotesList';
+import { RenovationBudgetTable } from '../components/RenovationBudgetTable';
+import { RenovationMilestoneEditor } from '../components/RenovationMilestoneEditor';
+import { RenovationCompaniesList } from '../components/RenovationCompaniesList';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Building2, Calendar, Wallet, Loader2, CheckCircle2, Clock } from 'lucide-react';
+import { ArrowLeft, Building2, Calendar, Wallet, Loader2, FileText, BarChart3, Clock, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function RenovationProjectPage() {
@@ -19,6 +23,7 @@ export default function RenovationProjectPage() {
   const milestones = milestonesQuery.data;
   const basePath = userRole === 'admin' ? '/admin' : userRole === 'agent' ? '/agent' : '/proprietaire';
   const canUpload = userRole === 'admin' || userRole === 'agent' || userRole === 'proprietaire';
+  const canManage = userRole === 'admin' || userRole === 'agent';
 
   if (projectQuery.isLoading) {
     return (
@@ -109,9 +114,27 @@ export default function RenovationProjectPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="documents">
-        <TabsList>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="milestones">Jalons</TabsTrigger>
+        <TabsList className="flex-wrap">
+          <TabsTrigger value="documents" className="gap-1">
+            <FileText className="h-3.5 w-3.5" />
+            Documents
+          </TabsTrigger>
+          <TabsTrigger value="quotes" className="gap-1">
+            <FileText className="h-3.5 w-3.5" />
+            Devis
+          </TabsTrigger>
+          <TabsTrigger value="budget" className="gap-1">
+            <BarChart3 className="h-3.5 w-3.5" />
+            Budget
+          </TabsTrigger>
+          <TabsTrigger value="planning" className="gap-1">
+            <Clock className="h-3.5 w-3.5" />
+            Planning
+          </TabsTrigger>
+          <TabsTrigger value="companies" className="gap-1">
+            <Users className="h-3.5 w-3.5" />
+            Entreprises
+          </TabsTrigger>
           <TabsTrigger value="details">Détails</TabsTrigger>
         </TabsList>
 
@@ -119,40 +142,20 @@ export default function RenovationProjectPage() {
           <RenovationFilesList projectId={project.id} canUpload={canUpload} />
         </TabsContent>
 
-        <TabsContent value="milestones" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Jalons du projet</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {milestonesQuery.isLoading ? (
-                <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-              ) : (
-                <div className="space-y-3">
-                  {milestones?.map(m => (
-                    <div key={m.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent/50">
-                      {m.status === 'completed' ? (
-                        <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
-                      ) : (
-                        <Clock className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                      )}
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{m.title}</p>
-                        {m.planned_date && (
-                          <p className="text-xs text-muted-foreground">
-                            Prévu: {new Date(m.planned_date).toLocaleDateString('fr-CH')}
-                          </p>
-                        )}
-                      </div>
-                      <Badge variant={m.status === 'completed' ? 'default' : 'outline'} className="text-xs">
-                        {m.status === 'completed' ? 'Terminé' : m.status === 'in_progress' ? 'En cours' : 'À faire'}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="quotes" className="mt-4">
+          <RenovationQuotesList projectId={project.id} canManage={canManage} />
+        </TabsContent>
+
+        <TabsContent value="budget" className="mt-4">
+          <RenovationBudgetTable projectId={project.id} canManage={canManage} />
+        </TabsContent>
+
+        <TabsContent value="planning" className="mt-4">
+          <RenovationMilestoneEditor projectId={project.id} canManage={canManage} />
+        </TabsContent>
+
+        <TabsContent value="companies" className="mt-4">
+          <RenovationCompaniesList projectId={project.id} canManage={canManage} />
         </TabsContent>
 
         <TabsContent value="details" className="mt-4">
