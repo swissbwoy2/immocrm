@@ -157,6 +157,10 @@ const AdminInteretsAcheteurs = lazy(() => import("./pages/admin/InteretsAcheteur
 const AdminProjetsDeveloppement = lazy(() => import("./pages/admin/ProjetsDeveloppement"));
 const AdminProjetDeveloppementDetail = lazy(() => import("./pages/admin/ProjetDeveloppementDetail"));
 
+// Renovation pages
+const RenovationProjectsPage = lazy(() => import("./features/renovation/pages/RenovationProjectsPage"));
+const RenovationProjectPage = lazy(() => import("./features/renovation/pages/RenovationProjectPage"));
+
 // Admin Proprietaires page
 const AdminProprietaires = lazy(() => import("./pages/admin/Proprietaires"));
 const AdminProprietaireDetail = lazy(() => import("./pages/admin/ProprietaireDetail"));
@@ -327,6 +331,10 @@ const App = () => (
               <Route path="/agent/proprietaires/:id" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentProprietaireDetail /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/carte" element={<ProtectedRoute allowedRoles={['agent', 'admin']}><AppLayout><AgentCarte /></AppLayout></ProtectedRoute>} />
 
+              {/* Agent Renovation Routes */}
+              <Route path="/agent/renovation" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><RenovationProjectsPage /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/renovation/:id" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><RenovationProjectPage /></AppLayout></ProtectedRoute>} />
+
               {/* Client Routes */}
               <Route path="/client" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDashboard /></AppLayout></ProtectedRoute>} />
               <Route path="/client/dossier" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientDossier /></AppLayout></ProtectedRoute>} />
@@ -363,6 +371,10 @@ const App = () => (
               {/* Admin Projets Développement Routes */}
               <Route path="/admin/projets-developpement" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminProjetsDeveloppement /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/projets-developpement/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminProjetDeveloppementDetail /></AppLayout></ProtectedRoute>} />
+
+              {/* Admin Renovation Routes */}
+              <Route path="/admin/renovation" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><RenovationProjectsPage /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/renovation/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><RenovationProjectPage /></AppLayout></ProtectedRoute>} />
 
               {/* Admin Annonces Publiques & Annonceurs Routes */}
               <Route path="/admin/annonces-publiques" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminAnnoncesPubliques /></AppLayout></ProtectedRoute>} />
@@ -402,6 +414,8 @@ const App = () => (
               <Route path="/proprietaire/parametres" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireParametres /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/projets-developpement" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireProjetsDeveloppement /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/projets-developpement/:id" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireProjetDetail /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/renovation" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><RenovationProjectsPage /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/renovation/:id" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><RenovationProjectPage /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/vente" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireVendreMonBien /></AppLayout></ProtectedRoute>} />
 
               {/* Public Routes */}
