@@ -7159,6 +7159,316 @@ export type Database = {
           },
         ]
       }
+      renovation_analysis_jobs: {
+        Row: {
+          analysis_type: string
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          file_id: string
+          id: string
+          last_error: string | null
+          locked_at: string | null
+          project_id: string
+          result: Json | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["renovation_job_status"]
+          updated_at: string
+        }
+        Insert: {
+          analysis_type?: string
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          file_id: string
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          project_id: string
+          result?: Json | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["renovation_job_status"]
+          updated_at?: string
+        }
+        Update: {
+          analysis_type?: string
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          file_id?: string
+          id?: string
+          last_error?: string | null
+          locked_at?: string | null
+          project_id?: string
+          result?: Json | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["renovation_job_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_analysis_jobs_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_project_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_analysis_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_project_files: {
+        Row: {
+          category: Database["public"]["Enums"]["renovation_file_category"]
+          created_at: string
+          file_hash: string | null
+          file_name: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          project_id: string
+          storage_path: string
+          tags: string[] | null
+          updated_at: string
+          uploaded_by: string | null
+          version: number
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["renovation_file_category"]
+          created_at?: string
+          file_hash?: string | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          project_id: string
+          storage_path: string
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by?: string | null
+          version?: number
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["renovation_file_category"]
+          created_at?: string
+          file_hash?: string | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          project_id?: string
+          storage_path?: string
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_by?: string | null
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_project_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_project_files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_project_internal_notes: {
+        Row: {
+          author_user_id: string
+          content: string
+          created_at: string
+          id: string
+          note_type: string
+          project_id: string
+        }
+        Insert: {
+          author_user_id: string
+          content: string
+          created_at?: string
+          id?: string
+          note_type?: string
+          project_id: string
+        }
+        Update: {
+          author_user_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          note_type?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_project_internal_notes_author_user_id_fkey"
+            columns: ["author_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_project_internal_notes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_project_members: {
+        Row: {
+          added_by: string | null
+          can_manage_budget: boolean
+          can_validate: boolean
+          created_at: string
+          id: string
+          project_id: string
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          can_manage_budget?: boolean
+          can_validate?: boolean
+          created_at?: string
+          id?: string
+          project_id: string
+          role?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          can_manage_budget?: boolean
+          can_validate?: boolean
+          created_at?: string
+          id?: string
+          project_id?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_project_members_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_project_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_projects: {
+        Row: {
+          budget_actual: number | null
+          budget_estimated: number | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          end_date_actual: string | null
+          end_date_planned: string | null
+          id: string
+          immeuble_id: string
+          objective: string | null
+          priority: Database["public"]["Enums"]["renovation_priority"]
+          project_type: string
+          quality_target: string | null
+          risk_notes: string | null
+          start_date_actual: string | null
+          start_date_planned: string | null
+          status: Database["public"]["Enums"]["renovation_project_status"]
+          timeline_constraint: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          budget_actual?: number | null
+          budget_estimated?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date_actual?: string | null
+          end_date_planned?: string | null
+          id?: string
+          immeuble_id: string
+          objective?: string | null
+          priority?: Database["public"]["Enums"]["renovation_priority"]
+          project_type?: string
+          quality_target?: string | null
+          risk_notes?: string | null
+          start_date_actual?: string | null
+          start_date_planned?: string | null
+          status?: Database["public"]["Enums"]["renovation_project_status"]
+          timeline_constraint?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          budget_actual?: number | null
+          budget_estimated?: number | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          end_date_actual?: string | null
+          end_date_planned?: string | null
+          id?: string
+          immeuble_id?: string
+          objective?: string | null
+          priority?: Database["public"]["Enums"]["renovation_priority"]
+          project_type?: string
+          quality_target?: string | null
+          risk_notes?: string | null
+          start_date_actual?: string | null
+          start_date_planned?: string | null
+          status?: Database["public"]["Enums"]["renovation_project_status"]
+          timeline_constraint?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_projects_immeuble_id_fkey"
+            columns: ["immeuble_id"]
+            isOneToOne: false
+            referencedRelation: "immeubles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       search_missions: {
         Row: {
           ai_agent_id: string
@@ -8488,6 +8798,69 @@ export type Database = {
         | "visite_demandee"
         | "visite_confirmee"
         | "archive"
+      renovation_alert_severity: "info" | "warning" | "error" | "critical"
+      renovation_alert_type:
+        | "budget_overrun"
+        | "schedule_delay"
+        | "missing_document"
+        | "warranty_expiring"
+        | "invoice_mismatch"
+        | "quality_issue"
+        | "permit_expiring"
+        | "milestone_overdue"
+      renovation_company_role:
+        | "general_contractor"
+        | "subcontractor"
+        | "architect"
+        | "engineer"
+        | "inspector"
+        | "consultant"
+        | "supplier"
+      renovation_file_category:
+        | "photo_before"
+        | "photo_during"
+        | "photo_after"
+        | "quote"
+        | "invoice"
+        | "contract"
+        | "permit"
+        | "plan"
+        | "diagnostic"
+        | "technical_report"
+        | "insurance"
+        | "warranty"
+        | "other"
+      renovation_incident_severity: "low" | "medium" | "high" | "critical"
+      renovation_incident_status:
+        | "reported"
+        | "acknowledged"
+        | "in_progress"
+        | "resolved"
+        | "closed"
+      renovation_job_status: "queued" | "processing" | "completed" | "failed"
+      renovation_priority: "low" | "medium" | "high" | "urgent"
+      renovation_project_status:
+        | "draft"
+        | "planning"
+        | "quoting"
+        | "approved"
+        | "in_progress"
+        | "on_hold"
+        | "completed"
+        | "cancelled"
+        | "archived"
+      renovation_reservation_status:
+        | "identified"
+        | "notified"
+        | "in_progress"
+        | "resolved"
+        | "disputed"
+      renovation_task_status:
+        | "pending"
+        | "in_progress"
+        | "completed"
+        | "blocked"
+        | "cancelled"
       score_label: "excellent" | "bon" | "moyen" | "faible"
       visit_request_status:
         | "non_traite"
@@ -8686,6 +9059,76 @@ export const Constants = {
         "visite_demandee",
         "visite_confirmee",
         "archive",
+      ],
+      renovation_alert_severity: ["info", "warning", "error", "critical"],
+      renovation_alert_type: [
+        "budget_overrun",
+        "schedule_delay",
+        "missing_document",
+        "warranty_expiring",
+        "invoice_mismatch",
+        "quality_issue",
+        "permit_expiring",
+        "milestone_overdue",
+      ],
+      renovation_company_role: [
+        "general_contractor",
+        "subcontractor",
+        "architect",
+        "engineer",
+        "inspector",
+        "consultant",
+        "supplier",
+      ],
+      renovation_file_category: [
+        "photo_before",
+        "photo_during",
+        "photo_after",
+        "quote",
+        "invoice",
+        "contract",
+        "permit",
+        "plan",
+        "diagnostic",
+        "technical_report",
+        "insurance",
+        "warranty",
+        "other",
+      ],
+      renovation_incident_severity: ["low", "medium", "high", "critical"],
+      renovation_incident_status: [
+        "reported",
+        "acknowledged",
+        "in_progress",
+        "resolved",
+        "closed",
+      ],
+      renovation_job_status: ["queued", "processing", "completed", "failed"],
+      renovation_priority: ["low", "medium", "high", "urgent"],
+      renovation_project_status: [
+        "draft",
+        "planning",
+        "quoting",
+        "approved",
+        "in_progress",
+        "on_hold",
+        "completed",
+        "cancelled",
+        "archived",
+      ],
+      renovation_reservation_status: [
+        "identified",
+        "notified",
+        "in_progress",
+        "resolved",
+        "disputed",
+      ],
+      renovation_task_status: [
+        "pending",
+        "in_progress",
+        "completed",
+        "blocked",
+        "cancelled",
       ],
       score_label: ["excellent", "bon", "moyen", "faible"],
       visit_request_status: [
