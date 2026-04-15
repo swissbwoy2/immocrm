@@ -7211,6 +7211,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "renovation_ai_alerts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "renovation_ai_alerts_resolved_by_fkey"
             columns: ["resolved_by"]
             isOneToOne: false
@@ -7280,6 +7287,13 @@ export type Database = {
             referencedRelation: "renovation_projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "renovation_analysis_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       renovation_audit_logs: {
@@ -7325,6 +7339,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_audit_logs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
             referencedColumns: ["id"]
           },
           {
@@ -7388,6 +7409,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_budget_lines_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
             referencedColumns: ["id"]
           },
         ]
@@ -7514,6 +7542,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "renovation_company_scores_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "renovation_company_scores_scored_by_fkey"
             columns: ["scored_by"]
             isOneToOne: false
@@ -7620,6 +7655,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "renovation_incidents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "renovation_incidents_reported_by_fkey"
             columns: ["reported_by"]
             isOneToOne: false
@@ -7676,6 +7718,13 @@ export type Database = {
             referencedRelation: "renovation_projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "renovation_milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       renovation_notifications_queue: {
@@ -7721,6 +7770,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_notifications_queue_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
             referencedColumns: ["id"]
           },
           {
@@ -7793,6 +7849,13 @@ export type Database = {
             referencedRelation: "renovation_projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "renovation_permits_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       renovation_project_companies: {
@@ -7853,6 +7916,13 @@ export type Database = {
             referencedRelation: "renovation_projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "renovation_project_companies_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       renovation_project_files: {
@@ -7910,6 +7980,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "renovation_project_files_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "renovation_project_files_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
@@ -7956,6 +8033,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_project_internal_notes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
             referencedColumns: ["id"]
           },
         ]
@@ -8007,6 +8091,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
             referencedColumns: ["id"]
           },
           {
@@ -8238,6 +8329,13 @@ export type Database = {
             referencedRelation: "renovation_projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "renovation_quotes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       renovation_reservations: {
@@ -8299,6 +8397,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_reservations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
             referencedColumns: ["id"]
           },
         ]
@@ -8381,6 +8486,13 @@ export type Database = {
             referencedRelation: "renovation_projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "renovation_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       renovation_updates: {
@@ -8424,6 +8536,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_updates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
             referencedColumns: ["id"]
           },
         ]
@@ -8491,6 +8610,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_warranties_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
             referencedColumns: ["id"]
           },
         ]
@@ -9514,7 +9640,88 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      renovation_my_company_score_view: {
+        Row: {
+          company_id: string | null
+          final_score: number | null
+          id: string | null
+          project_id: string | null
+          scored_at: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          final_score?: number | null
+          id?: string | null
+          project_id?: string | null
+          scored_at?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          final_score?: number | null
+          id?: string | null
+          project_id?: string | null
+          scored_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renovation_company_scores_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_company_scores_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_company_scores_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_projects_company_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      renovation_projects_company_view: {
+        Row: {
+          end_date_planned: string | null
+          id: string | null
+          priority: Database["public"]["Enums"]["renovation_priority"] | null
+          project_type: string | null
+          start_date_planned: string | null
+          status:
+            | Database["public"]["Enums"]["renovation_project_status"]
+            | null
+          title: string | null
+        }
+        Insert: {
+          end_date_planned?: string | null
+          id?: string | null
+          priority?: Database["public"]["Enums"]["renovation_priority"] | null
+          project_type?: string | null
+          start_date_planned?: string | null
+          status?:
+            | Database["public"]["Enums"]["renovation_project_status"]
+            | null
+          title?: string | null
+        }
+        Update: {
+          end_date_planned?: string | null
+          id?: string | null
+          priority?: Database["public"]["Enums"]["renovation_priority"] | null
+          project_type?: string | null
+          start_date_planned?: string | null
+          status?:
+            | Database["public"]["Enums"]["renovation_project_status"]
+            | null
+          title?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       activate_agent_on_login: { Args: never; Returns: undefined }
@@ -9652,6 +9859,29 @@ export type Database = {
           p_mandate_id: string
         }
         Returns: string
+      }
+      renovation_company_id_for_current_user: { Args: never; Returns: string }
+      renovation_is_admin: { Args: never; Returns: boolean }
+      renovation_is_agent: { Args: never; Returns: boolean }
+      renovation_is_company_user_on_project: {
+        Args: { _project_id: string }
+        Returns: boolean
+      }
+      renovation_user_can_manage_project: {
+        Args: { _project_id: string }
+        Returns: boolean
+      }
+      renovation_user_can_upload_to_project: {
+        Args: { _project_id: string }
+        Returns: boolean
+      }
+      renovation_user_can_view_project: {
+        Args: { _project_id: string }
+        Returns: boolean
+      }
+      renovation_user_can_view_project_internal: {
+        Args: { _project_id: string }
+        Returns: boolean
       }
       search_annonces_radius: {
         Args: {
