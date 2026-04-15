@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRenovationProject } from '../hooks/useRenovationProject';
 import { RenovationStatusBadge } from '../components/RenovationStatusBadge';
@@ -6,11 +7,17 @@ import { RenovationQuotesList } from '../components/RenovationQuotesList';
 import { RenovationBudgetTable } from '../components/RenovationBudgetTable';
 import { RenovationMilestoneEditor } from '../components/RenovationMilestoneEditor';
 import { RenovationCompaniesList } from '../components/RenovationCompaniesList';
+import { RenovationIncidentsList } from '../components/RenovationIncidentsList';
+import { RenovationReservationsList } from '../components/RenovationReservationsList';
+import { RenovationWarrantiesTable } from '../components/RenovationWarrantiesTable';
+import { RenovationHistoryFeed } from '../components/RenovationHistoryFeed';
+import { RenovationAlertsPanel } from '../components/RenovationAlertsPanel';
+import { RenovationCloseProjectDialog } from '../components/RenovationCloseProjectDialog';
+import { RenovationFinalReportCard } from '../components/RenovationFinalReportCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Building2, Calendar, Wallet, Loader2, FileText, BarChart3, Clock, Users } from 'lucide-react';
+import { ArrowLeft, Building2, Calendar, Wallet, Loader2, FileText, BarChart3, Clock, Users, AlertTriangle, ClipboardList, ShieldCheck, History, Lock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function RenovationProjectPage() {
@@ -18,12 +25,14 @@ export default function RenovationProjectPage() {
   const navigate = useNavigate();
   const { userRole } = useAuth();
   const { project: projectQuery, milestones: milestonesQuery } = useRenovationProject(id);
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
 
   const project = projectQuery.data;
   const milestones = milestonesQuery.data;
   const basePath = userRole === 'admin' ? '/admin' : userRole === 'agent' ? '/agent' : '/proprietaire';
   const canUpload = userRole === 'admin' || userRole === 'agent' || userRole === 'proprietaire';
   const canManage = userRole === 'admin' || userRole === 'agent';
+  const canClose = canManage && project && ['completed', 'in_progress'].includes(project.status);
 
   if (projectQuery.isLoading) {
     return (
@@ -63,7 +72,15 @@ export default function RenovationProjectPage() {
             </div>
           )}
         </div>
+        {canClose && (
+          <Button variant="outline" size="sm" onClick={() => setShowCloseDialog(true)}>
+            <Lock className="h-4 w-4 mr-1" /> Clôturer
+          </Button>
+        )}
       </div>
+
+      {/* Alerts */}
+      {canManage && <RenovationAlertsPanel projectId={project.id} canManage={canManage} />}
 
       {/* Summary cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -91,7 +108,7 @@ export default function RenovationProjectPage() {
                 ? `CHF ${project.budget_estimated.toLocaleString('fr-CH')}`
                 : 'Non défini'}
             </p>
-            {project.budget_actual > 0 && (
+            {project.budget_actual != null && project.budget_actual > 0 && (
               <p className="text-xs text-muted-foreground">
                 Réel: CHF {project.budget_actual.toLocaleString('fr-CH')}
               </p>
@@ -135,6 +152,22 @@ export default function RenovationProjectPage() {
             <Users className="h-3.5 w-3.5" />
             Entreprises
           </TabsTrigger>
+          <TabsTrigger value="incidents" className="gap-1">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            Incidents
+          </TabsTrigger>
+          <TabsTrigger value="reservations" className="gap-1">
+            <ClipboardList className="h-3.5 w-3.5" />
+            Réserves
+          </TabsTrigger>
+          <TabsTrigger value="warranties" className="gap-1">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            Garanties
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-1">
+            <History className="h-3.5 w-3.5" />
+            Historique
+          </TabsTrigger>
           <TabsTrigger value="details">Détails</TabsTrigger>
         </TabsList>
 
@@ -158,7 +191,32 @@ export default function RenovationProjectPage() {
           <RenovationCompaniesList projectId={project.id} canManage={canManage} />
         </TabsContent>
 
-        <TabsContent value="details" className="mt-4">
+        <TabsContent value="incidents" className="mt-4">
+          <RenovationIncidentsList projectId={project.id} canManage={canManage} />
+        </TabsContent>
+
+        <TabsContent value="reservations" className="mt-4">
+          <RenovationReservationsList projectId={project.id} canManage={canManage} />
+        </TabsContent>
+
+        <TabsContent value="warranties" className="mt-4">
+          <RenovationWarrantiesTable
+            projectId={project.id}
+            canManage={canManage}
+            warrantiesNotApplicable={project.warranties_not_applicable}
+          />
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-4">
+          <RenovationHistoryFeed projectId={project.id} />
+        </TabsContent>
+
+        <TabsContent value="details" className="mt-4 space-y-4">
+          <RenovationFinalReportCard
+            projectId={project.id}
+            finalReportPath={project.final_report_path}
+            canManage={canManage}
+          />
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Détails du projet</CardTitle>
@@ -188,10 +246,28 @@ export default function RenovationProjectPage() {
                   <p className="text-sm mt-1">{project.timeline_constraint}</p>
                 </div>
               )}
+              {project.closed_at && (
+                <div>
+                  <p className="text-sm text-muted-foreground">Clôturé le</p>
+                  <p className="text-sm mt-1">
+                    {new Date(project.closed_at).toLocaleDateString('fr-CH')}
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Close dialog */}
+      {showCloseDialog && (
+        <RenovationCloseProjectDialog
+          open={showCloseDialog}
+          onClose={() => setShowCloseDialog(false)}
+          projectId={project.id}
+          warrantiesNotApplicable={project.warranties_not_applicable}
+        />
+      )}
     </div>
   );
 }

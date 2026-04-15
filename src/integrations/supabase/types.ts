@@ -7165,6 +7165,7 @@ export type Database = {
           created_at: string
           data: Json | null
           id: string
+          idempotency_key: string | null
           is_read: boolean
           is_resolved: boolean
           message: string | null
@@ -7172,6 +7173,8 @@ export type Database = {
           resolved_at: string | null
           resolved_by: string | null
           severity: Database["public"]["Enums"]["renovation_alert_severity"]
+          target_id: string | null
+          target_table: string | null
           title: string
         }
         Insert: {
@@ -7179,6 +7182,7 @@ export type Database = {
           created_at?: string
           data?: Json | null
           id?: string
+          idempotency_key?: string | null
           is_read?: boolean
           is_resolved?: boolean
           message?: string | null
@@ -7186,6 +7190,8 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           severity?: Database["public"]["Enums"]["renovation_alert_severity"]
+          target_id?: string | null
+          target_table?: string | null
           title: string
         }
         Update: {
@@ -7193,6 +7199,7 @@ export type Database = {
           created_at?: string
           data?: Json | null
           id?: string
+          idempotency_key?: string | null
           is_read?: boolean
           is_resolved?: boolean
           message?: string | null
@@ -7200,6 +7207,8 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           severity?: Database["public"]["Enums"]["renovation_alert_severity"]
+          target_id?: string | null
+          target_table?: string | null
           title?: string
         }
         Relationships: [
@@ -7598,10 +7607,15 @@ export type Database = {
       }
       renovation_incidents: {
         Row: {
+          assigned_to: string | null
           company_id: string | null
+          cost_impact: number | null
           created_at: string
+          delay_impact_days: number | null
           description: string | null
           id: string
+          is_blocking: boolean
+          milestone_id: string | null
           project_id: string
           reported_by: string
           resolution: string | null
@@ -7612,10 +7626,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_to?: string | null
           company_id?: string | null
+          cost_impact?: number | null
           created_at?: string
+          delay_impact_days?: number | null
           description?: string | null
           id?: string
+          is_blocking?: boolean
+          milestone_id?: string | null
           project_id: string
           reported_by: string
           resolution?: string | null
@@ -7626,10 +7645,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_to?: string | null
           company_id?: string | null
+          cost_impact?: number | null
           created_at?: string
+          delay_impact_days?: number | null
           description?: string | null
           id?: string
+          is_blocking?: boolean
+          milestone_id?: string | null
           project_id?: string
           reported_by?: string
           resolution?: string | null
@@ -7645,6 +7669,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "renovation_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_incidents_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_milestones"
             referencedColumns: ["id"]
           },
           {
@@ -7729,11 +7760,13 @@ export type Database = {
       }
       renovation_notifications_queue: {
         Row: {
+          alert_id: string | null
           body: string | null
           channel: string
           created_at: string
           data: Json | null
           id: string
+          idempotency_key: string | null
           project_id: string
           recipient_user_id: string
           sent_at: string | null
@@ -7741,11 +7774,13 @@ export type Database = {
           title: string
         }
         Insert: {
+          alert_id?: string | null
           body?: string | null
           channel?: string
           created_at?: string
           data?: Json | null
           id?: string
+          idempotency_key?: string | null
           project_id: string
           recipient_user_id: string
           sent_at?: string | null
@@ -7753,11 +7788,13 @@ export type Database = {
           title: string
         }
         Update: {
+          alert_id?: string | null
           body?: string | null
           channel?: string
           created_at?: string
           data?: Json | null
           id?: string
+          idempotency_key?: string | null
           project_id?: string
           recipient_user_id?: string
           sent_at?: string | null
@@ -7765,6 +7802,13 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "renovation_notifications_queue_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_ai_alerts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "renovation_notifications_queue_project_id_fkey"
             columns: ["project_id"]
@@ -8113,11 +8157,14 @@ export type Database = {
         Row: {
           budget_actual: number | null
           budget_estimated: number | null
+          closed_at: string | null
+          closed_by: string | null
           created_at: string
           created_by: string | null
           description: string | null
           end_date_actual: string | null
           end_date_planned: string | null
+          final_report_path: string | null
           id: string
           immeuble_id: string
           objective: string | null
@@ -8131,15 +8178,19 @@ export type Database = {
           timeline_constraint: string | null
           title: string
           updated_at: string
+          warranties_not_applicable: boolean
         }
         Insert: {
           budget_actual?: number | null
           budget_estimated?: number | null
+          closed_at?: string | null
+          closed_by?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           end_date_actual?: string | null
           end_date_planned?: string | null
+          final_report_path?: string | null
           id?: string
           immeuble_id: string
           objective?: string | null
@@ -8153,15 +8204,19 @@ export type Database = {
           timeline_constraint?: string | null
           title: string
           updated_at?: string
+          warranties_not_applicable?: boolean
         }
         Update: {
           budget_actual?: number | null
           budget_estimated?: number | null
+          closed_at?: string | null
+          closed_by?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
           end_date_actual?: string | null
           end_date_planned?: string | null
+          final_report_path?: string | null
           id?: string
           immeuble_id?: string
           objective?: string | null
@@ -8175,6 +8230,7 @@ export type Database = {
           timeline_constraint?: string | null
           title?: string
           updated_at?: string
+          warranties_not_applicable?: boolean
         }
         Relationships: [
           {
@@ -8345,14 +8401,20 @@ export type Database = {
           deadline: string | null
           description: string
           id: string
+          is_blocking: boolean
           location: string | null
+          milestone_id: string | null
           notes: string | null
           photos: string[] | null
           project_id: string
+          reported_by: string | null
           resolved_at: string | null
           severity: Database["public"]["Enums"]["renovation_incident_severity"]
           status: Database["public"]["Enums"]["renovation_reservation_status"]
+          title: string | null
           updated_at: string
+          validated_at: string | null
+          validated_by: string | null
         }
         Insert: {
           company_id?: string | null
@@ -8360,14 +8422,20 @@ export type Database = {
           deadline?: string | null
           description: string
           id?: string
+          is_blocking?: boolean
           location?: string | null
+          milestone_id?: string | null
           notes?: string | null
           photos?: string[] | null
           project_id: string
+          reported_by?: string | null
           resolved_at?: string | null
           severity?: Database["public"]["Enums"]["renovation_incident_severity"]
           status?: Database["public"]["Enums"]["renovation_reservation_status"]
+          title?: string | null
           updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
         }
         Update: {
           company_id?: string | null
@@ -8375,14 +8443,20 @@ export type Database = {
           deadline?: string | null
           description?: string
           id?: string
+          is_blocking?: boolean
           location?: string | null
+          milestone_id?: string | null
           notes?: string | null
           photos?: string[] | null
           project_id?: string
+          reported_by?: string | null
           resolved_at?: string | null
           severity?: Database["public"]["Enums"]["renovation_incident_severity"]
           status?: Database["public"]["Enums"]["renovation_reservation_status"]
+          title?: string | null
           updated_at?: string
+          validated_at?: string | null
+          validated_by?: string | null
         }
         Relationships: [
           {
@@ -8390,6 +8464,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "renovation_companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_reservations_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_milestones"
             referencedColumns: ["id"]
           },
           {
@@ -8549,43 +8630,70 @@ export type Database = {
       }
       renovation_warranties: {
         Row: {
+          brand: string | null
+          category: string | null
           company_id: string | null
           created_at: string
           description: string | null
           document_file_id: string | null
           duration_months: number | null
           end_date: string | null
+          equipment: string | null
           id: string
+          installation_date: string | null
+          invoice_file_id: string | null
+          maintenance_frequency: string | null
+          model: string | null
           notes: string | null
+          notice_file_id: string | null
           project_id: string
+          serial_number: string | null
           start_date: string | null
           updated_at: string
           warranty_type: string
         }
         Insert: {
+          brand?: string | null
+          category?: string | null
           company_id?: string | null
           created_at?: string
           description?: string | null
           document_file_id?: string | null
           duration_months?: number | null
           end_date?: string | null
+          equipment?: string | null
           id?: string
+          installation_date?: string | null
+          invoice_file_id?: string | null
+          maintenance_frequency?: string | null
+          model?: string | null
           notes?: string | null
+          notice_file_id?: string | null
           project_id: string
+          serial_number?: string | null
           start_date?: string | null
           updated_at?: string
           warranty_type: string
         }
         Update: {
+          brand?: string | null
+          category?: string | null
           company_id?: string | null
           created_at?: string
           description?: string | null
           document_file_id?: string | null
           duration_months?: number | null
           end_date?: string | null
+          equipment?: string | null
           id?: string
+          installation_date?: string | null
+          invoice_file_id?: string | null
+          maintenance_frequency?: string | null
+          model?: string | null
           notes?: string | null
+          notice_file_id?: string | null
           project_id?: string
+          serial_number?: string | null
           start_date?: string | null
           updated_at?: string
           warranty_type?: string
@@ -8601,6 +8709,20 @@ export type Database = {
           {
             foreignKeyName: "renovation_warranties_document_file_id_fkey"
             columns: ["document_file_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_project_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_warranties_invoice_file_id_fkey"
+            columns: ["invoice_file_id"]
+            isOneToOne: false
+            referencedRelation: "renovation_project_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renovation_warranties_notice_file_id_fkey"
+            columns: ["notice_file_id"]
             isOneToOne: false
             referencedRelation: "renovation_project_files"
             referencedColumns: ["id"]
@@ -9864,6 +9986,10 @@ export type Database = {
         Args: { _immeuble_id: string }
         Returns: boolean
       }
+      renovation_check_project_closable: {
+        Args: { _project_id: string }
+        Returns: Json
+      }
       renovation_company_id_for_current_user: { Args: never; Returns: string }
       renovation_is_admin: { Args: never; Returns: boolean }
       renovation_is_agent: { Args: never; Returns: boolean }
@@ -10096,6 +10222,11 @@ export type Database = {
         | "quality_issue"
         | "permit_expiring"
         | "milestone_overdue"
+        | "incident_critical"
+        | "reservation_blocking"
+        | "project_not_closable"
+        | "no_update"
+        | "final_report_ready"
       renovation_company_role:
         | "general_contractor"
         | "subcontractor"
@@ -10137,6 +10268,7 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "archived"
+        | "closed"
       renovation_reservation_status:
         | "identified"
         | "notified"
@@ -10358,6 +10490,11 @@ export const Constants = {
         "quality_issue",
         "permit_expiring",
         "milestone_overdue",
+        "incident_critical",
+        "reservation_blocking",
+        "project_not_closable",
+        "no_update",
+        "final_report_ready",
       ],
       renovation_company_role: [
         "general_contractor",
@@ -10403,6 +10540,7 @@ export const Constants = {
         "completed",
         "cancelled",
         "archived",
+        "closed",
       ],
       renovation_reservation_status: [
         "identified",
