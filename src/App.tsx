@@ -414,6 +414,8 @@ const App = () => (
               <Route path="/proprietaire/parametres" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireParametres /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/projets-developpement" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireProjetsDeveloppement /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/projets-developpement/:id" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireProjetDetail /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/renovation" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><RenovationProjectsPage /></AppLayout></ProtectedRoute>} />
+              <Route path="/proprietaire/renovation/:id" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><RenovationProjectPage /></AppLayout></ProtectedRoute>} />
               <Route path="/proprietaire/vente" element={<ProtectedRoute allowedRoles={['proprietaire']}><AppLayout><ProprietaireVendreMonBien /></AppLayout></ProtectedRoute>} />
 
               {/* Public Routes */}
