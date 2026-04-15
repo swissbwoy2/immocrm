@@ -155,3 +155,18 @@ verify_jwt = false
 
 [functions.send-document-update-reminders]
 verify_jwt = false
+
+[functions.renovation-create-project]
+verify_jwt = false
+
+[functions.renovation-create-upload]
+verify_jwt = false
+
+[functions.renovation-register-upload]
+verify_jwt = false
+
+[functions.renovation-analyze-file]
+verify_jwt = false
+
+[functions.renovation-download-file]
+verify_jwt = false
