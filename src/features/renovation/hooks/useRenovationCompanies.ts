@@ -41,7 +41,7 @@ export function useRenovationCompanies(projectId: string | undefined) {
         .insert({
           project_id: projectId!,
           company_id: companyId,
-          role: role || 'contractor',
+          role: (role || 'contractor') as any,
           lot_name: lotName || null,
         });
       if (error) throw error;
