@@ -157,6 +157,10 @@ const AdminInteretsAcheteurs = lazy(() => import("./pages/admin/InteretsAcheteur
 const AdminProjetsDeveloppement = lazy(() => import("./pages/admin/ProjetsDeveloppement"));
 const AdminProjetDeveloppementDetail = lazy(() => import("./pages/admin/ProjetDeveloppementDetail"));
 
+// Renovation pages
+const RenovationProjectsPage = lazy(() => import("./features/renovation/pages/RenovationProjectsPage"));
+const RenovationProjectPage = lazy(() => import("./features/renovation/pages/RenovationProjectPage"));
+
 // Admin Proprietaires page
 const AdminProprietaires = lazy(() => import("./pages/admin/Proprietaires"));
 const AdminProprietaireDetail = lazy(() => import("./pages/admin/ProprietaireDetail"));
