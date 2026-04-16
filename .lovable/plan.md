@@ -1,43 +1,28 @@
 
 
-# Mini-recette complémentaire — Plan ajusté
+# Plan — Figer la version de référence Rénovation Intelligente
 
-## Réponses aux 3 points
+## Objectif
+Enregistrer dans la mémoire projet le périmètre définitif du module tel que décrit par l'utilisateur, sans modification de code ni migration.
 
-### 1. Format de fichier
-**Confirmé** : `renovation-analyze-quote` supporte `text/plain`. Le code (lignes 89-104) fait un fallback explicite : si le fichier n'est ni PDF ni image, il lit le contenu en texte brut via `.text()` et l'envoie directement à l'IA. Le format texte structuré est donc un happy path valide, pas un contournement.
+## Actions
 
-### 2. Comparabilité réelle
-Les 2 devis porteront sur le **même périmètre** : rénovation complète d'une salle de bain. Mêmes catégories (demolition, plomberie, peinture_revetements, menuiserie_int, electricite, divers), postes comparables, avec des écarts de prix réalistes entre les deux entreprises. Cela garantit que `renovation-compare-quotes` produira une comparaison catégorie par catégorie exploitable.
+### 1. Créer `mem://features/renovation-intelligente-reference-version`
 
-### 3. Seed/cleanup sans migration
-Les 2 entreprises de test seront insérées via `supabase--read_query` (INSERT) ou directement via les Edge Functions existantes. Le cleanup final utilisera un DELETE ciblé via le même outil. **Aucune migration SQL** ne sera créée.
+Fichier type `feature` contenant :
+- Statut : LIVRÉ, DÉPLOYÉ, TESTÉ, VALIDÉ — clôturé 2026-04-15
+- Périmètre fonctionnel complet (projets, documents, devis, budget/planning, entreprises, incidents, réserves, garanties, alertes, clôture, dossier final, historique, notifications)
+- 15 Edge Functions listées (note : l'utilisateur en liste 15 malgré le titre "13")
+- Architecture sécurité : verify_jwt manuel, RLS, bucket privé signed URLs, RPC SECURITY DEFINER, structured logging, filtrage par rôle, idempotence
+- 3 points de vigilance maintenance
 
----
+### 2. Mettre à jour `mem://index.md`
 
-## Séquence d'exécution
+Ajouter dans Memories :
+```
+- [Rénovation Intelligente v1](mem://features/renovation-intelligente-reference-version) — Périmètre figé Lots 1-4, 15 Edge Functions, clôturé 2026-04-15
+```
 
-### Étape 1 — Préparation
-1. Créer un projet test via `renovation-create-project`
-2. Insérer 2 entreprises via INSERT SQL direct (pas de migration)
-3. Uploader 2 fichiers texte structurés (devis concurrents salle de bain) via `renovation-create-upload` + upload storage + `renovation-register-upload`
-4. Créer 2 devis liés aux fichiers via `renovation-create-quote`
-
-### Étape 2 — Test `renovation-analyze-quote`
-- Analyser les 2 devis → attendu : 200 + `item_count > 0` + `summary.montant_ht`
-
-### Étape 3 — Test `renovation-compare-quotes`
-- Comparer les 2 devis analysés → attendu : 200 + comparaison par catégorie avec écarts
-
-### Étape 4 — Test `renovation-generate-final-report`
-- 1er appel → attendu : 200 + génération HTML
-- 2e appel sans `force` → attendu : 200 + `cached: true`
-
-### Étape 5 — Cleanup
-- DELETE ciblé via SQL direct : projet test, quotes, items, files, jobs, companies test, audit logs
-
-### Livrables
-- Résultat observé par cas (status HTTP + payload clé)
-- Confirmation cleanup
-- Statut final Lot 4
+## Aucun impact technique
+Zéro modification de code, zéro migration, zéro déploiement.
 
