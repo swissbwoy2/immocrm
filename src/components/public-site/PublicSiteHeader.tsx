@@ -44,10 +44,10 @@ export function PublicSiteHeader() {
 
               {/* Right: CTAs */}
               <div className="flex items-center gap-2">
-                <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex border-border/50">
+                <Button asChild variant="outline" size="sm" className="border-border/50">
                   <Link to="/login">
                     <LogIn className="h-4 w-4 sm:mr-2" />
-                    <span className="hidden sm:inline">Mon espace</span>
+                    <span className="hidden sm:inline">Mon espace client</span>
                   </Link>
                 </Button>
                 <Button
