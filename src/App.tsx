@@ -15,7 +15,7 @@ import { useAppVersionCheck } from "./hooks/useAppVersionCheck";
 // Eager load critical pages
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
-import Landing from "./pages/Landing";
+const HomePage = lazy(() => import("./pages/public-site/HomePage"));
 
 // Lazy load all other pages
 const NouveauMandat = lazy(() => import("./pages/NouveauMandat"));
@@ -237,7 +237,7 @@ const App = () => (
             <AppContent />
             <Suspense fallback={<PageLoader />}>
               <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<HomePage />} />
               
               <Route path="/login" element={<Login />} />
               <Route path="/nouveau-mandat" element={<NouveauMandat />} />
