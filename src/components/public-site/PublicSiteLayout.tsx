@@ -11,20 +11,20 @@ function PublicSiteInner({ children }: { children: ReactNode }) {
   useWhatsAppTracking();
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top banner */}
+    <div className="theme-luxury min-h-screen bg-background text-foreground">
+      {/* Top banner — luxury black with gold underline */}
       <div
-        className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border-b border-white/10"
+        className="bg-[hsl(30_15%_10%)] border-b border-[hsl(38_45%_48%/0.4)]"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="container mx-auto px-4 py-2 text-center">
-          <p className="text-xs sm:text-sm text-slate-300">
+          <p className="text-xs sm:text-sm text-[hsl(40_25%_85%)] tracking-wide">
             Un logiciel propulsé par{' '}
             <a
               href="https://www.immo-rama.ch"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:text-primary/80 font-semibold transition-colors"
+              className="text-[hsl(38_55%_70%)] hover:text-[hsl(38_55%_85%)] font-serif font-semibold transition-colors"
             >
               Immo-rama.ch
             </a>
