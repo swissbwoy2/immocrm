@@ -1,36 +1,30 @@
 
-## Problème
+## Changement demandé
 
-L'utilisateur ne voit ni le hamburger ni les boutons sur le header public à la racine `/`.
+Remplacer les textes du Hero de la homepage publique par :
 
-## Cause identifiée
+- **Headline principal** : "Ton futur appartement, Notre Mission !"
+- **Sous-titre** : "Confie la recherche ou la relocation de ton appartement à des experts de l'immobilier en Suisse romande !"
+- **Badge / accroche** : "Agence N°1 de relocation en Suisse romande ! Chasseur premium"
 
-Dans `src/components/public-site/PublicSiteHeader.tsx` (ligne ~22) :
+## Fichier concerné
 
-```tsx
-const handleScroll = () => setIsVisible(window.scrollY > 80);
-```
+**Unique fichier modifié** : `src/components/public-site/sections/HeroSection.tsx`
 
-Le header est **caché par défaut** (`isVisible = false`) et n'apparaît qu'après avoir scrollé de plus de 80px (classe `-translate-y-full opacity-0`).
+(Aucun impact sur `src/components/landing/HeroSection.tsx` qui appartient à l'ancienne landing privée et reste intact.)
 
-C'est pour cela que sur la capture, on voit la section Instagram mais aucun header — l'utilisateur est probablement en haut de page ou la position de scroll n'a pas déclenché l'affichage.
+## Mapping précis
 
-De plus, dans `HeroSection.tsx` il existe probablement déjà un bouton CTA "Activer ma recherche" intégré au hero, ce qui rend le header caché en haut de page acceptable visuellement, mais cela contredit la demande explicite de l'utilisateur de voir les 2 boutons et le hamburger en permanence.
-
-## Correction proposée
-
-**Fichier unique : `src/components/public-site/PublicSiteHeader.tsx`**
-
-Rendre le header **visible en permanence** dès le chargement de la page :
-
-1. Initialiser `isVisible = true` au lieu de `false`
-2. Supprimer la logique `handleScroll` qui cache le header en haut de page
-3. Garder l'effet glassmorphism (backdrop-blur) déjà en place
-
-Résultat : le hamburger, le logo, "Mon espace client" et "Activer ma recherche" seront visibles immédiatement, en haut de page comme après scroll, sur desktop et mobile.
+| Élément actuel | Nouveau contenu |
+|---|---|
+| Badge top "⭐ Chasseur immobilier N°1 en Suisse romande" | "⭐ Agence N°1 de relocation en Suisse romande • Chasseur premium" |
+| Headline location : "Tu n'es plus seul face à la **pénurie de logements !**" | "Ton futur appartement, **Notre Mission !**" |
+| Headline achat : "Trouve ton bien idéal **avant qu'il soit sur le marché**" | Conservé (concerne l'onglet Achat, hors demande) |
+| Sous-titre location : "Délègue ta recherche à **des experts dévoués...**" | "Confie la recherche ou la relocation de ton appartement à **des experts de l'immobilier en Suisse romande !**" |
 
 ## Garanties
 
-- Aucun autre fichier modifié
-- Aucun impact sur `/login`, `/nouveau-mandat`, ni le privé
-- Comportement responsive déjà en place (icônes seules `< sm`, icône + texte `sm+`) conservé
+- Aucune logique modifiée (UTM, tracking, CTA, liens)
+- Aucun changement sur les onglets Achat/Location ni sur les boutons
+- Aucun impact sur le privé, `/login`, `/nouveau-mandat`
+- Seul le contenu textuel de l'onglet "Location" du Hero public est touché
