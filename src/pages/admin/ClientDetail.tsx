@@ -1149,6 +1149,15 @@ export default function ClientDetail() {
                 <span className="hidden sm:inline">Envoyer dossier</span>
                 <span className="sm:hidden">Dossier</span>
               </Button>
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30 transition-all duration-300"
+                onClick={() => navigate(`/admin/clients/${client.id}/mandat-prefill`)}
+              >
+                <FileCheck className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline">Pré-remplir le mandat</span>
+                <span className="sm:hidden">Mandat</span>
+              </Button>
               <Button 
                 variant="outline" 
                 className="w-full sm:w-auto group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.15)] transition-all duration-300" 
