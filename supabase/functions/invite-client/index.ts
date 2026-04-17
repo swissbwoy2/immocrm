@@ -92,9 +92,9 @@ serve(async (req) => {
   }
 
   try {
-    const { email, clientId, prenom, nom, telephone, demandeMandat, invitationLegere, typeRecherche }: InviteClientRequest = await req.json();
+    const { email, clientId, prenom, nom, telephone, demandeMandat, invitationLegere, typeRecherche, agentId }: InviteClientRequest = await req.json();
 
-    console.log('Inviting client:', { email, clientId, prenom, nom, hasDemandeMandat: !!demandeMandat, invitationLegere });
+    console.log('Inviting client:', { email, clientId, prenom, nom, hasDemandeMandat: !!demandeMandat, invitationLegere, agentId });
 
     // Initialize Supabase admin client
     const supabaseAdmin = createClient(
@@ -247,11 +247,13 @@ serve(async (req) => {
         clientData.statut = 'en_attente';
         clientData.priorite = 'moyenne';
         clientData.type_recherche = typeRecherche || 'Acheter';
+        if (agentId) clientData.agent_id = agentId;
       } else {
         // Full mandate: activation immédiate
         clientData.date_ajout = new Date().toISOString();
         clientData.statut = 'actif';
         clientData.priorite = 'haute';
+        if (agentId) clientData.agent_id = agentId;
       }
 
       // Transfer all data from demandeMandat if available
