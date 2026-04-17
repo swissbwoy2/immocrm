@@ -146,53 +146,19 @@ export function HeroSection() {
                 <span>90 jours ou remboursé</span>
               </div>
 
-              {/* Mini-form */}
-              <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-4 sm:p-6 shadow-lg shadow-primary/5 max-w-2xl mx-auto">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                  <Select value={zone} onValueChange={setZone}>
-                    <SelectTrigger className="h-14 bg-background border-border/50">
-                      <SelectValue placeholder="Zone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {zoneOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={budget} onValueChange={setBudget}>
-                    <SelectTrigger className="h-14 bg-background border-border/50">
-                      <SelectValue placeholder="Budget" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {budgetOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select value={permis} onValueChange={setPermis}>
-                    <SelectTrigger className="h-14 bg-background border-border/50">
-                      <SelectValue placeholder="Permis / Situation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {permisOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
+              {/* CTA → Analyse de dossier */}
+              <div className="max-w-2xl mx-auto">
                 <Button
-                  onClick={handleSubmit}
+                  asChild
                   size="lg"
                   className="w-full group shadow-md shadow-primary/20 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground font-semibold text-base md:text-lg py-7"
                 >
-                  <Rocket className="h-5 w-5 mr-2" />
-                  Activer ma recherche maintenant
-                  <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                  <a href="#analyse-dossier">
+                    <FileSearch className="h-5 w-5 mr-2" />
+                    Analyse gratuite de mon dossier
+                    <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                  </a>
                 </Button>
-
                 <p className="text-xs text-muted-foreground mt-3">
                   Gratuit · Sans engagement · Réponse sous 24h
                 </p>
