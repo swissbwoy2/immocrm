@@ -232,8 +232,13 @@ export default function AdminOffresEnvoyees() {
   const [offres, setOffres] = useState<Offre[]>([]);
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [agentsById, setAgentsById] = useState<Map<string, Agent>>(new Map());
   const [clients, setClients] = useState<Client[]>([]);
+  const [clientsById, setClientsById] = useState<Map<string, Client>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadedAll, setLoadedAll] = useState(false);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [agentFilter, setAgentFilter] = useState("all");
@@ -250,6 +255,8 @@ export default function AdminOffresEnvoyees() {
   // Visites state
   const [visitesMap, setVisitesMap] = useState<Map<string, Visite[]>>(new Map());
 
+  const INITIAL_LIMIT = 300;
+
   useEffect(() => {
     if (!user || userRole !== 'admin') {
       navigate('/login');
@@ -261,70 +268,90 @@ export default function AdminOffresEnvoyees() {
 
   const loadData = async () => {
     try {
-      // Charger toutes les offres avec pagination (bypass 1000 row limit)
-      const { data: offresData, error: offresError } = await fetchAllPaginated(
-        () => supabase.from('offres').select('*').order('date_envoi', { ascending: false })
-      );
-      
+      // Parallélisation : count + offres récentes + agents + clients en simultané
+      const [
+        { count: countResult },
+        { data: offresData, error: offresError },
+        { data: agentsData, error: agentsError },
+        { data: clientsData, error: clientsError },
+      ] = await Promise.all([
+        supabase.from('offres').select('*', { count: 'exact', head: true }),
+        supabase
+          .from('offres')
+          .select('*')
+          .order('date_envoi', { ascending: false })
+          .limit(INITIAL_LIMIT),
+        supabase.from('agents').select('id, user_id'),
+        supabase.from('clients').select('id, user_id, agent_id'),
+      ]);
+
       if (offresError) throw offresError;
-      setOffres(offresData || []);
-
-      // Charger les visites associées aux offres
-      const offreIds = offresData?.map(o => o.id) || [];
-      if (offreIds.length > 0) {
-        const { data: visitesData, error: visitesError } = await supabase
-          .from('visites')
-          .select('id, offre_id, date_visite, statut, notes, feedback_agent')
-          .in('offre_id', offreIds)
-          .order('date_visite', { ascending: true })
-          .limit(15000);
-        
-        if (!visitesError && visitesData) {
-          const newVisitesMap = new Map<string, Visite[]>();
-          visitesData.forEach(v => {
-            if (!newVisitesMap.has(v.offre_id)) newVisitesMap.set(v.offre_id, []);
-            newVisitesMap.get(v.offre_id)!.push(v);
-          });
-          setVisitesMap(newVisitesMap);
-        }
-      }
-
-      // Charger les agents
-      const { data: agentsData, error: agentsError } = await supabase
-        .from('agents')
-        .select('id, user_id');
-      
       if (agentsError) throw agentsError;
-      setAgents(agentsData || []);
-
-      // Charger les clients avec leur agent assigné
-      const { data: clientsData, error: clientsError } = await supabase
-        .from('clients')
-        .select('id, user_id, agent_id');
-      
       if (clientsError) throw clientsError;
-      setClients(clientsData || []);
 
-      // Collecter tous les user_ids pour charger les profils
+      setTotalCount(countResult || 0);
+      setOffres(offresData || []);
+      setLoadedAll((offresData?.length || 0) >= (countResult || 0));
+
+      setAgents(agentsData || []);
+      setAgentsById(new Map((agentsData || []).map(a => [a.id, a])));
+      setClients(clientsData || []);
+      setClientsById(new Map((clientsData || []).map(c => [c.id, c])));
+
+      // Profils + visites en parallèle
       const userIds = new Set<string>();
       agentsData?.forEach(a => userIds.add(a.user_id));
       clientsData?.forEach(c => userIds.add(c.user_id));
 
-      if (userIds.size > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, prenom, nom')
-          .in('id', Array.from(userIds));
-        
-        if (profilesError) throw profilesError;
-        
-        const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
-        setProfiles(profilesMap);
+      const offreIds = (offresData || []).map(o => o.id);
+      const [profilesRes, visitesRes] = await Promise.all([
+        userIds.size > 0
+          ? supabase.from('profiles').select('id, prenom, nom').in('id', Array.from(userIds))
+          : Promise.resolve({ data: [] as any[], error: null }),
+        offreIds.length > 0
+          ? supabase
+              .from('visites')
+              .select('id, offre_id, date_visite, statut, notes, feedback_agent')
+              .in('offre_id', offreIds)
+              .order('date_visite', { ascending: true })
+          : Promise.resolve({ data: [] as any[], error: null }),
+      ]);
+
+      if (profilesRes.data) {
+        setProfiles(new Map(profilesRes.data.map((p: any) => [p.id, p])));
+      }
+
+      if (visitesRes.data) {
+        const newVisitesMap = new Map<string, Visite[]>();
+        visitesRes.data.forEach((v: any) => {
+          if (!newVisitesMap.has(v.offre_id)) newVisitesMap.set(v.offre_id, []);
+          newVisitesMap.get(v.offre_id)!.push(v);
+        });
+        setVisitesMap(newVisitesMap);
       }
     } catch (error) {
       console.error('Erreur chargement offres:', error);
+      toast.error('Erreur lors du chargement des offres');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAllOffres = async () => {
+    setLoadingMore(true);
+    try {
+      const { data, error } = await fetchAllPaginated(
+        () => supabase.from('offres').select('*').order('date_envoi', { ascending: false })
+      );
+      if (error) throw error;
+      setOffres(data || []);
+      setLoadedAll(true);
+      toast.success(`${data?.length || 0} offres chargées`);
+    } catch (e) {
+      console.error('Erreur chargement complet:', e);
+      toast.error('Erreur lors du chargement complet');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
