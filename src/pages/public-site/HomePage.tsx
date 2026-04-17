@@ -6,6 +6,7 @@ import { PublicSiteLayout } from '@/components/public-site/PublicSiteLayout';
 
 // Above the fold - eager
 import { HeroSection } from '@/components/public-site/sections/HeroSection';
+import { DossierAnalyseSection } from '@/components/public-site/sections/DossierAnalyseSection';
 import { SocialProofSection } from '@/components/public-site/sections/SocialProofSection';
 import { TeamSection } from '@/components/public-site/sections/TeamSection';
 import { ForWhoSection } from '@/components/public-site/sections/ForWhoSection';
@@ -14,7 +15,6 @@ import { HowItWorksSection } from '@/components/public-site/sections/HowItWorksS
 // Below the fold - lazy
 const DifferentiatorSection = lazy(() => import('@/components/public-site/sections/DifferentiatorSection').then(m => ({ default: m.DifferentiatorSection })));
 const ServicesFullSection = lazy(() => import('@/components/public-site/sections/ServicesFullSection').then(m => ({ default: m.ServicesFullSection })));
-const DossierAnalyseSection = lazy(() => import('@/components/public-site/sections/DossierAnalyseSection').then(m => ({ default: m.DossierAnalyseSection })));
 const GuaranteeSection = lazy(() => import('@/components/public-site/sections/GuaranteeSection').then(m => ({ default: m.GuaranteeSection })));
 const PricingSection = lazy(() => import('@/components/public-site/sections/PricingSection').then(m => ({ default: m.PricingSection })));
 const BudgetCalcSection = lazy(() => import('@/components/public-site/sections/BudgetCalcSection').then(m => ({ default: m.BudgetCalcSection })));
@@ -53,6 +53,7 @@ export default function HomePage() {
     <PublicSiteLayout>
 
       {/* Eager sections */}
+      <DossierAnalyseSection />
       <HeroSection />
 
       {/* Lazy sections */}
@@ -67,7 +68,6 @@ export default function HomePage() {
 
       {/* Lazy sections */}
       <Suspense fallback={null}>
-        <DossierAnalyseSection />
         <DifferentiatorSection />
         <ServicesFullSection />
         <BudgetCalcSection />
