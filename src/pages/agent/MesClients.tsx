@@ -446,6 +446,25 @@ const MesClients = () => {
             subtitle={`${clientsActifsOnly.length} clients actifs`}
             icon={Users}
             badge="Portfolio"
+            action={
+              <Button
+                onClick={() => setCreateDialogOpen(true)}
+                size="sm"
+                variant="outline"
+                className="border-primary/50 text-primary hover:bg-primary/10"
+              >
+                <UserPlus className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Créer un compte client</span>
+                <span className="sm:hidden">Créer</span>
+              </Button>
+            }
+          />
+
+          <CreateClientAccountDialog
+            open={createDialogOpen}
+            onOpenChange={setCreateDialogOpen}
+            agentId={agentId}
+            onCreated={() => loadAgentAndClients()}
           />
 
           {/* Filtres Section - Premium */}
