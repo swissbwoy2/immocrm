@@ -40,6 +40,7 @@ const MesClients = () => {
   const [agentId, setAgentId] = useState<string | null>(null);
   const [clientReminders, setClientReminders] = useState<Map<string, number>>(new Map());
   const [offresToday, setOffresToday] = useState<Map<string, number>>(new Map());
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     loadAgentAndClients();
