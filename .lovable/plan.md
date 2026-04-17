@@ -1,39 +1,62 @@
 
-## Problèmes identifiés
+## Analyse de la demande
 
-**1. Ordre des sections incorrect malgré la modification**
+3 objectifs distincts :
+1. **Loader global** avec logo Immo-Rama à chaque changement de page
+2. **Page admin "Offres envoyées"** trop lente / ne s'ouvre pas (1500+ offres)
+3. **Augmenter la capacité du site** pour fluidité maximale
 
-Sur la capture d'écran de `logisorama.ch` (publié), le widget visible juste sous le Hero est le **QuickForm "Zone / Budget / Permis / Situation"** — pas la section "Analyse gratuite de ton dossier".
+## Investigation nécessaire
 
-Vérification nécessaire : le QuickForm est probablement intégré **directement dans `HeroSection.tsx`** (et non une section séparée). Donc déplacer `DossierAnalyseSection` dans `HomePage.tsx` ne suffit pas — il faut soit :
-- (A) déplacer `DossierAnalyseSection` **avant** `HeroSection` (au-dessus du Hero) ; ou
-- (B) sortir le QuickForm du Hero et le placer après `DossierAnalyseSection`.
-
-→ **Option A retenue** : plus simple, sans risque de casser le tracking/UTM du QuickForm intégré au Hero. La section "Analyse gratuite de ton dossier" passera tout en haut, avant le Hero.
-
-**2. Cache PWA empêche de voir les changements en navigation normale**
-
-L'utilisateur ne voit les mises à jour qu'en navigation privée → le Service Worker PWA sert l'ancienne version cachée. La mémoire `mem://tech/pwa/update-and-session-strategy` indique que `SKIP_WAITING` a été retiré pour préserver les sessions, ce qui force l'utilisateur à fermer tous les onglets.
-
-→ Solution : **forcer une mise à jour ponctuelle** en bumpant la version du Service Worker (ou en ajoutant un mécanisme de notification de mise à jour visible). Le moyen le plus simple et sûr : modifier la chaîne de version du SW pour invalider l'ancien cache **une seule fois**, sans réactiver `SKIP_WAITING` de façon permanente.
+Je dois lire avant de planifier précisément :
+- `src/components/PageLoader.tsx` (existant) — pour le remplacer par un loader brandé
+- `src/components/PageTransition.tsx` — voir si un loader transition existe
+- La page "Offres envoyées" admin — identifier le fichier et la requête lente
+- `src/App.tsx` — où injecter le loader global Suspense
 
 ## Plan d'action
 
-### Étape 1 — Vérifier où se trouve le QuickForm
-Lire `src/components/public-site/sections/HeroSection.tsx` et `src/components/public-site/sections/DossierAnalyseSection.tsx` pour confirmer.
+### Lot 1 — Loader global brandé Immo-Rama
+- Refondre `src/components/PageLoader.tsx` avec :
+  - Logo `logoImmoRama` (déjà importé ailleurs) animé (pulse + spinner subtil)
+  - Fond blanc/dark adaptatif
+  - Texte "Logisorama" + "by Immo-rama.ch"
+- S'assurer qu'il est utilisé dans **tous** les `<Suspense fallback={...}>` du routing (App.tsx) → remplacer les fallbacks `null` ou autres loaders par `<PageLoader />`
 
-### Étape 2 — Réordonner dans `HomePage.tsx`
-Placer `<DossierAnalyseSection />` **au-dessus** de `<HeroSection />` (en eager, sortir du Suspense lazy).
+### Lot 2 — Page "Offres envoyées" admin (perf 1500+ offres)
+Diagnostic probable : requête SELECT * sans pagination + jointures lourdes (clients, profiles, immeubles).
 
-### Étape 3 — Forcer la mise à jour du PWA
-Localiser le fichier de configuration du Service Worker (probablement `vite.config.ts` ou `public/sw.js` / `src/sw.ts`) et bumper la version du cache. Cela force tous les navigateurs à invalider l'ancien cache au prochain chargement.
+Optimisations à appliquer :
+- **Pagination serveur** : afficher 50 offres par page avec `range()` au lieu de tout charger
+- **Filtres avant requête** : statut / agent / date pour réduire le volume avant fetch
+- **Compteur via `count: 'exact', head: true`** au lieu de récupérer toutes les lignes pour la stat
+- **Index DB** : vérifier index sur `offres.created_at`, `offres.statut`, `offres.agent_id` — créer migration si manquants
+- **Lazy-load** des données secondaires (profil acheteur) seulement à l'expansion d'une carte
+- **Skeleton loader** pendant le fetch (pas un blocage total)
 
-## Fichiers à modifier
+### Lot 3 — Capacité d'instance Lovable Cloud
+La capacité serveur (Postgres CPU/RAM) ne se modifie **pas par code** — c'est un paramètre d'infrastructure côté Lovable Cloud.
 
-1. `src/pages/public-site/HomePage.tsx` — réordonner sections
-2. Fichier de config PWA (à identifier) — bump cache version
+→ Je vais expliquer à l'utilisateur **où cliquer** pour upgrader l'instance Cloud (Backend → Advanced settings → Upgrade instance) et fournir un bouton `presentation-open-backend`. Cela complète les optimisations code du Lot 2.
+
+### Lot 4 — Performance générale du chargement
+- Vérifier que les routes utilisent bien `lazy()` partout (déjà le cas pour CookieConsent, à étendre si besoin)
+- Précharger le logo Immo-Rama (`<link rel="preload">` dans `index.html`) pour éviter le flash sur le loader
+- Confirmer que le `PageTransition` n'ajoute pas de délai artificiel
+
+## Fichiers impactés
+
+1. `src/components/PageLoader.tsx` — refonte avec logo
+2. `src/App.tsx` — uniformiser les Suspense fallbacks
+3. `index.html` — preload du logo
+4. Page admin offres envoyées (à identifier : probablement `src/pages/admin/OffresEnvoyees.tsx` ou similaire) — pagination + filtres + count head
+5. Migration SQL — index sur `offres` si manquants
 
 ## Garanties
-- Aucun changement sur le QuickForm intégré au Hero (UTM, tracking préservés)
-- Aucun impact sur `/login`, `/nouveau-mandat`, espace privé
-- Le bump de cache PWA est ponctuel — la stratégie anti-`SKIP_WAITING` reste en place
+- Aucun impact sur l'authentification, les RLS, le tracking UTM, ni les Edge Functions
+- Pagination respecte la règle mémoire `limit(15000)` / `fetchAllPaginated` (utilisé uniquement quand nécessaire — ici on veut au contraire **limiter** l'affichage)
+- Logo respecte la charte `mem://style/brand-identity-guidelines`
+
+## Question préalable
+
+Avant de coder, je dois confirmer un point ambigu sur le loader.
