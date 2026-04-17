@@ -357,7 +357,7 @@ export default function AdminOffresEnvoyees() {
 
   const getAgentName = (agentId: string | null) => {
     if (!agentId) return "Agent inconnu";
-    const agent = agents.find(a => a.id === agentId);
+    const agent = agentsById.get(agentId);
     if (!agent) return "Agent inconnu";
     const profile = profiles.get(agent.user_id);
     return profile ? `${profile.prenom} ${profile.nom}` : "Agent inconnu";
@@ -365,7 +365,7 @@ export default function AdminOffresEnvoyees() {
 
   const getClientName = (clientId: string | null) => {
     if (!clientId) return "Client inconnu";
-    const client = clients.find(c => c.id === clientId);
+    const client = clientsById.get(clientId);
     if (!client) return "Client inconnu";
     const profile = profiles.get(client.user_id);
     return profile ? `${profile.prenom} ${profile.nom}` : "Client inconnu";
