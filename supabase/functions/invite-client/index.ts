@@ -324,7 +324,15 @@ serve(async (req) => {
       }
     } else {
       clientRecordId = existingClient.id;
-      
+
+      // Si un agentId est fourni et que le client n'a pas d'agent assigné, l'assigner
+      if (agentId) {
+        const { data: cur } = await supabaseAdmin.from('clients').select('agent_id').eq('id', existingClient.id).maybeSingle();
+        if (!cur?.agent_id) {
+          await supabaseAdmin.from('clients').update({ agent_id: agentId }).eq('id', existingClient.id);
+        }
+      }
+
       // Update existing client with demande data
       if (demandeMandat) {
         const updateData: any = {
