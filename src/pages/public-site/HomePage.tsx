@@ -51,7 +51,6 @@ export default function HomePage() {
 
   return (
     <PublicSiteLayout>
-      <FloatingNav />
 
       {/* Eager sections */}
       <HeroSection />
