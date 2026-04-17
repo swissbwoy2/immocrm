@@ -58,7 +58,7 @@ export function DifferentiatorSection() {
     <section className="py-24 md:py-32 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
       <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px]" />
-      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-blue-500/8 rounded-full blur-[100px]" />
+      <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[100px]" />
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px]" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.5)_100%)]" />
 
@@ -74,7 +74,7 @@ export function DifferentiatorSection() {
           </div>
           <h2 className="text-3xl md:text-5xl lg:text-6xl font-black text-white mb-4 leading-tight tracking-tight">
             Pas une agence comme les autres
-            <span className="bg-gradient-to-r from-primary via-blue-400 to-violet-400 bg-clip-text text-transparent"> 💼</span>
+            <span className="bg-gradient-to-r from-primary via-primary to-accent bg-clip-text text-transparent"> 💼</span>
           </h2>
           <p className="text-base md:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
             {content.subtitle.split('POUR toi')[0]}
@@ -89,8 +89,8 @@ export function DifferentiatorSection() {
             <div className="grid grid-cols-[1fr_1.5fr_1.5fr] gap-6 mb-6">
               <div className="p-4" />
               <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-primary via-blue-500 to-violet-500 rounded-2xl blur-lg opacity-75 group-hover:opacity-100 transition-opacity" />
-                <div className="relative backdrop-blur-xl rounded-2xl p-5 bg-gradient-to-br from-primary/20 via-blue-500/10 to-violet-500/10 border border-white/20 shadow-2xl">
+                <div className="absolute -inset-1 bg-gradient-to-r from-primary via-primary to-accent rounded-2xl blur-lg opacity-75 group-hover:opacity-100 transition-opacity" />
+                <div className="relative backdrop-blur-xl rounded-2xl p-5 bg-gradient-to-br from-primary/20 via-primary/10 to-accent/10 border border-white/20 shadow-2xl">
                   <div className="flex items-center justify-center gap-3">
                     <div className="p-2 rounded-xl bg-white/10 backdrop-blur-sm"><Crown className="h-5 w-5 text-amber-400" /></div>
                     <h3 className="text-lg font-black text-white">Avec Immo-rama.ch</h3>
@@ -108,12 +108,12 @@ export function DifferentiatorSection() {
               {displayData.map((row, index) => (
                 <div key={index} className="grid grid-cols-[1fr_1.5fr_1.5fr] gap-6 animate-fade-in group" style={{ animationDelay: `${index * 50}ms` }}>
                   <div className="flex items-center gap-3 p-3">
-                    <div className="relative p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-blue-500/10 border border-white/10 backdrop-blur-sm group-hover:border-primary/30 transition-all">
+                    <div className="relative p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/60/10 border border-white/10 backdrop-blur-sm group-hover:border-primary/30 transition-all">
                       <row.icon className="h-4 w-4 text-primary" />
                     </div>
                     <span className="font-bold text-white group-hover:text-primary transition-colors text-sm">{row.aspect}</span>
                   </div>
-                  <div className="relative h-full backdrop-blur-xl rounded-xl p-4 bg-gradient-to-br from-primary/10 to-blue-500/5 border border-primary/20 group-hover:border-primary/40 transition-all">
+                  <div className="relative h-full backdrop-blur-xl rounded-xl p-4 bg-gradient-to-br from-primary/10 to-primary/60/5 border border-primary/20 group-hover:border-primary/40 transition-all">
                     <div className="flex items-start gap-2">
                       <div className="flex-shrink-0 p-1 rounded-full bg-gradient-to-br from-green-500 to-emerald-500"><CheckCircle className="h-3.5 w-3.5 text-white" /></div>
                       <span className="text-sm text-slate-200 leading-relaxed">{row.logisorama}</span>
@@ -137,12 +137,12 @@ export function DifferentiatorSection() {
                 <Card className="relative backdrop-blur-xl bg-slate-900/90 border-white/10 overflow-hidden">
                   <CardHeader className="pb-2 border-b border-white/5">
                     <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-blue-500/10 border border-white/10"><row.icon className="h-4 w-4 text-primary" /></div>
+                      <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/60/10 border border-white/10"><row.icon className="h-4 w-4 text-primary" /></div>
                       <CardTitle className="text-base text-white">{row.aspect}</CardTitle>
                     </div>
                   </CardHeader>
                   <CardContent className="pt-3 space-y-3">
-                    <div className="flex items-start gap-2 p-3 rounded-xl bg-gradient-to-br from-primary/15 to-blue-500/10 border border-primary/30">
+                    <div className="flex items-start gap-2 p-3 rounded-xl bg-gradient-to-br from-primary/15 to-primary/60/10 border border-primary/30">
                       <div className="flex-shrink-0 p-1 rounded-full bg-gradient-to-br from-green-500 to-emerald-500"><CheckCircle className="h-3.5 w-3.5 text-white" /></div>
                       <p className="text-sm text-slate-200">{row.logisorama}</p>
                     </div>
@@ -166,7 +166,7 @@ export function DifferentiatorSection() {
         <div className="mt-12 sm:mt-20 md:mt-24 text-center animate-fade-in px-2 sm:px-0" style={{ animationDelay: '700ms' }}>
           <div className="relative w-full max-w-3xl mx-auto">
             <div className="backdrop-blur-xl rounded-2xl sm:rounded-3xl p-6 sm:p-10 md:p-12 bg-gradient-to-br from-white/10 to-white/5 border border-white/20 shadow-2xl overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-violet-500/10" />
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10" />
               <div className="relative">
                 <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-3 sm:mb-4">La différence est claire 🎯</h3>
                 <p className="text-sm sm:text-base md:text-lg text-slate-300 mb-6 sm:mb-8 max-w-xl mx-auto leading-relaxed">
@@ -174,13 +174,13 @@ export function DifferentiatorSection() {
                 </p>
                 {isAchat ? (
                   <a href={content.ctaLink}>
-                    <Button size="lg" className="relative group/btn font-bold text-sm sm:text-base md:text-lg px-6 sm:px-10 py-5 sm:py-7 bg-gradient-to-r from-primary via-blue-500 to-violet-500 hover:from-primary/90 hover:via-blue-500/90 hover:to-violet-500/90 border-0 shadow-2xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-primary/50 w-full sm:w-auto">
+                    <Button size="lg" className="relative group/btn font-bold text-sm sm:text-base md:text-lg px-6 sm:px-10 py-5 sm:py-7 bg-gradient-to-r from-primary via-primary to-accent hover:from-primary/90 hover:via-primary/90 hover:to-accent/90 border-0 shadow-2xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-primary/50 w-full sm:w-auto">
                       <span className="relative z-10 flex items-center justify-center gap-2">{content.cta} 🏠<ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover/btn:translate-x-1 transition-transform" /></span>
                     </Button>
                   </a>
                 ) : (
                   <Link to={content.ctaLink}>
-                    <Button size="lg" className="relative group/btn font-bold text-sm sm:text-base md:text-lg px-6 sm:px-10 py-5 sm:py-7 bg-gradient-to-r from-primary via-blue-500 to-violet-500 hover:from-primary/90 hover:via-blue-500/90 hover:to-violet-500/90 border-0 shadow-2xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-primary/50 w-full sm:w-auto">
+                    <Button size="lg" className="relative group/btn font-bold text-sm sm:text-base md:text-lg px-6 sm:px-10 py-5 sm:py-7 bg-gradient-to-r from-primary via-primary to-accent hover:from-primary/90 hover:via-primary/90 hover:to-accent/90 border-0 shadow-2xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-primary/50 w-full sm:w-auto">
                       <span className="relative z-10 flex items-center justify-center gap-2">{content.cta} 🚀<ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 group-hover/btn:translate-x-1 transition-transform" /></span>
                     </Button>
                   </Link>
