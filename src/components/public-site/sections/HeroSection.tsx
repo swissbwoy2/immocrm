@@ -71,7 +71,7 @@ export function HeroSection() {
           <div className="animate-fade-in mb-2 md:mb-4">
             <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/50 rounded-full px-3 py-1.5 md:px-5 md:py-2.5">
               <Crown className="h-4 w-4 md:h-5 md:w-5 text-amber-500" />
-              <span className="text-xs md:text-base font-semibold text-amber-500">⭐ Chasseur immobilier N°1 en Suisse romande</span>
+              <span className="text-xs md:text-base font-semibold text-amber-500">⭐ Agence N°1 de relocation en Suisse romande • Chasseur premium</span>
             </div>
           </div>
 
@@ -117,13 +117,13 @@ export function HeroSection() {
           {(isLocation || !searchType) && (
             <div className="animate-fade-in space-y-6 md:space-y-8 w-full">
               <p className="text-xs sm:text-sm tracking-widest uppercase text-primary font-semibold">
-                Agence N°1 de relocation en Suisse romande
+                Agence N°1 de relocation en Suisse romande • Chasseur premium
               </p>
               <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-foreground leading-tight max-w-3xl mx-auto">
-                {ACTIVE_HEADLINE}
+                Ton futur appartement, <span className="text-primary">Notre Mission !</span>
               </h1>
               <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                Avec à peine 1% de logements disponibles en Suisse romande, Immo-Rama devient votre allié incontournable pour rechercher, cibler et dénicher plus rapidement votre futur appartement.
+                Confie la recherche ou la relocation de ton appartement à <strong className="text-foreground">des experts de l'immobilier en Suisse romande !</strong>
               </p>
 
               <div className="flex flex-wrap items-center justify-center gap-x-1 text-sm sm:text-base font-medium text-foreground/80">
