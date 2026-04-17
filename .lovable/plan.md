@@ -1,110 +1,75 @@
 
 ## Reformulation
 
-L'admin et l'agent doivent pouvoir **créer un compte client** depuis leur interface privée. Le client reçoit ensuite un email avec un lien pour :
-1. Définir son mot de passe
-2. Compléter son profil (formulaire classique)
-3. Signer son mandat
-4. Joindre les documents demandés
+L'admin/agent doit pouvoir **remplir le mandat à la place du client** (toutes les étapes : identité, recherche, tiers, documents, clauses), **sauf la signature** qui reste réservée au client. Et **sans contrainte de champs obligatoires** — l'admin peut sauvegarder un mandat partiel et le client complétera/signera.
 
 ## État actuel
 
-✅ **Edge Function `invite-client` existe déjà** (mémoire `unified-client-activation-flow`) — invite un client après paiement de mandat
-✅ **Module `/mandat-v3`** opérationnel (signature + documents en mode invité)
-✅ **Auth Supabase** configurée (rôle `client` géré via `user_roles`)
-✅ **Email infra** custom domain `notify.logisorama.ch` actif
+- `/mandat-v3` (public, mode invité) : 7 étapes avec validations strictes, signature obligatoire à la fin
+- Les admins/agents n'ont pas d'interface pour pré-remplir un mandat côté client
+- Création de compte client fonctionnelle (Lot précédent)
 
-## Ce qui manque
+## Plan
 
-Un **bouton/formulaire dans les espaces admin et agent** pour créer manuellement un compte client (sans passer par le paiement préalable), avec envoi d'un email d'invitation incluant un lien magique vers le formulaire de profil + mandat + documents.
+### 1. Nouvelle route privée `/admin/clients/:clientId/mandat-prefill` et `/agent/clients/:clientId/mandat-prefill`
 
-## Investigation à faire (avant code)
+Page wizard réutilisant les composants `MandatV3Step1` à `MandatV3Step6` **existants**, en sautant l'étape 7 (signature).
 
-- `src/pages/admin/Clients.tsx` (ou équivalent) — voir le bouton "Ajouter client" existant
-- `src/pages/agent/MesClients.tsx` — idem côté agent
-- `supabase/functions/invite-client/index.ts` — comprendre le flow actuel pour le réutiliser
-- Vérifier si une page `/client/onboarding` existe déjà ou s'il faut la créer
+### 2. Composant `MandatPrefillWizard.tsx`
 
-## Plan technique
+- Réutilise `MandatV3Step1Identity`, `Step2Search`, `Step3RelatedParties`, `Step4Documents`, `Step5References`, `Step6LegalClauses`
+- **Mode "staff"** activé via prop `staffMode={true}` :
+  - Désactive toutes les validations Zod bloquantes (champs `.optional()` runtime)
+  - Retire les astérisques visuels des labels obligatoires
+  - Supprime les blocages "Suivant" → navigation libre entre étapes
+  - Bandeau jaune en haut : "Mode pré-remplissage par l'agence — la signature sera demandée au client"
+- Bouton final : **"Envoyer au client pour signature"** (au lieu de "Signer")
 
-### Lot 1 — Bouton "Créer un compte client" (admin + agent)
+### 3. Adaptations légères dans les Steps existants
 
-**Fichiers** :
-- `src/pages/admin/Clients.tsx` : ajouter bouton "Créer un compte client"
-- `src/pages/agent/MesClients.tsx` : même bouton (visible si rôle `agent`)
-- ➕ `src/components/clients/CreateClientAccountDialog.tsx` (nouveau, partagé)
+Ajouter une prop optionnelle `staffMode?: boolean` aux 6 steps :
+- Si `true` → tous les `required` HTML deviennent `false`, validations désactivées
+- Aucun changement de comportement quand `staffMode` est absent ou `false` (rétrocompatibilité totale avec `/mandat-v3` public)
 
-**Formulaire minimal** (Dialog modal) :
-- Prénom *
-- Nom *
-- Email * (validé via Zod)
-- Téléphone * (format suisse +41)
-- Type de recherche (Louer / Acheter)
-- Agent assigné (auto = agent connecté côté agent, sélecteur côté admin)
+### 4. Edge Function `staff-create-mandate-draft`
 
-**Validation** : Zod côté client + serveur
+➕ `supabase/functions/staff-create-mandate-draft/index.ts`
 
-### Lot 2 — Edge Function `create-client-account`
+- Vérifie JWT staff (admin/agent via `has_role`)
+- Crée la ligne `mandates` avec statut `draft_pending_signature`
+- Insère related_parties, documents
+- Génère un `access_token` unique (réutilise infra `mandat-v3`)
+- Envoie email au client : *"Votre mandat a été pré-rempli par votre agent — il ne reste qu'à le signer"* avec lien magique vers `/mandat-v3/sign/:token` (étape 7 isolée)
 
-➕ `supabase/functions/create-client-account/index.ts`
+### 5. Page client `/mandat-v3/sign/:token`
 
-Logique :
-1. Vérifier JWT du caller (admin ou agent uniquement via `has_role`)
-2. Validation Zod du body
-3. Créer l'utilisateur via `supabase.auth.admin.createUser` avec `email_confirm: false` + `user_metadata` (prénom, nom, téléphone)
-4. Insérer rôle `client` dans `user_roles`
-5. Créer la ligne `clients` (avec `agent_id`, `type_recherche`, statut `prospect`)
-6. Si appelé par agent : créer aussi l'entrée `client_agents` (cohérence dual-source — mémoire `dual-source-assignment-integrity-strategy`)
-7. Générer un magic link via `supabase.auth.admin.generateLink({ type: 'invite', redirectTo: '/client/onboarding' })`
-8. Enqueue email d'invitation via `enqueue_email` RPC (template branded Logisorama)
+➕ Nouvelle page minimaliste qui charge le mandat existant via token et affiche **uniquement l'étape 7** (récap + signature + clauses légales à confirmer).
 
-### Lot 3 — Page d'onboarding client
+### 6. Bouton d'accès dans les fiches client
 
-➕ `src/pages/client/Onboarding.tsx` accessible via `/client/onboarding` (route publique, vérifie token recovery dans URL hash)
+- `src/pages/admin/ClientDetail.tsx` : bouton "Pré-remplir le mandat"
+- `src/pages/agent/ClientDetail.tsx` : idem
 
-3 étapes wizard :
-1. **Définir mot de passe** (`supabase.auth.updateUser({ password })`)
-2. **Compléter profil** (champs classiques : adresse, NPA, ville, nationalité, état civil, profession, revenus, etc. — réutiliser composants existants `mandat/`)
-3. **Mandat + documents** : redirection vers `/mandat-v3?prefill=true` qui pré-remplit les champs déjà saisis et permet la signature + upload documents
+→ Visible si le client n'a pas encore de mandat signé.
 
-À la fin : redirection vers `/client/dashboard`
-
-### Lot 4 — Email d'invitation branded
-
-Template HTML inline dans l'edge function :
-- Logo Immo-Rama
-- Titre : "Bienvenue chez Logisorama"
-- Bouton CTA : "Activer mon compte"
-- Expire dans 7 jours
-- Signé "Christ Ramazani, Directeur d'agence"
-
-## Fichiers à créer/modifier
+## Fichiers
 
 **Nouveaux** :
-- `src/components/clients/CreateClientAccountDialog.tsx`
-- `src/pages/client/Onboarding.tsx`
-- `supabase/functions/create-client-account/index.ts`
+- `src/components/mandat-v3/MandatPrefillWizard.tsx`
+- `src/pages/staff/MandatPrefill.tsx` (route partagée admin/agent)
+- `src/pages/mandat-v3/SignOnly.tsx`
+- `supabase/functions/staff-create-mandate-draft/index.ts`
 
-**Modifiés** :
-- `src/pages/admin/Clients.tsx` (bouton)
-- `src/pages/agent/MesClients.tsx` (bouton)
-- `src/App.tsx` (route `/client/onboarding`)
+**Modifiés** (ajout prop `staffMode` non-breaking) :
+- `src/components/mandat-v3/MandatV3Step1Identity.tsx` à `Step6LegalClauses.tsx`
+- `src/App.tsx` (3 routes : `/admin/clients/:id/mandat-prefill`, `/agent/clients/:id/mandat-prefill`, `/mandat-v3/sign/:token`)
+- Fiches client admin + agent (bouton d'accès)
 
 ## Garanties
 
-- ✅ Sécurité : edge function vérifie le rôle admin/agent via JWT
-- ✅ RLS respectée (cohérence `clients.agent_id` + `client_agents`)
-- ✅ Email envoyé via infra existante `notify.logisorama.ch`
-- ✅ Réutilise le module `/mandat-v3` existant pour signature + documents (pas de duplication)
-- ✅ Pas d'impact sur thème landing publique (luxe ivoire/or)
-- ✅ Pas d'impact sur thème espaces privés (ancien thème conservé)
-
-## Question rapide avant de coder
-
-Une seule clarification nécessaire :
-
-**À l'étape 3 du wizard d'onboarding (mandat + documents)** :
-- **A)** Redirection vers `/mandat-v3` existant avec pré-remplissage (recommandé — réutilise le module éprouvé)
-- **B)** Intégrer signature + documents directement dans `/client/onboarding` (nouveau composant)
-
-Réponds par "A" ou "B" et je lance.
+- ✅ Signature **toujours réservée au client** (jamais staff)
+- ✅ Aucun champ obligatoire en mode staff → sauvegarde libre
+- ✅ Module `/mandat-v3` public **inchangé** (validations strictes maintenues)
+- ✅ RLS : edge function valide rôle admin/agent + co-assignment
+- ✅ Email branded via `notify.logisorama.ch`
+- ✅ Thème inchangé (espaces privés = ancien thème)
