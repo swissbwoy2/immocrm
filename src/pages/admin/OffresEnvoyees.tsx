@@ -232,8 +232,13 @@ export default function AdminOffresEnvoyees() {
   const [offres, setOffres] = useState<Offre[]>([]);
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [agentsById, setAgentsById] = useState<Map<string, Agent>>(new Map());
   const [clients, setClients] = useState<Client[]>([]);
+  const [clientsById, setClientsById] = useState<Map<string, Client>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadedAll, setLoadedAll] = useState(false);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [agentFilter, setAgentFilter] = useState("all");
@@ -250,6 +255,8 @@ export default function AdminOffresEnvoyees() {
   // Visites state
   const [visitesMap, setVisitesMap] = useState<Map<string, Visite[]>>(new Map());
 
+  const INITIAL_LIMIT = 300;
+
   useEffect(() => {
     if (!user || userRole !== 'admin') {
       navigate('/login');
@@ -261,76 +268,96 @@ export default function AdminOffresEnvoyees() {
 
   const loadData = async () => {
     try {
-      // Charger toutes les offres avec pagination (bypass 1000 row limit)
-      const { data: offresData, error: offresError } = await fetchAllPaginated(
-        () => supabase.from('offres').select('*').order('date_envoi', { ascending: false })
-      );
-      
+      // Parallélisation : count + offres récentes + agents + clients en simultané
+      const [
+        { count: countResult },
+        { data: offresData, error: offresError },
+        { data: agentsData, error: agentsError },
+        { data: clientsData, error: clientsError },
+      ] = await Promise.all([
+        supabase.from('offres').select('*', { count: 'exact', head: true }),
+        supabase
+          .from('offres')
+          .select('*')
+          .order('date_envoi', { ascending: false })
+          .limit(INITIAL_LIMIT),
+        supabase.from('agents').select('id, user_id'),
+        supabase.from('clients').select('id, user_id, agent_id'),
+      ]);
+
       if (offresError) throw offresError;
-      setOffres(offresData || []);
-
-      // Charger les visites associées aux offres
-      const offreIds = offresData?.map(o => o.id) || [];
-      if (offreIds.length > 0) {
-        const { data: visitesData, error: visitesError } = await supabase
-          .from('visites')
-          .select('id, offre_id, date_visite, statut, notes, feedback_agent')
-          .in('offre_id', offreIds)
-          .order('date_visite', { ascending: true })
-          .limit(15000);
-        
-        if (!visitesError && visitesData) {
-          const newVisitesMap = new Map<string, Visite[]>();
-          visitesData.forEach(v => {
-            if (!newVisitesMap.has(v.offre_id)) newVisitesMap.set(v.offre_id, []);
-            newVisitesMap.get(v.offre_id)!.push(v);
-          });
-          setVisitesMap(newVisitesMap);
-        }
-      }
-
-      // Charger les agents
-      const { data: agentsData, error: agentsError } = await supabase
-        .from('agents')
-        .select('id, user_id');
-      
       if (agentsError) throw agentsError;
-      setAgents(agentsData || []);
-
-      // Charger les clients avec leur agent assigné
-      const { data: clientsData, error: clientsError } = await supabase
-        .from('clients')
-        .select('id, user_id, agent_id');
-      
       if (clientsError) throw clientsError;
-      setClients(clientsData || []);
 
-      // Collecter tous les user_ids pour charger les profils
+      setTotalCount(countResult || 0);
+      setOffres(offresData || []);
+      setLoadedAll((offresData?.length || 0) >= (countResult || 0));
+
+      setAgents(agentsData || []);
+      setAgentsById(new Map((agentsData || []).map(a => [a.id, a])));
+      setClients(clientsData || []);
+      setClientsById(new Map((clientsData || []).map(c => [c.id, c])));
+
+      // Profils + visites en parallèle
       const userIds = new Set<string>();
       agentsData?.forEach(a => userIds.add(a.user_id));
       clientsData?.forEach(c => userIds.add(c.user_id));
 
-      if (userIds.size > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, prenom, nom')
-          .in('id', Array.from(userIds));
-        
-        if (profilesError) throw profilesError;
-        
-        const profilesMap = new Map(profilesData?.map(p => [p.id, p]));
-        setProfiles(profilesMap);
+      const offreIds = (offresData || []).map(o => o.id);
+      const [profilesRes, visitesRes] = await Promise.all([
+        userIds.size > 0
+          ? supabase.from('profiles').select('id, prenom, nom').in('id', Array.from(userIds))
+          : Promise.resolve({ data: [] as any[], error: null }),
+        offreIds.length > 0
+          ? supabase
+              .from('visites')
+              .select('id, offre_id, date_visite, statut, notes, feedback_agent')
+              .in('offre_id', offreIds)
+              .order('date_visite', { ascending: true })
+          : Promise.resolve({ data: [] as any[], error: null }),
+      ]);
+
+      if (profilesRes.data) {
+        setProfiles(new Map(profilesRes.data.map((p: any) => [p.id as string, p as Profile] as const)));
+      }
+
+      if (visitesRes.data) {
+        const newVisitesMap = new Map<string, Visite[]>();
+        visitesRes.data.forEach((v: any) => {
+          if (!newVisitesMap.has(v.offre_id)) newVisitesMap.set(v.offre_id, []);
+          newVisitesMap.get(v.offre_id)!.push(v);
+        });
+        setVisitesMap(newVisitesMap);
       }
     } catch (error) {
       console.error('Erreur chargement offres:', error);
+      toast.error('Erreur lors du chargement des offres');
     } finally {
       setLoading(false);
     }
   };
 
+  const loadAllOffres = async () => {
+    setLoadingMore(true);
+    try {
+      const { data, error } = await fetchAllPaginated(
+        () => supabase.from('offres').select('*').order('date_envoi', { ascending: false })
+      );
+      if (error) throw error;
+      setOffres(data || []);
+      setLoadedAll(true);
+      toast.success(`${data?.length || 0} offres chargées`);
+    } catch (e) {
+      console.error('Erreur chargement complet:', e);
+      toast.error('Erreur lors du chargement complet');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const getAgentName = (agentId: string | null) => {
     if (!agentId) return "Agent inconnu";
-    const agent = agents.find(a => a.id === agentId);
+    const agent = agentsById.get(agentId);
     if (!agent) return "Agent inconnu";
     const profile = profiles.get(agent.user_id);
     return profile ? `${profile.prenom} ${profile.nom}` : "Agent inconnu";
@@ -338,7 +365,7 @@ export default function AdminOffresEnvoyees() {
 
   const getClientName = (clientId: string | null) => {
     if (!clientId) return "Client inconnu";
-    const client = clients.find(c => c.id === clientId);
+    const client = clientsById.get(clientId);
     if (!client) return "Client inconnu";
     const profile = profiles.get(client.user_id);
     return profile ? `${profile.prenom} ${profile.nom}` : "Client inconnu";
@@ -555,8 +582,8 @@ export default function AdminOffresEnvoyees() {
     return matchesSearch && matchesStatus && matchesAgent;
   });
 
-  // Stats
-  const totalOffres = offres.length;
+  // Stats (basées sur les offres chargées — totalOffres = compteur exact serveur)
+  const totalOffres = totalCount || offres.length;
   const offresEnvoyees = offres.filter(o => o.statut === 'envoyee' || o.statut === 'vue').length;
   const offresInteresse = offres.filter(o => ['interesse', 'visite_planifiee', 'visite_effectuee'].includes(o.statut || '')).length;
   const candidatures = offres.filter(o => o.statut === 'candidature_deposee').length;
@@ -564,7 +591,7 @@ export default function AdminOffresEnvoyees() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center min-h-[60vh]">
         <div className="relative">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           <Sparkles className="absolute inset-0 m-auto h-5 w-5 text-primary animate-pulse" />
@@ -577,7 +604,7 @@ export default function AdminOffresEnvoyees() {
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8">
         {/* Header premium */}
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-xl bg-primary/10">
               <Send className="h-6 w-6 text-primary" />
@@ -588,6 +615,26 @@ export default function AdminOffresEnvoyees() {
             </div>
           </div>
         </div>
+
+        {/* Bandeau pagination */}
+        {!loadedAll && totalCount > offres.length && (
+          <Card className="mb-6 border-primary/20 bg-primary/5">
+            <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-3">
+              <p className="text-sm text-muted-foreground">
+                Affichage des <span className="font-semibold text-foreground">{offres.length}</span> offres les plus récentes
+                sur <span className="font-semibold text-foreground">{totalCount}</span> au total — chargement rapide ⚡
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={loadAllOffres}
+                disabled={loadingMore}
+              >
+                {loadingMore ? 'Chargement…' : `Charger toutes les ${totalCount} offres`}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Premium KPI */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-8">
