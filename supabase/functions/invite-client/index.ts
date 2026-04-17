@@ -81,6 +81,8 @@ interface InviteClientRequest {
   demandeMandat?: DemandeMandat;
   invitationLegere?: boolean;
   typeRecherche?: string;
+  /** Optional: id of the agents row to auto-assign as primary agent */
+  agentId?: string;
 }
 
 serve(async (req) => {
@@ -90,9 +92,9 @@ serve(async (req) => {
   }
 
   try {
-    const { email, clientId, prenom, nom, telephone, demandeMandat, invitationLegere, typeRecherche }: InviteClientRequest = await req.json();
+    const { email, clientId, prenom, nom, telephone, demandeMandat, invitationLegere, typeRecherche, agentId }: InviteClientRequest = await req.json();
 
-    console.log('Inviting client:', { email, clientId, prenom, nom, hasDemandeMandat: !!demandeMandat, invitationLegere });
+    console.log('Inviting client:', { email, clientId, prenom, nom, hasDemandeMandat: !!demandeMandat, invitationLegere, agentId });
 
     // Initialize Supabase admin client
     const supabaseAdmin = createClient(
@@ -245,11 +247,13 @@ serve(async (req) => {
         clientData.statut = 'en_attente';
         clientData.priorite = 'moyenne';
         clientData.type_recherche = typeRecherche || 'Acheter';
+        if (agentId) clientData.agent_id = agentId;
       } else {
         // Full mandate: activation immédiate
         clientData.date_ajout = new Date().toISOString();
         clientData.statut = 'actif';
         clientData.priorite = 'haute';
+        if (agentId) clientData.agent_id = agentId;
       }
 
       // Transfer all data from demandeMandat if available
@@ -320,7 +324,15 @@ serve(async (req) => {
       }
     } else {
       clientRecordId = existingClient.id;
-      
+
+      // Si un agentId est fourni et que le client n'a pas d'agent assigné, l'assigner
+      if (agentId) {
+        const { data: cur } = await supabaseAdmin.from('clients').select('agent_id').eq('id', existingClient.id).maybeSingle();
+        if (!cur?.agent_id) {
+          await supabaseAdmin.from('clients').update({ agent_id: agentId }).eq('id', existingClient.id);
+        }
+      }
+
       // Update existing client with demande data
       if (demandeMandat) {
         const updateData: any = {

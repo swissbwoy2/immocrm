@@ -16,6 +16,8 @@ import { hasStableStatus } from "@/hooks/useSolvabilityCheck";
 import { CUMULATIVE_TYPES } from "@/hooks/useClientCandidates";
 import { ClientTypeBadge } from "@/components/ClientTypeBadge";
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
+import { CreateClientAccountDialog } from "@/components/clients/CreateClientAccountDialog";
+import { UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const MesClients = () => {
@@ -38,6 +40,7 @@ const MesClients = () => {
   const [agentId, setAgentId] = useState<string | null>(null);
   const [clientReminders, setClientReminders] = useState<Map<string, number>>(new Map());
   const [offresToday, setOffresToday] = useState<Map<string, number>>(new Map());
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     loadAgentAndClients();
@@ -443,6 +446,25 @@ const MesClients = () => {
             subtitle={`${clientsActifsOnly.length} clients actifs`}
             icon={Users}
             badge="Portfolio"
+            action={
+              <Button
+                onClick={() => setCreateDialogOpen(true)}
+                size="sm"
+                variant="outline"
+                className="border-primary/50 text-primary hover:bg-primary/10"
+              >
+                <UserPlus className="h-4 w-4 mr-1 md:mr-2" />
+                <span className="hidden sm:inline">Créer un compte client</span>
+                <span className="sm:hidden">Créer</span>
+              </Button>
+            }
+          />
+
+          <CreateClientAccountDialog
+            open={createDialogOpen}
+            onOpenChange={setCreateDialogOpen}
+            agentId={agentId}
+            onCreated={() => loadAgentAndClients()}
           />
 
           {/* Filtres Section - Premium */}
