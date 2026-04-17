@@ -1,63 +1,36 @@
 
+## Problème
 
-# Phase 1 — Execution Ready
+L'utilisateur ne voit ni le hamburger ni les boutons sur le header public à la racine `/`.
 
-## Context Gathered
-All 18 existing landing components have been fully read and analyzed. Business logic, data arrays, Supabase calls, UTM tracking, Meta Pixel firing, and calculation formulas are fully mapped.
+## Cause identifiée
 
-## Execution Summary
+Dans `src/components/public-site/PublicSiteHeader.tsx` (ligne ~22) :
 
-**24 files to create:**
+```tsx
+const handleScroll = () => setIsVisible(window.scrollY > 80);
+```
 
-### Core Layout (4)
-1. `src/components/public-site/PublicSiteHeader.tsx` — Sticky glassmorphism header
-2. `src/components/public-site/PublicSiteMenu.tsx` — Fullscreen overlay menu
-3. `src/components/public-site/PublicSiteFooter.tsx` — 4-column premium footer
-4. `src/components/public-site/PublicSiteLayout.tsx` — Wrapper with SearchTypeProvider, WhatsApp, CookieConsent
+Le header est **caché par défaut** (`isVisible = false`) et n'apparaît qu'après avoir scrollé de plus de 80px (classe `-translate-y-full opacity-0`).
 
-### Sections (19 in `src/components/public-site/sections/`)
-5. `HeroSection.tsx` — Full rebuild of PremiumHero (same data: HEADLINE_VARIANTS, zoneOptions, budgetOptions, permisOptions, tabs, mini-form, trust badges)
-6. `DifferentiatorSection.tsx` — Same comparison data arrays, dark bg, desktop table + mobile cards
-7. `HowItWorksSection.tsx` — Same 3 steps, timeline
-8. `SocialProofSection.tsx` — Elfsight widget `6edfc233...` + Instagram reels `DVPQODmCNBU` + `DUf-zVlDDDv`
-9. `ServicesFullSection.tsx` — Same 4 deliverables
-10. `DossierAnalyseSection.tsx` — Full visual rebuild, same Supabase insert + UTM + Meta Pixel + notify-new-lead + 2-step form
-11. `GuaranteeSection.tsx` — Same pricing items location/achat
-12. `PricingSection.tsx` — Same 3 columns
-13. `BudgetCalcSection.tsx` — Full visual rebuild, same calculation logic
-14. `CoverageSection.tsx` — Same 6 cantons
-15. `StatsSection.tsx` — Same Supabase query + AnimatedNumber
-16. `PartnersSection.tsx` — Same 7 partner logos with imports
-17. `TechSection.tsx` — Same 4 features
-18. `ServiceCardsSection.tsx` — 3 service cards
-19. `TeamSection.tsx` — Same Christ Ramazani data
-20. `ForWhoSection.tsx` — Same 3 profiles
-21. `FAQSection.tsx` — Same 5 FAQ items
-22. `CloserSection.tsx` — Dark CTA + partner program merged
-23. `index.ts` — Barrel exports
+C'est pour cela que sur la capture, on voit la section Instagram mais aucun header — l'utilisateur est probablement en haut de page ou la position de scroll n'a pas déclenché l'affichage.
 
-### Page (1)
-24. `src/pages/public-site/HomePage.tsx` — Assembles all sections, auth redirect identical to Landing.tsx
+De plus, dans `HeroSection.tsx` il existe probablement déjà un bouton CTA "Activer ma recherche" intégré au hero, ce qui rend le header caché en haut de page acceptable visuellement, mais cela contredit la demande explicite de l'utilisateur de voir les 2 boutons et le hamburger en permanence.
 
-**1 file to modify:**
-- `src/App.tsx` — Line 18: replace Landing import with lazy HomePage, Line 240: swap route element
+## Correction proposée
 
-## Design Tokens (uniform)
-- Sections: `py-24 md:py-32`
-- Cards: `rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm p-8`
-- Inputs: `h-14` for premium feel
-- CTA: `bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20`
+**Fichier unique : `src/components/public-site/PublicSiteHeader.tsx`**
 
-## Confirmations
-- No private component, page, logic, or business tunnel will be modified
-- `/nouveau-mandat` remains strictly intact
-- `src/App.tsx` is the only existing file modified
-- Landing.tsx remains in codebase untouched
+Rendre le header **visible en permanence** dès le chargement de la page :
 
-## Execution Order
-1. Core layout (4 files)
-2. All section components (19 files)
-3. HomePage.tsx
-4. App.tsx modification
-5. Screenshots for validation
+1. Initialiser `isVisible = true` au lieu de `false`
+2. Supprimer la logique `handleScroll` qui cache le header en haut de page
+3. Garder l'effet glassmorphism (backdrop-blur) déjà en place
 
+Résultat : le hamburger, le logo, "Mon espace client" et "Activer ma recherche" seront visibles immédiatement, en haut de page comme après scroll, sur desktop et mobile.
+
+## Garanties
+
+- Aucun autre fichier modifié
+- Aucun impact sur `/login`, `/nouveau-mandat`, ni le privé
+- Comportement responsive déjà en place (icônes seules `< sm`, icône + texte `sm+`) conservé
