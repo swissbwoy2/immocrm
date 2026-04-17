@@ -6,14 +6,7 @@ import logo from '@/assets/logo-immo-rama-new.png';
 import { PublicSiteMenu } from './PublicSiteMenu';
 
 export function PublicSiteHeader() {
-  const [isVisible, setIsVisible] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => setIsVisible(window.scrollY > 80);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   return (
     <>
