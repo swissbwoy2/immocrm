@@ -11,8 +11,8 @@ export function PublicSiteHeader() {
   return (
     <>
       <header
-        className="fixed top-0 left-0 right-0 z-50"
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+        className="fixed left-0 right-0 z-50"
+        style={{ top: 'calc(36px + env(safe-area-inset-top, 0px))' }}
       >
         <div className="bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-lg shadow-black/5">
           <div className="container mx-auto px-4 py-3">
