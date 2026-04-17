@@ -2,7 +2,7 @@ import { useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { PublicSiteLayout } from '@/components/public-site/PublicSiteLayout';
-import { FloatingNav } from '@/components/landing/FloatingNav';
+
 
 // Above the fold - eager
 import { HeroSection } from '@/components/public-site/sections/HeroSection';
