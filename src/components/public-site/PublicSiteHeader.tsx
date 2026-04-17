@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Rocket, Menu, X, LogIn } from 'lucide-react';
+import { Rocket, Menu, LogIn } from 'lucide-react';
 import logo from '@/assets/logo-immo-rama-new.png';
 import { PublicSiteMenu } from './PublicSiteMenu';
 
@@ -11,11 +11,7 @@ export function PublicSiteHeader() {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isVisible
-            ? 'translate-y-0 opacity-100'
-            : '-translate-y-full opacity-0'
-        }`}
+        className="fixed top-0 left-0 right-0 z-50"
         style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
       >
         <div className="bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-lg shadow-black/5">
