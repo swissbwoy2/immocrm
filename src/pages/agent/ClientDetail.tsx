@@ -750,6 +750,15 @@ export default function ClientDetail() {
               <span className="hidden sm:inline">Message</span>
               <span className="sm:hidden">Msg</span>
             </Button>
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => navigate(`/agent/clients/${client.id}/mandat-prefill`)}
+            >
+              <FileCheck className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Pré-remplir le mandat</span>
+              <span className="sm:hidden">Mandat</span>
+            </Button>
             <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="w-full sm:w-auto" onClick={handleEditClick}>
