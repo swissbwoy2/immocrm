@@ -67,11 +67,11 @@ export default function HomePage() {
 
       {/* Lazy sections */}
       <Suspense fallback={null}>
+        <DossierAnalyseSection />
         <DifferentiatorSection />
         <ServicesFullSection />
         <BudgetCalcSection />
         <GuaranteeSection />
-        <DossierAnalyseSection />
         <CoverageSection />
         <StatsSection />
         <PartnersSection />
