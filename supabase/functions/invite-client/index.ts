@@ -81,6 +81,8 @@ interface InviteClientRequest {
   demandeMandat?: DemandeMandat;
   invitationLegere?: boolean;
   typeRecherche?: string;
+  /** Optional: id of the agents row to auto-assign as primary agent */
+  agentId?: string;
 }
 
 serve(async (req) => {
