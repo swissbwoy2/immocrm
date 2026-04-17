@@ -318,7 +318,7 @@ export default function AdminOffresEnvoyees() {
       ]);
 
       if (profilesRes.data) {
-        setProfiles(new Map(profilesRes.data.map((p: any) => [p.id, p])));
+        setProfiles(new Map(profilesRes.data.map((p: any) => [p.id as string, p as Profile] as const)));
       }
 
       if (visitesRes.data) {
