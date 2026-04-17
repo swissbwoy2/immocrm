@@ -582,8 +582,8 @@ export default function AdminOffresEnvoyees() {
     return matchesSearch && matchesStatus && matchesAgent;
   });
 
-  // Stats
-  const totalOffres = offres.length;
+  // Stats (basées sur les offres chargées — totalOffres = compteur exact serveur)
+  const totalOffres = totalCount || offres.length;
   const offresEnvoyees = offres.filter(o => o.statut === 'envoyee' || o.statut === 'vue').length;
   const offresInteresse = offres.filter(o => ['interesse', 'visite_planifiee', 'visite_effectuee'].includes(o.statut || '')).length;
   const candidatures = offres.filter(o => o.statut === 'candidature_deposee').length;
@@ -591,7 +591,7 @@ export default function AdminOffresEnvoyees() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center min-h-[60vh]">
         <div className="relative">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           <Sparkles className="absolute inset-0 m-auto h-5 w-5 text-primary animate-pulse" />
@@ -604,7 +604,7 @@ export default function AdminOffresEnvoyees() {
     <div className="flex-1 overflow-auto">
       <div className="p-4 md:p-8">
         {/* Header premium */}
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-xl bg-primary/10">
               <Send className="h-6 w-6 text-primary" />
@@ -615,6 +615,26 @@ export default function AdminOffresEnvoyees() {
             </div>
           </div>
         </div>
+
+        {/* Bandeau pagination */}
+        {!loadedAll && totalCount > offres.length && (
+          <Card className="mb-6 border-primary/20 bg-primary/5">
+            <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-3">
+              <p className="text-sm text-muted-foreground">
+                Affichage des <span className="font-semibold text-foreground">{offres.length}</span> offres les plus récentes
+                sur <span className="font-semibold text-foreground">{totalCount}</span> au total — chargement rapide ⚡
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={loadAllOffres}
+                disabled={loadingMore}
+              >
+                {loadingMore ? 'Chargement…' : `Charger toutes les ${totalCount} offres`}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Premium KPI */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-8">
