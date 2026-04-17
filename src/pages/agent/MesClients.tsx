@@ -16,6 +16,8 @@ import { hasStableStatus } from "@/hooks/useSolvabilityCheck";
 import { CUMULATIVE_TYPES } from "@/hooks/useClientCandidates";
 import { ClientTypeBadge } from "@/components/ClientTypeBadge";
 import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
+import { CreateClientAccountDialog } from "@/components/clients/CreateClientAccountDialog";
+import { UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const MesClients = () => {
