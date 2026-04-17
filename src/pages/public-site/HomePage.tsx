@@ -54,6 +54,12 @@ export default function HomePage() {
 
       {/* Eager sections */}
       <HeroSection />
+
+      {/* Lazy sections */}
+      <Suspense fallback={null}>
+        <PricingSection />
+      </Suspense>
+
       <SocialProofSection />
       <TeamSection />
       <ForWhoSection />
@@ -65,7 +71,6 @@ export default function HomePage() {
         <ServicesFullSection />
         <DossierAnalyseSection />
         <GuaranteeSection />
-        <PricingSection />
         <BudgetCalcSection />
         <CoverageSection />
         <StatsSection />
