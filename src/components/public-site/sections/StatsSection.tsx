@@ -49,10 +49,10 @@ export function StatsSection() {
   }, []);
 
   const statItems = [
-    { icon: Users, value: stats.clients, suffix: '+', label: 'Familles relogées avec succès', gradient: 'from-blue-500 to-cyan-500' },
-    { icon: Home, value: stats.transactions, suffix: '+', label: 'Baux signés grâce à nous', gradient: 'from-green-500 to-emerald-500' },
-    { icon: Star, value: stats.satisfaction, suffix: '%', label: 'Recommanderaient Immo-Rama', gradient: 'from-yellow-500 to-orange-500' },
-    { icon: Clock, value: stats.avgDays, suffix: ' jours', label: 'En moyenne pour emménager', gradient: 'from-purple-500 to-pink-500' },
+    { icon: Users, value: stats.clients, suffix: '+', label: 'Familles relogées avec succès', gradient: 'from-primary to-accent' },
+    { icon: Home, value: stats.transactions, suffix: '+', label: 'Baux signés grâce à nous', gradient: 'from-accent to-primary' },
+    { icon: Star, value: stats.satisfaction, suffix: '%', label: 'Recommanderaient Immo-Rama', gradient: 'from-primary via-primary to-accent' },
+    { icon: Clock, value: stats.avgDays, suffix: ' jours', label: 'En moyenne pour emménager', gradient: 'from-accent via-primary to-accent' },
   ];
 
   return (
