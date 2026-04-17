@@ -1,62 +1,91 @@
 
-## Analyse de la demande
+## Objectif
 
-3 objectifs distincts :
-1. **Loader global** avec logo Immo-Rama à chaque changement de page
-2. **Page admin "Offres envoyées"** trop lente / ne s'ouvre pas (1500+ offres)
-3. **Augmenter la capacité du site** pour fluidité maximale
+Transformer le **thème visuel** de la landing publique (`/`) en style **ultra premium / luxe immobilier** (codes Sotheby's / Barnes / Christie's), en conservant strictement :
+- ✅ Tout le texte
+- ✅ Toutes les images
+- ✅ L'ordre des sections actuel
+- ❌ Modifié uniquement : couleurs, typographies, textures, ombres, traitement visuel
 
-## Investigation nécessaire
+## Direction visuelle proposée
 
-Je dois lire avant de planifier précisément :
-- `src/components/PageLoader.tsx` (existant) — pour le remplacer par un loader brandé
-- `src/components/PageTransition.tsx` — voir si un loader transition existe
-- La page "Offres envoyées" admin — identifier le fichier et la requête lente
-- `src/App.tsx` — où injecter le loader global Suspense
+**Bi-tons alternés** (effet magazine luxe) :
+- Sections sombres : noir minéral profond `#0E0E10` + accents or champagne `#C9A86A`
+- Sections claires : ivoire crème `#F5F1E8` + accents bronze `#8B6F3D`
+- Typographie titres : **Playfair Display** (serif contrastée, référence luxe)
+- Body : Inter (conservé)
+- Filets dorés fins en séparateurs, ombres profondes douces, animations lentes (700ms ease)
+- Icônes Lucide affinées (`stroke-width={1.25}`)
+- Boutons : noir mat avec bordure dorée + texte ivoire (au lieu de bleu plein)
 
-## Plan d'action
+## Stratégie d'isolation (critique)
 
-### Lot 1 — Loader global brandé Immo-Rama
-- Refondre `src/components/PageLoader.tsx` avec :
-  - Logo `logoImmoRama` (déjà importé ailleurs) animé (pulse + spinner subtil)
-  - Fond blanc/dark adaptatif
-  - Texte "Logisorama" + "by Immo-rama.ch"
-- S'assurer qu'il est utilisé dans **tous** les `<Suspense fallback={...}>` du routing (App.tsx) → remplacer les fallbacks `null` ou autres loaders par `<PageLoader />`
+Le nouveau thème est **scopé via une classe CSS** `.theme-luxury` posée sur `<PublicSiteLayout>` :
 
-### Lot 2 — Page "Offres envoyées" admin (perf 1500+ offres)
-Diagnostic probable : requête SELECT * sans pagination + jointures lourdes (clients, profiles, immeubles).
+```css
+.theme-luxury {
+  --background: 222 15% 6%;
+  --primary: 38 45% 58%;
+  /* ... */
+}
+```
 
-Optimisations à appliquer :
-- **Pagination serveur** : afficher 50 offres par page avec `range()` au lieu de tout charger
-- **Filtres avant requête** : statut / agent / date pour réduire le volume avant fetch
-- **Compteur via `count: 'exact', head: true`** au lieu de récupérer toutes les lignes pour la stat
-- **Index DB** : vérifier index sur `offres.created_at`, `offres.statut`, `offres.agent_id` — créer migration si manquants
-- **Lazy-load** des données secondaires (profil acheteur) seulement à l'expansion d'une carte
-- **Skeleton loader** pendant le fetch (pas un blocage total)
+→ **Zéro impact** sur les espaces privés (admin / agent / client / apporteur), sur la landing legacy `/landing`, ni sur les pages publiques annexes.
 
-### Lot 3 — Capacité d'instance Lovable Cloud
-La capacité serveur (Postgres CPU/RAM) ne se modifie **pas par code** — c'est un paramètre d'infrastructure côté Lovable Cloud.
+## Plan d'exécution
 
-→ Je vais expliquer à l'utilisateur **où cliquer** pour upgrader l'instance Cloud (Backend → Advanced settings → Upgrade instance) et fournir un bouton `presentation-open-backend`. Cela complète les optimisations code du Lot 2.
+### Lot 1 — Tokens design (`src/index.css`)
+Ajouter le scope `.theme-luxury` avec nouvelle palette HSL (or, ivoire, noir minéral, anthracite, bronze) + ajustement `--radius: 0.25rem` (moins arrondi = plus chic) + ombres profondes.
 
-### Lot 4 — Performance générale du chargement
-- Vérifier que les routes utilisent bien `lazy()` partout (déjà le cas pour CookieConsent, à étendre si besoin)
-- Précharger le logo Immo-Rama (`<link rel="preload">` dans `index.html`) pour éviter le flash sur le loader
-- Confirmer que le `PageTransition` n'ajoute pas de délai artificiel
+### Lot 2 — Typographie (`index.html` + `tailwind.config.ts`)
+- Preload Playfair Display via Google Fonts
+- Ajouter `fontFamily.serif: ['Playfair Display', 'serif']` dans Tailwind
+- Appliquer `font-serif` sur les `<h1>` / `<h2>` des sections
 
-## Fichiers impactés
+### Lot 3 — Layout publique
+- `PublicSiteLayout.tsx` : ajouter `className="theme-luxury"` sur le wrapper racine
+- Bandeau du haut : noir pur + liseré or 1px en bas
+- `PublicSiteHeader.tsx` : transparent → noir mat au scroll, lien actif souligné en or
+- `PublicSiteFooter.tsx` : noir profond, séparateurs dorés, copyright ivoire 60%
 
-1. `src/components/PageLoader.tsx` — refonte avec logo
-2. `src/App.tsx` — uniformiser les Suspense fallbacks
-3. `index.html` — preload du logo
-4. Page admin offres envoyées (à identifier : probablement `src/pages/admin/OffresEnvoyees.tsx` ou similaire) — pagination + filtres + count head
-5. Migration SQL — index sur `offres` si manquants
+### Lot 4 — Sections (16 fichiers dans `src/components/public-site/sections/`)
+Pour chacune, traitement chirurgical des classes Tailwind :
+- Remplacer gradients vifs (bleu/violet/slate) → dégradés or/noir/ivoire
+- Fonds blancs → ivoire `bg-[#F5F1E8]` ou noir minéral selon alternance
+- Bordures grises → `border-primary/20` (filet doré)
+- Cards : fond `card`, bordure dorée fine, ombre profonde douce
+- Boutons CTA : style luxe (noir + bordure or + hover translate doux)
+- Overlays sur images : dégradé noir bas → transparent haut (effet magazine)
+
+Alternance proposée : Hero (sombre) → Dossier (ivoire) → Pricing (sombre) → Social proof (ivoire) → Team (sombre) → ForWho (ivoire) → HowItWorks (sombre) → etc.
+
+### Lot 5 — Détails premium
+- Animation `fade-in-up` 700ms cubic-bezier(0.16, 1, 0.3, 1)
+- Hover boutons : transition 400ms, légère élévation `-translate-y-0.5`
+- Icônes Lucide : `stroke-width={1.25}` (au lieu de 2)
+- StickyMobileCTA : noir + or au lieu du bleu actuel
 
 ## Garanties
-- Aucun impact sur l'authentification, les RLS, le tracking UTM, ni les Edge Functions
-- Pagination respecte la règle mémoire `limit(15000)` / `fetchAllPaginated` (utilisé uniquement quand nécessaire — ici on veut au contraire **limiter** l'affichage)
-- Logo respecte la charte `mem://style/brand-identity-guidelines`
 
-## Question préalable
+- ✅ Texte / images / ordre des sections **inchangés**
+- ✅ Espaces privés (admin/agent/client/apporteur) **non impactés** (scope CSS strict)
+- ✅ `/landing` legacy non touchée — seulement `/` (HomePage)
+- ✅ Auth, RLS, Edge Functions, tracking UTM, pixels Meta/TikTok/Google **intacts**
+- ✅ Responsive mobile préservé (testé sur 390x844)
+- ✅ Performance : ajout d'une seule font Google (Playfair Display) — preload pour zéro flash
 
-Avant de coder, je dois confirmer un point ambigu sur le loader.
+## Question rapide avant de coder
+
+Merci de confirmer 2 points pour adapter précisément le rendu :
+
+1. **Ambiance** :
+   - **A)** Tout sombre (noir + or) — esprit Sotheby's gala
+   - **B)** Tout clair (ivoire + or bronze) — esprit Barnes lumineux
+   - **C)** Bi-tons alternés (sombre/ivoire) — esprit magazine luxe ← *ma reco*
+
+2. **Police titres** :
+   - **A)** Playfair Display (chic moderne, très lisible) ← *ma reco*
+   - **B)** Cormorant Garamond (haute couture, plus délicate)
+   - **C)** Bodoni Moda (magazine de mode, ultra contrastée)
+
+Réponds par exemple "C + A" et je lance l'implémentation.
