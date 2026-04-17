@@ -132,6 +132,75 @@ All colors MUST be HSL.
     --shadow-glow: 0 0 30px hsl(217 91% 60% / 0.4);
     --shadow-card-hover: 0 10px 40px -10px hsl(217 91% 60% / 0.3);
   }
+
+  /* ============================================
+     LUXURY THEME — Ivory & Gold (Barnes/Christie's)
+     Scoped to public landing page only via .theme-luxury wrapper.
+     Zero impact on private spaces (admin/agent/client/apporteur).
+     ============================================ */
+  .theme-luxury {
+    /* Ivory cream background, deep mineral foreground */
+    --background: 40 30% 96%;
+    --foreground: 30 15% 12%;
+
+    --card: 40 35% 98%;
+    --card-foreground: 30 15% 12%;
+
+    --popover: 40 35% 98%;
+    --popover-foreground: 30 15% 12%;
+
+    /* Champagne gold accent */
+    --primary: 38 45% 48%;
+    --primary-foreground: 40 35% 98%;
+
+    --secondary: 38 25% 90%;
+    --secondary-foreground: 30 15% 12%;
+
+    --muted: 38 20% 92%;
+    --muted-foreground: 30 12% 38%;
+
+    --accent: 28 35% 35%;
+    --accent-foreground: 40 35% 98%;
+
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 40 35% 98%;
+
+    /* Hairline gold border */
+    --border: 38 30% 80%;
+    --input: 38 30% 80%;
+    --ring: 38 45% 48%;
+
+    --radius: 0.25rem;
+
+    /* Deep, soft luxury shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(30 20% 15% / 0.06);
+    --shadow-md: 0 6px 14px -4px hsl(30 20% 15% / 0.08), 0 2px 4px -2px hsl(30 20% 15% / 0.06);
+    --shadow-lg: 0 18px 35px -10px hsl(30 20% 15% / 0.12), 0 6px 12px -6px hsl(30 20% 15% / 0.08);
+    --shadow-xl: 0 30px 60px -15px hsl(30 20% 15% / 0.18), 0 12px 20px -10px hsl(30 20% 15% / 0.10);
+    --shadow-glow: 0 0 30px hsl(38 45% 48% / 0.18);
+    --shadow-card-hover: 0 20px 50px -12px hsl(38 45% 48% / 0.20);
+  }
+
+  /* Luxury typography: serif headings on landing */
+  .theme-luxury h1,
+  .theme-luxury h2,
+  .theme-luxury h3 {
+    font-family: 'Playfair Display', Georgia, serif;
+    letter-spacing: -0.01em;
+  }
+
+  /* Soften body text with refined tracking */
+  .theme-luxury {
+    letter-spacing: 0.005em;
+  }
+
+  /* Premium hairline separators */
+  .theme-luxury hr,
+  .theme-luxury .luxury-divider {
+    border: none;
+    height: 1px;
+    background: linear-gradient(to right, transparent, hsl(var(--primary) / 0.4), transparent);
+  }
 }
 
 @layer base {
