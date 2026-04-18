@@ -158,7 +158,7 @@ export default function ConstruireRenover() {
               >
                 <Link to="/formulaire-construire-renover">
                   <Sparkles className="mr-3 h-6 w-6" />
-                  <span className="font-bold">En savoir plus</span>
+                  <span className="font-bold">Rénover maintenant</span>
                   <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-2 transition-transform" />
                 </Link>
               </Button>
@@ -247,7 +247,7 @@ export default function ConstruireRenover() {
             >
               <Link to="/formulaire-construire-renover">
                 <Sparkles className="mr-3 h-6 w-6" />
-                En savoir plus
+                Rénover maintenant
                 <ArrowRight className="ml-3 h-6 w-6" />
               </Link>
             </Button>
