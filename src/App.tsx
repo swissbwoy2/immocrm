@@ -23,6 +23,10 @@ const MandatV3 = lazy(() => import("./pages/MandatV3"));
 const MandatV3Suivi = lazy(() => import("./pages/MandatV3Suivi"));
 const VendreMonBien = lazy(() => import("./pages/VendreMonBien"));
 const FormulaireVendeurComplet = lazy(() => import("./pages/FormulaireVendeurComplet"));
+const RelouerMonAppartement = lazy(() => import("./pages/RelouerMonAppartement"));
+const FormulaireRelouer = lazy(() => import("./pages/FormulaireRelouer"));
+const ConstruireRenover = lazy(() => import("./pages/ConstruireRenover"));
+const FormulaireConstruireRenover = lazy(() => import("./pages/FormulaireConstruireRenover"));
 const FirstLogin = lazy(() => import("./pages/FirstLogin"));
 
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -248,6 +252,10 @@ const App = () => (
               <Route path="/mandat-v3/sign/:token" element={<MandatV3SignOnly />} />
               <Route path="/vendre-mon-bien" element={<VendreMonBien />} />
               <Route path="/formulaire-vendeur" element={<FormulaireVendeurComplet />} />
+              <Route path="/relouer-mon-appartement" element={<RelouerMonAppartement />} />
+              <Route path="/formulaire-relouer" element={<FormulaireRelouer />} />
+              <Route path="/construire-renover" element={<ConstruireRenover />} />
+              <Route path="/formulaire-construire-renover" element={<FormulaireConstruireRenover />} />
               <Route path="/first-login" element={<FirstLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
 

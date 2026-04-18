@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Crown, Key, Home, Rocket, ShieldCheck, ArrowRight, CheckCircle, Lock, Users, FileSearch } from 'lucide-react';
+import { Crown, Key, Home, Rocket, ShieldCheck, ArrowRight, CheckCircle, Lock, Users, FileSearch, Building2, Hammer, KeyRound } from 'lucide-react';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import heroBg from '@/assets/hero-bg.jpg';
 import { useSearchType } from '@/contexts/SearchTypeContext';
@@ -110,6 +110,34 @@ export function HeroSection() {
                 <Home className="h-5 w-5" />
                 <span>Je cherche à acheter</span>
               </button>
+            </div>
+          </div>
+
+          {/* Parcours secondaires — 3 autres profils */}
+          <div className="animate-fade-in mb-6 md:mb-8 w-full max-w-2xl" style={{ animationDelay: '95ms' }}>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">Autres parcours</p>
+            <div className="grid grid-cols-3 gap-2 md:gap-3">
+              <Link
+                to="/relouer-mon-appartement"
+                className="flex flex-col items-center justify-center gap-1 md:gap-2 p-3 md:p-4 rounded-xl border-2 border-border/40 bg-background/60 backdrop-blur-sm hover:border-primary/50 hover:bg-primary/5 transition-all group"
+              >
+                <KeyRound className="h-5 w-5 md:h-6 md:w-6 text-primary group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] md:text-sm font-semibold text-foreground text-center leading-tight">Relouer mon appart'</span>
+              </Link>
+              <Link
+                to="/vendre-mon-bien"
+                className="flex flex-col items-center justify-center gap-1 md:gap-2 p-3 md:p-4 rounded-xl border-2 border-border/40 bg-background/60 backdrop-blur-sm hover:border-primary/50 hover:bg-primary/5 transition-all group"
+              >
+                <Building2 className="h-5 w-5 md:h-6 md:w-6 text-primary group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] md:text-sm font-semibold text-foreground text-center leading-tight">Vendre mon bien</span>
+              </Link>
+              <Link
+                to="/construire-renover"
+                className="flex flex-col items-center justify-center gap-1 md:gap-2 p-3 md:p-4 rounded-xl border-2 border-border/40 bg-background/60 backdrop-blur-sm hover:border-primary/50 hover:bg-primary/5 transition-all group"
+              >
+                <Hammer className="h-5 w-5 md:h-6 md:w-6 text-primary group-hover:scale-110 transition-transform" />
+                <span className="text-[11px] md:text-sm font-semibold text-foreground text-center leading-tight">Construire & rénover</span>
+              </Link>
             </div>
           </div>
 
