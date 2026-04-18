@@ -19,7 +19,23 @@ export default function ConstruireRenover() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="theme-luxury min-h-screen bg-background">
+      {/* Header fixe avec retour accueil */}
+      <header
+        className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm"
+        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+      >
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+          <Link to="/" aria-label="Retour à l'accueil" className="flex items-center gap-2">
+            <img src={logoImmoRama} alt="Immo-Rama" className="h-8 w-auto" />
+          </Link>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/">← Accueil</Link>
+          </Button>
+        </div>
+      </header>
+
+      <div className="pt-16">
       {/* HERO */}
       <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0">
@@ -130,6 +146,7 @@ export default function ConstruireRenover() {
           </div>
         </div>
       </section>
+      </div>
     </div>
   );
 }
