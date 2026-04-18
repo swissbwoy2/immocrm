@@ -8,7 +8,7 @@ import {
   Mail, Phone, Loader2, CheckCircle, Building2, Calendar,
   Bed, Bath, Car, Trees, Sun, Mountain, Landmark, Map, Zap,
   DollarSign, Percent, Store, Factory, Camera, Upload, X, Image,
-  ChevronLeft, ChevronRight, FileText
+  ChevronLeft, ChevronRight, FileText, Lock, KeyRound
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,6 +83,9 @@ const formSchema = z.object({
   nom: z.string().min(2, 'Indiquez votre nom'),
   email: z.string().email('Email invalide'),
   telephone: z.string().min(10, 'Numéro invalide'),
+
+  // Compte
+  password: z.string().min(8, 'Au moins 8 caractères'),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -110,6 +113,7 @@ const STEPS = [
   { id: 2, title: 'Détails', icon: FileText, description: 'Caractéristiques' },
   { id: 3, title: 'Photos', icon: Camera, description: 'Images du bien' },
   { id: 4, title: 'Contact', icon: User, description: 'Vos coordonnées' },
+  { id: 5, title: 'Compte', icon: Lock, description: 'Création de compte' },
 ];
 
 export default function FormulaireVendeurComplet() {
@@ -284,6 +288,8 @@ export default function FormulaireVendeurComplet() {
         return true; // Photos are optional
       case 4:
         return await trigger(['nom', 'email', 'telephone']);
+      case 5:
+        return await trigger(['password']);
       default:
         return true;
     }
@@ -291,7 +297,7 @@ export default function FormulaireVendeurComplet() {
 
   const goToNextStep = async () => {
     const isValid = await validateStep(currentStep);
-    if (isValid && currentStep < 4) {
+    if (isValid && currentStep < 5) {
       setCurrentStep(prev => prev + 1);
     }
   };
@@ -305,6 +311,24 @@ export default function FormulaireVendeurComplet() {
   const onSubmit = async (data: FormData) => {
     setIsSubmitting(true);
     try {
+      // 1) Create user account first
+      const firstName = data.nom.split(' ')[0] || data.nom;
+      const lastName = data.nom.split(' ').slice(1).join(' ') || '';
+      const { error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            phone: data.telephone,
+            user_type: 'proprietaire_vendeur',
+          },
+        },
+      });
+      if (authError) throw authError;
+
       // Build equipment list
       const equipements = [];
       if (data.balcon) equipements.push('Balcon');
