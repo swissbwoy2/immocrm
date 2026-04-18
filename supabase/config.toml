@@ -200,3 +200,6 @@ verify_jwt = true
 
 [functions.renovation-dispatch-notifications]
 verify_jwt = true
+
+[functions.create-public-user]
+verify_jwt = false
