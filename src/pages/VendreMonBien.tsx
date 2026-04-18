@@ -17,7 +17,7 @@ export default function VendreMonBien() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="theme-luxury min-h-screen bg-background">
       <VendeurFloatingNav />
       
       <main>

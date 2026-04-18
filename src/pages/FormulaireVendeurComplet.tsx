@@ -481,7 +481,7 @@ export default function FormulaireVendeurComplet() {
 
   if (isSuccess) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="theme-luxury min-h-screen bg-background">
         <VendeurFloatingNav />
         <main className="pt-32 pb-24">
           <div className="container mx-auto px-4">
@@ -1159,7 +1159,7 @@ export default function FormulaireVendeurComplet() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="theme-luxury min-h-screen bg-background">
       <VendeurFloatingNav />
       
       <main className="pt-28 pb-24">
