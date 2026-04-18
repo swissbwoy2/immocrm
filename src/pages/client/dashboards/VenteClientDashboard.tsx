@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Tag, FileText, MessageSquare, Bell, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { PremiumDashboardHeader, PremiumEmptyState } from '@/components/premium';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 import { useNotifications } from '@/hooks/useNotifications';
