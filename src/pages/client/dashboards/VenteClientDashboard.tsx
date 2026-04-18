@@ -27,12 +27,10 @@ export default function VenteClientDashboard({ profile }: Props) {
         <Card>
           <CardContent className="pt-6">
             <PremiumEmptyState
-              icon={Sparkles}
-              iconAlt={Tag}
+              icon={Tag}
               title="Votre dossier de vente est en cours de préparation"
               description="Votre conseiller vous contactera très bientôt pour démarrer l'estimation et l'évaluation de votre bien."
-              actionLabel="Contacter mon conseiller"
-              onAction={() => navigate('/client/messagerie')}
+              action={{ label: 'Contacter mon conseiller', onClick: () => navigate('/client/messagerie') }}
             />
           </CardContent>
         </Card>

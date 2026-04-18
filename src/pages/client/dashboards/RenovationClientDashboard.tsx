@@ -56,7 +56,7 @@ export default function RenovationClientDashboard({ profile }: Props) {
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 via-transparent to-orange-500/5" />
           <CardHeader className="relative flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <HardHat className="w-5 h-5 text-amber-600" />
+              <HardHat className="w-5 h-5 text-primary" />
               Mes projets de rénovation
             </CardTitle>
             {projects.length > 0 && (
@@ -71,8 +71,7 @@ export default function RenovationClientDashboard({ profile }: Props) {
                 icon={Sparkles}
                 title="Votre projet sera bientôt visible"
                 description="Votre conseiller rénovation prendra contact avec vous sous 24h ouvrées pour ouvrir votre projet et le configurer ici."
-                actionLabel="Contacter mon conseiller"
-                onAction={() => navigate('/client/messagerie')}
+                action={{ label: 'Contacter mon conseiller', onClick: () => navigate('/client/messagerie') }}
               />
             ) : (
               <div className="space-y-3">

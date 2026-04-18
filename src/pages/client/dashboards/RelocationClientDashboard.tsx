@@ -27,12 +27,10 @@ export default function RelocationClientDashboard({ profile }: Props) {
         <Card>
           <CardContent className="pt-6">
             <PremiumEmptyState
-              icon={Sparkles}
-              iconAlt={Globe}
+              icon={Globe}
               title="Votre relocation est en cours de préparation"
               description="Votre conseiller relocation vous contactera pour cadrer votre installation (logement, administratif, écoles, etc.)."
-              actionLabel="Contacter mon conseiller"
-              onAction={() => navigate('/client/messagerie')}
+              action={{ label: 'Contacter mon conseiller', onClick: () => navigate('/client/messagerie') }}
             />
           </CardContent>
         </Card>
