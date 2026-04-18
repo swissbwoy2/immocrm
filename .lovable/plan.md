@@ -1,4 +1,4 @@
 
-## Investigation
+## Vérification
 
-Vérifions d'abord ce qui existe vraiment dans le code.
+L'utilisateur demande si "l'espace client rénové" existe. Je dois vérifier ce qui est présent.
