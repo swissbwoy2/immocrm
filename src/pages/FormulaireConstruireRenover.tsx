@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GoogleAddressAutocomplete, AddressComponents } from '@/components/GoogleAddressAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
+import { ForgotPasswordLink } from '@/components/auth/ForgotPasswordLink';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -125,7 +126,7 @@ export default function FormulaireConstruireRenover() {
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
     try {
-      const { error: authError } = await supabase.auth.signUp({
+      const { data: signUpData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
@@ -139,6 +140,21 @@ export default function FormulaireConstruireRenover() {
         },
       });
       if (authError) throw authError;
+
+      // Create profile + assign 'client' role server-side (RLS-safe)
+      if (signUpData?.user?.id) {
+        const { error: provisionError } = await supabase.functions.invoke('create-public-user', {
+          body: {
+            user_id: signUpData.user.id,
+            email: data.email,
+            first_name: data.prenom,
+            last_name: data.nom,
+            phone: data.telephone,
+            source: 'construire-renover',
+          },
+        });
+        if (provisionError) console.warn('create-public-user warning:', provisionError);
+      }
 
       const { error: leadError } = await supabase.from('leads').insert({
         first_name: data.prenom,
@@ -456,6 +472,10 @@ export default function FormulaireConstruireRenover() {
                 <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground flex items-start gap-2">
                   <Lock className="w-4 h-4 mt-0.5 shrink-0" />
                   <span>Un email de confirmation sera envoyé. Après validation, vous accéderez à votre espace pour suivre votre projet et recevoir vos devis.</span>
+                </div>
+
+                <div className="text-center pt-2">
+                  <ForgotPasswordLink defaultEmail={watch('email')} />
                 </div>
               </motion.div>
             )}

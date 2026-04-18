@@ -21,6 +21,7 @@ import { VendeurFloatingNav } from '@/components/landing/vendeur/VendeurFloating
 import { VendeurFooter } from '@/components/landing/vendeur/VendeurFooter';
 import { GoogleAddressAutocomplete, AddressComponents } from '@/components/GoogleAddressAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
+import { ForgotPasswordLink } from '@/components/auth/ForgotPasswordLink';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNativeCamera } from '@/hooks/useNativeCamera';
@@ -314,7 +315,7 @@ export default function FormulaireVendeurComplet() {
       // 1) Create user account first
       const firstName = data.nom.split(' ')[0] || data.nom;
       const lastName = data.nom.split(' ').slice(1).join(' ') || '';
-      const { error: authError } = await supabase.auth.signUp({
+      const { data: signUpData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
@@ -328,6 +329,21 @@ export default function FormulaireVendeurComplet() {
         },
       });
       if (authError) throw authError;
+
+      // Create profile + assign 'client' role server-side (RLS-safe)
+      if (signUpData?.user?.id) {
+        const { error: provisionError } = await supabase.functions.invoke('create-public-user', {
+          body: {
+            user_id: signUpData.user.id,
+            email: data.email,
+            first_name: firstName,
+            last_name: lastName,
+            phone: data.telephone,
+            source: 'formulaire_vendeur_complet',
+          },
+        });
+        if (provisionError) console.warn('create-public-user warning:', provisionError);
+      }
 
       // Build equipment list
       const equipements = [];
@@ -1148,6 +1164,10 @@ export default function FormulaireVendeurComplet() {
               <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
                 Un email de confirmation vous sera envoyé à <strong>{watch('email')}</strong>.
                 Après validation, vous accéderez à votre espace personnel.
+              </div>
+
+              <div className="text-center pt-2">
+                <ForgotPasswordLink defaultEmail={watch('email')} />
               </div>
             </div>
           </motion.div>

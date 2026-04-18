@@ -15,6 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GoogleAddressAutocomplete, AddressComponents } from '@/components/GoogleAddressAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
+import { ForgotPasswordLink } from '@/components/auth/ForgotPasswordLink';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -138,7 +139,7 @@ export default function FormulaireRelouer() {
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
     try {
-      const { error: authError } = await supabase.auth.signUp({
+      const { data: signUpData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
@@ -152,6 +153,21 @@ export default function FormulaireRelouer() {
         },
       });
       if (authError) throw authError;
+
+      // Create profile + assign 'client' role server-side (RLS-safe)
+      if (signUpData?.user?.id) {
+        const { error: provisionError } = await supabase.functions.invoke('create-public-user', {
+          body: {
+            user_id: signUpData.user.id,
+            email: data.email,
+            first_name: data.prenom,
+            last_name: data.nom,
+            phone: data.telephone,
+            source: 'relouer-mon-appartement',
+          },
+        });
+        if (provisionError) console.warn('create-public-user warning:', provisionError);
+      }
 
       const equipements: string[] = [];
       if (data.balcon) equipements.push('Balcon');
@@ -486,6 +502,10 @@ export default function FormulaireRelouer() {
                 <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground flex items-start gap-2">
                   <Lock className="w-4 h-4 mt-0.5 shrink-0" />
                   <span>Un email de confirmation sera envoyé. Après validation, vous accéderez à votre espace client pour suivre votre dossier.</span>
+                </div>
+
+                <div className="text-center pt-2">
+                  <ForgotPasswordLink defaultEmail={watch('email')} />
                 </div>
               </motion.div>
             )}
