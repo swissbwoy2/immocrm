@@ -1,50 +1,62 @@
 
-## Audit du module Rénovation Intelligente
+## Diagnostic à faire
 
-### ✅ Ce qui existe et est intact
-- **Pages** : `RenovationProjectsPage.tsx`, `RenovationProjectPage.tsx` (présentes dans `src/features/renovation/pages/`)
-- **Composants** : 21 composants (Files, Quotes, Budget, Milestones, Companies, Incidents, Reservations, Warranties, History, Alerts, CloseProject, FinalReport, etc.) — tous présents
-- **Hooks** : `useRenovationProjects`, `useRenovationProject`, `useRenovationFiles`, `useRenovationQuotes`, `useRenovationHistory` — tous présents
-- **Routes dans `App.tsx`** : 
-  - `/admin/renovation` + `/admin/renovation/:id` ✅
-  - `/agent/renovation` + `/agent/renovation/:id` ✅
-  - `/proprietaire/renovation` + `/proprietaire/renovation/:id` ✅
-- **API + Edge Functions** : intactes (15 edge functions selon mémoire `renovation-intelligente-reference-version`)
+Le compte `cendrinecardoso@gmail.com` est un client (`parcours_type='renovation'`). Quand elle se connecte, elle arrive sur `/client` qui rend `src/pages/client/Dashboard.tsx`. Ce dashboard a été modifié pour passer `parcoursType` au header — mais le **contenu** reste celui de la recherche de logement.
 
-### ❌ Ce qui manque — cause unique de l'invisibilité
-**Le module n'a AUCUNE entrée dans le menu latéral (`AppSidebar.tsx`)** pour aucun des 3 rôles concernés.
-- `case 'admin'` → pas d'entrée "Rénovation"
-- `case 'agent'` → pas d'entrée "Rénovation"
-- `case 'proprietaire'` → pas d'entrée "Rénovation" (seul "Projets de développement" existe, ce qui est un module différent)
+Donc ce que voit Cendrine :
+- header = "Projet de rénovation" ✅
+- corps du dashboard = cartes "offres / candidatures / visites / mandat-v3" ❌
 
-Le module est donc juste **inaccessible visuellement** — il fonctionne si on tape l'URL à la main.
+Ce n'est PAS le bon dashboard pour un parcours rénovation.
 
-## Plan de restauration (PHASE 2)
+## Vérifications à faire avant de coder
 
-Modification ciblée d'un seul fichier : `src/components/AppSidebar.tsx`
+1. Lire `src/pages/client/Dashboard.tsx` actuel pour confirmer qu'il n'y a pas encore de branchement par parcours
+2. Confirmer en DB que `cendrinecardoso` a bien `parcours_type='renovation'`
+3. Vérifier RLS sur `renovation_projects` pour le rôle `client`
+4. Vérifier `AppSidebar` côté client (menu identique pour tous les parcours actuellement)
 
-Ajout de 3 entrées de menu, une par rôle, avec icône `HardHat` (déjà importée) :
+## Plan de correction
 
-| Rôle | Libellé | Path | Position |
-|---|---|---|---|
-| admin | "Rénovation" | `/admin/renovation` | juste après "Projets développement" (ligne 66) |
-| agent | "Rénovation" | `/agent/renovation` | juste après "Biens en vente" (ligne 82) |
-| proprietaire | "Rénovation" | `/proprietaire/renovation` | juste après "Projets de développement" (ligne 136) |
+### 1. Transformer `/client` en dispatcher
+`src/pages/client/Dashboard.tsx` devient un router selon `profiles.parcours_type` :
+- `renovation` → `<RenovationClientDashboard />`
+- `vente` → `<VenteClientDashboard />`
+- `relocation` → `<RelocationClientDashboard />`
+- `location` / `achat` / défaut → comportement actuel (dashboard locatif inchangé)
 
-Aucune `notifKey` (pas de compteur de notif rénovation pour l'instant — peut être ajouté plus tard si besoin).
+### 2. Créer `RenovationClientDashboard`
+Nouveau fichier `src/pages/client/dashboards/RenovationClientDashboard.tsx` :
+- Header parcours rénovation (réutilise `PremiumDashboardHeader` avec `parcoursType='renovation'`)
+- Charge les `renovation_projects` du client (`client_id = auth.uid()`)
+- Si projet existant : carte "Mon projet" + statut + lien vers détails
+- Si aucun projet : empty state "Votre conseiller rénovation vous contactera sous 24h"
+- Cartes : Documents, Messagerie, Notifications
+- AUCUN bloc "offres / candidatures / mandat-v3"
+
+### 3. Créer `VenteClientDashboard` et `RelocationClientDashboard`
+Squelettes propres (header + empty state + accès messagerie/documents) pour ne pas qu'un client vente/relocation tombe sur du contenu locatif.
+
+### 4. Filtrer le menu latéral
+Dans `src/components/AppSidebar.tsx`, le case `'client'` doit lire `profile.parcours_type` et masquer les entrées non pertinentes pour rénovation/vente/relocation (ex : "Offres", "Candidatures", "Carte" si elles existent — à confirmer en lisant le fichier).
+
+### 5. Vérifier RLS `renovation_projects`
+Si le client ne peut pas lire son propre projet, ajouter une policy SELECT minimale via migration.
+
+### 6. Test end-to-end
+Login `cendrinecardoso` → `/client` → doit voir un dashboard rénovation cohérent.
+
+## Fichiers touchés
+| Fichier | Action |
+|---|---|
+| `src/pages/client/Dashboard.tsx` | Refactor en dispatcher |
+| `src/pages/client/dashboards/RenovationClientDashboard.tsx` | Créé |
+| `src/pages/client/dashboards/VenteClientDashboard.tsx` | Créé |
+| `src/pages/client/dashboards/RelocationClientDashboard.tsx` | Créé |
+| `src/components/AppSidebar.tsx` | Menu client filtré par `parcours_type` |
+| Migration RLS | Si lecture `renovation_projects` bloquée pour client |
 
 ## Garanties
-- ✅ Aucune modification des pages/composants/hooks/routes existants — module figé respecté (cf. mémoire `renovation-intelligente-reference-version`)
-- ✅ Aucun impact sur les autres dashboards
-- ✅ Aucune modification UX ailleurs
-- ✅ Permissions inchangées (les `ProtectedRoute` existants gèrent déjà l'accès par rôle)
-
-## PHASE 3 — Validation
-Après application, je vérifierai :
-1. Sidebar affiche "Rénovation" pour admin, agent, propriétaire
-2. Clic → ouvre la liste des projets
-3. Clic sur un projet → ouvre la page détail avec tous les onglets (Documents, Devis, Budget, Planning, Entreprises, Incidents, Réserves, Garanties, Historique, Détails)
-4. Aucun autre menu n'est cassé
-
-## Fichier touché
-- `src/components/AppSidebar.tsx` (3 lignes ajoutées)
+- ✅ Clients location/achat existants : zéro changement
+- ✅ Module rénovation admin/agent/proprio (figé) : non touché
+- ✅ Sécurité RLS préservée
