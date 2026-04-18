@@ -64,6 +64,7 @@ const getMenuForRole = (role: string) => {
         { name: 'Biens en vente', icon: Building2, path: '/admin/biens-vente', notifKey: null },
         { name: 'Intérêts acheteurs', icon: Heart, path: '/admin/interets-acheteurs', notifKey: 'new_interet_acheteur' },
         { name: 'Projets développement', icon: HardHat, path: '/admin/projets-developpement', notifKey: 'new_projet_developpement' },
+        { name: 'Rénovation', icon: HardHat, path: '/admin/renovation', notifKey: null },
         { name: 'Annonces Publiques', icon: Globe, path: '/admin/annonces-publiques', notifKey: null },
         { name: 'Annonceurs', icon: Megaphone, path: '/admin/annonceurs', notifKey: null },
         { name: 'Rappels', icon: AlarmClock, path: '/admin/rappels', notifKey: null },
