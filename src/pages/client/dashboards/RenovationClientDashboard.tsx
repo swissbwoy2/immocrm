@@ -71,7 +71,7 @@ export default function RenovationClientDashboard({ profile }: Props) {
                 icon={Sparkles}
                 title="Votre projet sera bientôt visible"
                 description="Votre conseiller rénovation prendra contact avec vous sous 24h ouvrées pour ouvrir votre projet et le configurer ici."
-                action={{ label: 'Contacter mon conseiller', onClick: () => navigate('/client/messagerie') }}
+                action={<Button onClick={() => navigate('/client/messagerie')}>Contacter mon conseiller</Button>}
               />
             ) : (
               <div className="space-y-3">
