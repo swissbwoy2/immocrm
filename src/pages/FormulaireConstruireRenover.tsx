@@ -151,6 +151,7 @@ export default function FormulaireConstruireRenover() {
             last_name: data.nom,
             phone: data.telephone,
             source: 'construire-renover',
+            parcours: 'renovation',
           },
         });
         if (provisionError) console.warn('create-public-user warning:', provisionError);

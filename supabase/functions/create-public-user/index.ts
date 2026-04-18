@@ -15,6 +15,7 @@ interface Payload {
   last_name?: string;
   phone?: string;
   source?: string;
+  parcours?: 'location' | 'achat' | 'vente' | 'renovation' | 'relocation';
 }
 
 Deno.serve(async (req: Request) => {
@@ -58,6 +59,7 @@ Deno.serve(async (req: Request) => {
           nom: body.last_name || '',
           telephone: body.phone || null,
           actif: true,
+          parcours_type: body.parcours || 'location',
         },
         { onConflict: 'id' }
       );

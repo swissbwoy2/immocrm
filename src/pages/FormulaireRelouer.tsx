@@ -164,6 +164,7 @@ export default function FormulaireRelouer() {
             last_name: data.nom,
             phone: data.telephone,
             source: 'relouer-mon-appartement',
+            parcours: 'relocation',
           },
         });
         if (provisionError) console.warn('create-public-user warning:', provisionError);
