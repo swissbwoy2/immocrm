@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import heroBg from '@/assets/hero-bg.jpg';
+import { LandingHamburgerMenu } from '@/components/landing/LandingHamburgerMenu';
 
 export default function ConstruireRenover() {
   useEffect(() => {
@@ -101,9 +102,12 @@ export default function ConstruireRenover() {
           <Link to="/" aria-label="Retour à l'accueil" className="flex items-center gap-2">
             <img src={logoImmoRama} alt="Immo-Rama" className="h-8 w-auto" />
           </Link>
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/">← Accueil</Link>
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+              <Link to="/">← Accueil</Link>
+            </Button>
+            <LandingHamburgerMenu />
+          </div>
         </div>
       </header>
 

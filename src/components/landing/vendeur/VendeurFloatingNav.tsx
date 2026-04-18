@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { LogIn, Home, Building, ArrowLeft } from 'lucide-react';
 import logo from '@/assets/logo-immo-rama-new.png';
+import { LandingHamburgerMenu } from '@/components/landing/LandingHamburgerMenu';
 
 export function VendeurFloatingNav() {
   const [isVisible, setIsVisible] = useState(false);
@@ -83,6 +84,8 @@ export function VendeurFloatingNav() {
                   <span className="hidden sm:inline">Se connecter</span>
                 </Link>
               </Button>
+
+              <LandingHamburgerMenu />
             </div>
           </div>
         </div>
