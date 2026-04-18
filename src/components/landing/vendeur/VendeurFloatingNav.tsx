@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogIn, Home, Building } from 'lucide-react';
+import { LogIn, Home, Building, ArrowLeft } from 'lucide-react';
 import logo from '@/assets/logo-immo-rama-new.png';
 
 export function VendeurFloatingNav() {
@@ -46,6 +46,18 @@ export function VendeurFloatingNav() {
 
             {/* Boutons */}
             <div className="flex items-center gap-2 sm:gap-3">
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <Link to="/">
+                  <ArrowLeft className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Accueil</span>
+                </Link>
+              </Button>
+
               <Button
                 asChild 
                 variant={isVendrePage ? "secondary" : "ghost"}
