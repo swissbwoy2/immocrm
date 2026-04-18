@@ -340,6 +340,7 @@ export default function FormulaireVendeurComplet() {
             last_name: lastName,
             phone: data.telephone,
             source: 'formulaire_vendeur_complet',
+            parcours: 'vente',
           },
         });
         if (provisionError) console.warn('create-public-user warning:', provisionError);

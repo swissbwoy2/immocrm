@@ -6439,6 +6439,7 @@ export type Database = {
           last_seen_at: string | null
           nom: string
           notifications_email: boolean | null
+          parcours_type: string | null
           prenom: string
           telephone: string | null
           updated_at: string | null
@@ -6453,6 +6454,7 @@ export type Database = {
           last_seen_at?: string | null
           nom: string
           notifications_email?: boolean | null
+          parcours_type?: string | null
           prenom: string
           telephone?: string | null
           updated_at?: string | null
@@ -6467,6 +6469,7 @@ export type Database = {
           last_seen_at?: string | null
           nom?: string
           notifications_email?: boolean | null
+          parcours_type?: string | null
           prenom?: string
           telephone?: string | null
           updated_at?: string | null
