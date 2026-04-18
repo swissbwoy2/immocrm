@@ -1,55 +1,42 @@
 
 
-## Compréhension
+## Diagnostic
 
-Tu veux que chaque parcours mène à un **vrai formulaire de création de compte complet** (pas un mini-lead form), avec toutes les infos métier nécessaires + activation de l'espace client.
+**1. Pas de retour vers l'accueil** — Les pages `RelouerMonAppartement.tsx` et `ConstruireRenover.tsx` n'ont **aucune navigation fixe** (pas de header, pas de FloatingNav). Seul un petit lien `← Retour à l'accueil` existe en bas de page (fin du CTA final), invisible sans scroller. `VendreMonBien` a son `VendeurFloatingNav` → la nav fonctionne pour ce parcours.
 
-## État actuel vérifié
+**2. Thème bleu** — La home (`/`) utilise le thème **luxury** (ivoire + or champagne via `theme-luxury` ou wrapper équivalent). `RelouerMonAppartement` et `ConstruireRenover` utilisent les variables par défaut → `--primary: 217 91% 60%` = bleu Tailwind. C'est pour ça que tout est bleu sur ces 2 landings.
 
-| Parcours | Landing | Formulaire | Création compte | Statut |
-|---|---|---|---|---|
-| Louer | `/` (Hero) | `/mandat-v3` | ✅ Oui (signataire) | ✅ Complet |
-| Acheter | `/` (Hero) | `/nouveau-mandat` | ✅ Oui | ✅ Complet (déjà prêt — tu confirmes) |
-| Vendre | `/vendre-mon-bien` | `/formulaire-vendeur` (`FormulaireVendeurComplet`, 1241 lignes, 4 étapes, photos, GoogleAddress) | ❌ **Pas de signUp** — insère seulement un lead | ⚠️ Manque création compte |
-| Relouer | `/relouer-mon-appartement` | `/formulaire-relouer` (3 étapes basiques) | ✅ signUp `proprietaire_bailleur` | ⚠️ Trop basique (pas de photos, pas assez de champs) |
-| Construire & Rénover | `/construire-renover` | `/formulaire-construire-renover` (3 étapes) | ✅ signUp `maitre_ouvrage` | ⚠️ Basique mais OK pour démarrer — à enrichir |
+**3. NPA / Ville auto qui ne marche pas** — Dans `FormulaireConstruireRenover.tsx` (lignes 264-274) et probablement `FormulaireRelouer.tsx`, les champs `NPA` et `Ville` sont en `readOnly` avec placeholder "Auto". Tu veux qu'ils soient **libres en saisie**.
 
-## Ce qu'il faut faire
+## Corrections
 
-### 1. `FormulaireVendeurComplet` — Ajouter création de compte
-Le formulaire est déjà très complet (photos, GoogleAddress, 4 étapes). Il manque juste :
-- Une **étape 5 "Compte"** avec champ `password` (min 8 car.)
-- Appel `supabase.auth.signUp` avec `user_type: 'proprietaire_vendeur'` avant l'insert lead
-- Redirection vers `/inscription-validee`
+### A. Navigation retour accueil sur les 2 landings
+Ajouter en haut de `RelouerMonAppartement.tsx` et `ConstruireRenover.tsx` un **header fixe minimal** identique en logique à `VendeurFloatingNav` :
+- Logo Immo-Rama à gauche → lien vers `/`
+- Bouton "← Accueil" + bouton CTA principal à droite
+- Position `fixed top-0`, fond blur, z-index élevé
+- Padding-top compensé sur le hero
 
-### 2. `FormulaireRelouer` — Enrichir le formulaire
-Passer de 3 → 4 étapes pour atteindre le niveau "complet" :
-- **Étape 1 — Bien** : type, adresse Google autocomplete + NPA, pièces, chambres, SDB, surface, étage, équipements (balcon/terrasse/cave/parking/ascenseur)
-- **Étape 2 — Location** : loyer, charges, date dispo, motif relocation, état, description
-- **Étape 3 — Photos** : upload multi-photos (réutiliser logique de `FormulaireVendeurComplet`)
-- **Étape 4 — Contact + Compte** : prénom/nom/email/tel + password
-- signUp inchangé (`proprietaire_bailleur`)
+### B. Thème harmonisé avec la landing principale
+Wrapper `<div className="theme-luxury …">` sur les 2 pages (landing **et** formulaires associés) pour récupérer les couleurs ivoire/or de la home. Aucun impact sur le reste du site (le scope est local au wrapper).
 
-### 3. `FormulaireConstruireRenover` — Enrichir
-Passer de 3 → 4 étapes :
-- **Étape 1 — Projet** : type, nature travaux, adresse Google, surface, budget, délai
-- **Étape 2 — Détails** : pièces concernées, état actuel, contraintes, niveau finitions, description
-- **Étape 3 — Photos/Plans** : upload (état existant ou plans)
-- **Étape 4 — Contact + Compte** : password
-- signUp inchangé (`maitre_ouvrage`)
+Pages concernées :
+- `RelouerMonAppartement.tsx`
+- `ConstruireRenover.tsx`
+- `FormulaireRelouer.tsx`
+- `FormulaireConstruireRenover.tsx`
 
-### 4. Buckets Storage
-Vérifier/créer si manquant : `bien-photos` (public, RLS owner) pour photos relouer + rénovation. Le bucket vendeur existe déjà.
-
-### 5. Espace client
-Aucune modif — l'espace client `/client/*` accueille déjà tous les nouveaux comptes via le rôle `client`.
+### C. Champs NPA / Ville libres
+Dans `FormulaireConstruireRenover.tsx` **et** `FormulaireRelouer.tsx` :
+- Retirer `readOnly` et la classe `bg-muted/50`
+- Remplacer placeholder `"Auto"` par `"1207"` (NPA) et `"Genève"` (Ville)
+- Conserver le pré-remplissage automatique quand l'utilisateur sélectionne une adresse Google (mais éditable ensuite)
 
 ## Garanties
 
-- ✅ Acheter (`/nouveau-mandat`) et Louer (`/mandat-v3`) : **inchangés**
-- ✅ Vendre : enrichi (étape compte ajoutée), reste du flow intact
-- ✅ Relouer & Rénover : enrichis avec photos + champs métier complets
-- ✅ Tous les nouveaux comptes ont accès à `/client/dashboard` après confirmation email
-- ✅ Validation Zod stricte sur tous les champs
-- ✅ Email confirmation via `notify.logisorama.ch`
+- ✅ La home `/` reste inchangée
+- ✅ `/vendre-mon-bien` reste inchangé (a déjà sa nav + son thème)
+- ✅ Les formulaires `Acheter` et `Louer` restent inchangés
+- ✅ Création de compte intacte sur tous les parcours
+- ✅ Photos / uploads inchangés
 
