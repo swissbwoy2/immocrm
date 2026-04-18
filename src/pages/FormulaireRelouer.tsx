@@ -3,69 +3,142 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, ArrowRight, Send, Home, Calendar, User, Mail, Phone, Loader2, CheckCircle } from 'lucide-react';
+import {
+  ArrowLeft, ChevronLeft, ChevronRight, Send, Home, User, Loader2,
+  CheckCircle, Camera, Upload, X, Lock, KeyRound, Banknote, MapPinned,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { GoogleAddressAutocomplete, AddressComponents } from '@/components/GoogleAddressAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const schema = z.object({
-  // Bien
+  // Étape 1 - Bien
   type_bien: z.string().min(1, 'Sélectionnez le type de bien'),
   adresse: z.string().min(2, 'Adresse requise'),
   npa: z.string().optional(),
   ville: z.string().min(2, 'Ville requise'),
   nombre_pieces: z.string().min(1, 'Indiquez le nombre de pièces'),
+  nombre_chambres: z.string().optional(),
+  nombre_sdb: z.string().optional(),
   surface: z.string().optional(),
+  etage: z.string().optional(),
+  balcon: z.boolean().optional(),
+  terrasse: z.boolean().optional(),
+  cave: z.boolean().optional(),
+  parking: z.boolean().optional(),
+  ascenseur: z.boolean().optional(),
+
+  // Étape 2 - Location
   loyer_actuel: z.string().min(1, 'Indiquez le loyer'),
   charges: z.string().optional(),
   date_disponibilite: z.string().min(1, 'Date de disponibilité requise'),
+  motif_relocation: z.string().optional(),
+  etat: z.string().optional(),
   description: z.string().optional(),
-  // Contact
+
+  // Étape 4 - Contact + Compte
   prenom: z.string().min(2, 'Prénom requis'),
   nom: z.string().min(2, 'Nom requis'),
   email: z.string().email('Email invalide'),
   telephone: z.string().min(10, 'Téléphone invalide'),
-  // Compte
   password: z.string().min(8, 'Au moins 8 caractères'),
 });
 
 type FormData = z.infer<typeof schema>;
+interface PhotoData { url: string; path: string }
+
+const STEPS = [
+  { id: 1, title: 'Bien', icon: Home },
+  { id: 2, title: 'Location', icon: Banknote },
+  { id: 3, title: 'Photos', icon: Camera },
+  { id: 4, title: 'Compte', icon: User },
+];
 
 export default function FormulaireRelouer() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
-  const totalSteps = 3;
+  const [photos, setPhotos] = useState<PhotoData[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
     document.title = "Formulaire — Relouer mon appartement";
   }, []);
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [step]);
 
   const { register, handleSubmit, watch, setValue, formState: { errors }, trigger } = useForm<FormData>({
     resolver: zodResolver(schema),
+    defaultValues: {
+      balcon: false, terrasse: false, cave: false, parking: false, ascenseur: false,
+    },
   });
+
+  const handleAddressChange = (c: AddressComponents | null) => {
+    if (!c) return;
+    setValue('adresse', c.fullAddress);
+    setValue('npa', c.postalCode || '');
+    setValue('ville', c.city || '');
+  };
+
+  const uploadPhoto = async (file: File): Promise<PhotoData | null> => {
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const path = `public-relouer/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from('bien-photos').upload(path, file, { contentType: file.type });
+      if (error) throw error;
+      const { data } = supabase.storage.from('bien-photos').getPublicUrl(path);
+      return { url: data.publicUrl, path };
+    } catch (e) {
+      console.error(e); return null;
+    }
+  };
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || !files.length) return;
+    const remaining = 8 - photos.length;
+    if (remaining <= 0) { toast.error('Maximum 8 photos'); return; }
+    setUploading(true);
+    try {
+      const arr = Array.from(files).slice(0, remaining);
+      const uploaded: PhotoData[] = [];
+      for (const f of arr) {
+        if (!f.type.startsWith('image/')) { toast.error(`${f.name} n'est pas une image`); continue; }
+        if (f.size > 10 * 1024 * 1024) { toast.error(`${f.name} > 10 Mo`); continue; }
+        const p = await uploadPhoto(f);
+        if (p) uploaded.push(p);
+      }
+      if (uploaded.length) {
+        setPhotos(prev => [...prev, ...uploaded]);
+        toast.success(`${uploaded.length} photo(s) ajoutée(s)`);
+      }
+    } finally { setUploading(false); }
+  };
+
+  const removePhoto = (i: number) => setPhotos(prev => prev.filter((_, idx) => idx !== i));
 
   const next = async () => {
     const fields: (keyof FormData)[][] = [
-      ['type_bien', 'adresse', 'ville', 'nombre_pieces', 'loyer_actuel', 'date_disponibilite'],
-      ['prenom', 'nom', 'email', 'telephone'],
-      ['password'],
+      ['type_bien', 'adresse', 'ville', 'nombre_pieces'],
+      ['loyer_actuel', 'date_disponibilite'],
+      [],
+      ['prenom', 'nom', 'email', 'telephone', 'password'],
     ];
     const valid = await trigger(fields[step - 1]);
-    if (valid) setStep(s => Math.min(s + 1, totalSteps));
+    if (valid) setStep(s => Math.min(s + 1, 4));
   };
 
   const onSubmit = async (data: FormData) => {
     setSubmitting(true);
     try {
-      // Sign up
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
@@ -80,7 +153,13 @@ export default function FormulaireRelouer() {
       });
       if (authError) throw authError;
 
-      // Insert lead
+      const equipements: string[] = [];
+      if (data.balcon) equipements.push('Balcon');
+      if (data.terrasse) equipements.push('Terrasse');
+      if (data.cave) equipements.push('Cave');
+      if (data.parking) equipements.push('Parking');
+      if (data.ascenseur) equipements.push('Ascenseur');
+
       const { error: leadError } = await supabase.from('leads').insert({
         first_name: data.prenom,
         last_name: data.nom,
@@ -93,16 +172,23 @@ export default function FormulaireRelouer() {
           npa: data.npa,
           ville: data.ville,
           nombre_pieces: data.nombre_pieces,
+          nombre_chambres: data.nombre_chambres,
+          nombre_sdb: data.nombre_sdb,
           surface: data.surface,
+          etage: data.etage,
+          equipements,
           loyer_actuel: data.loyer_actuel,
           charges: data.charges,
           date_disponibilite: data.date_disponibilite,
+          motif_relocation: data.motif_relocation,
+          etat: data.etat,
           description: data.description,
+          photos: photos.map(p => p.url),
         }),
       });
       if (leadError) console.warn('Lead insert warning:', leadError);
 
-      toast.success('Demande envoyée ! Vérifiez votre email pour confirmer votre compte.');
+      toast.success('Demande envoyée ! Vérifiez votre email.');
       navigate('/inscription-validee');
     } catch (e: any) {
       toast.error(e.message || 'Erreur lors de l\'envoi');
@@ -111,22 +197,46 @@ export default function FormulaireRelouer() {
     }
   };
 
+  const equipementsList: { key: keyof FormData; label: string }[] = [
+    { key: 'balcon', label: 'Balcon' },
+    { key: 'terrasse', label: 'Terrasse' },
+    { key: 'cave', label: 'Cave' },
+    { key: 'parking', label: 'Parking' },
+    { key: 'ascenseur', label: 'Ascenseur' },
+  ];
+
   return (
     <div className="min-h-screen bg-background py-8 md:py-12">
-      <div className="container mx-auto px-4 max-w-2xl">
+      <div className="container mx-auto px-4 max-w-3xl">
         <Button variant="ghost" onClick={() => navigate('/relouer-mon-appartement')} className="mb-6">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Retour
+          <ArrowLeft className="h-4 w-4 mr-2" /> Retour
         </Button>
 
         <div className="mb-8 text-center">
           <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
             Trouver un repreneur pour mon bail
           </h1>
-          <p className="text-muted-foreground">Étape {step} sur {totalSteps}</p>
-          <div className="w-full bg-muted rounded-full h-2 mt-4">
-            <div className="bg-primary h-2 rounded-full transition-all duration-300" style={{ width: `${(step / totalSteps) * 100}%` }} />
-          </div>
+          <p className="text-muted-foreground">Étape {step} sur 4</p>
+        </div>
+
+        {/* Stepper */}
+        <div className="flex items-center justify-between mb-8">
+          {STEPS.map((s, idx) => {
+            const Icon = s.icon;
+            const active = step === s.id;
+            const done = step > s.id;
+            return (
+              <div key={s.id} className="flex-1 flex items-center">
+                <div className="flex flex-col items-center w-full">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${done ? 'bg-emerald-500 border-emerald-500 text-white' : active ? 'bg-primary border-primary text-primary-foreground' : 'bg-muted border-border text-muted-foreground'}`}>
+                    {done ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
+                  </div>
+                  <p className={`text-xs mt-1 hidden sm:block ${active ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{s.title}</p>
+                </div>
+                {idx < STEPS.length - 1 && <div className={`h-0.5 flex-1 mx-2 ${done ? 'bg-emerald-500' : 'bg-border'}`} />}
+              </div>
+            );
+          })}
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="bg-card rounded-2xl border border-border/40 p-6 md:p-8 shadow-sm">
@@ -140,46 +250,93 @@ export default function FormulaireRelouer() {
 
                 <div>
                   <Label>Type de bien *</Label>
-                  <Select onValueChange={(v) => setValue('type_bien', v)}>
+                  <Select onValueChange={(v) => setValue('type_bien', v)} value={watch('type_bien')}>
                     <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Appartement">Appartement</SelectItem>
                       <SelectItem value="Studio">Studio</SelectItem>
                       <SelectItem value="Maison">Maison</SelectItem>
                       <SelectItem value="Loft">Loft</SelectItem>
+                      <SelectItem value="Duplex">Duplex</SelectItem>
                     </SelectContent>
                   </Select>
                   {errors.type_bien && <p className="text-xs text-destructive mt-1">{errors.type_bien.message}</p>}
                 </div>
 
                 <div>
-                  <Label>Adresse *</Label>
-                  <Input {...register('adresse')} placeholder="Rue et numéro" />
+                  <Label className="flex items-center gap-2"><MapPinned className="w-4 h-4 text-muted-foreground" /> Adresse *</Label>
+                  <GoogleAddressAutocomplete
+                    value={watch('adresse') || ''}
+                    onChange={handleAddressChange}
+                    onInputChange={(v) => setValue('adresse', v)}
+                    placeholder="Rue et numéro"
+                    restrictToSwitzerland
+                  />
                   {errors.adresse && <p className="text-xs text-destructive mt-1">{errors.adresse.message}</p>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>NPA</Label>
-                    <Input {...register('npa')} placeholder="1000" />
+                    <Input {...register('npa')} placeholder="Auto" readOnly className="bg-muted/50" />
                   </div>
                   <div>
                     <Label>Ville *</Label>
-                    <Input {...register('ville')} placeholder="Lausanne" />
+                    <Input {...register('ville')} placeholder="Auto" readOnly className="bg-muted/50" />
                     {errors.ville && <p className="text-xs text-destructive mt-1">{errors.ville.message}</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label>Pièces *</Label>
+                    <Input {...register('nombre_pieces')} type="number" step="0.5" placeholder="3.5" />
+                    {errors.nombre_pieces && <p className="text-xs text-destructive mt-1">{errors.nombre_pieces.message}</p>}
+                  </div>
+                  <div>
+                    <Label>Chambres</Label>
+                    <Input {...register('nombre_chambres')} type="number" placeholder="2" />
+                  </div>
+                  <div>
+                    <Label>SDB</Label>
+                    <Input {...register('nombre_sdb')} type="number" placeholder="1" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Nb de pièces *</Label>
-                    <Input {...register('nombre_pieces')} type="number" step="0.5" placeholder="3.5" />
-                    {errors.nombre_pieces && <p className="text-xs text-destructive mt-1">{errors.nombre_pieces.message}</p>}
-                  </div>
-                  <div>
                     <Label>Surface (m²)</Label>
                     <Input {...register('surface')} type="number" placeholder="80" />
                   </div>
+                  <div>
+                    <Label>Étage</Label>
+                    <Input {...register('etage')} placeholder="3" />
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="mb-2 block">Équipements</Label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {equipementsList.map((eq) => (
+                      <div key={eq.key} className="flex items-center gap-2 p-3 rounded-lg border border-border">
+                        <Checkbox
+                          id={eq.key}
+                          checked={watch(eq.key) as boolean}
+                          onCheckedChange={(c) => setValue(eq.key, c as boolean)}
+                        />
+                        <Label htmlFor={eq.key} className="cursor-pointer text-sm">{eq.label}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {step === 2 && (
+              <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Banknote className="h-5 w-5 text-primary" />
+                  <h2 className="text-xl font-bold">Conditions de location</h2>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -201,17 +358,98 @@ export default function FormulaireRelouer() {
                 </div>
 
                 <div>
+                  <Label>Motif de la relocation</Label>
+                  <Select onValueChange={(v) => setValue('motif_relocation', v)} value={watch('motif_relocation')}>
+                    <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Déménagement">Déménagement</SelectItem>
+                      <SelectItem value="Achat immobilier">Achat immobilier</SelectItem>
+                      <SelectItem value="Mutation professionnelle">Mutation professionnelle</SelectItem>
+                      <SelectItem value="Famille">Raisons familiales</SelectItem>
+                      <SelectItem value="Autre">Autre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>État du bien</Label>
+                  <Select onValueChange={(v) => setValue('etat', v)} value={watch('etat')}>
+                    <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Neuf">Neuf / Rénové</SelectItem>
+                      <SelectItem value="Bon état">Bon état</SelectItem>
+                      <SelectItem value="État correct">État correct</SelectItem>
+                      <SelectItem value="À rafraîchir">À rafraîchir</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
                   <Label>Description (optionnel)</Label>
-                  <Textarea {...register('description')} placeholder="Atouts, équipements, étage, balcon..." rows={3} />
+                  <Textarea {...register('description')} placeholder="Atouts, équipements, environnement..." rows={4} />
                 </div>
               </motion.div>
             )}
 
-            {step === 2 && (
-              <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+            {step === 3 && (
+              <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Camera className="h-5 w-5 text-primary" />
+                  <h2 className="text-xl font-bold">Photos du bien</h2>
+                </div>
+
+                <p className="text-sm text-muted-foreground">
+                  Ajoutez jusqu'à 8 photos (10 Mo max chacune). De belles photos accélèrent la relocation.
+                </p>
+
+                <div className="relative border-2 border-dashed rounded-xl p-8 text-center border-border hover:border-primary/50 transition">
+                  {uploading ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                      <p className="text-sm text-muted-foreground">Upload en cours...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+                      <p className="font-medium mb-1">Glissez ou sélectionnez vos photos</p>
+                      <p className="text-xs text-muted-foreground mb-3">JPG, PNG, WebP — 10 Mo max</p>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={(e) => handleFiles(e.target.files)}
+                        disabled={photos.length >= 8}
+                      />
+                      <Button type="button" variant="outline" size="sm" className="pointer-events-none">Parcourir</Button>
+                    </>
+                  )}
+                </div>
+
+                {photos.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {photos.map((p, i) => (
+                      <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-border">
+                        <img src={p.url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(i)}
+                          className="absolute top-1 right-1 p-1 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {step === 4 && (
+              <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <User className="h-5 w-5 text-primary" />
-                  <h2 className="text-xl font-bold">Vos coordonnées</h2>
+                  <h2 className="text-xl font-bold">Vos coordonnées et compte</h2>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -238,52 +476,35 @@ export default function FormulaireRelouer() {
                   <Input {...register('telephone')} type="tel" placeholder="+41 79 123 45 67" />
                   {errors.telephone && <p className="text-xs text-destructive mt-1">{errors.telephone.message}</p>}
                 </div>
-              </motion.div>
-            )}
-
-            {step === 3 && (
-              <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <CheckCircle className="h-5 w-5 text-primary" />
-                  <h2 className="text-xl font-bold">Création de votre compte</h2>
-                </div>
-
-                <p className="text-sm text-muted-foreground">
-                  Créez un mot de passe pour suivre votre dossier et échanger avec votre conseiller.
-                </p>
 
                 <div>
-                  <Label>Mot de passe *</Label>
+                  <Label className="flex items-center gap-2"><KeyRound className="w-4 h-4 text-muted-foreground" /> Mot de passe *</Label>
                   <Input {...register('password')} type="password" placeholder="8 caractères minimum" />
                   {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
                 </div>
 
-                <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
-                  En soumettant ce formulaire, vous acceptez d'être recontacté par Immo-Rama dans le cadre de votre demande.
+                <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground flex items-start gap-2">
+                  <Lock className="w-4 h-4 mt-0.5 shrink-0" />
+                  <span>Un email de confirmation sera envoyé. Après validation, vous accéderez à votre espace client pour suivre votre dossier.</span>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <div className="flex justify-between mt-8 pt-6 border-t">
-            {step > 1 && (
-              <Button type="button" variant="outline" onClick={() => setStep(s => s - 1)}>
-                <ArrowLeft className="h-4 w-4 mr-2" /> Précédent
+          <div className="flex justify-between mt-8 pt-6 border-t gap-4">
+            <Button type="button" variant="outline" onClick={() => setStep(s => Math.max(1, s - 1))} disabled={step === 1}>
+              <ChevronLeft className="h-4 w-4 mr-2" /> Précédent
+            </Button>
+            {step < 4 ? (
+              <Button type="button" onClick={next}>
+                Suivant <ChevronRight className="h-4 w-4 ml-2" />
+              </Button>
+            ) : (
+              <Button type="submit" disabled={submitting}>
+                {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                Créer mon compte et envoyer
               </Button>
             )}
-            <div className="ml-auto">
-              {step < totalSteps && (
-                <Button type="button" onClick={next}>
-                  Suivant <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
-              )}
-              {step === totalSteps && (
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                  Envoyer ma demande
-                </Button>
-              )}
-            </div>
           </div>
         </form>
       </div>
