@@ -39,7 +39,45 @@ import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
 import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 
-export default function ClientDashboard() {
+import RenovationClientDashboard from './dashboards/RenovationClientDashboard';
+import VenteClientDashboard from './dashboards/VenteClientDashboard';
+import RelocationClientDashboard from './dashboards/RelocationClientDashboard';
+
+export default function ClientDashboardDispatcher() {
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<{ prenom?: string; nom?: string; parcours_type?: string } | null>(null);
+  const [resolved, setResolved] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!user) { setResolved(true); return; }
+      const { data } = await supabase
+        .from('profiles')
+        .select('prenom, nom, parcours_type')
+        .eq('id', user.id)
+        .maybeSingle();
+      setProfile(data || null);
+      setResolved(true);
+    };
+    load();
+  }, [user]);
+
+  if (!resolved) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  const pt = profile?.parcours_type;
+  if (pt === 'renovation') return <RenovationClientDashboard profile={profile} />;
+  if (pt === 'vente') return <VenteClientDashboard profile={profile} />;
+  if (pt === 'relocation') return <RelocationClientDashboard profile={profile} />;
+  return <ClientDashboardLocation />;
+}
+
+function ClientDashboardLocation() {
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
   const { counts } = useNotifications();
