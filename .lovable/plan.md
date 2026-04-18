@@ -1,64 +1,75 @@
 
-## Diagnostic
+## Diagnostic confirmé
 
-Le dashboard `/client` affiche "Recherche de logement" pour une cliente qui a créé son compte via le formulaire **Construire & Rénover**. Elle devrait voir un dashboard adapté à son projet de rénovation, pas un dashboard de recherche locative.
+Le problème visible n’est pas seulement en base, il est surtout dans le rendu du dashboard.
 
-### Cause racine
+### Cause racine actuelle
+Dans `src/pages/client/Dashboard.tsx` :
+- le dashboard charge bien `profiles.parcours_type` (`select('actif, prenom, nom, parcours_type')`)
+- mais au moment d’afficher le header, il passe seulement `isAcheteur` à `PremiumDashboardHeader`
+- il ne passe jamais `parcoursType={clientProfile?.parcours_type}`
 
-Quand l'edge function `create-public-user` crée le profil/role, elle assigne **uniquement** le rôle `client` sans distinguer le **type de parcours** (locataire, acheteur, vendeur, maître d'ouvrage rénovation). Du coup, le dashboard client par défaut affiche le contenu "recherche de logement".
+Dans `src/components/premium/PremiumDashboardHeader.tsx`, la logique est :
+- si `parcoursType` est absent → fallback sur `isAcheteur ? 'achat' : 'location'`
+- donc un compte rénovation retombe automatiquement sur `location`
+- résultat : badge “Recherche de logement”
 
-Vérifications à faire :
-1. Lire `create-public-user/index.ts` → confirmer qu'aucun champ `type_recherche` ou marqueur "rénovation" n'est stocké
-2. Lire `FormulaireConstruireRenover.tsx` → voir quelles données sont passées au signup et si un champ distinctif est envoyé
-3. Lire le dashboard `/client` (probablement `src/pages/client/ClientDashboard.tsx` ou équivalent) → voir comment il décide quel contenu afficher
-4. Vérifier en DB l'utilisateur `cendrinecardoso` : son `profiles` contient-il un marqueur ? `auth.users.raw_user_meta_data.user_type = 'maitre_ouvrage'` est-il présent ?
-5. Vérifier s'il existe une table `projets_renovation` ou similaire (vu dans la mémoire `renovation-intelligente-reference-version`)
+## Ce que je vais corriger
 
-## Plan de correction
+### 1. Corriger le header du dashboard client
+Modifier `src/pages/client/Dashboard.tsx` pour transmettre explicitement :
+- `parcoursType={clientProfile?.parcours_type}`
 
-### 1. Identifier le marqueur de parcours
-Rénovation = `user_type: 'maitre_ouvrage'` (déjà présent dans `auth.users.raw_user_meta_data` selon la dernière vérif). Il faut le **propager** dans `public.profiles` (colonne dédiée, ex: `parcours_type` ou `type_client`) pour que le dashboard puisse le lire sans toucher à `auth.users`.
+Effet attendu :
+- `renovation` → “Projet de rénovation”
+- `vente` → “Vente de votre bien”
+- `relocation` → “Relocation de votre bien”
+- `achat/location` → comportement actuel conservé
 
-### 2. Modifier `create-public-user` edge function
-Accepter un nouveau champ `parcours` dans le payload (`'location' | 'achat' | 'vente' | 'renovation' | 'relocation'`) et l'enregistrer dans `profiles.parcours_type`.
+### 2. Ajouter une normalisation défensive
+Toujours dans le dashboard, sécuriser la valeur lue depuis le profil :
+- si `parcours_type` est vide/invalide → fallback propre
+- sinon utiliser la valeur exacte
 
-### 3. Migration SQL
-- Ajouter colonne `profiles.parcours_type TEXT` (nullable, défaut `'location'` pour ne rien casser)
-- Réparer rétroactivement la cliente Cendrine (`UPDATE profiles SET parcours_type = 'renovation' WHERE id = ...`)
+But :
+- éviter qu’un profil incomplet revienne encore sur “Recherche de logement” sans contrôle
 
-### 4. Mettre à jour les 3 formulaires publics
-Ajouter `parcours` dans le payload envoyé à `create-public-user` :
-- `FormulaireConstruireRenover` → `parcours: 'renovation'`
-- `FormulaireRelouer` → `parcours: 'relocation'`
-- `FormulaireVendeurComplet` → `parcours: 'vente'`
+### 3. Adapter le contenu principal pour les comptes rénovation
+Aujourd’hui, même après correction du header, le reste du dashboard reste orienté location (`offres`, `visites`, `candidatures`, bouton `Compléter mon dossier` vers `/mandat-v3`).
 
-### 5. Adapter le Dashboard client
-Lire `profiles.parcours_type` et afficher le bon header/contenu :
-- `renovation` → "Suivi de votre projet de rénovation" (icône 🚧, lien vers espace rénovation)
-- `vente` → "Suivi de votre vente" 
-- `relocation` → "Suivi de votre relocation"
-- `location`/`achat` (défaut) → contenu actuel inchangé
+Je vais donc ajouter une branche spécifique si `parcours_type === 'renovation'` :
+- carte d’accueil “Suivi de votre projet de rénovation”
+- message cohérent avec la promesse rénovation
+- CTA vers l’espace rénovation si disponible
+- sinon bloc d’attente clair au lieu des cartes “recherche de logement”
 
-Si un module dashboard rénovation existe déjà (cf. mémoire `renovation-intelligente`), router directement vers celui-ci. Sinon, afficher un placeholder "Votre conseiller rénovation vous contactera sous 24h" avec les infos clés du projet.
+### 4. Exposer correctement l’espace rénovation côté client
+Le module rénovation existe déjà dans `src/features/renovation/...`, mais les routes actuelles sont seulement :
+- `/agent/renovation`
+- `/admin/renovation`
+- `/proprietaire/renovation`
 
-### 6. Test end-to-end
-- Créer un compte test via `/formulaire-construire-renover`
-- Se connecter → vérifier que le dashboard affiche "Projet de rénovation" et non "Recherche de logement"
-- Idem pour `/formulaire-relouer` (relocation) et `/formulaire-vendeur` (vente)
+Il n’existe pas de route client dédiée dans `src/App.tsx`.
 
-## Fichiers touchés
+Je vais donc :
+- soit créer `/client/renovation` et `/client/renovation/:id` si le client doit accéder au module
+- soit garder le dashboard client classique mais avec un bloc rénovation dédié si ce module n’est pas encore prêt pour le rôle `client`
 
-| Fichier | Action |
-|---|---|
-| Migration SQL | Ajout `profiles.parcours_type` + réparation Cendrine |
-| `supabase/functions/create-public-user/index.ts` | Accepter + stocker `parcours` |
-| `src/pages/FormulaireConstruireRenover.tsx` | Envoyer `parcours: 'renovation'` |
-| `src/pages/FormulaireRelouer.tsx` | Envoyer `parcours: 'relocation'` |
-| `src/pages/FormulaireVendeurComplet.tsx` | Envoyer `parcours: 'vente'` |
-| Dashboard client (`src/pages/client/...`) | Brancher l'affichage sur `parcours_type` |
+### 5. Vérifier la cohérence des nouveaux formulaires
+Le code des formulaires est déjà bon en lecture :
+- `FormulaireConstruireRenover` envoie `parcours: 'renovation'`
+- `FormulaireRelouer` envoie `parcours: 'relocation'`
+- `FormulaireVendeurComplet` envoie `parcours: 'vente'`
 
-## Garanties
-- ✅ Comptes existants `client` classiques inchangés (défaut `'location'`)
-- ✅ Cliente Cendrine réparée par la migration
-- ✅ Aucun impact sur agent/admin/apporteur
-- ✅ Idempotent
+Je vérifierai quand même lors de l’implémentation que :
+- `create-public-user` stocke bien `profiles.parcours_type`
+- les comptes déjà créés avant le correctif sont réparés si nécessaire
+
+## Fichiers à toucher
+- `src/pages/client/Dashboard.tsx`
+- `src/App.tsx` si on ouvre des routes client rénovation
+- éventuellement composants/sections du dashboard client pour une variante rénovation dédiée
+- éventuellement une migration ciblée seulement si des profils existants ont encore la mauvaise valeur
+
+## Résultat attendu
+Un client inscrit via **Construire & Rénover** ne verra plus “Recherche de logement”, mais un dashboard cohérent avec son parcours rénovation, avec contenu et CTA adaptés.
