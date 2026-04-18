@@ -1,37 +1,52 @@
 
-L'utilisateur veut le même traitement (thème luxury + header fixe avec bouton "← Accueil") sur les 3 autres pages liées aux parcours. Je dois identifier lesquelles.
+## Compréhension
 
-Pages déjà traitées : `RelouerMonAppartement`, `ConstruireRenover`, `FormulaireRelouer`, `FormulaireConstruireRenover`.
-
-Pages probablement concernées (les "3 autres") :
-- `VendreMonBien` (a déjà `VendeurFloatingNav` mais peut-être pas le thème luxury)
-- `FormulaireVendeurComplet`
-- `/nouveau-mandat` (parcours Acheter)
-- `/mandat-v3` (parcours Louer)
-- `/inscription-validee` (page de confirmation post-inscription)
-
-Vu le contexte ("3 autres"), il s'agit probablement des 3 formulaires/landings restants du tunnel : **Vendre** (landing + formulaire) + **page de confirmation** OU les formulaires Acheter/Louer/confirmation.
-
-Je vais vérifier rapidement.
+Tu veux remplacer le contenu actuel de la landing `/construire-renover` par cette nouvelle promesse axée **Rénovation intelligente par IA** (avant / pendant / après chantier), avec un CTA "En savoir plus" qui mène au formulaire existant.
 
 ## Plan
 
-Appliquer sur les 3 pages restantes du tunnel :
+### 1. Refonte de `src/pages/ConstruireRenover.tsx`
 
-1. **`VendreMonBien.tsx`** + **`FormulaireVendeurComplet.tsx`**
-   - Wrapper `theme-luxury` (le `VendeurFloatingNav` existe déjà, on garde)
-   - Vérifier que le bouton "← Accueil" est présent dans la nav, sinon l'ajouter
+Garder :
+- Header fixe + bouton retour Accueil
+- Wrapper `theme-luxury`
+- Lien vers `/formulaire-construire-renover` (inchangé)
 
-2. **`InscriptionValidee.tsx`** (page de succès post-signup commune aux 3 parcours)
-   - Wrapper `theme-luxury`
-   - Header fixe minimal avec logo + bouton "← Accueil"
+Remplacer le contenu par 5 sections :
 
-3. **Formulaires `/nouveau-mandat` et `/mandat-v3`** : à confirmer — l'utilisateur a dit "Acheter et Louer sont déjà OK". Donc on **ne touche pas**.
+**A. HERO**
+- Badge : "🚧 Rénovation intelligente 🚧"
+- Titre : "Rénovez plus intelligemment grâce à l'IA"
+- Sous-titre : "Réduisez les erreurs, optimisez vos coûts et anticipez les retards grâce à l'intelligence artificielle."
+- Paragraphe d'intro : agent IA connecté 24/7 qui suit le projet avant/pendant/après
+- CTA principal : "En savoir plus" → `/formulaire-construire-renover`
+- Trust badges : Devis gratuit · IA 24/7 · Économies garanties
 
-### Garanties
-- ✅ Home `/` inchangée
-- ✅ Logique signup / mandats / photos inchangée
-- ✅ `VendeurFloatingNav` conservée (juste enrichie si bouton Accueil manquant)
-- ✅ Cohérence visuelle ivoire/or sur tout le tunnel
+**B. AVANT LE CHANTIER** (carte avec icône `ClipboardCheck`)
+Liste des 11 bénéfices (optimisation plans, analyse devis, audit entreprises, classement étoiles, fournitures, comparaison prix, matériaux locaux/étrangers, permis, amiante, canalisations, risques techniques)
 
-Si tu confirmes, j'applique.
+**C. PENDANT LE CHANTIER** (carte avec icône `Activity`)
+Liste des 7 bénéfices (suivi temps réel, anticipation retards, optimisation coûts, détection erreurs, prise de décision, suivi centralisé, coordination)
+
+**D. APRÈS LE CHANTIER** (carte avec icône `ShieldCheck`)
+Liste des 5 bénéfices (suivi 24/7 installations, garanties, centralisation docs, traçabilité, conservation pour futur)
+
+**E. CTA FINAL**
+- Titre : "Ne rénovez plus à l'aveugle"
+- Sous-titre : "L'IA peut vous faire économiser des milliers de francs"
+- Bouton : "En savoir plus" → `/formulaire-construire-renover`
+
+### 2. Composants utilisés
+- `Card` / icônes Lucide existantes (`ClipboardCheck`, `Activity`, `ShieldCheck`, `Sparkles`, `CheckCircle`, `Bot`)
+- Aucune dépendance nouvelle
+- Conserve `theme-luxury` (ivoire/or)
+
+### 3. Fichiers
+- **Modifié** : `src/pages/ConstruireRenover.tsx` uniquement
+- **Inchangés** : header, formulaire, routes, espace client
+
+## Garanties
+- ✅ Header fixe + bouton Accueil conservés
+- ✅ Thème luxury conservé
+- ✅ Formulaire `/formulaire-construire-renover` inchangé
+- ✅ Aucun impact sur les autres parcours
