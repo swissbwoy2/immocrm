@@ -1,52 +1,46 @@
 
-## Compréhension
+## Objectif
+Ajouter un menu hamburger sur chaque landing page du tunnel pour permettre la navigation entre les parcours.
 
-Tu veux remplacer le contenu actuel de la landing `/construire-renover` par cette nouvelle promesse axée **Rénovation intelligente par IA** (avant / pendant / après chantier), avec un CTA "En savoir plus" qui mène au formulaire existant.
+## Pages concernées
+1. `src/pages/RelouerMonAppartement.tsx`
+2. `src/pages/ConstruireRenover.tsx`
+3. `src/pages/VendreMonBien.tsx` (a déjà `VendeurFloatingNav`, on enrichit ou on remplace)
+4. La home `/` (Index) — à confirmer si concerné
 
-## Plan
+## Approche
 
-### 1. Refonte de `src/pages/ConstruireRenover.tsx`
+### 1. Créer un composant réutilisable `LandingHamburgerMenu`
+Fichier : `src/components/landing/LandingHamburgerMenu.tsx`
 
-Garder :
-- Header fixe + bouton retour Accueil
-- Wrapper `theme-luxury`
-- Lien vers `/formulaire-construire-renover` (inchangé)
+Contenu :
+- Bouton hamburger (icône `Menu` de lucide-react) en haut à droite du header
+- Utilise `Sheet` de shadcn (slide depuis la droite) pour le panneau
+- Liens de navigation :
+  - 🏠 Accueil (`/`)
+  - 🔍 Acheter / Chercher (`/`)
+  - 🏠 Louer (`/`)
+  - 💰 Vendre mon bien (`/vendre-mon-bien`)
+  - 🔄 Relouer mon appartement (`/relouer-mon-appartement`)
+  - 🚧 Construire / Rénover (`/construire-renover`)
+  - 📞 Nous contacter (ancre ou page)
+  - 👤 Espace client (`/auth`)
 
-Remplacer le contenu par 5 sections :
+Style : thème luxury (ivoire/or), liens avec icônes Lucide.
 
-**A. HERO**
-- Badge : "🚧 Rénovation intelligente 🚧"
-- Titre : "Rénovez plus intelligemment grâce à l'IA"
-- Sous-titre : "Réduisez les erreurs, optimisez vos coûts et anticipez les retards grâce à l'intelligence artificielle."
-- Paragraphe d'intro : agent IA connecté 24/7 qui suit le projet avant/pendant/après
-- CTA principal : "En savoir plus" → `/formulaire-construire-renover`
-- Trust badges : Devis gratuit · IA 24/7 · Économies garanties
+### 2. Intégration dans les headers fixes existants
+Dans chaque landing :
+- `RelouerMonAppartement.tsx` → ajouter `<LandingHamburgerMenu />` dans le header fixe (à côté du bouton "← Accueil" actuel, ou en remplacement)
+- `ConstruireRenover.tsx` → idem
+- `VendreMonBien.tsx` → ajouter dans `VendeurFloatingNav` ou en complément
 
-**B. AVANT LE CHANTIER** (carte avec icône `ClipboardCheck`)
-Liste des 11 bénéfices (optimisation plans, analyse devis, audit entreprises, classement étoiles, fournitures, comparaison prix, matériaux locaux/étrangers, permis, amiante, canalisations, risques techniques)
-
-**C. PENDANT LE CHANTIER** (carte avec icône `Activity`)
-Liste des 7 bénéfices (suivi temps réel, anticipation retards, optimisation coûts, détection erreurs, prise de décision, suivi centralisé, coordination)
-
-**D. APRÈS LE CHANTIER** (carte avec icône `ShieldCheck`)
-Liste des 5 bénéfices (suivi 24/7 installations, garanties, centralisation docs, traçabilité, conservation pour futur)
-
-**E. CTA FINAL**
-- Titre : "Ne rénovez plus à l'aveugle"
-- Sous-titre : "L'IA peut vous faire économiser des milliers de francs"
-- Bouton : "En savoir plus" → `/formulaire-construire-renover`
-
-### 2. Composants utilisés
-- `Card` / icônes Lucide existantes (`ClipboardCheck`, `Activity`, `ShieldCheck`, `Sparkles`, `CheckCircle`, `Bot`)
-- Aucune dépendance nouvelle
-- Conserve `theme-luxury` (ivoire/or)
-
-### 3. Fichiers
-- **Modifié** : `src/pages/ConstruireRenover.tsx` uniquement
-- **Inchangés** : header, formulaire, routes, espace client
+### 3. Responsive
+- Mobile : hamburger seul
+- Desktop : hamburger + bouton "← Accueil" visible
 
 ## Garanties
-- ✅ Header fixe + bouton Accueil conservés
-- ✅ Thème luxury conservé
-- ✅ Formulaire `/formulaire-construire-renover` inchangé
-- ✅ Aucun impact sur les autres parcours
+- ✅ Aucune logique métier modifiée
+- ✅ Routes existantes inchangées
+- ✅ Thème luxury respecté
+- ✅ Composant réutilisable (DRY)
+- ✅ Formulaires intacts
