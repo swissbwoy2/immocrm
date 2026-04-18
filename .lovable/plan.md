@@ -1,42 +1,37 @@
 
+L'utilisateur veut le même traitement (thème luxury + header fixe avec bouton "← Accueil") sur les 3 autres pages liées aux parcours. Je dois identifier lesquelles.
 
-## Diagnostic
+Pages déjà traitées : `RelouerMonAppartement`, `ConstruireRenover`, `FormulaireRelouer`, `FormulaireConstruireRenover`.
 
-**1. Pas de retour vers l'accueil** — Les pages `RelouerMonAppartement.tsx` et `ConstruireRenover.tsx` n'ont **aucune navigation fixe** (pas de header, pas de FloatingNav). Seul un petit lien `← Retour à l'accueil` existe en bas de page (fin du CTA final), invisible sans scroller. `VendreMonBien` a son `VendeurFloatingNav` → la nav fonctionne pour ce parcours.
+Pages probablement concernées (les "3 autres") :
+- `VendreMonBien` (a déjà `VendeurFloatingNav` mais peut-être pas le thème luxury)
+- `FormulaireVendeurComplet`
+- `/nouveau-mandat` (parcours Acheter)
+- `/mandat-v3` (parcours Louer)
+- `/inscription-validee` (page de confirmation post-inscription)
 
-**2. Thème bleu** — La home (`/`) utilise le thème **luxury** (ivoire + or champagne via `theme-luxury` ou wrapper équivalent). `RelouerMonAppartement` et `ConstruireRenover` utilisent les variables par défaut → `--primary: 217 91% 60%` = bleu Tailwind. C'est pour ça que tout est bleu sur ces 2 landings.
+Vu le contexte ("3 autres"), il s'agit probablement des 3 formulaires/landings restants du tunnel : **Vendre** (landing + formulaire) + **page de confirmation** OU les formulaires Acheter/Louer/confirmation.
 
-**3. NPA / Ville auto qui ne marche pas** — Dans `FormulaireConstruireRenover.tsx` (lignes 264-274) et probablement `FormulaireRelouer.tsx`, les champs `NPA` et `Ville` sont en `readOnly` avec placeholder "Auto". Tu veux qu'ils soient **libres en saisie**.
+Je vais vérifier rapidement.
 
-## Corrections
+## Plan
 
-### A. Navigation retour accueil sur les 2 landings
-Ajouter en haut de `RelouerMonAppartement.tsx` et `ConstruireRenover.tsx` un **header fixe minimal** identique en logique à `VendeurFloatingNav` :
-- Logo Immo-Rama à gauche → lien vers `/`
-- Bouton "← Accueil" + bouton CTA principal à droite
-- Position `fixed top-0`, fond blur, z-index élevé
-- Padding-top compensé sur le hero
+Appliquer sur les 3 pages restantes du tunnel :
 
-### B. Thème harmonisé avec la landing principale
-Wrapper `<div className="theme-luxury …">` sur les 2 pages (landing **et** formulaires associés) pour récupérer les couleurs ivoire/or de la home. Aucun impact sur le reste du site (le scope est local au wrapper).
+1. **`VendreMonBien.tsx`** + **`FormulaireVendeurComplet.tsx`**
+   - Wrapper `theme-luxury` (le `VendeurFloatingNav` existe déjà, on garde)
+   - Vérifier que le bouton "← Accueil" est présent dans la nav, sinon l'ajouter
 
-Pages concernées :
-- `RelouerMonAppartement.tsx`
-- `ConstruireRenover.tsx`
-- `FormulaireRelouer.tsx`
-- `FormulaireConstruireRenover.tsx`
+2. **`InscriptionValidee.tsx`** (page de succès post-signup commune aux 3 parcours)
+   - Wrapper `theme-luxury`
+   - Header fixe minimal avec logo + bouton "← Accueil"
 
-### C. Champs NPA / Ville libres
-Dans `FormulaireConstruireRenover.tsx` **et** `FormulaireRelouer.tsx` :
-- Retirer `readOnly` et la classe `bg-muted/50`
-- Remplacer placeholder `"Auto"` par `"1207"` (NPA) et `"Genève"` (Ville)
-- Conserver le pré-remplissage automatique quand l'utilisateur sélectionne une adresse Google (mais éditable ensuite)
+3. **Formulaires `/nouveau-mandat` et `/mandat-v3`** : à confirmer — l'utilisateur a dit "Acheter et Louer sont déjà OK". Donc on **ne touche pas**.
 
-## Garanties
+### Garanties
+- ✅ Home `/` inchangée
+- ✅ Logique signup / mandats / photos inchangée
+- ✅ `VendeurFloatingNav` conservée (juste enrichie si bouton Accueil manquant)
+- ✅ Cohérence visuelle ivoire/or sur tout le tunnel
 
-- ✅ La home `/` reste inchangée
-- ✅ `/vendre-mon-bien` reste inchangé (a déjà sa nav + son thème)
-- ✅ Les formulaires `Acheter` et `Louer` restent inchangés
-- ✅ Création de compte intacte sur tous les parcours
-- ✅ Photos / uploads inchangés
-
+Si tu confirmes, j'applique.
