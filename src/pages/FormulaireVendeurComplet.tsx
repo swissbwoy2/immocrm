@@ -1112,6 +1112,47 @@ export default function FormulaireVendeurComplet() {
           </motion.div>
         );
 
+      case 5:
+        return (
+          <motion.div
+            key="step5"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="p-6 rounded-2xl bg-card border border-border/50"
+          >
+            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+              <Lock className="w-5 h-5 text-primary" />
+              Création de votre compte
+            </h2>
+
+            <p className="text-sm text-muted-foreground mb-4">
+              Créez un mot de passe pour accéder à votre espace client et suivre votre dossier de vente.
+            </p>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-muted-foreground" />
+                  Mot de passe *
+                </Label>
+                <Input
+                  {...register('password')}
+                  type="password"
+                  placeholder="8 caractères minimum"
+                  className={errors.password ? 'border-destructive' : ''}
+                />
+                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+              </div>
+
+              <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
+                Un email de confirmation vous sera envoyé à <strong>{watch('email')}</strong>.
+                Après validation, vous accéderez à votre espace personnel.
+              </div>
+            </div>
+          </motion.div>
+        );
+
       default:
         return null;
     }
@@ -1220,7 +1261,7 @@ export default function FormulaireVendeurComplet() {
                   Précédent
                 </Button>
 
-                {currentStep < 4 ? (
+                {currentStep < 5 ? (
                   <Button
                     type="button"
                     onClick={goToNextStep}
