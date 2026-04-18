@@ -206,7 +206,7 @@ export default function FormulaireRelouer() {
   ];
 
   return (
-    <div className="min-h-screen bg-background py-8 md:py-12">
+    <div className="theme-luxury min-h-screen bg-background py-8 md:py-12">
       <div className="container mx-auto px-4 max-w-3xl">
         <Button variant="ghost" onClick={() => navigate('/relouer-mon-appartement')} className="mb-6">
           <ArrowLeft className="h-4 w-4 mr-2" /> Retour
@@ -278,11 +278,11 @@ export default function FormulaireRelouer() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label>NPA</Label>
-                    <Input {...register('npa')} placeholder="Auto" readOnly className="bg-muted/50" />
+                    <Input {...register('npa')} placeholder="1207" />
                   </div>
                   <div>
                     <Label>Ville *</Label>
-                    <Input {...register('ville')} placeholder="Auto" readOnly className="bg-muted/50" />
+                    <Input {...register('ville')} placeholder="Genève" />
                     {errors.ville && <p className="text-xs text-destructive mt-1">{errors.ville.message}</p>}
                   </div>
                 </div>
