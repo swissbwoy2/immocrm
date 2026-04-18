@@ -247,7 +247,7 @@ export default function ConstruireRenover() {
             >
               <Link to="/formulaire-construire-renover">
                 <Sparkles className="mr-3 h-6 w-6" />
-                En savoir plus
+                Rénover maintenant
                 <ArrowRight className="ml-3 h-6 w-6" />
               </Link>
             </Button>
