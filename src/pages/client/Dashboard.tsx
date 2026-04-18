@@ -447,6 +447,11 @@ export default function ClientDashboard() {
           <PremiumDashboardHeader
             userName={clientProfile?.prenom}
             isAcheteur={isAcheteur}
+            parcoursType={
+              (['location','achat','vente','renovation','relocation'] as const).includes(clientProfile?.parcours_type)
+                ? clientProfile.parcours_type
+                : undefined
+            }
             messageCount={counts.new_message}
             offerCount={counts.new_offer}
             onMessagesClick={() => navigate('/client/messagerie')}
