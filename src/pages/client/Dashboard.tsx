@@ -80,7 +80,7 @@ export default function ClientDashboard() {
     try {
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('actif, prenom, nom')
+        .select('actif, prenom, nom, parcours_type')
         .eq('id', user.id)
         .single();
 
