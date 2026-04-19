@@ -29,7 +29,11 @@ export default function RenovationProjectPage() {
 
   const project = projectQuery.data;
   const milestones = milestonesQuery.data;
-  const basePath = userRole === 'admin' ? '/admin' : userRole === 'agent' ? '/agent' : '/proprietaire';
+  const basePath =
+    userRole === 'admin' ? '/admin'
+    : userRole === 'agent' ? '/agent'
+    : userRole === 'client' ? '/client'
+    : '/proprietaire';
   const canUpload = userRole === 'admin' || userRole === 'agent' || userRole === 'proprietaire';
   const canManage = userRole === 'admin' || userRole === 'agent';
   const canClose = canManage && project && ['completed', 'in_progress'].includes(project.status);
