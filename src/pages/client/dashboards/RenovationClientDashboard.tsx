@@ -78,7 +78,7 @@ export default function RenovationClientDashboard({ profile }: Props) {
                 {projects.map((p) => (
                   <button
                     key={p.id}
-                    onClick={() => navigate(`/client/messagerie`)}
+                    onClick={() => navigate(`/client/renovation/${p.id}`)}
                     className="w-full text-left p-4 rounded-lg border bg-card hover:bg-accent/40 transition-all flex items-center justify-between group"
                   >
                     <div>

@@ -29,7 +29,7 @@ import { NotificationBell } from './NotificationBell';
 import { useNotifications } from '@/hooks/useNotifications';
 import { checkDraftsExist } from '@/hooks/useDraftManager';
 
-const getMenuForRole = (role: string) => {
+const getMenuForRole = (role: string, parcoursType?: string | null) => {
   switch (role) {
     case 'admin':
       return [
@@ -101,6 +101,28 @@ const getMenuForRole = (role: string) => {
         { name: 'Paramètres', icon: Settings, path: '/agent/parametres', notifKey: null },
       ];
     case 'client':
+      if (parcoursType === 'renovation') {
+        return [
+          { name: 'Dashboard', icon: LayoutDashboard, path: '/client', notifKey: null },
+          { name: 'Mes projets rénovation', icon: HardHat, path: '/client/renovation', notifKey: null },
+          { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
+          { name: 'Mon dossier', icon: User, path: '/client/dossier', notifKey: null },
+          { name: 'Mes documents', icon: FileText, path: '/client/documents', notifKey: null },
+          { name: 'Notifications', icon: Bell, path: '/client/notifications', notifKey: 'total' },
+          { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
+        ];
+      }
+      if (parcoursType === 'vente') {
+        return [
+          { name: 'Dashboard', icon: LayoutDashboard, path: '/client', notifKey: null },
+          { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
+          { name: 'Mon dossier', icon: User, path: '/client/dossier', notifKey: null },
+          { name: 'Mes documents', icon: FileText, path: '/client/documents', notifKey: null },
+          { name: 'Notifications', icon: Bell, path: '/client/notifications', notifKey: 'total' },
+          { name: 'Paramètres', icon: Settings, path: '/client/parametres', notifKey: null },
+        ];
+      }
+      // Default: location / relocation / recherche logement
       return [
         { name: 'Dashboard', icon: LayoutDashboard, path: '/client', notifKey: null },
         { name: 'Messagerie', icon: MessageSquare, path: '/client/messagerie', notifKey: 'new_message' },
@@ -218,7 +240,7 @@ export function AppSidebar() {
     }
   };
 
-  const menu = useMemo(() => getMenuForRole(userRole || ''), [userRole]);
+  const menu = useMemo(() => getMenuForRole(userRole || '', profile?.parcours_type), [userRole, profile?.parcours_type]);
 
   if (!user || !userRole) {
     return null;

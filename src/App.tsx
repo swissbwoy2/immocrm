@@ -363,6 +363,8 @@ const App = () => (
               <Route path="/client/parametres" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientParametres /></AppLayout></ProtectedRoute>} />
               <Route path="/client/annonces" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientAnnonces /></AppLayout></ProtectedRoute>} />
               <Route path="/client/carte" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientCarte /></AppLayout></ProtectedRoute>} />
+              <Route path="/client/renovation" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><RenovationProjectsPage /></AppLayout></ProtectedRoute>} />
+              <Route path="/client/renovation/:id" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><RenovationProjectPage /></AppLayout></ProtectedRoute>} />
 
               {/* Apporteur Routes */}
               <Route path="/apporteur" element={<ProtectedRoute allowedRoles={['apporteur']}><AppLayout><ApporteurDashboard /></AppLayout></ProtectedRoute>} />

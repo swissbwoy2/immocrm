@@ -13,7 +13,11 @@ export function RenovationProjectCard({ project }: Props) {
   const navigate = useNavigate();
   const { userRole } = useAuth();
 
-  const basePath = userRole === 'admin' ? '/admin' : userRole === 'agent' ? '/agent' : '/proprietaire';
+  const basePath =
+    userRole === 'admin' ? '/admin'
+    : userRole === 'agent' ? '/agent'
+    : userRole === 'client' ? '/client'
+    : '/proprietaire';
 
   return (
     <Card
