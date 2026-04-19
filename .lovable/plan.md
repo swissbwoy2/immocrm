@@ -1,62 +1,32 @@
 
-## Diagnostic à faire
+## Vérification dashboard Relocation
 
-Le compte `cendrinecardoso@gmail.com` est un client (`parcours_type='renovation'`). Quand elle se connecte, elle arrive sur `/client` qui rend `src/pages/client/Dashboard.tsx`. Ce dashboard a été modifié pour passer `parcoursType` au header — mais le **contenu** reste celui de la recherche de logement.
+Le fichier `src/pages/client/dashboards/RelocationClientDashboard.tsx` est bien en place (visible dans le contexte fourni) et il est branché dans le dispatcher `src/pages/client/Dashboard.tsx` via :
 
-Donc ce que voit Cendrine :
-- header = "Projet de rénovation" ✅
-- corps du dashboard = cartes "offres / candidatures / visites / mandat-v3" ❌
+```
+if (pt === 'relocation') return <RelocationClientDashboard profile={profile} />;
+```
 
-Ce n'est PAS le bon dashboard pour un parcours rénovation.
+### Contenu actuel du dashboard Relocation
+- Header `PremiumDashboardHeader` avec `parcoursType="relocation"` → affiche "Relocation de votre bien" avec icône `KeyRound`
+- Empty state : "Votre relocation est en cours de préparation" + CTA "Contacter mon conseiller"
+- 3 cartes raccourcis : Documents, Messagerie, Notifications
+- Aucun bloc parasite locatif (offres / candidatures / mandat-v3)
 
-## Vérifications à faire avant de coder
+### Vérifications restantes à faire
 
-1. Lire `src/pages/client/Dashboard.tsx` actuel pour confirmer qu'il n'y a pas encore de branchement par parcours
-2. Confirmer en DB que `cendrinecardoso` a bien `parcours_type='renovation'`
-3. Vérifier RLS sur `renovation_projects` pour le rôle `client`
-4. Vérifier `AppSidebar` côté client (menu identique pour tous les parcours actuellement)
+1. Confirmer en base qu'il existe au moins un compte avec `parcours_type='relocation'` pour tester (sinon création d'un compte test via `/formulaire-relouer`)
+2. Vérifier que `FormulaireRelouer.tsx` envoie bien `parcours: 'relocation'` à l'edge function `create-public-user` — sinon les nouveaux comptes relocation atterriront sur le dashboard locatif par défaut
+3. Vérifier que la sidebar client n'affiche pas d'entrées non pertinentes (Offres, Candidatures, Carte) pour un compte relocation
 
-## Plan de correction
+### Réponse courte
+Oui, le dashboard Relocation est bien en place côté UI. Mais il reste à confirmer que les nouveaux inscrits via le formulaire "Relouer mon bien" reçoivent bien `parcours_type='relocation'` à la création du compte, sinon ils ne verront jamais ce dashboard.
 
-### 1. Transformer `/client` en dispatcher
-`src/pages/client/Dashboard.tsx` devient un router selon `profiles.parcours_type` :
-- `renovation` → `<RenovationClientDashboard />`
-- `vente` → `<VenteClientDashboard />`
-- `relocation` → `<RelocationClientDashboard />`
-- `location` / `achat` / défaut → comportement actuel (dashboard locatif inchangé)
+### Plan proposé si tu veux qu'on sécurise tout
+1. Lire `src/pages/FormulaireRelouer.tsx` et confirmer/corriger l'envoi du `parcours`
+2. Lire l'edge function `create-public-user` pour vérifier qu'elle écrit bien `parcours_type` dans `profiles`
+3. Requête de contrôle en DB : combien de profils ont `parcours_type='relocation'` aujourd'hui
+4. Si nécessaire, migration ciblée pour réparer d'éventuels comptes relocation existants mal taggés
+5. Filtrer la sidebar client par `parcours_type` (cohérence avec le travail déjà fait sur rénovation)
 
-### 2. Créer `RenovationClientDashboard`
-Nouveau fichier `src/pages/client/dashboards/RenovationClientDashboard.tsx` :
-- Header parcours rénovation (réutilise `PremiumDashboardHeader` avec `parcoursType='renovation'`)
-- Charge les `renovation_projects` du client (`client_id = auth.uid()`)
-- Si projet existant : carte "Mon projet" + statut + lien vers détails
-- Si aucun projet : empty state "Votre conseiller rénovation vous contactera sous 24h"
-- Cartes : Documents, Messagerie, Notifications
-- AUCUN bloc "offres / candidatures / mandat-v3"
-
-### 3. Créer `VenteClientDashboard` et `RelocationClientDashboard`
-Squelettes propres (header + empty state + accès messagerie/documents) pour ne pas qu'un client vente/relocation tombe sur du contenu locatif.
-
-### 4. Filtrer le menu latéral
-Dans `src/components/AppSidebar.tsx`, le case `'client'` doit lire `profile.parcours_type` et masquer les entrées non pertinentes pour rénovation/vente/relocation (ex : "Offres", "Candidatures", "Carte" si elles existent — à confirmer en lisant le fichier).
-
-### 5. Vérifier RLS `renovation_projects`
-Si le client ne peut pas lire son propre projet, ajouter une policy SELECT minimale via migration.
-
-### 6. Test end-to-end
-Login `cendrinecardoso` → `/client` → doit voir un dashboard rénovation cohérent.
-
-## Fichiers touchés
-| Fichier | Action |
-|---|---|
-| `src/pages/client/Dashboard.tsx` | Refactor en dispatcher |
-| `src/pages/client/dashboards/RenovationClientDashboard.tsx` | Créé |
-| `src/pages/client/dashboards/VenteClientDashboard.tsx` | Créé |
-| `src/pages/client/dashboards/RelocationClientDashboard.tsx` | Créé |
-| `src/components/AppSidebar.tsx` | Menu client filtré par `parcours_type` |
-| Migration RLS | Si lecture `renovation_projects` bloquée pour client |
-
-## Garanties
-- ✅ Clients location/achat existants : zéro changement
-- ✅ Module rénovation admin/agent/proprio (figé) : non touché
-- ✅ Sécurité RLS préservée
+Aucun changement appliqué tant que ce plan n'est pas approuvé.
