@@ -108,9 +108,10 @@ serve(async (req) => {
       }
     );
 
-    // Check if user already exists in auth.users
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const existingUser = existingUsers?.users?.find(u => u.email === email);
+    // Check if user already exists in auth.users (case-insensitive)
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 10000 });
+    const existingUser = existingUsers?.users?.find(u => (u.email || '').toLowerCase() === normalizedEmail);
 
     console.log('Existing user:', existingUser ? { id: existingUser.id, email: existingUser.email } : null);
 
