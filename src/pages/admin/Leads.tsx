@@ -285,6 +285,8 @@ export default function Leads() {
       setInvitingLeadId(null);
     }
   };
+
+  const exportCSV = () => {
     const headers = ["Prénom", "Nom", "Email", "Téléphone", "Localité", "Budget", "Statut Emploi", "Permis", "Poursuites", "Garant", "Qualifié", "Date", "Contacté", "Notes"];
     const rows = leads.map((lead) => [
       lead.prenom || "",
