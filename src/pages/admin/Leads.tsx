@@ -233,7 +233,58 @@ export default function Leads() {
     }
   };
 
-  const exportCSV = () => {
+  const inviteLeadAsClient = async (lead: Lead) => {
+    if (!lead.email) {
+      toast.error("Email manquant pour ce lead");
+      return;
+    }
+    const isLouer = (lead.type_recherche || '').toLowerCase() === 'location' || (lead.type_recherche || '').toLowerCase() === 'louer';
+    const isAcheter = (lead.type_recherche || '').toLowerCase() === 'achat' || (lead.type_recherche || '').toLowerCase() === 'acheter';
+    const typeRecherche = isLouer ? 'Louer' : isAcheter ? 'Acheter' : 'Louer';
+
+    if (!confirm(
+      `Inviter ${lead.prenom || ''} ${lead.nom || ''} (${lead.email}) en tant que client ?\n\n` +
+      `• Compte créé en mode invitation légère (à activer manuellement)\n` +
+      `• Type : ${typeRecherche}\n` +
+      (typeRecherche === 'Louer' ? `• Facture AbaNinja de 300 CHF générée automatiquement\n` : '') +
+      `• Email d'invitation envoyé`
+    )) return;
+
+    setInvitingLeadId(lead.id);
+    toast.loading(`Invitation de ${lead.prenom || lead.email}...`, { id: `invite-${lead.id}` });
+    try {
+      const { data, error } = await supabase.functions.invoke('invite-client', {
+        body: {
+          email: lead.email,
+          prenom: lead.prenom || lead.email.split('@')[0],
+          nom: lead.nom || '',
+          telephone: lead.telephone || '',
+          invitationLegere: true,
+          typeRecherche,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      // Marquer le lead comme contacté
+      await supabase.from('leads').update({ contacted: true }).eq('id', lead.id);
+
+      toast.success(`Client invité : ${lead.email}`, {
+        id: `invite-${lead.id}`,
+        description: typeRecherche === 'Louer'
+          ? 'Facture AbaNinja créée. Compte à activer manuellement après paiement.'
+          : 'Compte à activer manuellement.',
+      });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    } catch (err) {
+      toast.error(`Erreur invitation`, {
+        id: `invite-${lead.id}`,
+        description: err instanceof Error ? err.message : "Erreur inconnue",
+      });
+    } finally {
+      setInvitingLeadId(null);
+    }
+  };
     const headers = ["Prénom", "Nom", "Email", "Téléphone", "Localité", "Budget", "Statut Emploi", "Permis", "Poursuites", "Garant", "Qualifié", "Date", "Contacté", "Notes"];
     const rows = leads.map((lead) => [
       lead.prenom || "",
