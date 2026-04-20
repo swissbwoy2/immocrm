@@ -589,6 +589,21 @@ export default function Leads() {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-1">
+                    {(lead.source === 'landing_analyse_dossier' || lead.source === 'landing_quickform' || lead.source === 'landing_quickform_achat') && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => inviteLeadAsClient(lead)}
+                        disabled={invitingLeadId === lead.id}
+                        title="Inviter comme client (création compte + facture 300 CHF si location)"
+                      >
+                        {invitingLeadId === lead.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        ) : (
+                          <UserPlus className="h-4 w-4 text-primary" />
+                        )}
+                      </Button>
+                    )}
                     {!lead.contacted && (
                       <Button
                         variant="ghost"
