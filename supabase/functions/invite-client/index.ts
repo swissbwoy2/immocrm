@@ -480,13 +480,88 @@ serve(async (req) => {
 
     console.log('Email sent successfully to user:', userId);
 
+    // === Invitation légère locative : créer automatiquement la facture AbaNinja 300 CHF ===
+    let invoiceCreated = false;
+    let invoiceError: string | null = null;
+    if (invitationLegere && clientRecordId) {
+      const normalizedType = (typeRecherche || 'Acheter').toLowerCase();
+      const isLouer = normalizedType === 'louer' || normalizedType === 'location';
+      // Création facture pour location uniquement (achat suit un autre flux acompte)
+      if (isLouer) {
+        try {
+          console.log('Creating AbaNinja client + invoice for light invitation (location)');
+          const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+          const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+          const clientRes = await fetch(`${supabaseUrl}/functions/v1/create-abaninja-client`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${serviceKey}`,
+              'apikey': serviceKey,
+            },
+            body: JSON.stringify({
+              prenom: prenom || email.split('@')[0],
+              nom: nom || '',
+              email,
+              telephone: telephone || '',
+              adresse: '',
+            }),
+          });
+          const clientJson = await clientRes.json();
+          if (!clientRes.ok || !clientJson.success) {
+            throw new Error(clientJson.error || `create-abaninja-client failed (${clientRes.status})`);
+          }
+
+          const invoiceRes = await fetch(`${supabaseUrl}/functions/v1/create-abaninja-invoice`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${serviceKey}`,
+              'apikey': serviceKey,
+            },
+            body: JSON.stringify({
+              client_uuid: clientJson.client_uuid,
+              address_uuid: clientJson.address_uuid,
+              type_recherche: 'Louer',
+              prenom: prenom || email.split('@')[0],
+              nom: nom || '',
+              email,
+              demande_id: clientRecordId, // pas de demande_mandat → on référence le client
+            }),
+          });
+          const invoiceJson = await invoiceRes.json();
+          if (!invoiceRes.ok || !invoiceJson.success) {
+            throw new Error(invoiceJson.error || `create-abaninja-invoice failed (${invoiceRes.status})`);
+          }
+
+          // Enregistrer un acompte 300 CHF en attente lié au client
+          await supabaseAdmin.from('acomptes').insert({
+            client_id: clientRecordId,
+            agent_id: agentId || null,
+            montant: 300,
+            statut: 'en_attente',
+            notes: `Facture AbaNinja ${invoiceJson.invoice_number || invoiceJson.invoice_id} (invitation légère locative)`,
+          });
+
+          invoiceCreated = true;
+          console.log('AbaNinja invoice created for light invitation:', invoiceJson.invoice_id);
+        } catch (e: any) {
+          invoiceError = e.message || String(e);
+          console.error('Failed to create AbaNinja invoice for light invitation:', invoiceError);
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
         message: message,
         userId: userId,
         isNewUser: isNewUser,
-        clientId: clientRecordId
+        clientId: clientRecordId,
+        invoiceCreated,
+        invoiceError,
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
