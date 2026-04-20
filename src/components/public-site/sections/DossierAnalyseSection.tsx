@@ -10,6 +10,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSearchType } from '@/contexts/SearchTypeContext';
 import { useUTMParams } from '@/hooks/useUTMParams';
+import { ScrollReveal } from '@/components/public-site/animations/ScrollReveal';
+import { BorderBeam } from '@/components/public-site/magic/BorderBeam';
+import { CinematicHero } from '@/components/ui/cinematic-hero';
 
 const permisOptions = [
   { value: 'Suisse', label: 'Nationalité Suisse' },
@@ -119,17 +122,28 @@ export function DossierAnalyseSection() {
   }
 
   return (
-    <section id="analyse-dossier" className="py-24 md:py-32 bg-gradient-to-b from-muted/30 to-background relative overflow-hidden">
+    <section id="analyse-dossier" className="relative overflow-hidden">
+      <CinematicHero
+        brandName="Immo-Rama"
+        tagline1="Analyse gratuite"
+        tagline2="de ton dossier 📋"
+        cardHeading="Dossier personnalisé"
+        cardDescription="Nos experts te disent ce qui joue et ce qui ne joue pas. Réponse personnalisée sous 24h."
+        metricValue="500+"
+        metricLabel="familles accompagnées avec succès"
+        ctaHeading="Commence maintenant"
+        ctaDescription="Gratuit · Sans engagement · Réponse sous 24h"
+      >
+        {/* Placeholder CTA inside card - formulaire follows below */}
+        <div className="text-xs text-[hsl(40_20%_50%)] border-t border-[hsl(38_45%_48%/0.15)] pt-3 mt-3">
+          👇 Remplis le formulaire ci-dessous
+        </div>
+      </CinematicHero>
+
+      <div className="bg-gradient-to-b from-[hsl(30_15%_8%)] to-background relative overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,hsl(var(--primary)/0.06)_0%,transparent_60%)]" />
-      <div className="container mx-auto px-4 relative z-10">
+      <div className="container mx-auto px-4 py-12 relative z-10">
         <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-8 animate-fade-in">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-4">
-              <FileSearch className="h-7 w-7 text-primary" />
-            </div>
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Analyse gratuite de ton dossier 📋</h2>
-            <p className="text-muted-foreground">Nos experts te disent ce qui joue et ce qui ne joue pas</p>
-          </div>
 
           {!searchType && (
             <div className="flex justify-center gap-3 mb-8 animate-fade-in">
@@ -139,7 +153,8 @@ export function DossierAnalyseSection() {
           )}
 
           {searchType && (
-            <div className="bg-card/50 backdrop-blur-sm rounded-2xl border border-border/50 shadow-lg p-6 md:p-8 animate-fade-in">
+            <div className="relative bg-card/50 backdrop-blur-sm rounded-2xl border border-[hsl(38_45%_48%/0.2)] shadow-lg p-6 md:p-8 overflow-hidden">
+            <BorderBeam duration={10} />
               <div className="flex justify-center gap-2 mb-6">
                 {['qualification', 'coordonnees'].map((s, i) => (
                   <div key={s} className={`h-2 w-20 rounded-full transition-colors ${(step === 'qualification' && i === 0) || step === 'coordonnees' ? 'bg-primary' : 'bg-muted'}`} />
@@ -251,6 +266,7 @@ export function DossierAnalyseSection() {
             </div>
           )}
         </div>
+      </div>
       </div>
     </section>
   );

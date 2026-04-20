@@ -1,6 +1,11 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Clock, Target, Compass, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ScrollReveal } from '@/components/public-site/animations/ScrollReveal';
+import { GoldDivider } from '@/components/public-site/animations/GoldDivider';
+import { TiltCard } from '@/components/public-site/animations/TiltCard';
+import { staggerContainer, staggerItem } from '@/hooks/useScrollReveal';
 
 const profiles = [
   { icon: Clock, title: 'Vous manquez de temps', description: "Entre le travail, la famille et les obligations, vous n'avez pas le temps d'éplucher les annonces et d'appeler les régies." },
@@ -12,19 +17,54 @@ export function ForWhoSection() {
   return (
     <section className="py-24 md:py-32 bg-muted/30">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12"><p className="text-xs sm:text-sm tracking-widest uppercase text-primary font-medium mb-3">Pour qui ?</p><h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground">Ce service est fait pour vous si…</h2></div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+
+        <ScrollReveal variant="fade-up" className="text-center mb-4">
+          <p className="text-xs sm:text-sm tracking-widest uppercase text-[hsl(38_45%_48%)] font-medium mb-3">Pour qui ?</p>
+          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground font-serif">
+            Ce service est fait pour vous si…
+          </h2>
+        </ScrollReveal>
+
+        <ScrollReveal variant="fade-in" delay={0.1}>
+          <GoldDivider className="mb-12" />
+        </ScrollReveal>
+
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto"
+        >
           {profiles.map((p, i) => (
-            <div key={i} className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 md:p-8 text-center space-y-4 hover:border-primary/30 transition-colors">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary/10"><p.icon className="h-7 w-7 text-primary" /></div>
-              <h3 className="text-lg font-bold text-foreground">{p.title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{p.description}</p>
-            </div>
+            <motion.div key={i} variants={staggerItem}>
+              <TiltCard intensity={5}>
+                <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-2xl p-6 md:p-8 text-center space-y-4 hover:border-[hsl(38_45%_48%/0.4)] hover:shadow-[0_8px_30px_hsl(38_45%_48%/0.08)] transition-all duration-500 h-full">
+                  <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-[hsl(38_45%_48%/0.12)] to-[hsl(28_35%_35%/0.08)] border border-[hsl(38_45%_48%/0.2)]">
+                    <p.icon className="h-7 w-7 text-[hsl(38_45%_48%)]" />
+                  </div>
+                  <h3 className="text-lg font-bold text-foreground font-serif">{p.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{p.description}</p>
+                </div>
+              </TiltCard>
+            </motion.div>
           ))}
-        </div>
-        <div className="text-center mt-10">
-          <Button asChild variant="outline" size="lg" className="group border-primary/30 hover:border-primary"><Link to="/nouveau-mandat">Activer ma recherche<ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" /></Link></Button>
-        </div>
+        </motion.div>
+
+        <ScrollReveal variant="fade-up" delay={0.3} className="text-center mt-10">
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            className="group border-[hsl(38_45%_48%/0.35)] hover:border-[hsl(38_45%_48%/0.7)] hover:bg-[hsl(38_45%_48%/0.06)] text-[hsl(38_45%_44%)] hover:text-[hsl(38_45%_40%)]"
+          >
+            <Link to="/nouveau-mandat">
+              Activer ma recherche
+              <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </Button>
+        </ScrollReveal>
+
       </div>
     </section>
   );

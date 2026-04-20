@@ -15,6 +15,7 @@ import {
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import heroBg from '@/assets/hero-bg.jpg';
 import { LandingHamburgerMenu } from '@/components/landing/LandingHamburgerMenu';
+import { ScrollExpansionHero } from '@/components/ui/scroll-expansion-hero';
 
 export default function ConstruireRenover() {
   useEffect(() => {
@@ -112,78 +113,14 @@ export default function ConstruireRenover() {
       </header>
 
       <div className="pt-16">
-        {/* HERO */}
-        <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-          <div className="absolute inset-0">
-            <img src={heroBg} alt="" className="w-full h-full object-cover" loading="eager" />
-            <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/85 to-background/95" />
-          </div>
-
-          <div className="container mx-auto px-4 py-12 md:py-20 relative z-10">
-            <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/50 rounded-full px-3 py-1.5 md:px-5 md:py-2.5 mb-4">
-                <Crown className="h-4 w-4 md:h-5 md:w-5 text-amber-500" />
-                <span className="text-xs md:text-base font-semibold text-amber-500">
-                  🚧 Rénovation intelligente • Pilotée par IA 🚧
-                </span>
-              </div>
-
-              <img
-                src={logoImmoRama}
-                alt="Immo-Rama"
-                className="h-16 md:h-28 w-auto drop-shadow-2xl mb-4"
-              />
-
-              <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 leading-tight">
-                Rénovez plus intelligemment <br />
-                <span className="text-primary">grâce à l'intelligence artificielle.</span>
-              </h1>
-
-              <p className="text-base md:text-xl text-muted-foreground max-w-2xl mb-6 leading-relaxed">
-                Réduisez les erreurs, <strong className="text-foreground">optimisez vos coûts</strong>{' '}
-                et anticipez les retards grâce à l'IA et aux nouvelles technologies.
-              </p>
-
-              <div className="rounded-xl px-4 md:px-8 py-3 md:py-5 border-2 border-primary/40 bg-primary/10 shadow-lg mb-6 max-w-3xl">
-                <div className="flex items-start md:items-center gap-3">
-                  <Bot className="h-6 w-6 md:h-8 md:w-8 text-primary flex-shrink-0 mt-1 md:mt-0" />
-                  <p className="text-sm md:text-base text-foreground text-left md:text-center">
-                    Un <strong>agent IA connecté 24h/24 et 7j/7</strong> suit votre projet{' '}
-                    <strong>avant, pendant et après</strong> le chantier pour prévenir les erreurs
-                    coûteuses.
-                  </p>
-                </div>
-              </div>
-
-              <Button
-                asChild
-                size="lg"
-                className="group text-base md:text-xl px-8 md:px-14 py-5 md:py-8 shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 hover:scale-105"
-              >
-                <Link to="/formulaire-construire-renover">
-                  <Sparkles className="mr-3 h-6 w-6" />
-                  <span className="font-bold">Rénover maintenant</span>
-                  <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-2 transition-transform" />
-                </Link>
-              </Button>
-
-              <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground mt-4">
-                <span className="flex items-center gap-1">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  Devis gratuit
-                </span>
-                <span className="flex items-center gap-1">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  IA 24h/24 · 7j/7
-                </span>
-                <span className="flex items-center gap-1">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  Économies garanties
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
+        {/* HERO — scroll expansion */}
+        <ScrollExpansionHero
+          mediaSrc={heroBg}
+          bgImageSrc={heroBg}
+          mediaType="image"
+          title="Rénovez plus intelligemment grâce à l'intelligence artificielle."
+          scrollToExpand="Faites défiler pour découvrir"
+        />
 
         {/* INTRO */}
         <section className="py-12 md:py-16">

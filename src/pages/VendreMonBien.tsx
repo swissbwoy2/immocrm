@@ -9,6 +9,8 @@ import { VendeurWorkflowSection } from '@/components/landing/vendeur/VendeurWork
 import { VendeurDifferentiationSection } from '@/components/landing/vendeur/VendeurDifferentiationSection';
 import { VendeurFAQSection } from '@/components/landing/vendeur/VendeurFAQSection';
 import { VendeurCTASection } from '@/components/landing/vendeur/VendeurCTASection';
+import heroBg from '@/assets/hero-bg.jpg';
+import { ScrollExpansionHero } from '@/components/ui/scroll-expansion-hero';
 
 export default function VendreMonBien() {
   useEffect(() => {
@@ -21,6 +23,13 @@ export default function VendreMonBien() {
       <VendeurFloatingNav />
       
       <main>
+        <ScrollExpansionHero
+          mediaSrc={heroBg}
+          bgImageSrc={heroBg}
+          mediaType="image"
+          title="Combien d'acheteurs prêts à acheter votre bien aujourd'hui ?"
+          scrollToExpand="Faites défiler pour découvrir"
+        />
         <VendeurHeroSection />
         <VendeurMatchingSection />
         <VendeurZeroCommissionSection />

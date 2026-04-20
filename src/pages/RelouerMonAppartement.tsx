@@ -5,6 +5,7 @@ import { ArrowRight, Home, Users, ShieldCheck, CheckCircle, Crown, Search, FileC
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import heroBg from '@/assets/hero-bg.jpg';
 import { LandingHamburgerMenu } from '@/components/landing/LandingHamburgerMenu';
+import { ScrollExpansionHero } from '@/components/ui/scroll-expansion-hero';
 
 export default function RelouerMonAppartement() {
   useEffect(() => {
@@ -40,66 +41,14 @@ export default function RelouerMonAppartement() {
       </header>
 
       <div className="pt-16">
-      {/* HERO */}
-      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0">
-          <img src={heroBg} alt="" className="w-full h-full object-cover" loading="eager" />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/85 to-background/95" />
-        </div>
-
-        <div className="container mx-auto px-4 py-12 md:py-20 relative z-10">
-          <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/50 rounded-full px-3 py-1.5 md:px-5 md:py-2.5 mb-4">
-              <Crown className="h-4 w-4 md:h-5 md:w-5 text-amber-500" />
-              <span className="text-xs md:text-base font-semibold text-amber-500">Sortie de bail facilitée • Repreneur garanti</span>
-            </div>
-
-            <img src={logoImmoRama} alt="Immo-Rama" className="h-16 md:h-28 w-auto drop-shadow-2xl mb-4" />
-
-            <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4 leading-tight">
-              Vous quittez votre appartement ? <br />
-              <span className="text-primary">Nous trouvons votre repreneur.</span>
-            </h1>
-
-            <p className="text-base md:text-xl text-muted-foreground max-w-2xl mb-6 leading-relaxed">
-              Confiez-nous la <strong className="text-foreground">recherche d'un locataire solvable</strong> pour reprendre votre bail.
-              Vous évitez les pénalités et libérez votre logement sereinement.
-            </p>
-
-            <div className="rounded-xl px-4 md:px-8 py-3 md:py-5 border-2 border-green-500/50 bg-green-500/10 shadow-lg mb-6">
-              <div className="flex items-center justify-center gap-2 md:gap-3">
-                <ShieldCheck className="h-6 w-6 md:h-8 md:w-8 text-green-500 flex-shrink-0" />
-                <span className="text-base md:text-2xl font-bold text-foreground">
-                  Repreneur trouvé en moyenne en 21 jours
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center gap-4">
-              <Button asChild size="lg" className="group text-base md:text-xl px-8 md:px-14 py-5 md:py-8 shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 hover:scale-105">
-                <Link to="/formulaire-relouer">
-                  <Home className="mr-3 h-6 w-6" />
-                  <span className="font-bold">Trouver mon repreneur</span>
-                  <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-2 transition-transform" />
-                </Link>
-              </Button>
-
-              <div className="flex flex-wrap items-center justify-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground mt-2">
-                <span className="flex items-center gap-1"><CheckCircle className="h-4 w-4 text-green-500" />Sans frais initial</span>
-                <span className="flex items-center gap-1"><CheckCircle className="h-4 w-4 text-green-500" />Locataires pré-vérifiés</span>
-                <span className="flex items-center gap-1"><CheckCircle className="h-4 w-4 text-green-500" />Dossier prêt pour la régie</span>
-              </div>
-            </div>
-
-            <div className="mt-8 inline-flex items-center gap-2 bg-background/80 backdrop-blur-sm rounded-full px-4 py-2 border border-border/40">
-              <Users className="h-4 w-4 text-primary" />
-              <span className="text-sm text-muted-foreground">
-                <span className="text-primary font-medium">+200 baux repris</span> avec succès en 2025
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* HERO — scroll expansion */}
+      <ScrollExpansionHero
+        mediaSrc={heroBg}
+        bgImageSrc={heroBg}
+        mediaType="image"
+        title="Vous quittez votre appartement ? Nous trouvons votre repreneur."
+        scrollToExpand="Faites défiler pour découvrir"
+      />
 
       {/* COMMENT ÇA MARCHE */}
       <section className="py-16 md:py-24 bg-muted/30">

@@ -7,6 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useSearchType } from '@/contexts/SearchTypeContext';
+import { ScrollReveal } from '@/components/public-site/animations/ScrollReveal';
+import { GoldDivider } from '@/components/public-site/animations/GoldDivider';
+import { BorderBeam } from '@/components/public-site/magic/BorderBeam';
 
 const permitTypes = [
   { value: 'suisse', label: 'Nationalité suisse' }, { value: 'C', label: 'Permis C (établissement)' },
@@ -99,21 +102,25 @@ export function BudgetCalcSection() {
     <section id="calculateur" className="py-24 md:py-32 relative overflow-hidden bg-gradient-to-b from-muted/10 via-background to-muted/10">
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-10 md:mb-14 animate-fade-in">
+          <ScrollReveal variant="fade-up" className="text-center mb-10 md:mb-14">
             <div className="inline-flex items-center gap-2 mb-4">
-              <div className="bg-primary/10 rounded-full px-5 py-2.5 border border-primary/20">
+              <div className="bg-[hsl(38_45%_48%/0.08)] rounded-full px-5 py-2.5 border border-[hsl(38_45%_48%/0.25)]">
                 <div className="flex items-center gap-2">
-                  {isAchat ? <Landmark className="h-4 w-4 text-primary" /> : <Calculator className="h-4 w-4 text-primary" />}
-                  <span className="text-primary font-semibold">Calculateur gratuit</span>
+                  {isAchat ? <Landmark className="h-4 w-4 text-[hsl(38_45%_48%)]" /> : <Calculator className="h-4 w-4 text-[hsl(38_45%_48%)]" />}
+                  <span className="text-[hsl(38_45%_48%)] font-semibold">Calculateur gratuit</span>
                 </div>
               </div>
             </div>
-            <h2 className="text-2xl md:text-4xl font-bold mb-3 text-foreground">{content.title}</h2>
+            <h2 className="text-2xl md:text-4xl font-bold mb-3 text-foreground font-serif">{content.title}</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm md:text-base">{content.subtitle}</p>
-          </div>
+          </ScrollReveal>
 
-          <div className="relative animate-fade-in">
-            <div className="rounded-2xl md:rounded-3xl border border-border/30 p-5 md:p-8 bg-card/80">
+          <GoldDivider className="mb-10" />
+
+          <ScrollReveal variant="fade-up" delay={0.1}>
+          <div className="relative">
+            <div className="rounded-2xl md:rounded-3xl border border-[hsl(38_45%_48%/0.2)] p-5 md:p-8 bg-card/80 overflow-hidden">
+            <BorderBeam duration={14} />
               <div className="grid md:grid-cols-2 gap-6 md:gap-8">
                 <div className="space-y-5">
                   {isAchat ? (
@@ -228,9 +235,10 @@ export function BudgetCalcSection() {
               </div>
             </div>
           </div>
+          </ScrollReveal>
 
           <div className="mt-8 max-w-2xl mx-auto">
-            <div className="relative overflow-hidden rounded-xl p-4 bg-muted/30 backdrop-blur-sm border border-border/30">
+            <div className="relative overflow-hidden rounded-xl p-4 bg-muted/30 backdrop-blur-sm border border-[hsl(38_45%_48%/0.15)]">
               <div className="flex items-start gap-3"><Info className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" /><p className="text-xs text-muted-foreground">{content.disclaimer}</p></div>
             </div>
           </div>
