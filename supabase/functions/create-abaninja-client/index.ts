@@ -133,11 +133,11 @@ serve(async (req) => {
           value: email,
           primary: true
         },
-        {
+        ...(telephone && String(telephone).trim() ? [{
           type: "phone",
-          value: telephone,
+          value: String(telephone).trim(),
           primary: false
-        }
+        }] : [])
       ]
     };
 
