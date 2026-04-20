@@ -53,6 +53,7 @@ import {
   Upload,
   FileText as FileTextIcon,
   Target,
+  UserPlus,
 } from "lucide-react";
 import { ClientTypeBadge } from "@/components/ClientTypeBadge";
 
@@ -89,6 +90,7 @@ export default function Leads() {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  const [invitingLeadId, setInvitingLeadId] = useState<string | null>(null);
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["leads", filter, formulaireFilter, typeFilter],
