@@ -1,162 +1,54 @@
 
-## Constat immédiat
+## Diagnostic
 
-Oui, tu as raison : la sidebar affichée à Cendrine est encore celle du parcours recherche d’appartement.
+Tu as invité Mobin et Fazli depuis le bouton "Inviter client" (admin) pour de la recherche locative. Tu n'arrives pas à activer leur compte depuis `/admin/demandes-activation`.
 
-### Ce que j’ai confirmé dans le code
-- `src/components/AppSidebar.tsx` a un menu `case 'client'` 100% statique avec :
-  - Offres reçues
-  - Annonces
-  - Mes visites
-  - Carte
-  - Calendrier
-  - Mes candidatures
-- Ce menu ne lit pas `profile.parcours_type`.
-- Donc même si `/client` affiche un header “Projet de rénovation”, la navigation latérale reste celle du parcours logement.
+Avant de proposer un correctif, je dois comprendre ce qui se passe exactement. Plusieurs causes possibles très différentes.
 
-## Deuxième problème confirmé
+## Hypothèses à vérifier
 
-Le dashboard rénovation client actuel n’est pas relié au module de référence complet.
+1. **Les comptes n'apparaissent pas du tout dans la liste `/demandes-activation`**
+   - L'edge function `invite-client` a peut-être créé un compte avec `invitationLegere=true` qui ne génère pas de "demande d'activation" classique
+   - Ou la requête de la page filtre sur un statut qui ne correspond pas
 
-### Ce que j’ai trouvé
-- `src/pages/client/Dashboard.tsx` route bien `parcours_type='renovation'` vers `RenovationClientDashboard`.
-- Mais `src/pages/client/dashboards/RenovationClientDashboard.tsx` est une version simplifiée :
-  - liste de projets
-  - empty state
-  - 3 cartes raccourcis
-- Le module de référence complet existe toujours :
-  - `src/features/renovation/pages/RenovationProjectsPage.tsx`
-  - `src/features/renovation/pages/RenovationProjectPage.tsx`
-  - tous les composants Documents / Devis / Budget / Planning / Entreprises / Incidents / Réserves / Garanties / Historique / Rapport final sont présents
-- Mais il n’existe actuellement **aucune route client** du type `/client/renovation` ou `/client/renovation/:id`.
+2. **Les comptes apparaissent mais le bouton "Activer" ne fait rien / renvoie une erreur**
+   - Problème RLS sur la table de demandes
+   - Problème dans l'edge function d'activation
+   - Erreur silencieuse côté client
 
-## Cause racine probable pour Cendrine
+3. **Les comptes apparaissent mais sont déjà marqués comme actifs**
+   - L'invitation légère active automatiquement, donc plus de demande à traiter
 
-Il y a 2 causes distinctes :
+4. **Erreur visible (toast rouge, erreur console) au clic**
+   - Besoin de lire console + network + edge logs
 
-1. **Sidebar non adaptée**
-- purement un problème UI
-- la sidebar client n’est pas filtrée par `parcours_type`
+## Ce que je vais inspecter (read-only) avant tout correctif
 
-2. **Projet non visible**
-- ce n’est probablement pas un bug visuel seulement
-- la sécurité du module rénovation n’autorise pas automatiquement un “client” à voir un projet
-- dans les policies, un utilisateur voit un projet rénovation seulement s’il est :
-  - admin/agent
-  - créateur du projet
-  - membre du projet via `renovation_project_members.user_id = auth.uid()`
-  - propriétaire du bien concerné
-- donc pour Cendrine, si son projet ne s’affiche pas, il faut très probablement :
-  - vérifier qu’elle est bien liée au projet comme membre
-  - sinon réparer cette liaison de données
+1. `src/pages/admin/DemandesActivation.tsx` (ou équivalent) — la requête de listing et la logique du bouton "Activer"
+2. Edge function `invite-client` — comprendre quel état est créé pour Mobin/Fazli (compte auth + profil + rôle + lien agent + ligne de "demande d'activation" éventuelle)
+3. Edge function d'activation appelée par le bouton (probablement `activate-client` ou équivalent)
+4. Requête DB :
+   - profils Mobin / Fazli (existence, `actif`, `parcours_type`, `email_confirmed`)
+   - éventuelle table `client_activation_requests` ou équivalent
+5. Logs auth récents (déjà visibles : 4 invitations envoyées récemment, dont une `mohammadparvez080@gmail.com` à 07:16 — donc l'invitation côté auth est bien partie)
+6. Logs edge functions `invite-client` et fonction d'activation pour les 2 comptes
 
-## Plan de correction
+## Question avant d'aller plus loin
 
-### 1. Corriger la sidebar client par parcours
-Modifier `src/components/AppSidebar.tsx` pour que le menu client dépende de `profile.parcours_type` :
-- `renovation` :
-  - Dashboard
-  - Mon projet rénovation
-  - Messagerie
-  - Mes documents
-  - Notifications
-  - Paramètres
-- supprimer pour rénovation :
-  - Offres reçues
-  - Annonces
-  - Mes visites
-  - Carte
-  - Calendrier
-  - Mes candidatures
+Pour cibler vite, j'ai besoin de savoir précisément ce que tu vois côté UI :
 
-### 2. Restaurer un vrai accès client au module Rénovation
-Au lieu d’une simple carte vide, brancher le client sur le module réel :
-- ajouter routes client :
-  - `/client/renovation`
-  - `/client/renovation/:id`
-- réutiliser la page détail existante du module de référence comme base
-- l’adapter en **mode lecture seule client**
-- afficher les sections demandées :
-  - Documents
-  - Devis
-  - Budget
-  - Planning
-  - Entreprises
-  - Incidents
-  - Réserves
-  - Garanties
-  - Historique
-  - Détails
-  - Rapport final
-- masquer côté client les actions de gestion :
-  - création
-  - édition budget
-  - ajout entreprise
-  - signalement si non souhaité
-  - clôture
-  - génération admin-only
+- A) Mobin et Fazli **n'apparaissent pas** dans la liste `/admin/demandes-activation`
+- B) Ils apparaissent, mais le bouton "Activer" **affiche une erreur** (tu peux me donner le message)
+- C) Ils apparaissent, je clique "Activer", **rien ne se passe**
+- D) Ils apparaissent comme **déjà activés / verrouillés**
+- E) Autre — précise
 
-### 3. Transformer le dashboard rénovation client en vraie porte d’entrée
-Refondre `RenovationClientDashboard.tsx` pour qu’il :
-- charge le projet visible du client
-- affiche un résumé premium du projet
-- redirige vers `/client/renovation/:id`
-- n’affiche plus seulement un empty state générique si le projet existe
+## Plan de correction (générique, sera ajusté après ta réponse)
 
-### 4. Vérifier et réparer la liaison de données de Cendrine
-Audit backend à faire au moment de l’implémentation :
-- confirmer que `cendrinecardoso@gmail.com` a bien `parcours_type='renovation'`
-- retrouver son `auth user id`
-- vérifier s’il existe un projet dans `renovation_projects` correspondant à son dossier
-- vérifier s’il existe une ligne dans `renovation_project_members` avec son `user_id`
-- si la ligne manque :
-  - réparer la donnée
-  - ou ajouter un correctif/migration ciblé si le flux de création oublie cette liaison
+1. **Si A** → corriger la requête de listing pour inclure les invitations légères locatives en attente d'activation (filtrage par `actif=false` + `parcours_type` recherche, sans exclure le mode "invitation légère")
+2. **Si B/C** → corriger l'edge function d'activation : RLS, paramètres manquants, ou bouton qui appelle la mauvaise fonction
+3. **Si D** → exposer un état "à compléter" et permettre une relance d'invitation au lieu d'une activation déjà faite
+4. **Dans tous les cas** → ajouter un bouton "Renvoyer l'invitation" sur la ligne pour Mobin/Fazli, car les liens d'invitation Supabase expirent (les logs montrent déjà des `403: Email link is invalid or has expired`)
+5. Audit ciblé en DB sur les 2 comptes pour confirmer leur état réel et appliquer un correctif si la liaison agent / parcours est cassée
 
-### 5. Sécuriser l’accès client sans casser le module validé
-Ne pas réinventer le module.
-Je garderai le module de référence intact et j’ajouterai seulement :
-- un accès client lecture seule
-- la navigation client adaptée
-- la liaison correcte entre client et projet
-
-## Fichiers concernés
-
-- `src/components/AppSidebar.tsx`
-- `src/App.tsx`
-- `src/pages/client/dashboards/RenovationClientDashboard.tsx`
-- probablement une nouvelle page client wrapper pour le détail rénovation
-- éventuellement migration / réparation de données si la liaison Cendrine ↔ projet est absente
-
-## Détail technique important
-
-Le vrai point bloquant n’est pas seulement la sidebar.
-Même avec une sidebar “Rénovation”, Cendrine ne verra rien tant que son accès au projet n’est pas réellement relié au module via les règles de visibilité existantes.
-
-En clair :
-```text
-Aujourd’hui
-client renovation
-  -> /client
-  -> mini dashboard simplifié
-  -> sidebar logement
-  -> aucun accès au détail du vrai module
-
-Après correction
-client renovation
-  -> /client
-  -> dashboard renovation premium
-  -> sidebar renovation
-  -> /client/renovation/:id
-  -> module de référence en lecture seule
-  -> projet visible car liaison membre corrigée
-```
-
-## Résultat attendu
-
-Après implémentation :
-- Cendrine n’aura plus la sidebar “recherche d’appartement”
-- elle arrivera sur un dashboard rénovation cohérent
-- elle pourra ouvrir son vrai projet rénovation
-- elle verra le module complet en lecture seule
-- le module admin/agent/propriétaire déjà validé restera intact
+Aucun fichier modifié tant que tu n'as pas confirmé le scénario A/B/C/D/E.
