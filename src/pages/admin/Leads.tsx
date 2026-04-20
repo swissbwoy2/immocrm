@@ -53,6 +53,7 @@ import {
   Upload,
   FileText as FileTextIcon,
   Target,
+  UserPlus,
 } from "lucide-react";
 import { ClientTypeBadge } from "@/components/ClientTypeBadge";
 
@@ -89,6 +90,7 @@ export default function Leads() {
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  const [invitingLeadId, setInvitingLeadId] = useState<string | null>(null);
 
   const { data: leads = [], isLoading } = useQuery({
     queryKey: ["leads", filter, formulaireFilter, typeFilter],
@@ -228,6 +230,59 @@ export default function Leads() {
         id: `relance-${lead.id}`,
         description: err instanceof Error ? err.message : "Erreur inconnue",
       });
+    }
+  };
+
+  const inviteLeadAsClient = async (lead: Lead) => {
+    if (!lead.email) {
+      toast.error("Email manquant pour ce lead");
+      return;
+    }
+    const isLouer = (lead.type_recherche || '').toLowerCase() === 'location' || (lead.type_recherche || '').toLowerCase() === 'louer';
+    const isAcheter = (lead.type_recherche || '').toLowerCase() === 'achat' || (lead.type_recherche || '').toLowerCase() === 'acheter';
+    const typeRecherche = isLouer ? 'Louer' : isAcheter ? 'Acheter' : 'Louer';
+
+    if (!confirm(
+      `Inviter ${lead.prenom || ''} ${lead.nom || ''} (${lead.email}) en tant que client ?\n\n` +
+      `• Compte créé en mode invitation légère (à activer manuellement)\n` +
+      `• Type : ${typeRecherche}\n` +
+      (typeRecherche === 'Louer' ? `• Facture AbaNinja de 300 CHF générée automatiquement\n` : '') +
+      `• Email d'invitation envoyé`
+    )) return;
+
+    setInvitingLeadId(lead.id);
+    toast.loading(`Invitation de ${lead.prenom || lead.email}...`, { id: `invite-${lead.id}` });
+    try {
+      const { data, error } = await supabase.functions.invoke('invite-client', {
+        body: {
+          email: lead.email,
+          prenom: lead.prenom || lead.email.split('@')[0],
+          nom: lead.nom || '',
+          telephone: lead.telephone || '',
+          invitationLegere: true,
+          typeRecherche,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      // Marquer le lead comme contacté
+      await supabase.from('leads').update({ contacted: true }).eq('id', lead.id);
+
+      toast.success(`Client invité : ${lead.email}`, {
+        id: `invite-${lead.id}`,
+        description: typeRecherche === 'Louer'
+          ? 'Facture AbaNinja créée. Compte à activer manuellement après paiement.'
+          : 'Compte à activer manuellement.',
+      });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    } catch (err) {
+      toast.error(`Erreur invitation`, {
+        id: `invite-${lead.id}`,
+        description: err instanceof Error ? err.message : "Erreur inconnue",
+      });
+    } finally {
+      setInvitingLeadId(null);
     }
   };
 
@@ -534,6 +589,21 @@ export default function Leads() {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-1">
+                    {(lead.source === 'landing_analyse_dossier' || lead.source === 'landing_quickform' || lead.source === 'landing_quickform_achat') && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => inviteLeadAsClient(lead)}
+                        disabled={invitingLeadId === lead.id}
+                        title="Inviter comme client (création compte + facture 300 CHF si location)"
+                      >
+                        {invitingLeadId === lead.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        ) : (
+                          <UserPlus className="h-4 w-4 text-primary" />
+                        )}
+                      </Button>
+                    )}
                     {!lead.contacted && (
                       <Button
                         variant="ghost"
