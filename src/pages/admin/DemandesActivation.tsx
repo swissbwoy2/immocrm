@@ -504,14 +504,18 @@ export default function DemandesActivation() {
           </Card>
         </div>
 
-        <Tabs defaultValue="demandes" className="space-y-4">
+        <Tabs defaultValue={inactiveProfiles.length > 0 && newDemandes.length + paidDemandes.length === 0 ? 'comptes' : 'demandes'} className="space-y-4">
           <TabsList>
             <TabsTrigger value="demandes">
               Demandes de mandat {newDemandes.length + invoicedDemandes.length + paidDemandes.length > 0 && (
                 <Badge variant="destructive" className="ml-2">{newDemandes.length + invoicedDemandes.length + paidDemandes.length}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="comptes">Comptes inactifs</TabsTrigger>
+            <TabsTrigger value="comptes">
+              Comptes inactifs {inactiveProfiles.length > 0 && (
+                <Badge variant="destructive" className="ml-2">{inactiveProfiles.length}</Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="demandes">
