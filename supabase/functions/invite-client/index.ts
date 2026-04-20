@@ -535,13 +535,13 @@ serve(async (req) => {
             throw new Error(invoiceJson.error || `create-abaninja-invoice failed (${invoiceRes.status})`);
           }
 
-          // Enregistrer un acompte 300 CHF en attente lié au client
+          // Enregistrer un acompte 300 CHF lié au client (statut 'paye' = en attente règlement)
           await supabaseAdmin.from('acomptes').insert({
             client_id: clientRecordId,
             agent_id: agentId || null,
             montant: 300,
-            statut: 'en_attente',
-            notes: `Facture AbaNinja ${invoiceJson.invoice_number || invoiceJson.invoice_id} (invitation légère locative)`,
+            statut: 'paye',
+            notes: `Facture AbaNinja ${invoiceJson.invoice_number || invoiceJson.invoice_id || ''} (invitation légère locative) - en attente paiement client`,
           });
 
           invoiceCreated = true;
