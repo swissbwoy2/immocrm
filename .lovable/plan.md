@@ -1,45 +1,127 @@
 
-# Plan urgent : rétablir l’accès aux tableaux de bord pour tous les rôles
+
+# Plan : corriger le crash qui persiste uniquement sur le site publié
 
 ## Diagnostic confirmé
 
-Le blocage n’est pas lié à un client précis ni au formulaire `/nouveau-mandat`.
+Le problème actuel publié n’est plus le même que l’erreur notifications.
 
-Les logs frontend enregistrés montrent l’erreur globale suivante :
-
-```text
-cannot add `postgres_changes` callbacks for realtime:notifications-realtime after `subscribe()`
-```
-
-Cette erreur vient du système de notifications temps réel. Comme `AppSidebar` utilise `useNotifications()` dans le layout commun, le crash se produit avant même que le dashboard admin, agent ou client puisse s’afficher.
-
-Résultat : tous les rôles qui passent par le layout connecté peuvent tomber sur la page rouge “Une erreur est survenue”.
-
-Point important : le code local contient déjà une correction partielle avec un nom de canal unique, mais les logs production montrent encore l’ancien canal :
+Les derniers logs montrent :
 
 ```text
-notifications-realtime
+Error creating WebGL context.
+Page URL: https://logisorama.ch/
 ```
 
-Donc soit :
-1. le correctif précédent n’a pas été publié correctement sur `logisorama.ch`,
-2. soit un ancien bundle est encore servi par le cache/PWA,
-3. soit il existe encore une autre instance du hook en production qui utilise l’ancien canal.
+Et le HTML publié de `https://logisorama.ch` affiche directement l’ErrorBoundary avec cette erreur.
 
-## Objectif
+Conclusion : le site publié plante sur la page d’accueil publique `/`, avant ou pendant la redirection automatique vers `/admin`, `/agent` ou `/client`.
 
-Rétablir immédiatement l’accès aux dashboards, même si les notifications temps réel sont temporairement dégradées.
+C’est pour ça que :
+- en preview, ça fonctionne ;
+- en publié, certains utilisateurs restent bloqués ;
+- le problème touche plusieurs rôles ;
+- l’erreur vient du rendu 3D/WebGL de la homepage, pas du dashboard lui-même.
 
-La priorité est :
+Les composants concernés sont :
 
-1. dashboard accessible pour admin, agent, client ;
-2. zéro crash global causé par les notifications ;
-3. notifications consultables en lecture classique ;
-4. temps réel réactivable proprement ensuite.
+```text
+src/pages/public-site/HomePage.tsx
+src/components/public-site/3d/TravelingGoldKey3D.tsx
+src/components/public-site/3d/Scene3DWrapper.tsx
+src/components/public-site/3d/SwissGlobe3D.tsx
+src/components/public-site/3d/GoldKey3D.tsx
+```
 
-## Correctif à appliquer
+La page d’accueil charge actuellement plusieurs scènes `@react-three/fiber` / Three.js. Sur certains navigateurs ou environnements publiés, WebGL ne peut pas être créé, ce qui déclenche :
 
-### 1. Hotfix immédiat dans `useNotifications`
+```text
+THREE.WebGLRenderer: Error creating WebGL context
+```
+
+## Correctif prioritaire
+
+### 1. Désactiver WebGL/3D critique sur la homepage publiée
+
+Fichier :
+
+```text
+src/pages/public-site/HomePage.tsx
+```
+
+Retirer ou désactiver temporairement :
+
+```tsx
+<TravelingGoldKey3D />
+```
+
+Objectif : empêcher la homepage `/` de planter avant la redirection des utilisateurs connectés.
+
+Remplacer par une animation CSS/HTML légère si nécessaire, sans WebGL.
+
+### 2. Sécuriser tous les wrappers 3D
+
+Fichier :
+
+```text
+src/components/public-site/3d/Scene3DWrapper.tsx
+```
+
+Ajouter une détection WebGL avant de rendre `<Canvas>` :
+
+- créer une fonction `canUseWebGL()`;
+- tenter `canvas.getContext('webgl') || canvas.getContext('experimental-webgl')`;
+- si WebGL indisponible, afficher le `fallback`;
+- ne jamais rendre `<Canvas>` si le contexte WebGL ne peut pas être créé.
+
+### 3. Ajouter un ErrorBoundary local autour des scènes 3D
+
+Créer un composant léger :
+
+```text
+src/components/public-site/3d/WebGLErrorBoundary.tsx
+```
+
+Il doit :
+- attraper les erreurs WebGL ;
+- afficher un fallback statique ;
+- éviter que l’ErrorBoundary global fasse tomber toute l’application.
+
+Puis l’utiliser autour des scènes 3D restantes :
+
+```text
+CoverageSection.tsx
+CloserSection.tsx
+```
+
+### 4. Corriger la stratégie PWA publiée
+
+Le fichier actuel contient encore :
+
+```ts
+skipWaiting: true
+clientsClaim: true
+```
+
+dans :
+
+```text
+vite.config.ts
+```
+
+C’est contraire à la règle projet mémorisée : éviter `SKIP_WAITING` pour ne pas casser les sessions et servir des bundles incohérents.
+
+À modifier :
+
+- supprimer `skipWaiting: true`;
+- supprimer `clientsClaim: true`;
+- conserver `cleanupOutdatedCaches`;
+- garder le check de mise à jour dans `src/main.tsx`;
+- étendre la détection preview pour inclure aussi `lovableproject.com`, pas seulement `id-preview--`.
+
+### 5. Stabiliser définitivement les notifications
+
+Même si les nouveaux logs ne montrent plus d’erreur notifications après 17:07, il faut compléter le hotfix :
 
 Fichier :
 
@@ -47,100 +129,83 @@ Fichier :
 src/hooks/useNotifications.ts
 ```
 
-Modifier le hook pour que le système de notifications ne puisse plus jamais faire planter l’application.
+Option la plus sûre pour restaurer l’accès :
+- désactiver temporairement le realtime notifications ;
+- garder uniquement le chargement classique `.select()` ;
+- garder `markAsRead`, `markAllAsRead`, `markTypeAsRead`, `deleteNotification`.
 
-Actions :
+Cela garantit que les dashboards ne peuvent plus tomber à cause de Realtime.
 
-- Supprimer toute dépendance à un canal statique type `notifications-realtime`.
-- Garder le chargement initial des notifications via query classique.
-- Encapsuler strictement toute la partie temps réel dans un `try/catch`.
-- Ajouter une option de sécurité : si la souscription temps réel échoue, ne rien throw et continuer sans realtime.
-- Stabiliser la dépendance `toast` pour éviter des remounts inutiles.
-- S’assurer que le cleanup retire bien le canal avant tout nouveau subscribe.
+Ensuite, dans une deuxième étape, le realtime pourra être réactivé proprement avec une seule source centralisée.
 
-Version prioritaire si urgence maximale : désactiver temporairement la souscription temps réel et garder uniquement le refresh manuel/query initiale. Les dashboards seront accessibles immédiatement.
+### 6. Éviter le passage par `/` après connexion
 
-### 2. Protéger `AppSidebar`
-
-Fichier :
+Fichiers :
 
 ```text
-src/components/AppSidebar.tsx
+src/pages/Login.tsx
+src/contexts/AuthContext.tsx
+src/components/ProtectedRoute.tsx
 ```
 
-Ajouter une protection locale autour de l’usage des notifications :
-
-- Si `useNotifications` retourne une erreur ou des compteurs indisponibles, afficher simplement `0`.
-- Ne jamais laisser une erreur notification faire tomber la sidebar.
-- Garder le menu et la navigation fonctionnels même sans notifications.
-
-### 3. Protéger `NotificationBell`
-
-Fichier :
+Vérifier que les utilisateurs connectés vont directement vers :
 
 ```text
-src/components/NotificationBell.tsx
+/admin
+/agent
+/client
+/proprietaire
+/apporteur
+/coursier
+/closeur
 ```
 
-Ajouter un comportement dégradé :
-
-- si les notifications échouent, afficher la cloche sans badge ;
-- ne pas bloquer l’interface ;
-- afficher éventuellement “Notifications temporairement indisponibles” uniquement dans le popover.
-
-### 4. Nettoyer le risque PWA/cache
-
-Fichier :
-
-```text
-src/main.tsx
-```
-
-Comme le domaine `logisorama.ch` semble encore servir un ancien bundle, ajouter une stratégie de récupération plus claire :
-
-- garder l’absence de `SKIP_WAITING` conformément à la règle projet ;
-- mais s’assurer que l’app vérifie les mises à jour régulièrement ;
-- ajouter un message console clair quand une nouvelle version est disponible ;
-- si nécessaire, prévoir une instruction utilisateur temporaire : fermer/réouvrir l’app ou vider le cache si l’ancien bundle persiste.
-
-### 5. Vérifier que la version publiée ne contient plus `notifications-realtime`
-
-Après correction :
-
-- rechercher dans tout le code source `notifications-realtime` ;
-- vérifier que le build généré ne contient plus ce nom ;
-- publier le correctif ;
-- recharger `logisorama.ch` ;
-- confirmer que les nouveaux logs ne contiennent plus :
-
-```text
-cannot add `postgres_changes` callbacks
-```
+et ne repassent pas inutilement par `/`, car `/` contient la homepage publique.
 
 ## Validation
 
-1. Admin peut accéder à `/admin`.
-2. Agent peut accéder à `/agent`.
-3. Client peut accéder à `/client`.
-4. La sidebar s’affiche.
-5. La cloche de notifications ne bloque plus l’app.
-6. Les notifications existantes restent visibles via chargement classique.
-7. Aucun nouveau log `notifications-realtime after subscribe()` dans `error_logs`.
-8. Si le temps réel est désactivé temporairement, le refresh manuel ou changement de page récupère quand même les notifications.
+Après implémentation :
 
-## Fichiers concernés
+1. `https://logisorama.ch/` ne doit plus afficher `Error creating WebGL context`.
+2. `https://logisorama.ch/login` reste accessible.
+3. Connexion admin redirige vers `/admin`.
+4. Connexion agent redirige vers `/agent`.
+5. Connexion client redirige vers `/client`.
+6. Plus aucun nouveau log :
 
 ```text
-src/hooks/useNotifications.ts          (hotfix principal)
-src/components/AppSidebar.tsx          (protection layout)
-src/components/NotificationBell.tsx    (mode dégradé)
-src/main.tsx                           (vérification cache/PWA si nécessaire)
+Error creating WebGL context
 ```
 
-## Priorité d’implémentation
+7. Plus aucun nouveau log :
 
-1. Restaurer l’accès dashboard en neutralisant le crash notifications.
-2. Publier immédiatement.
-3. Vérifier les logs `error_logs`.
-4. Réactiver le realtime proprement seulement après stabilisation.
+```text
+cannot add postgres_changes callbacks after subscribe()
+```
+
+8. Le site publié doit être mis à jour via le bouton Publish/Update, car les changements frontend ne vont pas automatiquement en production.
+
+## Fichiers à modifier
+
+```text
+src/pages/public-site/HomePage.tsx
+src/components/public-site/3d/Scene3DWrapper.tsx
+src/components/public-site/3d/WebGLErrorBoundary.tsx
+src/components/public-site/sections/CoverageSection.tsx
+src/components/public-site/sections/CloserSection.tsx
+src/hooks/useNotifications.ts
+src/main.tsx
+vite.config.ts
+```
+
+## Résultat attendu
+
+Le site publié ne dépendra plus de WebGL pour charger l’application. Même si WebGL est bloqué ou indisponible chez un utilisateur, la homepage restera visible, la redirection auth fonctionnera, et les dashboards admin/agent/client seront accessibles.
+
+<lov-actions>
+  <lov-open-history>View History</lov-open-history>
+</lov-actions>
+<lov-actions>
+<lov-link url="https://docs.lovable.dev/tips-tricks/troubleshooting">Troubleshooting docs</lov-link>
+</lov-actions>
 
