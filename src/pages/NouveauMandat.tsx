@@ -16,6 +16,9 @@ import MandatFormStep5 from '@/components/mandat/MandatFormStep5';
 import MandatFormStep6 from '@/components/mandat/MandatFormStep6';
 import MandatFormStep7 from '@/components/mandat/MandatFormStep7';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
+import { RetroGrid } from '@/components/public-site/magic/RetroGrid';
+import { Meteors } from '@/components/public-site/magic/Meteors';
+import { BorderBeam } from '@/components/public-site/magic/BorderBeam';
 
 const STORAGE_KEY = 'mandat_form_data';
 const STEPS = [
@@ -410,16 +413,29 @@ export default function NouveauMandat() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/10" />
-      <div className="fixed inset-0 opacity-30">
+    <div className="min-h-screen relative overflow-hidden theme-luxury">
+      {/* Luxury Animated Background */}
+      <div className="fixed inset-0 bg-gradient-to-br from-background via-background to-[hsl(38_45%_48%/0.08)]" />
+      <div className="fixed inset-0 pointer-events-none">
+        <RetroGrid angle={70} className="opacity-40" />
+      </div>
+      <div className="fixed inset-0 opacity-20 pointer-events-none">
         <FloatingParticles />
       </div>
-      
-      {/* Ambient Light Effects */}
-      <div className="fixed top-0 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-      <div className="fixed bottom-0 right-1/4 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      <div className="fixed inset-0 pointer-events-none hidden md:block">
+        <Meteors number={12} />
+      </div>
+
+      {/* Ambient Gold Light Effects */}
+      <div className="fixed top-0 left-1/4 w-[40rem] h-[40rem] bg-[hsl(38_45%_48%/0.12)] rounded-full blur-3xl animate-pulse pointer-events-none" />
+      <div className="fixed bottom-0 right-1/4 w-[40rem] h-[40rem] bg-[hsl(38_55%_60%/0.10)] rounded-full blur-3xl animate-pulse pointer-events-none" style={{ animationDelay: '1.5s' }} />
+
+      {/* Floating decorative key — desktop only */}
+      <div className="fixed bottom-8 right-8 hidden lg:block pointer-events-none animate-pulse" style={{ animationDuration: '4s' }}>
+        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" className="drop-shadow-[0_0_20px_hsl(38_45%_48%/0.5)]">
+          <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" stroke="hsl(38 45% 48%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
 
       <div className="relative z-10 py-8 px-4">
         <div className="max-w-2xl mx-auto">
@@ -517,9 +533,10 @@ export default function NouveauMandat() {
           </div>
 
           {/* Premium Form Card */}
-          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-2xl shadow-primary/5 overflow-hidden">
+          <Card className="relative backdrop-blur-xl bg-card/80 border-[hsl(38_45%_48%/0.3)] shadow-2xl shadow-[hsl(38_45%_48%/0.15)] overflow-hidden">
+            <BorderBeam size={250} duration={14} colorFrom="hsl(38 55% 65%)" colorTo="hsl(28 35% 38%)" />
             {/* Card shine effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[hsl(38_45%_48%/0.05)] via-transparent to-[hsl(38_55%_60%/0.05)] pointer-events-none" />
             
             <CardContent className="pt-6 relative z-10">
               <div className="animate-fade-in">
