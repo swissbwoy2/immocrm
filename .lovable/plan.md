@@ -1,75 +1,250 @@
 
 
-# Plan : Refondre `/nouveau-mandat` avec le design system forms-premium
+# Plan : corriger définitivement l’erreur `client-invite` à la création du mot de passe
 
-## Constat
+## Diagnostic
 
-Claude Code a livré le commit `ed91964` qui couvre Login, FirstLogin, ResetPassword, FormulaireVendeurComplet, FormulaireRelouer, FormulaireConstruireRenover et MandatV3. Mais il a **oublié `/nouveau-mandat`**, qui est pourtant le formulaire le plus important (7 steps, parcours principal de conversion mandataire).
+Le problème vient très probablement du flux d’activation `/first-login`.
 
-Côté Lovable, j'ai déjà appliqué un **fix d'urgence de lisibilité** (titres dorés, labels lisibles, contraste inputs). Mais le formulaire n'utilise toujours pas les composants `forms-premium` créés par Claude Code (LuxuryFormBackground, FloatingKey3D, PremiumFormShell, PremiumInput, etc.).
+Les logs backend montrent deux erreurs liées :
 
-## Périmètre du fix
+```text
+403: User from sub claim in JWT does not exist
+PUT /user
+```
 
-### Fichiers à refondre (10 fichiers)
+et parfois :
 
-1. `src/pages/NouveauMandat.tsx` — wrapper page
-2. `src/components/mandat/MandatForm.tsx` — orchestrateur stepper
-3. `src/components/mandat/MandatFormStep1.tsx` — Informations personnelles
-4. `src/components/mandat/MandatFormStep2.tsx` — Type de bien & critères
-5. `src/components/mandat/MandatFormStep3.tsx` — Localisation
-6. `src/components/mandat/MandatFormStep4.tsx` — Situation professionnelle
-7. `src/components/mandat/MandatFormStep5.tsx` — Situation familiale
-8. `src/components/mandat/MandatFormStep6.tsx` — Documents
-9. `src/components/mandat/MandatFormStep7.tsx` — Signature & CGV
-10. `src/components/mandat/SignaturePad.tsx` — habillage premium (border doré + glow)
+```text
+One-time token not found
+Email link is invalid or has expired
+GET /verify
+```
 
-### Refonte cosmétique uniquement
+Ce que ça signifie :
 
-- Wrapper `NouveauMandat` → `PremiumFormShell` + `LuxuryFormBackground` + `FloatingKey3D`
-- `MandatForm` → `PremiumStepIndicator` + `PremiumStepTransition` (AnimatePresence entre steps)
-- Tous les `Input` shadcn → `PremiumInput` avec icônes `LuxuryIcons` contextuelles
-- Tous les `Select` → `PremiumSelect`
-- Tous les `Textarea` → `PremiumTextarea`
-- Cards radio (type recherche, type bien, statut civil, statut pro) → `PremiumRadioCard`
-- Checkbox CGV → `PremiumCheckboxCard`
-- Boutons next/back/submit → `PremiumButton` (variants next, back, submit)
-- Titres `h1`/`h2` → font-serif Cormorant + gradient doré (déjà fait côté Lovable, à conserver)
-- Récapitulatif final → animations stagger (chaque ligne fade-in + slide-right)
-- Zone upload documents (Step 6) → border doré dashed pulsant + thumbnails glow
-- SignaturePad → border doré + glow au focus + grid background subtle
+1. Le client clique sur le lien d’invitation.
+2. Le lien d’invitation crée normalement une session temporaire pour définir le mot de passe.
+3. Mais le navigateur contient parfois une ancienne session cassée/stale d’un utilisateur supprimé ou inexistant.
+4. Quand le client entre son mot de passe, `supabase.auth.updateUser({ password })` utilise cette mauvaise session.
+5. Résultat : erreur `User from sub claim in JWT does not exist`.
 
-## Contraintes strictes (non négociables)
+Il y a aussi un deuxième souci : `invite-client` redirige encore en dur vers :
 
-- ZÉRO modification de la logique métier (validation, soumission, redirections)
-- ZÉRO modification des textes, labels, placeholders, descriptions
-- ZÉRO modification des appels Supabase (`.insert`, `.update`, `.select`)
-- ZÉRO modification des edge functions
-- Préserver `SearchTypeContext` pour Louer/Acheter
-- Préserver `NATIONALITES` constant
-- Préserver `MandatRecapitulatif` data structure
-- Préserver tous les pixels Meta/TikTok/Google Ads + UTM tracking
-- Préserver les ID HTML (#nouveau-mandat-form, etc.)
-- Préserver toutes les animations/transitions existantes qui fonctionnent
-- Préserver l'isolation `theme-luxury` du wrapper
+```ts
+https://immocrm.lovable.app/first-login
+```
 
-## Bonus : fix runtime warning ResizeObserver
+Alors que l’utilisateur utilise maintenant surtout :
 
-Pendant la refonte, ajouter un `requestAnimationFrame` autour des appels `observe()` dans le hook resize utilisé par `PremiumStepIndicator` ou `LuxuryFormBackground` pour éviter le warning `ResizeObserver loop completed with undelivered notifications`.
+```text
+https://logisorama.ch
+```
 
-## Validation après refonte
+Cela peut créer des sessions incohérentes entre domaines.
 
-1. Reload `/nouveau-mandat` → background doré animé visible (RetroGrid + particules + meteors)
-2. FloatingKey3D visible en bottom-right desktop, absent en mobile
-3. PremiumStepIndicator avec gradient doré progressif + AnimatedBeam entre steps
-4. Step 1 → tous les champs en PremiumInput avec icônes dorées (Mail, Phone, User, Calendar, Globe, IdCard)
-5. Naviguer Step 1 → 2 → 3 → ... → 7 avec transitions cinématiques (fade + slide)
-6. Step 7 → SignaturePad premium + récapitulatif animé + bouton submit XL avec glow
-7. Mobile 375px → background simplifié, particules désactivées, FloatingKey3D masqué, inputs ≥16px
-8. `bun run build` = 0 erreur TypeScript
-9. Console preview = 0 erreur runtime, 0 warning React
-10. Soumission Step 7 → POST Supabase intact, redirection intacte, pixels intacts
+## Correctif à appliquer
 
-## Prochaine étape
+### 1. Corriger `invite-client`
 
-Approuve ce plan → je passe en mode default et je refonds les 10 fichiers du parcours `/nouveau-mandat` avec le design system `forms-premium` créé par Claude Code, pour que ce formulaire bénéficie enfin du même rendu cinématique luxury que les 7 autres déjà refondus dans le commit `ed91964`.
+Fichier :
+
+```text
+supabase/functions/invite-client/index.ts
+```
+
+Remplacer les redirections hardcodées :
+
+```ts
+redirectTo: 'https://immocrm.lovable.app/first-login'
+```
+
+par une détection dynamique du domaine appelant, comme déjà fait dans `resend-agent-invitation` :
+
+```ts
+const DEFAULT_APP_URL = "https://logisorama.ch";
+
+const getAppBaseUrl = (req: Request) => {
+  const origin = req.headers.get("origin");
+  if (origin) return origin.replace(/\/$/, "");
+
+  const referer = req.headers.get("referer");
+  if (referer) {
+    try {
+      return new URL(referer).origin;
+    } catch {}
+  }
+
+  return DEFAULT_APP_URL;
+};
+```
+
+Puis :
+
+```ts
+const redirectTo = `${getAppBaseUrl(req)}/first-login`;
+```
+
+Et utiliser ce `redirectTo` pour :
+
+- `inviteUserByEmail`
+- `resetPasswordForEmail`
+
+Résultat : si l’invitation est envoyée depuis `logisorama.ch`, le client revient sur `logisorama.ch/first-login`.
+
+---
+
+### 2. Corriger les CORS de `invite-client`
+
+Toujours dans :
+
+```text
+supabase/functions/invite-client/index.ts
+```
+
+Remplacer les headers CORS trop courts :
+
+```ts
+'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+```
+
+par la version complète déjà utilisée dans d’autres fonctions :
+
+```ts
+'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version'
+```
+
+---
+
+### 3. Rendre `/first-login` robuste contre les sessions cassées
+
+Fichier :
+
+```text
+src/pages/FirstLogin.tsx
+```
+
+Modifier l’initialisation actuelle, qui fait seulement :
+
+```ts
+await supabase.auth.getSession()
+```
+
+pour faire une vraie validation :
+
+1. Lire les erreurs dans l’URL :
+   - `error`
+   - `error_code`
+   - `error_description`
+
+2. Si le lien est expiré ou invalide :
+   - supprimer uniquement la session locale
+   - afficher un message clair
+   - rediriger vers `/login`
+
+3. Si une session existe :
+   - appeler `supabase.auth.getUser()`
+   - si `getUser()` retourne `User from sub claim in JWT does not exist` :
+     - faire `supabase.auth.signOut({ scope: 'local' })`
+     - supprimer les clés locales Supabase `sb-*`
+     - afficher : “Session expirée, veuillez demander un nouveau lien”
+     - rediriger vers `/login`
+
+4. Ajouter un listener `onAuthStateChange` pour gérer correctement :
+   - `PASSWORD_RECOVERY`
+   - `SIGNED_IN`
+
+Cela évite que `updateUser({ password })` soit appelé avec une session cassée.
+
+---
+
+### 4. Protéger le bouton “Définir mon mot de passe”
+
+Toujours dans :
+
+```text
+src/pages/FirstLogin.tsx
+```
+
+Avant d’appeler :
+
+```ts
+supabase.auth.updateUser({ password })
+```
+
+ajouter :
+
+```ts
+const { data: { user }, error: userError } = await supabase.auth.getUser();
+```
+
+Si pas de user valide :
+
+- nettoyer la session locale
+- afficher un message clair
+- ne pas appeler `updateUser`
+
+Résultat : plus de `PUT /user` avec un token invalide.
+
+---
+
+### 5. Harmoniser les renvois d’invitation client
+
+Fichiers concernés :
+
+```text
+src/pages/Login.tsx
+supabase/functions/invite-client/index.ts
+```
+
+Le bouton “Renvoyer l’invitation” côté login utilise déjà :
+
+```ts
+redirectTo: `${window.location.origin}/first-login`
+```
+
+Il faut garder cette logique côté frontend, mais s’assurer que le flux admin/agent qui appelle `invite-client` utilise aussi le bon domaine via la correction de l’Edge Function.
+
+---
+
+## À faire immédiatement pour le client déjà bloqué
+
+Après le correctif :
+
+1. Renvoyer l’invitation client depuis l’admin/agent.
+2. Demander au client d’ouvrir le nouveau lien dans le même navigateur.
+3. Si le navigateur était déjà pollué par une ancienne session, le nouveau `/first-login` nettoiera automatiquement la session cassée.
+4. Le client pourra définir son mot de passe normalement.
+
+Solution temporaire avant correctif : ouvrir le lien en navigation privée ou vider les données du site `logisorama.ch`.
+
+## Validation
+
+Après implémentation :
+
+1. Envoyer une invitation client depuis le CRM.
+2. Vérifier que le lien arrive sur :
+
+```text
+https://logisorama.ch/first-login
+```
+
+3. Définir le mot de passe.
+4. Vérifier qu’il n’y a plus de requête `/user` en erreur 403.
+5. Vérifier que le client peut se connecter ensuite depuis `/login`.
+6. Tester aussi le cas “renvoi invitation” pour un client déjà existant.
+7. Vérifier les logs backend : plus de `User from sub claim in JWT does not exist`.
+
+## Fichiers à modifier
+
+```text
+supabase/functions/invite-client/index.ts
+src/pages/FirstLogin.tsx
+```
+
+Optionnel selon audit final :
+
+```text
+src/pages/Login.tsx
+```
 
