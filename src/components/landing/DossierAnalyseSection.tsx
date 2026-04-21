@@ -523,6 +523,11 @@ export function DossierAnalyseSection() {
                     />
                   </div>
 
+                  {/* Étape obligatoire : créneau téléphonique */}
+                  <div className="pt-4 border-t border-border/40">
+                    <PhoneSlotPicker selected={selectedSlot} onSelect={setSelectedSlot} />
+                  </div>
+
                   <div className="flex gap-3">
                     <Button
                       variant="outline"
