@@ -195,14 +195,7 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { user, userRole, signOut } = useAuth();
   const [profile, setProfile] = useState<any>(null);
-  // Defensive: if notifications hook fails, never crash the sidebar
-  let counts: ReturnType<typeof useNotifications>['counts'];
-  try {
-    counts = useNotifications().counts;
-  } catch (err) {
-    console.error('[AppSidebar] useNotifications failed:', err);
-    counts = { total: 0 } as any;
-  }
+  const { counts } = useNotifications();
   const [hasDrafts, setHasDrafts] = useState(false);
 
   const handleNavClick = () => {
