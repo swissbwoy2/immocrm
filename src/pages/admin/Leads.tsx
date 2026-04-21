@@ -481,6 +481,7 @@ export default function Leads() {
         <PremiumTableHeader>
           <TableRow>
             <TableHead>Contact</TableHead>
+            <TableHead>Source</TableHead>
             <TableHead>Recherche</TableHead>
             <TableHead>Qualification</TableHead>
             <TableHead>Date</TableHead>
@@ -491,18 +492,20 @@ export default function Leads() {
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8">
+              <TableCell colSpan={7} className="text-center py-8">
                 Chargement...
               </TableCell>
             </TableRow>
-          ) : leads.length === 0 ? (
+          ) : displayedLeads.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                 Aucun lead pour le moment
               </TableCell>
             </TableRow>
           ) : (
-            leads.map((lead) => (
+            displayedLeads.map((lead) => {
+              const sourceInfo = getLeadSource(lead);
+              return (
               <PremiumTableRow key={lead.id}>
                 <TableCell>
                   <div className="space-y-1">
