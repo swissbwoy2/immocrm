@@ -484,19 +484,21 @@ function ClientDashboardLocation() {
         
         <div className="relative z-10 p-4 md:p-8">
           {/* Premium Dashboard Header */}
-          <PremiumDashboardHeader
-            userName={clientProfile?.prenom}
-            isAcheteur={isAcheteur}
-            parcoursType={
-              (['location','achat','vente','renovation','relocation'] as const).includes(clientProfile?.parcours_type)
-                ? clientProfile.parcours_type
-                : undefined
-            }
-            messageCount={counts.new_message}
-            offerCount={counts.new_offer}
-            onMessagesClick={() => navigate('/client/messagerie')}
-            onOffersClick={() => navigate('/client/offres-recues')}
-          />
+          <SectionErrorBoundary sectionName="DashboardHeader">
+            <PremiumDashboardHeader
+              userName={clientProfile?.prenom}
+              isAcheteur={isAcheteur}
+              parcoursType={
+                (['location','achat','vente','renovation','relocation'] as const).includes(clientProfile?.parcours_type)
+                  ? clientProfile.parcours_type
+                  : undefined
+              }
+              messageCount={counts.new_message}
+              offerCount={counts.new_offer}
+              onMessagesClick={() => navigate('/client/messagerie')}
+              onOffersClick={() => navigate('/client/offres-recues')}
+            />
+          </SectionErrorBoundary>
 
           {/* Alerte compte non actif */}
           {profileActif === false && (
@@ -599,37 +601,39 @@ function ClientDashboardLocation() {
           )}
 
           {/* KPIs avec effets premium */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-8">
-            <PremiumKPICard
-              title="Offres reçues"
-              value={stats.offresRecues}
-              icon={Home}
-              subtitle={stats.offresNonVues > 0 ? `${stats.offresNonVues} nouvelles` : undefined}
-              variant={stats.offresNonVues > 0 ? 'warning' : 'default'}
-              onClick={() => navigate('/client/offres-recues')}
-            />
-            <PremiumKPICard
-              title="Visites à venir"
-              value={stats.visitesAVenir}
-              icon={Calendar}
-              onClick={() => navigate('/client/visites')}
-            />
-            <PremiumKPICard
-              title="Visites effectuées"
-              value={stats.visitesEffectuees}
-              icon={Calendar}
-              variant="success"
-              onClick={() => navigate('/client/visites')}
-            />
-            <PremiumKPICard
-              title="Candidatures"
-              value={stats.candidaturesDeposees}
-              icon={FileCheck}
-              subtitle={stats.candidaturesEnAttente > 0 ? `${stats.candidaturesEnAttente} en attente` : undefined}
-              variant={stats.candidaturesEnAttente > 0 ? 'warning' : 'default'}
-              onClick={() => navigate('/client/mes-candidatures')}
-            />
-          </div>
+          <SectionErrorBoundary sectionName="KPIs">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-8">
+              <PremiumKPICard
+                title="Offres reçues"
+                value={stats.offresRecues}
+                icon={Home}
+                subtitle={stats.offresNonVues > 0 ? `${stats.offresNonVues} nouvelles` : undefined}
+                variant={stats.offresNonVues > 0 ? 'warning' : 'default'}
+                onClick={() => navigate('/client/offres-recues')}
+              />
+              <PremiumKPICard
+                title="Visites à venir"
+                value={stats.visitesAVenir}
+                icon={Calendar}
+                onClick={() => navigate('/client/visites')}
+              />
+              <PremiumKPICard
+                title="Visites effectuées"
+                value={stats.visitesEffectuees}
+                icon={Calendar}
+                variant="success"
+                onClick={() => navigate('/client/visites')}
+              />
+              <PremiumKPICard
+                title="Candidatures"
+                value={stats.candidaturesDeposees}
+                icon={FileCheck}
+                subtitle={stats.candidaturesEnAttente > 0 ? `${stats.candidaturesEnAttente} en attente` : undefined}
+                variant={stats.candidaturesEnAttente > 0 ? 'warning' : 'default'}
+                onClick={() => navigate('/client/mes-candidatures')}
+              />
+            </div>
+          </SectionErrorBoundary>
 
           {/* Section Statistiques détaillées */}
           <div className="mb-8 animate-fade-in" style={{ animationDelay: '200ms' }}>
@@ -639,12 +643,14 @@ function ClientDashboardLocation() {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
               </div>
               <CardContent className="relative p-0">
-                <ClientStatsSection
-                  offres={offres}
-                  visites={visites}
-                  candidatures={candidatures}
-                  client={client}
-                />
+                <SectionErrorBoundary sectionName="ClientStats">
+                  <ClientStatsSection
+                    offres={offres}
+                    visites={visites}
+                    candidatures={candidatures}
+                    client={client}
+                  />
+                </SectionErrorBoundary>
               </CardContent>
             </Card>
           </div>
@@ -659,21 +665,25 @@ function ClientDashboardLocation() {
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                   </div>
                   <div className="relative">
-                    {isAcheteur ? (
-                      <PurchaseSolvabilityAlert result={purchaseSolvabilityResult} />
-                    ) : (
-                      <SolvabilityAlert result={solvabilityResult} />
-                    )}
+                    <SectionErrorBoundary sectionName="Solvability">
+                      {isAcheteur ? (
+                        <PurchaseSolvabilityAlert result={purchaseSolvabilityResult} />
+                      ) : (
+                        <SolvabilityAlert result={solvabilityResult} />
+                      )}
+                    </SectionErrorBoundary>
                   </div>
                 </div>
               </div>
               
               <div className="animate-fade-in" style={{ animationDelay: '280ms' }}>
-                <PremiumDossierChecklistCard
-                  clientName={clientFullName}
-                  candidates={candidates}
-                  documents={documents}
-                />
+                <SectionErrorBoundary sectionName="DossierChecklist">
+                  <PremiumDossierChecklistCard
+                    clientName={clientFullName}
+                    candidates={candidates}
+                    documents={documents}
+                  />
+                </SectionErrorBoundary>
               </div>
             </div>
           )}
@@ -681,11 +691,13 @@ function ClientDashboardLocation() {
           {/* Gestion des candidats - Premium */}
           {profileActif !== false && (
             <div className="mb-8 animate-fade-in" style={{ animationDelay: '340ms' }}>
-              <PremiumCandidatesCard
-                clientId={client.id}
-                clientRevenus={client.revenus_mensuels || 0}
-                budgetDemande={client.budget_max || 0}
-              />
+              <SectionErrorBoundary sectionName="Candidates">
+                <PremiumCandidatesCard
+                  clientId={client.id}
+                  clientRevenus={client.revenus_mensuels || 0}
+                  budgetDemande={client.budget_max || 0}
+                />
+              </SectionErrorBoundary>
             </div>
           )}
 
