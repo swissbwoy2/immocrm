@@ -56,6 +56,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { ClientTypeBadge } from "@/components/ClientTypeBadge";
+import { getLeadSource, LEAD_SOURCE_FILTER_OPTIONS, type LeadSourceKey } from "@/lib/lead-source";
 
 type Lead = {
   id: string;
@@ -71,6 +72,11 @@ type Lead = {
   a_garant: boolean | null;
   is_qualified: boolean | null;
   source: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_content: string | null;
+  utm_term: string | null;
   created_at: string | null;
   contacted: boolean | null;
   notes: string | null;
@@ -83,6 +89,7 @@ export default function Leads() {
   const [filter, setFilter] = useState<"all" | "contacted" | "not_contacted" | "qualified" | "not_qualified" | "to_evaluate">("all");
   const [formulaireFilter, setFormulaireFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<LeadSourceKey | "all">("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState("");
   const [showRelanceDialog, setShowRelanceDialog] = useState(false);
@@ -287,8 +294,8 @@ export default function Leads() {
   };
 
   const exportCSV = () => {
-    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Localité", "Budget", "Statut Emploi", "Permis", "Poursuites", "Garant", "Qualifié", "Date", "Contacté", "Notes"];
-    const rows = leads.map((lead) => [
+    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Localité", "Budget", "Statut Emploi", "Permis", "Poursuites", "Garant", "Qualifié", "Date", "Contacté", "Source", "Source brute", "UTM Source", "UTM Medium", "UTM Campaign", "UTM Content", "UTM Term", "Notes"];
+    const rows = displayedLeads.map((lead) => [
       lead.prenom || "",
       lead.nom || "",
       lead.email,
@@ -302,6 +309,13 @@ export default function Leads() {
       lead.is_qualified ? "Oui" : "Non",
       lead.created_at ? format(new Date(lead.created_at), "dd/MM/yyyy HH:mm") : "",
       lead.contacted ? "Oui" : "Non",
+      getLeadSource(lead).label,
+      lead.source || "",
+      lead.utm_source || "",
+      lead.utm_medium || "",
+      lead.utm_campaign || "",
+      lead.utm_content || "",
+      lead.utm_term || "",
       lead.notes || "",
     ]);
 
@@ -379,18 +393,22 @@ export default function Leads() {
     }
   };
 
-  const notContactedLeads = leads.filter((l) => !l.contacted);
-  const notContactedCount = notContactedLeads.length;
-  const qualifiedCount = leads.filter((l) => l.is_qualified).length;
+  const displayedLeads = sourceFilter === "all"
+    ? leads
+    : leads.filter((l) => getLeadSource(l).key === sourceFilter);
 
-  const chercheurCount = leads.filter((l) => l.type_recherche === 'Louer' || l.type_recherche === 'Acheter').length;
-  const vendeurCount = leads.filter((l) => l.type_recherche === 'Vendre').length;
+  const notContactedLeads = displayedLeads.filter((l) => !l.contacted);
+  const notContactedCount = notContactedLeads.length;
+  const qualifiedCount = displayedLeads.filter((l) => l.is_qualified).length;
+
+  const chercheurCount = displayedLeads.filter((l) => l.type_recherche === 'Louer' || l.type_recherche === 'Acheter').length;
+  const vendeurCount = displayedLeads.filter((l) => l.type_recherche === 'Vendre').length;
 
   return (
     <div className="space-y-6">
       <PremiumPageHeader
         title="Leads Shortlist"
-        subtitle={`${leads.length} leads • ${chercheurCount} chercheurs • ${vendeurCount} vendeurs • ${qualifiedCount} qualifiés • ${notContactedCount} non contactés`}
+        subtitle={`${displayedLeads.length} leads • ${chercheurCount} chercheurs • ${vendeurCount} vendeurs • ${qualifiedCount} qualifiés • ${notContactedCount} non contactés`}
       />
 
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
@@ -418,6 +436,16 @@ export default function Leads() {
               <SelectItem value="Acheter">🏠 Achat</SelectItem>
               <SelectItem value="Vendre">🏢 Vendeur</SelectItem>
               <SelectItem value="none">❓ À classifier</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as LeadSourceKey | "all")}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Source d'acquisition" />
+            </SelectTrigger>
+            <SelectContent>
+              {LEAD_SOURCE_FILTER_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
           {formulaires.length > 0 && (
@@ -460,6 +488,7 @@ export default function Leads() {
         <PremiumTableHeader>
           <TableRow>
             <TableHead>Contact</TableHead>
+            <TableHead>Source</TableHead>
             <TableHead>Recherche</TableHead>
             <TableHead>Qualification</TableHead>
             <TableHead>Date</TableHead>
@@ -470,18 +499,20 @@ export default function Leads() {
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8">
+              <TableCell colSpan={7} className="text-center py-8">
                 Chargement...
               </TableCell>
             </TableRow>
-          ) : leads.length === 0 ? (
+          ) : displayedLeads.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                 Aucun lead pour le moment
               </TableCell>
             </TableRow>
           ) : (
-            leads.map((lead) => (
+            displayedLeads.map((lead) => {
+              const sourceInfo = getLeadSource(lead);
+              return (
               <PremiumTableRow key={lead.id}>
                 <TableCell>
                   <div className="space-y-1">
@@ -499,6 +530,18 @@ export default function Leads() {
                       <div className="flex items-center gap-2">
                         <Phone className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">{lead.telephone}</span>
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-1">
+                    <Badge variant="outline" className={sourceInfo.badgeClass}>
+                      {sourceInfo.label}
+                    </Badge>
+                    {lead.utm_campaign && (
+                      <div className="text-[10px] text-muted-foreground truncate max-w-[160px]" title={lead.utm_campaign}>
+                        {lead.utm_campaign}
                       </div>
                     )}
                   </div>
@@ -652,7 +695,8 @@ export default function Leads() {
                   </div>
                 </TableCell>
               </PremiumTableRow>
-            ))
+              );
+            })
           )}
         </TableBody>
       </PremiumTable>
@@ -664,6 +708,34 @@ export default function Leads() {
             <DialogTitle>Notes pour {selectedLead?.prenom} {selectedLead?.nom || selectedLead?.email}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {selectedLead && (() => {
+              const info = getLeadSource(selectedLead);
+              const rows: Array<[string, string | null]> = [
+                ["Source", info.label],
+                ["Campagne", selectedLead.utm_campaign],
+                ["Medium", selectedLead.utm_medium],
+                ["Contenu", selectedLead.utm_content],
+                ["Terme", selectedLead.utm_term],
+                ["Source brute", selectedLead.source],
+                ["Formulaire", selectedLead.formulaire],
+              ].filter(([, v]) => !!v) as Array<[string, string]>;
+              return (
+                <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Origine</span>
+                    <Badge variant="outline" className={info.badgeClass}>{info.label}</Badge>
+                  </div>
+                  <div className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1 text-xs">
+                    {rows.map(([k, v]) => (
+                      <div key={k} className="contents">
+                        <span className="text-muted-foreground">{k}</span>
+                        <span className="font-medium break-all">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             <div>
               <label className="text-sm font-medium mb-1 block">Type de lead</label>
               <Select 
