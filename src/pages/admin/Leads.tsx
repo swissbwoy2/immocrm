@@ -386,12 +386,16 @@ export default function Leads() {
     }
   };
 
-  const notContactedLeads = leads.filter((l) => !l.contacted);
-  const notContactedCount = notContactedLeads.length;
-  const qualifiedCount = leads.filter((l) => l.is_qualified).length;
+  const displayedLeads = sourceFilter === "all"
+    ? leads
+    : leads.filter((l) => getLeadSource(l).key === sourceFilter);
 
-  const chercheurCount = leads.filter((l) => l.type_recherche === 'Louer' || l.type_recherche === 'Acheter').length;
-  const vendeurCount = leads.filter((l) => l.type_recherche === 'Vendre').length;
+  const notContactedLeads = displayedLeads.filter((l) => !l.contacted);
+  const notContactedCount = notContactedLeads.length;
+  const qualifiedCount = displayedLeads.filter((l) => l.is_qualified).length;
+
+  const chercheurCount = displayedLeads.filter((l) => l.type_recherche === 'Louer' || l.type_recherche === 'Acheter').length;
+  const vendeurCount = displayedLeads.filter((l) => l.type_recherche === 'Vendre').length;
 
   return (
     <div className="space-y-6">
