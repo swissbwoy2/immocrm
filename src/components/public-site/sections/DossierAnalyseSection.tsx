@@ -289,6 +289,9 @@ export function DossierAnalyseSection() {
                     <Label className="text-sm font-medium flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-muted-foreground" />Localité souhaitée</Label>
                     <Input value={localite} onChange={(e) => setLocalite(e.target.value)} placeholder="Ex: Lausanne, Genève..." className="h-14 bg-background/80 border-border/50" />
                   </div>
+                  <div className="pt-4 border-t border-border/40">
+                    <PhoneSlotPicker selected={selectedSlot} onSelect={setSelectedSlot} />
+                  </div>
                   <div className="flex gap-3">
                     <Button variant="outline" size="lg" className="flex-shrink-0" onClick={() => setStep('qualification')}><ArrowLeft className="h-4 w-4" /></Button>
                     <Button size="lg" className="flex-1 text-base font-semibold shadow-lg hover:shadow-primary/30 hover:scale-[1.02] transition-all" onClick={handleSubmit} disabled={!isCoordonneesValid || isSubmitting}>
