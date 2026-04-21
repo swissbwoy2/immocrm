@@ -89,6 +89,7 @@ export default function Leads() {
   const [filter, setFilter] = useState<"all" | "contacted" | "not_contacted" | "qualified" | "not_qualified" | "to_evaluate">("all");
   const [formulaireFilter, setFormulaireFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [sourceFilter, setSourceFilter] = useState<LeadSourceKey | "all">("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [notes, setNotes] = useState("");
   const [showRelanceDialog, setShowRelanceDialog] = useState(false);
