@@ -135,6 +135,13 @@ export function DossierAnalyseSection() {
       setStep('submitted');
     } catch (error) {
       console.error('Error submitting analyse dossier:', error);
+      if (createdApptId) {
+        await supabase
+          .from('lead_phone_appointments')
+          .update({ status: 'annule' })
+          .eq('id', createdApptId)
+          .then(undefined, () => {});
+      }
       toast.error('Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setIsSubmitting(false);
