@@ -59,13 +59,13 @@ export default function MandatFormStep5({ data, onChange }: Props) {
           <Users className="h-8 w-8 text-primary" />
           <div className="absolute inset-0 rounded-full bg-primary/10 animate-ping opacity-75" />
         </div>
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+        <h2 className="text-2xl md:text-3xl font-bold font-serif bg-gradient-to-r from-[hsl(38_55%_70%)] via-[hsl(38_55%_60%)] to-[hsl(38_45%_48%)] bg-clip-text text-transparent">
           Candidats supplémentaires
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-sm text-foreground/70 mt-1">
           Ajoutez les personnes qui occuperont le logement avec vous
         </p>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-xs text-foreground/60 mt-1">
           (conjoint, enfants, colocataires, garants...)
         </p>
       </div>

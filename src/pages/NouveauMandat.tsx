@@ -434,7 +434,7 @@ export default function NouveauMandat() {
               />
             </div>
             <div className="relative">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary via-primary/80 to-accent bg-clip-text text-transparent">
+              <h1 className="text-4xl md:text-5xl font-bold font-serif bg-gradient-to-r from-[hsl(38_55%_75%)] via-[hsl(38_50%_60%)] to-[hsl(38_45%_48%)] bg-clip-text text-transparent drop-shadow-[0_0_30px_hsl(38_45%_48%/0.4)]">
                 Mandat de recherche
               </h1>
               <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent/20 blur-lg opacity-50" />
