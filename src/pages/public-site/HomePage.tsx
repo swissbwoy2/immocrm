@@ -2,6 +2,7 @@ import { useEffect, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { PublicSiteLayout } from '@/components/public-site/PublicSiteLayout';
+import { WebGLErrorBoundary } from '@/components/public-site/3d/WebGLErrorBoundary';
 import { TravelingGoldKey3D } from '@/components/public-site/3d/TravelingGoldKey3D';
 
 
@@ -52,7 +53,9 @@ export default function HomePage() {
 
   return (
     <PublicSiteLayout>
-      <TravelingGoldKey3D />
+      <WebGLErrorBoundary>
+        <TravelingGoldKey3D />
+      </WebGLErrorBoundary>
 
       {/* Eager sections */}
       <DossierAnalyseSection />

@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useReducedMotion } from 'framer-motion';
+import { WebGLErrorBoundary } from './WebGLErrorBoundary';
 
 interface Scene3DWrapperProps {
   children: React.ReactNode;
@@ -20,6 +21,22 @@ function SceneLoader() {
   );
 }
 
+// Detect WebGL support to avoid throwing in environments without it
+// (Safari low-power, headless browsers, GPU-blocked machines, some bots).
+function canUseWebGL(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const canvas = document.createElement('canvas');
+    const gl =
+      canvas.getContext('webgl2') ||
+      canvas.getContext('webgl') ||
+      canvas.getContext('experimental-webgl');
+    return !!gl;
+  } catch {
+    return false;
+  }
+}
+
 export function Scene3DWrapper({
   children,
   className = 'absolute inset-0',
@@ -30,32 +47,42 @@ export function Scene3DWrapper({
   fallback,
 }: Scene3DWrapperProps) {
   const [isMobile, setIsMobile] = useState(false);
+  const [webglOk, setWebglOk] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
+    setWebglOk(canUseWebGL());
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  if (isMobile || prefersReducedMotion) {
+  if (isMobile || prefersReducedMotion || !webglOk) {
     return fallback ? <>{fallback}</> : null;
   }
 
   return (
     <div className={className}>
-      <Suspense fallback={<SceneLoader />}>
-        <Canvas
-          dpr={[1, 2]}
-          camera={{ position: cameraPosition, fov: 60 }}
-          frameloop="demand"
-          gl={{ antialias: true, alpha: true }}
-        >
-          <fog attach="fog" args={[fogColor, fogNear, fogFar]} />
-          {children}
-        </Canvas>
-      </Suspense>
+      <WebGLErrorBoundary fallback={fallback ?? null}>
+        <Suspense fallback={<SceneLoader />}>
+          <Canvas
+            dpr={[1, 2]}
+            camera={{ position: cameraPosition, fov: 60 }}
+            frameloop="demand"
+            gl={{ antialias: true, alpha: true, failIfMajorPerformanceCaveat: false }}
+            onCreated={({ gl }) => {
+              gl.domElement.addEventListener('webglcontextlost', (e) => {
+                e.preventDefault();
+                console.warn('[Scene3DWrapper] WebGL context lost');
+              });
+            }}
+          >
+            <fog attach="fog" args={[fogColor, fogNear, fogFar]} />
+            {children}
+          </Canvas>
+        </Suspense>
+      </WebGLErrorBoundary>
     </div>
   );
 }
