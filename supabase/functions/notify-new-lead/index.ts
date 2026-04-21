@@ -1,7 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const SENDER_EMAIL = Deno.env.get("RESEND_FROM_EMAIL") || "onboarding@resend.dev";
+const RAW_FROM = (Deno.env.get("RESEND_FROM_EMAIL") || "").trim();
+// Fallback to the verified Logisorama sender used by the rest of the project
+const SENDER_EMAIL = RAW_FROM && RAW_FROM.includes("@") ? RAW_FROM : "support@logisorama.ch";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
