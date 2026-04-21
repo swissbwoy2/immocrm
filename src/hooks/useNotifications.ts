@@ -262,10 +262,14 @@ export const useNotifications = () => {
 
             setNotifications(prev => [newNotification, ...prev]);
 
-            toast({
-              title: newNotification.title,
-              description: newNotification.message || undefined,
-            });
+            try {
+              toastRef.current({
+                title: newNotification.title,
+                description: newNotification.message || undefined,
+              });
+            } catch (e) {
+              console.error('[useNotifications] toast failed:', e);
+            }
           }
         )
         .on(
