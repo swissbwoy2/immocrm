@@ -56,6 +56,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { ClientTypeBadge } from "@/components/ClientTypeBadge";
+import { getLeadSource, LEAD_SOURCE_FILTER_OPTIONS, type LeadSourceKey } from "@/lib/lead-source";
 
 type Lead = {
   id: string;
@@ -71,6 +72,11 @@ type Lead = {
   a_garant: boolean | null;
   is_qualified: boolean | null;
   source: string | null;
+  utm_source: string | null;
+  utm_medium: string | null;
+  utm_campaign: string | null;
+  utm_content: string | null;
+  utm_term: string | null;
   created_at: string | null;
   contacted: boolean | null;
   notes: string | null;
