@@ -16,6 +16,9 @@ import MandatFormStep5 from '@/components/mandat/MandatFormStep5';
 import MandatFormStep6 from '@/components/mandat/MandatFormStep6';
 import MandatFormStep7 from '@/components/mandat/MandatFormStep7';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
+import { RetroGrid } from '@/components/public-site/magic/RetroGrid';
+import { Meteors } from '@/components/public-site/magic/Meteors';
+import { BorderBeam } from '@/components/public-site/magic/BorderBeam';
 
 const STORAGE_KEY = 'mandat_form_data';
 const STEPS = [
