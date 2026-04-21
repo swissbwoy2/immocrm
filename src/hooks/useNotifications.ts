@@ -230,92 +230,9 @@ export const useNotifications = () => {
     loadNotifications();
   }, [loadNotifications]);
 
-  // Setup realtime subscription
-  // CRITICAL: never throw — a crash here would take down the whole dashboard
-  useEffect(() => {
-    if (!user) return;
-
-    let channel: ReturnType<typeof supabase.channel> | null = null;
-
-    try {
-      // Unique channel name per user + per mount to avoid
-      // "cannot add postgres_changes callbacks after subscribe()" when
-      // the hook re-mounts (StrictMode, navigation) before the previous
-      // channel is fully cleaned up.
-      const channelName = `notifications:${user.id}:${Math.random().toString(36).slice(2, 10)}`;
-
-      channel = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            const newNotification = {
-              ...payload.new,
-              metadata: payload.new.metadata as Record<string, any> | null
-            } as Notification;
-
-            setNotifications(prev => [newNotification, ...prev]);
-
-            try {
-              toastRef.current({
-                title: newNotification.title,
-                description: newNotification.message || undefined,
-              });
-            } catch (e) {
-              console.error('[useNotifications] toast failed:', e);
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            setNotifications(prev =>
-              prev.map(n =>
-                n.id === payload.new.id
-                  ? { ...payload.new, metadata: payload.new.metadata as Record<string, any> | null } as Notification
-                  : n
-              )
-            );
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'DELETE',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
-          }
-        )
-        .subscribe();
-    } catch (err) {
-      // Realtime failure must NEVER crash the dashboard.
-      console.error('[useNotifications] realtime setup failed:', err);
-    }
-
-    return () => {
-      try {
-        if (channel) supabase.removeChannel(channel);
-      } catch (err) {
-        console.error('[useNotifications] removeChannel failed:', err);
-      }
-    };
-  }, [user]);
+  // Realtime temporarily disabled to guarantee dashboard stability.
+  // Notifications still load via the initial query + manual refresh.
+  // Re-enable once a single centralized realtime source is in place.
 
   return {
     notifications,

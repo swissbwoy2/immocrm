@@ -46,9 +46,20 @@ function GoldKeyMesh() {
   );
 }
 
+function canUseWebGL(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const c = document.createElement('canvas');
+    return !!(c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl'));
+  } catch {
+    return false;
+  }
+}
+
 export function TravelingGoldKey3D() {
   const prefersReducedMotion = useReducedMotion();
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const webglOk = canUseWebGL();
 
   const { scrollYProgress } = useScroll();
 
@@ -65,7 +76,7 @@ export function TravelingGoldKey3D() {
   const x = useSpring(rawX, { stiffness: 50, damping: 20 });
   const y = useSpring(rawY, { stiffness: 50, damping: 20 });
 
-  if (isMobile || prefersReducedMotion) return null;
+  if (isMobile || prefersReducedMotion || !webglOk) return null;
 
   return (
     <motion.div
