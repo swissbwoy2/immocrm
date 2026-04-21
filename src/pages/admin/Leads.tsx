@@ -687,6 +687,25 @@ export default function Leads() {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-1">
+                    {(() => {
+                      const appt = apptByLeadId.get(lead.id) || (lead.email && apptByEmail.get(lead.email.toLowerCase()));
+                      if (!appt || appt.status !== 'en_attente') return null;
+                      return (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => confirmAppointment(appt.id)}
+                          disabled={confirmingApptId === appt.id}
+                          title="Confirmer le RDV téléphonique (envoie email + .ics)"
+                        >
+                          {confirmingApptId === appt.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-success" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4 text-success" />
+                          )}
+                        </Button>
+                      );
+                    })()}
                     {(lead.source === 'landing_analyse_dossier' || lead.source === 'landing_quickform' || lead.source === 'landing_quickform_achat') && (
                       <Button
                         variant="ghost"
