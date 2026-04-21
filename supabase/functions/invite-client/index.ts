@@ -169,7 +169,7 @@ serve(async (req) => {
       const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
         email,
         {
-          redirectTo: 'https://immocrm.lovable.app/first-login',
+          redirectTo,
         }
       );
 
