@@ -294,8 +294,8 @@ export default function Leads() {
   };
 
   const exportCSV = () => {
-    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Localité", "Budget", "Statut Emploi", "Permis", "Poursuites", "Garant", "Qualifié", "Date", "Contacté", "Notes"];
-    const rows = leads.map((lead) => [
+    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Localité", "Budget", "Statut Emploi", "Permis", "Poursuites", "Garant", "Qualifié", "Date", "Contacté", "Source", "Source brute", "UTM Source", "UTM Medium", "UTM Campaign", "UTM Content", "UTM Term", "Notes"];
+    const rows = displayedLeads.map((lead) => [
       lead.prenom || "",
       lead.nom || "",
       lead.email,
@@ -309,6 +309,13 @@ export default function Leads() {
       lead.is_qualified ? "Oui" : "Non",
       lead.created_at ? format(new Date(lead.created_at), "dd/MM/yyyy HH:mm") : "",
       lead.contacted ? "Oui" : "Non",
+      getLeadSource(lead).label,
+      lead.source || "",
+      lead.utm_source || "",
+      lead.utm_medium || "",
+      lead.utm_campaign || "",
+      lead.utm_content || "",
+      lead.utm_term || "",
       lead.notes || "",
     ]);
 
