@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Home, Users, ShieldCheck, CheckCircle, Crown, Search, FileCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, Home, Users, ShieldCheck, CheckCircle, Crown, Search, FileCheck, Sparkles, Gift } from 'lucide-react';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import heroBg from '@/assets/hero-bg.jpg';
 import { LandingHamburgerMenu } from '@/components/landing/LandingHamburgerMenu';
@@ -77,14 +77,88 @@ export default function RelouerMonAppartement() {
         </div>
       </section>
 
-      {/* CTA FINAL */}
+      {/* TARIFS */}
       <section className="py-16 md:py-24">
+        <div className="container mx-auto px-4">
+          <div className="text-center max-w-3xl mx-auto mb-12">
+            <p className="text-xs font-semibold tracking-widest uppercase text-primary mb-3">Tarifs transparents</p>
+            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
+              Choisissez votre formule
+            </h2>
+            <p className="text-muted-foreground text-base md:text-lg">
+              Service de base 100% gratuit, ou Premium pour maximiser vos chances de relouer rapidement.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            {/* Colonne 1 — GRATUIT */}
+            <div className="bg-card/50 border border-border/50 rounded-2xl p-6 md:p-8 flex flex-col gap-5">
+              <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
+                <Gift className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground mb-1">Service Standard</p>
+                <p className="text-4xl font-bold text-foreground">GRATUIT</p>
+                <p className="text-sm text-muted-foreground mt-1">Sans engagement</p>
+              </div>
+              <ul className="space-y-3 flex-1">
+                {[
+                  'Recherche d\'un repreneur dans notre base de candidats vérifiés',
+                  'Constitution du dossier complet pour votre régie',
+                  'Sortie anticipée de bail facilitée',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Colonne 2 — PREMIUM */}
+            <div className="relative bg-primary/5 border border-primary/40 rounded-2xl p-6 md:p-8 flex flex-col gap-5 shadow-lg shadow-primary/10">
+              <div className="absolute top-4 right-4">
+                <span className="inline-flex items-center gap-1 bg-primary text-primary-foreground text-xs font-semibold px-2.5 py-1 rounded-full">
+                  <Crown className="h-3 w-3" />
+                  RECOMMANDÉ
+                </span>
+              </div>
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Crown className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-primary mb-1">Formule Premium</p>
+                <p className="text-4xl font-bold text-foreground">299.-</p>
+                <p className="text-sm text-muted-foreground mt-1">Paiement unique</p>
+              </div>
+              <ul className="space-y-3 flex-1">
+                {[
+                  'Publication sur Immobilier.ch',
+                  'Publication sur Flatfox',
+                  'Gestion complète des visites',
+                  'Pré-sélection des dossiers solvables',
+                  'Envoi du dossier finalisé à votre régie',
+                  'Tout le service Standard inclus',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-foreground/80">
+                    <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0 mt-0.5" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA FINAL */}
+      <section className="py-16 md:py-24 bg-muted/20">
         <div className="container mx-auto px-4 text-center max-w-3xl">
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
             Prêt à libérer votre appartement ?
           </h2>
           <p className="text-muted-foreground text-base md:text-lg mb-8">
-            Remplissez le formulaire en 3 minutes — nous vous recontactons sous 24h.
+            Service gratuit sans engagement — option Premium à 299.- pour publier sur Immobilier.ch &amp; Flatfox.
           </p>
           <Button asChild size="lg" className="text-base md:text-xl px-8 md:px-14 py-5 md:py-8">
             <Link to="/formulaire-relouer">

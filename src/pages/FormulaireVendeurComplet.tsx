@@ -810,7 +810,7 @@ export default function FormulaireVendeurComplet() {
   return (
     <PremiumFormShell currentStep={currentStep - 1} totalSteps={STEPS.length}>
       <VendeurFloatingNav />
-      <PremiumStepIndicator steps={premiumSteps} currentStep={currentStep - 1} />
+      <PremiumStepIndicator steps={STEPS} currentStep={currentStep - 1} />
 
       <div className="container mx-auto px-4 max-w-3xl pb-8">
         <div className="text-center mb-8">
