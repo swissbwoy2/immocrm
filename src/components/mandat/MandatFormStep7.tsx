@@ -27,10 +27,10 @@ export default function MandatFormStep7({ data, onChange }: Props) {
           <PenLine className="h-8 w-8 text-primary" />
           <div className="absolute inset-0 rounded-full bg-primary/10 animate-ping opacity-75" />
         </div>
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+        <h2 className="text-2xl md:text-3xl font-bold font-serif bg-gradient-to-r from-[hsl(38_55%_70%)] via-[hsl(38_55%_60%)] to-[hsl(38_45%_48%)] bg-clip-text text-transparent">
           Récapitulatif et Signature
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">Vérifiez vos informations et signez le mandat</p>
+        <p className="text-sm text-foreground/70 mt-1">Vérifiez vos informations et signez le mandat</p>
       </div>
 
       {/* Récapitulatif complet */}
