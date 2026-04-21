@@ -38,6 +38,7 @@ import { useClientCandidates } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
 import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
+import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
 
 import RenovationClientDashboard from './dashboards/RenovationClientDashboard';
 import VenteClientDashboard from './dashboards/VenteClientDashboard';
@@ -449,8 +450,9 @@ function ClientDashboardLocation() {
                         reloggedCandidatureForCalc?.signature_effectuee_at || 
                         reloggedCandidatureForCalc?.date_etat_lieux || null;
   
-  const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at, mandatEndDate);
-  const daysRemaining = calculateDaysRemaining(client.date_ajout || client.created_at, mandatEndDate);
+  const mandatStartDate = client.date_ajout || client.created_at || new Date().toISOString();
+  const daysElapsed = calculateDaysElapsed(mandatStartDate, mandatEndDate);
+  const daysRemaining = calculateDaysRemaining(mandatStartDate, mandatEndDate);
 
   // Calculate stats
   const now = new Date();
