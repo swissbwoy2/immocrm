@@ -1,68 +1,93 @@
 
 
-# Plan : Débloquer Claude Code + corriger les 75+ erreurs TS depuis Lovable
+# Plan : Fix lisibilité formulaire /nouveau-mandat (urgent)
 
-## Contexte
+## Diagnostic du bug visible sur ton screenshot
 
-Claude Code est bloqué côté ton Mac (le terminal a perdu son CWD `/Users/ramazani/Desktop/immocrm`). Pendant que tu le redémarres, **je peux corriger les 75+ erreurs TypeScript directement depuis Lovable** — le build est cassé et la preview ne reflète plus aucun changement, donc c'est prioritaire.
+Tu vois un formulaire quasi illisible parce qu'il y a **3 problèmes de contraste cumulés** :
 
-Important : `uipro-cli` n'existe pas sur npm public (Claude Code l'a confirmé). On garde la stratégie : design system construit manuellement à partir des skills `ui-ux-pro-max` qui sont déjà chargés en context.
+### Bug 1 — Titres de step invisibles (le plus grave)
+Dans **Step1, Step2, Step3, Step5, Step6, Step7**, tous les `<h2>` utilisent :
+```
+bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text
+```
+**Il manque `text-transparent`** → le navigateur ignore `bg-clip-text` sans cette classe. Sur le screenshot, "Informations personnelles" apparaît en bleu/transparent fantôme au lieu du beau gradient doré attendu.
 
-## Action 1 — Côté toi (terminal)
+### Bug 2 — Labels de champs en bleu illisible
+Les `<Label>` de Step1 (E-mail, Téléphone, Prénom, Nom, Adresse, Date de naissance, Nationalité, Type de permis) sont rendus en **bleu pâle** (couleur héritée par défaut au lieu du `text-foreground`). Cause probable : un `text-primary` mal placé ou une couleur OKLCH héritée du wrapper.
 
-Relance Claude Code depuis le bon dossier :
+### Bug 3 — Header "Mandat de recherche" presque invisible
+`from-primary via-primary/80 to-accent` sur fond doré → gradient doré sur fond doré = fantôme.
 
-```bash
-cd ~/Desktop/immocrm && claude
+## Corrections à apporter (mode default, ~8 fichiers)
+
+### A. Fix titres de step — 6 fichiers
+Dans `MandatFormStep1.tsx`, `Step2`, `Step3`, `Step5`, `Step6`, `Step7` :
+
+**Avant** :
+```tsx
+<h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
 ```
 
-Si le dossier a bougé, retrouve-le avec :
-
-```bash
-find ~ -name "vite.config.ts" -not -path "*/node_modules/*" 2>/dev/null
+**Après** :
+```tsx
+<h2 className="text-2xl md:text-3xl font-bold font-serif bg-gradient-to-r from-[hsl(38_55%_70%)] via-[hsl(38_55%_60%)] to-[hsl(38_45%_48%)] bg-clip-text text-transparent">
 ```
 
-## Action 2 — Côté moi (Lovable, dès ton approbation)
+→ Ajoute `text-transparent` (fix critique), passe en `font-serif` (Cormorant) et utilise le **gradient doré luxury** cohérent avec la landing v3.
 
-### A. Fix framer-motion v12 strict typing (8 fichiers)
+### B. Fix labels de champs — Step1 (et vérifier Step2-7)
+Forcer la couleur des labels en blanc ivoire lisible :
 
-Ajouter `as const` sur les `ease: [...]` arrays et `type: "spring"` strings :
+**Avant** :
+```tsx
+<Label htmlFor="email" className="flex items-center gap-2 text-sm font-medium">
+```
 
-- `src/components/public-site/magic/AnimatedList.tsx` (ligne 13) → `type: "spring" as const`
-- `src/components/public-site/sections/CloserSection.tsx` (ligne 120) → `ease: [...] as const`
-- `src/components/public-site/sections/CoverageSection.tsx` (ligne 60)
-- `src/components/public-site/sections/DifferentiatorSection.tsx` (lignes 117, 150)
-- Grep du pattern dans tous les autres fichiers `src/components/public-site/sections/*` et `src/components/public-site/animations/*` pour catch les similaires non listés dans l'erreur tronquée
+**Après** :
+```tsx
+<Label htmlFor="email" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+```
 
-### B. Fix erreurs Supabase (5 fichiers métier)
+Et changer les icônes Lucide de `text-primary/70` (trop pâle) → `text-[hsl(38_55%_60%)]` (doré lisible).
 
-Lire `src/integrations/supabase/types.ts` pour chaque table, puis corriger :
+### C. Fix header `/nouveau-mandat` — `src/pages/NouveauMandat.tsx` ligne 437
+**Avant** :
+```tsx
+<h1 className="... from-primary via-primary/80 to-accent bg-clip-text text-transparent">
+  Mandat de recherche
+</h1>
+```
 
-- `src/components/AddBienVenteDialog.tsx:558` — table `photos_biens` (colonne `immeuble_id` à vérifier — erreur TS dit qu'elle existe pourtant ; probablement un autre champ excess à virer)
-- `src/components/CapturePhotosDialog.tsx:173,188` — table `photos_biens` (idem)
-- `src/components/DocumentUpdateReminder.tsx:112,124` — table `client_document_verifications` (typage strict du Record + colonne `client_id`)
-- `src/components/biens-vente/rapport-estimation/RapportEstimationDataForm.tsx:155` — table `biens_vente` (typer le Record correctement au lieu de `Record<string, any>`)
-- `src/components/proprietaire/AddHypothequeDialog.tsx:83` — table `hypotheques`
+**Après** :
+```tsx
+<h1 className="text-4xl md:text-5xl font-bold font-serif bg-gradient-to-r from-[hsl(38_55%_75%)] via-[hsl(38_50%_60%)] to-[hsl(38_45%_48%)] bg-clip-text text-transparent drop-shadow-[0_0_30px_hsl(38_45%_48%/0.4)]">
+  Mandat de recherche
+</h1>
+```
 
-L'erreur TS sur ces fichiers indique en fait que TypeScript narrowing échoue sur les Record/objets dynamiques. Solution : typer correctement avec le type Insert généré (`Database['public']['Tables']['xxx']['Insert']`) ou utiliser `as any` localement avec commentaire `// TODO: typer correctement` si le schéma exact est ambigu.
+### D. Fix sous-titres "Vos coordonnées et situation personnelle"
+Passer de `text-muted-foreground` (trop pâle sur dark) à `text-foreground/70` pour garantir 4.5:1 de contraste.
 
-### C. Validation
+### E. Augmenter contraste des Inputs
+Sur les `<Input>` actuels (`bg-background/50 backdrop-blur-sm`) → passer à `bg-background/80 border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_45%_60%)] text-foreground placeholder:text-muted-foreground/60` pour que les placeholders et le texte saisi restent lisibles.
 
-- Vérifier 0 erreur TS résiduelle
-- Vérifier preview Lovable se rafraîchit
-- Confirmer que la HomePage `/` affiche le hero v3 ScrollExpandMedia déjà livré
+## Hors scope de ce fix
 
-## Hors scope de ce plan (à faire ensuite par Claude Code une fois relancé)
+- Création du dossier `src/components/forms-premium/` (refonte cinématique complète) → ça reste pour Claude Code dans la mission v5 que tu lui as déjà transmise
+- Animations GSAP, particules 3D, BorderBeam → mission v5 Claude Code
+- Step4 n'est pas touché car pas dans le scope du screenshot, mais sera revérifié
 
-- Phase 1 : Création `TravelingGoldKey3D` (clé 3D voyageuse)
-- Phase 2 : Refonte `HowItWorksSection` (scroll horizontal cinématique)
-- Phase 3 : Refonte `PartnersSection` (Resolve + FirstCaution dominants)
-- Phase 4 : Stylisation des 8 autres sections (Bento, OrbitingCircles, Marquee, etc.)
-- Génération `design-system/MASTER.md` manuelle (uipro-cli n'existe pas)
+## Validation après fix
 
-Ces phases nécessitent beaucoup plus de tokens et le 21st.dev MCP côté Claude Code → garder ça pour ta session locale.
+1. Reload `/nouveau-mandat` → titre "Mandat de recherche" visible en doré brillant
+2. Step 1 → "Informations personnelles" lisible en gradient doré font-serif
+3. Tous les labels (E-mail, Téléphone, Prénom, etc.) lisibles en blanc ivoire
+4. Naviguer Step 1 → 2 → 3 → ... → 7 et confirmer lisibilité partout
+5. Test mobile 375px : taille minimum 16px sur inputs (évite zoom iOS)
+6. `bun run build` = 0 erreur
 
 ## Prochaine étape
 
-Approuve ce plan → je passe en mode default et je corrige immédiatement les 75+ erreurs TS pour débloquer ton build. En parallèle tu relances Claude Code dans le bon dossier pour qu'il enchaîne sur les Phases 1-4.
+Approuve ce plan → je passe en mode default et je corrige immédiatement les 8 fichiers pour rendre le formulaire lisible. Pendant ce temps Claude Code peut continuer la refonte cinématique complète (mission v5).
 
