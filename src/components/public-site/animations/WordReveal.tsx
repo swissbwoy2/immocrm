@@ -30,7 +30,7 @@ export function WordReveal({ text, className = '', delay = 0, stagger = 0.06 }: 
             transition={{
               duration: 0.55,
               delay: delay + i * stagger,
-              ease: [0.22, 1, 0.36, 1],
+              ease: [0.22, 1, 0.36, 1] as const,
             }}
           >
             {word}

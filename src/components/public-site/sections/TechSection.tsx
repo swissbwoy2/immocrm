@@ -1,5 +1,6 @@
-import { Radar, BarChart3, FileCheck, LayoutDashboard, Cpu, Crown, Brain, Globe, Shield, Zap } from 'lucide-react';
-import { motion } from 'framer-motion';
+import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import { Radar, BarChart3, FileCheck, LayoutDashboard, Crown, Brain, Globe, Shield, Zap } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { ScrollReveal } from '@/components/public-site/animations/ScrollReveal';
 import { GoldDivider } from '@/components/public-site/animations/GoldDivider';
 import { TiltCard } from '@/components/public-site/animations/TiltCard';
@@ -13,34 +14,56 @@ const features = [
   { icon: LayoutDashboard, title: 'Ton tableau de bord perso', description: "Suis chaque étape de ta recherche en direct depuis ton espace client." },
 ];
 
-const orbitIcons = [Radar, BarChart3, FileCheck, Globe, Brain, Shield, Zap, LayoutDashboard];
+const innerOrbitIcons = [Radar, BarChart3, FileCheck, Globe];
+const outerOrbitIcons = [Brain, Shield, Zap, LayoutDashboard];
 
 export function TechSection() {
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <section className="py-24 md:py-32 relative overflow-hidden bg-gradient-to-b from-background via-[hsl(38_45%_48%/0.02)] to-background">
       <div className="container mx-auto px-4 relative z-10">
 
         <div className="grid lg:grid-cols-2 gap-16 items-center max-w-6xl mx-auto">
 
-          {/* Orbit visualization */}
+          {/* Orbit visualization — Logisorama logo at center */}
           <ScrollReveal variant="slide-right" className="hidden lg:flex items-center justify-center">
             <div className="relative w-72 h-72">
-              {/* Center orb */}
-              <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-gradient-to-br from-[hsl(38_45%_44%)] to-[hsl(28_35%_38%)] flex items-center justify-center shadow-[0_0_30px_hsl(38_45%_48%/0.4)] z-10">
-                <Cpu className="h-8 w-8 text-[hsl(40_35%_98%)]" />
+              {/* Center logo */}
+              <div className="absolute inset-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full bg-gradient-to-br from-[hsl(38_45%_44%)] to-[hsl(28_35%_38%)] flex items-center justify-center shadow-[0_0_36px_hsl(38_45%_48%/0.45)] z-10 overflow-hidden border-2 border-[hsl(38_55%_65%/0.4)]">
+                <motion.div
+                  animate={prefersReducedMotion ? {} : {
+                    boxShadow: [
+                      '0 0 0 0px hsl(38 45% 48% / 0.4)',
+                      '0 0 0 16px hsl(38 45% 48% / 0)',
+                    ],
+                  }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'easeOut' as const }}
+                  className="absolute inset-0 rounded-full"
+                />
+                <img
+                  src={logoImmoRama}
+                  alt="Immo-Rama"
+                  className="w-14 h-14 object-contain"
+                  style={{ filter: 'brightness(0) invert(1)' }}
+                />
               </div>
 
               {/* Inner orbit */}
-              {orbitIcons.slice(0, 4).map((Icon, i) => (
+              {innerOrbitIcons.map((Icon, i) => (
                 <OrbitingCircles key={i} radius={90} duration={18} delay={i * 4.5} iconSize={36} path={i === 0}>
-                  <Icon className="h-4 w-4 text-[hsl(38_45%_48%)]" />
+                  <div className="w-9 h-9 rounded-full bg-[hsl(30_15%_10%)] border border-[hsl(38_45%_48%/0.4)] flex items-center justify-center shadow-[0_0_10px_hsl(38_45%_48%/0.2)]">
+                    <Icon className="h-4 w-4 text-[hsl(38_45%_55%)]" />
+                  </div>
                 </OrbitingCircles>
               ))}
 
               {/* Outer orbit */}
-              {orbitIcons.slice(4).map((Icon, i) => (
+              {outerOrbitIcons.map((Icon, i) => (
                 <OrbitingCircles key={i + 4} radius={130} duration={28} delay={i * 7} reverse iconSize={32} path={i === 0}>
-                  <Icon className="h-3.5 w-3.5 text-[hsl(28_35%_45%)]" />
+                  <div className="w-8 h-8 rounded-full bg-[hsl(30_15%_12%)] border border-[hsl(28_35%_35%/0.45)] flex items-center justify-center">
+                    <Icon className="h-3.5 w-3.5 text-[hsl(28_35%_52%)]" />
+                  </div>
                 </OrbitingCircles>
               ))}
             </div>
@@ -51,7 +74,6 @@ export function TechSection() {
             <ScrollReveal variant="fade-up" className="mb-4">
               <div className="inline-flex items-center gap-2 mb-6">
                 <div className="bg-[hsl(38_45%_48%/0.08)] border border-[hsl(38_45%_48%/0.25)] rounded-full px-5 py-2.5">
-                  <Cpu className="inline-block h-4 w-4 text-[hsl(38_45%_48%)] mr-2" />
                   <span className="text-sm font-semibold text-[hsl(38_45%_48%)]">Tech & Innovation</span>
                 </div>
               </div>

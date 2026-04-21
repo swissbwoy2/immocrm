@@ -30,7 +30,7 @@ export function GoldDivider({ className = '', width = 120 }: GoldDividerProps) {
           fill="none"
           initial={{ pathLength: 0, opacity: 0 }}
           animate={isInView || prefersReducedMotion ? { pathLength: 1, opacity: 1 } : { pathLength: 0, opacity: 0 }}
-          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] as const }}
         />
         <motion.circle
           cx={width / 2}

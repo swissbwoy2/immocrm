@@ -1,7 +1,8 @@
+import { useRef } from 'react';
 import { Shield, Wallet, CheckCircle, RefreshCcw, Crown, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSearchType } from '@/contexts/SearchTypeContext';
-import { motion } from 'framer-motion';
+import { motion, useInView, useReducedMotion } from 'framer-motion';
 import { ScrollReveal } from '@/components/public-site/animations/ScrollReveal';
 import { GoldDivider } from '@/components/public-site/animations/GoldDivider';
 import { TiltCard } from '@/components/public-site/animations/TiltCard';
@@ -10,6 +11,9 @@ import { staggerContainer, staggerItem } from '@/hooks/useScrollReveal';
 
 export function GuaranteeSection() {
   const { isAchat } = useSearchType();
+  const shieldRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(shieldRef, { once: true, amount: 0.3 });
+  const prefersReducedMotion = useReducedMotion();
 
   const pricingItemsLocation = [
     { icon: Wallet, label: 'Acompte', value: '300 CHF', description: '100% sécurisé' },
@@ -42,6 +46,36 @@ export function GuaranteeSection() {
           </ScrollReveal>
 
           <GoldDivider className="mb-10" />
+
+          {/* Floating shield icon */}
+          <div ref={shieldRef} className="flex justify-center mb-10">
+            <motion.div
+              initial={prefersReducedMotion ? false : { scale: 0.5, opacity: 0 }}
+              animate={isInView ? { scale: 1, opacity: 1 } : {}}
+              transition={{ type: 'spring' as const, stiffness: 180, damping: 20, delay: 0.1 }}
+            >
+              <motion.div
+                animate={prefersReducedMotion ? {} : { y: [0, -10, 0] }}
+                transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' as const }}
+                className="relative w-24 h-24 rounded-2xl bg-gradient-to-br from-[hsl(38_45%_44%/0.15)] to-[hsl(28_35%_35%/0.1)] border border-[hsl(38_45%_48%/0.4)] flex items-center justify-center"
+                style={{ boxShadow: '0 0 32px hsl(38 45% 48% / 0.2), 0 0 8px hsl(38 45% 48% / 0.15)' }}
+              >
+                {/* Pulsing halo rings */}
+                {!prefersReducedMotion && [0, 1, 2].map((i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute inset-0 rounded-2xl border border-[hsl(38_45%_48%/0.3)]"
+                    animate={{
+                      scale: [1, 1.5 + i * 0.3],
+                      opacity: [0.6, 0],
+                    }}
+                    transition={{ duration: 2, delay: i * 0.55, repeat: Infinity, ease: 'easeOut' as const }}
+                  />
+                ))}
+                <Shield className="h-12 w-12 text-[hsl(38_55%_65%)]" />
+              </motion.div>
+            </motion.div>
+          </div>
 
           <motion.div
             variants={staggerContainer}

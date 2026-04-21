@@ -1,7 +1,7 @@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ScrollReveal } from '@/components/public-site/animations/ScrollReveal';
 import { GoldDivider } from '@/components/public-site/animations/GoldDivider';
 
@@ -15,6 +15,8 @@ const faqs = [
 
 export function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const prefersReducedMotion = useReducedMotion();
+
   return (
     <section id="faq" className="py-24 md:py-32 bg-muted/30">
       <div className="container mx-auto px-4">
@@ -34,35 +36,51 @@ export function FAQSection() {
 
         <div className="max-w-2xl mx-auto space-y-3">
           {faqs.map((faq, i) => (
-            <ScrollReveal key={i} variant="fade-up" delay={i * 0.05}>
+            <motion.div
+              key={i}
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.45, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] as const }}
+            >
               <Collapsible open={openIndex === i} onOpenChange={(open) => setOpenIndex(open ? i : null)}>
-                <CollapsibleTrigger className="w-full flex items-center justify-between gap-4 p-4 md:p-5 rounded-xl bg-card/50 backdrop-blur-sm border border-[hsl(38_45%_48%/0.15)] hover:border-[hsl(38_45%_48%/0.4)] hover:bg-[hsl(38_45%_48%/0.04)] transition-all duration-300 text-left group">
-                  <span className="text-sm md:text-base font-semibold text-foreground group-hover:text-[hsl(38_45%_44%)] transition-colors">{faq.q}</span>
+                <CollapsibleTrigger
+                  className={`w-full flex items-center justify-between gap-4 p-4 md:p-5 rounded-xl backdrop-blur-sm border transition-all duration-300 text-left group
+                    ${openIndex === i
+                      ? 'bg-[hsl(38_45%_48%/0.08)] border-[hsl(38_45%_48%/0.5)] shadow-[0_0_16px_hsl(38_45%_48%/0.1)]'
+                      : 'bg-card/50 border-[hsl(38_45%_48%/0.15)] hover:border-[hsl(38_45%_48%/0.4)] hover:bg-[hsl(38_45%_48%/0.04)]'
+                    }`}
+                >
+                  <span className="text-sm md:text-base font-semibold text-foreground group-hover:text-[hsl(38_45%_44%)] transition-colors">
+                    {faq.q}
+                  </span>
                   <motion.div
-                    animate={{ rotate: openIndex === i ? 180 : 0 }}
-                    transition={{ duration: 0.25 }}
-                    className="flex-shrink-0"
+                    animate={{ rotate: openIndex === i ? 45 : 0 }}
+                    transition={{ duration: 0.22, ease: 'easeInOut' as const }}
+                    className="flex-shrink-0 w-8 h-8 rounded-full bg-[hsl(38_45%_48%/0.1)] border border-[hsl(38_45%_48%/0.25)] flex items-center justify-center"
                   >
-                    <ChevronDown className="h-5 w-5 text-[hsl(38_45%_48%)]" />
+                    <Plus className="h-4 w-4 text-[hsl(38_45%_48%)]" />
                   </motion.div>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <AnimatePresence>
                     {openIndex === i && (
                       <motion.div
-                        initial={{ opacity: 0, y: -4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        transition={{ duration: 0.2 }}
-                        className="px-4 md:px-5 pb-4 pt-3"
+                        initial={prefersReducedMotion ? false : { opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' as const }}
+                        className="overflow-hidden"
                       >
-                        <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-[hsl(38_45%_48%/0.4)] pl-4">{faq.a}</p>
+                        <div className="px-4 md:px-5 pb-4 pt-3">
+                          <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-[hsl(38_45%_48%/0.4)] pl-4">{faq.a}</p>
+                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </CollapsibleContent>
               </Collapsible>
-            </ScrollReveal>
+            </motion.div>
           ))}
         </div>
 

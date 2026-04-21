@@ -93,7 +93,7 @@ export const AnimatedBeam = forwardRef<SVGSVGElement, AnimatedBeamProps>(({
         </linearGradient>
         <motion.linearGradient
           animate={gradientCoordinates}
-          transition={{ delay, duration, ease: [0.16, 1, 0.3, 1], repeat: Infinity, repeatDelay: 0 }}
+          transition={{ delay, duration, ease: [0.16, 1, 0.3, 1] as const, repeat: Infinity, repeatDelay: 0 }}
           id={`${id}-gradient`}
           gradientUnits="userSpaceOnUse"
         >

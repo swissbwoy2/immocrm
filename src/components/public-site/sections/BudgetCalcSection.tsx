@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { Calculator, CheckCircle, AlertTriangle, ArrowRight, Info, ShieldCheck, Landmark, Home, PiggyBank } from 'lucide-react';
+import { NumberTicker } from '@/components/public-site/magic/NumberTicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,22 +28,6 @@ function formatCHF(amount: number): string {
   return new Intl.NumberFormat('fr-CH', { style: 'currency', currency: 'CHF', maximumFractionDigits: 0 }).format(amount);
 }
 
-function AnimatedNumber({ value, duration = 1000 }: { value: number; duration?: number }) {
-  const [displayValue, setDisplayValue] = useState(0);
-  useEffect(() => {
-    const startTime = Date.now();
-    const startValue = displayValue;
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      setDisplayValue(startValue + (value - startValue) * easeOut);
-      if (progress < 1) requestAnimationFrame(animate);
-    };
-    requestAnimationFrame(animate);
-  }, [value, duration]);
-  return <>{formatCHF(Math.round(displayValue))}</>;
-}
 
 export function BudgetCalcSection() {
   const { isAchat } = useSearchType();
@@ -194,13 +179,18 @@ export function BudgetCalcSection() {
                           {isAchat && resultAchat ? (
                             <>
                               <p className="text-sm text-muted-foreground mb-1">Prix d'achat maximum estimé</p>
-                              <p className={cn("text-3xl md:text-4xl font-bold", result.isSolvable ? 'text-success' : 'text-warning')}><AnimatedNumber value={resultAchat.prixMax} /></p>
+                              <p className={cn("text-3xl md:text-4xl font-bold", result.isSolvable ? 'text-success' : 'text-warning')}>
+                                <NumberTicker value={resultAchat.prixMax} prefix="CHF " className="font-bold" />
+                              </p>
                               {resultAchat.empruntMax > 0 && <p className="text-sm text-muted-foreground mt-2">Capacité d'emprunt : <span className="font-semibold">{formatCHF(resultAchat.empruntMax)}</span> (80%)</p>}
                             </>
                           ) : resultLocation ? (
                             <>
                               <p className="text-sm text-muted-foreground mb-1">Budget maximum recommandé</p>
-                              <p className={cn("text-3xl md:text-4xl font-bold", result.isSolvable ? 'text-success' : 'text-warning')}><AnimatedNumber value={resultLocation.budgetPossible} /><span className="text-lg font-normal text-muted-foreground">/mois</span></p>
+                              <p className={cn("text-3xl md:text-4xl font-bold", result.isSolvable ? 'text-success' : 'text-warning')}>
+                                <NumberTicker value={resultLocation.budgetPossible} prefix="CHF " className="font-bold" />
+                                <span className="text-lg font-normal text-muted-foreground">/mois</span>
+                              </p>
                             </>
                           ) : null}
                         </div>
