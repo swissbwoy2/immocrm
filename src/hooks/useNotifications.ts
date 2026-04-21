@@ -315,7 +315,7 @@ export const useNotifications = () => {
         console.error('[useNotifications] removeChannel failed:', err);
       }
     };
-  }, [user, toast]);
+  }, [user]);
 
   return {
     notifications,
