@@ -533,9 +533,10 @@ export default function NouveauMandat() {
           </div>
 
           {/* Premium Form Card */}
-          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-2xl shadow-primary/5 overflow-hidden">
+          <Card className="relative backdrop-blur-xl bg-card/80 border-[hsl(38_45%_48%/0.3)] shadow-2xl shadow-[hsl(38_45%_48%/0.15)] overflow-hidden">
+            <BorderBeam size={250} duration={14} colorFrom="hsl(38 55% 65%)" colorTo="hsl(28 35% 38%)" />
             {/* Card shine effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-br from-[hsl(38_45%_48%/0.05)] via-transparent to-[hsl(38_55%_60%/0.05)] pointer-events-none" />
             
             <CardContent className="pt-6 relative z-10">
               <div className="animate-fade-in">
