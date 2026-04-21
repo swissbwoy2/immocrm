@@ -1,54 +1,68 @@
 
-## Diagnostic
 
-Tu as invité Mobin et Fazli depuis le bouton "Inviter client" (admin) pour de la recherche locative. Tu n'arrives pas à activer leur compte depuis `/admin/demandes-activation`.
+# Plan : Débloquer Claude Code + corriger les 75+ erreurs TS depuis Lovable
 
-Avant de proposer un correctif, je dois comprendre ce qui se passe exactement. Plusieurs causes possibles très différentes.
+## Contexte
 
-## Hypothèses à vérifier
+Claude Code est bloqué côté ton Mac (le terminal a perdu son CWD `/Users/ramazani/Desktop/immocrm`). Pendant que tu le redémarres, **je peux corriger les 75+ erreurs TypeScript directement depuis Lovable** — le build est cassé et la preview ne reflète plus aucun changement, donc c'est prioritaire.
 
-1. **Les comptes n'apparaissent pas du tout dans la liste `/demandes-activation`**
-   - L'edge function `invite-client` a peut-être créé un compte avec `invitationLegere=true` qui ne génère pas de "demande d'activation" classique
-   - Ou la requête de la page filtre sur un statut qui ne correspond pas
+Important : `uipro-cli` n'existe pas sur npm public (Claude Code l'a confirmé). On garde la stratégie : design system construit manuellement à partir des skills `ui-ux-pro-max` qui sont déjà chargés en context.
 
-2. **Les comptes apparaissent mais le bouton "Activer" ne fait rien / renvoie une erreur**
-   - Problème RLS sur la table de demandes
-   - Problème dans l'edge function d'activation
-   - Erreur silencieuse côté client
+## Action 1 — Côté toi (terminal)
 
-3. **Les comptes apparaissent mais sont déjà marqués comme actifs**
-   - L'invitation légère active automatiquement, donc plus de demande à traiter
+Relance Claude Code depuis le bon dossier :
 
-4. **Erreur visible (toast rouge, erreur console) au clic**
-   - Besoin de lire console + network + edge logs
+```bash
+cd ~/Desktop/immocrm && claude
+```
 
-## Ce que je vais inspecter (read-only) avant tout correctif
+Si le dossier a bougé, retrouve-le avec :
 
-1. `src/pages/admin/DemandesActivation.tsx` (ou équivalent) — la requête de listing et la logique du bouton "Activer"
-2. Edge function `invite-client` — comprendre quel état est créé pour Mobin/Fazli (compte auth + profil + rôle + lien agent + ligne de "demande d'activation" éventuelle)
-3. Edge function d'activation appelée par le bouton (probablement `activate-client` ou équivalent)
-4. Requête DB :
-   - profils Mobin / Fazli (existence, `actif`, `parcours_type`, `email_confirmed`)
-   - éventuelle table `client_activation_requests` ou équivalent
-5. Logs auth récents (déjà visibles : 4 invitations envoyées récemment, dont une `mohammadparvez080@gmail.com` à 07:16 — donc l'invitation côté auth est bien partie)
-6. Logs edge functions `invite-client` et fonction d'activation pour les 2 comptes
+```bash
+find ~ -name "vite.config.ts" -not -path "*/node_modules/*" 2>/dev/null
+```
 
-## Question avant d'aller plus loin
+## Action 2 — Côté moi (Lovable, dès ton approbation)
 
-Pour cibler vite, j'ai besoin de savoir précisément ce que tu vois côté UI :
+### A. Fix framer-motion v12 strict typing (8 fichiers)
 
-- A) Mobin et Fazli **n'apparaissent pas** dans la liste `/admin/demandes-activation`
-- B) Ils apparaissent, mais le bouton "Activer" **affiche une erreur** (tu peux me donner le message)
-- C) Ils apparaissent, je clique "Activer", **rien ne se passe**
-- D) Ils apparaissent comme **déjà activés / verrouillés**
-- E) Autre — précise
+Ajouter `as const` sur les `ease: [...]` arrays et `type: "spring"` strings :
 
-## Plan de correction (générique, sera ajusté après ta réponse)
+- `src/components/public-site/magic/AnimatedList.tsx` (ligne 13) → `type: "spring" as const`
+- `src/components/public-site/sections/CloserSection.tsx` (ligne 120) → `ease: [...] as const`
+- `src/components/public-site/sections/CoverageSection.tsx` (ligne 60)
+- `src/components/public-site/sections/DifferentiatorSection.tsx` (lignes 117, 150)
+- Grep du pattern dans tous les autres fichiers `src/components/public-site/sections/*` et `src/components/public-site/animations/*` pour catch les similaires non listés dans l'erreur tronquée
 
-1. **Si A** → corriger la requête de listing pour inclure les invitations légères locatives en attente d'activation (filtrage par `actif=false` + `parcours_type` recherche, sans exclure le mode "invitation légère")
-2. **Si B/C** → corriger l'edge function d'activation : RLS, paramètres manquants, ou bouton qui appelle la mauvaise fonction
-3. **Si D** → exposer un état "à compléter" et permettre une relance d'invitation au lieu d'une activation déjà faite
-4. **Dans tous les cas** → ajouter un bouton "Renvoyer l'invitation" sur la ligne pour Mobin/Fazli, car les liens d'invitation Supabase expirent (les logs montrent déjà des `403: Email link is invalid or has expired`)
-5. Audit ciblé en DB sur les 2 comptes pour confirmer leur état réel et appliquer un correctif si la liaison agent / parcours est cassée
+### B. Fix erreurs Supabase (5 fichiers métier)
 
-Aucun fichier modifié tant que tu n'as pas confirmé le scénario A/B/C/D/E.
+Lire `src/integrations/supabase/types.ts` pour chaque table, puis corriger :
+
+- `src/components/AddBienVenteDialog.tsx:558` — table `photos_biens` (colonne `immeuble_id` à vérifier — erreur TS dit qu'elle existe pourtant ; probablement un autre champ excess à virer)
+- `src/components/CapturePhotosDialog.tsx:173,188` — table `photos_biens` (idem)
+- `src/components/DocumentUpdateReminder.tsx:112,124` — table `client_document_verifications` (typage strict du Record + colonne `client_id`)
+- `src/components/biens-vente/rapport-estimation/RapportEstimationDataForm.tsx:155` — table `biens_vente` (typer le Record correctement au lieu de `Record<string, any>`)
+- `src/components/proprietaire/AddHypothequeDialog.tsx:83` — table `hypotheques`
+
+L'erreur TS sur ces fichiers indique en fait que TypeScript narrowing échoue sur les Record/objets dynamiques. Solution : typer correctement avec le type Insert généré (`Database['public']['Tables']['xxx']['Insert']`) ou utiliser `as any` localement avec commentaire `// TODO: typer correctement` si le schéma exact est ambigu.
+
+### C. Validation
+
+- Vérifier 0 erreur TS résiduelle
+- Vérifier preview Lovable se rafraîchit
+- Confirmer que la HomePage `/` affiche le hero v3 ScrollExpandMedia déjà livré
+
+## Hors scope de ce plan (à faire ensuite par Claude Code une fois relancé)
+
+- Phase 1 : Création `TravelingGoldKey3D` (clé 3D voyageuse)
+- Phase 2 : Refonte `HowItWorksSection` (scroll horizontal cinématique)
+- Phase 3 : Refonte `PartnersSection` (Resolve + FirstCaution dominants)
+- Phase 4 : Stylisation des 8 autres sections (Bento, OrbitingCircles, Marquee, etc.)
+- Génération `design-system/MASTER.md` manuelle (uipro-cli n'existe pas)
+
+Ces phases nécessitent beaucoup plus de tokens et le 21st.dev MCP côté Claude Code → garder ça pour ta session locale.
+
+## Prochaine étape
+
+Approuve ce plan → je passe en mode default et je corrige immédiatement les 75+ erreurs TS pour débloquer ton build. En parallèle tu relances Claude Code dans le bon dossier pour qu'il enchaîne sur les Phases 1-4.
+
