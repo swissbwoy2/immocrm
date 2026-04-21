@@ -727,10 +727,10 @@ export default function Leads() {
                   </div>
                   <div className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1 text-xs">
                     {rows.map(([k, v]) => (
-                      <>
+                      <div key={k} className="contents">
                         <span className="text-muted-foreground">{k}</span>
                         <span className="font-medium break-all">{v}</span>
-                      </>
+                      </div>
                     ))}
                   </div>
                 </div>
