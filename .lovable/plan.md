@@ -1,155 +1,92 @@
 
 
-# Plan : Rendez-vous téléphonique obligatoire dans le formulaire "Analyse de dossier"
+# Fix bug submit + Rappel automatique 24h avant le RDV téléphonique
 
-## Mise à jour vs version précédente
+## Diagnostic du bug "rien ne se passe"
 
-- Plage horaire élargie : **7h30 → 22h00** (au lieu de 8h30 → 16h30)
-- Toujours 7j/7 (lundi → dimanche inclus)
-- Slots de 15 min → **58 slots/jour** (7h30, 7h45, … 21h45)
+Cause confirmée par les logs DB + RLS :
 
-## Objectif
+1. À 21:14:52 : INSERT dans `lead_phone_appointments` réussit (ligne présente en base)
+2. INSERT dans `leads` exécute `.select('id').single()` → le RETURNING passe par les RLS **SELECT** de `leads`, qui exigent `admin` ou `closeur` → **42501** pour un anon
+3. Le `throw` annule la suite mais l'appointment est déjà inséré
+4. Le user re-clique → conflit unique 23505 sur le slot → toast "créneau déjà pris" + `setSelectedSlot(null)` → écran qui paraît figé
 
-Avant qu'un prospect puisse envoyer son formulaire d'analyse de dossier, il doit **réserver un créneau téléphonique de 15 minutes** entre 7h30 et 22h00 (Europe/Zurich), tous les jours. Le créneau apparaît dans `/admin/calendrier` + `/admin/leads`, l'admin confirme, et le prospect reçoit une confirmation email avec invitation `.ics`.
+## Correctifs
 
-## Comportement attendu
+### 1. Suppression du `.select()` post-INSERT sur `leads`
+Dans les **deux** fichiers (`src/components/landing/DossierAnalyseSection.tsx` et `src/components/public-site/sections/DossierAnalyseSection.tsx`) :
+- Générer `const leadId = crypto.randomUUID()` côté client
+- INSERT avec `.insert({ id: leadId, ... })` **sans** `.select()` (pattern documenté Lovable pour éviter ce 42501)
+- Utiliser `leadId` directement pour l'UPDATE de `lead_phone_appointments.lead_id`
 
-```text
-Formulaire analyse de dossier
-        │
-        ▼
-[Étape finale ajoutée] ──► Choix créneau téléphonique
-        │                        │
-        │   7j/7 (lun → dim inclus)
-        │   7h30 → 22h00, slots de 15 min (58 slots/jour)
-        │   Créneaux déjà pris = grisés (indisponibles)
-        │
-        ▼
-   Submit form ──► Crée lead + crée rendez-vous "en_attente"
-        │
-        ▼
-   Admin voit dans /admin/leads (badge "RDV tél le X à Y")
-   Admin voit dans /admin/calendrier (event orange en attente)
-        │
-        ▼
-   Admin clique "Confirmer le RDV"
-        │
-        ▼
-   Email au prospect : "Votre rendez-vous téléphonique est fixé le … à …"
-   + pièce jointe invitation.ics (réutilise send-calendar-invite)
-```
+### 2. Nettoyage de l'appointment orphelin si l'INSERT lead échoue
+Si l'INSERT `leads` échoue après réservation du slot → DELETE de l'appointment qu'on vient de créer (ou UPDATE status='annule') → libère le créneau immédiatement, plus de blocage en cas de retry.
 
-## Données
+### 3. Pré-vérif côté client (UX)
+Avant l'INSERT appointment, faire un SELECT sur la vue `available_phone_slots` pour vérifier que le slot est encore libre → message clair sans même tenter l'écriture.
 
-### Nouvelle table `lead_phone_appointments`
+## Rappel automatique 24h avant le RDV
 
-```text
-id                  uuid PK
-lead_id             uuid → leads.id (nullable)
-prospect_email      text NOT NULL
-prospect_phone      text NOT NULL
-prospect_name       text NOT NULL
-slot_start          timestamptz NOT NULL  (Europe/Zurich)
-slot_end            timestamptz NOT NULL  (slot_start + 15min)
-status              text DEFAULT 'en_attente'  (en_attente | confirme | annule | termine)
-confirmed_by        uuid (admin user_id)
-confirmed_at        timestamptz
-ics_sent_at         timestamptz
-notes_admin         text
-source_form         text DEFAULT 'analyse_dossier'
-created_at          timestamptz DEFAULT now()
-updated_at          timestamptz DEFAULT now()
+### A. Nouvelle Edge Function `send-phone-appointment-reminders`
+Logique :
+- Sélectionne tous les `lead_phone_appointments` où `status = 'confirme'`, `reminder_24h_sent_at IS NULL`, et `slot_start` est entre `now() + 23h` et `now() + 25h`
+- Pour chacun :
+  - Envoie un email Resend depuis `support@logisorama.ch` (pattern `send-calendar-invite` existant)
+  - Sujet : "📞 Rappel : votre rendez-vous téléphonique demain"
+  - Corps HTML premium (gradient sombre + carte glass) reprenant le style de `send-calendar-invite/index.ts` : date en français long (Europe/Zurich), heure, numéro de téléphone, message "Notre équipe vous appellera demain à HH:MM"
+  - Bouton CTA "📅 Ajouter au calendrier" qui pointe vers la fonction publique `download-phone-appointment-ics?id={appointment_id}` (génère et sert le `.ics` directement, RFC 5545, méthode REQUEST + VALARM -PT15M)
+  - Pièce jointe `.ics` également incluse (réutilise le générateur de `send-calendar-invite`)
+- UPDATE `reminder_24h_sent_at = now()` après succès
+- Logs structurés : `[reminder] sent=X, skipped=Y, errors=Z`
+- CORS standard, pas de JWT requis (appelée par cron)
 
-UNIQUE INDEX (slot_start) WHERE status != 'annule'
-INDEX (slot_start), INDEX (status), INDEX (lead_id)
-```
+### B. Nouvelle Edge Function publique `download-phone-appointment-ics`
+- GET avec `?id=<uuid>`
+- SELECT sur `lead_phone_appointments` (clé service-role pour bypasser RLS, validation stricte UUID)
+- Génère ICS Europe/Zurich + alarme 15 min avant
+- Réponse `Content-Type: text/calendar; charset=utf-8` + `Content-Disposition: attachment; filename="rdv-logisorama.ics"`
+- Permet l'ajout au calendrier en 1 clic depuis n'importe quel client mail
 
-### RLS
-- **INSERT public anonyme** : autorisé (prospect non loggé)
-- **SELECT public anonyme** : autorisé sur `slot_start, status` via vue `available_phone_slots`
-- **SELECT/UPDATE/DELETE admin** : `has_role(auth.uid(), 'admin')`
+### C. Migration DB
+- ALTER TABLE `lead_phone_appointments` ADD COLUMN `reminder_24h_sent_at timestamptz`
+- INDEX partiel `(slot_start) WHERE status = 'confirme' AND reminder_24h_sent_at IS NULL` pour des cron requests rapides
+- Cron job pg_cron (toutes les 15 min) :
+  ```
+  SELECT cron.schedule(
+    'phone-appointment-reminders-24h',
+    '*/15 * * * *',
+    $$ SELECT net.http_post(
+       url:='https://ydljsdscdnqrqnjvqela.supabase.co/functions/v1/send-phone-appointment-reminders',
+       headers:='{"Content-Type":"application/json","Authorization":"Bearer <ANON_KEY>"}'::jsonb,
+       body:='{}'::jsonb
+    ); $$
+  );
+  ```
+  (insérée via outil insert, pas migration, conformément aux règles)
 
-## Génération des créneaux
-
-Côté **frontend** : J+1 → J+14 jours calendaires × **58 slots/jour** (de 7h30 à 21h45, pas de 15 min, dernier appel possible 21h45 → 22h00).
-Query `lead_phone_appointments WHERE slot_start BETWEEN now AND now+14d AND status != 'annule'` → grise les créneaux pris.
-
-## Modifications fichiers
-
-### 1. Migration DB
-- Création table `lead_phone_appointments` + RLS + vue `available_phone_slots`
-- Trigger `updated_at`
-- `ALTER PUBLICATION supabase_realtime ADD TABLE lead_phone_appointments`
-
-### 2. `src/components/landing/AnalyseDossierForm.tsx` (nom à confirmer à la lecture)
-Étape finale obligatoire `<PhoneSlotPicker />` avant le bouton "Envoyer mon dossier". Bouton désactivé tant que pas de créneau choisi.
-
-### 3. Nouveau `src/components/landing/PhoneSlotPicker.tsx`
-- DatePicker shadcn — J+1 à J+14, aucun jour désactivé
-- Grille 58 slots de 15 min (7h30 → 21h45)
-- Slot pris : `disabled + opacity-50 + bg-muted`
-- Slot sélectionné : `bg-primary text-primary-foreground`
-- Realtime subscribe sur `lead_phone_appointments`
-- Style premium landing (glass, gold, Framer Motion)
-- Sur mobile : grille collapsée par tranche horaire (Matin 7h30-12h / Après-midi 12h-18h / Soir 18h-22h) pour éviter scroll infini
-
-### 4. Logique submit form analyse-dossier
-- Insert `lead_phone_appointments` avec slot choisi (gestion conflit unique → message "créneau déjà pris, choisis-en un autre")
-- Insert lead avec `source = 'landing_analyse_dossier'`
-- UPDATE `lead_phone_appointments.lead_id`
-- Toast : "Demande envoyée. Votre RDV téléphonique est en attente de confirmation."
-
-### 5. `/admin/leads` (`src/pages/admin/Leads.tsx`)
-- Badge "RDV tél" sur leads `landing_analyse_dossier`
-- Format : `📞 Sam 27 avril 21h15` + badge statut (`en_attente` orange / `confirme` vert)
-- Bouton **Confirmer RDV** (si `en_attente`) → invoke `confirm-phone-appointment`
-- Bouton **Annuler RDV**
-
-### 6. `/admin/calendrier` (`src/pages/admin/Calendrier.tsx`)
-- Source ajoutée : `lead_phone_appointments WHERE status IN ('en_attente','confirme')`
-- Couleur : orange si `en_attente`, vert si `confirme`
-- Title : "📞 RDV tél : {prospect_name} ({prospect_phone})"
-
-### 7. Edge Function `supabase/functions/confirm-phone-appointment/index.ts`
-- Auth : JWT admin requis
-- Reçoit `{ appointment_id }`
-- UPDATE status='confirme', confirmed_by, confirmed_at
-- Envoie email Resend + invoke `send-calendar-invite` :
-  - title : "Rendez-vous téléphonique avec Logisorama"
-  - description : "Notre équipe vous appellera au {prospect_phone}"
-  - start/end du slot, timezone Europe/Zurich
-- Email HTML : "Votre rendez-vous téléphonique est fixé le {date} à {heure}" + bouton Ajouter au calendrier
-- Marque `ics_sent_at = now()`
-
-## Validation
-
-1. Créneaux 7j/7 de 7h30 à 22h00 (58 slots/jour)
-2. Slots pris grisés en temps réel
-3. Soumission impossible sans créneau
-4. Lead + RDV créés en `en_attente`
-5. Badge RDV + bouton Confirmer dans `/admin/leads`
-6. Event orange dans `/admin/calendrier`
-7. Confirmer → email + `.ics` (iPhone/Google/Outlook)
-8. Event devient vert
-9. Réservation simultanée → erreur claire
-10. Slots passés non sélectionnables
+### D. Mise à jour `confirm-phone-appointment`
+- Reset `reminder_24h_sent_at = NULL` au moment de la confirmation (sécurise les confirmations tardives < 24h pour qu'elles n'envoient pas de rappel inutile : ajouter une garde "skip si slot_start < now() + 26h" côté reminder).
 
 ## Fichiers touchés
 
 ```text
-[NEW] supabase migration                               table + RLS + vue + realtime
-[NEW] src/components/landing/PhoneSlotPicker.tsx
-[NEW] supabase/functions/confirm-phone-appointment/index.ts
-[MOD] src/components/landing/AnalyseDossierForm.tsx    (intégration picker + submit)
-[MOD] src/pages/admin/Leads.tsx                        (badge RDV + bouton Confirmer)
-[MOD] src/pages/admin/Calendrier.tsx                   (source événements)
+[FIX] src/components/landing/DossierAnalyseSection.tsx
+[FIX] src/components/public-site/sections/DossierAnalyseSection.tsx
+[NEW] supabase migration                                ADD reminder_24h_sent_at + index
+[INSERT] cron.schedule                                  job toutes 15 min
+[NEW] supabase/functions/send-phone-appointment-reminders/index.ts
+[NEW] supabase/functions/download-phone-appointment-ics/index.ts
+[MOD] supabase/functions/confirm-phone-appointment/index.ts (reset reminder + appel ICS endpoint)
 ```
 
-## Notes techniques
+## Validation
 
-- **Timezone Europe/Zurich** strict partout (génération slots, affichage, ics)
-- **Pas d'auto-confirm** : confirmation manuelle admin
-- **Réutilise `send-calendar-invite`** existant
-- **Realtime** activé sur `lead_phone_appointments`
-- Aucune modification de `auth.users`
+1. Soumission analyse dossier après sélection slot → success state, lead + appointment créés et liés (plus de 42501)
+2. Re-soumission après échec → slot libéré, pas de blocage
+3. RDV confirmé par admin pour H+24 → email rappel automatique reçu dans les 15 min suivantes (cron `*/15`)
+4. Email rappel : design premium, bouton "Ajouter au calendrier" fonctionnel (download .ics), pièce jointe .ics présente
+5. Pas de double rappel (`reminder_24h_sent_at` empêche)
+6. Confirmation tardive < 26h → pas de rappel envoyé (garde temps)
+7. RDV annulé → pas de rappel
+8. `.ics` ouvre correctement sur iPhone Calendar / Google Calendar / Outlook avec rappel 15 min auto
 
