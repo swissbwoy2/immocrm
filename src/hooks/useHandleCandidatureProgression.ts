@@ -87,8 +87,8 @@ export function useHandleCandidatureProgression() {
       }
 
       // Mettre à jour le statut
-      const { error } = await supabase
-        .from('candidatures')
+      const { error } = await (supabase
+        .from('candidatures') as any)
         .update(updateData)
         .eq('id', candidatureId);
 

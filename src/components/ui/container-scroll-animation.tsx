@@ -23,7 +23,7 @@ export function ContainerScroll({ titleComponent, children, className }: Contain
 
   const rotate = useTransform(scrollYProgress, [0, 0.5], prefersReducedMotion ? [0, 0] : [20, 0]);
   const scale = useTransform(scrollYProgress, [0, 0.5], scaleDimensions());
-  const translateY = useTransform(scrollYProgress, [0, 0.5], prefersReducedMotion ? [0, 0] : ['-10%', '0%']);
+  const translateY = useTransform(scrollYProgress, [0, 0.5], (prefersReducedMotion ? ['0%', '0%'] : ['-10%', '0%']) as string[]);
   const titleOpacity = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
   const titleY = useTransform(scrollYProgress, [0, 0.3], prefersReducedMotion ? [0, 0] : [0, -60]);
 
@@ -49,7 +49,7 @@ export function ContainerScroll({ titleComponent, children, className }: Contain
             scale,
             y: translateY,
             transformPerspective: 1000,
-          }}
+          } as any}
           className="w-full max-w-5xl mx-auto px-4"
         >
           <div

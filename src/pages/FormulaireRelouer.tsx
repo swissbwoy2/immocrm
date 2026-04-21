@@ -177,7 +177,7 @@ export default function FormulaireRelouer() {
       if (data.parking) equipements.push('Parking');
       if (data.ascenseur) equipements.push('Ascenseur');
 
-      const { error: leadError } = await supabase.from('leads').insert({
+      const { error: leadError } = await (supabase.from('leads') as any).insert({
         first_name: data.prenom,
         last_name: data.nom,
         email: data.email,
