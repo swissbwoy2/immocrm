@@ -431,6 +431,16 @@ export default function Leads() {
               <SelectItem value="none">❓ À classifier</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as LeadSourceKey | "all")}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Source d'acquisition" />
+            </SelectTrigger>
+            <SelectContent>
+              {LEAD_SOURCE_FILTER_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {formulaires.length > 0 && (
             <Select value={formulaireFilter} onValueChange={setFormulaireFilter}>
               <SelectTrigger className="w-[200px]">
