@@ -150,8 +150,8 @@ export function RapportEstimationDataForm({ immeuble, onUpdate }: RapportEstimat
         permis_construire: permis.length > 0 ? permis : null,
       };
 
-      const { error } = await supabase
-        .from('immeubles')
+      const { error } = await (supabase
+        .from('immeubles') as any)
         .update(updateData)
         .eq('id', immeuble.id);
 

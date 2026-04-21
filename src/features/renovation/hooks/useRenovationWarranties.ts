@@ -53,8 +53,8 @@ export function useRenovationWarranties(projectId: string | undefined) {
 
   const update = useMutation({
     mutationFn: async ({ id, ...payload }: { id: string; [key: string]: any }) => {
-      const { data, error } = await supabase
-        .from('renovation_warranties')
+      const { data, error } = await (supabase
+        .from('renovation_warranties') as any)
         .update(payload)
         .eq('id', id)
         .select()

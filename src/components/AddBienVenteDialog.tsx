@@ -554,7 +554,7 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess, isAdmin = fa
               .from('photos-immeubles')
               .getPublicUrl(fileName);
 
-            await supabase.from('photos_immeuble').insert({
+            await (supabase.from('photos_immeuble') as any).insert({
               immeuble_id: immeuble.id,
               url: publicUrl,
               legende: photo.legende || null,

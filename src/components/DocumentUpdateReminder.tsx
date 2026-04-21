@@ -107,8 +107,8 @@ export function DocumentUpdateReminder() {
     try {
       if (confirmation.id) {
         // Update existing
-        const { error } = await supabase
-          .from('document_update_confirmations')
+        const { error } = await (supabase
+          .from('document_update_confirmations') as any)
           .update({
             [field]: newValue,
             confirmed_at: allOk ? new Date().toISOString() : null,
@@ -118,8 +118,8 @@ export function DocumentUpdateReminder() {
         if (error) throw error;
       } else {
         // Insert new
-        const { data, error } = await supabase
-          .from('document_update_confirmations')
+        const { data, error } = await (supabase
+          .from('document_update_confirmations') as any)
           .insert({
             client_id: clientId,
             month_year: monthYear,

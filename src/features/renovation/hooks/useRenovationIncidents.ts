@@ -48,8 +48,8 @@ export function useRenovationIncidents(projectId: string | undefined) {
 
   const update = useMutation({
     mutationFn: async ({ id, ...payload }: { id: string; [key: string]: any }) => {
-      const { data, error } = await supabase
-        .from('renovation_incidents')
+      const { data, error } = await (supabase
+        .from('renovation_incidents') as any)
         .update(payload)
         .eq('id', id)
         .select()

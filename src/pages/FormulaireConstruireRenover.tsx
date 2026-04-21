@@ -157,7 +157,7 @@ export default function FormulaireConstruireRenover() {
         if (provisionError) console.warn('create-public-user warning:', provisionError);
       }
 
-      const { error: leadError } = await supabase.from('leads').insert({
+      const { error: leadError } = await (supabase.from('leads') as any).insert({
         first_name: data.prenom,
         last_name: data.nom,
         email: data.email,

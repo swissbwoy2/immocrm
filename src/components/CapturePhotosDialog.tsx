@@ -178,7 +178,7 @@ export function CapturePhotosDialog({
               est_principale: i === 0,
               ordre: i,
               uploaded_by: user?.id,
-            });
+            } as any);
           } else {
             const { data: { publicUrl } } = supabase.storage
               .from('photos-immeubles')
@@ -193,7 +193,7 @@ export function CapturePhotosDialog({
               est_principale: i === 0,
               ordre: i,
               uploaded_by: user?.id,
-            });
+            } as any);
           }
         }
 
