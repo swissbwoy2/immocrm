@@ -30,9 +30,9 @@ const heroPartnersLocation = [
 
 const heroPartnersAchat = [
   {
-    name: 'RealAdvisor',
-    logo: realadvisorLogo,
-    href: 'https://www.realadvisor.ch',
+    name: 'Resolve',
+    logo: resolveLogo,
+    href: 'https://app.resolve.ch/?ref=3cDockrkQdpgjmMqm&utm_source=referral_link_user',
     desc: 'Comparateur indépendant des meilleurs taux hypothécaires',
   },
   {
