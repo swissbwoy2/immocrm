@@ -4976,6 +4976,7 @@ export type Database = {
           prospect_email: string
           prospect_name: string
           prospect_phone: string
+          reminder_24h_sent_at: string | null
           slot_end: string
           slot_start: string
           source_form: string
@@ -4993,6 +4994,7 @@ export type Database = {
           prospect_email: string
           prospect_name: string
           prospect_phone: string
+          reminder_24h_sent_at?: string | null
           slot_end: string
           slot_start: string
           source_form?: string
@@ -5010,6 +5012,7 @@ export type Database = {
           prospect_email?: string
           prospect_name?: string
           prospect_phone?: string
+          reminder_24h_sent_at?: string | null
           slot_end?: string
           slot_start?: string
           source_form?: string
