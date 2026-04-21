@@ -71,19 +71,20 @@ export function DossierAnalyseSection() {
   const handleSubmit = async () => {
     if (!isCoordonneesValid || !selectedSlot) return;
     setIsSubmitting(true);
+    let createdApptId: string | null = null;
     try {
-      const { data: appt, error: apptErr } = await supabase
+      const apptId = crypto.randomUUID();
+      const { error: apptErr } = await supabase
         .from('lead_phone_appointments')
         .insert({
+          id: apptId,
           prospect_email: email.trim(),
           prospect_phone: telephone.trim(),
           prospect_name: `${prenom.trim()} ${nom.trim()}`.trim(),
           slot_start: selectedSlot.start.toISOString(),
           slot_end: selectedSlot.end.toISOString(),
           source_form: 'analyse_dossier',
-        })
-        .select('id')
-        .single();
+        });
 
       if (apptErr) {
         if ((apptErr as any).code === '23505') {
@@ -95,8 +96,11 @@ export function DossierAnalyseSection() {
         setIsSubmitting(false);
         return;
       }
+      createdApptId = apptId;
 
-      const { data: leadData, error } = await supabase.from('leads').insert({
+      const leadId = crypto.randomUUID();
+      const { error } = await supabase.from('leads').insert({
+        id: leadId,
         email: email.trim(), prenom: prenom.trim(), nom: nom.trim(), telephone: telephone.trim(),
         localite: localite.trim() || null, statut_emploi: isAchat ? null : statutEmploi,
         permis_nationalite: isAchat ? null : permisNationalite, poursuites: isAchat ? null : !confirmNoPoursuites,
@@ -106,15 +110,13 @@ export function DossierAnalyseSection() {
         apport_personnel: isAchat ? apportPersonnel : null, type_bien: isAchat ? typeBien : null,
         utm_source: utmParams.utm_source, utm_medium: utmParams.utm_medium,
         utm_campaign: utmParams.utm_campaign, utm_content: utmParams.utm_content, utm_term: utmParams.utm_term,
-      }).select('id').single();
+      });
       if (error) throw error;
 
-      if (leadData?.id && appt?.id) {
-        await supabase
-          .from('lead_phone_appointments')
-          .update({ lead_id: leadData.id })
-          .eq('id', appt.id);
-      }
+      await supabase
+        .from('lead_phone_appointments')
+        .update({ lead_id: leadId })
+        .eq('id', apptId);
 
       supabase.functions.invoke('notify-new-lead', {
         body: {
