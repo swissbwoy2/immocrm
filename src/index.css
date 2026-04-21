@@ -785,6 +785,11 @@ All colors MUST be HSL.
     border-radius: 0 2px 2px 0;
   }
 
+  /* v2 active bar via child span */
+  .sidebar-item-active .sidebar-active-bar {
+    opacity: 1 !important;
+  }
+
   /* Progress bar glow effect */
   .progress-glow {
     box-shadow: 0 0 10px hsl(var(--primary) / 0.3);

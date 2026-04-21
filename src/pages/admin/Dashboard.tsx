@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send, Bell, Power, Sparkles, Heart } from 'lucide-react';
+import { Users, UserCog, Clock, CheckCircle, AlertTriangle, DollarSign, Send, Bell, Power, Heart } from 'lucide-react';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,7 @@ import { AdminStatsSection } from '@/components/stats/AdminStatsSection';
 import { RecommendationStats } from '@/components/stats/RecommendationStats';
 import { PremiumKPICard } from '@/components/premium';
 import { AgencyProjectionSection } from '@/components/admin/AgencyProjectionSection';
+import { PremiumPageShellV2, PremiumPageHeaderV2 } from '@/components/dashboard/v2';
 
 const adminMenu = [
   { name: 'Tableau de bord', icon: Users, path: '/admin' },
@@ -193,12 +194,14 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="relative">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border border-primary/30"></div>
+      <PremiumPageShellV2>
+        <div className="flex items-center justify-center py-32">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+            <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border border-primary/30" />
+          </div>
         </div>
-      </div>
+      </PremiumPageShellV2>
     );
   }
 
@@ -273,40 +276,25 @@ export default function AdminDashboard() {
 
   return (
     <PullToRefresh onRefresh={loadData} className="flex-1 overflow-y-auto">
-      <div className="p-4 md:p-8">
-        {/* Header avec dégradé animé */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-6 md:p-8 mb-8 animate-fade-in">
-          {/* Particules flottantes */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-4 right-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl animate-float-particle" style={{ animationDelay: '0s' }} />
-            <div className="absolute bottom-4 left-20 w-20 h-20 bg-accent/10 rounded-full blur-2xl animate-float-particle" style={{ animationDelay: '1s' }} />
-            <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-primary/5 rounded-full blur-xl animate-float-particle" style={{ animationDelay: '2s' }} />
-          </div>
-          
-          <div className="relative z-10 flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="w-6 h-6 text-primary animate-pulse-soft" />
-                <span className="text-sm font-medium text-primary/80 uppercase tracking-wider">Administration</span>
-              </div>
-              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent animate-gradient-text bg-[length:200%_auto]">
-                Tableau de bord
-              </h1>
-              <p className="text-muted-foreground mt-2">Vue d'ensemble de l'activité</p>
-            </div>
-            {counts.new_message > 0 && (
-              <Button 
-                variant="outline" 
-                onClick={() => navigate('/admin/messagerie')} 
-                className="relative glass-morphism border-primary/20 hover:scale-105 transition-all duration-300"
+      <PremiumPageShellV2>
+        <PremiumPageHeaderV2
+          title="Tableau de bord"
+          subtitle="Vue d'ensemble de l'activité de l'agence"
+          breadcrumbs={[{ label: 'Administration' }, { label: 'Tableau de bord' }]}
+          actions={
+            counts.new_message > 0 ? (
+              <Button
+                variant="outline"
+                onClick={() => navigate('/admin/messagerie')}
+                className="glass-morphism border-primary/20 hover:scale-105 transition-all duration-300"
               >
                 <Bell className="w-4 h-4 mr-2" />
                 Messages
-                <Badge variant="destructive" className="ml-2 animate-bounce-soft">{counts.new_message}</Badge>
+                <Badge variant="destructive" className="ml-2">{counts.new_message}</Badge>
               </Button>
-            )}
-          </div>
-        </div>
+            ) : undefined
+          }
+        />
 
         {/* KPIs avec composants Premium */}
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3 md:gap-4 mb-8">
@@ -659,7 +647,7 @@ export default function AdminDashboard() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </PremiumPageShellV2>
     </PullToRefresh>
   );
 }

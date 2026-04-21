@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download, Calendar, FileCheck, Home, Key, Sparkles, Bike, Heart } from 'lucide-react';
+import { LayoutDashboard, Users, Send, MessageSquare, CheckCircle, DollarSign, Bell, FileText, Download, Calendar, FileCheck, Home, Key, Bike, Heart } from 'lucide-react';
+import { PremiumPageShellV2, PremiumPageHeaderV2 } from '@/components/dashboard/v2';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { PremiumKPICard } from '@/components/premium/PremiumKPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -204,12 +205,14 @@ export default function AgentDashboard() {
 
   if (loading || !agent) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="relative">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border border-primary/30"></div>
+      <PremiumPageShellV2>
+        <div className="flex items-center justify-center py-32">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+            <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border border-primary/30" />
+          </div>
         </div>
-      </div>
+      </PremiumPageShellV2>
     );
   }
 
@@ -297,40 +300,25 @@ export default function AgentDashboard() {
 
   return (
     <PullToRefresh onRefresh={loadAgentData} className="flex-1 overflow-y-auto">
-      <div className="p-4 md:p-8 space-y-6">
-          {/* Header avec dégradé animé */}
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-6 md:p-8 animate-fade-in">
-            {/* Particules flottantes */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute top-4 right-10 w-24 h-24 bg-primary/10 rounded-full blur-2xl animate-float-particle" style={{ animationDelay: '0s' }} />
-              <div className="absolute bottom-4 left-20 w-20 h-20 bg-accent/10 rounded-full blur-2xl animate-float-particle" style={{ animationDelay: '1s' }} />
-              <div className="absolute top-1/2 right-1/4 w-16 h-16 bg-primary/5 rounded-full blur-xl animate-float-particle" style={{ animationDelay: '2s' }} />
-            </div>
-            
-            <div className="relative z-10 flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-6 h-6 text-primary animate-pulse-soft" />
-                  <span className="text-sm font-medium text-primary/80 uppercase tracking-wider">Espace Agent</span>
-                </div>
-                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent animate-gradient-text bg-[length:200%_auto]">
-                  Tableau de bord
-                </h1>
-                <p className="text-muted-foreground mt-2">Gérez vos clients et vos offres</p>
-              </div>
-              {counts.new_message > 0 && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate('/agent/messagerie')} 
-                  className="relative glass-morphism border-primary/20 hover:scale-105 transition-all duration-300"
+      <PremiumPageShellV2>
+          <PremiumPageHeaderV2
+            title="Tableau de bord"
+            subtitle="Gérez vos clients et vos offres"
+            breadcrumbs={[{ label: 'Espace Agent' }, { label: 'Tableau de bord' }]}
+            actions={
+              counts.new_message > 0 ? (
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/agent/messagerie')}
+                  className="glass-morphism border-primary/20 hover:scale-105 transition-all duration-300"
                 >
                   <Bell className="w-4 h-4 mr-2" />
                   Messages
-                  <Badge variant="destructive" className="ml-2 animate-bounce-soft">{counts.new_message}</Badge>
+                  <Badge variant="destructive" className="ml-2">{counts.new_message}</Badge>
                 </Button>
-              )}
-            </div>
-          </div>
+              ) : undefined
+            }
+          />
 
           {/* KPIs avec effets modernes */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4 xl:gap-4 2xl:grid-cols-5">
@@ -1083,7 +1071,7 @@ export default function AgentDashboard() {
             {/* Shine effect */}
             <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent pointer-events-none" />
           </Card>
-      </div>
+      </PremiumPageShellV2>
     </PullToRefresh>
   );
 }
