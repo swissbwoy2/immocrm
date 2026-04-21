@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import logoImmorama from '@/assets/logo-immo-rama-new.png';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { PremiumFormCard } from '@/components/forms-premium/PremiumFormCard';
-import { PremiumInput } from '@/components/forms-premium/PremiumInput';
-import { LuxuryFormBackground } from '@/components/forms-premium/backgrounds/LuxuryFormBackground';
-import { IconLock, IconLoader, IconArrowLeft } from '@/components/forms-premium/icons/LuxuryIcons';
+import { PremiumAuthLayout, AuthInput, AuthSubmitButton } from '@/components/auth/PremiumAuthLayout';
+import { Lock, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
+import heroBg from '@/assets/hero-bg.jpg';
+import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
   const fromAnnonceur = searchParams.get('from') === 'annonceur';
   const redirectPath = fromAnnonceur ? '/connexion-annonceur' : '/login';
+
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -27,7 +27,6 @@ export default function ResetPassword() {
     let mounted = true;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
-      console.log('Auth event:', event, 'Session:', !!session);
       if (event === 'PASSWORD_RECOVERY') {
         setIsTokenValid(true);
         setIsInitializing(false);
@@ -83,116 +82,94 @@ export default function ResetPassword() {
 
   const isValid = password.length >= 6 && password === confirmPassword;
 
-  const EyeToggle = ({ show, onToggle, label }: { show: boolean; onToggle: () => void; label: string }) => (
-    <button type="button" aria-label={label} onClick={onToggle} className="text-[hsl(40_20%_45%)] hover:text-[hsl(38_55%_65%)] transition-colors p-1">
-      {show ? (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><path d="M1 1l22 22"/></svg>
-      ) : (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      )}
-    </button>
-  );
-
-  const LoadingScreen = () => (
-    <div className="min-h-screen bg-[hsl(30_15%_8%)] flex flex-col items-center justify-center gap-4 relative overflow-hidden">
-      <LuxuryFormBackground />
-      <motion.div
-        className="relative z-10 flex flex-col items-center gap-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <div className="w-12 h-12 rounded-full border-2 border-[hsl(38_45%_48%/0.3)] border-t-[hsl(38_55%_65%)] animate-spin" />
-        <p className="text-sm text-[hsl(40_20%_50%)]">Vérification du lien...</p>
-      </motion.div>
-    </div>
-  );
-
-  if (isInitializing) return <LoadingScreen />;
+  // Loading screen — premium version with hero bg
+  if (isInitializing) {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0">
+          <img src={heroBg} alt="" className="w-full h-full object-cover" loading="eager" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/55 to-black/80" />
+        </div>
+        <motion.div
+          className="relative z-10 flex flex-col items-center gap-5"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <img
+            src={logoImmoRama}
+            alt="Immo-Rama"
+            className="h-20 w-auto drop-shadow-xl brightness-0 invert"
+          />
+          <div className="w-10 h-10 border-[3px] border-white/20 border-t-white rounded-full animate-spin" />
+          <p className="text-sm text-white/70 font-medium">Vérification du lien...</p>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[hsl(30_15%_8%)] flex items-center justify-center p-4 relative overflow-hidden">
-      <LuxuryFormBackground />
-      <motion.div
-        className="relative z-10 w-full max-w-md"
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <PremiumFormCard>
-          <div className="flex flex-col items-center gap-4 mb-8">
-            <img
-              src={logoImmorama}
-              alt="Immo-Rama"
-              className="h-14 w-auto"
-              style={{ filter: 'brightness(0) invert(1)' }}
-            />
-            <div className="text-center">
-              <h1 className="text-2xl font-serif font-bold text-[hsl(40_20%_88%)]">
-                Nouveau mot de passe
-              </h1>
-              <p className="text-xs text-[hsl(40_20%_45%)] mt-2">
-                Choisissez un nouveau mot de passe pour votre compte.
-              </p>
-            </div>
-            <div className="w-16 h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.6)] to-transparent" />
-          </div>
-
-          <form onSubmit={handleResetPassword} className="space-y-5">
-            <PremiumInput
-              label="Nouveau mot de passe"
-              type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              icon={<IconLock size={16} />}
-              required
-              disabled={loading}
-              rightAction={<EyeToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} label="Afficher le mot de passe" />}
-            />
-            <PremiumInput
-              label="Confirmer le mot de passe"
-              type={showConfirmPassword ? 'text' : 'password'}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              icon={<IconLock size={16} />}
-              error={confirmPassword && password !== confirmPassword ? 'Les mots de passe ne correspondent pas' : undefined}
-              required
-              disabled={loading}
-              rightAction={<EyeToggle show={showConfirmPassword} onToggle={() => setShowConfirmPassword(!showConfirmPassword)} label="Afficher la confirmation" />}
-            />
-
-            <motion.button
-              type="submit"
-              whileHover={loading || !isValid ? {} : { scale: 1.02, boxShadow: '0 0 30px hsl(38 45% 48% / 0.35)' }}
-              whileTap={loading || !isValid ? {} : { scale: 0.98 }}
-              disabled={loading || !isValid}
-              className={`relative w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl font-semibold text-sm text-[hsl(30_15%_8%)] overflow-hidden transition-all duration-300 ${
-                loading || !isValid
-                  ? 'bg-[hsl(38_45%_48%/0.3)] cursor-not-allowed text-[hsl(40_20%_40%)]'
-                  : 'bg-gradient-to-r from-[hsl(38_55%_65%)] to-[hsl(38_45%_48%)] shadow-[0_4px_16px_hsl(38_45%_48%/0.25)]'
-              }`}
-            >
-              {!loading && isValid && (
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -skew-x-12"
-                  animate={{ x: ['-100%', '200%'] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 2.5, ease: 'easeInOut' }}
-                />
-              )}
-              {loading ? <IconLoader size={16} /> : null}
-              <span className="relative z-10">{loading ? 'Réinitialisation...' : 'Réinitialiser le mot de passe'}</span>
-            </motion.button>
-
+    <PremiumAuthLayout
+      title="Nouveau mot de passe"
+      description="Choisissez un mot de passe sécurisé pour votre compte"
+      backTo={redirectPath}
+      badge="Réinitialisation"
+    >
+      <form onSubmit={handleResetPassword} className="space-y-4">
+        <AuthInput
+          label="Nouveau mot de passe"
+          type={showPassword ? 'text' : 'password'}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          icon={<Lock className="h-4 w-4" />}
+          hint="Minimum 6 caractères"
+          required
+          disabled={loading}
+          placeholder="Nouveau mot de passe"
+          animDelay={0.1}
+          rightAction={
             <button
               type="button"
-              onClick={() => navigate(redirectPath)}
-              className="w-full flex items-center justify-center gap-2 text-xs text-[hsl(40_20%_45%)] hover:text-[hsl(38_55%_65%)] transition-colors py-1 cursor-pointer"
+              aria-label={showPassword ? 'Masquer' : 'Afficher'}
+              onClick={() => setShowPassword(!showPassword)}
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
             >
-              <IconArrowLeft size={14} />
-              Retour à la connexion
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
-          </form>
-        </PremiumFormCard>
-      </motion.div>
-    </div>
+          }
+        />
+
+        <AuthInput
+          label="Confirmer le mot de passe"
+          type={showConfirmPassword ? 'text' : 'password'}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          icon={<Lock className="h-4 w-4" />}
+          error={confirmPassword && password !== confirmPassword ? 'Les mots de passe ne correspondent pas' : undefined}
+          required
+          disabled={loading}
+          placeholder="Confirmez le mot de passe"
+          animDelay={0.2}
+          rightAction={
+            <button
+              type="button"
+              aria-label={showConfirmPassword ? 'Masquer' : 'Afficher'}
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          }
+        />
+
+        <AuthSubmitButton
+          loading={loading}
+          disabled={!isValid}
+          animDelay={0.3}
+        >
+          Réinitialiser le mot de passe
+        </AuthSubmitButton>
+      </form>
+    </PremiumAuthLayout>
   );
 }

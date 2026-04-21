@@ -2,35 +2,26 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Mail, Lock, Loader2, ArrowRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { PublicHeader } from '@/components/public/PublicHeader';
-import { PublicFooter } from '@/components/public/PublicFooter';
-import logoImmoRama from '@/assets/logo-immo-rama-new.png';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { PremiumAuthLayout, AuthInput, AuthSubmitButton } from '@/components/auth/PremiumAuthLayout';
+import { Mail, Lock, Eye, EyeOff, UserPlus } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function ConnexionAnnonceur() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
 
   const loginMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
 
-      // Verify user is an annonceur
       const { data: annonceur, error: annonceurError } = await supabase
         .from('annonceurs')
         .select('id, statut')
@@ -39,7 +30,7 @@ export default function ConnexionAnnonceur() {
 
       if (annonceurError || !annonceur) {
         await supabase.auth.signOut();
-        throw new Error('Ce compte n\'est pas un compte annonceur');
+        throw new Error("Ce compte n'est pas un compte annonceur");
       }
 
       if (annonceur.statut === 'suspendu') {
@@ -94,138 +85,120 @@ export default function ConnexionAnnonceur() {
     }
   };
 
+  const isLoading = loginMutation.isPending;
+  const canSubmit = !!email && !!password && !isLoading;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <PublicHeader />
+    <PremiumAuthLayout
+      title="Espace Annonceur"
+      description="Connectez-vous pour gérer vos annonces immobilières"
+      backTo="/"
+      badge="Portail Annonceur"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <AuthInput
+          label="Adresse email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          icon={<Mail className="h-4 w-4" />}
+          required
+          disabled={isLoading}
+          autoComplete="email"
+          placeholder="vous@exemple.com"
+          animDelay={0.1}
+        />
 
-      <div className="pt-24 pb-16">
-        <div className="container mx-auto px-4">
-          <div className="max-w-md mx-auto">
-            <Card className="p-6 md:p-8">
-              <div className="text-center mb-8">
-                <img src={logoImmoRama} alt="Immo-Rama" className="h-12 mx-auto mb-4" />
-                <h1 className="text-2xl font-bold mb-2">Espace Annonceur</h1>
-                <p className="text-muted-foreground">Connectez-vous pour gérer vos annonces</p>
-              </div>
+        <AuthInput
+          label="Mot de passe"
+          type={showPassword ? 'text' : 'password'}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          icon={<Lock className="h-4 w-4" />}
+          required
+          disabled={isLoading}
+          autoComplete="current-password"
+          placeholder="Votre mot de passe"
+          animDelay={0.2}
+          rightAction={
+            <button
+              type="button"
+              aria-label={showPassword ? 'Masquer' : 'Afficher'}
+              onClick={() => setShowPassword(!showPassword)}
+              className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          }
+        />
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="votre@email.com"
-                      className="pl-10"
-                      required
-                    />
-                  </div>
-                </div>
+        <AuthSubmitButton
+          loading={isLoading}
+          disabled={!canSubmit}
+          animDelay={0.3}
+        >
+          Se connecter
+        </AuthSubmitButton>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Mot de passe</Label>
-                    <button
-                      type="button"
-                      onClick={() => setResetDialogOpen(true)}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      Mot de passe oublié ?
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Votre mot de passe"
-                      className="pl-10"
-                      required
-                    />
-                  </div>
-                </div>
+        {/* Links */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="space-y-1 pt-1"
+        >
+          <button
+            type="button"
+            onClick={() => setResetDialogOpen(true)}
+            className="w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors py-1 cursor-pointer underline-offset-4 hover:underline"
+          >
+            Mot de passe oublié ?
+          </button>
+        </motion.div>
 
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  size="lg"
-                  disabled={loginMutation.isPending}
-                >
-                  {loginMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Connexion...
-                    </>
-                  ) : (
-                    <>
-                      Se connecter
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </form>
+        {/* Register link */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.45 }}
+          className="pt-3 border-t border-border/50"
+        >
+          <Link
+            to="/inscription-annonceur"
+            className="w-full flex items-center justify-center gap-2 h-11 px-5 rounded-xl border border-border/60 text-foreground/70 text-sm font-medium hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all duration-200"
+          >
+            <UserPlus className="h-4 w-4" />
+            Devenir annonceur
+          </Link>
+        </motion.div>
+      </form>
 
-              <div className="mt-6 pt-6 border-t text-center text-sm text-muted-foreground">
-                Pas encore de compte ?{' '}
-                <Link to="/inscription-annonceur" className="text-primary font-medium hover:underline">
-                  Créer un compte
-                </Link>
-              </div>
-
-              <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Réinitialiser le mot de passe</DialogTitle>
-                    <DialogDescription>
-                      Entrez votre email pour recevoir un lien de réinitialisation.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleResetPassword} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="reset-email">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          id="reset-email"
-                          type="email"
-                          placeholder="votre@email.com"
-                          value={resetEmail}
-                          onChange={(e) => setResetEmail(e.target.value)}
-                          className="pl-10"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <Button type="submit" className="w-full" disabled={resetLoading}>
-                      {resetLoading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Envoi en cours...
-                        </>
-                      ) : (
-                        'Envoyer le lien de réinitialisation'
-                      )}
-                    </Button>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </Card>
-
-            <p className="text-center text-sm text-muted-foreground mt-6">
-              <Link to="/" className="hover:text-foreground">
-                ← Retour au site principal
-              </Link>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <PublicFooter />
-    </div>
+      {/* Reset password dialog */}
+      <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <DialogContent className="bg-background border-border text-foreground">
+          <DialogHeader>
+            <DialogTitle className="font-serif">Réinitialiser le mot de passe</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Entrez votre email pour recevoir un lien de réinitialisation.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleResetPassword} className="space-y-4 mt-2">
+            <AuthInput
+              label="Email"
+              type="email"
+              value={resetEmail}
+              onChange={(e) => setResetEmail(e.target.value)}
+              icon={<Mail className="h-4 w-4" />}
+              required
+              disabled={resetLoading}
+              placeholder="vous@exemple.com"
+            />
+            <AuthSubmitButton loading={resetLoading} disabled={!resetEmail}>
+              Envoyer le lien
+            </AuthSubmitButton>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </PremiumAuthLayout>
   );
 }
