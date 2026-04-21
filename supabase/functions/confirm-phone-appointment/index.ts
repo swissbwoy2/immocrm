@@ -72,13 +72,14 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Update status -> confirme
+    // Update status -> confirme (reset reminder marker for re-confirmations)
     const { error: updErr } = await admin
       .from('lead_phone_appointments')
       .update({
         status: 'confirme',
         confirmed_by: user.id,
         confirmed_at: new Date().toISOString(),
+        reminder_24h_sent_at: null,
       })
       .eq('id', appointment_id);
 

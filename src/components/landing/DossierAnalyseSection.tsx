@@ -95,20 +95,22 @@ export function DossierAnalyseSection() {
     if (!isCoordonneesValid || !selectedSlot) return;
     setIsSubmitting(true);
 
+    let createdApptId: string | null = null;
     try {
       // 1. Réserver le créneau téléphonique d'abord (gestion conflit)
-      const { data: appt, error: apptErr } = await supabase
+      // Pas de .select() : RLS SELECT anonyme bloque RETURNING. On génère l'id côté client.
+      const apptId = crypto.randomUUID();
+      const { error: apptErr } = await supabase
         .from('lead_phone_appointments')
         .insert({
+          id: apptId,
           prospect_email: email.trim(),
           prospect_phone: telephone.trim(),
           prospect_name: `${prenom.trim()} ${nom.trim()}`.trim(),
           slot_start: selectedSlot.start.toISOString(),
           slot_end: selectedSlot.end.toISOString(),
           source_form: 'analyse_dossier',
-        })
-        .select('id')
-        .single();
+        });
 
       if (apptErr) {
         if ((apptErr as any).code === '23505') {
@@ -120,8 +122,12 @@ export function DossierAnalyseSection() {
         setIsSubmitting(false);
         return;
       }
+      createdApptId = apptId;
 
-      const { data: leadData, error } = await supabase.from('leads').insert({
+      // 2. Créer le lead — id généré côté client, pas de .select() pour éviter 42501 RLS
+      const leadId = crypto.randomUUID();
+      const { error } = await supabase.from('leads').insert({
+        id: leadId,
         email: email.trim(),
         prenom: prenom.trim(),
         nom: nom.trim(),
@@ -142,17 +148,15 @@ export function DossierAnalyseSection() {
         utm_campaign: utmParams.utm_campaign,
         utm_content: utmParams.utm_content,
         utm_term: utmParams.utm_term,
-      }).select('id').single();
+      });
 
       if (error) throw error;
 
       // Lier l'appointment au lead créé
-      if (leadData?.id && appt?.id) {
-        await supabase
-          .from('lead_phone_appointments')
-          .update({ lead_id: leadData.id })
-          .eq('id', appt.id);
-      }
+      await supabase
+        .from('lead_phone_appointments')
+        .update({ lead_id: leadId })
+        .eq('id', apptId);
 
       // Fire-and-forget email notification
       supabase.functions
@@ -184,6 +188,14 @@ export function DossierAnalyseSection() {
       setStep('submitted');
     } catch (error) {
       console.error('Error submitting analyse dossier:', error);
+      // Libère le créneau si le lead n'a pas pu être créé après réservation
+      if (createdApptId) {
+        await supabase
+          .from('lead_phone_appointments')
+          .update({ status: 'annule' })
+          .eq('id', createdApptId)
+          .then(undefined, () => {});
+      }
       toast.error('Une erreur est survenue. Veuillez réessayer.');
     } finally {
       setIsSubmitting(false);
