@@ -22,6 +22,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSearchType } from '@/contexts/SearchTypeContext';
 import { useUTMParams } from '@/hooks/useUTMParams';
+import { PhoneSlotPicker } from '@/components/landing/PhoneSlotPicker';
+import type { Slot } from '@/lib/phoneSlots';
 
 const permisOptions = [
   { value: 'Suisse', label: 'Nationalité Suisse' },
@@ -72,6 +74,7 @@ export function DossierAnalyseSection() {
   const [localite, setLocalite] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
 
   // Validation
   const isQualificationValidLocation = statutEmploi && permisNationalite;
@@ -80,7 +83,7 @@ export function DossierAnalyseSection() {
     ? isQualificationValidAchat
     : isQualificationValidLocation;
   const isCoordonneesValid =
-    prenom.trim() && nom.trim() && email.trim() && telephone.trim();
+    prenom.trim() && nom.trim() && email.trim() && telephone.trim() && !!selectedSlot;
 
   const handleAnalyser = () => {
     if (isQualificationValid) {
@@ -89,11 +92,36 @@ export function DossierAnalyseSection() {
   };
 
   const handleSubmit = async () => {
-    if (!isCoordonneesValid) return;
+    if (!isCoordonneesValid || !selectedSlot) return;
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.from('leads').insert({
+      // 1. Réserver le créneau téléphonique d'abord (gestion conflit)
+      const { data: appt, error: apptErr } = await supabase
+        .from('lead_phone_appointments')
+        .insert({
+          prospect_email: email.trim(),
+          prospect_phone: telephone.trim(),
+          prospect_name: `${prenom.trim()} ${nom.trim()}`.trim(),
+          slot_start: selectedSlot.start.toISOString(),
+          slot_end: selectedSlot.end.toISOString(),
+          source_form: 'analyse_dossier',
+        })
+        .select('id')
+        .single();
+
+      if (apptErr) {
+        if ((apptErr as any).code === '23505') {
+          toast.error('Ce créneau vient d\'être réservé. Choisis-en un autre.');
+          setSelectedSlot(null);
+        } else {
+          throw apptErr;
+        }
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { data: leadData, error } = await supabase.from('leads').insert({
         email: email.trim(),
         prenom: prenom.trim(),
         nom: nom.trim(),
