@@ -114,6 +114,8 @@ const calculateCounts = (notifs: Notification[]): NotificationCounts => {
 export const useNotifications = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
