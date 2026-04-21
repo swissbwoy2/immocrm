@@ -401,7 +401,7 @@ export default function Leads() {
     <div className="space-y-6">
       <PremiumPageHeader
         title="Leads Shortlist"
-        subtitle={`${leads.length} leads • ${chercheurCount} chercheurs • ${vendeurCount} vendeurs • ${qualifiedCount} qualifiés • ${notContactedCount} non contactés`}
+        subtitle={`${displayedLeads.length} leads • ${chercheurCount} chercheurs • ${vendeurCount} vendeurs • ${qualifiedCount} qualifiés • ${notContactedCount} non contactés`}
       />
 
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
