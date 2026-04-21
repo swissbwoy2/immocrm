@@ -7,8 +7,9 @@ import { GoldDivider } from '@/components/public-site/animations/GoldDivider';
 import { TiltCard } from '@/components/public-site/animations/TiltCard';
 import { MagneticButton } from '@/components/public-site/animations/MagneticButton';
 import { staggerContainer, staggerItem } from '@/hooks/useScrollReveal';
+import { useSearchType } from '@/contexts/SearchTypeContext';
 
-const columns = [
+const columnsLocation = [
   {
     icon: Banknote,
     title: 'Activation',
@@ -32,7 +33,37 @@ const columns = [
   },
 ];
 
+const columnsAchat = [
+  {
+    icon: Banknote,
+    title: 'Activation',
+    value: "2'500 CHF",
+    description: "Acompte d'engagement, déduit de la commission finale d'achat.",
+    highlight: false,
+  },
+  {
+    icon: Trophy,
+    title: 'Succès',
+    value: '1% du prix d\'achat',
+    description: "Commission uniquement à l'acte authentique. Acompte déduit.",
+    highlight: true,
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Garantie',
+    value: '6 mois',
+    description: "Pas de bien trouvé en 6 mois ? Acompte intégralement remboursé.",
+    highlight: false,
+  },
+];
+
 export function PricingSection() {
+  const { isAchat } = useSearchType();
+  const columns = isAchat ? columnsAchat : columnsLocation;
+  const subtext = isAchat
+    ? 'Sans engagement · Acompte remboursable après 6 mois'
+    : 'Sans engagement · Acompte remboursable';
+
   return (
     <section id="tarifs" className="py-24 md:py-32 bg-background luxury-mesh-bg">
       <div className="container mx-auto px-4">
@@ -42,7 +73,9 @@ export function PricingSection() {
             Tarifs transparents
           </p>
           <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground font-serif">
-            Un modèle simple et sans surprise
+            {isAchat
+              ? 'Une commission claire, alignée sur votre succès'
+              : 'Un modèle simple et sans surprise'}
           </h2>
         </ScrollReveal>
 
@@ -99,7 +132,7 @@ export function PricingSection() {
               </Link>
             </Button>
           </MagneticButton>
-          <p className="text-xs text-muted-foreground mt-3">Sans engagement · Acompte remboursable</p>
+          <p className="text-xs text-muted-foreground mt-3">{subtext}</p>
         </ScrollReveal>
 
       </div>

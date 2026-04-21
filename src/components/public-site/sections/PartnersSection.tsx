@@ -11,8 +11,9 @@ import { GoldDivider } from '@/components/public-site/animations/GoldDivider';
 import { Marquee } from '@/components/public-site/magic/Marquee';
 import { BorderBeam } from '@/components/public-site/magic/BorderBeam';
 import { motion } from 'framer-motion';
+import { useSearchType } from '@/contexts/SearchTypeContext';
 
-const heroPartners = [
+const heroPartnersLocation = [
   {
     name: 'Resolve',
     logo: resolveLogo,
@@ -27,6 +28,21 @@ const heroPartners = [
   },
 ];
 
+const heroPartnersAchat = [
+  {
+    name: 'RealAdvisor',
+    logo: realadvisorLogo,
+    href: 'https://www.realadvisor.ch',
+    desc: 'Comparateur indépendant des meilleurs taux hypothécaires',
+  },
+  {
+    name: 'Immobilier.ch',
+    logo: immobilierChLogo,
+    href: 'https://www.immobilier.ch',
+    desc: 'Le portail immobilier n°1 en Suisse romande',
+  },
+];
+
 const marqueePartners = [
   { name: 'Allianz', logo: allianzLogo },
   { name: 'AXA', logo: axaLogo },
@@ -36,6 +52,9 @@ const marqueePartners = [
 ];
 
 export function PartnersSection() {
+  const { isAchat } = useSearchType();
+  const heroPartners = isAchat ? heroPartnersAchat : heroPartnersLocation;
+
   return (
     <section id="partenaires" className="py-24 md:py-32 bg-muted/30 relative overflow-hidden">
       <div className="container mx-auto px-4 relative z-10">
@@ -58,7 +77,7 @@ export function PartnersSection() {
           <GoldDivider className="mb-12" />
         </ScrollReveal>
 
-        {/* HERO PARTNERS — Resolve + FirstCaution dominant */}
+        {/* HERO PARTNERS */}
         <ScrollReveal variant="fade-up" delay={0.15}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-14">
             {heroPartners.map((p, i) => (
@@ -78,7 +97,6 @@ export function PartnersSection() {
                 <div className="relative flex flex-col items-center justify-center gap-4 px-8 py-8 bg-[hsl(38_45%_48%/0.06)] border-2 border-[hsl(38_45%_48%/0.3)] rounded-2xl hover:border-[hsl(38_45%_48%/0.65)] hover:shadow-[0_0_40px_hsl(38_45%_48%/0.2)] transition-all duration-500 h-36">
                   <BorderBeam duration={6} colorFrom="hsl(38 55% 65%)" colorTo="hsl(28 35% 38%)" />
 
-                  {/* Partenaire privilégié badge */}
                   <div className="absolute top-3 right-3 flex items-center gap-1 bg-[hsl(38_45%_44%/0.15)] border border-[hsl(38_45%_48%/0.45)] rounded-full px-2.5 py-1">
                     <Award className="h-3 w-3 text-[hsl(38_55%_65%)]" />
                     <span className="text-[10px] font-bold text-[hsl(38_55%_65%)] uppercase tracking-widest">Partenaire privilégié</span>
@@ -92,7 +110,6 @@ export function PartnersSection() {
                   />
                   <p className="text-xs text-[hsl(40_20%_60%)] group-hover:text-[hsl(40_20%_75%)] text-center transition-colors">{p.desc}</p>
 
-                  {/* Pulsing halo */}
                   <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 bg-[radial-gradient(ellipse_80%_60%_at_50%_50%,hsl(38_45%_48%/0.06),transparent)]" />
                 </div>
               </motion.a>

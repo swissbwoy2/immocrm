@@ -6,14 +6,24 @@ import { ScrollReveal } from '@/components/public-site/animations/ScrollReveal';
 import { GoldDivider } from '@/components/public-site/animations/GoldDivider';
 import { TiltCard } from '@/components/public-site/animations/TiltCard';
 import { staggerContainer, staggerItem } from '@/hooks/useScrollReveal';
+import { useSearchType } from '@/contexts/SearchTypeContext';
 
-const profiles = [
+const profilesLocation = [
   { icon: Clock, title: 'Vous manquez de temps', description: "Entre le travail, la famille et les obligations, vous n'avez pas le temps d'éplucher les annonces et d'appeler les régies." },
   { icon: Target, title: 'Vous ne trouvez rien qui correspond', description: "Les annonces disparaissent en quelques heures. Vous arrivez toujours trop tard ou votre dossier n'est pas retenu." },
   { icon: Compass, title: "Vous venez d'arriver en Suisse", description: "Vous ne connaissez pas encore le marché local, les régies, ni les pratiques. Vous avez besoin d'un guide." },
 ];
 
+const profilesAchat = [
+  { icon: Clock, title: 'Vous manquez de temps', description: "Démarcher banques, visiter, négocier, suivre les notaires : un projet d'achat est un second métier." },
+  { icon: Target, title: 'Vous ne trouvez pas le bien idéal', description: "Les bons biens partent en off-market avant même d'être publiés. Vous ratez les meilleures opportunités." },
+  { icon: Compass, title: 'Vous voulez le meilleur financement', description: "Comparer les taux hypothécaires de toutes les banques sans vous y noyer : on s'en charge." },
+];
+
 export function ForWhoSection() {
+  const { isAchat } = useSearchType();
+  const profiles = isAchat ? profilesAchat : profilesLocation;
+
   return (
     <section className="py-24 md:py-32 bg-muted/30">
       <div className="container mx-auto px-4">

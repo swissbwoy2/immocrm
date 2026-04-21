@@ -7,8 +7,9 @@ import { ScrollReveal } from '@/components/public-site/animations/ScrollReveal';
 import { GoldDivider } from '@/components/public-site/animations/GoldDivider';
 import { MagneticButton } from '@/components/public-site/animations/MagneticButton';
 import { RetroGrid } from '@/components/public-site/magic/RetroGrid';
+import { useSearchType } from '@/contexts/SearchTypeContext';
 
-const steps = [
+const stepsLocation = [
   {
     num: '01',
     icon: MessageSquare,
@@ -28,6 +29,29 @@ const steps = [
     description: "Quand vous êtes au travail, en vacances ou indisponible, nous visitons pour vous et vous faisons un retour complet. Dossier optimisé, candidature déposée, suivi auprès de la régie — vous n'avez qu'à choisir votre futur logement.",
   },
 ];
+
+const stepsAchat = [
+  {
+    num: '01',
+    icon: MessageSquare,
+    title: 'Vous nous décrivez votre projet',
+    description: "En 2 minutes : zone, budget, type de bien, situation personnelle et fonds propres. Gratuit, sans engagement.",
+  },
+  {
+    num: '02',
+    icon: Search,
+    title: 'Votre agent dédié active son réseau',
+    description: "Il accède aux biens off-market, contacte les vendeurs et propriétaires, et vous propose uniquement les biens qui matchent.",
+  },
+  {
+    num: '03',
+    icon: Home,
+    title: 'Visite, financement, signature',
+    description: "Nous vous accompagnons aux visites, comparons les meilleures hypothèques avec nos partenaires bancaires, et vous suivons jusqu'à l'acte authentique chez le notaire.",
+  },
+];
+
+type Step = typeof stepsLocation[0];
 
 function ConnectorPath({ isInView }: { isInView: boolean }) {
   const prefersReducedMotion = useReducedMotion();
@@ -56,7 +80,7 @@ function ConnectorPath({ isInView }: { isInView: boolean }) {
   );
 }
 
-function StepCard({ step, index, isInView }: { step: typeof steps[0]; index: number; isInView: boolean }) {
+function StepCard({ step, index, isInView }: { step: Step; index: number; isInView: boolean }) {
   const Icon = step.icon;
   const prefersReducedMotion = useReducedMotion();
 
@@ -67,12 +91,10 @@ function StepCard({ step, index, isInView }: { step: typeof steps[0]; index: num
       transition={{ duration: 0.6, delay: index * 0.18, ease: [0.22, 1, 0.36, 1] as const }}
       className="relative flex flex-col bg-card/60 backdrop-blur-sm border border-[hsl(38_45%_48%/0.18)] rounded-2xl p-7 hover:border-[hsl(38_45%_48%/0.5)] hover:shadow-[0_12px_40px_hsl(38_45%_48%/0.1)] transition-all duration-500 group overflow-hidden h-full"
     >
-      {/* Watermark number */}
       <span className="absolute -top-3 right-3 text-9xl font-bold text-[hsl(38_45%_48%/0.07)] select-none pointer-events-none leading-none font-serif">
         {step.num}
       </span>
 
-      {/* Animated icon */}
       <motion.div
         initial={prefersReducedMotion ? false : { rotate: -15, scale: 0.6, opacity: 0 }}
         animate={isInView ? { rotate: 0, scale: 1, opacity: 1 } : {}}
@@ -87,22 +109,21 @@ function StepCard({ step, index, isInView }: { step: typeof steps[0]; index: num
       </h3>
       <p className="text-sm text-[hsl(40_20%_60%)] leading-relaxed relative z-10">{step.description}</p>
 
-      {/* Bottom accent */}
       <div className="absolute bottom-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.55)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
     </motion.div>
   );
 }
 
-function StepsGrid() {
+function StepsGrid({ stepsData }: { stepsData: Step[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, amount: 0.15 });
 
   return (
     <div ref={ref} className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr_auto_1fr] gap-6 max-w-5xl mx-auto items-start">
-      {steps.map((step, i) => (
+      {stepsData.map((step, i) => (
         <>
           <StepCard key={step.num} step={step} index={i} isInView={isInView} />
-          {i < steps.length - 1 && <ConnectorPath key={`conn-${i}`} isInView={isInView} />}
+          {i < stepsData.length - 1 && <ConnectorPath key={`conn-${i}`} isInView={isInView} />}
         </>
       ))}
     </div>
@@ -110,6 +131,9 @@ function StepsGrid() {
 }
 
 export function HowItWorksSection() {
+  const { isAchat } = useSearchType();
+  const steps = isAchat ? stepsAchat : stepsLocation;
+
   return (
     <section id="comment-ca-marche" className="py-24 md:py-32 bg-background relative overflow-hidden">
       <RetroGrid className="opacity-[0.04]" />
@@ -129,7 +153,7 @@ export function HowItWorksSection() {
           <GoldDivider className="mb-14" />
         </ScrollReveal>
 
-        <StepsGrid />
+        <StepsGrid stepsData={steps} />
 
         <ScrollReveal variant="fade-up" delay={0.4} className="flex justify-center mt-14">
           <MagneticButton strength={0.25}>
