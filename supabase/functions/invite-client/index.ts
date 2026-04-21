@@ -151,7 +151,7 @@ serve(async (req) => {
       const { error: resetError } = await supabaseAdmin.auth.resetPasswordForEmail(
         email,
         {
-          redirectTo: 'https://immocrm.lovable.app/first-login',
+          redirectTo,
         }
       );
 
