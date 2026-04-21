@@ -229,67 +229,85 @@ export const useNotifications = () => {
   }, [loadNotifications]);
 
   // Setup realtime subscription
+  // CRITICAL: never throw — a crash here would take down the whole dashboard
   useEffect(() => {
     if (!user) return;
 
-    const channel = supabase
-      .channel('notifications-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const newNotification = {
-            ...payload.new,
-            metadata: payload.new.metadata as Record<string, any> | null
-          } as Notification;
-          
-          setNotifications(prev => [newNotification, ...prev]);
+    let channel: ReturnType<typeof supabase.channel> | null = null;
 
-          toast({
-            title: newNotification.title,
-            description: newNotification.message || undefined,
-          });
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          setNotifications(prev => 
-            prev.map(n => 
-              n.id === payload.new.id 
-                ? { ...payload.new, metadata: payload.new.metadata as Record<string, any> | null } as Notification 
-                : n
-            )
-          );
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
-        }
-      )
-      .subscribe();
+    try {
+      // Unique channel name per user + per mount to avoid
+      // "cannot add postgres_changes callbacks after subscribe()" when
+      // the hook re-mounts (StrictMode, navigation) before the previous
+      // channel is fully cleaned up.
+      const channelName = `notifications:${user.id}:${Math.random().toString(36).slice(2, 10)}`;
+
+      channel = supabase
+        .channel(channelName)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const newNotification = {
+              ...payload.new,
+              metadata: payload.new.metadata as Record<string, any> | null
+            } as Notification;
+
+            setNotifications(prev => [newNotification, ...prev]);
+
+            toast({
+              title: newNotification.title,
+              description: newNotification.message || undefined,
+            });
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            setNotifications(prev =>
+              prev.map(n =>
+                n.id === payload.new.id
+                  ? { ...payload.new, metadata: payload.new.metadata as Record<string, any> | null } as Notification
+                  : n
+              )
+            );
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
+          }
+        )
+        .subscribe();
+    } catch (err) {
+      // Realtime failure must NEVER crash the dashboard.
+      console.error('[useNotifications] realtime setup failed:', err);
+    }
 
     return () => {
-      supabase.removeChannel(channel);
+      try {
+        if (channel) supabase.removeChannel(channel);
+      } catch (err) {
+        console.error('[useNotifications] removeChannel failed:', err);
+      }
     };
   }, [user, toast]);
 
