@@ -109,6 +109,8 @@ serve(async (req) => {
 
   try {
     const { email, clientId, prenom, nom, telephone, demandeMandat, invitationLegere, typeRecherche, agentId }: InviteClientRequest = await req.json();
+    const redirectTo = `${getAppBaseUrl(req)}/first-login`;
+    console.log('Redirect URL:', redirectTo);
 
     console.log('Inviting client:', { email, clientId, prenom, nom, hasDemandeMandat: !!demandeMandat, invitationLegere, agentId });
 
