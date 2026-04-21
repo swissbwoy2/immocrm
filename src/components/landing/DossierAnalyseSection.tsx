@@ -142,9 +142,17 @@ export function DossierAnalyseSection() {
         utm_campaign: utmParams.utm_campaign,
         utm_content: utmParams.utm_content,
         utm_term: utmParams.utm_term,
-      });
+      }).select('id').single();
 
       if (error) throw error;
+
+      // Lier l'appointment au lead créé
+      if (leadData?.id && appt?.id) {
+        await supabase
+          .from('lead_phone_appointments')
+          .update({ lead_id: leadData.id })
+          .eq('id', appt.id);
+      }
 
       // Fire-and-forget email notification
       supabase.functions
