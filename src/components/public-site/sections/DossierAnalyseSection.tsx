@@ -13,6 +13,8 @@ import { useUTMParams } from '@/hooks/useUTMParams';
 import { ScrollReveal } from '@/components/public-site/animations/ScrollReveal';
 import { BorderBeam } from '@/components/public-site/magic/BorderBeam';
 import { CinematicHero } from '@/components/ui/cinematic-hero';
+import { PhoneSlotPicker } from '@/components/landing/PhoneSlotPicker';
+import type { Slot } from '@/lib/phoneSlots';
 
 const permisOptions = [
   { value: 'Suisse', label: 'Nationalité Suisse' },
@@ -55,21 +57,46 @@ export function DossierAnalyseSection() {
   const [telephone, setTelephone] = useState('');
   const [localite, setLocalite] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
 
   const isQualificationValidLocation = statutEmploi && permisNationalite;
   const isQualificationValidAchat = accordBancaire && apportPersonnel;
   const isQualificationValid = isAchat ? isQualificationValidAchat : isQualificationValidLocation;
-  const isCoordonneesValid = prenom.trim() && nom.trim() && email.trim() && telephone.trim();
+  const isCoordonneesValid = prenom.trim() && nom.trim() && email.trim() && telephone.trim() && !!selectedSlot;
 
   const handleAnalyser = () => {
     if (isQualificationValid) setStep('coordonnees');
   };
 
   const handleSubmit = async () => {
-    if (!isCoordonneesValid) return;
+    if (!isCoordonneesValid || !selectedSlot) return;
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from('leads').insert({
+      const { data: appt, error: apptErr } = await supabase
+        .from('lead_phone_appointments')
+        .insert({
+          prospect_email: email.trim(),
+          prospect_phone: telephone.trim(),
+          prospect_name: `${prenom.trim()} ${nom.trim()}`.trim(),
+          slot_start: selectedSlot.start.toISOString(),
+          slot_end: selectedSlot.end.toISOString(),
+          source_form: 'analyse_dossier',
+        })
+        .select('id')
+        .single();
+
+      if (apptErr) {
+        if ((apptErr as any).code === '23505') {
+          toast.error('Ce créneau vient d\'être réservé. Choisis-en un autre.');
+          setSelectedSlot(null);
+        } else {
+          throw apptErr;
+        }
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { data: leadData, error } = await supabase.from('leads').insert({
         email: email.trim(), prenom: prenom.trim(), nom: nom.trim(), telephone: telephone.trim(),
         localite: localite.trim() || null, statut_emploi: isAchat ? null : statutEmploi,
         permis_nationalite: isAchat ? null : permisNationalite, poursuites: isAchat ? null : !confirmNoPoursuites,
@@ -79,8 +106,15 @@ export function DossierAnalyseSection() {
         apport_personnel: isAchat ? apportPersonnel : null, type_bien: isAchat ? typeBien : null,
         utm_source: utmParams.utm_source, utm_medium: utmParams.utm_medium,
         utm_campaign: utmParams.utm_campaign, utm_content: utmParams.utm_content, utm_term: utmParams.utm_term,
-      });
+      }).select('id').single();
       if (error) throw error;
+
+      if (leadData?.id && appt?.id) {
+        await supabase
+          .from('lead_phone_appointments')
+          .update({ lead_id: leadData.id })
+          .eq('id', appt.id);
+      }
 
       supabase.functions.invoke('notify-new-lead', {
         body: {
@@ -254,6 +288,9 @@ export function DossierAnalyseSection() {
                   <div className="space-y-2">
                     <Label className="text-sm font-medium flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-muted-foreground" />Localité souhaitée</Label>
                     <Input value={localite} onChange={(e) => setLocalite(e.target.value)} placeholder="Ex: Lausanne, Genève..." className="h-14 bg-background/80 border-border/50" />
+                  </div>
+                  <div className="pt-4 border-t border-border/40">
+                    <PhoneSlotPicker selected={selectedSlot} onSelect={setSelectedSlot} />
                   </div>
                   <div className="flex gap-3">
                     <Button variant="outline" size="lg" className="flex-shrink-0" onClick={() => setStep('qualification')}><ArrowLeft className="h-4 w-4" /></Button>

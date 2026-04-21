@@ -137,6 +137,43 @@ export default function Leads() {
     },
   });
 
+  const { data: phoneAppointments = [] } = useQuery({
+    queryKey: ["lead-phone-appointments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lead_phone_appointments")
+        .select("id, lead_id, slot_start, slot_end, status, prospect_email")
+        .order("slot_start", { ascending: true });
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  const apptByLeadId = new Map<string, any>();
+  const apptByEmail = new Map<string, any>();
+  phoneAppointments.forEach((a) => {
+    if (a.lead_id) apptByLeadId.set(a.lead_id, a);
+    if (a.prospect_email) apptByEmail.set(a.prospect_email.toLowerCase(), a);
+  });
+
+  const [confirmingApptId, setConfirmingApptId] = useState<string | null>(null);
+  const confirmAppointment = async (appointmentId: string) => {
+    setConfirmingApptId(appointmentId);
+    try {
+      const { error } = await supabase.functions.invoke('confirm-phone-appointment', {
+        body: { appointment_id: appointmentId },
+      });
+      if (error) throw error;
+      toast.success('Rendez-vous confirmé. Email + invitation envoyés au prospect.');
+      queryClient.invalidateQueries({ queryKey: ["lead-phone-appointments"] });
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Erreur: ' + (e.message || 'confirmation échouée'));
+    } finally {
+      setConfirmingApptId(null);
+    }
+  };
+
   const { data: formulaires = [] } = useQuery({
     queryKey: ["lead-formulaires"],
     queryFn: async () => {
@@ -620,6 +657,24 @@ export default function Leads() {
                       {format(new Date(lead.created_at), "dd MMM yyyy HH:mm", { locale: fr })}
                     </span>
                   )}
+                  {(() => {
+                    const appt = apptByLeadId.get(lead.id) || (lead.email && apptByEmail.get(lead.email.toLowerCase()));
+                    if (!appt) return null;
+                    const isConfirmed = appt.status === 'confirme';
+                    return (
+                      <div className="mt-1">
+                        <Badge
+                          variant="outline"
+                          className={isConfirmed
+                            ? "bg-success/15 text-success border-success/40"
+                            : "bg-warning/15 text-warning border-warning/40"}
+                        >
+                          📞 {format(new Date(appt.slot_start), "EEE d MMM HH'h'mm", { locale: fr })}
+                          {isConfirmed ? " · confirmé" : " · en attente"}
+                        </Badge>
+                      </div>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell>
                   {lead.contacted ? (
@@ -632,6 +687,25 @@ export default function Leads() {
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-1">
+                    {(() => {
+                      const appt = apptByLeadId.get(lead.id) || (lead.email && apptByEmail.get(lead.email.toLowerCase()));
+                      if (!appt || appt.status !== 'en_attente') return null;
+                      return (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => confirmAppointment(appt.id)}
+                          disabled={confirmingApptId === appt.id}
+                          title="Confirmer le RDV téléphonique (envoie email + .ics)"
+                        >
+                          {confirmingApptId === appt.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-success" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4 text-success" />
+                          )}
+                        </Button>
+                      );
+                    })()}
                     {(lead.source === 'landing_analyse_dossier' || lead.source === 'landing_quickform' || lead.source === 'landing_quickform_achat') && (
                       <Button
                         variant="ghost"

@@ -4964,6 +4964,68 @@ export type Database = {
           },
         ]
       }
+      lead_phone_appointments: {
+        Row: {
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          ics_sent_at: string | null
+          id: string
+          lead_id: string | null
+          notes_admin: string | null
+          prospect_email: string
+          prospect_name: string
+          prospect_phone: string
+          slot_end: string
+          slot_start: string
+          source_form: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          ics_sent_at?: string | null
+          id?: string
+          lead_id?: string | null
+          notes_admin?: string | null
+          prospect_email: string
+          prospect_name: string
+          prospect_phone: string
+          slot_end: string
+          slot_start: string
+          source_form?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          ics_sent_at?: string | null
+          id?: string
+          lead_id?: string | null
+          notes_admin?: string | null
+          prospect_email?: string
+          prospect_name?: string
+          prospect_phone?: string
+          slot_end?: string
+          slot_start?: string
+          source_form?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_phone_appointments_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           a_garant: boolean | null
@@ -9801,6 +9863,21 @@ export type Database = {
       }
     }
     Views: {
+      available_phone_slots: {
+        Row: {
+          slot_start: string | null
+          status: string | null
+        }
+        Insert: {
+          slot_start?: string | null
+          status?: string | null
+        }
+        Update: {
+          slot_start?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       renovation_my_company_score_view: {
         Row: {
           company_id: string | null
