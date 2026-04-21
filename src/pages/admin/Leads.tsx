@@ -528,6 +528,18 @@ export default function Leads() {
                   </div>
                 </TableCell>
                 <TableCell>
+                  <div className="space-y-1">
+                    <Badge variant="outline" className={sourceInfo.badgeClass}>
+                      {sourceInfo.label}
+                    </Badge>
+                    {lead.utm_campaign && (
+                      <div className="text-[10px] text-muted-foreground truncate max-w-[160px]" title={lead.utm_campaign}>
+                        {lead.utm_campaign}
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
                   <div className="space-y-2">
                     <ClientTypeBadge typeRecherche={lead.type_recherche} size="sm" />
                     {lead.localite && (
