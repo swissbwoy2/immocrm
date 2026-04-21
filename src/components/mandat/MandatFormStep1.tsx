@@ -95,8 +95,8 @@ export default function MandatFormStep1({ data, onChange }: Props) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Email */}
         <div className="space-y-2 group">
-          <Label htmlFor="email" className="flex items-center gap-2 text-sm font-medium">
-            <Mail className="h-4 w-4 text-primary/70" />
+          <Label htmlFor="email" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+            <Mail className="h-4 w-4 text-[hsl(38_55%_60%)]" />
             E-mail <span className="text-destructive">*</span>
           </Label>
           <Input
@@ -106,14 +106,14 @@ export default function MandatFormStep1({ data, onChange }: Props) {
             onChange={(e) => onChange({ email: e.target.value })}
             placeholder="votre.email@example.ch"
             required
-            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm"
+            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60"
           />
         </div>
 
         {/* Téléphone */}
         <div className="space-y-2 group">
-          <Label htmlFor="telephone" className="flex items-center gap-2 text-sm font-medium">
-            <Phone className="h-4 w-4 text-primary/70" />
+          <Label htmlFor="telephone" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+            <Phone className="h-4 w-4 text-[hsl(38_55%_60%)]" />
             Téléphone <span className="text-destructive">*</span>
           </Label>
           <Input
@@ -123,14 +123,14 @@ export default function MandatFormStep1({ data, onChange }: Props) {
             onChange={(e) => onChange({ telephone: e.target.value })}
             placeholder="+41 79 123 45 67"
             required
-            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm"
+            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60"
           />
         </div>
 
         {/* Prénom */}
         <div className="space-y-2 group">
-          <Label htmlFor="prenom" className="flex items-center gap-2 text-sm font-medium">
-            <User className="h-4 w-4 text-primary/70" />
+          <Label htmlFor="prenom" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+            <User className="h-4 w-4 text-[hsl(38_55%_60%)]" />
             Prénom <span className="text-destructive">*</span>
           </Label>
           <Input
@@ -139,14 +139,14 @@ export default function MandatFormStep1({ data, onChange }: Props) {
             onChange={(e) => onChange({ prenom: e.target.value })}
             placeholder="Prénom"
             required
-            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm"
+            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60"
           />
         </div>
 
         {/* Nom */}
         <div className="space-y-2 group">
-          <Label htmlFor="nom" className="flex items-center gap-2 text-sm font-medium">
-            <User className="h-4 w-4 text-primary/70" />
+          <Label htmlFor="nom" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+            <User className="h-4 w-4 text-[hsl(38_55%_60%)]" />
             Nom de famille <span className="text-destructive">*</span>
           </Label>
           <Input
@@ -155,14 +155,14 @@ export default function MandatFormStep1({ data, onChange }: Props) {
             onChange={(e) => onChange({ nom: e.target.value })}
             placeholder="Nom"
             required
-            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm"
+            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60"
           />
         </div>
 
         {/* Adresse - Full width with autocomplete */}
         <div className="space-y-2 md:col-span-2 group">
-          <Label htmlFor="adresse" className="flex items-center gap-2 text-sm font-medium">
-            <MapPin className="h-4 w-4 text-primary/70" />
+          <Label htmlFor="adresse" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+            <MapPin className="h-4 w-4 text-[hsl(38_55%_60%)]" />
             Adresse actuelle <span className="text-muted-foreground text-xs">(optionnel)</span>
           </Label>
           <GoogleAddressAutocomplete
@@ -170,20 +170,20 @@ export default function MandatFormStep1({ data, onChange }: Props) {
             onChange={(address: AddressComponents) => onChange({ adresse: address.fullAddress })}
             onInputChange={(value) => onChange({ adresse: value })}
             placeholder="Commencez à taper votre adresse..."
-            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm"
+            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60"
           />
         </div>
 
         {/* Date de naissance - 3 sélecteurs */}
         <div className="space-y-2 group md:col-span-2">
-          <Label className="flex items-center gap-2 text-sm font-medium">
-            <Calendar className="h-4 w-4 text-primary/70" />
+          <Label className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+            <Calendar className="h-4 w-4 text-[hsl(38_55%_60%)]" />
             Date de naissance <span className="text-destructive">*</span>
           </Label>
           <div className="grid grid-cols-3 gap-2">
             {/* Jour */}
             <Select value={dateParts.day} onValueChange={(v) => handleDatePartChange('day', v)}>
-              <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm">
+              <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60">
                 <SelectValue placeholder="Jour" />
               </SelectTrigger>
               <SelectContent className="backdrop-blur-xl bg-popover/95 max-h-[200px]">
@@ -195,7 +195,7 @@ export default function MandatFormStep1({ data, onChange }: Props) {
 
             {/* Mois */}
             <Select value={dateParts.month} onValueChange={(v) => handleDatePartChange('month', v)}>
-              <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm">
+              <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60">
                 <SelectValue placeholder="Mois" />
               </SelectTrigger>
               <SelectContent className="backdrop-blur-xl bg-popover/95 max-h-[200px]">
@@ -207,7 +207,7 @@ export default function MandatFormStep1({ data, onChange }: Props) {
 
             {/* Année */}
             <Select value={dateParts.year} onValueChange={(v) => handleDatePartChange('year', v)}>
-              <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm">
+              <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60">
                 <SelectValue placeholder="Année" />
               </SelectTrigger>
               <SelectContent className="backdrop-blur-xl bg-popover/95 max-h-[200px]">
@@ -221,12 +221,12 @@ export default function MandatFormStep1({ data, onChange }: Props) {
 
         {/* Nationalité */}
         <div className="space-y-2 group">
-          <Label htmlFor="nationalite" className="flex items-center gap-2 text-sm font-medium">
-            <Globe className="h-4 w-4 text-primary/70" />
+          <Label htmlFor="nationalite" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+            <Globe className="h-4 w-4 text-[hsl(38_55%_60%)]" />
             Nationalité <span className="text-muted-foreground text-xs">(optionnel)</span>
           </Label>
           <Select value={data.nationalite} onValueChange={(value) => onChange({ nationalite: value })}>
-            <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm">
+            <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60">
               <SelectValue placeholder="Sélectionnez" />
             </SelectTrigger>
             <SelectContent className="backdrop-blur-xl bg-popover/95">
@@ -239,12 +239,12 @@ export default function MandatFormStep1({ data, onChange }: Props) {
 
         {/* Type de permis */}
         <div className="space-y-2 group">
-          <Label htmlFor="type_permis" className="flex items-center gap-2 text-sm font-medium">
-            <Shield className="h-4 w-4 text-primary/70" />
+          <Label htmlFor="type_permis" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+            <Shield className="h-4 w-4 text-[hsl(38_55%_60%)]" />
             Type de permis de séjour <span className="text-destructive">*</span>
           </Label>
           <Select value={data.type_permis} onValueChange={(value) => onChange({ type_permis: value })}>
-            <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm">
+            <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60">
               <SelectValue placeholder="Sélectionnez" />
             </SelectTrigger>
             <SelectContent className="backdrop-blur-xl bg-popover/95">
@@ -257,12 +257,12 @@ export default function MandatFormStep1({ data, onChange }: Props) {
 
         {/* État civil */}
         <div className="space-y-2 group">
-          <Label htmlFor="etat_civil" className="flex items-center gap-2 text-sm font-medium">
-            <Heart className="h-4 w-4 text-primary/70" />
+          <Label htmlFor="etat_civil" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
+            <Heart className="h-4 w-4 text-[hsl(38_55%_60%)]" />
             État civil <span className="text-muted-foreground text-xs">(optionnel)</span>
           </Label>
           <Select value={data.etat_civil} onValueChange={(value) => onChange({ etat_civil: value })}>
-            <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/50 backdrop-blur-sm">
+            <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60">
               <SelectValue placeholder="Sélectionnez" />
             </SelectTrigger>
             <SelectContent className="backdrop-blur-xl bg-popover/95">
