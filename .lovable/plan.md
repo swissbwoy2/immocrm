@@ -1,93 +1,75 @@
 
 
-# Plan : Fix lisibilité formulaire /nouveau-mandat (urgent)
+# Plan : Refondre `/nouveau-mandat` avec le design system forms-premium
 
-## Diagnostic du bug visible sur ton screenshot
+## Constat
 
-Tu vois un formulaire quasi illisible parce qu'il y a **3 problèmes de contraste cumulés** :
+Claude Code a livré le commit `ed91964` qui couvre Login, FirstLogin, ResetPassword, FormulaireVendeurComplet, FormulaireRelouer, FormulaireConstruireRenover et MandatV3. Mais il a **oublié `/nouveau-mandat`**, qui est pourtant le formulaire le plus important (7 steps, parcours principal de conversion mandataire).
 
-### Bug 1 — Titres de step invisibles (le plus grave)
-Dans **Step1, Step2, Step3, Step5, Step6, Step7**, tous les `<h2>` utilisent :
-```
-bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text
-```
-**Il manque `text-transparent`** → le navigateur ignore `bg-clip-text` sans cette classe. Sur le screenshot, "Informations personnelles" apparaît en bleu/transparent fantôme au lieu du beau gradient doré attendu.
+Côté Lovable, j'ai déjà appliqué un **fix d'urgence de lisibilité** (titres dorés, labels lisibles, contraste inputs). Mais le formulaire n'utilise toujours pas les composants `forms-premium` créés par Claude Code (LuxuryFormBackground, FloatingKey3D, PremiumFormShell, PremiumInput, etc.).
 
-### Bug 2 — Labels de champs en bleu illisible
-Les `<Label>` de Step1 (E-mail, Téléphone, Prénom, Nom, Adresse, Date de naissance, Nationalité, Type de permis) sont rendus en **bleu pâle** (couleur héritée par défaut au lieu du `text-foreground`). Cause probable : un `text-primary` mal placé ou une couleur OKLCH héritée du wrapper.
+## Périmètre du fix
 
-### Bug 3 — Header "Mandat de recherche" presque invisible
-`from-primary via-primary/80 to-accent` sur fond doré → gradient doré sur fond doré = fantôme.
+### Fichiers à refondre (10 fichiers)
 
-## Corrections à apporter (mode default, ~8 fichiers)
+1. `src/pages/NouveauMandat.tsx` — wrapper page
+2. `src/components/mandat/MandatForm.tsx` — orchestrateur stepper
+3. `src/components/mandat/MandatFormStep1.tsx` — Informations personnelles
+4. `src/components/mandat/MandatFormStep2.tsx` — Type de bien & critères
+5. `src/components/mandat/MandatFormStep3.tsx` — Localisation
+6. `src/components/mandat/MandatFormStep4.tsx` — Situation professionnelle
+7. `src/components/mandat/MandatFormStep5.tsx` — Situation familiale
+8. `src/components/mandat/MandatFormStep6.tsx` — Documents
+9. `src/components/mandat/MandatFormStep7.tsx` — Signature & CGV
+10. `src/components/mandat/SignaturePad.tsx` — habillage premium (border doré + glow)
 
-### A. Fix titres de step — 6 fichiers
-Dans `MandatFormStep1.tsx`, `Step2`, `Step3`, `Step5`, `Step6`, `Step7` :
+### Refonte cosmétique uniquement
 
-**Avant** :
-```tsx
-<h2 className="text-2xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-```
+- Wrapper `NouveauMandat` → `PremiumFormShell` + `LuxuryFormBackground` + `FloatingKey3D`
+- `MandatForm` → `PremiumStepIndicator` + `PremiumStepTransition` (AnimatePresence entre steps)
+- Tous les `Input` shadcn → `PremiumInput` avec icônes `LuxuryIcons` contextuelles
+- Tous les `Select` → `PremiumSelect`
+- Tous les `Textarea` → `PremiumTextarea`
+- Cards radio (type recherche, type bien, statut civil, statut pro) → `PremiumRadioCard`
+- Checkbox CGV → `PremiumCheckboxCard`
+- Boutons next/back/submit → `PremiumButton` (variants next, back, submit)
+- Titres `h1`/`h2` → font-serif Cormorant + gradient doré (déjà fait côté Lovable, à conserver)
+- Récapitulatif final → animations stagger (chaque ligne fade-in + slide-right)
+- Zone upload documents (Step 6) → border doré dashed pulsant + thumbnails glow
+- SignaturePad → border doré + glow au focus + grid background subtle
 
-**Après** :
-```tsx
-<h2 className="text-2xl md:text-3xl font-bold font-serif bg-gradient-to-r from-[hsl(38_55%_70%)] via-[hsl(38_55%_60%)] to-[hsl(38_45%_48%)] bg-clip-text text-transparent">
-```
+## Contraintes strictes (non négociables)
 
-→ Ajoute `text-transparent` (fix critique), passe en `font-serif` (Cormorant) et utilise le **gradient doré luxury** cohérent avec la landing v3.
+- ZÉRO modification de la logique métier (validation, soumission, redirections)
+- ZÉRO modification des textes, labels, placeholders, descriptions
+- ZÉRO modification des appels Supabase (`.insert`, `.update`, `.select`)
+- ZÉRO modification des edge functions
+- Préserver `SearchTypeContext` pour Louer/Acheter
+- Préserver `NATIONALITES` constant
+- Préserver `MandatRecapitulatif` data structure
+- Préserver tous les pixels Meta/TikTok/Google Ads + UTM tracking
+- Préserver les ID HTML (#nouveau-mandat-form, etc.)
+- Préserver toutes les animations/transitions existantes qui fonctionnent
+- Préserver l'isolation `theme-luxury` du wrapper
 
-### B. Fix labels de champs — Step1 (et vérifier Step2-7)
-Forcer la couleur des labels en blanc ivoire lisible :
+## Bonus : fix runtime warning ResizeObserver
 
-**Avant** :
-```tsx
-<Label htmlFor="email" className="flex items-center gap-2 text-sm font-medium">
-```
+Pendant la refonte, ajouter un `requestAnimationFrame` autour des appels `observe()` dans le hook resize utilisé par `PremiumStepIndicator` ou `LuxuryFormBackground` pour éviter le warning `ResizeObserver loop completed with undelivered notifications`.
 
-**Après** :
-```tsx
-<Label htmlFor="email" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-```
+## Validation après refonte
 
-Et changer les icônes Lucide de `text-primary/70` (trop pâle) → `text-[hsl(38_55%_60%)]` (doré lisible).
-
-### C. Fix header `/nouveau-mandat` — `src/pages/NouveauMandat.tsx` ligne 437
-**Avant** :
-```tsx
-<h1 className="... from-primary via-primary/80 to-accent bg-clip-text text-transparent">
-  Mandat de recherche
-</h1>
-```
-
-**Après** :
-```tsx
-<h1 className="text-4xl md:text-5xl font-bold font-serif bg-gradient-to-r from-[hsl(38_55%_75%)] via-[hsl(38_50%_60%)] to-[hsl(38_45%_48%)] bg-clip-text text-transparent drop-shadow-[0_0_30px_hsl(38_45%_48%/0.4)]">
-  Mandat de recherche
-</h1>
-```
-
-### D. Fix sous-titres "Vos coordonnées et situation personnelle"
-Passer de `text-muted-foreground` (trop pâle sur dark) à `text-foreground/70` pour garantir 4.5:1 de contraste.
-
-### E. Augmenter contraste des Inputs
-Sur les `<Input>` actuels (`bg-background/50 backdrop-blur-sm`) → passer à `bg-background/80 border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_45%_60%)] text-foreground placeholder:text-muted-foreground/60` pour que les placeholders et le texte saisi restent lisibles.
-
-## Hors scope de ce fix
-
-- Création du dossier `src/components/forms-premium/` (refonte cinématique complète) → ça reste pour Claude Code dans la mission v5 que tu lui as déjà transmise
-- Animations GSAP, particules 3D, BorderBeam → mission v5 Claude Code
-- Step4 n'est pas touché car pas dans le scope du screenshot, mais sera revérifié
-
-## Validation après fix
-
-1. Reload `/nouveau-mandat` → titre "Mandat de recherche" visible en doré brillant
-2. Step 1 → "Informations personnelles" lisible en gradient doré font-serif
-3. Tous les labels (E-mail, Téléphone, Prénom, etc.) lisibles en blanc ivoire
-4. Naviguer Step 1 → 2 → 3 → ... → 7 et confirmer lisibilité partout
-5. Test mobile 375px : taille minimum 16px sur inputs (évite zoom iOS)
-6. `bun run build` = 0 erreur
+1. Reload `/nouveau-mandat` → background doré animé visible (RetroGrid + particules + meteors)
+2. FloatingKey3D visible en bottom-right desktop, absent en mobile
+3. PremiumStepIndicator avec gradient doré progressif + AnimatedBeam entre steps
+4. Step 1 → tous les champs en PremiumInput avec icônes dorées (Mail, Phone, User, Calendar, Globe, IdCard)
+5. Naviguer Step 1 → 2 → 3 → ... → 7 avec transitions cinématiques (fade + slide)
+6. Step 7 → SignaturePad premium + récapitulatif animé + bouton submit XL avec glow
+7. Mobile 375px → background simplifié, particules désactivées, FloatingKey3D masqué, inputs ≥16px
+8. `bun run build` = 0 erreur TypeScript
+9. Console preview = 0 erreur runtime, 0 warning React
+10. Soumission Step 7 → POST Supabase intact, redirection intacte, pixels intacts
 
 ## Prochaine étape
 
-Approuve ce plan → je passe en mode default et je corrige immédiatement les 8 fichiers pour rendre le formulaire lisible. Pendant ce temps Claude Code peut continuer la refonte cinématique complète (mission v5).
+Approuve ce plan → je passe en mode default et je refonds les 10 fichiers du parcours `/nouveau-mandat` avec le design system `forms-premium` créé par Claude Code, pour que ce formulaire bénéficie enfin du même rendu cinématique luxury que les 7 autres déjà refondus dans le commit `ed91964`.
 
