@@ -657,6 +657,24 @@ export default function Leads() {
                       {format(new Date(lead.created_at), "dd MMM yyyy HH:mm", { locale: fr })}
                     </span>
                   )}
+                  {(() => {
+                    const appt = apptByLeadId.get(lead.id) || (lead.email && apptByEmail.get(lead.email.toLowerCase()));
+                    if (!appt) return null;
+                    const isConfirmed = appt.status === 'confirme';
+                    return (
+                      <div className="mt-1">
+                        <Badge
+                          variant="outline"
+                          className={isConfirmed
+                            ? "bg-success/15 text-success border-success/40"
+                            : "bg-warning/15 text-warning border-warning/40"}
+                        >
+                          📞 {format(new Date(appt.slot_start), "EEE d MMM HH'h'mm", { locale: fr })}
+                          {isConfirmed ? " · confirmé" : " · en attente"}
+                        </Badge>
+                      </div>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell>
                   {lead.contacted ? (
