@@ -26,6 +26,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useState, useEffect, useMemo } from 'react';
 import { NotificationBadge } from './NotificationBadge';
 import { NotificationBell } from './NotificationBell';
+import { SilentErrorBoundary } from './SilentErrorBoundary';
 import { useNotifications } from '@/hooks/useNotifications';
 import { checkDraftsExist } from '@/hooks/useDraftManager';
 
@@ -278,7 +279,11 @@ export function AppSidebar() {
               <p className="text-xs text-sidebar-foreground/60 truncate">by Immo-rama.ch</p>
             </div>
           )}
-          {!collapsed && <NotificationBell />}
+          {!collapsed && (
+            <SilentErrorBoundary label="NotificationBell">
+              <NotificationBell />
+            </SilentErrorBoundary>
+          )}
         </div>
       </SidebarHeader>
 

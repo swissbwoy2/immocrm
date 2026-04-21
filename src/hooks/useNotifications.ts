@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -114,6 +114,8 @@ const calculateCounts = (notifs: Notification[]): NotificationCounts => {
 export const useNotifications = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -260,10 +262,14 @@ export const useNotifications = () => {
 
             setNotifications(prev => [newNotification, ...prev]);
 
-            toast({
-              title: newNotification.title,
-              description: newNotification.message || undefined,
-            });
+            try {
+              toastRef.current({
+                title: newNotification.title,
+                description: newNotification.message || undefined,
+              });
+            } catch (e) {
+              console.error('[useNotifications] toast failed:', e);
+            }
           }
         )
         .on(
@@ -309,7 +315,7 @@ export const useNotifications = () => {
         console.error('[useNotifications] removeChannel failed:', err);
       }
     };
-  }, [user, toast]);
+  }, [user]);
 
   return {
     notifications,

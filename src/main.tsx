@@ -21,24 +21,27 @@ if (isPreviewHost || isInIframe) {
 } else {
   registerSW({
     onNeedRefresh() {
-      console.log('New version available — update will apply automatically');
+      console.log('[PWA] New version available — will apply on next navigation. Close & reopen the app if a stale screen persists.');
     },
     onOfflineReady() {
-      console.log('App ready for offline use');
+      console.log('[PWA] App ready for offline use');
     },
     onRegisteredSW(swUrl, registration) {
-      console.log('Service Worker registered:', swUrl);
+      console.log('[PWA] Service Worker registered:', swUrl);
 
       if (registration) {
+        // Check for updates more aggressively (every 60s when tab is visible)
         setInterval(() => {
           if (!document.hidden) {
-            registration.update();
+            registration.update().catch((err) => {
+              console.warn('[PWA] update check failed:', err);
+            });
           }
-        }, 2 * 60 * 1000);
+        }, 60 * 1000);
       }
     },
     onRegisterError(error) {
-      console.error('Service Worker registration error:', error);
+      console.error('[PWA] Service Worker registration error:', error);
     }
   });
 }
