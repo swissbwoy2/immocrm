@@ -3,15 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  ChevronLeft, ChevronRight, Send, Home, User, Loader2,
-  CheckCircle, Camera, Upload, X, Lock, KeyRound, Banknote, MapPinned,
-} from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Upload, X, Loader2 } from 'lucide-react';
 import { GoogleAddressAutocomplete, AddressComponents } from '@/components/GoogleAddressAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
 import { ForgotPasswordLink } from '@/components/auth/ForgotPasswordLink';
@@ -21,9 +13,14 @@ import { PremiumFormShell } from '@/components/forms-premium/PremiumFormShell';
 import { PremiumStepIndicator } from '@/components/forms-premium/PremiumStepIndicator';
 import { PremiumFormCard } from '@/components/forms-premium/PremiumFormCard';
 import { PremiumButton } from '@/components/forms-premium/PremiumButton';
+import { PremiumInput } from '@/components/forms-premium/PremiumInput';
+import { PremiumTextarea } from '@/components/forms-premium/PremiumTextarea';
+import { PremiumSelect } from '@/components/forms-premium/PremiumSelect';
+import { PremiumCheckbox } from '@/components/forms-premium/PremiumCheckbox';
+import { LuxuryIconBadge } from '@/components/forms-premium/LuxuryIconBadge';
+import { IconHome, IconMail, IconPhone, IconLock, IconCamera, IconUser, IconWallet, IconCalendar } from '@/components/forms-premium/icons/LuxuryIcons';
 
 const schema = z.object({
-  // Étape 1 - Bien
   type_bien: z.string().min(1, 'Sélectionnez le type de bien'),
   adresse: z.string().min(2, 'Adresse requise'),
   npa: z.string().optional(),
@@ -38,16 +35,12 @@ const schema = z.object({
   cave: z.boolean().optional(),
   parking: z.boolean().optional(),
   ascenseur: z.boolean().optional(),
-
-  // Étape 2 - Location
   loyer_actuel: z.string().min(1, 'Indiquez le loyer'),
   charges: z.string().optional(),
   date_disponibilite: z.string().min(1, 'Date de disponibilité requise'),
   motif_relocation: z.string().optional(),
   etat: z.string().optional(),
   description: z.string().optional(),
-
-  // Étape 4 - Contact + Compte
   prenom: z.string().min(2, 'Prénom requis'),
   nom: z.string().min(2, 'Nom requis'),
   email: z.string().email('Email invalide'),
@@ -59,10 +52,10 @@ type FormData = z.infer<typeof schema>;
 interface PhotoData { url: string; path: string }
 
 const STEPS = [
-  { id: 1, title: 'Bien', icon: Home },
-  { id: 2, title: 'Location', icon: Banknote },
-  { id: 3, title: 'Photos', icon: Camera },
-  { id: 4, title: 'Compte', icon: User },
+  { id: 1, title: 'Bien', icon: '🏠' },
+  { id: 2, title: 'Location', icon: '💰' },
+  { id: 3, title: 'Photos', icon: '📷' },
+  { id: 4, title: 'Compte', icon: '👤' },
 ];
 
 export default function FormulaireRelouer() {
@@ -157,7 +150,6 @@ export default function FormulaireRelouer() {
       });
       if (authError) throw authError;
 
-      // Create profile + assign 'client' role server-side (RLS-safe)
       if (signUpData?.user?.id) {
         const { error: provisionError } = await supabase.functions.invoke('create-public-user', {
           body: {
@@ -225,11 +217,9 @@ export default function FormulaireRelouer() {
     { key: 'ascenseur', label: 'Ascenseur' },
   ];
 
-  const premiumSteps = STEPS.map(s => ({ title: s.title, icon: '●' }));
-
   return (
     <PremiumFormShell currentStep={step - 1} totalSteps={STEPS.length}>
-      <PremiumStepIndicator steps={premiumSteps} currentStep={step - 1} />
+      <PremiumStepIndicator steps={STEPS} currentStep={step - 1} />
 
       <div className="container mx-auto px-4 max-w-3xl pb-8">
         <div className="text-center mb-8">
@@ -241,260 +231,226 @@ export default function FormulaireRelouer() {
 
         <PremiumFormCard>
           <form onSubmit={handleSubmit(onSubmit)}>
-          <AnimatePresence mode="wait">
-            {step === 1 && (
-              <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Home className="h-5 w-5 text-primary" />
-                  <h2 className="text-xl font-bold">Votre bien</h2>
-                </div>
+            <AnimatePresence mode="wait">
 
-                <div>
-                  <Label>Type de bien *</Label>
-                  <Select onValueChange={(v) => setValue('type_bien', v)} value={watch('type_bien')}>
-                    <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Appartement">Appartement</SelectItem>
-                      <SelectItem value="Studio">Studio</SelectItem>
-                      <SelectItem value="Maison">Maison</SelectItem>
-                      <SelectItem value="Loft">Loft</SelectItem>
-                      <SelectItem value="Duplex">Duplex</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.type_bien && <p className="text-xs text-destructive mt-1">{errors.type_bien.message}</p>}
-                </div>
+              {/* ——— Step 1 : Votre bien ——— */}
+              {step === 1 && (
+                <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
+                  <div className="flex items-center gap-3 mb-2">
+                    <LuxuryIconBadge size="sm"><IconHome size={16} /></LuxuryIconBadge>
+                    <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Votre bien</h2>
+                  </div>
 
-                <div>
-                  <Label className="flex items-center gap-2"><MapPinned className="w-4 h-4 text-muted-foreground" /> Adresse *</Label>
-                  <GoogleAddressAutocomplete
-                    value={watch('adresse') || ''}
-                    onChange={handleAddressChange}
-                    onInputChange={(v) => setValue('adresse', v)}
-                    placeholder="Rue et numéro"
-                    restrictToSwitzerland
+                  <PremiumSelect
+                    label="Type de bien"
+                    required
+                    value={watch('type_bien') || ''}
+                    onValueChange={(v) => setValue('type_bien', v)}
+                    options={[
+                      { value: 'Appartement', label: 'Appartement' },
+                      { value: 'Studio', label: 'Studio' },
+                      { value: 'Maison', label: 'Maison' },
+                      { value: 'Loft', label: 'Loft' },
+                      { value: 'Duplex', label: 'Duplex' },
+                    ]}
+                    placeholder="Choisir..."
+                    error={errors.type_bien?.message}
                   />
-                  {errors.adresse && <p className="text-xs text-destructive mt-1">{errors.adresse.message}</p>}
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>NPA</Label>
-                    <Input {...register('npa')} placeholder="1207" />
+                    <p className="text-sm font-medium text-[hsl(40_20%_60%)] mb-1.5">Adresse <span className="text-red-400">*</span></p>
+                    <GoogleAddressAutocomplete
+                      value={watch('adresse') || ''}
+                      onChange={handleAddressChange}
+                      onInputChange={(v) => setValue('adresse', v)}
+                      placeholder="Rue et numéro"
+                      restrictToSwitzerland
+                    />
+                    {errors.adresse && <p className="text-xs text-red-400 mt-1">{errors.adresse.message}</p>}
                   </div>
-                  <div>
-                    <Label>Ville *</Label>
-                    <Input {...register('ville')} placeholder="Genève" />
-                    {errors.ville && <p className="text-xs text-destructive mt-1">{errors.ville.message}</p>}
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <Label>Pièces *</Label>
-                    <Input {...register('nombre_pieces')} type="number" step="0.5" placeholder="3.5" />
-                    {errors.nombre_pieces && <p className="text-xs text-destructive mt-1">{errors.nombre_pieces.message}</p>}
+                  <div className="grid grid-cols-2 gap-4">
+                    <PremiumInput label="NPA" {...register('npa')} value={watch('npa') || ''} placeholder="1207" />
+                    <PremiumInput label="Ville" required {...register('ville')} value={watch('ville') || ''} placeholder="Genève" error={errors.ville?.message} />
                   </div>
-                  <div>
-                    <Label>Chambres</Label>
-                    <Input {...register('nombre_chambres')} type="number" placeholder="2" />
-                  </div>
-                  <div>
-                    <Label>SDB</Label>
-                    <Input {...register('nombre_sdb')} type="number" placeholder="1" />
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Surface (m²)</Label>
-                    <Input {...register('surface')} type="number" placeholder="80" />
+                  <div className="grid grid-cols-3 gap-4">
+                    <PremiumInput label="Pièces" required {...register('nombre_pieces')} value={watch('nombre_pieces') || ''} type="number" step="0.5" placeholder="3.5" error={errors.nombre_pieces?.message} />
+                    <PremiumInput label="Chambres" {...register('nombre_chambres')} value={watch('nombre_chambres') || ''} type="number" placeholder="2" />
+                    <PremiumInput label="SDB" {...register('nombre_sdb')} value={watch('nombre_sdb') || ''} type="number" placeholder="1" />
                   </div>
-                  <div>
-                    <Label>Étage</Label>
-                    <Input {...register('etage')} placeholder="3" />
-                  </div>
-                </div>
 
-                <div>
-                  <Label className="mb-2 block">Équipements</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {equipementsList.map((eq) => (
-                      <div key={eq.key} className="flex items-center gap-2 p-3 rounded-lg border border-border">
-                        <Checkbox
+                  <div className="grid grid-cols-2 gap-4">
+                    <PremiumInput label="Surface (m²)" {...register('surface')} value={watch('surface') || ''} type="number" placeholder="80" />
+                    <PremiumInput label="Étage" {...register('etage')} value={watch('etage') || ''} placeholder="3" />
+                  </div>
+
+                  <div>
+                    <p className="text-sm font-medium text-[hsl(40_20%_60%)] mb-3">Équipements</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {equipementsList.map((eq) => (
+                        <PremiumCheckbox
+                          key={eq.key}
                           id={eq.key}
-                          checked={watch(eq.key) as boolean}
+                          checked={watch(eq.key) as boolean || false}
                           onCheckedChange={(c) => setValue(eq.key, c as boolean)}
+                          label={eq.label}
                         />
-                        <Label htmlFor={eq.key} className="cursor-pointer text-sm">{eq.label}</Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {step === 2 && (
-              <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Banknote className="h-5 w-5 text-primary" />
-                  <h2 className="text-xl font-bold">Conditions de location</h2>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Loyer net (CHF) *</Label>
-                    <Input {...register('loyer_actuel')} type="number" placeholder="1800" />
-                    {errors.loyer_actuel && <p className="text-xs text-destructive mt-1">{errors.loyer_actuel.message}</p>}
-                  </div>
-                  <div>
-                    <Label>Charges (CHF)</Label>
-                    <Input {...register('charges')} type="number" placeholder="200" />
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Disponible à partir du *</Label>
-                  <Input {...register('date_disponibilite')} type="date" />
-                  {errors.date_disponibilite && <p className="text-xs text-destructive mt-1">{errors.date_disponibilite.message}</p>}
-                </div>
-
-                <div>
-                  <Label>Motif de la relocation</Label>
-                  <Select onValueChange={(v) => setValue('motif_relocation', v)} value={watch('motif_relocation')}>
-                    <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Déménagement">Déménagement</SelectItem>
-                      <SelectItem value="Achat immobilier">Achat immobilier</SelectItem>
-                      <SelectItem value="Mutation professionnelle">Mutation professionnelle</SelectItem>
-                      <SelectItem value="Famille">Raisons familiales</SelectItem>
-                      <SelectItem value="Autre">Autre</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>État du bien</Label>
-                  <Select onValueChange={(v) => setValue('etat', v)} value={watch('etat')}>
-                    <SelectTrigger><SelectValue placeholder="Choisir..." /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Neuf">Neuf / Rénové</SelectItem>
-                      <SelectItem value="Bon état">Bon état</SelectItem>
-                      <SelectItem value="État correct">État correct</SelectItem>
-                      <SelectItem value="À rafraîchir">À rafraîchir</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Description (optionnel)</Label>
-                  <Textarea {...register('description')} placeholder="Atouts, équipements, environnement..." rows={4} />
-                </div>
-              </motion.div>
-            )}
-
-            {step === 3 && (
-              <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Camera className="h-5 w-5 text-primary" />
-                  <h2 className="text-xl font-bold">Photos du bien</h2>
-                </div>
-
-                <p className="text-sm text-muted-foreground">
-                  Ajoutez jusqu'à 8 photos (10 Mo max chacune). De belles photos accélèrent la relocation.
-                </p>
-
-                <div className="relative border-2 border-dashed rounded-xl p-8 text-center border-border hover:border-primary/50 transition">
-                  {uploading ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                      <p className="text-sm text-muted-foreground">Upload en cours...</p>
+                      ))}
                     </div>
-                  ) : (
-                    <>
-                      <Upload className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
-                      <p className="font-medium mb-1">Glissez ou sélectionnez vos photos</p>
-                      <p className="text-xs text-muted-foreground mb-3">JPG, PNG, WebP — 10 Mo max</p>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                        onChange={(e) => handleFiles(e.target.files)}
-                        disabled={photos.length >= 8}
-                      />
-                      <Button type="button" variant="outline" size="sm" className="pointer-events-none">Parcourir</Button>
-                    </>
-                  )}
-                </div>
+                  </div>
+                </motion.div>
+              )}
 
-                {photos.length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {photos.map((p, i) => (
-                      <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border border-border">
-                        <img src={p.url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removePhoto(i)}
-                          className="absolute top-1 right-1 p-1 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+              {/* ——— Step 2 : Conditions de location ——— */}
+              {step === 2 && (
+                <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
+                  <div className="flex items-center gap-3 mb-2">
+                    <LuxuryIconBadge size="sm"><IconWallet size={16} /></LuxuryIconBadge>
+                    <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Conditions de location</h2>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <PremiumInput label="Loyer net (CHF)" required {...register('loyer_actuel')} value={watch('loyer_actuel') || ''} type="number" placeholder="1800" error={errors.loyer_actuel?.message} />
+                    <PremiumInput label="Charges (CHF)" {...register('charges')} value={watch('charges') || ''} type="number" placeholder="200" />
+                  </div>
+
+                  <PremiumInput
+                    label="Disponible à partir du"
+                    required
+                    {...register('date_disponibilite')}
+                    value={watch('date_disponibilite') || ''}
+                    type="date"
+                    icon={<IconCalendar size={16} />}
+                    error={errors.date_disponibilite?.message}
+                  />
+
+                  <PremiumSelect
+                    label="Motif de la relocation"
+                    value={watch('motif_relocation') || ''}
+                    onValueChange={(v) => setValue('motif_relocation', v)}
+                    options={[
+                      { value: 'Déménagement', label: 'Déménagement' },
+                      { value: 'Achat immobilier', label: 'Achat immobilier' },
+                      { value: 'Mutation professionnelle', label: 'Mutation professionnelle' },
+                      { value: 'Famille', label: 'Raisons familiales' },
+                      { value: 'Autre', label: 'Autre' },
+                    ]}
+                    placeholder="Choisir..."
+                  />
+
+                  <PremiumSelect
+                    label="État du bien"
+                    value={watch('etat') || ''}
+                    onValueChange={(v) => setValue('etat', v)}
+                    options={[
+                      { value: 'Neuf', label: 'Neuf / Rénové' },
+                      { value: 'Bon état', label: 'Bon état' },
+                      { value: 'État correct', label: 'État correct' },
+                      { value: 'À rafraîchir', label: 'À rafraîchir' },
+                    ]}
+                    placeholder="Choisir..."
+                  />
+
+                  <PremiumTextarea
+                    label="Description"
+                    optional
+                    {...register('description')}
+                    value={watch('description') || ''}
+                    placeholder="Atouts, équipements, environnement..."
+                    rows={4}
+                  />
+                </motion.div>
+              )}
+
+              {/* ——— Step 3 : Photos ——— */}
+              {step === 3 && (
+                <motion.div key="s3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
+                  <div className="flex items-center gap-3 mb-2">
+                    <LuxuryIconBadge size="sm"><IconCamera size={16} /></LuxuryIconBadge>
+                    <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Photos du bien</h2>
+                  </div>
+                  <p className="text-sm text-[hsl(40_20%_50%)]">
+                    Ajoutez jusqu'à 8 photos (10 Mo max chacune). De belles photos accélèrent la relocation.
+                  </p>
+
+                  <div className="relative border-2 border-dashed rounded-xl p-8 text-center border-[hsl(38_45%_48%/0.25)] hover:border-[hsl(38_55%_65%/0.4)] transition-colors duration-300 bg-[hsl(38_45%_48%/0.03)]">
+                    {uploading ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="w-8 h-8 animate-spin text-[hsl(38_55%_65%)]" />
+                        <p className="text-sm text-[hsl(40_20%_50%)]">Upload en cours...</p>
                       </div>
-                    ))}
+                    ) : (
+                      <>
+                        <Upload className="w-10 h-10 mx-auto mb-3 text-[hsl(38_45%_48%)]" />
+                        <p className="font-medium mb-1 text-[hsl(40_20%_75%)]">Glissez ou sélectionnez vos photos</p>
+                        <p className="text-xs text-[hsl(40_20%_45%)] mb-4">JPG, PNG, WebP — 10 Mo max</p>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          onChange={(e) => handleFiles(e.target.files)}
+                          disabled={photos.length >= 8}
+                          aria-label="Sélectionner des photos"
+                        />
+                        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[hsl(38_45%_48%/0.3)] text-[hsl(40_20%_60%)] text-sm pointer-events-none">
+                          Parcourir les fichiers
+                        </span>
+                      </>
+                    )}
                   </div>
-                )}
-              </motion.div>
-            )}
 
-            {step === 4 && (
-              <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <User className="h-5 w-5 text-primary" />
-                  <h2 className="text-xl font-bold">Vos coordonnées et compte</h2>
-                </div>
+                  {photos.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {photos.map((p, i) => (
+                        <div key={i} className="relative group aspect-square rounded-xl overflow-hidden border border-[hsl(38_45%_48%/0.2)]">
+                          <img src={p.url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => removePhoto(i)}
+                            aria-label={`Supprimer photo ${i + 1}`}
+                            className="absolute top-1 right-1 p-1 rounded-full bg-[hsl(30_15%_8%/0.8)] text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Prénom *</Label>
-                    <Input {...register('prenom')} />
-                    {errors.prenom && <p className="text-xs text-destructive mt-1">{errors.prenom.message}</p>}
+              {/* ——— Step 4 : Compte ——— */}
+              {step === 4 && (
+                <motion.div key="s4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
+                  <div className="flex items-center gap-3 mb-2">
+                    <LuxuryIconBadge size="sm"><IconUser size={16} /></LuxuryIconBadge>
+                    <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Vos coordonnées et compte</h2>
                   </div>
-                  <div>
-                    <Label>Nom *</Label>
-                    <Input {...register('nom')} />
-                    {errors.nom && <p className="text-xs text-destructive mt-1">{errors.nom.message}</p>}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <PremiumInput label="Prénom" required {...register('prenom')} value={watch('prenom') || ''} error={errors.prenom?.message} />
+                    <PremiumInput label="Nom" required {...register('nom')} value={watch('nom') || ''} error={errors.nom?.message} />
                   </div>
-                </div>
 
-                <div>
-                  <Label>Email *</Label>
-                  <Input {...register('email')} type="email" placeholder="vous@exemple.ch" />
-                  {errors.email && <p className="text-xs text-destructive mt-1">{errors.email.message}</p>}
-                </div>
+                  <PremiumInput label="Email" required type="email" {...register('email')} value={watch('email') || ''} placeholder="vous@exemple.ch" icon={<IconMail size={16} />} error={errors.email?.message} />
+                  <PremiumInput label="Téléphone" required type="tel" {...register('telephone')} value={watch('telephone') || ''} placeholder="+41 79 123 45 67" icon={<IconPhone size={16} />} error={errors.telephone?.message} />
+                  <PremiumInput label="Mot de passe" required type="password" {...register('password')} value={watch('password') || ''} placeholder="8 caractères minimum" icon={<IconLock size={16} />} error={errors.password?.message} hint="Minimum 8 caractères" />
 
-                <div>
-                  <Label>Téléphone *</Label>
-                  <Input {...register('telephone')} type="tel" placeholder="+41 79 123 45 67" />
-                  {errors.telephone && <p className="text-xs text-destructive mt-1">{errors.telephone.message}</p>}
-                </div>
+                  <div className="rounded-xl p-4 bg-[hsl(38_45%_48%/0.06)] border border-[hsl(38_45%_48%/0.2)] flex items-start gap-3">
+                    <IconLock size={16} className="text-[hsl(38_55%_65%)] mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-[hsl(40_20%_50%)] leading-relaxed">
+                      Un email de confirmation sera envoyé. Après validation, vous accéderez à votre espace client pour suivre votre dossier.
+                    </p>
+                  </div>
 
-                <div>
-                  <Label className="flex items-center gap-2"><KeyRound className="w-4 h-4 text-muted-foreground" /> Mot de passe *</Label>
-                  <Input {...register('password')} type="password" placeholder="8 caractères minimum" />
-                  {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
-                </div>
-
-                <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground flex items-start gap-2">
-                  <Lock className="w-4 h-4 mt-0.5 shrink-0" />
-                  <span>Un email de confirmation sera envoyé. Après validation, vous accéderez à votre espace client pour suivre votre dossier.</span>
-                </div>
-
-                <div className="text-center pt-2">
-                  <ForgotPasswordLink defaultEmail={watch('email')} />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  <div className="text-center">
+                    <ForgotPasswordLink defaultEmail={watch('email')} />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div className="flex justify-between items-center mt-8 pt-6 border-t border-[hsl(38_45%_48%/0.15)] gap-4">
               <PremiumButton type="button" variant="back" onClick={() => setStep(s => Math.max(1, s - 1))} disabled={step === 1}>

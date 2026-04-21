@@ -5,13 +5,14 @@ import { CheckCircle2, AlertCircle } from 'lucide-react';
 interface PremiumInputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   icon?: ReactNode;
+  rightAction?: ReactNode;
   error?: string;
   hint?: string;
   required?: boolean;
   optional?: boolean;
 }
 
-export function PremiumInput({ label, icon, error, hint, required, optional, className = '', ...props }: PremiumInputProps) {
+export function PremiumInput({ label, icon, rightAction, error, hint, required, optional, className = '', ...props }: PremiumInputProps) {
   const [focused, setFocused] = useState(false);
   const hasValue = Boolean(props.value || props.defaultValue);
   const floated = focused || hasValue;
@@ -53,11 +54,13 @@ export function PremiumInput({ label, icon, error, hint, required, optional, cla
             onBlur={(e) => { setFocused(false); props.onBlur?.(e); }}
             className={`w-full bg-transparent text-[hsl(40_20%_88%)] placeholder-transparent pt-6 pb-2 px-4 outline-none text-sm rounded-xl ${className}`}
           />
+          {/* Right action (e.g. show/hide password) */}
+          {rightAction && <span className="mr-2 flex-shrink-0">{rightAction}</span>}
           {/* Validation icon */}
-          {!error && hasValue && !focused && (
+          {!rightAction && !error && hasValue && !focused && (
             <CheckCircle2 className="h-4 w-4 text-[hsl(38_45%_48%)] mr-3 flex-shrink-0" />
           )}
-          {error && (
+          {!rightAction && error && (
             <AlertCircle className="h-4 w-4 text-red-400 mr-3 flex-shrink-0" />
           )}
         </div>

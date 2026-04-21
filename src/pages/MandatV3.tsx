@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
+import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { MandatV3FormData, initialMandatV3Data, LEGAL_CHECKBOXES } from '@/components/mandat-v3/types';
 import { logMandateEvent } from '@/components/mandat-v3/useMandateAudit';
@@ -12,15 +11,20 @@ import MandatV3Step4Documents from '@/components/mandat-v3/MandatV3Step4Document
 import MandatV3Step5Financial from '@/components/mandat-v3/MandatV3Step5Financial';
 import MandatV3Step6Legal from '@/components/mandat-v3/MandatV3Step6Legal';
 import MandatV3Step7Signature from '@/components/mandat-v3/MandatV3Step7Signature';
+import logoImmorama from '@/assets/logo-immo-rama-new.png';
+
+const LuxuryFormBackground = lazy(() =>
+  import('@/components/forms-premium/backgrounds/LuxuryFormBackground').then((m) => ({ default: m.LuxuryFormBackground }))
+);
 
 const STEPS = [
-  { label: 'Identité', number: 1 },
-  { label: 'Recherche', number: 2 },
-  { label: 'Tiers', number: 3 },
-  { label: 'Documents', number: 4 },
-  { label: 'Finances', number: 5 },
-  { label: 'Juridique', number: 6 },
-  { label: 'Signature', number: 7 },
+  { label: 'Identité', number: 1, icon: '👤' },
+  { label: 'Recherche', number: 2, icon: '🔍' },
+  { label: 'Tiers', number: 3, icon: '🤝' },
+  { label: 'Documents', number: 4, icon: '📄' },
+  { label: 'Finances', number: 5, icon: '💰' },
+  { label: 'Juridique', number: 6, icon: '⚖️' },
+  { label: 'Signature', number: 7, icon: '✍️' },
 ];
 
 const SESSION_KEY = 'mandat_v3_session';
@@ -39,13 +43,11 @@ export default function MandatV3() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to top on step change
   useEffect(() => {
     containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
 
-  // Restore session from sessionStorage on mount
   useEffect(() => {
     try {
       const saved = sessionStorage.getItem(SESSION_KEY);
@@ -205,42 +207,79 @@ export default function MandatV3() {
     }
   };
 
-  const currentStepLabel = STEPS.find((s) => s.number === step)?.label || '';
   const progressValue = ((step - 1) / (STEPS.length - 1)) * 100;
 
   return (
-    <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
-      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Mandat de recherche</h1>
-          <p className="text-muted-foreground mt-1 text-sm">ImmoRésidence Sàrl</p>
-        </div>
+    <div
+      ref={containerRef}
+      className="min-h-screen bg-[hsl(30_15%_8%)] relative overflow-x-hidden"
+    >
+      <Suspense fallback={null}>
+        <LuxuryFormBackground />
+      </Suspense>
 
-        {/* Mobile-friendly stepper */}
+      <div className="relative z-10 max-w-3xl mx-auto px-3 sm:px-4 py-8 sm:py-12">
+        {/* Header */}
+        <motion.div
+          className="text-center mb-8 sm:mb-10"
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <img
+            src={logoImmorama}
+            alt="Immo-Rama"
+            className="h-12 w-auto mx-auto mb-5"
+            style={{ filter: 'brightness(0) invert(1)' }}
+          />
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[hsl(40_20%_88%)]">
+            Mandat de recherche
+          </h1>
+          <p className="text-xs text-[hsl(40_20%_45%)] mt-2 tracking-wider uppercase">
+            ImmoRésidence Sàrl — Logisorama
+          </p>
+          <div className="mt-4 w-20 h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.7)] to-transparent mx-auto" />
+        </motion.div>
+
+        {/* Stepper */}
         {!isSubmitted && (
-          <div className="mb-6 sm:mb-8">
+          <motion.div
+            className="mb-6 sm:mb-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.15, duration: 0.4 }}
+          >
             {/* Mobile: progress bar + step info */}
             <div className="sm:hidden space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="font-medium text-foreground">
+              <div className="flex items-center justify-between text-xs px-1">
+                <span className="font-medium text-[hsl(40_20%_70%)]">
                   Étape {step}/{STEPS.length}
                 </span>
-                <span className="text-muted-foreground">{currentStepLabel}</span>
+                <span className="text-[hsl(40_20%_45%)]">
+                  {STEPS.find((s) => s.number === step)?.icon}{' '}
+                  {STEPS.find((s) => s.number === step)?.label}
+                </span>
               </div>
-              <Progress value={progressValue} className="h-2" />
-              {/* Step dots (minimal) */}
+              {/* Progress bar */}
+              <div className="h-1.5 rounded-full bg-[hsl(30_10%_14%)] overflow-hidden">
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-[hsl(38_55%_65%)] to-[hsl(38_45%_48%)]"
+                  animate={{ width: `${progressValue}%` }}
+                  transition={{ duration: 0.4, ease: 'easeOut' }}
+                />
+              </div>
+              {/* Dots */}
               <div className="flex items-center justify-center gap-1.5">
                 {STEPS.map((s) => (
                   <button
                     key={s.number}
                     onClick={() => s.number <= step && setStep(s.number)}
-                    className={`w-2 h-2 rounded-full transition-all ${
+                    className={`rounded-full transition-all duration-300 ${
                       s.number === step
-                        ? 'w-6 bg-primary'
+                        ? 'w-6 h-2 bg-[hsl(38_55%_65%)]'
                         : s.number < step
-                        ? 'bg-primary/40 cursor-pointer'
-                        : 'bg-muted-foreground/20'
+                        ? 'w-2 h-2 bg-[hsl(38_45%_48%/0.5)] cursor-pointer'
+                        : 'w-2 h-2 bg-[hsl(30_10%_20%)]'
                     }`}
                     aria-label={`Étape ${s.number}: ${s.label}`}
                   />
@@ -248,65 +287,156 @@ export default function MandatV3() {
               </div>
             </div>
 
-            {/* Desktop: full stepper with labels */}
-            <div className="hidden sm:flex items-center justify-center gap-1 overflow-x-auto pb-2">
+            {/* Desktop: pill stepper */}
+            <div className="hidden sm:flex items-center justify-center gap-1 flex-wrap">
               {STEPS.map((s) => (
                 <div key={s.number} className="flex items-center">
                   <button
                     onClick={() => s.number <= step && setStep(s.number)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 ${
                       s.number === step
-                        ? 'bg-primary text-primary-foreground'
+                        ? 'bg-gradient-to-r from-[hsl(38_55%_65%)] to-[hsl(38_45%_48%)] text-[hsl(30_15%_8%)] shadow-[0_2px_12px_hsl(38_45%_48%/0.3)]'
                         : s.number < step
-                        ? 'bg-primary/20 text-primary cursor-pointer'
-                        : 'bg-muted text-muted-foreground'
+                        ? 'bg-[hsl(38_45%_48%/0.15)] text-[hsl(38_55%_65%)] border border-[hsl(38_45%_48%/0.3)] cursor-pointer hover:bg-[hsl(38_45%_48%/0.25)]'
+                        : 'bg-[hsl(30_10%_14%)] text-[hsl(40_20%_35%)] border border-[hsl(30_10%_20%)]'
                     }`}
                   >
-                    {s.number < step ? <Check className="h-3 w-3" /> : <span>{s.number}</span>}
+                    {s.number < step
+                      ? <Check className="h-3 w-3" />
+                      : <span className="text-[10px]">{s.icon}</span>
+                    }
                     <span>{s.label}</span>
                   </button>
-                  {s.number < 7 && <div className={`w-4 h-0.5 ${s.number < step ? 'bg-primary/40' : 'bg-muted'}`} />}
+                  {s.number < 7 && (
+                    <div className={`w-3 h-px mx-0.5 ${s.number < step ? 'bg-[hsl(38_45%_48%/0.4)]' : 'bg-[hsl(30_10%_18%)]'}`} />
+                  )}
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* Step content */}
-        <div className="bg-card rounded-2xl border shadow-sm p-4 sm:p-6 md:p-8">
-          {step === 1 && <MandatV3Step1Identity data={formData} onChange={updateForm} />}
-          {step === 2 && <MandatV3Step2Search data={formData} onChange={updateForm} />}
-          {step === 3 && <MandatV3Step3RelatedParties data={formData} onChange={updateForm} />}
-          {step === 4 && <MandatV3Step4Documents data={formData} mandateId={mandateId} accessToken={accessToken} onChange={updateForm} />}
-          {step === 5 && <MandatV3Step5Financial />}
-          {step === 6 && <MandatV3Step6Legal data={formData} mandateId={mandateId} onChange={updateForm} />}
-          {step === 7 && (
-            <MandatV3Step7Signature
-              data={formData} mandateId={mandateId} onChange={updateForm}
-              onSubmitSignature={handleSubmitSignature}
-              isSubmitting={isSubmitting} isSubmitted={isSubmitted}
-            />
-          )}
-        </div>
+        {/* Step content card */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+            className="relative rounded-2xl border border-[hsl(38_45%_48%/0.15)] bg-[hsl(30_12%_10%/0.85)] backdrop-blur-sm shadow-[0_8px_40px_hsl(30_15%_4%/0.6)] p-4 sm:p-6 md:p-8"
+            style={{
+              background: 'linear-gradient(145deg, hsl(30 12% 11% / 0.9) 0%, hsl(30 10% 9% / 0.95) 100%)',
+            }}
+          >
+            {/* Gold corner accent */}
+            <div className="absolute top-0 left-0 w-24 h-24 rounded-tl-2xl overflow-hidden pointer-events-none">
+              <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[hsl(38_45%_48%/0.06)] to-transparent" />
+            </div>
+
+            {/* Step header label */}
+            <div className="flex items-center gap-2 mb-5 pb-4 border-b border-[hsl(38_45%_48%/0.1)]">
+              <span className="text-lg">{STEPS.find((s) => s.number === step)?.icon}</span>
+              <div>
+                <p className="text-[10px] text-[hsl(40_20%_40%)] uppercase tracking-widest">
+                  Étape {step} sur {STEPS.length}
+                </p>
+                <p className="text-sm font-semibold text-[hsl(40_20%_75%)]">
+                  {STEPS.find((s) => s.number === step)?.label}
+                </p>
+              </div>
+              <div className="ml-auto">
+                <div className="flex gap-0.5">
+                  {STEPS.map((s) => (
+                    <div
+                      key={s.number}
+                      className={`h-1 rounded-full transition-all duration-300 ${
+                        s.number <= step
+                          ? 'bg-[hsl(38_55%_65%)] w-4'
+                          : 'bg-[hsl(30_10%_20%)] w-2'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Step components — zero changes to their internals */}
+            {step === 1 && <MandatV3Step1Identity data={formData} onChange={updateForm} />}
+            {step === 2 && <MandatV3Step2Search data={formData} onChange={updateForm} />}
+            {step === 3 && <MandatV3Step3RelatedParties data={formData} onChange={updateForm} />}
+            {step === 4 && <MandatV3Step4Documents data={formData} mandateId={mandateId} accessToken={accessToken} onChange={updateForm} />}
+            {step === 5 && <MandatV3Step5Financial />}
+            {step === 6 && <MandatV3Step6Legal data={formData} mandateId={mandateId} onChange={updateForm} />}
+            {step === 7 && (
+              <MandatV3Step7Signature
+                data={formData} mandateId={mandateId} onChange={updateForm}
+                onSubmitSignature={handleSubmitSignature}
+                isSubmitting={isSubmitting} isSubmitted={isSubmitted}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
 
         {/* Navigation */}
         {!isSubmitted && (
-          <div className="flex justify-between mt-4 sm:mt-6 gap-3">
-            <Button
-              variant="outline"
+          <motion.div
+            className="flex justify-between mt-4 sm:mt-5 gap-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.3 }}
+          >
+            <motion.button
+              type="button"
+              whileHover={step === 1 ? {} : { scale: 1.02 }}
+              whileTap={step === 1 ? {} : { scale: 0.98 }}
               onClick={() => setStep((s) => Math.max(s - 1, 1))}
               disabled={step === 1}
-              className="gap-2 min-h-[48px] flex-1 sm:flex-none"
+              className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium min-h-[48px] flex-1 sm:flex-none justify-center transition-all duration-200 border ${
+                step === 1
+                  ? 'opacity-30 cursor-not-allowed border-[hsl(30_10%_20%)] text-[hsl(40_20%_35%)] bg-transparent'
+                  : 'border-[hsl(38_45%_48%/0.3)] text-[hsl(40_20%_65%)] bg-[hsl(38_45%_48%/0.06)] hover:bg-[hsl(38_45%_48%/0.12)] hover:border-[hsl(38_45%_48%/0.5)]'
+              }`}
             >
-              <ArrowLeft className="h-4 w-4" /> <span className="hidden xs:inline">Précédent</span>
-            </Button>
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden xs:inline">Précédent</span>
+            </motion.button>
+
             {step < 7 && (
-              <Button onClick={handleNext} className="gap-2 min-h-[48px] flex-1 sm:flex-none">
-                <span className="hidden xs:inline">Suivant</span> <ArrowRight className="h-4 w-4" />
-              </Button>
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.02, boxShadow: '0 0 28px hsl(38 45% 48% / 0.3)' }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleNext}
+                className="relative flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold min-h-[48px] flex-1 sm:flex-none justify-center overflow-hidden bg-gradient-to-r from-[hsl(38_55%_65%)] to-[hsl(38_45%_48%)] text-[hsl(30_15%_8%)] shadow-[0_4px_16px_hsl(38_45%_48%/0.2)] transition-shadow duration-200"
+              >
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -skew-x-12"
+                  animate={{ x: ['-100%', '200%'] }}
+                  transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3, ease: 'easeInOut' }}
+                />
+                <span className="relative z-10 hidden xs:inline">Suivant</span>
+                <ArrowRight className="relative z-10 h-4 w-4" />
+              </motion.button>
             )}
-          </div>
+          </motion.div>
         )}
+
+        {/* Trust footer */}
+        <motion.div
+          className="mt-8 text-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.4 }}
+        >
+          <div className="flex items-center justify-center gap-6 text-[10px] text-[hsl(40_20%_32%)] tracking-wider uppercase">
+            <span>🔒 SSL sécurisé</span>
+            <span className="w-px h-3 bg-[hsl(40_20%_25%)]" />
+            <span>🇨🇭 Données en Suisse</span>
+            <span className="w-px h-3 bg-[hsl(40_20%_25%)]" />
+            <span>🛡️ RGPD conforme</span>
+          </div>
+        </motion.div>
       </div>
     </div>
   );

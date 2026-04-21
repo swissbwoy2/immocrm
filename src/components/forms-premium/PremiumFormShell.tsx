@@ -1,7 +1,14 @@
-import { ReactNode } from 'react';
+import { ReactNode, Suspense, lazy } from 'react';
 import logoImmoRama from '@/assets/logo-immo-rama-new.png';
 import { Shield, Lock, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
+
+const LuxuryFormBackground = lazy(() =>
+  import('./backgrounds/LuxuryFormBackground').then((m) => ({ default: m.LuxuryFormBackground }))
+);
+const FloatingKey3D = lazy(() =>
+  import('./backgrounds/FloatingKey3D').then((m) => ({ default: m.FloatingKey3D }))
+);
 
 interface PremiumFormShellProps {
   children: ReactNode;
@@ -20,18 +27,10 @@ const TRUST_BADGES = [
 export function PremiumFormShell({ children, currentStep, totalSteps, stepLabels, stepIcons }: PremiumFormShellProps) {
   return (
     <div className="min-h-screen bg-[hsl(30_15%_8%)] relative overflow-hidden">
-      {/* Background ambient */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[hsl(38_45%_48%/0.04)] rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[hsl(28_35%_35%/0.05)] rounded-full blur-3xl" />
-        <div
-          className="absolute inset-0 opacity-[0.02]"
-          style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, hsl(38 45% 55%) 1px, transparent 0)`,
-            backgroundSize: '40px 40px',
-          }}
-        />
-      </div>
+      {/* Animated luxury background */}
+      <Suspense fallback={null}>
+        <LuxuryFormBackground />
+      </Suspense>
 
       {/* Sticky header */}
       <div className="sticky top-0 z-40 border-b border-[hsl(38_45%_48%/0.15)] bg-[hsl(30_15%_8%/0.9)] backdrop-blur-xl">
@@ -81,6 +80,11 @@ export function PremiumFormShell({ children, currentStep, totalSteps, stepLabels
       <div className="relative z-10 pb-24">
         {children}
       </div>
+
+      {/* Floating 3D key */}
+      <Suspense fallback={null}>
+        <FloatingKey3D />
+      </Suspense>
 
       {/* Footer trust badges */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-[hsl(30_15%_8%/0.95)] backdrop-blur-xl border-t border-[hsl(38_45%_48%/0.1)]">

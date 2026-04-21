@@ -1,273 +1,144 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Building2, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-
-const clearLocalSupabaseStorage = () => {
-  try {
-    const keys = Object.keys(localStorage);
-    keys.forEach((k) => {
-      if (k.startsWith('sb-') || k.includes('supabase.auth')) {
-        localStorage.removeItem(k);
-      }
-    });
-  } catch {
-    // ignore
-  }
-};
+import { PremiumFormCard } from '@/components/forms-premium/PremiumFormCard';
+import { PremiumInput } from '@/components/forms-premium/PremiumInput';
+import { LuxuryFormBackground } from '@/components/forms-premium/backgrounds/LuxuryFormBackground';
+import { LuxuryIconBadge } from '@/components/forms-premium/LuxuryIconBadge';
+import { IconLock, IconLoader } from '@/components/forms-premium/icons/LuxuryIcons';
+import { motion } from 'framer-motion';
 
 export default function FirstLogin() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(true);
-  const [sessionReady, setSessionReady] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    let isMounted = true;
-
-    // Listener auth changes (PASSWORD_RECOVERY, SIGNED_IN)
-    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[FirstLogin] auth event:', event, !!session);
-      if (!isMounted) return;
-      if ((event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') && session) {
-        setSessionReady(true);
-        setChecking(false);
-      }
-    });
-
-    const init = async () => {
-      // 1. Read URL errors (hash + query)
-      const hash = window.location.hash.startsWith('#')
-        ? window.location.hash.substring(1)
-        : window.location.hash;
-      const hashParams = new URLSearchParams(hash);
-      const queryParams = new URLSearchParams(window.location.search);
-      const urlError =
-        hashParams.get('error') ||
-        queryParams.get('error') ||
-        hashParams.get('error_code') ||
-        queryParams.get('error_code');
-      const urlErrorDesc =
-        hashParams.get('error_description') || queryParams.get('error_description');
-
-      if (urlError) {
-        console.warn('[FirstLogin] URL error:', urlError, urlErrorDesc);
-        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-        clearLocalSupabaseStorage();
-        toast({
-          title: 'Lien invalide ou expiré',
-          description:
-            urlErrorDesc?.replace(/\+/g, ' ') ||
-            "Veuillez demander un nouveau lien d'invitation.",
-          variant: 'destructive',
-        });
+    const checkSession = async () => {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast({ title: 'Session expirée', description: 'Veuillez cliquer à nouveau sur le lien dans votre email', variant: 'destructive' });
         navigate('/login');
-        return;
-      }
-
-      // 2. Wait briefly so Supabase client can process the URL hash tokens
-      await new Promise((resolve) => setTimeout(resolve, 1200));
-      if (!isMounted) return;
-
-      // 3. Validate session via getUser (real server-side check)
-      const { data: sessionData } = await supabase.auth.getSession();
-
-      if (!sessionData.session) {
-        toast({
-          title: 'Session introuvable',
-          description: 'Veuillez cliquer à nouveau sur le lien dans votre email.',
-          variant: 'destructive',
-        });
-        navigate('/login');
-        return;
-      }
-
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-
-      if (userError || !userData?.user) {
-        console.warn('[FirstLogin] stale session detected:', userError?.message);
-        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-        clearLocalSupabaseStorage();
-        toast({
-          title: 'Session expirée',
-          description:
-            'Votre session précédente n\'est plus valide. Veuillez demander un nouveau lien d\'invitation.',
-          variant: 'destructive',
-        });
-        navigate('/login');
-        return;
-      }
-
-      if (isMounted) {
-        setSessionReady(true);
-        setChecking(false);
       }
     };
-
-    init();
-
-    return () => {
-      isMounted = false;
-      subscription.subscription.unsubscribe();
-    };
+    checkSession();
   }, [navigate, toast]);
 
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (password.length < 8) {
-      toast({
-        title: 'Erreur',
-        description: 'Le mot de passe doit contenir au moins 8 caractères',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erreur', description: 'Le mot de passe doit contenir au moins 8 caractères', variant: 'destructive' });
       return;
     }
-
     if (password !== confirmPassword) {
-      toast({
-        title: 'Erreur',
-        description: 'Les mots de passe ne correspondent pas',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erreur', description: 'Les mots de passe ne correspondent pas', variant: 'destructive' });
       return;
     }
-
     setLoading(true);
-
     try {
-      // Re-validate user before updating password (avoid 403 on stale JWT)
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData?.user) {
-        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-        clearLocalSupabaseStorage();
-        toast({
-          title: 'Session expirée',
-          description:
-            'Votre lien n\'est plus valide. Veuillez demander un nouveau lien d\'invitation.',
-          variant: 'destructive',
-        });
-        navigate('/login');
-        return;
-      }
-
-      const { error } = await supabase.auth.updateUser({
-        password: password,
-      });
-
+      const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
-
-      toast({
-        title: 'Succès',
-        description: 'Votre mot de passe a été défini. Vous pouvez maintenant vous connecter.',
-      });
-
+      toast({ title: 'Succès', description: 'Votre mot de passe a été défini. Vous pouvez maintenant vous connecter.' });
       await supabase.auth.signOut();
       navigate('/login');
     } catch (error: any) {
-      console.error('[FirstLogin] updateUser error:', error);
-      const msg = error?.message || '';
-      if (msg.includes('JWT') || msg.includes('sub claim') || msg.includes('does not exist')) {
-        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
-        clearLocalSupabaseStorage();
-        toast({
-          title: 'Session expirée',
-          description:
-            'Votre lien d\'invitation n\'est plus valide. Veuillez en demander un nouveau.',
-          variant: 'destructive',
-        });
-        navigate('/login');
-      } else {
-        toast({
-          title: 'Erreur',
-          description: msg || 'Une erreur est survenue',
-          variant: 'destructive',
-        });
-      }
+      toast({ title: 'Erreur', description: error.message || 'Une erreur est survenue', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
   };
 
-  if (checking) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
-        <div className="flex flex-col items-center gap-3 text-muted-foreground">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-sm">Vérification de votre lien d'invitation…</p>
-        </div>
-      </div>
-    );
-  }
+  const isValid = password.length >= 8 && password === confirmPassword;
+
+  const EyeToggle = ({ show, onToggle, label }: { show: boolean; onToggle: () => void; label: string }) => (
+    <button type="button" aria-label={label} onClick={onToggle} className="text-[hsl(40_20%_45%)] hover:text-[hsl(38_55%_65%)] transition-colors p-1">
+      {show ? (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+      ) : (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+      )}
+    </button>
+  );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-4">
-          <div className="flex justify-center">
-            <div className="p-3 bg-primary/10 rounded-2xl">
-              <Building2 className="w-12 h-12 text-primary" />
+    <div className="min-h-screen bg-[hsl(30_15%_8%)] flex items-center justify-center p-4 relative overflow-hidden">
+      <LuxuryFormBackground />
+      <motion.div
+        className="relative z-10 w-full max-w-md"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <PremiumFormCard>
+          <div className="flex flex-col items-center gap-4 mb-8">
+            <LuxuryIconBadge size="lg">
+              <IconLock size={28} />
+            </LuxuryIconBadge>
+            <div className="text-center">
+              <h1 className="text-2xl font-serif font-bold text-[hsl(40_20%_88%)]">
+                Définir votre mot de passe
+              </h1>
+              <p className="text-xs text-[hsl(40_20%_45%)] mt-2 leading-relaxed">
+                Bienvenue ! Veuillez définir votre mot de passe pour activer votre compte.
+              </p>
             </div>
+            <div className="w-16 h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.6)] to-transparent" />
           </div>
-          <div>
-            <CardTitle className="text-2xl">Définir votre mot de passe</CardTitle>
-            <CardDescription className="text-base">
-              Bienvenue ! Veuillez définir votre mot de passe pour activer votre compte.
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSetPassword} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">Nouveau mot de passe</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Minimum 8 caractères"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
-                  required
-                  disabled={loading || !sessionReady}
-                  minLength={8}
-                />
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="Confirmer votre mot de passe"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pl-10"
-                  required
-                  disabled={loading || !sessionReady}
-                  minLength={8}
-                />
-              </div>
-            </div>
+          <form onSubmit={handleSetPassword} className="space-y-5">
+            <PremiumInput
+              label="Nouveau mot de passe"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              icon={<IconLock size={16} />}
+              hint="Minimum 8 caractères"
+              required
+              disabled={loading}
+              rightAction={<EyeToggle show={showPassword} onToggle={() => setShowPassword(!showPassword)} label="Afficher le mot de passe" />}
+            />
+            <PremiumInput
+              label="Confirmer le mot de passe"
+              type={showConfirm ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              icon={<IconLock size={16} />}
+              error={confirmPassword && password !== confirmPassword ? 'Les mots de passe ne correspondent pas' : undefined}
+              required
+              disabled={loading}
+              rightAction={<EyeToggle show={showConfirm} onToggle={() => setShowConfirm(!showConfirm)} label="Afficher la confirmation" />}
+            />
 
-            <Button type="submit" className="w-full" disabled={loading || !sessionReady}>
-              {loading ? 'Enregistrement...' : 'Définir mon mot de passe'}
-            </Button>
+            <motion.button
+              type="submit"
+              whileHover={loading || !isValid ? {} : { scale: 1.02, boxShadow: '0 0 30px hsl(38 45% 48% / 0.35)' }}
+              whileTap={loading || !isValid ? {} : { scale: 0.98 }}
+              disabled={loading || !isValid}
+              className={`relative w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-xl font-semibold text-sm text-[hsl(30_15%_8%)] overflow-hidden transition-all duration-300 ${
+                loading || !isValid
+                  ? 'bg-[hsl(38_45%_48%/0.3)] cursor-not-allowed text-[hsl(40_20%_40%)]'
+                  : 'bg-gradient-to-r from-[hsl(38_55%_65%)] to-[hsl(38_45%_48%)] shadow-[0_4px_16px_hsl(38_45%_48%/0.25)]'
+              }`}
+            >
+              {!loading && isValid && (
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -skew-x-12"
+                  animate={{ x: ['-100%', '200%'] }}
+                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 2.5, ease: 'easeInOut' }}
+                />
+              )}
+              {loading ? <IconLoader size={16} /> : null}
+              <span className="relative z-10">{loading ? 'Enregistrement...' : 'Définir mon mot de passe'}</span>
+            </motion.button>
           </form>
-        </CardContent>
-      </Card>
+        </PremiumFormCard>
+      </motion.div>
     </div>
   );
 }

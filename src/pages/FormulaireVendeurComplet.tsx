@@ -4,22 +4,21 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Send, Home, MapPinned, Ruler, Banknote, User,
-  Mail, Phone, Loader2, CheckCircle, Building2, Calendar,
-  Bed, Bath, Car, Trees, Sun, Mountain, Landmark, Map, Zap,
-  DollarSign, Percent, Store, Factory, Camera, Upload, X, Image,
-  ChevronLeft, ChevronRight, FileText, Lock, KeyRound
+  Loader2, CheckCircle, Building2, Calendar,
+  Car, Trees, Sun, Mountain, Zap,
+  Camera, Upload, X, Image,
 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
 import { PremiumFormShell } from '@/components/forms-premium/PremiumFormShell';
 import { PremiumStepIndicator } from '@/components/forms-premium/PremiumStepIndicator';
 import { PremiumFormCard } from '@/components/forms-premium/PremiumFormCard';
 import { PremiumButton } from '@/components/forms-premium/PremiumButton';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { PremiumInput } from '@/components/forms-premium/PremiumInput';
+import { PremiumTextarea } from '@/components/forms-premium/PremiumTextarea';
+import { PremiumSelect } from '@/components/forms-premium/PremiumSelect';
+import { PremiumCheckbox } from '@/components/forms-premium/PremiumCheckbox';
+import { PremiumRadioGroup } from '@/components/forms-premium/PremiumRadioGroup';
+import { LuxuryIconBadge } from '@/components/forms-premium/LuxuryIconBadge';
+import { IconHome, IconDocument, IconCamera, IconUser, IconLock, IconMail, IconPhone, IconWallet, IconBuilding } from '@/components/forms-premium/icons/LuxuryIcons';
 import { VendeurFloatingNav } from '@/components/landing/vendeur/VendeurFloatingNav';
 import { VendeurFooter } from '@/components/landing/vendeur/VendeurFooter';
 import { GoogleAddressAutocomplete, AddressComponents } from '@/components/GoogleAddressAutocomplete';
@@ -111,13 +110,12 @@ interface PhotoData {
   file?: File;
 }
 
-// Stepper steps definition
 const STEPS = [
-  { id: 1, title: 'Bien', icon: Home, description: 'Type et localisation' },
-  { id: 2, title: 'Détails', icon: FileText, description: 'Caractéristiques' },
-  { id: 3, title: 'Photos', icon: Camera, description: 'Images du bien' },
-  { id: 4, title: 'Contact', icon: User, description: 'Vos coordonnées' },
-  { id: 5, title: 'Compte', icon: Lock, description: 'Création de compte' },
+  { id: 1, title: 'Bien', icon: '🏠' },
+  { id: 2, title: 'Détails', icon: '📄' },
+  { id: 3, title: 'Photos', icon: '📷' },
+  { id: 4, title: 'Contact', icon: '👤' },
+  { id: 5, title: 'Compte', icon: '🔑' },
 ];
 
 export default function FormulaireVendeurComplet() {
@@ -501,26 +499,27 @@ export default function FormulaireVendeurComplet() {
 
   if (isSuccess) {
     return (
-      <div className="theme-luxury min-h-screen bg-background">
+      <div className="min-h-screen bg-[hsl(30_15%_8%)]">
         <VendeurFloatingNav />
         <main className="pt-32 pb-24">
           <div className="container mx-auto px-4">
             <div className="max-w-2xl mx-auto text-center">
-              <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
+              <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-emerald-500/20 border-2 border-emerald-500/40 flex items-center justify-center">
                 <CheckCircle className="w-12 h-12 text-emerald-500" />
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold mb-6">
+              <h1 className="text-3xl md:text-4xl font-serif font-bold mb-6 text-[hsl(40_20%_88%)]">
                 Votre bien a été soumis !
               </h1>
-              <p className="text-xl text-muted-foreground mb-8">
-                Notre équipe analyse votre bien et vous contactera sous 24h 
+              <p className="text-lg text-[hsl(40_20%_55%)] mb-8">
+                Notre équipe analyse votre bien et vous contactera sous 24h
                 avec le nombre d'acheteurs potentiels correspondants à votre profil.
               </p>
-              <div className="space-y-4">
-                <Button onClick={() => navigate('/vendre-mon-bien')} size="lg">
-                  Retour à la page vendeur
-                </Button>
-              </div>
+              <button
+                onClick={() => navigate('/vendre-mon-bien')}
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-[hsl(38_55%_65%)] to-[hsl(38_45%_48%)] text-[hsl(30_15%_8%)] font-semibold shadow-[0_4px_20px_hsl(38_45%_48%/0.3)] hover:shadow-[0_6px_30px_hsl(38_45%_48%/0.45)] transition-all duration-300 cursor-pointer"
+              >
+                Retour à la page vendeur
+              </button>
             </div>
           </div>
         </main>
@@ -529,7 +528,6 @@ export default function FormulaireVendeurComplet() {
     );
   }
 
-  // Render step content
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
@@ -539,640 +537,267 @@ export default function FormulaireVendeurComplet() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="p-6 rounded-2xl bg-card border border-border/50"
+            transition={{ duration: 0.3 }}
+            className="space-y-5"
           >
-            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-              <Home className="w-5 h-5 text-primary" />
-              Informations principales
-            </h2>
-            
-            <div className="space-y-4">
-              {/* Type de bien */}
-              <div className="space-y-2">
-                <Label>Type de bien *</Label>
-                <Select 
-                  value={watch('type_bien')} 
-                  onValueChange={(value) => setValue('type_bien', value)}
-                >
-                  <SelectTrigger className={errors.type_bien ? 'border-destructive' : ''}>
-                    <SelectValue placeholder="Sélectionnez..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="appartement">Appartement</SelectItem>
-                    <SelectItem value="villa">Villa / Maison</SelectItem>
-                    <SelectItem value="immeuble">Immeuble de rapport</SelectItem>
-                    <SelectItem value="terrain">Terrain</SelectItem>
-                    <SelectItem value="commercial">Local commercial</SelectItem>
-                    <SelectItem value="autre">Autre</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="flex items-center gap-3 mb-2">
+              <LuxuryIconBadge size="sm"><IconHome size={16} /></LuxuryIconBadge>
+              <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Informations principales</h2>
+            </div>
 
-              {/* Villa sub-question */}
-              <AnimatePresence mode="wait">
-                {typeBien === 'villa' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="space-y-3 p-4 rounded-xl bg-muted/50 border border-border/30"
-                  >
-                    <Label className="text-base">Votre bien comprend-il plusieurs logements séparés ?</Label>
-                    <RadioGroup
-                      value={watch('est_multi_logements') || 'non'}
-                      onValueChange={(value: 'non' | 'oui_2' | 'oui_3plus') => setValue('est_multi_logements', value)}
-                      className="grid grid-cols-1 md:grid-cols-3 gap-3"
-                    >
-                      <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
-                        <RadioGroupItem value="non" id="non" />
-                        <Label htmlFor="non" className="cursor-pointer">Non, maison individuelle</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
-                        <RadioGroupItem value="oui_2" id="oui_2" />
-                        <Label htmlFor="oui_2" className="cursor-pointer">Oui, 2 logements</Label>
-                      </div>
-                      <div className="flex items-center space-x-2 p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer">
-                        <RadioGroupItem value="oui_3plus" id="oui_3plus" />
-                        <Label htmlFor="oui_3plus" className="cursor-pointer">Oui, 3+ logements</Label>
-                      </div>
-                    </RadioGroup>
+            <PremiumSelect
+              label="Type de bien"
+              required
+              value={watch('type_bien') || ''}
+              onValueChange={(value) => setValue('type_bien', value)}
+              options={[
+                { value: 'appartement', label: 'Appartement' },
+                { value: 'villa', label: 'Villa / Maison' },
+                { value: 'immeuble', label: 'Immeuble de rapport' },
+                { value: 'terrain', label: 'Terrain' },
+                { value: 'commercial', label: 'Local commercial' },
+                { value: 'autre', label: 'Autre' },
+              ]}
+              placeholder="Sélectionnez..."
+              error={errors.type_bien?.message}
+            />
+
+            {/* Villa sub-question */}
+            <AnimatePresence mode="wait">
+              {typeBien === 'villa' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <PremiumRadioGroup
+                    label="Votre bien comprend-il plusieurs logements séparés ?"
+                    value={watch('est_multi_logements') || 'non'}
+                    onChange={(value) => setValue('est_multi_logements', value as 'non' | 'oui_2' | 'oui_3plus')}
+                    options={[
+                      { value: 'non', label: 'Non, maison individuelle' },
+                      { value: 'oui_2', label: 'Oui, 2 logements' },
+                      { value: 'oui_3plus', label: 'Oui, 3+ logements' },
+                    ]}
+                    columns={3}
+                  />
                   </motion.div>
                 )}
               </AnimatePresence>
 
               {/* Adresse */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <MapPinned className="w-4 h-4 text-muted-foreground" />
-                  Adresse du bien *
-                </Label>
+              <div>
+                <p className="text-sm font-medium text-[hsl(40_20%_60%)] mb-1.5">Adresse du bien <span className="text-red-400">*</span></p>
                 <GoogleAddressAutocomplete
                   value={watch('adresse')}
                   onChange={handleAddressChange}
                   onInputChange={(val) => setValue('adresse', val)}
                   placeholder="Entrez l'adresse complète"
-                  className={errors.adresse ? 'border-destructive' : ''}
                   restrictToSwitzerland
                 />
-                {errors.adresse && <p className="text-sm text-destructive">{errors.adresse.message}</p>}
+                {errors.adresse && <p className="text-xs text-red-400 mt-1">{errors.adresse.message}</p>}
               </div>
 
-              {/* NPA / Ville (auto-filled) */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>NPA</Label>
-                  <Input {...register('npa')} placeholder="Auto" readOnly className="bg-muted/50" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Ville</Label>
-                  <Input {...register('ville')} placeholder="Auto" readOnly className="bg-muted/50" />
-                </div>
+                <PremiumInput label="NPA" {...register('npa')} value={watch('npa') || ''} placeholder="Auto" readOnly />
+                <PremiumInput label="Ville" {...register('ville')} value={watch('ville') || ''} placeholder="Auto" readOnly />
               </div>
 
-              {/* Surface & Prix */}
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Ruler className="w-4 h-4 text-muted-foreground" />
-                    {typeBien === 'terrain' ? 'Surface du terrain (m²) *' : 'Surface habitable (m²) *'}
-                  </Label>
-                  <Input 
-                    {...register('surface')}
-                    placeholder={typeBien === 'terrain' ? 'Ex: 800' : 'Ex: 120'}
-                    className={errors.surface ? 'border-destructive' : ''}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Banknote className="w-4 h-4 text-muted-foreground" />
-                    Prix souhaité (CHF) *
-                  </Label>
-                  <Input 
-                    {...register('prix_souhaite')}
-                    placeholder={typeBien === 'terrain' ? "Ex: 500'000" : "Ex: 800'000"}
-                    className={errors.prix_souhaite ? 'border-destructive' : ''}
-                  />
-                </div>
+                <PremiumInput
+                  label={typeBien === 'terrain' ? 'Surface du terrain (m²)' : 'Surface habitable (m²)'}
+                  required
+                  {...register('surface')}
+                  value={watch('surface') || ''}
+                  placeholder={typeBien === 'terrain' ? 'Ex: 800' : 'Ex: 120'}
+                  error={errors.surface?.message}
+                />
+                <PremiumInput
+                  label="Prix souhaité (CHF)"
+                  required
+                  {...register('prix_souhaite')}
+                  value={watch('prix_souhaite') || ''}
+                  placeholder={typeBien === 'terrain' ? "Ex: 500'000" : "Ex: 800'000"}
+                  icon={<IconWallet size={16} />}
+                  error={errors.prix_souhaite?.message}
+                />
               </div>
-            </div>
           </motion.div>
         );
 
       case 2:
         return (
-          <motion.div
-            key="step2"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
-            {/* Details based on property type */}
-            {typeBien && typeBien !== 'autre' && (
-              <div className="p-6 rounded-2xl bg-card border border-border/50">
-                {/* TERRAIN Section */}
-                {typeBien === 'terrain' && (
-                  <>
-                    <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                      <Map className="w-5 h-5 text-primary" />
-                      Caractéristiques du terrain
-                    </h2>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Zone d'affectation</Label>
-                        <Select onValueChange={(value) => setValue('zone_affectation', value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionnez..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="habitation">Zone d'habitation</SelectItem>
-                            <SelectItem value="mixte">Zone mixte</SelectItem>
-                            <SelectItem value="agricole">Zone agricole</SelectItem>
-                            <SelectItem value="industrielle">Zone industrielle</SelectItem>
-                            <SelectItem value="autre">Autre</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Constructibilité (COS/CUS)</Label>
-                        <Input {...register('constructibilite')} placeholder="Ex: 0.4 / 1.2" />
-                      </div>
-                      <div className="flex items-center space-x-3 p-4 rounded-lg border border-border">
-                        <Checkbox
-                          id="terrain_viabilise"
-                          checked={watch('terrain_viabilise')}
-                          onCheckedChange={(checked) => setValue('terrain_viabilise', checked as boolean)}
-                        />
-                        <Label htmlFor="terrain_viabilise" className="flex items-center gap-2 cursor-pointer">
-                          <Zap className="w-4 h-4 text-muted-foreground" />
-                          Terrain viabilisé (eau, électricité, égouts)
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-3 p-4 rounded-lg border border-border">
-                        <Checkbox
-                          id="acces_route"
-                          checked={watch('acces_route')}
-                          onCheckedChange={(checked) => setValue('acces_route', checked as boolean)}
-                        />
-                        <Label htmlFor="acces_route" className="flex items-center gap-2 cursor-pointer">
-                          <Car className="w-4 h-4 text-muted-foreground" />
-                          Accès route direct
-                        </Label>
-                      </div>
-                    </div>
-                  </>
-                )}
+          <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
+            <div className="flex items-center gap-3 mb-2">
+              <LuxuryIconBadge size="sm"><IconDocument size={16} /></LuxuryIconBadge>
+              <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Caractéristiques du bien</h2>
+            </div>
 
-                {/* IMMEUBLE / MULTI-LOGEMENTS Section */}
-                {showRendementFields && (
-                  <>
-                    <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                      <Landmark className="w-5 h-5 text-primary" />
-                      Données de rendement
-                    </h2>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-muted-foreground" />
-                          Nombre de logements
-                        </Label>
-                        <Input {...register('nb_logements')} placeholder="Ex: 6" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <DollarSign className="w-4 h-4 text-muted-foreground" />
-                          Revenus locatifs annuels (CHF)
-                        </Label>
-                        <Input {...register('revenus_locatifs')} placeholder="Ex: 120'000" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Banknote className="w-4 h-4 text-muted-foreground" />
-                          Charges annuelles (CHF)
-                        </Label>
-                        <Input {...register('charges_annuelles')} placeholder="Ex: 15'000" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Percent className="w-4 h-4 text-muted-foreground" />
-                          Taux d'occupation (%)
-                        </Label>
-                        <Input {...register('taux_occupation')} placeholder="Ex: 95" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>État général</Label>
-                        <Select onValueChange={(value) => setValue('etat_general', value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionnez..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="neuf">Neuf / Rénové récemment</SelectItem>
-                            <SelectItem value="bon">Bon état</SelectItem>
-                            <SelectItem value="moyen">État moyen</SelectItem>
-                            <SelectItem value="a_renover">À rénover</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-muted-foreground" />
-                          Année construction
-                        </Label>
-                        <Input {...register('annee_construction')} placeholder="Ex: 1985" />
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* COMMERCIAL Section */}
-                {typeBien === 'commercial' && (
-                  <>
-                    <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                      <Store className="w-5 h-5 text-primary" />
-                      Détails du local
-                    </h2>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label>Usage actuel</Label>
-                        <Select onValueChange={(value) => setValue('usage_actuel', value)}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Sélectionnez..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="commerce">Commerce / Boutique</SelectItem>
-                            <SelectItem value="bureau">Bureau</SelectItem>
-                            <SelectItem value="atelier">Atelier / Dépôt</SelectItem>
-                            <SelectItem value="restaurant">Restaurant / Café</SelectItem>
-                            <SelectItem value="vacant">Vacant</SelectItem>
-                            <SelectItem value="autre">Autre</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <DollarSign className="w-4 h-4 text-muted-foreground" />
-                          Loyer actuel (CHF/mois)
-                        </Label>
-                        <Input {...register('loyer_actuel')} placeholder="Ex: 3'500" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-muted-foreground" />
-                          Année construction
-                        </Label>
-                        <Input {...register('annee_construction')} placeholder="Ex: 2000" />
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* APPARTEMENT / VILLA SIMPLE Section */}
-                {(typeBien === 'appartement' || (typeBien === 'villa' && !showRendementFields)) && (
-                  <>
-                    <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-                      <Building2 className="w-5 h-5 text-primary" />
-                      Détails du bien
-                    </h2>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Home className="w-4 h-4 text-muted-foreground" />
-                          Nombre de pièces
-                        </Label>
-                        <Input {...register('nombre_pieces')} placeholder="Ex: 4.5" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Bed className="w-4 h-4 text-muted-foreground" />
-                          Chambres
-                        </Label>
-                        <Input {...register('nombre_chambres')} placeholder="Ex: 3" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Bath className="w-4 h-4 text-muted-foreground" />
-                          Salles de bain
-                        </Label>
-                        <Input {...register('nombre_sdb')} placeholder="Ex: 2" />
-                      </div>
-                      {typeBien === 'appartement' && (
-                        <div className="space-y-2">
-                          <Label>Étage</Label>
-                          <Input {...register('etage')} placeholder="Ex: 3ème" />
-                        </div>
-                      )}
-                      {typeBien === 'villa' && (
-                        <div className="space-y-2">
-                          <Label className="flex items-center gap-2">
-                            <Trees className="w-4 h-4 text-muted-foreground" />
-                            Surface terrain (m²)
-                          </Label>
-                          <Input {...register('surface_terrain')} placeholder="Ex: 500" />
-                        </div>
-                      )}
-                      <div className="space-y-2">
-                        <Label className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-muted-foreground" />
-                          Année construction
-                        </Label>
-                        <Input {...register('annee_construction')} placeholder="Ex: 2010" />
-                      </div>
-                    </div>
-                  </>
-                )}
+            {typeBien === 'terrain' && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <PremiumSelect label="Zone d'affectation" value={watch('zone_affectation') || ''} onValueChange={(v) => setValue('zone_affectation', v)} options={[{value:'habitation',label:"Zone d'habitation"},{value:'mixte',label:'Zone mixte'},{value:'agricole',label:'Zone agricole'},{value:'industrielle',label:'Zone industrielle'},{value:'autre',label:'Autre'}]} placeholder="Sélectionnez..." />
+                  <PremiumInput label="Constructibilité (COS/CUS)" {...register('constructibilite')} value={watch('constructibilite') || ''} placeholder="Ex: 0.4 / 1.2" />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <PremiumCheckbox id="terrain_viabilise" checked={watch('terrain_viabilise') || false} onCheckedChange={(c) => setValue('terrain_viabilise', c as boolean)} label="Terrain viabilisé (eau, électricité, égouts)" />
+                  <PremiumCheckbox id="acces_route" checked={watch('acces_route') || false} onCheckedChange={(c) => setValue('acces_route', c as boolean)} label="Accès route direct" />
+                </div>
               </div>
             )}
 
-            {/* Équipements */}
+            {showRendementFields && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <PremiumInput label="Nombre de logements" {...register('nb_logements')} value={watch('nb_logements') || ''} placeholder="Ex: 6" icon={<IconBuilding size={16} />} />
+                  <PremiumInput label="Revenus locatifs annuels (CHF)" {...register('revenus_locatifs')} value={watch('revenus_locatifs') || ''} placeholder="Ex: 120'000" icon={<IconWallet size={16} />} />
+                  <PremiumInput label="Charges annuelles (CHF)" {...register('charges_annuelles')} value={watch('charges_annuelles') || ''} placeholder="Ex: 15'000" />
+                  <PremiumInput label="Taux d'occupation (%)" {...register('taux_occupation')} value={watch('taux_occupation') || ''} placeholder="Ex: 95" />
+                  <PremiumSelect label="État général" value={watch('etat_general') || ''} onValueChange={(v) => setValue('etat_general', v)} options={[{value:'neuf',label:'Neuf / Rénové récemment'},{value:'bon',label:'Bon état'},{value:'moyen',label:'État moyen'},{value:'a_renover',label:'À rénover'}]} placeholder="Sélectionnez..." />
+                  <PremiumInput label="Année construction" {...register('annee_construction')} value={watch('annee_construction') || ''} placeholder="Ex: 1985" icon={<Calendar className="h-4 w-4" />} />
+                </div>
+              </div>
+            )}
+
+            {typeBien === 'commercial' && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <PremiumSelect label="Usage actuel" value={watch('usage_actuel') || ''} onValueChange={(v) => setValue('usage_actuel', v)} options={[{value:'commerce',label:'Commerce / Boutique'},{value:'bureau',label:'Bureau'},{value:'atelier',label:'Atelier / Dépôt'},{value:'restaurant',label:'Restaurant / Café'},{value:'vacant',label:'Vacant'},{value:'autre',label:'Autre'}]} placeholder="Sélectionnez..." />
+                <PremiumInput label="Loyer actuel (CHF/mois)" {...register('loyer_actuel')} value={watch('loyer_actuel') || ''} placeholder="Ex: 3'500" icon={<IconWallet size={16} />} />
+                <PremiumInput label="Année construction" {...register('annee_construction')} value={watch('annee_construction') || ''} placeholder="Ex: 2000" />
+              </div>
+            )}
+
+            {(typeBien === 'appartement' || (typeBien === 'villa' && !showRendementFields)) && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <PremiumInput label="Nombre de pièces" {...register('nombre_pieces')} value={watch('nombre_pieces') || ''} placeholder="Ex: 4.5" />
+                <PremiumInput label="Chambres" {...register('nombre_chambres')} value={watch('nombre_chambres') || ''} placeholder="Ex: 3" />
+                <PremiumInput label="Salles de bain" {...register('nombre_sdb')} value={watch('nombre_sdb') || ''} placeholder="Ex: 2" />
+                {typeBien === 'appartement' && <PremiumInput label="Étage" {...register('etage')} value={watch('etage') || ''} placeholder="Ex: 3ème" />}
+                {typeBien === 'villa' && <PremiumInput label="Surface terrain (m²)" {...register('surface_terrain')} value={watch('surface_terrain') || ''} placeholder="Ex: 500" />}
+                <PremiumInput label="Année construction" {...register('annee_construction')} value={watch('annee_construction') || ''} placeholder="Ex: 2010" />
+              </div>
+            )}
+
             {typeBien && typeBien !== 'terrain' && typeBien !== 'autre' && getEquipmentItems().length > 0 && (
-              <div className="p-6 rounded-2xl bg-card border border-border/50">
-                <h2 className="text-xl font-semibold mb-6">Équipements</h2>
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-[hsl(40_20%_60%)]">Équipements</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {getEquipmentItems().map((item) => (
-                    <div key={item.key} className="flex items-center space-x-3">
-                      <Checkbox
-                        id={item.key}
-                        checked={watch(item.key as keyof FormData) as boolean}
-                        onCheckedChange={(checked) => 
-                          setValue(item.key as keyof FormData, checked as boolean)
-                        }
-                      />
-                      <Label htmlFor={item.key} className="flex items-center gap-2 cursor-pointer">
-                        <item.icon className="w-4 h-4 text-muted-foreground" />
-                        {item.label}
-                      </Label>
-                    </div>
+                    <PremiumCheckbox
+                      key={item.key}
+                      id={item.key}
+                      checked={watch(item.key as keyof FormData) as boolean || false}
+                      onCheckedChange={(checked) => setValue(item.key as keyof FormData, checked as boolean)}
+                      label={item.label}
+                    />
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Motivations */}
-            <div className="p-6 rounded-2xl bg-card border border-border/50">
-              <h2 className="text-xl font-semibold mb-6">Vos motivations</h2>
-              
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Délai de vente souhaité</Label>
-                    <Select onValueChange={(value) => setValue('delai_vente', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionnez..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="urgent">Urgent (- de 3 mois)</SelectItem>
-                        <SelectItem value="3-6mois">3 à 6 mois</SelectItem>
-                        <SelectItem value="6-12mois">6 à 12 mois</SelectItem>
-                        <SelectItem value="flexible">Flexible</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Motif de vente</Label>
-                    <Select onValueChange={(value) => setValue('motif_vente', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionnez..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="demenagement">Déménagement</SelectItem>
-                        <SelectItem value="succession">Succession</SelectItem>
-                        <SelectItem value="investissement">Réinvestissement</SelectItem>
-                        <SelectItem value="changement">Changement de vie</SelectItem>
-                        <SelectItem value="autre">Autre</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Description libre (optionnel)</Label>
-                  <Textarea 
-                    {...register('description')}
-                    placeholder="Points forts de votre bien, travaux récents, particularités..."
-                    rows={4}
-                  />
-                </div>
+            <div className="space-y-4 pt-2 border-t border-[hsl(38_45%_48%/0.12)]">
+              <p className="text-sm font-medium text-[hsl(40_20%_60%)]">Vos motivations</p>
+              <div className="grid grid-cols-2 gap-4">
+                <PremiumSelect label="Délai de vente souhaité" value={watch('delai_vente') || ''} onValueChange={(v) => setValue('delai_vente', v)} options={[{value:'urgent',label:'Urgent (- de 3 mois)'},{value:'3-6mois',label:'3 à 6 mois'},{value:'6-12mois',label:'6 à 12 mois'},{value:'flexible',label:'Flexible'}]} placeholder="Sélectionnez..." />
+                <PremiumSelect label="Motif de vente" value={watch('motif_vente') || ''} onValueChange={(v) => setValue('motif_vente', v)} options={[{value:'demenagement',label:'Déménagement'},{value:'succession',label:'Succession'},{value:'investissement',label:'Réinvestissement'},{value:'changement',label:'Changement de vie'},{value:'autre',label:'Autre'}]} placeholder="Sélectionnez..." />
               </div>
+              <PremiumTextarea label="Description libre" optional {...register('description')} value={watch('description') || ''} placeholder="Points forts de votre bien, travaux récents, particularités..." rows={4} />
             </div>
           </motion.div>
         );
 
       case 3:
         return (
-          <motion.div
-            key="step3"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="p-6 rounded-2xl bg-card border border-border/50"
-          >
-            <h2 className="text-xl font-semibold mb-2 flex items-center gap-2">
-              <Camera className="w-5 h-5 text-primary" />
-              Photos du bien
-            </h2>
-            <p className="text-sm text-muted-foreground mb-6">
-              Ajoutez jusqu'à 5 photos pour enrichir votre dossier (optionnel)
-            </p>
+          <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
+            <div className="flex items-center gap-3 mb-2">
+              <LuxuryIconBadge size="sm"><IconCamera size={16} /></LuxuryIconBadge>
+              <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Photos du bien</h2>
+            </div>
+            <p className="text-sm text-[hsl(40_20%_50%)]">Ajoutez jusqu'à 5 photos pour enrichir votre dossier (optionnel)</p>
 
-            {/* Native camera buttons */}
             {isNative && (
-              <div className="flex gap-3 mb-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleNativePhoto(true)}
-                  disabled={cameraLoading || uploading || photos.length >= 5}
-                  className="flex-1"
-                >
-                  <Camera className="w-4 h-4 mr-2" />
-                  Prendre une photo
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleNativePhoto(false)}
-                  disabled={cameraLoading || uploading || photos.length >= 5}
-                  className="flex-1"
-                >
-                  <Image className="w-4 h-4 mr-2" />
-                  Galerie
-                </Button>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => handleNativePhoto(true)} disabled={cameraLoading || uploading || photos.length >= 5} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[hsl(38_45%_48%/0.25)] text-[hsl(40_20%_60%)] text-sm hover:border-[hsl(38_45%_48%/0.45)] transition-colors cursor-pointer disabled:opacity-50">
+                  <Camera className="w-4 h-4" /> Prendre une photo
+                </button>
+                <button type="button" onClick={() => handleNativePhoto(false)} disabled={cameraLoading || uploading || photos.length >= 5} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-[hsl(38_45%_48%/0.25)] text-[hsl(40_20%_60%)] text-sm hover:border-[hsl(38_45%_48%/0.45)] transition-colors cursor-pointer disabled:opacity-50">
+                  <Image className="w-4 h-4" /> Galerie
+                </button>
               </div>
             )}
 
-            {/* Drag and drop zone */}
             <div
-              className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all ${
-                dragOver 
-                  ? 'border-primary bg-primary/10' 
-                  : 'border-border hover:border-primary/50'
+              className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
+                dragOver ? 'border-[hsl(38_55%_65%/0.6)] bg-[hsl(38_45%_48%/0.06)]' : 'border-[hsl(38_45%_48%/0.25)] hover:border-[hsl(38_55%_65%/0.4)] bg-[hsl(38_45%_48%/0.03)]'
               } ${photos.length >= 5 ? 'opacity-50 pointer-events-none' : ''}`}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
               onDrop={handleDrop}
             >
               {uploading ? (
-                <div className="flex flex-col items-center gap-2">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">Upload en cours...</p>
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-[hsl(38_55%_65%)]" />
+                  <p className="text-sm text-[hsl(40_20%_50%)]">Upload en cours...</p>
                 </div>
               ) : (
                 <>
-                  <Upload className="w-10 h-10 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-foreground font-medium mb-1">
-                    Glissez vos photos ici
-                  </p>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    ou cliquez pour sélectionner (max 5 photos, 10 MB chacune)
-                  </p>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    onChange={(e) => handleFileUpload(e.target.files)}
-                    disabled={photos.length >= 5}
-                  />
-                  <Button type="button" variant="outline" size="sm" className="pointer-events-none">
-                    Parcourir
-                  </Button>
+                  <Upload className="w-10 h-10 mx-auto mb-3 text-[hsl(38_45%_48%)]" />
+                  <p className="font-medium mb-1 text-[hsl(40_20%_75%)]">Glissez vos photos ici</p>
+                  <p className="text-sm text-[hsl(40_20%_45%)] mb-4">ou cliquez pour sélectionner (max 5 photos, 10 MB chacune)</p>
+                  <input type="file" accept="image/*" multiple className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={(e) => handleFileUpload(e.target.files)} disabled={photos.length >= 5} aria-label="Sélectionner des photos" />
+                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[hsl(38_45%_48%/0.3)] text-[hsl(40_20%_60%)] text-sm pointer-events-none">Parcourir</span>
                 </>
               )}
             </div>
 
-            {/* Photo grid */}
             {photos.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 {photos.map((photo, index) => (
-                  <div key={index} className="relative group aspect-square rounded-lg overflow-hidden border border-border">
-                    <img
-                      src={photo.url}
-                      alt={`Photo ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removePhoto(index)}
-                      className="absolute top-2 right-2 p-1.5 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
+                  <div key={index} className="relative group aspect-square rounded-xl overflow-hidden border border-[hsl(38_45%_48%/0.2)]">
+                    <img src={photo.url} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => removePhoto(index)} aria-label={`Supprimer photo ${index + 1}`} className="absolute top-1.5 right-1.5 p-1 rounded-full bg-[hsl(30_15%_8%/0.8)] text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
                       <X className="w-4 h-4" />
                     </button>
-                    {index === 0 && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-primary/90 text-primary-foreground text-xs py-1 text-center">
-                        Principale
-                      </div>
-                    )}
+                    {index === 0 && <div className="absolute bottom-0 left-0 right-0 bg-[hsl(38_45%_48%/0.9)] text-[hsl(30_15%_8%)] text-xs py-1 text-center font-medium">Principale</div>}
                   </div>
                 ))}
               </div>
             )}
-
-            <p className="text-xs text-muted-foreground mt-4">
-              💡 Conseil : Prenez des photos lumineuses de chaque pièce, de l'extérieur et des points forts du bien.
-            </p>
+            <p className="text-xs text-[hsl(40_20%_38%)]">Conseil : Prenez des photos lumineuses de chaque pièce, de l'extérieur et des points forts du bien.</p>
           </motion.div>
         );
 
       case 4:
         return (
-          <motion.div
-            key="step4"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="p-6 rounded-2xl bg-card border border-border/50"
-          >
-            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" />
-              Vos coordonnées
-            </h2>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Nom complet *</Label>
-                <Input 
-                  {...register('nom')}
-                  placeholder="Prénom Nom"
-                  className={errors.nom ? 'border-destructive' : ''}
-                />
-                {errors.nom && <p className="text-sm text-destructive">{errors.nom.message}</p>}
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
-                    Email *
-                  </Label>
-                  <Input 
-                    {...register('email')}
-                    type="email"
-                    placeholder="votre@email.ch"
-                    className={errors.email ? 'border-destructive' : ''}
-                  />
-                  {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    Téléphone *
-                  </Label>
-                  <Input 
-                    {...register('telephone')}
-                    type="tel"
-                    placeholder="079 xxx xx xx"
-                    className={errors.telephone ? 'border-destructive' : ''}
-                  />
-                  {errors.telephone && <p className="text-sm text-destructive">{errors.telephone.message}</p>}
-                </div>
-              </div>
+          <motion.div key="step4" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
+            <div className="flex items-center gap-3 mb-2">
+              <LuxuryIconBadge size="sm"><IconUser size={16} /></LuxuryIconBadge>
+              <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Vos coordonnées</h2>
+            </div>
+            <PremiumInput label="Nom complet" required {...register('nom')} value={watch('nom') || ''} placeholder="Prénom Nom" error={errors.nom?.message} />
+            <div className="grid grid-cols-2 gap-4">
+              <PremiumInput label="Email" required type="email" {...register('email')} value={watch('email') || ''} placeholder="votre@email.ch" icon={<IconMail size={16} />} error={errors.email?.message} />
+              <PremiumInput label="Téléphone" required type="tel" {...register('telephone')} value={watch('telephone') || ''} placeholder="079 xxx xx xx" icon={<IconPhone size={16} />} error={errors.telephone?.message} />
             </div>
           </motion.div>
         );
 
       case 5:
         return (
-          <motion.div
-            key="step5"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="p-6 rounded-2xl bg-card border border-border/50"
-          >
-            <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
-              <Lock className="w-5 h-5 text-primary" />
-              Création de votre compte
-            </h2>
-
-            <p className="text-sm text-muted-foreground mb-4">
-              Créez un mot de passe pour accéder à votre espace client et suivre votre dossier de vente.
-            </p>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <KeyRound className="w-4 h-4 text-muted-foreground" />
-                  Mot de passe *
-                </Label>
-                <Input
-                  {...register('password')}
-                  type="password"
-                  placeholder="8 caractères minimum"
-                  className={errors.password ? 'border-destructive' : ''}
-                />
-                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
-              </div>
-
-              <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
-                Un email de confirmation vous sera envoyé à <strong>{watch('email')}</strong>.
-                Après validation, vous accéderez à votre espace personnel.
-              </div>
-
-              <div className="text-center pt-2">
-                <ForgotPasswordLink defaultEmail={watch('email')} />
-              </div>
+          <motion.div key="step5" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3 }} className="space-y-5">
+            <div className="flex items-center gap-3 mb-2">
+              <LuxuryIconBadge size="sm"><IconLock size={16} /></LuxuryIconBadge>
+              <h2 className="text-lg font-serif font-semibold text-[hsl(40_20%_85%)]">Création de votre compte</h2>
+            </div>
+            <p className="text-sm text-[hsl(40_20%_50%)]">Créez un mot de passe pour accéder à votre espace client et suivre votre dossier de vente.</p>
+            <PremiumInput label="Mot de passe" required type="password" {...register('password')} value={watch('password') || ''} placeholder="8 caractères minimum" icon={<IconLock size={16} />} error={errors.password?.message} hint="Minimum 8 caractères" />
+            <div className="rounded-xl p-4 bg-[hsl(38_45%_48%/0.06)] border border-[hsl(38_45%_48%/0.2)] flex items-start gap-3">
+              <IconLock size={16} className="text-[hsl(38_55%_65%)] mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-[hsl(40_20%_50%)] leading-relaxed">Un email de confirmation vous sera envoyé à <strong className="text-[hsl(40_20%_70%)]">{watch('email')}</strong>. Après validation, vous accéderez à votre espace personnel.</p>
+            </div>
+            <div className="text-center">
+              <ForgotPasswordLink defaultEmail={watch('email')} />
             </div>
           </motion.div>
         );
@@ -1181,8 +806,6 @@ export default function FormulaireVendeurComplet() {
         return null;
     }
   };
-
-  const premiumSteps = STEPS.map(s => ({ title: s.title, icon: '●' }));
 
   return (
     <PremiumFormShell currentStep={currentStep - 1} totalSteps={STEPS.length}>
