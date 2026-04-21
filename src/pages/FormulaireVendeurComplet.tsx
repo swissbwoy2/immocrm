@@ -3,15 +3,18 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { 
-  ArrowLeft, Send, Home, MapPinned, Ruler, Banknote, User, 
+import {
+  Send, Home, MapPinned, Ruler, Banknote, User,
   Mail, Phone, Loader2, CheckCircle, Building2, Calendar,
   Bed, Bath, Car, Trees, Sun, Mountain, Landmark, Map, Zap,
   DollarSign, Percent, Store, Factory, Camera, Upload, X, Image,
   ChevronLeft, ChevronRight, FileText, Lock, KeyRound
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PremiumFormShell } from '@/components/forms-premium/PremiumFormShell';
+import { PremiumStepIndicator } from '@/components/forms-premium/PremiumStepIndicator';
+import { PremiumFormCard } from '@/components/forms-premium/PremiumFormCard';
+import { PremiumButton } from '@/components/forms-premium/PremiumButton';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -1179,90 +1182,24 @@ export default function FormulaireVendeurComplet() {
     }
   };
 
+  const premiumSteps = STEPS.map(s => ({ title: s.title, icon: '●' }));
+
   return (
-    <div className="theme-luxury min-h-screen bg-background">
+    <PremiumFormShell currentStep={currentStep - 1} totalSteps={STEPS.length}>
       <VendeurFloatingNav />
-      
-      <main className="pt-28 pb-24">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto">
-            {/* Back button */}
-            <Button 
-              variant="ghost" 
-              className="mb-6"
-              onClick={() => navigate('/vendre-mon-bien')}
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Retour
-            </Button>
+      <PremiumStepIndicator steps={premiumSteps} currentStep={currentStep - 1} />
 
-            {/* Header */}
-            <div className="text-center mb-8">
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">
-                Complétez les informations de votre bien
-              </h1>
-              <p className="text-lg text-muted-foreground">
-                Plus vous nous donnez de détails, plus notre matching sera précis.
-              </p>
-            </div>
+      <div className="container mx-auto px-4 max-w-3xl pb-8">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold font-serif text-[hsl(40_20%_88%)] mb-2">
+            Complétez les informations de votre bien
+          </h1>
+          <p className="text-[hsl(40_20%_48%)] text-sm">
+            Plus vous nous donnez de détails, plus notre matching sera précis.
+          </p>
+        </div>
 
-            {/* Stepper */}
-            <div className="mb-10">
-              <div className="flex items-center justify-between">
-                {STEPS.map((step, index) => {
-                  const isActive = currentStep === step.id;
-                  const isCompleted = currentStep > step.id;
-                  const StepIcon = step.icon;
-                  
-                  return (
-                    <div key={step.id} className="flex-1 flex items-center">
-                      <div className="flex flex-col items-center w-full">
-                        <div
-                          className={`
-                            relative w-12 h-12 rounded-full flex items-center justify-center
-                            transition-all duration-300 border-2
-                            ${isCompleted 
-                              ? 'bg-emerald-500 border-emerald-500 text-white' 
-                              : isActive 
-                                ? 'bg-primary border-primary text-primary-foreground' 
-                                : 'bg-muted border-border text-muted-foreground'
-                            }
-                          `}
-                        >
-                          {isCompleted ? (
-                            <CheckCircle className="w-6 h-6" />
-                          ) : (
-                            <StepIcon className="w-5 h-5" />
-                          )}
-                        </div>
-                        <div className="mt-2 text-center hidden sm:block">
-                          <p className={`text-sm font-medium ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
-                            {step.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{step.description}</p>
-                        </div>
-                      </div>
-                      {index < STEPS.length - 1 && (
-                        <div 
-                          className={`h-0.5 flex-1 mx-2 transition-colors ${
-                            currentStep > step.id ? 'bg-emerald-500' : 'bg-border'
-                          }`}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              
-              {/* Mobile step indicator */}
-              <div className="sm:hidden text-center mt-4">
-                <p className="text-sm font-medium text-primary">
-                  Étape {currentStep} : {STEPS[currentStep - 1].title}
-                </p>
-                <p className="text-xs text-muted-foreground">{STEPS[currentStep - 1].description}</p>
-              </div>
-            </div>
-
+        <PremiumFormCard>
             {/* Form */}
             <form onSubmit={handleSubmit(onSubmit)}>
               <AnimatePresence mode="wait">
@@ -1270,58 +1207,36 @@ export default function FormulaireVendeurComplet() {
               </AnimatePresence>
 
               {/* Navigation buttons */}
-              <div className="flex justify-between mt-8 gap-4">
-                <Button
+              <div className="flex justify-between items-center mt-8 pt-6 border-t border-[hsl(38_45%_48%/0.15)] gap-4">
+                <PremiumButton
                   type="button"
-                  variant="outline"
+                  variant="back"
                   onClick={goToPrevStep}
                   disabled={currentStep === 1}
-                  className="flex-1 sm:flex-none"
                 >
-                  <ChevronLeft className="w-4 h-4 mr-2" />
                   Précédent
-                </Button>
+                </PremiumButton>
 
                 {currentStep < 5 ? (
-                  <Button
-                    type="button"
-                    onClick={goToNextStep}
-                    className="flex-1 sm:flex-none"
-                  >
+                  <PremiumButton type="button" variant="next" onClick={goToNextStep}>
                     Suivant
-                    <ChevronRight className="w-4 h-4 ml-2" />
-                  </Button>
+                  </PremiumButton>
                 ) : (
-                  <Button 
-                    type="submit" 
-                    className="flex-1 sm:flex-none bg-gradient-to-r from-primary to-accent hover:opacity-90"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Envoi...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-5 h-5 mr-2" />
-                        Soumettre mon bien
-                      </>
-                    )}
-                  </Button>
+                  <PremiumButton type="submit" variant="submit" loading={isSubmitting} disabled={isSubmitting}>
+                    Soumettre mon bien
+                  </PremiumButton>
                 )}
               </div>
 
-              <p className="text-xs text-center text-muted-foreground mt-6">
-                En soumettant ce formulaire, vous acceptez d'être contacté par notre équipe. 
+              <p className="text-xs text-center text-[hsl(40_20%_35%)] mt-6">
+                En soumettant ce formulaire, vous acceptez d'être contacté par notre équipe.
                 Aucune donnée n'est partagée avec des tiers.
               </p>
             </form>
-          </div>
-        </div>
-      </main>
+        </PremiumFormCard>
+      </div>
 
       <VendeurFooter />
-    </div>
+    </PremiumFormShell>
   );
 }

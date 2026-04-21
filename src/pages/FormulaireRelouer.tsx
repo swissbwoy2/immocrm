@@ -4,10 +4,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  ArrowLeft, ChevronLeft, ChevronRight, Send, Home, User, Loader2,
+  ChevronLeft, ChevronRight, Send, Home, User, Loader2,
   CheckCircle, Camera, Upload, X, Lock, KeyRound, Banknote, MapPinned,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,6 +17,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { ForgotPasswordLink } from '@/components/auth/ForgotPasswordLink';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PremiumFormShell } from '@/components/forms-premium/PremiumFormShell';
+import { PremiumStepIndicator } from '@/components/forms-premium/PremiumStepIndicator';
+import { PremiumFormCard } from '@/components/forms-premium/PremiumFormCard';
+import { PremiumButton } from '@/components/forms-premium/PremiumButton';
 
 const schema = z.object({
   // Étape 1 - Bien
@@ -222,41 +225,22 @@ export default function FormulaireRelouer() {
     { key: 'ascenseur', label: 'Ascenseur' },
   ];
 
-  return (
-    <div className="theme-luxury min-h-screen bg-background py-8 md:py-12">
-      <div className="container mx-auto px-4 max-w-3xl">
-        <Button variant="ghost" onClick={() => navigate('/relouer-mon-appartement')} className="mb-6">
-          <ArrowLeft className="h-4 w-4 mr-2" /> Retour
-        </Button>
+  const premiumSteps = STEPS.map(s => ({ title: s.title, icon: '●' }));
 
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+  return (
+    <PremiumFormShell currentStep={step - 1} totalSteps={STEPS.length}>
+      <PremiumStepIndicator steps={premiumSteps} currentStep={step - 1} />
+
+      <div className="container mx-auto px-4 max-w-3xl pb-8">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold font-serif text-[hsl(40_20%_88%)] mb-2">
             Trouver un repreneur pour mon bail
           </h1>
-          <p className="text-muted-foreground">Étape {step} sur 4</p>
+          <p className="text-[hsl(40_20%_45%)] text-sm">Étape {step} sur 4</p>
         </div>
 
-        {/* Stepper */}
-        <div className="flex items-center justify-between mb-8">
-          {STEPS.map((s, idx) => {
-            const Icon = s.icon;
-            const active = step === s.id;
-            const done = step > s.id;
-            return (
-              <div key={s.id} className="flex-1 flex items-center">
-                <div className="flex flex-col items-center w-full">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${done ? 'bg-emerald-500 border-emerald-500 text-white' : active ? 'bg-primary border-primary text-primary-foreground' : 'bg-muted border-border text-muted-foreground'}`}>
-                    {done ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
-                  </div>
-                  <p className={`text-xs mt-1 hidden sm:block ${active ? 'text-primary font-medium' : 'text-muted-foreground'}`}>{s.title}</p>
-                </div>
-                {idx < STEPS.length - 1 && <div className={`h-0.5 flex-1 mx-2 ${done ? 'bg-emerald-500' : 'bg-border'}`} />}
-              </div>
-            );
-          })}
-        </div>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="bg-card rounded-2xl border border-border/40 p-6 md:p-8 shadow-sm">
+        <PremiumFormCard>
+          <form onSubmit={handleSubmit(onSubmit)}>
           <AnimatePresence mode="wait">
             {step === 1 && (
               <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
@@ -512,23 +496,23 @@ export default function FormulaireRelouer() {
             )}
           </AnimatePresence>
 
-          <div className="flex justify-between mt-8 pt-6 border-t gap-4">
-            <Button type="button" variant="outline" onClick={() => setStep(s => Math.max(1, s - 1))} disabled={step === 1}>
-              <ChevronLeft className="h-4 w-4 mr-2" /> Précédent
-            </Button>
-            {step < 4 ? (
-              <Button type="button" onClick={next}>
-                Suivant <ChevronRight className="h-4 w-4 ml-2" />
-              </Button>
-            ) : (
-              <Button type="submit" disabled={submitting}>
-                {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                Créer mon compte et envoyer
-              </Button>
-            )}
-          </div>
-        </form>
+            <div className="flex justify-between items-center mt-8 pt-6 border-t border-[hsl(38_45%_48%/0.15)] gap-4">
+              <PremiumButton type="button" variant="back" onClick={() => setStep(s => Math.max(1, s - 1))} disabled={step === 1}>
+                Précédent
+              </PremiumButton>
+              {step < 4 ? (
+                <PremiumButton type="button" variant="next" onClick={next}>
+                  Suivant
+                </PremiumButton>
+              ) : (
+                <PremiumButton type="submit" variant="submit" loading={submitting} disabled={submitting}>
+                  Créer mon compte et envoyer
+                </PremiumButton>
+              )}
+            </div>
+          </form>
+        </PremiumFormCard>
       </div>
-    </div>
+    </PremiumFormShell>
   );
 }

@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUTMParams } from '@/hooks/useUTMParams';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { ArrowLeft, ArrowRight, Send, Loader2, Sparkles, Check } from 'lucide-react';
-import logoImmorama from '@/assets/logo-immo-rama-new.png';
+import { ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { MandatFormData, initialFormData } from '@/components/mandat/types';
@@ -15,10 +12,11 @@ import MandatFormStep4 from '@/components/mandat/MandatFormStep4';
 import MandatFormStep5 from '@/components/mandat/MandatFormStep5';
 import MandatFormStep6 from '@/components/mandat/MandatFormStep6';
 import MandatFormStep7 from '@/components/mandat/MandatFormStep7';
-import { FloatingParticles } from '@/components/messaging/FloatingParticles';
-import { RetroGrid } from '@/components/public-site/magic/RetroGrid';
-import { Meteors } from '@/components/public-site/magic/Meteors';
-import { BorderBeam } from '@/components/public-site/magic/BorderBeam';
+import { PremiumFormShell } from '@/components/forms-premium/PremiumFormShell';
+import { PremiumStepIndicator } from '@/components/forms-premium/PremiumStepIndicator';
+import { PremiumFormCard } from '@/components/forms-premium/PremiumFormCard';
+import { PremiumButton } from '@/components/forms-premium/PremiumButton';
+import { PremiumStepTransition } from '@/components/forms-premium/PremiumStepTransition';
 
 const STORAGE_KEY = 'mandat_form_data';
 const STEPS = [
@@ -405,7 +403,6 @@ export default function NouveauMandat() {
   };
 
   const StepComponent = STEPS[currentStep].component;
-  const progress = ((currentStep + 1) / STEPS.length) * 100;
 
   const handleAddCoBuyer = () => {
     setCurrentStep(3);
@@ -413,189 +410,63 @@ export default function NouveauMandat() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden theme-luxury">
-      {/* Luxury Animated Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-background via-background to-[hsl(38_45%_48%/0.08)]" />
-      <div className="fixed inset-0 pointer-events-none">
-        <RetroGrid angle={70} className="opacity-40" />
-      </div>
-      <div className="fixed inset-0 opacity-20 pointer-events-none">
-        <FloatingParticles />
-      </div>
-      <div className="fixed inset-0 pointer-events-none hidden md:block">
-        <Meteors number={12} />
-      </div>
+    <PremiumFormShell currentStep={currentStep} totalSteps={STEPS.length}>
+      <PremiumStepIndicator steps={STEPS} currentStep={currentStep} />
 
-      {/* Ambient Gold Light Effects */}
-      <div className="fixed top-0 left-1/4 w-[40rem] h-[40rem] bg-[hsl(38_45%_48%/0.12)] rounded-full blur-3xl animate-pulse pointer-events-none" />
-      <div className="fixed bottom-0 right-1/4 w-[40rem] h-[40rem] bg-[hsl(38_55%_60%/0.10)] rounded-full blur-3xl animate-pulse pointer-events-none" style={{ animationDelay: '1.5s' }} />
-
-      {/* Floating decorative key — desktop only */}
-      <div className="fixed bottom-8 right-8 hidden lg:block pointer-events-none animate-pulse" style={{ animationDuration: '4s' }}>
-        <svg width="80" height="80" viewBox="0 0 24 24" fill="none" className="drop-shadow-[0_0_20px_hsl(38_45%_48%/0.5)]">
-          <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" stroke="hsl(38 45% 48%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </div>
-
-      <div className="relative z-10 py-8 px-4">
-        <div className="max-w-2xl mx-auto">
-          {/* Premium Header */}
-          <div className="text-center mb-8">
-            <div className="relative inline-block mb-4">
-              <div className="absolute inset-0 bg-primary/20 blur-xl animate-pulse" />
-              <img 
-                src={logoImmorama} 
-                alt="Immo-Rama" 
-                className="h-16 mx-auto relative z-10 drop-shadow-lg transition-transform hover:scale-105" 
-              />
-            </div>
-            <div className="relative">
-              <h1 className="text-4xl md:text-5xl font-bold font-serif bg-gradient-to-r from-[hsl(38_55%_75%)] via-[hsl(38_50%_60%)] to-[hsl(38_45%_48%)] bg-clip-text text-transparent drop-shadow-[0_0_30px_hsl(38_45%_48%/0.4)]">
-                Mandat de recherche
-              </h1>
-              <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-accent/20 blur-lg opacity-50" />
-            </div>
-            <p className="text-muted-foreground mt-2 flex items-center justify-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-              {currentStep < 4 
-                ? 'Étape par étape vers votre nouveau logement'
-                : formData.type_recherche === 'Acheter' 
-                  ? 'Pour un bien immobilier à acheter' 
-                  : 'Pour un logement à louer'}
-              <Sparkles className="h-4 w-4 text-primary animate-pulse" />
-            </p>
-          </div>
-
-          {/* Premium Progress Bar */}
-          <div className="mb-8">
-            {/* Step indicators */}
-            <div className="flex justify-between items-center mb-4">
-              {STEPS.map((step, index) => (
-                <div 
-                  key={index}
-                  className={`flex flex-col items-center transition-all duration-500 ${
-                    index <= currentStep ? 'opacity-100' : 'opacity-40'
-                  }`}
-                >
-                  <div className={`
-                    relative w-10 h-10 rounded-full flex items-center justify-center text-lg
-                    transition-all duration-500 transform
-                    ${index < currentStep 
-                      ? 'bg-gradient-to-br from-green-400 to-green-600 text-white shadow-lg shadow-green-500/30 scale-100' 
-                      : index === currentStep 
-                        ? 'bg-gradient-to-br from-primary to-primary/80 text-white shadow-lg shadow-primary/30 scale-110 ring-4 ring-primary/20' 
-                        : 'bg-muted text-muted-foreground'
-                    }
-                  `}>
-                    {index < currentStep ? (
-                      <Check className="h-5 w-5 animate-scale-in" />
-                    ) : (
-                      <span>{step.icon}</span>
-                    )}
-                    {index === currentStep && (
-                      <div className="absolute inset-0 rounded-full bg-primary/30 animate-ping" />
-                    )}
-                  </div>
-                  <span className={`text-xs mt-2 text-center max-w-[80px] hidden sm:block ${
-                    index === currentStep ? 'text-primary font-semibold' : 'text-muted-foreground'
-                  }`}>
-                    {step.title}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            {/* Progress bar */}
-            <div className="relative h-2 bg-muted/50 rounded-full overflow-hidden backdrop-blur-sm">
-              <div 
-                className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary via-primary to-accent transition-all duration-700 ease-out rounded-full"
-                style={{ width: `${progress}%` }}
-              >
-                {/* Shine effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-[shimmer_2s_infinite]" />
-              </div>
-              {/* Glow effect */}
-              <div 
-                className="absolute inset-y-0 left-0 bg-primary/30 blur-md transition-all duration-700"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-
-            {/* Step info */}
-            <div className="flex justify-between text-sm mt-3">
-              <span className="text-muted-foreground">
-                Étape <span className="text-primary font-bold">{currentStep + 1}</span> sur {STEPS.length}
-              </span>
-              <span className="text-primary font-medium flex items-center gap-1">
-                {STEPS[currentStep].icon} {STEPS[currentStep].title}
-              </span>
-            </div>
-          </div>
-
-          {/* Premium Form Card */}
-          <Card className="relative backdrop-blur-xl bg-card/80 border-[hsl(38_45%_48%/0.3)] shadow-2xl shadow-[hsl(38_45%_48%/0.15)] overflow-hidden">
-            <BorderBeam size={250} duration={14} colorFrom="hsl(38 55% 65%)" colorTo="hsl(28 35% 38%)" />
-            {/* Card shine effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-[hsl(38_45%_48%/0.05)] via-transparent to-[hsl(38_55%_60%/0.05)] pointer-events-none" />
-            
-            <CardContent className="pt-6 relative z-10">
-              <div className="animate-fade-in">
-                {currentStep === 4 ? (
-                  <MandatFormStep4 data={formData} onChange={handleChange} onAddCoBuyer={handleAddCoBuyer} />
-                ) : (
-                  <StepComponent data={formData} onChange={handleChange} />
-                )}
-              </div>
-            </CardContent>
-
-            <CardFooter className="flex justify-between gap-4 border-t border-border/50 pt-6 relative z-10 bg-muted/20">
-              <Button
-                variant="outline"
-                onClick={currentStep === 0 ? () => navigate('/login') : handlePrevious}
-                className="gap-2 group backdrop-blur-sm bg-background/50 hover:bg-background/80 transition-all duration-300"
-              >
-                <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-                {currentStep === 0 ? 'Retour' : 'Précédent'}
-              </Button>
-
-              {currentStep < STEPS.length - 1 ? (
-                <Button 
-                  onClick={handleNext} 
-                  className="gap-2 group bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25 transition-all duration-300 hover:shadow-xl hover:shadow-primary/30"
-                >
-                  Suivant
-                  <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleSubmit}
-                  disabled={submitting || !formData.cgv_acceptees || !formData.signature_data}
-                  className="gap-2 group bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/30 disabled:opacity-50"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Envoi...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                      Envoyer la demande
-                    </>
-                  )}
-                </Button>
-              )}
-            </CardFooter>
-          </Card>
-
-          {/* Info */}
-          <p className="text-center text-xs text-muted-foreground mt-6 flex items-center justify-center gap-2">
-            <Sparkles className="h-3 w-3 text-primary/50" />
-            Vos recherches seront activées dès réception de l'acompte.
-            <Sparkles className="h-3 w-3 text-primary/50" />
+      <div className="container mx-auto px-4 max-w-2xl pb-8">
+        {/* Step title */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold font-serif text-[hsl(40_20%_88%)]">
+            {STEPS[currentStep].icon}{' '}
+            <span className="text-[hsl(38_55%_65%)]">{STEPS[currentStep].title}</span>
+          </h1>
+          <p className="text-sm text-[hsl(40_20%_45%)] mt-2">
+            {currentStep < 4
+              ? 'Étape par étape vers votre nouveau logement'
+              : formData.type_recherche === 'Acheter'
+              ? 'Pour un bien immobilier à acheter'
+              : 'Pour un logement à louer'}
           </p>
         </div>
+
+        <PremiumFormCard>
+          <PremiumStepTransition stepKey={currentStep} direction={1}>
+            {currentStep === 4 ? (
+              <MandatFormStep4 data={formData} onChange={handleChange} onAddCoBuyer={handleAddCoBuyer} />
+            ) : (
+              <StepComponent data={formData} onChange={handleChange} />
+            )}
+          </PremiumStepTransition>
+
+          <div className="flex justify-between items-center mt-10 pt-6 border-t border-[hsl(38_45%_48%/0.15)]">
+            <PremiumButton
+              variant="back"
+              onClick={currentStep === 0 ? () => navigate('/login') : handlePrevious}
+            >
+              {currentStep === 0 ? <><ArrowLeft className="h-4 w-4" /> Retour</> : undefined}
+            </PremiumButton>
+
+            {currentStep < STEPS.length - 1 ? (
+              <PremiumButton variant="next" onClick={handleNext}>
+                Continuer
+              </PremiumButton>
+            ) : (
+              <PremiumButton
+                variant="submit"
+                onClick={handleSubmit}
+                loading={submitting}
+                disabled={submitting || !formData.cgv_acceptees || !formData.signature_data}
+              >
+                Envoyer la demande
+              </PremiumButton>
+            )}
+          </div>
+        </PremiumFormCard>
+
+        <p className="text-center text-xs text-[hsl(40_20%_35%)] mt-6">
+          Vos recherches seront activées dès réception de l'acompte.
+        </p>
       </div>
-    </div>
+    </PremiumFormShell>
   );
 }
