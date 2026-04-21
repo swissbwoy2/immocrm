@@ -1,28 +1,19 @@
 import { useMemo } from 'react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MandatFormData, NATIONALITES, TYPES_PERMIS, ETATS_CIVILS } from './types';
-import { User, Mail, Phone, MapPin, Calendar, Globe, Shield, Heart } from 'lucide-react';
 import { GoogleAddressAutocomplete, AddressComponents } from '@/components/GoogleAddressAutocomplete';
+import { PremiumInput } from '@/components/forms-premium/PremiumInput';
+import { PremiumSelect } from '@/components/forms-premium/PremiumSelect';
+import { LuxuryIconBadge } from '@/components/forms-premium/LuxuryIconBadge';
+import { IconUser, IconMail, IconPhone, IconMapPin, IconCalendar, IconShield } from '@/components/forms-premium/icons/LuxuryIcons';
 
-// Constantes pour les sélecteurs de date
 const MONTHS = [
-  { value: '01', label: 'Janvier' },
-  { value: '02', label: 'Février' },
-  { value: '03', label: 'Mars' },
-  { value: '04', label: 'Avril' },
-  { value: '05', label: 'Mai' },
-  { value: '06', label: 'Juin' },
-  { value: '07', label: 'Juillet' },
-  { value: '08', label: 'Août' },
-  { value: '09', label: 'Septembre' },
-  { value: '10', label: 'Octobre' },
-  { value: '11', label: 'Novembre' },
-  { value: '12', label: 'Décembre' },
+  { value: '01', label: 'Janvier' }, { value: '02', label: 'Février' },
+  { value: '03', label: 'Mars' }, { value: '04', label: 'Avril' },
+  { value: '05', label: 'Mai' }, { value: '06', label: 'Juin' },
+  { value: '07', label: 'Juillet' }, { value: '08', label: 'Août' },
+  { value: '09', label: 'Septembre' }, { value: '10', label: 'Octobre' },
+  { value: '11', label: 'Novembre' }, { value: '12', label: 'Décembre' },
 ];
-
-// Années de 2010 à 1920 (ordre décroissant)
 const YEARS = Array.from({ length: 91 }, (_, i) => String(2010 - i));
 
 interface Props {
@@ -31,7 +22,6 @@ interface Props {
 }
 
 export default function MandatFormStep1({ data, onChange }: Props) {
-  // Parser la date existante
   const dateParts = useMemo(() => {
     if (data.date_naissance && data.date_naissance.match(/^\d{4}-\d{2}-\d{2}$/)) {
       const [year, month, day] = data.date_naissance.split('-');
@@ -40,7 +30,6 @@ export default function MandatFormStep1({ data, onChange }: Props) {
     return { day: '', month: '', year: '' };
   }, [data.date_naissance]);
 
-  // Calculer les jours disponibles selon le mois/année
   const getDaysInMonth = (month: string, year: string) => {
     if (!month) return 31;
     const m = parseInt(month, 10);
@@ -60,217 +49,67 @@ export default function MandatFormStep1({ data, onChange }: Props) {
     let newDay = part === 'day' ? value : dateParts.day;
     const newMonth = part === 'month' ? value : dateParts.month;
     const newYear = part === 'year' ? value : dateParts.year;
-
-    // Ajuster le jour si nécessaire
     if (newDay && newMonth) {
       const maxDays = getDaysInMonth(newMonth, newYear);
-      if (parseInt(newDay, 10) > maxDays) {
-        newDay = String(maxDays).padStart(2, '0');
-      }
+      if (parseInt(newDay, 10) > maxDays) newDay = String(maxDays).padStart(2, '0');
     }
-
-    // Construire la date si toutes les parties sont remplies
     if (newDay && newMonth && newYear) {
       onChange({ date_naissance: `${newYear}-${newMonth}-${newDay}` });
     } else {
-      // Stocker partiellement pour garder la sélection
-      const partialDate = `${newYear || '0000'}-${newMonth || '00'}-${newDay || '00'}`;
-      onChange({ date_naissance: partialDate });
+      onChange({ date_naissance: `${newYear || '0000'}-${newMonth || '00'}-${newDay || '00'}` });
     }
   };
+
   return (
     <div className="space-y-6">
-      {/* Premium Header */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 mb-4 relative">
-          <User className="h-8 w-8 text-primary" />
-          <div className="absolute inset-0 rounded-full bg-primary/10 animate-ping opacity-75" />
+      <div className="flex flex-col items-center gap-3 mb-6">
+        <LuxuryIconBadge size="lg"><IconUser size={26} /></LuxuryIconBadge>
+        <div className="text-center">
+          <h2 className="text-xl font-serif font-bold text-[hsl(40_20%_88%)]">Informations personnelles</h2>
+          <p className="text-xs text-[hsl(40_20%_45%)] mt-1">Vos coordonnées et situation personnelle</p>
         </div>
-        <h2 className="text-2xl md:text-3xl font-bold font-serif bg-gradient-to-r from-[hsl(38_55%_70%)] via-[hsl(38_55%_60%)] to-[hsl(38_45%_48%)] bg-clip-text text-transparent">
-          Informations personnelles
-        </h2>
-        <p className="text-sm text-foreground/70 mt-1">Vos coordonnées et situation personnelle</p>
+        <div className="w-12 h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.6)] to-transparent" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Email */}
-        <div className="space-y-2 group">
-          <Label htmlFor="email" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-            <Mail className="h-4 w-4 text-[hsl(38_55%_60%)]" />
-            E-mail <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="email"
-            type="email"
-            value={data.email}
-            onChange={(e) => onChange({ email: e.target.value })}
-            placeholder="votre.email@example.ch"
-            required
-            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60"
-          />
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <PremiumInput label="E-mail" type="email" value={data.email} onChange={(e) => onChange({ email: e.target.value })} icon={<IconMail size={16} />} placeholder="votre.email@example.ch" required />
+        <PremiumInput label="Téléphone" type="tel" value={data.telephone} onChange={(e) => onChange({ telephone: e.target.value })} icon={<IconPhone size={16} />} placeholder="+41 79 123 45 67" required />
+        <PremiumInput label="Prénom" value={data.prenom} onChange={(e) => onChange({ prenom: e.target.value })} icon={<IconUser size={16} />} placeholder="Prénom" required />
+        <PremiumInput label="Nom de famille" value={data.nom} onChange={(e) => onChange({ nom: e.target.value })} icon={<IconUser size={16} />} placeholder="Nom" required />
 
-        {/* Téléphone */}
-        <div className="space-y-2 group">
-          <Label htmlFor="telephone" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-            <Phone className="h-4 w-4 text-[hsl(38_55%_60%)]" />
-            Téléphone <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="telephone"
-            type="tel"
-            value={data.telephone}
-            onChange={(e) => onChange({ telephone: e.target.value })}
-            placeholder="+41 79 123 45 67"
-            required
-            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60"
-          />
-        </div>
-
-        {/* Prénom */}
-        <div className="space-y-2 group">
-          <Label htmlFor="prenom" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-            <User className="h-4 w-4 text-[hsl(38_55%_60%)]" />
-            Prénom <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="prenom"
-            value={data.prenom}
-            onChange={(e) => onChange({ prenom: e.target.value })}
-            placeholder="Prénom"
-            required
-            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60"
-          />
-        </div>
-
-        {/* Nom */}
-        <div className="space-y-2 group">
-          <Label htmlFor="nom" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-            <User className="h-4 w-4 text-[hsl(38_55%_60%)]" />
-            Nom de famille <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="nom"
-            value={data.nom}
-            onChange={(e) => onChange({ nom: e.target.value })}
-            placeholder="Nom"
-            required
-            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60"
-          />
-        </div>
-
-        {/* Adresse - Full width with autocomplete */}
-        <div className="space-y-2 md:col-span-2 group">
-          <Label htmlFor="adresse" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-            <MapPin className="h-4 w-4 text-[hsl(38_55%_60%)]" />
-            Adresse actuelle <span className="text-muted-foreground text-xs">(optionnel)</span>
-          </Label>
+        {/* Adresse avec autocomplete */}
+        <div className="md:col-span-2 space-y-1.5">
+          <label className="flex items-center gap-2 text-sm font-medium text-[hsl(40_20%_60%)]">
+            <span className="text-[hsl(38_45%_48%)]"><IconMapPin size={16} /></span>
+            Adresse actuelle
+            <span className="text-[hsl(40_20%_38%)] text-[10px]">(optionnel)</span>
+          </label>
           <GoogleAddressAutocomplete
             value={data.adresse}
             onChange={(address: AddressComponents) => onChange({ adresse: address.fullAddress })}
             onInputChange={(value) => onChange({ adresse: value })}
             placeholder="Commencez à taper votre adresse..."
-            className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60"
+            className="w-full bg-[hsl(30_15%_9%/0.6)] border border-[hsl(38_45%_48%/0.2)] rounded-xl px-4 py-3 text-sm text-[hsl(40_20%_75%)] placeholder:text-[hsl(40_20%_38%)] focus:outline-none focus:border-[hsl(38_55%_65%/0.7)] focus:ring-2 focus:ring-[hsl(38_45%_48%/0.25)] transition-all duration-300"
           />
         </div>
 
-        {/* Date de naissance - 3 sélecteurs */}
-        <div className="space-y-2 group md:col-span-2">
-          <Label className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-            <Calendar className="h-4 w-4 text-[hsl(38_55%_60%)]" />
-            Date de naissance <span className="text-destructive">*</span>
-          </Label>
+        {/* Date de naissance — 3 selects */}
+        <div className="md:col-span-2 space-y-1.5">
+          <label className="flex items-center gap-2 text-sm font-medium text-[hsl(40_20%_60%)]">
+            <span className="text-[hsl(38_45%_48%)]"><IconCalendar size={16} /></span>
+            Date de naissance <span className="text-red-400">*</span>
+          </label>
           <div className="grid grid-cols-3 gap-2">
-            {/* Jour */}
-            <Select value={dateParts.day} onValueChange={(v) => handleDatePartChange('day', v)}>
-              <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60">
-                <SelectValue placeholder="Jour" />
-              </SelectTrigger>
-              <SelectContent className="backdrop-blur-xl bg-popover/95 max-h-[200px]">
-                {DAYS.map((d) => (
-                  <SelectItem key={d} value={d} className="cursor-pointer hover:bg-primary/10">{parseInt(d, 10)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Mois */}
-            <Select value={dateParts.month} onValueChange={(v) => handleDatePartChange('month', v)}>
-              <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60">
-                <SelectValue placeholder="Mois" />
-              </SelectTrigger>
-              <SelectContent className="backdrop-blur-xl bg-popover/95 max-h-[200px]">
-                {MONTHS.map((m) => (
-                  <SelectItem key={m.value} value={m.value} className="cursor-pointer hover:bg-primary/10">{m.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Année */}
-            <Select value={dateParts.year} onValueChange={(v) => handleDatePartChange('year', v)}>
-              <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60">
-                <SelectValue placeholder="Année" />
-              </SelectTrigger>
-              <SelectContent className="backdrop-blur-xl bg-popover/95 max-h-[200px]">
-                {YEARS.map((y) => (
-                  <SelectItem key={y} value={y} className="cursor-pointer hover:bg-primary/10">{y}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <PremiumSelect label="" value={dateParts.day} onValueChange={(v) => handleDatePartChange('day', v)} placeholder="Jour" options={DAYS.map(d => ({ value: d, label: String(parseInt(d, 10)) }))} />
+            <PremiumSelect label="" value={dateParts.month} onValueChange={(v) => handleDatePartChange('month', v)} placeholder="Mois" options={MONTHS} />
+            <PremiumSelect label="" value={dateParts.year} onValueChange={(v) => handleDatePartChange('year', v)} placeholder="Année" options={YEARS.map(y => ({ value: y, label: y }))} />
           </div>
         </div>
 
-        {/* Nationalité */}
-        <div className="space-y-2 group">
-          <Label htmlFor="nationalite" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-            <Globe className="h-4 w-4 text-[hsl(38_55%_60%)]" />
-            Nationalité <span className="text-muted-foreground text-xs">(optionnel)</span>
-          </Label>
-          <Select value={data.nationalite} onValueChange={(value) => onChange({ nationalite: value })}>
-            <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60">
-              <SelectValue placeholder="Sélectionnez" />
-            </SelectTrigger>
-            <SelectContent className="backdrop-blur-xl bg-popover/95">
-              {NATIONALITES.map((nat) => (
-                <SelectItem key={nat} value={nat} className="cursor-pointer hover:bg-primary/10">{nat}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Type de permis */}
-        <div className="space-y-2 group">
-          <Label htmlFor="type_permis" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-            <Shield className="h-4 w-4 text-[hsl(38_55%_60%)]" />
-            Type de permis de séjour <span className="text-destructive">*</span>
-          </Label>
-          <Select value={data.type_permis} onValueChange={(value) => onChange({ type_permis: value })}>
-            <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60">
-              <SelectValue placeholder="Sélectionnez" />
-            </SelectTrigger>
-            <SelectContent className="backdrop-blur-xl bg-popover/95">
-              {TYPES_PERMIS.map((permis) => (
-                <SelectItem key={permis.value} value={permis.value} className="cursor-pointer hover:bg-primary/10">{permis.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* État civil */}
-        <div className="space-y-2 group">
-          <Label htmlFor="etat_civil" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-            <Heart className="h-4 w-4 text-[hsl(38_55%_60%)]" />
-            État civil <span className="text-muted-foreground text-xs">(optionnel)</span>
-          </Label>
-          <Select value={data.etat_civil} onValueChange={(value) => onChange({ etat_civil: value })}>
-            <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60">
-              <SelectValue placeholder="Sélectionnez" />
-            </SelectTrigger>
-            <SelectContent className="backdrop-blur-xl bg-popover/95">
-              {ETATS_CIVILS.map((etat) => (
-                <SelectItem key={etat} value={etat} className="cursor-pointer hover:bg-primary/10">{etat}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <PremiumSelect label="Nationalité" icon={<IconShield size={16} />} value={data.nationalite} onValueChange={(v) => onChange({ nationalite: v })} options={NATIONALITES.map(n => ({ value: n, label: n }))} optional />
+        <PremiumSelect label="Type de permis de séjour" icon={<IconShield size={16} />} value={data.type_permis} onValueChange={(v) => onChange({ type_permis: v })} options={TYPES_PERMIS.map(p => ({ value: p.value, label: p.label }))} required />
+        <div className="md:col-span-2">
+          <PremiumSelect label="État civil" icon={<IconUser size={16} />} value={data.etat_civil} onValueChange={(v) => onChange({ etat_civil: v })} options={ETATS_CIVILS.map(e => ({ value: e, label: e }))} optional />
         </div>
       </div>
     </div>

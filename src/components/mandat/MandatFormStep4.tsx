@@ -1,14 +1,9 @@
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { MandatFormData, DECOUVERTES_AGENCE, TYPES_BIEN, PIECES_OPTIONS } from './types';
-import { Home, Building2, AlertCircle, CheckCircle, Calculator, Users, TrendingUp, Wallet, Info, UserPlus, Store } from 'lucide-react';
+import { PremiumInput } from '@/components/forms-premium/PremiumInput';
+import { PremiumSelect } from '@/components/forms-premium/PremiumSelect';
+import { PremiumRadioGroup } from '@/components/forms-premium/PremiumRadioGroup';
+import { PremiumTextarea } from '@/components/forms-premium/PremiumTextarea';
+import { Home, Building2, AlertCircle, CheckCircle, Calculator, Users, TrendingUp, Wallet, Info, UserPlus } from 'lucide-react';
 import CapacityGauge from './CapacityGauge';
 import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
 import CommercialSearchFields from './CommercialSearchFields';
@@ -19,737 +14,362 @@ interface Props {
   onAddCoBuyer?: () => void;
 }
 
+function GoldCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div className={`rounded-xl border border-[hsl(38_45%_48%/0.2)] bg-[hsl(30_12%_10%/0.6)] p-4 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+function StatusBadge({ viable, labelOk, labelNok }: { viable: boolean; labelOk: string; labelNok: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+      viable
+        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+        : 'bg-red-500/15 text-red-400 border border-red-500/30'
+    }`}>
+      {viable ? <CheckCircle size={11} /> : <AlertCircle size={11} />}
+      {viable ? labelOk : labelNok}
+    </span>
+  );
+}
+
 export default function MandatFormStep4({ data, onChange, onAddCoBuyer }: Props) {
   const isRental = data.type_recherche === 'Louer';
   const isPurchase = data.type_recherche === 'Acheter';
   const isCommercial = data.type_bien === 'Local commercial';
-  const isSociete = data.location_type === 'societe';
 
-  // Calculate total income including candidates
   const clientRevenus = data.revenus_mensuels || 0;
   const candidatsRevenus = data.candidats?.reduce((sum, c) => sum + (c.revenus_mensuels || 0), 0) || 0;
   const totalRevenusMensuels = clientRevenus + candidatsRevenus;
   const hasCandidates = data.candidats && data.candidats.length > 0;
 
-  // Calculate rental budget recommendation (1/3 of total income)
   const budgetConseilleLocation = totalRevenusMensuels ? Math.floor(totalRevenusMensuels / 3) : 0;
-  
-  // Rental effort rate calculation (loyer / revenus * 100)
-  const tauxEffortLocation = totalRevenusMensuels > 0 && data.budget_max > 0
-    ? Math.round((data.budget_max / totalRevenusMensuels) * 100)
-    : 0;
-  
-  // Rental income requirements
+  const tauxEffortLocation = totalRevenusMensuels > 0 && data.budget_max > 0 ? Math.round((data.budget_max / totalRevenusMensuels) * 100) : 0;
   const revenuMinRequiLocation = data.budget_max > 0 ? data.budget_max * 3 : 0;
   const revenuManquantLocation = Math.max(0, revenuMinRequiLocation - totalRevenusMensuels);
-  
-  // Rental viability
   const isRentalViable = tauxEffortLocation <= 33;
 
-  // Calculate purchase viability with total income
   const revenuAnnuelBrut = totalRevenusMensuels * 12;
-  
-  // Prix max finançable = (Revenu annuel × 33%) / 7%
   const prixAchatMax = revenuAnnuelBrut > 0 ? Math.round((revenuAnnuelBrut * 0.33) / 0.07) : 0;
-  
-  // Apport requis = 26% du prix d'achat (20% fonds propres + 6% frais)
   const apportRequis = data.budget_max > 0 ? Math.round(data.budget_max * 0.26) : 0;
   const apportManquant = Math.max(0, apportRequis - (data.apport_personnel || 0));
-  
-  // Charges mensuelles = (Prix × 7%) / 12
   const chargesMensuelles = data.budget_max > 0 ? Math.round((data.budget_max * 0.07) / 12) : 0;
-  
-  // Taux d'effort = Charges annuelles / Revenu annuel × 100
-  const tauxEffort = revenuAnnuelBrut > 0 && data.budget_max > 0 
-    ? Math.round(((data.budget_max * 0.07) / revenuAnnuelBrut) * 100) 
-    : 0;
-  
-  // Revenu minimum requis pour ce prix = (Prix × 7%) / 33%
+  const tauxEffort = revenuAnnuelBrut > 0 && data.budget_max > 0 ? Math.round(((data.budget_max * 0.07) / revenuAnnuelBrut) * 100) : 0;
   const revenuMinRequis = data.budget_max > 0 ? Math.round((data.budget_max * 0.07) / 0.33) : 0;
   const revenuMinMensuel = Math.round(revenuMinRequis / 12);
-  
-  // Revenu manquant
   const revenuManquant = Math.max(0, revenuMinMensuel - totalRevenusMensuels);
-
-  // Check permit for purchase eligibility
-  const permisEligibleAchat = ['B', 'C', 'Suisse', 'Suisse / Autre'].some(p => 
-    data.type_permis?.includes(p) || data.nationalite?.toLowerCase().includes('suisse')
-  );
-
-  // Check overall viability
+  const permisEligibleAchat = ['B', 'C', 'Suisse', 'Suisse / Autre'].some(p => data.type_permis?.includes(p) || data.nationalite?.toLowerCase().includes('suisse'));
   const isViable = tauxEffort <= 33 && apportManquant === 0 && permisEligibleAchat;
 
+  const OUNI_NON = [{ value: 'oui', label: 'Oui' }, { value: 'non', label: 'Non' }];
+
   return (
-    <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-semibold">Critères de recherche</h2>
-        <p className="text-sm text-muted-foreground">Informez notre équipe de vos critères</p>
+    <div className="space-y-5">
+      <PremiumSelect
+        label="Comment avez-vous découvert notre agence ?"
+        value={data.decouverte_agence}
+        onValueChange={(v) => onChange({ decouverte_agence: v })}
+        options={DECOUVERTES_AGENCE.map(d => ({ value: d, label: d }))}
+        required
+      />
+
+      {/* Type de recherche */}
+      <PremiumRadioGroup
+        label="Que recherchez-vous ?"
+        options={[
+          { value: 'Louer', label: 'Louer', description: 'Acompte: 300 CHF', icon: <Home size={20} strokeWidth={1.5} /> },
+          { value: 'Acheter', label: 'Acheter', description: "Acompte: 2'500 CHF", icon: <Building2 size={20} strokeWidth={1.5} /> },
+        ]}
+        value={data.type_recherche}
+        onChange={(v) => onChange({ type_recherche: v, budget_max: 0, apport_personnel: 0 })}
+        columns={2}
+        required
+      />
+
+      {/* Permis warning for purchase */}
+      {isPurchase && !permisEligibleAchat && data.type_permis && (
+        <div className="rounded-xl border border-orange-500/30 bg-orange-950/20 p-4 flex gap-3">
+          <AlertCircle size={18} className="text-orange-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-orange-300">Permis non éligible à l'achat</p>
+            <p className="text-xs text-orange-400/80 mt-1">En Suisse, l'accès à la propriété requiert un permis B, C ou la nationalité suisse. Votre permis actuel ({data.type_permis}) ne permet pas l'acquisition immobilière.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Revenus info for purchase */}
+      {isPurchase && (
+        <GoldCard>
+          <div className="flex items-start gap-3">
+            <Users size={16} className="text-[hsl(38_55%_65%)] mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-[hsl(40_20%_75%)]">Revenus pris en compte</p>
+              <div className="mt-2 space-y-1 text-xs">
+                <div className="flex justify-between text-[hsl(40_20%_55%)]">
+                  <span>Vos revenus:</span>
+                  <span className="font-medium text-[hsl(40_20%_70%)]">{clientRevenus.toLocaleString('fr-CH')} CHF/mois</span>
+                </div>
+                {hasCandidates && (
+                  <div className="flex justify-between text-[hsl(40_20%_55%)]">
+                    <span>Revenus candidats ({data.candidats.length}):</span>
+                    <span className="font-medium text-emerald-400">+{candidatsRevenus.toLocaleString('fr-CH')} CHF/mois</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-1.5 border-t border-[hsl(38_45%_48%/0.15)]">
+                  <span className="font-semibold text-[hsl(40_20%_65%)]">Revenu total:</span>
+                  <span className="font-bold text-[hsl(38_55%_65%)]">{totalRevenusMensuels.toLocaleString('fr-CH')} CHF/mois</span>
+                </div>
+              </div>
+              {!hasCandidates && revenuManquant > 0 && onAddCoBuyer && (
+                <button type="button" onClick={onAddCoBuyer} className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-medium border border-[hsl(38_45%_48%/0.3)] text-[hsl(38_55%_65%)] hover:bg-[hsl(38_45%_48%/0.1)] transition-colors">
+                  <UserPlus size={13} /> Ajouter un co-acquéreur maintenant
+                </button>
+              )}
+            </div>
+          </div>
+        </GoldCard>
+      )}
+
+      {!isCommercial && (
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-[hsl(40_20%_60%)]">
+            Combien de personnes occuperaient le bien ? <span className="text-red-400">*</span>
+          </label>
+          <input
+            type="number"
+            value={data.nombre_occupants || ''}
+            onChange={(e) => onChange({ nombre_occupants: Number(e.target.value) })}
+            className="w-full bg-[hsl(30_15%_9%/0.6)] border border-[hsl(38_45%_48%/0.2)] rounded-xl px-4 py-3 text-sm text-[hsl(40_20%_75%)] placeholder:text-[hsl(40_20%_38%)] focus:outline-none focus:border-[hsl(38_55%_65%/0.7)] focus:ring-2 focus:ring-[hsl(38_45%_48%/0.25)] transition-all duration-300"
+          />
+        </div>
+      )}
+
+      <PremiumSelect
+        label="Type d'objet"
+        value={data.type_bien}
+        onValueChange={(v) => {
+          if (v !== 'Local commercial') {
+            onChange({ type_bien: v, location_type: null, raison_sociale: '', numero_ide: '', chiffre_affaires: 0, type_exploitation: '', nombre_employes: 0, surface_souhaitee: 0, etage_souhaite: '', affectation_commerciale: '', besoins_commerciaux: [] });
+          } else {
+            onChange({ type_bien: v });
+          }
+        }}
+        options={TYPES_BIEN.map(t => ({ value: t, label: t }))}
+        required
+      />
+
+      {!isCommercial && (
+        <PremiumSelect
+          label="Nombre de pièces"
+          value={data.pieces_recherche}
+          onValueChange={(v) => onChange({ pieces_recherche: v })}
+          options={PIECES_OPTIONS.map(p => ({ value: p, label: p }))}
+          required
+        />
+      )}
+
+      {/* Région */}
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium text-[hsl(40_20%_60%)]">Région(s)</label>
+        <GooglePlacesAutocomplete
+          value={data.region_recherche}
+          onChange={(value) => onChange({ region_recherche: value })}
+          placeholder="Tapez une région, commune ou district..."
+          multiSelect
+        />
+        <p className="text-[11px] text-[hsl(40_20%_38%)]">Vous pouvez sélectionner plusieurs régions</p>
       </div>
 
-      <div className="space-y-4">
-        <div className="space-y-3">
-          <Label>Comment avez-vous découvert notre agence ? *</Label>
-          <Select value={data.decouverte_agence} onValueChange={(value) => onChange({ decouverte_agence: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionnez" />
-            </SelectTrigger>
-            <SelectContent>
-              {DECOUVERTES_AGENCE.map((dec) => (
-                <SelectItem key={dec} value={dec}>{dec}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {isCommercial && <CommercialSearchFields data={data} onChange={onChange} />}
 
-        {/* Search type selection with visual cards */}
-        <div className="space-y-3">
-          <Label>Que recherchez-vous ? *</Label>
-          <RadioGroup
-            value={data.type_recherche}
-            onValueChange={(value) => onChange({ type_recherche: value, budget_max: 0, apport_personnel: 0 })}
-            className="grid grid-cols-2 gap-4"
-          >
-            <Label
-              htmlFor="type-louer"
-              className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                isRental ? 'border-primary bg-primary/5' : 'border-muted hover:border-muted-foreground/50'
-              }`}
-            >
-              <RadioGroupItem value="Louer" id="type-louer" className="sr-only" />
-              <Home className={`h-8 w-8 ${isRental ? 'text-primary' : 'text-muted-foreground'}`} />
-              <span className={`font-medium ${isRental ? 'text-primary' : ''}`}>Louer</span>
-              <span className="text-xs text-muted-foreground text-center">Acompte: 300 CHF</span>
-            </Label>
-            <Label
-              htmlFor="type-acheter"
-              className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                isPurchase ? 'border-primary bg-primary/5' : 'border-muted hover:border-muted-foreground/50'
-              }`}
-            >
-              <RadioGroupItem value="Acheter" id="type-acheter" className="sr-only" />
-              <Building2 className={`h-8 w-8 ${isPurchase ? 'text-primary' : 'text-muted-foreground'}`} />
-              <span className={`font-medium ${isPurchase ? 'text-primary' : ''}`}>Acheter</span>
-              <span className="text-xs text-muted-foreground text-center">Acompte: 2'500 CHF</span>
-            </Label>
-          </RadioGroup>
-        </div>
-
-        {/* Permit eligibility warning for purchase */}
-        {isPurchase && !permisEligibleAchat && data.type_permis && (
-          <Card className="p-4 border-orange-500 bg-orange-50 dark:bg-orange-950/30">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
-              <div>
-                <p className="font-medium text-orange-700 dark:text-orange-400">
-                  Permis non éligible à l'achat
-                </p>
-                <p className="text-sm text-orange-600 dark:text-orange-500 mt-1">
-                  En Suisse, l'accès à la propriété requiert un permis B, C ou la nationalité suisse.
-                  Votre permis actuel ({data.type_permis}) ne permet pas l'acquisition immobilière.
-                </p>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Income info for purchase */}
-        {isPurchase && (
-          <Card className="p-4 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
-            <div className="flex items-start gap-3">
-              <Users className="h-5 w-5 text-blue-600 mt-0.5" />
-              <div className="flex-1">
-                <p className="font-medium text-blue-700 dark:text-blue-400">
-                  Revenus pris en compte
-                </p>
-                <div className="mt-2 space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-blue-600 dark:text-blue-500">Vos revenus:</span>
-                    <span className="font-medium text-blue-700 dark:text-blue-400">
-                      {clientRevenus.toLocaleString('fr-CH')} CHF/mois
-                    </span>
-                  </div>
-                  {hasCandidates && (
-                    <div className="flex justify-between">
-                      <span className="text-blue-600 dark:text-blue-500">
-                        Revenus candidats ({data.candidats.length}):
-                      </span>
-                      <span className="font-medium text-blue-700 dark:text-blue-400">
-                        +{candidatsRevenus.toLocaleString('fr-CH')} CHF/mois
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex justify-between pt-2 border-t border-blue-200 dark:border-blue-700">
-                    <span className="font-medium text-blue-700 dark:text-blue-400">Revenu total:</span>
-                    <span className="font-bold text-blue-800 dark:text-blue-300">
-                      {totalRevenusMensuels.toLocaleString('fr-CH')} CHF/mois
-                    </span>
-                  </div>
-                </div>
-                {!hasCandidates && revenuManquant > 0 && onAddCoBuyer && (
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
-                    className="mt-3 w-full gap-2 border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-950"
-                    onClick={onAddCoBuyer}
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    Ajouter un co-acquéreur maintenant
-                  </Button>
-                )}
-                {!hasCandidates && !revenuManquant && (
-                  <p className="text-xs text-blue-500 dark:text-blue-600 mt-2">
-                    💡 Vous pouvez ajouter des co-acquéreurs à l'étape suivante pour augmenter votre capacité d'emprunt.
-                  </p>
-                )}
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Number of occupants - hide for commercial */}
-        {!isCommercial && (
-          <div className="space-y-2">
-            <Label htmlFor="nombre_occupants">Combien de personnes occuperaient le bien ? *</Label>
-            <Input
-              id="nombre_occupants"
-              type="number"
-              value={data.nombre_occupants || ''}
-              onChange={(e) => onChange({ nombre_occupants: Number(e.target.value) })}
-              required
-            />
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <Label htmlFor="type_bien">Type d'objet *</Label>
-          <Select value={data.type_bien} onValueChange={(value) => {
-            // Reset commercial fields when changing type
-            if (value !== 'Local commercial') {
-              onChange({ 
-                type_bien: value,
-                location_type: null,
-                raison_sociale: '',
-                numero_ide: '',
-                chiffre_affaires: 0,
-                type_exploitation: '',
-                nombre_employes: 0,
-                surface_souhaitee: 0,
-                etage_souhaite: '',
-                affectation_commerciale: '',
-                besoins_commerciaux: []
-              });
-            } else {
-              onChange({ type_bien: value });
-            }
-          }}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionnez" />
-            </SelectTrigger>
-            <SelectContent>
-              {TYPES_BIEN.map((type) => (
-                <SelectItem key={type} value={type}>{type}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Number of rooms - hide for commercial, show surface instead */}
-        {!isCommercial && (
-          <div className="space-y-2">
-            <Label htmlFor="pieces_recherche">Nombre de pièces *</Label>
-            <Select value={data.pieces_recherche} onValueChange={(value) => onChange({ pieces_recherche: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionnez" />
-              </SelectTrigger>
-              <SelectContent>
-                {PIECES_OPTIONS.map((piece) => (
-                  <SelectItem key={piece} value={piece}>{piece}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          <Label htmlFor="region_recherche">Région(s)</Label>
-          <GooglePlacesAutocomplete
-            value={data.region_recherche}
-            onChange={(value) => onChange({ region_recherche: value })}
-            placeholder="Tapez une région, commune ou district..."
-            multiSelect
+      {/* RENTAL budget */}
+      {isRental && (
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium text-[hsl(40_20%_60%)]">
+            Budget maximum (loyer mensuel CHF) <span className="text-red-400">*</span>
+          </label>
+          <input
+            type="number"
+            value={data.budget_max || ''}
+            onChange={(e) => onChange({ budget_max: Number(e.target.value) })}
+            placeholder="Le loyer brut ne devant pas dépasser le tiers du salaire"
+            className="w-full bg-[hsl(30_15%_9%/0.6)] border border-[hsl(38_45%_48%/0.2)] rounded-xl px-4 py-3 text-sm text-[hsl(40_20%_75%)] placeholder:text-[hsl(40_20%_38%)] focus:outline-none focus:border-[hsl(38_55%_65%/0.7)] focus:ring-2 focus:ring-[hsl(38_45%_48%/0.25)] transition-all duration-300"
           />
-          <p className="text-xs text-muted-foreground">
-            Vous pouvez sélectionner plusieurs régions
+          <p className="text-[11px] text-[hsl(40_20%_38%)]">
+            Budget conseillé max: {budgetConseilleLocation > 0 ? `${budgetConseilleLocation.toLocaleString('fr-CH')} CHF` : '---'} (1/3 de vos revenus{hasCandidates ? ' + candidats' : ''})
           </p>
         </div>
+      )}
 
-        {/* Commercial-specific search fields */}
-        {isCommercial && (
-          <div className="md:col-span-2">
-            <CommercialSearchFields data={data} onChange={onChange} />
+      {/* RENTAL viability */}
+      {isRental && data.budget_max > 0 && (
+        <div className={`rounded-xl border p-4 ${isRentalViable ? 'border-emerald-500/25 bg-emerald-950/15' : 'border-red-500/25 bg-red-950/10'}`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Calculator size={16} className="text-[hsl(38_55%_65%)]" />
+              <span className="text-sm font-semibold text-[hsl(40_20%_80%)]">Analyse de votre budget location</span>
+            </div>
+            <StatusBadge viable={isRentalViable} labelOk="Budget adapté" labelNok="Budget élevé" />
           </div>
-        )}
-
-          {/* RENTAL: Budget field */}
-          {isRental && (
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="budget_max">Budget maximum (loyer mensuel CHF) *</Label>
-              <Input
-                id="budget_max"
-                type="number"
-                value={data.budget_max || ''}
-                onChange={(e) => onChange({ budget_max: Number(e.target.value) })}
-                placeholder="Le loyer brut ne devant pas dépasser le tiers du salaire"
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Budget conseillé max: {budgetConseilleLocation > 0 ? `${budgetConseilleLocation.toLocaleString('fr-CH')} CHF` : '---'} 
-                (1/3 de vos revenus{hasCandidates ? ' + candidats' : ''})
+          <div className="flex justify-center mb-4 py-3 bg-[hsl(30_15%_8%/0.5)] rounded-lg">
+            <CapacityGauge currentValue={tauxEffortLocation} maxValue={50} label="Taux d'effort" />
+          </div>
+          {!isRentalViable && (
+            <GoldCard className="mb-4">
+              <p className="text-xs font-semibold text-[hsl(40_20%_72%)] mb-1">Recommandation basée sur vos revenus</p>
+              <p className="text-xs text-[hsl(40_20%_50%)] mb-2">
+                Avec vos revenus de <strong className="text-[hsl(40_20%_65%)]">{totalRevenusMensuels.toLocaleString('fr-CH')} CHF/mois</strong>, loyer recommandé&nbsp;:
               </p>
+              <p className="text-2xl font-bold text-[hsl(38_55%_65%)] text-center">{budgetConseilleLocation.toLocaleString('fr-CH')} CHF/mois</p>
+            </GoldCard>
+          )}
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <GoldCard>
+              <div className="flex items-center gap-1.5 mb-1.5"><TrendingUp size={14} className="text-[hsl(40_20%_45%)]" /><span className="text-xs font-medium text-[hsl(40_20%_65%)]">Taux d'effort</span></div>
+              <p className="text-xl font-bold"><span className={tauxEffortLocation > 33 ? 'text-red-400' : 'text-emerald-400'}>{tauxEffortLocation}%</span><span className="text-[hsl(40_20%_40%)] text-xs font-normal"> / 33% max</span></p>
+            </GoldCard>
+            <GoldCard>
+              <div className="flex items-center gap-1.5 mb-1.5"><Users size={14} className="text-[hsl(40_20%_45%)]" /><span className="text-xs font-medium text-[hsl(40_20%_65%)]">Revenus cumulés</span></div>
+              <p className="text-xl font-bold"><span className={revenuManquantLocation > 0 ? 'text-red-400' : 'text-emerald-400'}>{totalRevenusMensuels.toLocaleString('fr-CH')}</span></p>
+              {revenuManquantLocation > 0 && <p className="text-[10px] text-red-400 mt-0.5">⚠ Il manque {revenuManquantLocation.toLocaleString('fr-CH')} CHF/mois</p>}
+            </GoldCard>
+          </div>
+          {revenuManquantLocation > 0 && (
+            <div className="rounded-xl border border-red-500/30 bg-red-950/15 p-3 flex items-start gap-2">
+              <AlertCircle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1 text-xs">
+                <p className="text-red-300">Il vous manque <strong>{revenuManquantLocation.toLocaleString('fr-CH')} CHF/mois</strong> de revenus pour ce loyer.</p>
+                {!hasCandidates && onAddCoBuyer && (
+                  <button type="button" onClick={onAddCoBuyer} className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-red-400/30 text-red-300 hover:bg-red-950/30 transition-colors">
+                    <UserPlus size={12} /> Ajouter un colocataire maintenant
+                  </button>
+                )}
+              </div>
             </div>
           )}
+          <p className="text-[10px] text-[hsl(40_20%_35%)] mt-3 pt-3 border-t border-[hsl(38_45%_48%/0.1)]">
+            💡 En Suisse, les régies exigent généralement que le loyer ne dépasse pas 33% des revenus bruts mensuels.
+          </p>
+        </div>
+      )}
 
-          {/* RENTAL: Viability analysis */}
-          {isRental && data.budget_max > 0 && (
-            <Card className={`md:col-span-2 p-4 ${isRentalViable ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'}`}>
+      {/* PURCHASE */}
+      {isPurchase && (
+        <>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-[hsl(40_20%_60%)]">Prix d'achat maximum (CHF) <span className="text-red-400">*</span></label>
+            <input
+              type="number"
+              value={data.budget_max || ''}
+              onChange={(e) => onChange({ budget_max: Number(e.target.value) })}
+              placeholder="Prix d'achat souhaité"
+              className="w-full bg-[hsl(30_15%_9%/0.6)] border border-[hsl(38_45%_48%/0.2)] rounded-xl px-4 py-3 text-sm text-[hsl(40_20%_75%)] placeholder:text-[hsl(40_20%_38%)] focus:outline-none focus:border-[hsl(38_55%_65%/0.7)] focus:ring-2 focus:ring-[hsl(38_45%_48%/0.25)] transition-all duration-300"
+            />
+            <p className="text-[11px] text-[hsl(40_20%_38%)]">Avec vos revenus, prix max: <strong className="text-[hsl(40_20%_55%)]">{prixAchatMax > 0 ? `${prixAchatMax.toLocaleString('fr-CH')} CHF` : '---'}</strong></p>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-[hsl(40_20%_60%)]">Apport personnel disponible (CHF) <span className="text-red-400">*</span></label>
+            <input
+              type="number"
+              value={data.apport_personnel || ''}
+              onChange={(e) => onChange({ apport_personnel: Number(e.target.value) })}
+              placeholder="Fonds propres disponibles"
+              className="w-full bg-[hsl(30_15%_9%/0.6)] border border-[hsl(38_45%_48%/0.2)] rounded-xl px-4 py-3 text-sm text-[hsl(40_20%_75%)] placeholder:text-[hsl(40_20%_38%)] focus:outline-none focus:border-[hsl(38_55%_65%/0.7)] focus:ring-2 focus:ring-[hsl(38_45%_48%/0.25)] transition-all duration-300"
+            />
+            <p className="text-[11px] text-[hsl(40_20%_38%)]">Apport requis (26%): <strong className="text-[hsl(40_20%_55%)]">{apportRequis > 0 ? `${apportRequis.toLocaleString('fr-CH')} CHF` : '---'}</strong></p>
+          </div>
+
+          {data.budget_max > 0 && (
+            <div className={`rounded-xl border p-4 ${isViable ? 'border-emerald-500/25 bg-emerald-950/15' : 'border-red-500/25 bg-red-950/10'}`}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                  <Calculator className="h-5 w-5 text-primary" />
-                  <span className="font-semibold">Analyse de votre budget location</span>
+                  <Calculator size={16} className="text-[hsl(38_55%_65%)]" />
+                  <span className="text-sm font-semibold text-[hsl(40_20%_80%)]">Analyse de financement</span>
                 </div>
-                {isRentalViable ? (
-                  <Badge variant="default" className="bg-green-600">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Budget adapté
-                  </Badge>
-                ) : (
-                  <Badge variant="destructive">
-                    <AlertCircle className="h-3 w-3 mr-1" />
-                    Budget élevé
-                  </Badge>
-                )}
+                <StatusBadge viable={isViable} labelOk="Finançable" labelNok="À revoir" />
               </div>
-              
-              {/* Visual Gauge for rental */}
-              <div className="flex justify-center mb-6 py-4 bg-background rounded-lg">
-                <CapacityGauge 
-                  currentValue={tauxEffortLocation}
-                  maxValue={50}
-                  label="Taux d'effort"
-                />
+              <div className="flex justify-center mb-4 py-3 bg-[hsl(30_15%_8%/0.5)] rounded-lg">
+                <CapacityGauge currentValue={tauxEffort} maxValue={50} label="Taux d'effort" />
               </div>
-
-              {/* Recommendation for rental */}
-              {!isRentalViable && (
-                <Card className="p-4 mb-4 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900">
-                      <Home className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-blue-800 dark:text-blue-300 mb-1">
-                        💡 Recommandation basée sur vos revenus
-                      </p>
-                      <p className="text-sm text-blue-700 dark:text-blue-400 mb-3">
-                        Avec vos revenus actuels de <strong>{totalRevenusMensuels.toLocaleString('fr-CH')} CHF/mois</strong>, 
-                        nous vous recommandons de viser un loyer de :
-                      </p>
-                      <div className="bg-white dark:bg-blue-950/50 rounded-lg p-3 text-center">
-                        <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                          {budgetConseilleLocation.toLocaleString('fr-CH')} CHF/mois
-                        </p>
-                        <p className="text-xs text-blue-600/70 dark:text-blue-500 mt-1">
-                          Loyer max pour un taux d'effort de 33%
-                        </p>
-                      </div>
-                      <div className="mt-3 text-xs text-blue-600 dark:text-blue-500 space-y-1">
-                        <p>📊 Votre budget actuel: {data.budget_max.toLocaleString('fr-CH')} CHF/mois
-                          <span className="text-destructive font-medium"> (+{(data.budget_max - budgetConseilleLocation).toLocaleString('fr-CH')} CHF de trop)</span>
-                        </p>
-                        <p>💰 Revenu min requis pour {data.budget_max.toLocaleString('fr-CH')} CHF: {revenuMinRequiLocation.toLocaleString('fr-CH')} CHF/mois</p>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
+              {!isViable && tauxEffort > 33 && (
+                <GoldCard className="mb-4">
+                  <p className="text-xs font-semibold text-[hsl(40_20%_72%)] mb-1">Recommandation basée sur vos revenus</p>
+                  <p className="text-xs text-[hsl(40_20%_50%)] mb-2">Avec <strong className="text-[hsl(40_20%_65%)]">{totalRevenusMensuels.toLocaleString('fr-CH')} CHF/mois</strong>, bien recommandé à&nbsp;:</p>
+                  <p className="text-2xl font-bold text-[hsl(38_55%_65%)] text-center">{prixAchatMax.toLocaleString('fr-CH')} CHF</p>
+                </GoldCard>
               )}
-              
-              {/* Rental metrics */}
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <Card className="p-3 bg-background">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Taux d'effort</span>
-                  </div>
-                  <div className="text-2xl font-bold mb-1">
-                    <span className={tauxEffortLocation > 33 ? 'text-destructive' : 'text-green-600'}>
-                      {tauxEffortLocation}%
-                    </span>
-                    <span className="text-muted-foreground text-sm font-normal"> / 33% max</span>
-                  </div>
-                  <div className="text-xs space-y-1 text-muted-foreground">
-                    <p>Loyer: {data.budget_max.toLocaleString('fr-CH')} CHF/mois</p>
-                    <p>Revenus: {totalRevenusMensuels.toLocaleString('fr-CH')} CHF/mois</p>
-                  </div>
-                </Card>
-
-                <Card className="p-3 bg-background">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Revenus cumulés</span>
-                  </div>
-                  <div className="text-2xl font-bold mb-1">
-                    <span className={revenuManquantLocation > 0 ? 'text-destructive' : 'text-green-600'}>
-                      {totalRevenusMensuels.toLocaleString('fr-CH')}
-                    </span>
-                    <span className="text-muted-foreground text-sm font-normal"> / {revenuMinRequiLocation.toLocaleString('fr-CH')} CHF</span>
-                  </div>
-                  {revenuManquantLocation > 0 && (
-                    <p className="text-xs text-destructive font-medium">
-                      ⚠️ Il manque {revenuManquantLocation.toLocaleString('fr-CH')} CHF/mois
-                    </p>
-                  )}
-                </Card>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <GoldCard>
+                  <div className="flex items-center gap-1.5 mb-1.5"><TrendingUp size={14} className="text-[hsl(40_20%_45%)]" /><span className="text-xs font-medium text-[hsl(40_20%_65%)]">Taux d'effort</span></div>
+                  <p className="text-xl font-bold"><span className={tauxEffort > 33 ? 'text-red-400' : 'text-emerald-400'}>{tauxEffort}%</span><span className="text-[hsl(40_20%_40%)] text-xs font-normal"> / 33% max</span></p>
+                </GoldCard>
+                <GoldCard>
+                  <div className="flex items-center gap-1.5 mb-1.5"><Wallet size={14} className="text-[hsl(40_20%_45%)]" /><span className="text-xs font-medium text-[hsl(40_20%_65%)]">Apport personnel</span></div>
+                  <p className="text-xl font-bold"><span className={apportManquant > 0 ? 'text-red-400' : 'text-emerald-400'}>{(data.apport_personnel || 0).toLocaleString('fr-CH')}</span></p>
+                  {apportManquant > 0 && <p className="text-[10px] text-red-400 mt-0.5">⚠ Il manque {apportManquant.toLocaleString('fr-CH')} CHF</p>}
+                </GoldCard>
               </div>
-
-              {/* Requirements summary for rental */}
-              <div className="bg-background rounded-lg p-3 space-y-2">
-                <p className="text-sm font-medium flex items-center gap-2">
-                  <Info className="h-4 w-4" />
-                  Exigences pour ce loyer
-                </p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Revenu mensuel min:</span>
-                    <span className={`font-medium ${revenuManquantLocation > 0 ? 'text-destructive' : 'text-green-600'}`}>
-                      {revenuMinRequiLocation.toLocaleString('fr-CH')} CHF
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Votre revenu total:</span>
-                    <span className="font-medium">{totalRevenusMensuels.toLocaleString('fr-CH')} CHF</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Loyer max conseillé:</span>
-                    <span className="font-medium text-green-600">{budgetConseilleLocation.toLocaleString('fr-CH')} CHF</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Votre budget:</span>
-                    <span className={`font-medium ${!isRentalViable ? 'text-destructive' : ''}`}>{data.budget_max.toLocaleString('fr-CH')} CHF</span>
+              <GoldCard>
+                <div className="flex items-center gap-1.5 mb-2"><Info size={13} className="text-[hsl(40_20%_45%)]" /><span className="text-xs font-medium text-[hsl(40_20%_65%)]">Exigences pour ce prix d'achat</span></div>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                  {[
+                    ['Revenu mensuel min:', `${revenuMinMensuel.toLocaleString('fr-CH')} CHF`, revenuManquant > 0],
+                    ["Votre revenu total:", `${totalRevenusMensuels.toLocaleString('fr-CH')} CHF`, false],
+                    ['Apport min (26%):', `${apportRequis.toLocaleString('fr-CH')} CHF`, apportManquant > 0],
+                    ['Charges mensuelles:', `${chargesMensuelles.toLocaleString('fr-CH')} CHF`, false],
+                  ].map(([label, val, warn]) => (
+                    <div key={String(label)} className="flex justify-between gap-2">
+                      <span className="text-[hsl(40_20%_45%)]">{label}</span>
+                      <span className={`font-medium ${warn ? 'text-red-400' : 'text-[hsl(40_20%_70%)]'}`}>{val}</span>
+                    </div>
+                  ))}
+                </div>
+              </GoldCard>
+              {revenuManquant > 0 && (
+                <div className="mt-3 rounded-xl border border-red-500/30 bg-red-950/15 p-3 flex items-start gap-2">
+                  <AlertCircle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 text-xs">
+                    <p className="text-red-300">Il vous manque <strong>{revenuManquant.toLocaleString('fr-CH')} CHF/mois</strong> de revenus.</p>
+                    {!hasCandidates && onAddCoBuyer && (
+                      <button type="button" onClick={onAddCoBuyer} className="mt-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-red-400/30 text-red-300 hover:bg-red-950/30 transition-colors">
+                        <UserPlus size={12} /> Ajouter un co-acquéreur maintenant
+                      </button>
+                    )}
                   </div>
                 </div>
-                
-                {revenuManquantLocation > 0 && (
-                  <Alert variant="destructive" className="mt-2">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription className="flex flex-col gap-2">
-                      <span>
-                        Il vous manque <strong>{revenuManquantLocation.toLocaleString('fr-CH')} CHF/mois</strong> de revenus pour ce loyer.
-                      </span>
-                      {!hasCandidates && onAddCoBuyer && (
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-fit gap-2 border-red-300 bg-white/50 dark:bg-black/20 text-destructive hover:bg-red-100 dark:hover:bg-red-950"
-                          onClick={onAddCoBuyer}
-                        >
-                          <UserPlus className="h-4 w-4" />
-                          Ajouter un colocataire maintenant
-                        </Button>
-                      )}
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
-
-              <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
-                💡 En Suisse, les régies exigent généralement que le loyer ne dépasse pas 33% des revenus bruts mensuels.
+              )}
+              <p className="text-[10px] text-[hsl(40_20%_35%)] mt-3 pt-3 border-t border-[hsl(38_45%_48%/0.1)]">
+                💡 Calcul basé sur les normes bancaires suisses: intérêts théoriques 5% + amortissement 1% + charges 1% = 7%/an.
               </p>
-            </Card>
+            </div>
           )}
+        </>
+      )}
 
-          {/* PURCHASE: Price and down payment fields */}
-          {isPurchase && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="budget_max">Prix d'achat maximum (CHF) *</Label>
-                <Input
-                  id="budget_max"
-                  type="number"
-                  value={data.budget_max || ''}
-                  onChange={(e) => onChange({ budget_max: Number(e.target.value) })}
-                  placeholder="Prix d'achat souhaité"
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  Avec vos revenus, prix max: <strong>{prixAchatMax > 0 ? `${prixAchatMax.toLocaleString('fr-CH')} CHF` : '---'}</strong>
-                </p>
-              </div>
+      <PremiumTextarea
+        label="Souhaits particuliers (étage, quartier, vue...)"
+        value={data.souhaits_particuliers}
+        onChange={(e) => onChange({ souhaits_particuliers: e.target.value })}
+        placeholder="Décrivez vos souhaits particuliers..."
+        rows={3}
+      />
 
-              <div className="space-y-2">
-                <Label htmlFor="apport_personnel">Apport personnel disponible (CHF) *</Label>
-                <Input
-                  id="apport_personnel"
-                  type="number"
-                  value={data.apport_personnel || ''}
-                  onChange={(e) => onChange({ apport_personnel: Number(e.target.value) })}
-                  placeholder="Fonds propres disponibles"
-                  required
-                />
-                <p className="text-xs text-muted-foreground">
-                  Apport requis (26%): <strong>{apportRequis > 0 ? `${apportRequis.toLocaleString('fr-CH')} CHF` : '---'}</strong>
-                </p>
-              </div>
-
-              {/* Purchase viability analysis - Enhanced */}
-              {data.budget_max > 0 && (
-                <Card className={`md:col-span-2 p-4 ${isViable ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800'}`}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <Calculator className="h-5 w-5 text-primary" />
-                      <span className="font-semibold">Analyse de financement</span>
-                    </div>
-                    {isViable ? (
-                      <Badge variant="default" className="bg-green-600">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Finançable
-                      </Badge>
-                    ) : (
-                      <Badge variant="destructive">
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        À revoir
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  {/* Visual Gauge */}
-                  <div className="flex justify-center mb-6 py-4 bg-background rounded-lg">
-                    <CapacityGauge 
-                      currentValue={tauxEffort}
-                      maxValue={50}
-                      label="Taux d'effort"
-                    />
-                  </div>
-
-                  {/* Recommendation based on income */}
-                  {!isViable && tauxEffort > 33 && (
-                    <Card className="p-4 mb-4 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-full bg-blue-100 dark:bg-blue-900">
-                          <Calculator className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-blue-800 dark:text-blue-300 mb-1">
-                            💡 Recommandation basée sur vos revenus
-                          </p>
-                          <p className="text-sm text-blue-700 dark:text-blue-400 mb-3">
-                            Avec vos revenus actuels de <strong>{totalRevenusMensuels.toLocaleString('fr-CH')} CHF/mois</strong>, 
-                            nous vous recommandons de viser un bien à :
-                          </p>
-                          <div className="bg-white dark:bg-blue-950/50 rounded-lg p-3 text-center">
-                            <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-                              {prixAchatMax.toLocaleString('fr-CH')} CHF
-                            </p>
-                            <p className="text-xs text-blue-600/70 dark:text-blue-500 mt-1">
-                              Prix max pour un taux d'effort de 33%
-                            </p>
-                          </div>
-                          <div className="mt-3 text-xs text-blue-600 dark:text-blue-500 space-y-1">
-                            <p>📊 Votre budget actuel: {data.budget_max.toLocaleString('fr-CH')} CHF 
-                              <span className="text-destructive font-medium"> (+{((data.budget_max - prixAchatMax) / 1000).toFixed(0)}k de trop)</span>
-                            </p>
-                            <p>💰 Apport requis pour {prixAchatMax.toLocaleString('fr-CH')} CHF: {Math.round(prixAchatMax * 0.26).toLocaleString('fr-CH')} CHF</p>
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  )}
-                  
-                  {/* Main metrics */}
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    {/* Taux d'effort - Detailed */}
-                    <Card className="p-3 bg-background">
-                      <div className="flex items-center gap-2 mb-2">
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Taux d'effort</span>
-                      </div>
-                      <div className="text-2xl font-bold mb-1">
-                        <span className={tauxEffort > 33 ? 'text-destructive' : 'text-green-600'}>
-                          {tauxEffort}%
-                        </span>
-                        <span className="text-muted-foreground text-sm font-normal"> / 33% max</span>
-                      </div>
-                      <div className="text-xs space-y-1 text-muted-foreground">
-                        <p>Charges annuelles: {(data.budget_max * 0.07).toLocaleString('fr-CH')} CHF</p>
-                        <p>Revenu annuel: {revenuAnnuelBrut.toLocaleString('fr-CH')} CHF</p>
-                      </div>
-                    </Card>
-
-                    {/* Apport - Detailed */}
-                    <Card className="p-3 bg-background">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Wallet className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Apport personnel</span>
-                      </div>
-                      <div className="text-2xl font-bold mb-1">
-                        <span className={apportManquant > 0 ? 'text-destructive' : 'text-green-600'}>
-                          {(data.apport_personnel || 0).toLocaleString('fr-CH')}
-                        </span>
-                        <span className="text-muted-foreground text-sm font-normal"> / {apportRequis.toLocaleString('fr-CH')} CHF</span>
-                      </div>
-                      {apportManquant > 0 && (
-                        <p className="text-xs text-destructive font-medium">
-                          ⚠️ Il manque {apportManquant.toLocaleString('fr-CH')} CHF
-                        </p>
-                      )}
-                    </Card>
-                  </div>
-
-                  {/* Requirements summary */}
-                  <div className="bg-background rounded-lg p-3 space-y-2">
-                    <p className="text-sm font-medium flex items-center gap-2">
-                      <Info className="h-4 w-4" />
-                      Exigences pour ce prix d'achat
-                    </p>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Revenu mensuel min:</span>
-                        <span className={`font-medium ${revenuManquant > 0 ? 'text-destructive' : 'text-green-600'}`}>
-                          {revenuMinMensuel.toLocaleString('fr-CH')} CHF
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Votre revenu total:</span>
-                        <span className="font-medium">{totalRevenusMensuels.toLocaleString('fr-CH')} CHF</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Apport min (26%):</span>
-                        <span className={`font-medium ${apportManquant > 0 ? 'text-destructive' : 'text-green-600'}`}>
-                          {apportRequis.toLocaleString('fr-CH')} CHF
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Charges mensuelles:</span>
-                        <span className="font-medium">{chargesMensuelles.toLocaleString('fr-CH')} CHF</span>
-                      </div>
-                    </div>
-                    
-                    {revenuManquant > 0 && (
-                      <Alert variant="destructive" className="mt-2">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription className="flex flex-col gap-2">
-                          <span>
-                            Il vous manque <strong>{revenuManquant.toLocaleString('fr-CH')} CHF/mois</strong> de revenus.
-                          </span>
-                          {!hasCandidates && onAddCoBuyer && (
-                            <Button 
-                              type="button" 
-                              variant="outline" 
-                              size="sm" 
-                              className="w-fit gap-2 border-red-300 bg-white/50 dark:bg-black/20 text-destructive hover:bg-red-100 dark:hover:bg-red-950"
-                              onClick={onAddCoBuyer}
-                            >
-                              <UserPlus className="h-4 w-4" />
-                              Ajouter un co-acquéreur maintenant
-                            </Button>
-                          )}
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
-                    💡 Calcul basé sur les normes bancaires suisses: intérêts théoriques 5% + amortissement 1% + charges 1% = 7%/an.
-                    Les charges ne doivent pas dépasser 33% du revenu brut annuel.
-                  </p>
-                </Card>
-              )}
-            </>
+      {/* Residential lifestyle questions */}
+      {!isCommercial && (
+        <div className="space-y-4 pt-2">
+          <div className="h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.12)] to-transparent" />
+          <PremiumRadioGroup label="Avez-vous des animaux ?" options={OUNI_NON} value={data.animaux ? 'oui' : 'non'} onChange={(v) => onChange({ animaux: v === 'oui' })} columns={2} />
+          <PremiumRadioGroup label="Jouez-vous d'un instrument de musique ?" options={OUNI_NON} value={data.instrument_musique ? 'oui' : 'non'} onChange={(v) => onChange({ instrument_musique: v === 'oui' })} columns={2} />
+          <PremiumRadioGroup label="Avez-vous un ou plusieurs véhicules ?" options={OUNI_NON} value={data.vehicules ? 'oui' : 'non'} onChange={(v) => onChange({ vehicules: v === 'oui' })} columns={2} />
+          {data.vehicules && (
+            <div className="pl-3 border-l-2 border-[hsl(38_45%_48%/0.3)]">
+              <PremiumInput label="Numéro(s) de plaque(s)" value={data.numero_plaques} onChange={(e) => onChange({ numero_plaques: e.target.value })} placeholder="Ex: VD 123456" />
+            </div>
           )}
-
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="souhaits_particuliers">Souhaits particuliers (étage, quartier, vue...)</Label>
-            <Textarea
-              id="souhaits_particuliers"
-              value={data.souhaits_particuliers}
-              onChange={(e) => onChange({ souhaits_particuliers: e.target.value })}
-              placeholder="Décrivez vos souhaits particuliers..."
-              rows={3}
-            />
-          </div>
         </div>
-
-        {/* Residential questions - hide for commercial */}
-        {!isCommercial && (
-          <div className="space-y-4 pt-4 border-t">
-            <div className="space-y-3">
-              <Label>Avez-vous des animaux ?</Label>
-              <RadioGroup
-                value={data.animaux ? 'oui' : 'non'}
-                onValueChange={(value) => onChange({ animaux: value === 'oui' })}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="oui" id="animaux-oui" />
-                  <Label htmlFor="animaux-oui" className="font-normal">Oui</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="non" id="animaux-non" />
-                  <Label htmlFor="animaux-non" className="font-normal">Non</Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            <div className="space-y-3">
-              <Label>Jouez-vous d'un instrument de musique ? *</Label>
-              <RadioGroup
-                value={data.instrument_musique ? 'oui' : 'non'}
-                onValueChange={(value) => onChange({ instrument_musique: value === 'oui' })}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="oui" id="instrument-oui" />
-                  <Label htmlFor="instrument-oui" className="font-normal">Oui</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="non" id="instrument-non" />
-                  <Label htmlFor="instrument-non" className="font-normal">Non</Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            <div className="space-y-3">
-              <Label>Avez-vous un ou plusieurs véhicules ? *</Label>
-              <RadioGroup
-                value={data.vehicules ? 'oui' : 'non'}
-                onValueChange={(value) => onChange({ vehicules: value === 'oui' })}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="oui" id="vehicules-oui" />
-                  <Label htmlFor="vehicules-oui" className="font-normal">Oui</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="non" id="vehicules-non" />
-                  <Label htmlFor="vehicules-non" className="font-normal">Non</Label>
-                </div>
-              </RadioGroup>
-            </div>
-
-            {data.vehicules && (
-              <div className="space-y-2 pl-4 border-l-2 border-primary/30">
-                <Label htmlFor="numero_plaques">Numéro(s) de plaque(s)</Label>
-                <Input
-                  id="numero_plaques"
-                  value={data.numero_plaques}
-                  onChange={(e) => onChange({ numero_plaques: e.target.value })}
-                  placeholder="Ex: VD 123456"
-                />
-              </div>
-            )}
-          </div>
-        )}
+      )}
     </div>
   );
 }

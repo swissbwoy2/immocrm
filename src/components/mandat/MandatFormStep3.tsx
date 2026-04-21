@@ -1,15 +1,31 @@
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card } from '@/components/ui/card';
 import { MandatFormData, UTILISATIONS_LOGEMENT } from './types';
-import { Briefcase, Building2, Wallet, Calendar, Home, AlertTriangle, Scale, CreditCard } from 'lucide-react';
+import { PremiumInput } from '@/components/forms-premium/PremiumInput';
+import { PremiumSelect } from '@/components/forms-premium/PremiumSelect';
+import { PremiumRadioGroup } from '@/components/forms-premium/PremiumRadioGroup';
+import { LuxuryIconBadge } from '@/components/forms-premium/LuxuryIconBadge';
+import { IconWallet, IconHome, IconCalendar } from '@/components/forms-premium/icons/LuxuryIcons';
+import { Briefcase, Building2, AlertTriangle, Scale, CreditCard } from 'lucide-react';
 import CommercialFieldsStep3 from './CommercialFieldsStep3';
 
 interface Props {
   data: MandatFormData;
   onChange: (data: Partial<MandatFormData>) => void;
+}
+
+const OUNI_NON = [{ value: 'oui', label: 'Oui' }, { value: 'non', label: 'Non' }];
+
+function LuxuryQuestionCard({ children, active, danger }: { children: React.ReactNode; active?: boolean; danger?: boolean }) {
+  return (
+    <div className={`rounded-xl border p-4 transition-all duration-300 ${
+      danger && active
+        ? 'border-red-500/40 bg-red-950/15'
+        : active
+        ? 'border-[hsl(38_45%_48%/0.4)] bg-[hsl(38_45%_48%/0.07)]'
+        : 'border-[hsl(38_45%_48%/0.15)] bg-[hsl(30_15%_10%/0.4)]'
+    }`}>
+      {children}
+    </div>
+  );
 }
 
 export default function MandatFormStep3({ data, onChange }: Props) {
@@ -18,223 +34,133 @@ export default function MandatFormStep3({ data, onChange }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Premium Header */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 mb-4 relative">
-          <Briefcase className="h-8 w-8 text-primary" />
-          <div className="absolute inset-0 rounded-full bg-primary/10 animate-ping opacity-75" />
+      <div className="flex flex-col items-center gap-3 mb-6">
+        <LuxuryIconBadge size="lg">
+          <Briefcase size={26} strokeWidth={1.5} className="text-[hsl(38_55%_65%)]" />
+        </LuxuryIconBadge>
+        <div className="text-center">
+          <h2 className="text-xl font-serif font-bold text-[hsl(40_20%_88%)]">
+            {isCommercial ? 'Informations sur le locataire' : 'Situation financière et professionnelle'}
+          </h2>
+          <p className="text-xs text-[hsl(40_20%_45%)] mt-1">
+            {isCommercial ? "Indiquez si vous louez en nom propre ou au nom d'une société" : 'Vos revenus et informations professionnelles'}
+          </p>
         </div>
-        <h2 className="text-2xl md:text-3xl font-bold font-serif bg-gradient-to-r from-[hsl(38_55%_70%)] via-[hsl(38_55%_60%)] to-[hsl(38_45%_48%)] bg-clip-text text-transparent">
-          {isCommercial ? 'Informations sur le locataire' : 'Situation financière et professionnelle'}
-        </h2>
-        <p className="text-sm text-foreground/70 mt-1">
-          {isCommercial ? 'Indiquez si vous louez en nom propre ou au nom d\'une société' : 'Vos revenus et informations professionnelles'}
-        </p>
+        <div className="w-12 h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.6)] to-transparent" />
       </div>
 
-      {/* Commercial: Show location type selection and conditional fields */}
       {isCommercial ? (
         <CommercialFieldsStep3 data={data} onChange={onChange} />
       ) : (
-        // Standard residential fields
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Profession */}
-          <div className="space-y-2 group">
-            <Label htmlFor="profession" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-              <Briefcase className="h-4 w-4 text-[hsl(38_55%_60%)]" />
-              Profession <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="profession"
-              value={data.profession}
-              onChange={(e) => onChange({ profession: e.target.value })}
-              placeholder="Votre profession"
-              required
-              className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60"
-            />
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <PremiumInput label="Profession" value={data.profession} onChange={(e) => onChange({ profession: e.target.value })} icon={<Briefcase size={16} strokeWidth={1.5} className="text-[hsl(38_45%_48%)]" />} placeholder="Votre profession" required />
+          <PremiumInput label="Employeur" value={data.employeur} onChange={(e) => onChange({ employeur: e.target.value })} icon={<Building2 size={16} strokeWidth={1.5} className="text-[hsl(38_45%_48%)]" />} placeholder="Nom de l'entreprise" required />
 
-          {/* Employeur */}
-          <div className="space-y-2 group">
-            <Label htmlFor="employeur" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-              <Building2 className="h-4 w-4 text-[hsl(38_55%_60%)]" />
-              Employeur <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="employeur"
-              value={data.employeur}
-              onChange={(e) => onChange({ employeur: e.target.value })}
-              placeholder="Nom de l'entreprise"
-              required
-              className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60"
-            />
-          </div>
-
-          {/* Revenus mensuels */}
-          <div className="space-y-2 group">
-            <Label htmlFor="revenus_mensuels" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-              <Wallet className="h-4 w-4 text-[hsl(38_55%_60%)]" />
-              Revenu mensuel net (CHF) <span className="text-destructive">*</span>
-            </Label>
+          {/* Revenus CHF */}
+          <div className="space-y-1.5">
+            <label className="flex items-center gap-2 text-sm font-medium text-[hsl(40_20%_60%)]">
+              <span className="text-[hsl(38_45%_48%)]"><IconWallet size={16} /></span>
+              Revenu mensuel net (CHF) <span className="text-red-400">*</span>
+            </label>
             <div className="relative">
-              <Input
-                id="revenus_mensuels"
+              <input
                 type="number"
                 value={data.revenus_mensuels || ''}
                 onChange={(e) => onChange({ revenus_mensuels: Number(e.target.value) })}
                 placeholder="Ex: 5000"
-                required
-                className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60 pr-14"
+                className="w-full bg-[hsl(30_15%_9%/0.6)] border border-[hsl(38_45%_48%/0.2)] rounded-xl px-4 py-3 pr-14 text-sm text-[hsl(40_20%_75%)] placeholder:text-[hsl(40_20%_38%)] focus:outline-none focus:border-[hsl(38_55%_65%/0.7)] focus:ring-2 focus:ring-[hsl(38_45%_48%/0.25)] transition-all duration-300"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
-                CHF
-              </span>
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[hsl(40_20%_45%)] text-xs font-medium pointer-events-none">CHF</span>
             </div>
           </div>
 
-          {/* Date d'engagement */}
-          <div className="space-y-2 group">
-            <Label htmlFor="date_engagement" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-              <Calendar className="h-4 w-4 text-[hsl(38_55%_60%)]" />
-              Date d'engagement au poste
-            </Label>
-            <Input
-              id="date_engagement"
-              type="date"
-              value={data.date_engagement}
-              onChange={(e) => onChange({ date_engagement: e.target.value })}
-              className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60"
-            />
-          </div>
+          <PremiumInput label="Date d'engagement au poste" type="date" value={data.date_engagement} onChange={(e) => onChange({ date_engagement: e.target.value })} icon={<IconCalendar size={16} />} />
 
-          {/* Utilisation du logement */}
-          <div className="space-y-2 group md:col-span-2">
-            <Label htmlFor="utilisation_logement" className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-              <Home className="h-4 w-4 text-[hsl(38_55%_60%)]" />
-              Utilisation du logement à titre <span className="text-destructive">*</span>
-            </Label>
-            <Select value={data.utilisation_logement} onValueChange={(value) => onChange({ utilisation_logement: value })}>
-              <SelectTrigger className="transition-all duration-300 focus:ring-2 focus:ring-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60">
-                <SelectValue placeholder="Sélectionnez" />
-              </SelectTrigger>
-              <SelectContent className="backdrop-blur-xl bg-popover/95">
-                {UTILISATIONS_LOGEMENT.map((util) => (
-                  <SelectItem key={util} value={util} className="cursor-pointer hover:bg-primary/10">{util}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="md:col-span-2">
+            <PremiumSelect
+              label="Utilisation du logement à titre"
+              icon={<IconHome size={16} />}
+              value={data.utilisation_logement}
+              onValueChange={(v) => onChange({ utilisation_logement: v })}
+              options={UTILISATIONS_LOGEMENT.map(u => ({ value: u, label: u }))}
+              required
+            />
           </div>
         </div>
       )}
 
-      {/* Questions financières - only show for residential OR commercial in personal name */}
       {(!isCommercial || isPersonnel) && (
-        <div className="space-y-4 pt-6 border-t border-border/50">
-          {/* Charges extraordinaires */}
-          <Card className={`p-4 backdrop-blur-sm transition-all duration-300 ${
-            data.charges_extraordinaires 
-              ? 'bg-orange-500/10 border-orange-500/30' 
-              : 'bg-background/50 border-border/50'
-          }`}>
-            <div className="space-y-3">
-              <Label className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-                <CreditCard className={`h-4 w-4 ${data.charges_extraordinaires ? 'text-orange-500' : 'text-[hsl(38_55%_60%)]'}`} />
-                Avez-vous des charges extraordinaires ? <span className="text-destructive">*</span>
-              </Label>
-              <p className="text-xs text-muted-foreground">Leasing, crédit, pension alimentaire, etc.</p>
-              <RadioGroup
-                value={data.charges_extraordinaires ? 'oui' : 'non'}
-                onValueChange={(value) => onChange({ charges_extraordinaires: value === 'oui' })}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="oui" id="charges-oui" className="border-2" />
-                  <Label htmlFor="charges-oui" className="font-normal cursor-pointer">Oui</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="non" id="charges-non" className="border-2" />
-                  <Label htmlFor="charges-non" className="font-normal cursor-pointer">Non</Label>
-                </div>
-              </RadioGroup>
-            </div>
+        <div className="space-y-3 pt-4">
+          <div className="h-px bg-gradient-to-r from-transparent via-[hsl(38_45%_48%/0.12)] to-transparent" />
 
+          <LuxuryQuestionCard active={data.charges_extraordinaires}>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <CreditCard size={16} strokeWidth={1.5} className={data.charges_extraordinaires ? 'text-[hsl(38_55%_65%)]' : 'text-[hsl(40_20%_45%)]'} />
+                <span className="text-sm font-medium text-[hsl(40_20%_70%)]">
+                  Avez-vous des charges extraordinaires ? <span className="text-red-400">*</span>
+                </span>
+              </div>
+              <p className="text-xs text-[hsl(40_20%_40%)]">Leasing, crédit, pension alimentaire, etc.</p>
+              <PremiumRadioGroup
+                options={OUNI_NON}
+                value={data.charges_extraordinaires ? 'oui' : 'non'}
+                onChange={(v) => onChange({ charges_extraordinaires: v === 'oui' })}
+                columns={2}
+              />
+            </div>
             {data.charges_extraordinaires && (
-              <div className="mt-4 pl-4 border-l-2 border-orange-500/50 animate-fade-in">
-                <Label htmlFor="montant_charges_extra" className="text-sm font-medium">
-                  Montant des charges / échéance (CHF)
-                </Label>
-                <div className="relative mt-2">
-                  <Input
-                    id="montant_charges_extra"
-                    type="number"
-                    value={data.montant_charges_extra || ''}
-                    onChange={(e) => onChange({ montant_charges_extra: Number(e.target.value) })}
-                    placeholder="Ex: 500"
-                    className="transition-all duration-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 bg-background/80 backdrop-blur-sm border-[hsl(38_45%_48%/0.3)] focus:border-[hsl(38_55%_60%)] text-foreground placeholder:text-muted-foreground/60 pr-14"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-medium">
-                    CHF
-                  </span>
+              <div className="mt-4 pl-3 border-l-2 border-[hsl(38_45%_48%/0.4)]">
+                <div className="space-y-1.5">
+                  <label className="text-xs text-[hsl(40_20%_55%)] font-medium">Montant des charges / échéance (CHF)</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={data.montant_charges_extra || ''}
+                      onChange={(e) => onChange({ montant_charges_extra: Number(e.target.value) })}
+                      placeholder="Ex: 500"
+                      className="w-full bg-[hsl(30_15%_9%/0.6)] border border-[hsl(38_45%_48%/0.2)] rounded-xl px-4 py-3 pr-14 text-sm text-[hsl(40_20%_75%)] placeholder:text-[hsl(40_20%_38%)] focus:outline-none focus:border-[hsl(38_55%_65%/0.7)] focus:ring-2 focus:ring-[hsl(38_45%_48%/0.25)] transition-all duration-300"
+                    />
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[hsl(40_20%_45%)] text-xs font-medium pointer-events-none">CHF</span>
+                  </div>
                 </div>
               </div>
             )}
-          </Card>
+          </LuxuryQuestionCard>
 
-          {/* Poursuites */}
-          <Card className={`p-4 backdrop-blur-sm transition-all duration-300 ${
-            data.poursuites 
-              ? 'bg-destructive/10 border-destructive/30 shadow-lg shadow-destructive/10' 
-              : 'bg-background/50 border-border/50'
-          }`}>
+          <LuxuryQuestionCard active={data.poursuites} danger>
             <div className="space-y-3">
-              <Label className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-                <AlertTriangle className={`h-4 w-4 ${data.poursuites ? 'text-destructive animate-pulse' : 'text-[hsl(38_55%_60%)]'}`} />
-                Avez-vous des poursuites ou actes de défaut de biens ? <span className="text-destructive">*</span>
-              </Label>
-              <RadioGroup
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={16} strokeWidth={1.5} className={data.poursuites ? 'text-red-400' : 'text-[hsl(40_20%_45%)]'} />
+                <span className="text-sm font-medium text-[hsl(40_20%_70%)]">
+                  Avez-vous des poursuites ou actes de défaut de biens ? <span className="text-red-400">*</span>
+                </span>
+              </div>
+              <PremiumRadioGroup
+                options={OUNI_NON}
                 value={data.poursuites ? 'oui' : 'non'}
-                onValueChange={(value) => onChange({ poursuites: value === 'oui' })}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="oui" id="poursuites-oui" className="border-2" />
-                  <Label htmlFor="poursuites-oui" className="font-normal cursor-pointer">Oui</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="non" id="poursuites-non" className="border-2" />
-                  <Label htmlFor="poursuites-non" className="font-normal cursor-pointer">Non</Label>
-                </div>
-              </RadioGroup>
+                onChange={(v) => onChange({ poursuites: v === 'oui' })}
+                columns={2}
+              />
             </div>
-          </Card>
+          </LuxuryQuestionCard>
 
-          {/* Curatelle */}
-          <Card className={`p-4 backdrop-blur-sm transition-all duration-300 ${
-            data.curatelle 
-              ? 'bg-destructive/10 border-destructive/30' 
-              : 'bg-background/50 border-border/50'
-          }`}>
+          <LuxuryQuestionCard active={data.curatelle} danger>
             <div className="space-y-3">
-              <Label className="flex items-center gap-2 text-sm font-medium text-foreground/90">
-                <Scale className={`h-4 w-4 ${data.curatelle ? 'text-destructive' : 'text-[hsl(38_55%_60%)]'}`} />
-                Êtes-vous sous curatelle ? <span className="text-destructive">*</span>
-              </Label>
-              <RadioGroup
+              <div className="flex items-center gap-2">
+                <Scale size={16} strokeWidth={1.5} className={data.curatelle ? 'text-red-400' : 'text-[hsl(40_20%_45%)]'} />
+                <span className="text-sm font-medium text-[hsl(40_20%_70%)]">
+                  Êtes-vous sous curatelle ? <span className="text-red-400">*</span>
+                </span>
+              </div>
+              <PremiumRadioGroup
+                options={OUNI_NON}
                 value={data.curatelle ? 'oui' : 'non'}
-                onValueChange={(value) => onChange({ curatelle: value === 'oui' })}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="oui" id="curatelle-oui" className="border-2" />
-                  <Label htmlFor="curatelle-oui" className="font-normal cursor-pointer">Oui</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="non" id="curatelle-non" className="border-2" />
-                  <Label htmlFor="curatelle-non" className="font-normal cursor-pointer">Non</Label>
-                </div>
-              </RadioGroup>
+                onChange={(v) => onChange({ curatelle: v === 'oui' })}
+                columns={2}
+              />
             </div>
-          </Card>
+          </LuxuryQuestionCard>
         </div>
       )}
     </div>
