@@ -1,91 +1,155 @@
 
 
-# Plan : afficher la source du lead dans `/admin/leads`
+# Plan : Rendez-vous téléphonique obligatoire dans le formulaire "Analyse de dossier"
 
-## Constat
+## Mise à jour vs version précédente
 
-La table `leads` stocke déjà tout ce qu'il faut :
-
-- `source` (ex. `landing_quickform`, `landing_analyse_dossier`, `formulaire_vendeur_complet`, `meta_lead_ads`, etc.)
-- `utm_source` (ex. `facebook`, `tiktok`, `google`, `instagram`)
-- `utm_medium` (ex. `cpc`, `paid`, `social`)
-- `utm_campaign` (ex. `chercheur_geneve_avril`)
-
-Mais sur la page `/admin/leads`, **aucune de ces infos n'est visible**. La colonne "Recherche" affiche juste le `formulaire` (interne), pas la source d'acquisition. Impossible de savoir d'un coup d'œil si un lead vient de Facebook Ads, TikTok, Google Ads, ou directement du site.
+- Plage horaire élargie : **7h30 → 22h00** (au lieu de 8h30 → 16h30)
+- Toujours 7j/7 (lundi → dimanche inclus)
+- Slots de 15 min → **58 slots/jour** (7h30, 7h45, … 21h45)
 
 ## Objectif
 
-Afficher pour chaque lead, dans la liste et dans le détail, **un badge "Source"** lisible et coloré :
+Avant qu'un prospect puisse envoyer son formulaire d'analyse de dossier, il doit **réserver un créneau téléphonique de 15 minutes** entre 7h30 et 22h00 (Europe/Zurich), tous les jours. Le créneau apparaît dans `/admin/calendrier` + `/admin/leads`, l'admin confirme, et le prospect reçoit une confirmation email avec invitation `.ics`.
+
+## Comportement attendu
 
 ```text
-🟦 Facebook Ads      🟪 TikTok Ads     🟩 Google Ads
-🟧 Instagram         ⚫ Direct          🟨 Meta Lead Ads
-🔵 Référent          ⚪ Inconnu
+Formulaire analyse de dossier
+        │
+        ▼
+[Étape finale ajoutée] ──► Choix créneau téléphonique
+        │                        │
+        │   7j/7 (lun → dim inclus)
+        │   7h30 → 22h00, slots de 15 min (58 slots/jour)
+        │   Créneaux déjà pris = grisés (indisponibles)
+        │
+        ▼
+   Submit form ──► Crée lead + crée rendez-vous "en_attente"
+        │
+        ▼
+   Admin voit dans /admin/leads (badge "RDV tél le X à Y")
+   Admin voit dans /admin/calendrier (event orange en attente)
+        │
+        ▼
+   Admin clique "Confirmer le RDV"
+        │
+        ▼
+   Email au prospect : "Votre rendez-vous téléphonique est fixé le … à …"
+   + pièce jointe invitation.ics (réutilise send-calendar-invite)
 ```
 
-## Logique de dérivation de la source
+## Données
 
-Créer un utilitaire `src/lib/lead-source.ts` qui prend un lead et renvoie `{ label, color, icon }` selon cette priorité :
+### Nouvelle table `lead_phone_appointments`
 
 ```text
-1. utm_source = 'facebook'  | utm_medium contient 'meta'  → Facebook Ads
-2. utm_source = 'instagram'                                → Instagram Ads
-3. utm_source = 'tiktok'                                   → TikTok Ads
-4. utm_source = 'google'    | utm_medium = 'cpc'           → Google Ads
-5. source = 'meta_lead_ads'                                → Meta Lead Ads (formulaire natif)
-6. source = 'formulaire_vendeur_complet'                   → Formulaire Vendeur
-7. source contient 'landing'                               → Landing directe
-8. utm_source défini mais non listé                        → utm_source en clair
-9. Sinon                                                   → Direct
+id                  uuid PK
+lead_id             uuid → leads.id (nullable)
+prospect_email      text NOT NULL
+prospect_phone      text NOT NULL
+prospect_name       text NOT NULL
+slot_start          timestamptz NOT NULL  (Europe/Zurich)
+slot_end            timestamptz NOT NULL  (slot_start + 15min)
+status              text DEFAULT 'en_attente'  (en_attente | confirme | annule | termine)
+confirmed_by        uuid (admin user_id)
+confirmed_at        timestamptz
+ics_sent_at         timestamptz
+notes_admin         text
+source_form         text DEFAULT 'analyse_dossier'
+created_at          timestamptz DEFAULT now()
+updated_at          timestamptz DEFAULT now()
+
+UNIQUE INDEX (slot_start) WHERE status != 'annule'
+INDEX (slot_start), INDEX (status), INDEX (lead_id)
 ```
 
-Affichage : badge couleur + petite ligne en-dessous avec `utm_campaign` si présent (ex. `chercheur_geneve_avril`), pour permettre l'analyse fine sans surcharger.
+### RLS
+- **INSERT public anonyme** : autorisé (prospect non loggé)
+- **SELECT public anonyme** : autorisé sur `slot_start, status` via vue `available_phone_slots`
+- **SELECT/UPDATE/DELETE admin** : `has_role(auth.uid(), 'admin')`
 
-## Modifications
+## Génération des créneaux
 
-### 1. Nouveau fichier : `src/lib/lead-source.ts`
+Côté **frontend** : J+1 → J+14 jours calendaires × **58 slots/jour** (de 7h30 à 21h45, pas de 15 min, dernier appel possible 21h45 → 22h00).
+Query `lead_phone_appointments WHERE slot_start BETWEEN now AND now+14d AND status != 'annule'` → grise les créneaux pris.
 
-Fonction pure `getLeadSource(lead)` retournant `{ key, label, badgeClass, icon }`. Couleurs alignées sur les guidelines (semantic tokens, pas de couleurs hardcodées dans Tailwind direct).
+## Modifications fichiers
 
-### 2. `src/pages/admin/Leads.tsx`
+### 1. Migration DB
+- Création table `lead_phone_appointments` + RLS + vue `available_phone_slots`
+- Trigger `updated_at`
+- `ALTER PUBLICATION supabase_realtime ADD TABLE lead_phone_appointments`
 
-- Étendre le type `Lead` avec `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`.
-- Ajouter une **nouvelle colonne "Source"** entre "Recherche" et "Qualification" (ou regrouper dans "Recherche" si trop large à 1329px). Recommandation : nouvelle colonne dédiée, c'est l'info clé demandée.
-- Header : `<TableHead>Source</TableHead>` (colSpan empty rows passe de 6 à 7).
-- Cellule : badge `getLeadSource(lead).label` + sous-ligne discrète `utm_campaign` si présent.
-- Ajouter un **filtre "Source"** dans la barre de filtres (à côté de "Tous les formulaires") : Toutes / Facebook Ads / TikTok / Google Ads / Instagram / Direct / Autre.
-- Mettre à jour `exportCSV` pour inclure les colonnes `source`, `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`.
+### 2. `src/components/landing/AnalyseDossierForm.tsx` (nom à confirmer à la lecture)
+Étape finale obligatoire `<PhoneSlotPicker />` avant le bouton "Envoyer mon dossier". Bouton désactivé tant que pas de créneau choisi.
 
-### 3. Détail du lead (dialog notes existant)
+### 3. Nouveau `src/components/landing/PhoneSlotPicker.tsx`
+- DatePicker shadcn — J+1 à J+14, aucun jour désactivé
+- Grille 58 slots de 15 min (7h30 → 21h45)
+- Slot pris : `disabled + opacity-50 + bg-muted`
+- Slot sélectionné : `bg-primary text-primary-foreground`
+- Realtime subscribe sur `lead_phone_appointments`
+- Style premium landing (glass, gold, Framer Motion)
+- Sur mobile : grille collapsée par tranche horaire (Matin 7h30-12h / Après-midi 12h-18h / Soir 18h-22h) pour éviter scroll infini
 
-Ajouter en haut du dialog une petite section "Origine" :
+### 4. Logique submit form analyse-dossier
+- Insert `lead_phone_appointments` avec slot choisi (gestion conflit unique → message "créneau déjà pris, choisis-en un autre")
+- Insert lead avec `source = 'landing_analyse_dossier'`
+- UPDATE `lead_phone_appointments.lead_id`
+- Toast : "Demande envoyée. Votre RDV téléphonique est en attente de confirmation."
 
-```text
-Source       : Facebook Ads
-Campagne     : chercheur_geneve_avril
-Medium       : cpc
-Contenu      : ad_variant_3
-Formulaire   : landing_quickform
-```
+### 5. `/admin/leads` (`src/pages/admin/Leads.tsx`)
+- Badge "RDV tél" sur leads `landing_analyse_dossier`
+- Format : `📞 Sam 27 avril 21h15` + badge statut (`en_attente` orange / `confirme` vert)
+- Bouton **Confirmer RDV** (si `en_attente`) → invoke `confirm-phone-appointment`
+- Bouton **Annuler RDV**
 
-Affiche uniquement les champs non null.
+### 6. `/admin/calendrier` (`src/pages/admin/Calendrier.tsx`)
+- Source ajoutée : `lead_phone_appointments WHERE status IN ('en_attente','confirme')`
+- Couleur : orange si `en_attente`, vert si `confirme`
+- Title : "📞 RDV tél : {prospect_name} ({prospect_phone})"
+
+### 7. Edge Function `supabase/functions/confirm-phone-appointment/index.ts`
+- Auth : JWT admin requis
+- Reçoit `{ appointment_id }`
+- UPDATE status='confirme', confirmed_by, confirmed_at
+- Envoie email Resend + invoke `send-calendar-invite` :
+  - title : "Rendez-vous téléphonique avec Logisorama"
+  - description : "Notre équipe vous appellera au {prospect_phone}"
+  - start/end du slot, timezone Europe/Zurich
+- Email HTML : "Votre rendez-vous téléphonique est fixé le {date} à {heure}" + bouton Ajouter au calendrier
+- Marque `ics_sent_at = now()`
 
 ## Validation
 
-1. Un lead avec `utm_source='facebook'` affiche un badge bleu **Facebook Ads**.
-2. Un lead avec `utm_source='tiktok'` affiche un badge **TikTok Ads**.
-3. Un lead sans aucun UTM affiche **Direct**.
-4. Le filtre "Source" filtre correctement la liste.
-5. L'export CSV contient les colonnes UTM.
-6. Le dialog détail affiche le bloc "Origine" avec les valeurs disponibles.
-7. Aucune régression sur les colonnes existantes.
+1. Créneaux 7j/7 de 7h30 à 22h00 (58 slots/jour)
+2. Slots pris grisés en temps réel
+3. Soumission impossible sans créneau
+4. Lead + RDV créés en `en_attente`
+5. Badge RDV + bouton Confirmer dans `/admin/leads`
+6. Event orange dans `/admin/calendrier`
+7. Confirmer → email + `.ics` (iPhone/Google/Outlook)
+8. Event devient vert
+9. Réservation simultanée → erreur claire
+10. Slots passés non sélectionnables
 
-## Fichiers modifiés
+## Fichiers touchés
 
 ```text
-src/lib/lead-source.ts           (NOUVEAU — utilitaire de dérivation)
-src/pages/admin/Leads.tsx        (colonne Source + filtre + CSV + dialog)
+[NEW] supabase migration                               table + RLS + vue + realtime
+[NEW] src/components/landing/PhoneSlotPicker.tsx
+[NEW] supabase/functions/confirm-phone-appointment/index.ts
+[MOD] src/components/landing/AnalyseDossierForm.tsx    (intégration picker + submit)
+[MOD] src/pages/admin/Leads.tsx                        (badge RDV + bouton Confirmer)
+[MOD] src/pages/admin/Calendrier.tsx                   (source événements)
 ```
 
-Aucune modification base de données : les colonnes existent déjà dans `leads`.
+## Notes techniques
+
+- **Timezone Europe/Zurich** strict partout (génération slots, affichage, ics)
+- **Pas d'auto-confirm** : confirmation manuelle admin
+- **Réutilise `send-calendar-invite`** existant
+- **Realtime** activé sur `lead_phone_appointments`
+- Aucune modification de `auth.users`
 
