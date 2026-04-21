@@ -137,6 +137,43 @@ export default function Leads() {
     },
   });
 
+  const { data: phoneAppointments = [] } = useQuery({
+    queryKey: ["lead-phone-appointments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("lead_phone_appointments")
+        .select("id, lead_id, slot_start, slot_end, status, prospect_email")
+        .order("slot_start", { ascending: true });
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  const apptByLeadId = new Map<string, any>();
+  const apptByEmail = new Map<string, any>();
+  phoneAppointments.forEach((a) => {
+    if (a.lead_id) apptByLeadId.set(a.lead_id, a);
+    if (a.prospect_email) apptByEmail.set(a.prospect_email.toLowerCase(), a);
+  });
+
+  const [confirmingApptId, setConfirmingApptId] = useState<string | null>(null);
+  const confirmAppointment = async (appointmentId: string) => {
+    setConfirmingApptId(appointmentId);
+    try {
+      const { error } = await supabase.functions.invoke('confirm-phone-appointment', {
+        body: { appointment_id: appointmentId },
+      });
+      if (error) throw error;
+      toast.success('Rendez-vous confirmé. Email + invitation envoyés au prospect.');
+      queryClient.invalidateQueries({ queryKey: ["lead-phone-appointments"] });
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Erreur: ' + (e.message || 'confirmation échouée'));
+    } finally {
+      setConfirmingApptId(null);
+    }
+  };
+
   const { data: formulaires = [] } = useQuery({
     queryKey: ["lead-formulaires"],
     queryFn: async () => {
