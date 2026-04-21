@@ -708,6 +708,34 @@ export default function Leads() {
             <DialogTitle>Notes pour {selectedLead?.prenom} {selectedLead?.nom || selectedLead?.email}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {selectedLead && (() => {
+              const info = getLeadSource(selectedLead);
+              const rows: Array<[string, string | null]> = [
+                ["Source", info.label],
+                ["Campagne", selectedLead.utm_campaign],
+                ["Medium", selectedLead.utm_medium],
+                ["Contenu", selectedLead.utm_content],
+                ["Terme", selectedLead.utm_term],
+                ["Source brute", selectedLead.source],
+                ["Formulaire", selectedLead.formulaire],
+              ].filter(([, v]) => !!v) as Array<[string, string]>;
+              return (
+                <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Origine</span>
+                    <Badge variant="outline" className={info.badgeClass}>{info.label}</Badge>
+                  </div>
+                  <div className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1 text-xs">
+                    {rows.map(([k, v]) => (
+                      <>
+                        <span className="text-muted-foreground">{k}</span>
+                        <span className="font-medium break-all">{v}</span>
+                      </>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
             <div>
               <label className="text-sm font-medium mb-1 block">Type de lead</label>
               <Select 
