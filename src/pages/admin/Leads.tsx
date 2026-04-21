@@ -688,7 +688,8 @@ export default function Leads() {
                   </div>
                 </TableCell>
               </PremiumTableRow>
-            ))
+              );
+            })
           )}
         </TableBody>
       </PremiumTable>
