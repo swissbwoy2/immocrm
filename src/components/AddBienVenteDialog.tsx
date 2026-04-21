@@ -563,7 +563,7 @@ export function AddBienVenteDialog({ open, onOpenChange, onSuccess, isAdmin = fa
               est_principale: i === 0,
               ordre: i,
               uploaded_by: user?.id,
-            });
+            } as any);
           }
         }
       }

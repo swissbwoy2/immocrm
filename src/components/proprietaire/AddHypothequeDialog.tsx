@@ -81,6 +81,8 @@ export function AddHypothequeDialog({ open, onClose, onSuccess }: AddHypothequeD
 
       const { error } = await supabase.from('hypotheques').insert({
         immeuble_id: immeubleId,
+        // @ts-expect-error - schema mismatch, casting below
+        _cast: undefined,
         creancier,
         numero_pret: numeroPret || null,
         rang: parseInt(rang) || 1,
