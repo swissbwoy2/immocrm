@@ -1,211 +1,91 @@
 
 
-# Plan : corriger le crash qui persiste uniquement sur le site publié
+# Plan : afficher la source du lead dans `/admin/leads`
 
-## Diagnostic confirmé
+## Constat
 
-Le problème actuel publié n’est plus le même que l’erreur notifications.
+La table `leads` stocke déjà tout ce qu'il faut :
 
-Les derniers logs montrent :
+- `source` (ex. `landing_quickform`, `landing_analyse_dossier`, `formulaire_vendeur_complet`, `meta_lead_ads`, etc.)
+- `utm_source` (ex. `facebook`, `tiktok`, `google`, `instagram`)
+- `utm_medium` (ex. `cpc`, `paid`, `social`)
+- `utm_campaign` (ex. `chercheur_geneve_avril`)
 
-```text
-Error creating WebGL context.
-Page URL: https://logisorama.ch/
-```
+Mais sur la page `/admin/leads`, **aucune de ces infos n'est visible**. La colonne "Recherche" affiche juste le `formulaire` (interne), pas la source d'acquisition. Impossible de savoir d'un coup d'œil si un lead vient de Facebook Ads, TikTok, Google Ads, ou directement du site.
 
-Et le HTML publié de `https://logisorama.ch` affiche directement l’ErrorBoundary avec cette erreur.
+## Objectif
 
-Conclusion : le site publié plante sur la page d’accueil publique `/`, avant ou pendant la redirection automatique vers `/admin`, `/agent` ou `/client`.
-
-C’est pour ça que :
-- en preview, ça fonctionne ;
-- en publié, certains utilisateurs restent bloqués ;
-- le problème touche plusieurs rôles ;
-- l’erreur vient du rendu 3D/WebGL de la homepage, pas du dashboard lui-même.
-
-Les composants concernés sont :
+Afficher pour chaque lead, dans la liste et dans le détail, **un badge "Source"** lisible et coloré :
 
 ```text
-src/pages/public-site/HomePage.tsx
-src/components/public-site/3d/TravelingGoldKey3D.tsx
-src/components/public-site/3d/Scene3DWrapper.tsx
-src/components/public-site/3d/SwissGlobe3D.tsx
-src/components/public-site/3d/GoldKey3D.tsx
+🟦 Facebook Ads      🟪 TikTok Ads     🟩 Google Ads
+🟧 Instagram         ⚫ Direct          🟨 Meta Lead Ads
+🔵 Référent          ⚪ Inconnu
 ```
 
-La page d’accueil charge actuellement plusieurs scènes `@react-three/fiber` / Three.js. Sur certains navigateurs ou environnements publiés, WebGL ne peut pas être créé, ce qui déclenche :
+## Logique de dérivation de la source
+
+Créer un utilitaire `src/lib/lead-source.ts` qui prend un lead et renvoie `{ label, color, icon }` selon cette priorité :
 
 ```text
-THREE.WebGLRenderer: Error creating WebGL context
+1. utm_source = 'facebook'  | utm_medium contient 'meta'  → Facebook Ads
+2. utm_source = 'instagram'                                → Instagram Ads
+3. utm_source = 'tiktok'                                   → TikTok Ads
+4. utm_source = 'google'    | utm_medium = 'cpc'           → Google Ads
+5. source = 'meta_lead_ads'                                → Meta Lead Ads (formulaire natif)
+6. source = 'formulaire_vendeur_complet'                   → Formulaire Vendeur
+7. source contient 'landing'                               → Landing directe
+8. utm_source défini mais non listé                        → utm_source en clair
+9. Sinon                                                   → Direct
 ```
 
-## Correctif prioritaire
+Affichage : badge couleur + petite ligne en-dessous avec `utm_campaign` si présent (ex. `chercheur_geneve_avril`), pour permettre l'analyse fine sans surcharger.
 
-### 1. Désactiver WebGL/3D critique sur la homepage publiée
+## Modifications
 
-Fichier :
+### 1. Nouveau fichier : `src/lib/lead-source.ts`
+
+Fonction pure `getLeadSource(lead)` retournant `{ key, label, badgeClass, icon }`. Couleurs alignées sur les guidelines (semantic tokens, pas de couleurs hardcodées dans Tailwind direct).
+
+### 2. `src/pages/admin/Leads.tsx`
+
+- Étendre le type `Lead` avec `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`.
+- Ajouter une **nouvelle colonne "Source"** entre "Recherche" et "Qualification" (ou regrouper dans "Recherche" si trop large à 1329px). Recommandation : nouvelle colonne dédiée, c'est l'info clé demandée.
+- Header : `<TableHead>Source</TableHead>` (colSpan empty rows passe de 6 à 7).
+- Cellule : badge `getLeadSource(lead).label` + sous-ligne discrète `utm_campaign` si présent.
+- Ajouter un **filtre "Source"** dans la barre de filtres (à côté de "Tous les formulaires") : Toutes / Facebook Ads / TikTok / Google Ads / Instagram / Direct / Autre.
+- Mettre à jour `exportCSV` pour inclure les colonnes `source`, `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`.
+
+### 3. Détail du lead (dialog notes existant)
+
+Ajouter en haut du dialog une petite section "Origine" :
 
 ```text
-src/pages/public-site/HomePage.tsx
+Source       : Facebook Ads
+Campagne     : chercheur_geneve_avril
+Medium       : cpc
+Contenu      : ad_variant_3
+Formulaire   : landing_quickform
 ```
 
-Retirer ou désactiver temporairement :
-
-```tsx
-<TravelingGoldKey3D />
-```
-
-Objectif : empêcher la homepage `/` de planter avant la redirection des utilisateurs connectés.
-
-Remplacer par une animation CSS/HTML légère si nécessaire, sans WebGL.
-
-### 2. Sécuriser tous les wrappers 3D
-
-Fichier :
-
-```text
-src/components/public-site/3d/Scene3DWrapper.tsx
-```
-
-Ajouter une détection WebGL avant de rendre `<Canvas>` :
-
-- créer une fonction `canUseWebGL()`;
-- tenter `canvas.getContext('webgl') || canvas.getContext('experimental-webgl')`;
-- si WebGL indisponible, afficher le `fallback`;
-- ne jamais rendre `<Canvas>` si le contexte WebGL ne peut pas être créé.
-
-### 3. Ajouter un ErrorBoundary local autour des scènes 3D
-
-Créer un composant léger :
-
-```text
-src/components/public-site/3d/WebGLErrorBoundary.tsx
-```
-
-Il doit :
-- attraper les erreurs WebGL ;
-- afficher un fallback statique ;
-- éviter que l’ErrorBoundary global fasse tomber toute l’application.
-
-Puis l’utiliser autour des scènes 3D restantes :
-
-```text
-CoverageSection.tsx
-CloserSection.tsx
-```
-
-### 4. Corriger la stratégie PWA publiée
-
-Le fichier actuel contient encore :
-
-```ts
-skipWaiting: true
-clientsClaim: true
-```
-
-dans :
-
-```text
-vite.config.ts
-```
-
-C’est contraire à la règle projet mémorisée : éviter `SKIP_WAITING` pour ne pas casser les sessions et servir des bundles incohérents.
-
-À modifier :
-
-- supprimer `skipWaiting: true`;
-- supprimer `clientsClaim: true`;
-- conserver `cleanupOutdatedCaches`;
-- garder le check de mise à jour dans `src/main.tsx`;
-- étendre la détection preview pour inclure aussi `lovableproject.com`, pas seulement `id-preview--`.
-
-### 5. Stabiliser définitivement les notifications
-
-Même si les nouveaux logs ne montrent plus d’erreur notifications après 17:07, il faut compléter le hotfix :
-
-Fichier :
-
-```text
-src/hooks/useNotifications.ts
-```
-
-Option la plus sûre pour restaurer l’accès :
-- désactiver temporairement le realtime notifications ;
-- garder uniquement le chargement classique `.select()` ;
-- garder `markAsRead`, `markAllAsRead`, `markTypeAsRead`, `deleteNotification`.
-
-Cela garantit que les dashboards ne peuvent plus tomber à cause de Realtime.
-
-Ensuite, dans une deuxième étape, le realtime pourra être réactivé proprement avec une seule source centralisée.
-
-### 6. Éviter le passage par `/` après connexion
-
-Fichiers :
-
-```text
-src/pages/Login.tsx
-src/contexts/AuthContext.tsx
-src/components/ProtectedRoute.tsx
-```
-
-Vérifier que les utilisateurs connectés vont directement vers :
-
-```text
-/admin
-/agent
-/client
-/proprietaire
-/apporteur
-/coursier
-/closeur
-```
-
-et ne repassent pas inutilement par `/`, car `/` contient la homepage publique.
+Affiche uniquement les champs non null.
 
 ## Validation
 
-Après implémentation :
+1. Un lead avec `utm_source='facebook'` affiche un badge bleu **Facebook Ads**.
+2. Un lead avec `utm_source='tiktok'` affiche un badge **TikTok Ads**.
+3. Un lead sans aucun UTM affiche **Direct**.
+4. Le filtre "Source" filtre correctement la liste.
+5. L'export CSV contient les colonnes UTM.
+6. Le dialog détail affiche le bloc "Origine" avec les valeurs disponibles.
+7. Aucune régression sur les colonnes existantes.
 
-1. `https://logisorama.ch/` ne doit plus afficher `Error creating WebGL context`.
-2. `https://logisorama.ch/login` reste accessible.
-3. Connexion admin redirige vers `/admin`.
-4. Connexion agent redirige vers `/agent`.
-5. Connexion client redirige vers `/client`.
-6. Plus aucun nouveau log :
-
-```text
-Error creating WebGL context
-```
-
-7. Plus aucun nouveau log :
+## Fichiers modifiés
 
 ```text
-cannot add postgres_changes callbacks after subscribe()
+src/lib/lead-source.ts           (NOUVEAU — utilitaire de dérivation)
+src/pages/admin/Leads.tsx        (colonne Source + filtre + CSV + dialog)
 ```
 
-8. Le site publié doit être mis à jour via le bouton Publish/Update, car les changements frontend ne vont pas automatiquement en production.
-
-## Fichiers à modifier
-
-```text
-src/pages/public-site/HomePage.tsx
-src/components/public-site/3d/Scene3DWrapper.tsx
-src/components/public-site/3d/WebGLErrorBoundary.tsx
-src/components/public-site/sections/CoverageSection.tsx
-src/components/public-site/sections/CloserSection.tsx
-src/hooks/useNotifications.ts
-src/main.tsx
-vite.config.ts
-```
-
-## Résultat attendu
-
-Le site publié ne dépendra plus de WebGL pour charger l’application. Même si WebGL est bloqué ou indisponible chez un utilisateur, la homepage restera visible, la redirection auth fonctionnera, et les dashboards admin/agent/client seront accessibles.
-
-<lov-actions>
-  <lov-open-history>View History</lov-open-history>
-</lov-actions>
-<lov-actions>
-<lov-link url="https://docs.lovable.dev/tips-tricks/troubleshooting">Troubleshooting docs</lov-link>
-</lov-actions>
+Aucune modification base de données : les colonnes existent déjà dans `leads`.
 
