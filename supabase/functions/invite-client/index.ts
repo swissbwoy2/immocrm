@@ -3,7 +3,23 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+};
+
+const DEFAULT_APP_URL = 'https://logisorama.ch';
+
+const getAppBaseUrl = (req: Request) => {
+  const origin = req.headers.get('origin');
+  if (origin) return origin.replace(/\/$/, '');
+  const referer = req.headers.get('referer');
+  if (referer) {
+    try {
+      return new URL(referer).origin;
+    } catch {
+      // ignore
+    }
+  }
+  return DEFAULT_APP_URL;
 };
 
 // Mapping des types du formulaire vers les types de la table documents
