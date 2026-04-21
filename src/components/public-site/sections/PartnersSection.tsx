@@ -15,16 +15,16 @@ import { useSearchType } from '@/contexts/SearchTypeContext';
 
 const heroPartnersLocation = [
   {
-    name: 'Resolve',
-    logo: resolveLogo,
-    href: 'https://app.resolve.ch/?ref=3cDockrkQdpgjmMqm&utm_source=referral_link_user',
-    desc: 'Dépôt de garantie digital — 0 CHF bloqué',
-  },
-  {
     name: 'FirstCaution',
     logo: firstcautionLogo,
     href: 'https://www.firstcaution.ch/fr/onboarding/?ref=link=0062863',
-    desc: 'Assurance caution locative premium',
+    desc: 'La meilleure garantie de loyer dès 8.-',
+  },
+  {
+    name: 'Resolve',
+    logo: resolveLogo,
+    href: 'https://app.resolve.ch/?ref=3cDockrkQdpgjmMqm&utm_source=referral_link_user',
+    desc: 'Comparateur indépendant pour votre hypothèque',
   },
 ];
 
@@ -33,7 +33,7 @@ const heroPartnersAchat = [
     name: 'Resolve',
     logo: resolveLogo,
     href: 'https://app.resolve.ch/?ref=3cDockrkQdpgjmMqm&utm_source=referral_link_user',
-    desc: 'Comparateur indépendant des meilleurs taux hypothécaires',
+    desc: 'Comparateur indépendant pour votre hypothèque',
   },
   {
     name: 'Immobilier.ch',
