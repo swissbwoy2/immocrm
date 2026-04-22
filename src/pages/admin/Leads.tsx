@@ -74,8 +74,7 @@ export default function Leads() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("email, role")
-        .eq("role", "client")
+        .select("email")
         .not("email", "is", null)
         .limit(15000);
       if (error) throw error;
