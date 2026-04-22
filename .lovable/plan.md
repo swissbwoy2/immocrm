@@ -1,149 +1,126 @@
 
 
-# Refonte UX — Page `Leads Shortlist` (`/admin/leads`)
+# Fix : Pipeline RDV téléphonique = 0 + Adaptation mobile complète
 
-## Diagnostic actuel
+## Diagnostic
 
-La page est aujourd'hui un **gros tableau dense** (7 colonnes, ~10 infos par ligne, 12 boutons icônes par row, filtres en `Select` côté gauche et boutons CSV à droite). Elle ressemble effectivement à un export Excel : pas de hiérarchie visuelle, pas de pipeline, pas de focus sur "qui appeler maintenant".
+### Bug "RDV téléphonique = 0" dans le pipeline
 
-## Vision cible
+Vérifié en base : **7 rendez-vous existent** (6 `confirme` + 1 `en_attente`), tous avec `lead_id = NULL` mais avec un `prospect_email` qui matche correctement les leads existants. Le mapping email→lead fonctionne, donc le KPI strip affiche bien **6**.
 
-Transformer la page en **CRM commercial premium** orienté action, avec 3 vues, des KPI animés, un pipeline Kanban, et un panneau latéral détail (au lieu de tout afficher dans la table).
+Le **bug** est dans `src/components/admin/leads/types.ts` → fonction `getStage()` :
 
-```text
-┌────────────────────────────────────────────────────────────────┐
-│  🎯 Leads Shortlist          [Pipeline] [Liste] [Cartes]       │
-│  Pulse : 47 leads · 12 RDV · 5 chauds aujourd'hui              │
-├────────────────────────────────────────────────────────────────┤
-│  ┌──KPI──┐ ┌──KPI──┐ ┌──KPI──┐ ┌──KPI──┐                     │
-│  │ Total │ │ RDV   │ │ Quali │ │ Taux  │  (animés Framer)     │
-│  │  47 ↑ │ │ tél 12│ │ 28    │ │ 59%   │                     │
-│  └───────┘ └───────┘ └───────┘ └───────┘                     │
-├────────────────────────────────────────────────────────────────┤
-│  🔍 Recherche globale    [Type ▾] [Source ▾] [Période ▾]      │
-├────────────────────────────────────────────────────────────────┤
-│  Vue PIPELINE (par défaut) :                                   │
-│  ┌─────────┬─────────┬─────────┬─────────┬─────────┐          │
-│  │Nouveau  │RDV pris │Contacté │Qualifié │Client   │          │
-│  │ (12)    │ (8)     │ (15)    │ (7)     │ (5)     │          │
-│  │ ┌─────┐ │ ┌─────┐ │         │         │         │          │
-│  │ │card │ │ │card │ │         │         │         │          │
-│  │ └─────┘ │ └─────┘ │         │         │         │          │
-│  └─────────┴─────────┴─────────┴─────────┴─────────┘          │
-└────────────────────────────────────────────────────────────────┘
-   click card → side panel slide-in (détail + actions)
+```ts
+if (lead.is_qualified === true) return "qualifie";  // ← capture les leads qui ont un RDV
+if (lead.contacted) return "contacte";              // ← idem
+if (hasAppointment) return "rdv";                   // ← jamais atteint
 ```
 
-## Composants & écrans
+Tous les 6 leads avec RDV confirmé sont déjà `contacted=true` (puisque la confirmation admin a déclenché le contact), donc ils tombent en colonne "Contacté" au lieu de "RDV téléphonique" → la colonne RDV reste vide.
 
-### 1. Header animé `LeadsHero`
-- Titre + sous-titre "pulse" temps réel : "47 leads · 12 RDV téléphoniques · 5 nouveaux aujourd'hui"
-- Toggle de vue segmenté : **Pipeline** | **Liste** | **Cartes**
-- Boutons primaires (Relancer tous, Importer CSV, Exporter) regroupés dans un menu actions à droite pour désencombrer
+### Bug `lead_id` NULL en base (cause racine)
 
-### 2. Bandeau KPI animés
-4 cartes glass animées (Framer Motion + AnimatedCounter) :
-- **Total leads** (variation 7j en delta)
-- **RDV téléphoniques** (`en_attente` orange + `confirme` vert)
-- **Qualifiés** (% du total)
-- **Taux de contact** (contacted/total avec mini ring chart SVG animé)
+Toutes les lignes `lead_phone_appointments` ont `lead_id = NULL`. L'UPDATE post-soumission échoue silencieusement (vraisemblablement bloqué par RLS anonyme sur UPDATE). Conséquence : tout le système repose sur le fallback `prospect_email`. Pas grave actuellement mais à corriger pour la robustesse.
 
-Chaque carte cliquable → applique un filtre rapide.
+### Mobile (375px–390px)
 
-### 3. Barre de filtres unifiée
-- Une seule **searchbar globale** (nom/email/téléphone/localité)
-- Filtres compacts : Type · Source · Statut · Période (7j/30j/all) · "Avec RDV téléphonique"
-- Chip "filtres actifs" effaçables individuellement
-- Chip ★ "Hot leads" : qualifiés + non contactés + RDV à venir < 48h
+Problèmes identifiés sur la maquette actuelle :
+- **Hero** : titre + segmented control + bouton "Relancer (X)" ne tiennent pas en row sur petit écran
+- **KPI strip** : `grid-cols-2` OK mais valeurs `text-3xl` + label peuvent overflow
+- **Filtres** : 4 selects (`w-[150px]` / `w-[170px]` / `w-[130px]`) + bouton Hot débordent largement
+- **Pipeline** : `min-w-[260px]` × 5 colonnes = scroll horizontal acceptable, mais swipe pas optimisé
+- **Hot carousel** : `min-w-[300px]` cards OK
+- **Side panel** (`Sheet` slide-right) : ne devient pas bottom-sheet sur mobile
 
-### 4. Vue Pipeline (par défaut) — `LeadsPipelineBoard`
-Kanban avec 5 colonnes :
-1. **Nouveau** (créé < 24h, non contacté)
-2. **RDV téléphonique** (a un `lead_phone_appointments`)
-3. **Contacté** (`contacted=true`)
-4. **Qualifié** (`is_qualified=true`)
-5. **Converti en client** (lead avec compte client lié)
+## Correctifs
 
-Chaque carte lead :
-- Avatar initiales gradient
-- Nom + ville + budget
-- Badges type (🔑/🏠/🏢) + source
-- Si RDV : pastille orange "📞 Sam 14h30" / verte si confirmé
-- Hover → ombre + cursor-pointer + actions rapides flottantes
+### 1. Fix priorité "RDV téléphonique" dans le pipeline
+**`src/components/admin/leads/types.ts`** — réordonner `getStage()` pour que la présence d'un RDV en `en_attente` ou `confirme` à venir batte les statuts contacted/qualified :
 
-Drag-and-drop entre colonnes pour changer le statut (`@dnd-kit/core` déjà compatible). Animation fluide Framer Motion `layout`.
+```ts
+export function getStage(lead, hasActiveAppt, isClient) {
+  if (isClient) return "client";
+  if (hasActiveAppt) return "rdv";              // ← priorité absolue
+  if (lead.is_qualified === true) return "qualifie";
+  if (lead.contacted) return "contacte";
+  return "nouveau";
+}
+```
 
-### 5. Vue Liste premium (alternative à Pipeline, pas la table actuelle)
-Liste verticale aérée avec rows épaisses (80px) :
-- Avatar | Identité | Recherche | Source | RDV | Statut | 1 bouton "Ouvrir" (→ side panel)
-- Plus de 12 boutons par ligne — actions concentrées dans le side panel
+Et passer **`hasActiveAppt`** (RDV `en_attente` ou `confirme`, slot futur ou < 24h passé) plutôt que "n'importe quel RDV" — pour qu'un RDV `termine` ou `annule` ne bloque pas le lead en colonne RDV indéfiniment. Logique calculée dans `LeadsPipeline.tsx`.
 
-### 6. Vue Cartes
-Grille responsive 3-4 colonnes de cartes "fiche lead" pour vue d'ensemble visuelle (utile pour briefing matinal).
+### 2. Fix UPDATE `lead_id` cassé
+**`supabase/migrations/...`** : ajouter une **policy RLS UPDATE** anonyme sur `lead_phone_appointments` limitée à `lead_id IS NULL` (un anon peut renseigner le lien, mais ne peut pas modifier le statut, le slot, etc.) :
 
-### 7. Side Panel détail `LeadDetailSheet` (Sheet shadcn slide right, w=480)
-Remplace les ~12 boutons par ligne. Sections :
-- **Identité & contact** (clic-to-call, clic-to-email, clic-to-WhatsApp)
-- **RDV téléphonique** : date, statut, bouton "Confirmer + envoyer .ics" (intégration existante)
-- **Qualification** : checks visuels (salarié, permis, poursuites, garant) avec icônes vert/rouge
-- **Origine & UTM** : carte synthétique
-- **Actions principales** (boutons larges, pas icônes) :
-  - 🚀 Inviter comme client (existant)
-  - ✉️ Envoyer relance email (existant)
-  - ☎️ Marquer contacté
-  - 📝 Notes (textarea inline, sauvegarde auto debounced)
-  - 🗑️ Supprimer (en bas, danger zone)
-- Timeline activités (créé / RDV / contacté / qualifié / invité)
+```sql
+CREATE POLICY "anon can link lead_id once"
+ON lead_phone_appointments FOR UPDATE
+TO anon
+USING (lead_id IS NULL)
+WITH CHECK (lead_id IS NOT NULL);
+```
 
-### 8. Hot Leads — Carrousel haut
-Au-dessus du pipeline, un carrousel horizontal "🔥 À traiter en priorité" :
-- RDV téléphonique dans les prochaines 24h non confirmés
-- Leads qualifiés non contactés depuis > 48h
-- Cards horizontales avec CTA direct "Confirmer RDV" / "Appeler maintenant"
++ trigger backfill **une seule fois** pour relier les 7 lignes existantes via `prospect_email`.
 
-### 9. Détails techniques UI
-- **Animations** : `framer-motion` `layout`, `AnimatePresence` sur les cartes, KPI counter animé, transitions douces 200ms
-- **Couleurs** : conformes aux tokens existants (semantic), pas de texte clair sur fond clair (validation contraste)
-- **Mobile** : Pipeline → swipe horizontal entre colonnes, Liste responsive, side panel devient bottom sheet
-- **Accessibilité** : touch targets 44px, `cursor-pointer` partout, focus visible, labels ARIA, support `prefers-reduced-motion`
-- **Realtime** : abonnement Supabase sur `leads` + `lead_phone_appointments` pour mise à jour live des colonnes
+### 3. Refonte mobile complète
 
-## Données & logique
+**`LeadsHero.tsx`** :
+- Sur `<sm` : segmented control + dropdown actions sur une row, bouton "Relancer" en `w-full` row dédiée
+- Pulse text wrap proprement (`flex-wrap`)
 
-Aucune **migration DB nécessaire**. Toute la logique utilise les colonnes existantes :
-- `contacted`, `is_qualified`, `type_recherche`, `created_at` → colonnes pipeline
-- `lead_phone_appointments.status` → colonne RDV
-- Détection "converti en client" : LEFT JOIN sur `clients.email = leads.email`
-- Drag-and-drop déclenche `UPDATE leads SET contacted/is_qualified` selon colonne cible
+**`LeadsKpiStrip.tsx`** :
+- `text-3xl` → `text-2xl sm:text-3xl`
+- Label `text-xs` → `text-[10px] sm:text-xs`
+- Padding réduit `p-3 sm:p-4`
+
+**`LeadsFilters.tsx`** :
+- Sur mobile : 1ère row = search (`w-full`), 2ème row = scroll horizontal (`overflow-x-auto`) avec les 3 selects + bouton Hot, chacun en `min-w-[110px] flex-shrink-0`
+- Selects `text-xs` sur mobile
+
+**`LeadsPipeline.tsx`** :
+- Colonnes `min-w-[280px] sm:min-w-[260px]`, ajout `snap-x snap-mandatory` sur le scroll container + `snap-start` sur chaque colonne pour swipe naturel
+- Indicateur visuel "← scroll →" sur mobile uniquement (premier load, fade après 3s)
+
+**`LeadsListView.tsx`** :
+- Vérification : déjà responsive ? Si row > 1 line sur mobile → restructurer en stack vertical : avatar + identité ligne 1 / metadata ligne 2 / RDV+actions ligne 3
+
+**`LeadsCardsView.tsx`** :
+- Grille `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4` (vs actuel probablement `md:grid-cols-3`)
+
+**`LeadDetailSheet.tsx`** :
+- Sur `<md` : `side="bottom"` au lieu de `side="right"`, hauteur `h-[92vh]`, header sticky, footer sticky avec actions principales
+
+**`LeadsHotCarousel.tsx`** :
+- Cards `min-w-[260px] sm:min-w-[300px]` + scroll `snap-x`
+- Boutons "Confirmer" / "Appeler" en `min-h-[44px]` (touch target)
+
+### 4. Touch targets (accessibilité mobile)
+- Tous les boutons icon-only → `h-11 w-11` minimum sur mobile
+- Cartes pipeline → `min-h-[80px]` pour tap confortable
 
 ## Fichiers touchés
 
 ```text
-[REWRITE] src/pages/admin/Leads.tsx                       (orchestrateur léger : header + KPI + tab vues)
-[NEW]     src/components/admin/leads/LeadsHero.tsx        (header pulse + toggle vue)
-[NEW]     src/components/admin/leads/LeadsKpiStrip.tsx    (4 KPI animés)
-[NEW]     src/components/admin/leads/LeadsHotCarousel.tsx (carrousel priorités)
-[NEW]     src/components/admin/leads/LeadsFilters.tsx     (search + chips)
-[NEW]     src/components/admin/leads/LeadsPipeline.tsx    (Kanban dnd-kit + Framer)
-[NEW]     src/components/admin/leads/LeadsListView.tsx    (liste aérée 1 row 80px)
-[NEW]     src/components/admin/leads/LeadsCardsView.tsx   (grille fiches)
-[NEW]     src/components/admin/leads/LeadCard.tsx         (carte lead réutilisable)
-[NEW]     src/components/admin/leads/LeadDetailSheet.tsx  (side panel détail + actions)
-[NEW]     src/components/admin/leads/AnimatedCounter.tsx  (compteur animé Framer)
-[NEW]     src/hooks/useLeadsRealtime.ts                   (subscription leads + RDV)
-[KEEP]    Dialogs Relance + Import CSV existants (déplacés dans menu actions)
+[FIX]  src/components/admin/leads/types.ts                fonction getStage réordonnée
+[FIX]  src/components/admin/leads/LeadsPipeline.tsx       hasActiveAppt + snap-x mobile
+[MOD]  src/components/admin/leads/LeadsHero.tsx           layout mobile
+[MOD]  src/components/admin/leads/LeadsKpiStrip.tsx       tailles responsive
+[MOD]  src/components/admin/leads/LeadsFilters.tsx        scroll horizontal mobile
+[MOD]  src/components/admin/leads/LeadsListView.tsx       stack mobile vertical
+[MOD]  src/components/admin/leads/LeadsCardsView.tsx      grid responsive
+[MOD]  src/components/admin/leads/LeadDetailSheet.tsx     bottom sheet < md
+[MOD]  src/components/admin/leads/LeadsHotCarousel.tsx    snap-x + touch targets
+[NEW]  supabase migration                                 policy UPDATE anon + backfill lead_id
 ```
 
 ## Validation
 
-1. Pipeline visible par défaut, 5 colonnes alimentées correctement
-2. Drag d'une carte de "Nouveau" → "Contacté" met à jour la DB en realtime
-3. KPI animent au chargement et changent live après une action
-4. Carrousel "Hot Leads" affiche les RDV à venir + qualifiés froids
-5. Click carte → side panel s'ouvre avec toutes les infos + actions
-6. Toutes les fonctions existantes (relance, invite client, confirm RDV, notes, delete, import/export CSV) sont préservées et accessibles via le side panel ou menu actions
-7. Mobile : pipeline en swipe, side panel en bottom sheet
-8. Aucun problème de contraste (vérifié light + dark)
-9. Realtime : nouveau lead apparaît dans "Nouveau" sans refresh
-10. Aucune migration ni régression sur la table `leads`
+1. Pipeline → colonne **RDV téléphonique** affiche bien les 6 RDV confirmés (et le pending)
+2. KPI strip et colonne RDV affichent le **même nombre**
+3. Lead avec RDV `confirme` + `is_qualified=true` → reste en RDV jusqu'à ce que le slot soit passé, puis bascule en "Qualifié"
+4. Nouvelle soumission analyse-dossier → `lead_id` correctement renseigné en base (vérif : 0 ligne avec `lead_id IS NULL` après test)
+5. Mobile 375px : aucun overflow horizontal, tous les boutons ≥44px, side panel s'ouvre en bottom-sheet
+6. Pipeline en swipe fluide sur mobile (snap entre colonnes)
+7. Filtres mobile : search pleine largeur + selects scrollables horizontalement sans casser le layout
+8. Aucune régression desktop
 
