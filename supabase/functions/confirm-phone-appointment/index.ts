@@ -100,6 +100,8 @@ Deno.serve(async (req) => {
       timeZone: 'Europe/Zurich',
     });
 
+    const ADMIN_EMAIL = 'info@immo-rama.ch';
+
     // Send confirmation email + ICS via existing send-calendar-invite function
     if (RESEND_API_KEY) {
       try {
@@ -116,6 +118,23 @@ Deno.serve(async (req) => {
         });
       } catch (e) {
         console.error('send-calendar-invite failed:', e);
+      }
+
+      // Send the same calendar invite to admin so it appears in their agenda
+      try {
+        await admin.functions.invoke('send-calendar-invite', {
+          body: {
+            title: `[RDV Lead] ${appt.prospect_name} — ${appt.prospect_phone}`,
+            description: `RDV téléphonique confirmé avec ${appt.prospect_name}.\nEmail : ${appt.prospect_email}\nTéléphone : ${appt.prospect_phone}`,
+            location: `Téléphone : ${appt.prospect_phone}`,
+            start_date: appt.slot_start,
+            end_date: appt.slot_end,
+            all_day: false,
+            recipient_email: ADMIN_EMAIL,
+          },
+        });
+      } catch (e) {
+        console.error('send-calendar-invite (admin) failed:', e);
       }
 
       // Also send a friendly HTML confirmation
