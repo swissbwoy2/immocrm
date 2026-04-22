@@ -1,45 +1,67 @@
 
 
-# Envoyer aussi l'invitation RDV téléphonique à l'admin
+# Fix : Email de relance qui ne part pas
 
-## Problème
+## Diagnostic
 
-Quand un lead réserve un créneau et que le RDV est **confirmé** (manuellement par l'admin ou auto), le lead reçoit deux emails de `support@logisorama.ch` :
-1. Un email HTML de confirmation
-2. Une invitation calendrier (.ics) via la fonction `send-calendar-invite`
+L'email de relance pour Cendrine Cardoso (`christ.ramazani@gmail.com`) n'a jamais été envoyé. Deux causes confirmées :
 
-→ L'admin (`info@immo-rama.ch`) ne reçoit **rien** côté boîte mail. Il a seulement la notif in-app.
+### Cause #1 — Bug bloquant dans `send-lead-relance`
+La fonction sélectionne la config SMTP comme ceci :
+```ts
+.from('email_configurations').select('*').eq('is_active', true).limit(1).single()
+```
+→ Il y a **7 configurations SMTP actives** (Gaetan, Maurine, Christ, Thibault, Miguel, Carina, Teklu).
+→ `.single()` exige **exactement 1 ligne**. Avec 7 lignes, PostgREST renvoie l'erreur `PGRST116` et la fonction **crash silencieusement**.
+→ C'est pour ça que tu as cliqué "Relance" mais Cendrine n'a rien reçu.
+
+### Cause #2 — Pas de feedback d'erreur visible
+Le toast "Erreur" s'affiche brièvement mais sans détail clair, donc le bug passe inaperçu.
 
 ## Correctif
 
-Modifier **`supabase/functions/confirm-phone-appointment/index.ts`** pour ajouter `info@immo-rama.ch` comme **BCC** sur les deux envois :
+**Fichier modifié** : `supabase/functions/send-lead-relance/index.ts`
 
-### 1. Envoi de l'invitation .ics
-Ajouter `bcc_email: 'info@immo-rama.ch'` dans le payload envoyé à `send-calendar-invite`. Si la fonction ne supporte pas déjà `bcc_email`, l'ajouter (ou faire un second appel `send-calendar-invite` avec `recipient_email: 'info@immo-rama.ch'` pour rester simple et ne pas toucher à la signature de la fonction calendrier partagée).
+1. **Sélectionner la config SMTP de l'utilisateur connecté** (admin qui clique sur Relance), comme le fait déjà `send-smtp-email` :
+   ```ts
+   .from('email_configurations')
+   .select('*')
+   .eq('user_id', user.id)
+   .eq('is_active', true)
+   .maybeSingle()
+   ```
+2. **Fallback** : si l'admin n'a pas de config personnelle (ex : Christ utilise `christ.ramazani@gmail.com` qui n'est pas dans `email_configurations`), retomber sur la config `info@immo-rama.ch` (config "officielle" de l'agence) :
+   ```ts
+   if (!emailConfig) {
+     // Fallback sur info@immo-rama.ch
+     const { data: fallback } = await supabase
+       .from('email_configurations')
+       .select('*')
+       .eq('email_from', 'info@immo-rama.ch')
+       .eq('is_active', true)
+       .maybeSingle();
+     emailConfig = fallback;
+   }
+   ```
+3. **Erreur claire** si toujours aucune config : `"Aucune configuration SMTP trouvée pour cet utilisateur"` (au lieu d'un crash PGRST116 cryptique).
 
-### 2. Envoi du HTML récap (Resend direct)
-Ajouter le champ `bcc: ['info@immo-rama.ch']` dans le body de l'appel `https://api.resend.com/emails`. Sujet enrichi côté admin via le `bcc` natif Resend (l'admin voit le même sujet : "📞 Rendez-vous téléphonique confirmé — …").
+4. **Redéployer** la fonction (`deploy_edge_functions(['send-lead-relance'])`).
 
-### Approche retenue (minimaliste, zéro régression)
+5. **Test** : relancer Cendrine Cardoso → vérifier dans les logs que l'envoi part et confirmer la bonne réception sur `christ.ramazani@gmail.com`.
 
-- **Ne pas modifier** `send-calendar-invite` (utilisée par d'autres flows : visites, candidatures, etc.).
-- Faire **un second appel** `send-calendar-invite` ciblant `info@immo-rama.ch` → l'admin reçoit aussi le .ics, ajoutable directement à son agenda Outlook/Google.
-- Ajouter `bcc: ['info@immo-rama.ch']` sur l'appel Resend HTML → l'admin reçoit aussi le récap visuel sans dupliquer la logique HTML.
-
-## Fichier touché
+## Fichiers touchés
 
 ```text
-[MOD] supabase/functions/confirm-phone-appointment/index.ts
-      - Second appel send-calendar-invite avec recipient_email = 'info@immo-rama.ch'
-      - Ajout bcc: ['info@immo-rama.ch'] sur l'appel Resend HTML
-      - Préfixer le sujet pour l'admin : pas modifié (BCC reçoit le même sujet, c'est OK)
+[MOD] supabase/functions/send-lead-relance/index.ts
+      → Filtre par user_id + fallback info@immo-rama.ch + erreur explicite
 ```
 
 ## Validation
 
-1. Confirmer un RDV téléphonique depuis `/admin/leads`
-2. Le lead reçoit toujours : 1 email HTML + 1 invitation .ics
-3. **`info@immo-rama.ch` reçoit aussi** : 1 email HTML (en BCC) + 1 invitation .ics ajoutable au calendrier
-4. L'expéditeur reste `support@logisorama.ch`
-5. Aucune régression sur les autres usages de `send-calendar-invite` (visites, états des lieux, signatures bail)
+1. Cliquer "Relance" sur n'importe quel lead non contacté depuis `/admin/leads`
+2. Le toast affiche "Email envoyé à …" (vert)
+3. Le destinataire reçoit l'email marketing depuis l'adresse de l'admin connecté
+4. Les logs de `send-lead-relance` montrent un envoi réussi (status 200)
+5. Le lead passe en `contacted = true` automatiquement
+6. Aucune régression sur "Relancer tous" (bouton dialog)
 
