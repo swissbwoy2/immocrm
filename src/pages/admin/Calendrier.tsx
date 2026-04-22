@@ -67,12 +67,12 @@ export default function AdminCalendrier() {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
 
       // Use paginated fetch to bypass 1000-row server limit
-      const [eventsRes, visitesRes, agentsRes, clientsRes, candidaturesRes] = await Promise.all([
+      const [eventsRes, visitesRes, agentsRes, clientsRes, candidaturesRes, phoneApptsRes] = await Promise.all([
         fetchAllPaginated(() =>
           supabase.from('calendar_events').select('*').order('event_date', { ascending: true })
         ),
@@ -86,6 +86,11 @@ export default function AdminCalendrier() {
             .select('id, client_id, offre_id, date_etat_lieux, heure_etat_lieux, date_signature_choisie, statut, clients(id, profiles!clients_user_id_fkey(prenom, nom)), offres(adresse, agent_id)')
             .or('date_etat_lieux.not.is.null,date_signature_choisie.not.is.null')
         ),
+        supabase.from('lead_phone_appointments')
+          .select('id, lead_id, slot_start, slot_end, status, prospect_name, prospect_email, prospect_phone, leads(prenom, nom, email, telephone)')
+          .in('status', ['confirme', 'en_attente'])
+          .order('slot_start', { ascending: true })
+          .limit(5000),
       ]);
 
       // Log results for debugging
