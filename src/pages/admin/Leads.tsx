@@ -73,12 +73,13 @@ export default function Leads() {
     queryKey: ["clients-email-set"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("clients")
-        .select("email")
+        .from("profiles")
+        .select("email, role")
+        .eq("role", "client")
         .not("email", "is", null)
         .limit(15000);
       if (error) throw error;
-      return data as { email: string }[];
+      return (data as any[]).map((r) => ({ email: r.email as string }));
     },
   });
 
