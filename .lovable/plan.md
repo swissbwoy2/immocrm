@@ -1,67 +1,77 @@
 
 
-# Fix : Email de relance qui ne part pas
+# Affichage complet des données du formulaire dans le détail Lead Shortlist
 
-## Diagnostic
+## Constat
 
-L'email de relance pour Cendrine Cardoso (`christ.ramazani@gmail.com`) n'a jamais été envoyé. Deux causes confirmées :
+Les leads issus du formulaire **Analyse de dossier** (landing page) contiennent en base toutes les réponses du formulaire — mais le panneau de détail (`LeadDetailSheet`) n'en affiche qu'une fraction sous forme de mini-badges (« Salarié », « Pas de poursuites ») sans valeurs explicites ni libellés clairs.
 
-### Cause #1 — Bug bloquant dans `send-lead-relance`
-La fonction sélectionne la config SMTP comme ceci :
-```ts
-.from('email_configurations').select('*').eq('is_active', true).limit(1).single()
-```
-→ Il y a **7 configurations SMTP actives** (Gaetan, Maurine, Christ, Thibault, Miguel, Carina, Teklu).
-→ `.single()` exige **exactement 1 ligne**. Avec 7 lignes, PostgREST renvoie l'erreur `PGRST116` et la fonction **crash silencieusement**.
-→ C'est pour ça que tu as cliqué "Relance" mais Cendrine n'a rien reçu.
+**Champs présents en DB mais sous-exploités ou invisibles :**
 
-### Cause #2 — Pas de feedback d'erreur visible
-Le toast "Erreur" s'affiche brièvement mais sans détail clair, donc le bug passe inaperçu.
+| Champ DB | Affiché actuellement | À afficher |
+|---|---|---|
+| `localite` | ✅ (région) | déjà OK |
+| `statut_emploi` | mini-badge "Salarié" | **Statut professionnel** explicite (Salarié / Indépendant / Étudiant / Retraité / Autre) |
+| `permis_nationalite` | mini-badge "Permis B" | **Permis / Nationalité** avec libellé clair |
+| `poursuites` | mini-badge "Pas de poursuites" | **Extrait de poursuites** : Oui / Non + montant si applicable |
+| `a_garant` | mélangé dans badge poursuites | **Garant** : Oui / Non — visible séparément |
+| `accord_bancaire` | ❌ absent du type TS, jamais affiché | **Accord bancaire** : Oui / Non (acheteurs) |
+| `apport_personnel` | ❌ absent du type TS, jamais affiché | **Apport personnel** (acheteurs) |
+| `type_bien` | ❌ absent du type TS, jamais affiché | **Type de bien recherché** |
+| `budget` | mini-ligne | **Budget** dans bloc dédié |
+| `type_recherche` | badge | déjà OK |
 
 ## Correctif
 
-**Fichier modifié** : `supabase/functions/send-lead-relance/index.ts`
+### 1. Compléter le type TypeScript `Lead`
+**`src/components/admin/leads/types.ts`** — ajouter les 3 champs manquants :
+```ts
+accord_bancaire: boolean | null;
+apport_personnel: string | null;
+type_bien: string | null;
+```
 
-1. **Sélectionner la config SMTP de l'utilisateur connecté** (admin qui clique sur Relance), comme le fait déjà `send-smtp-email` :
-   ```ts
-   .from('email_configurations')
-   .select('*')
-   .eq('user_id', user.id)
-   .eq('is_active', true)
-   .maybeSingle()
-   ```
-2. **Fallback** : si l'admin n'a pas de config personnelle (ex : Christ utilise `christ.ramazani@gmail.com` qui n'est pas dans `email_configurations`), retomber sur la config `info@immo-rama.ch` (config "officielle" de l'agence) :
-   ```ts
-   if (!emailConfig) {
-     // Fallback sur info@immo-rama.ch
-     const { data: fallback } = await supabase
-       .from('email_configurations')
-       .select('*')
-       .eq('email_from', 'info@immo-rama.ch')
-       .eq('is_active', true)
-       .maybeSingle();
-     emailConfig = fallback;
-   }
-   ```
-3. **Erreur claire** si toujours aucune config : `"Aucune configuration SMTP trouvée pour cet utilisateur"` (au lieu d'un crash PGRST116 cryptique).
+### 2. Refondre la section « Profil du candidat » dans `LeadDetailSheet`
+**`src/components/admin/leads/LeadDetailSheet.tsx`** — remplacer la section "Qualification" actuelle (badges minuscules) par un bloc **« Détails du formulaire »** structuré en grille clé/valeur lisible, similaire à la section "Origine" existante :
 
-4. **Redéployer** la fonction (`deploy_edge_functions(['send-lead-relance'])`).
+```text
+┌─ 📋 Réponses du formulaire ────────────────┐
+│ Type de recherche      Louer               │
+│ Type de bien           Appartement 3.5p    │
+│ Région recherchée      Lausanne et environs│
+│ Budget mensuel         2'500–3'000 CHF     │
+│ ─────────────────────────────────────────── │
+│ Statut professionnel   ✅ Salarié          │
+│ Permis / Nationalité   ✅ Permis C         │
+│ Extrait de poursuites  ✅ Aucune           │
+│ Garant disponible      — Non concerné      │
+│ Accord bancaire        ✅ Oui              │
+│ Apport personnel       150'000 CHF         │
+└────────────────────────────────────────────┘
+```
 
-5. **Test** : relancer Cendrine Cardoso → vérifier dans les logs que l'envoi part et confirmer la bonne réception sur `christ.ramazani@gmail.com`.
+- Chaque ligne : libellé à gauche (`text-muted-foreground`), valeur à droite (`font-medium`) avec icône colorée (✅ vert / ⚠️ ambre / ❌ rouge / — gris) selon la valeur.
+- Affichage **conditionnel intelligent** :
+  - Champs locataires (`statut_emploi`, `permis_nationalite`, `poursuites`, `a_garant`) → uniquement si `type_recherche = 'Louer'` ou `location`
+  - Champs acheteurs (`accord_bancaire`, `apport_personnel`, `type_bien`) → uniquement si `type_recherche = 'Acheter'`
+  - Une ligne ne s'affiche **jamais** si la valeur est `null` (pas de "non renseigné" parasite)
+- Garder les mini-badges existants supprimés (remplacés par cette nouvelle vue plus lisible).
+
+### 3. Mapping libellés humains
+Petit helper `formatStatutEmploi`, `formatPermis`, etc. pour transformer les valeurs brutes (`'salarie'`, `'autre'`) en libellés FR (`'Salarié'`, `'Autre'`).
 
 ## Fichiers touchés
 
 ```text
-[MOD] supabase/functions/send-lead-relance/index.ts
-      → Filtre par user_id + fallback info@immo-rama.ch + erreur explicite
+[MOD] src/components/admin/leads/types.ts            (+3 champs : accord_bancaire, apport_personnel, type_bien)
+[MOD] src/components/admin/leads/LeadDetailSheet.tsx (nouvelle section "Réponses du formulaire" remplaçant les mini-badges)
 ```
 
 ## Validation
 
-1. Cliquer "Relance" sur n'importe quel lead non contacté depuis `/admin/leads`
-2. Le toast affiche "Email envoyé à …" (vert)
-3. Le destinataire reçoit l'email marketing depuis l'adresse de l'admin connecté
-4. Les logs de `send-lead-relance` montrent un envoi réussi (status 200)
-5. Le lead passe en `contacted = true` automatiquement
-6. Aucune régression sur "Relancer tous" (bouton dialog)
+1. Ouvrir un lead `landing_analyse_dossier` (locataire) → voir Statut, Permis, Poursuites, Garant en clair avec libellés
+2. Ouvrir un lead acheteur → voir Type de bien, Budget, Accord bancaire, Apport personnel
+3. Les champs `null` ne s'affichent pas (pas de bruit visuel)
+4. Aucun appel DB modifié (les données étaient déjà fetchées avec `select("*")`)
+5. Aucune régression sur la pipeline, les filtres, les actions, ou les notes
 
