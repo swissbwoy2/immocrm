@@ -171,6 +171,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             from: 'Logisorama <support@logisorama.ch>',
             to: [appt.prospect_email],
+            bcc: [ADMIN_EMAIL],
             subject: `📞 Rendez-vous téléphonique confirmé — ${dateStr} à ${timeStr}`,
             html: htmlBody,
           }),
