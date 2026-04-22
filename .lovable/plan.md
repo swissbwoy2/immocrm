@@ -1,126 +1,113 @@
 
 
-# Fix : Pipeline RDV téléphonique = 0 + Adaptation mobile complète
+# Plan : Migration des leads CSV vers `meta_leads` + déplacement bouton import
 
-## Diagnostic
+## Contexte
 
-### Bug "RDV téléphonique = 0" dans le pipeline
+- **109 leads** avec `source = 'Payé'` dans la table `leads` proviennent des imports CSV Wix (Meta Ads) : 72 "Logisorama futur" + 27 "LOGISORAMA5.0" + 5 "vendeurs vs Acheteurs" + 4 "LOGISORAMA 2.0" + 1 "NEW ACHETEUR-copy"
+- La table `meta_leads` existe déjà (page `/admin/meta-ads-leads`) avec `leadgen_id NOT NULL` (clé Meta API native)
+- Les ~85 leads "natifs" (`landing_quickform`, `landing_analyse_dossier`, `formulaire_vendeur_complet`, etc.) restent dans `leads`
 
-Vérifié en base : **7 rendez-vous existent** (6 `confirme` + 1 `en_attente`), tous avec `lead_id = NULL` mais avec un `prospect_email` qui matche correctement les leads existants. Le mapping email→lead fonctionne, donc le KPI strip affiche bien **6**.
+## Architecture cible
 
-Le **bug** est dans `src/components/admin/leads/types.ts` → fonction `getStage()` :
-
-```ts
-if (lead.is_qualified === true) return "qualifie";  // ← capture les leads qui ont un RDV
-if (lead.contacted) return "contacte";              // ← idem
-if (hasAppointment) return "rdv";                   // ← jamais atteint
+```text
+┌─────────────────────────┐         ┌─────────────────────────┐
+│  /admin/leads           │         │  /admin/meta-ads-leads  │
+│  Leads Shortlist        │         │  Meta Leads             │
+│  (formulaires natifs)   │         │  (Meta API + CSV import)│
+│                         │         │                         │
+│  source ≠ 'Payé'        │         │  source = 'csv_import'  │
+│                         │         │  + source = 'meta_api'  │
+│  + bouton Relance       │         │  + bouton Importer CSV  │
+│  + bouton Exporter      │         │  + bouton Sync Meta     │
+└─────────────────────────┘         └─────────────────────────┘
 ```
 
-Tous les 6 leads avec RDV confirmé sont déjà `contacted=true` (puisque la confirmation admin a déclenché le contact), donc ils tombent en colonne "Contacté" au lieu de "RDV téléphonique" → la colonne RDV reste vide.
+## Étape 1 — Migration DB (one-time)
 
-### Bug `lead_id` NULL en base (cause racine)
+**Nouvelle migration SQL** :
 
-Toutes les lignes `lead_phone_appointments` ont `lead_id = NULL`. L'UPDATE post-soumission échoue silencieusement (vraisemblablement bloqué par RLS anonyme sur UPDATE). Conséquence : tout le système repose sur le fallback `prospect_email`. Pas grave actuellement mais à corriger pour la robustesse.
+1. **Migrer les 109 leads CSV** de `leads` → `meta_leads` :
+   ```sql
+   INSERT INTO meta_leads (
+     leadgen_id, source, form_name, email, phone, first_name, last_name,
+     full_name, city, lead_status, notes, imported_at, created_at,
+     raw_meta_payload
+   )
+   SELECT
+     'csv_' || l.id::text,                    -- leadgen_id synthétique unique
+     'csv_import',                            -- source distincte
+     l.formulaire,
+     l.email, l.telephone, l.prenom, l.nom,
+     trim(coalesce(l.prenom,'') || ' ' || coalesce(l.nom,'')),
+     l.localite,
+     CASE WHEN l.contacted THEN 'contacted'
+          WHEN l.is_qualified THEN 'qualified'
+          ELSE 'new' END,
+     l.notes, l.created_at, l.created_at,
+     jsonb_build_object('original_lead_id', l.id, 'budget', l.budget,
+       'utm_source', l.utm_source, 'utm_campaign', l.utm_campaign)
+   FROM leads l
+   WHERE l.source = 'Payé'
+   ON CONFLICT (leadgen_id) DO NOTHING;
+   ```
 
-### Mobile (375px–390px)
+2. **Supprimer ces leads** de la table `leads` (avec `ON DELETE CASCADE` déjà présent sur les FKs si applicable, sinon nettoyage préalable de `lead_phone_appointments`/relances) :
+   ```sql
+   DELETE FROM leads WHERE source = 'Payé';
+   ```
 
-Problèmes identifiés sur la maquette actuelle :
-- **Hero** : titre + segmented control + bouton "Relancer (X)" ne tiennent pas en row sur petit écran
-- **KPI strip** : `grid-cols-2` OK mais valeurs `text-3xl` + label peuvent overflow
-- **Filtres** : 4 selects (`w-[150px]` / `w-[170px]` / `w-[130px]`) + bouton Hot débordent largement
-- **Pipeline** : `min-w-[260px]` × 5 colonnes = scroll horizontal acceptable, mais swipe pas optimisé
-- **Hot carousel** : `min-w-[300px]` cards OK
-- **Side panel** (`Sheet` slide-right) : ne devient pas bottom-sheet sur mobile
+3. **Modifier l'edge function `import-leads-csv`** pour pointer désormais vers `meta_leads` (insert direct avec `leadgen_id = 'csv_' || gen_random_uuid()` et `source = 'csv_import'`).
 
-## Correctifs
+## Étape 2 — Filtrage Leads Shortlist
 
-### 1. Fix priorité "RDV téléphonique" dans le pipeline
-**`src/components/admin/leads/types.ts`** — réordonner `getStage()` pour que la présence d'un RDV en `en_attente` ou `confirme` à venir batte les statuts contacted/qualified :
+**`src/pages/admin/Leads.tsx`** :
+- Ajouter `.neq('source', 'Payé')` dans la query principale `fetchLeads` (ceinture + bretelles, au cas où des anciens resteraient ou pour leads manuels marqués 'Payé')
+- Retirer le bouton "Importer CSV" du `LeadsHero` (prop `onImport={undefined}`)
+- Supprimer le state `showImportDialog`, `importFile`, `importing` et le JSX du Dialog d'import
+- Supprimer la fonction `handleImportCSV` (déplacée dans MetaLeads)
 
-```ts
-export function getStage(lead, hasActiveAppt, isClient) {
-  if (isClient) return "client";
-  if (hasActiveAppt) return "rdv";              // ← priorité absolue
-  if (lead.is_qualified === true) return "qualifie";
-  if (lead.contacted) return "contacte";
-  return "nouveau";
-}
-```
+**`src/components/admin/leads/LeadsHero.tsx`** : conditionnel — afficher le bouton Import seulement si `onImport` est défini (déjà le cas via prop optionnelle).
 
-Et passer **`hasActiveAppt`** (RDV `en_attente` ou `confirme`, slot futur ou < 24h passé) plutôt que "n'importe quel RDV" — pour qu'un RDV `termine` ou `annule` ne bloque pas le lead en colonne RDV indéfiniment. Logique calculée dans `LeadsPipeline.tsx`.
+## Étape 3 — Bouton Import CSV dans MetaLeads
 
-### 2. Fix UPDATE `lead_id` cassé
-**`supabase/migrations/...`** : ajouter une **policy RLS UPDATE** anonyme sur `lead_phone_appointments` limitée à `lead_id IS NULL` (un anon peut renseigner le lien, mais ne peut pas modifier le statut, le slot, etc.) :
+**`src/pages/admin/MetaLeads.tsx`** :
+- Ajouter un bouton "Importer CSV" dans le header (à côté de "Sync Meta")
+- Déplacer le Dialog d'import (extraction CSV + parsing Wix) depuis `Leads.tsx`
+- Modifier l'appel à `import-leads-csv` (ou un nouveau `import-meta-leads-csv`) pour insérer dans `meta_leads` au lieu de `leads`
+- Refresh `fetchLeads()` après import
 
-```sql
-CREATE POLICY "anon can link lead_id once"
-ON lead_phone_appointments FOR UPDATE
-TO anon
-USING (lead_id IS NULL)
-WITH CHECK (lead_id IS NOT NULL);
-```
+**Edge Function `import-leads-csv`** : refactor pour insérer dans `meta_leads` :
+- Génère `leadgen_id = 'csv_' || crypto.randomUUID()` 
+- `source = 'csv_import'`
+- Map `formulaire_name` → `form_name`
+- Conserve la déduplication par `email` (vérifier si email déjà présent dans `meta_leads`)
 
-+ trigger backfill **une seule fois** pour relier les 7 lignes existantes via `prospect_email`.
+## Étape 4 — Validation
 
-### 3. Refonte mobile complète
-
-**`LeadsHero.tsx`** :
-- Sur `<sm` : segmented control + dropdown actions sur une row, bouton "Relancer" en `w-full` row dédiée
-- Pulse text wrap proprement (`flex-wrap`)
-
-**`LeadsKpiStrip.tsx`** :
-- `text-3xl` → `text-2xl sm:text-3xl`
-- Label `text-xs` → `text-[10px] sm:text-xs`
-- Padding réduit `p-3 sm:p-4`
-
-**`LeadsFilters.tsx`** :
-- Sur mobile : 1ère row = search (`w-full`), 2ème row = scroll horizontal (`overflow-x-auto`) avec les 3 selects + bouton Hot, chacun en `min-w-[110px] flex-shrink-0`
-- Selects `text-xs` sur mobile
-
-**`LeadsPipeline.tsx`** :
-- Colonnes `min-w-[280px] sm:min-w-[260px]`, ajout `snap-x snap-mandatory` sur le scroll container + `snap-start` sur chaque colonne pour swipe naturel
-- Indicateur visuel "← scroll →" sur mobile uniquement (premier load, fade après 3s)
-
-**`LeadsListView.tsx`** :
-- Vérification : déjà responsive ? Si row > 1 line sur mobile → restructurer en stack vertical : avatar + identité ligne 1 / metadata ligne 2 / RDV+actions ligne 3
-
-**`LeadsCardsView.tsx`** :
-- Grille `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4` (vs actuel probablement `md:grid-cols-3`)
-
-**`LeadDetailSheet.tsx`** :
-- Sur `<md` : `side="bottom"` au lieu de `side="right"`, hauteur `h-[92vh]`, header sticky, footer sticky avec actions principales
-
-**`LeadsHotCarousel.tsx`** :
-- Cards `min-w-[260px] sm:min-w-[300px]` + scroll `snap-x`
-- Boutons "Confirmer" / "Appeler" en `min-h-[44px]` (touch target)
-
-### 4. Touch targets (accessibilité mobile)
-- Tous les boutons icon-only → `h-11 w-11` minimum sur mobile
-- Cartes pipeline → `min-h-[80px]` pour tap confortable
+1. La query `SELECT count(*) FROM leads WHERE source='Payé'` retourne **0** après migration
+2. La query `SELECT count(*) FROM meta_leads WHERE source='csv_import'` retourne **109**
+3. La page `/admin/leads` n'affiche plus que les leads des formulaires natifs (~85)
+4. La page `/admin/meta-ads-leads` affiche les 109 leads CSV migrés + leads Meta API natifs
+5. Le bouton "Importer CSV" est visible dans `/admin/meta-ads-leads` et fonctionnel
+6. Le bouton "Importer CSV" a disparu de `/admin/leads`
+7. Aucune perte de données (notes, contacted status préservés via `lead_status` mapping)
+8. Les KPI/Pipeline de Leads Shortlist se rechargent avec les bons compteurs
 
 ## Fichiers touchés
 
 ```text
-[FIX]  src/components/admin/leads/types.ts                fonction getStage réordonnée
-[FIX]  src/components/admin/leads/LeadsPipeline.tsx       hasActiveAppt + snap-x mobile
-[MOD]  src/components/admin/leads/LeadsHero.tsx           layout mobile
-[MOD]  src/components/admin/leads/LeadsKpiStrip.tsx       tailles responsive
-[MOD]  src/components/admin/leads/LeadsFilters.tsx        scroll horizontal mobile
-[MOD]  src/components/admin/leads/LeadsListView.tsx       stack mobile vertical
-[MOD]  src/components/admin/leads/LeadsCardsView.tsx      grid responsive
-[MOD]  src/components/admin/leads/LeadDetailSheet.tsx     bottom sheet < md
-[MOD]  src/components/admin/leads/LeadsHotCarousel.tsx    snap-x + touch targets
-[NEW]  supabase migration                                 policy UPDATE anon + backfill lead_id
+[NEW] supabase/migrations/...                    Migration leads → meta_leads + DELETE
+[MOD] src/pages/admin/Leads.tsx                  Filtre source≠'Payé' + retire import dialog
+[MOD] src/pages/admin/MetaLeads.tsx              Ajoute bouton + dialog import CSV
+[MOD] supabase/functions/import-leads-csv/...    Insert dans meta_leads au lieu de leads
+[MOD] src/components/admin/leads/LeadsHero.tsx   Vérif: bouton Import optionnel (déjà OK)
 ```
 
-## Validation
+## Notes techniques
 
-1. Pipeline → colonne **RDV téléphonique** affiche bien les 6 RDV confirmés (et le pending)
-2. KPI strip et colonne RDV affichent le **même nombre**
-3. Lead avec RDV `confirme` + `is_qualified=true` → reste en RDV jusqu'à ce que le slot soit passé, puis bascule en "Qualifié"
-4. Nouvelle soumission analyse-dossier → `lead_id` correctement renseigné en base (vérif : 0 ligne avec `lead_id IS NULL` après test)
-5. Mobile 375px : aucun overflow horizontal, tous les boutons ≥44px, side panel s'ouvre en bottom-sheet
-6. Pipeline en swipe fluide sur mobile (snap entre colonnes)
-7. Filtres mobile : search pleine largeur + selects scrollables horizontalement sans casser le layout
-8. Aucune régression desktop
+- **Pas de perte de données** : `notes`, `contacted`, `is_qualified` mappés vers `lead_status` ; `budget` et UTM stockés dans `raw_meta_payload`
+- **Idempotence** : `ON CONFLICT (leadgen_id) DO NOTHING` permet de relancer la migration sans risque
+- **Cascade FK** : si `lead_phone_appointments.lead_id` référence ces leads, on conserve les appointments (ils continuent à matcher via `prospect_email`) mais on doit `SET NULL` avant DELETE
+- **Pas de modif RLS** : les policies existantes de `meta_leads` (admin only) restent valides
 
