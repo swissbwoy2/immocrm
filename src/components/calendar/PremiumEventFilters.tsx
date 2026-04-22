@@ -29,6 +29,7 @@ const eventTypes = [
   { value: 'visite', label: 'Visite' },
   { value: 'rappel', label: 'Rappel' },
   { value: 'rendez_vous', label: 'Rendez-vous' },
+  { value: 'rdv_telephonique', label: '📞 RDV téléphonique' },
   { value: 'tache', label: 'Tâche' },
   { value: 'reunion', label: 'Réunion' },
   { value: 'signature', label: 'Signature' },
