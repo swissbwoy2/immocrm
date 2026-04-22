@@ -354,16 +354,26 @@ serve(async (req) => {
     // Limit to 3 leads per invocation to avoid CPU timeout
     const limitedIds = lead_ids.slice(0, 3);
 
-    // Get SMTP config
-    const { data: emailConfig, error: configError } = await supabase
+    // Get SMTP config: prefer the logged-in user's config, fallback to info@immo-rama.ch
+    let { data: emailConfig } = await supabase
       .from('email_configurations')
       .select('*')
+      .eq('user_id', user.id)
       .eq('is_active', true)
-      .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (configError || !emailConfig) {
-      throw new Error('Aucune configuration email active trouvée. Configurez vos paramètres SMTP.');
+    if (!emailConfig) {
+      const { data: fallback } = await supabase
+        .from('email_configurations')
+        .select('*')
+        .eq('email_from', 'info@immo-rama.ch')
+        .eq('is_active', true)
+        .maybeSingle();
+      emailConfig = fallback;
+    }
+
+    if (!emailConfig) {
+      throw new Error('Aucune configuration SMTP trouvée pour cet utilisateur (ni de fallback info@immo-rama.ch).');
     }
 
     // Get leads data
