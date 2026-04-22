@@ -22,6 +22,9 @@ export type Lead = {
   notes: string | null;
   formulaire: string | null;
   type_recherche: string | null;
+  accord_bancaire: boolean | null;
+  apport_personnel: string | null;
+  type_bien: string | null;
 };
 
 export type PhoneAppointment = {
