@@ -425,7 +425,7 @@ export default function AdminCalendrier() {
 
       toast.success('Visite(s) supprimée(s)');
       setVisiteDetailDialogOpen(false);
-      loadData();
+      loadData(true);
     } catch (error: any) {
       console.error('Error deleting visite group:', error);
       toast.error('Erreur lors de la suppression');
