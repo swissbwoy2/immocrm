@@ -330,7 +330,7 @@ export default function AdminCalendrier() {
       if (error) throw error;
 
       toast.success('Statut mis à jour');
-      loadData();
+      loadData(true);
     } catch (error: any) {
       console.error('Error updating event:', error);
       toast.error('Erreur lors de la mise à jour');
