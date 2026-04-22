@@ -74,7 +74,10 @@ export function LeadDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="w-full sm:max-w-[480px] overflow-y-auto p-0">
+      <SheetContent
+        side="right"
+        className="w-full sm:max-w-[480px] overflow-y-auto p-0 max-md:!inset-x-0 max-md:!inset-y-auto max-md:!bottom-0 max-md:!top-auto max-md:!h-[92vh] max-md:!w-full max-md:!max-w-full max-md:rounded-t-2xl max-md:border-t max-md:data-[state=closed]:slide-out-to-bottom max-md:data-[state=open]:slide-in-from-bottom"
+      >
         {/* Header */}
         <div className="bg-gradient-to-br from-primary/15 to-primary/5 p-6 border-b">
           <div className="flex items-start gap-4">
