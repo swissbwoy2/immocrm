@@ -197,12 +197,12 @@ export default function AdminCalendrier() {
     }
   }, []);
 
-  // Debounced reload for realtime events
+  // Debounced reload for realtime events (silent — no spinner)
   const debouncedReload = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      loadData();
-    }, 1500);
+      loadData(true);
+    }, 2500);
   }, [loadData]);
 
   // Initial load + realtime subscriptions + polling fallback
@@ -213,32 +213,31 @@ export default function AdminCalendrier() {
     const channel = supabase
       .channel('admin-calendar-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'visites' }, () => {
-        console.log('🔄 Realtime: visites change detected');
         debouncedReload();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_events' }, () => {
-        console.log('🔄 Realtime: calendar_events change detected');
         debouncedReload();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'candidatures' }, () => {
-        console.log('🔄 Realtime: candidatures change detected');
         debouncedReload();
       })
-      .subscribe((status) => {
-        console.log('📡 Calendar realtime status:', status);
-      });
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lead_phone_appointments' }, () => {
+        debouncedReload();
+      })
+      .subscribe();
 
-    // Polling fallback every 30s
+    // Polling fallback (silent) every 120s
     const pollInterval = setInterval(() => {
-      loadData();
-    }, 30000);
+      loadData(true);
+    }, 120000);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
-  }, [loadData, debouncedReload]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Filter events
   const filteredEvents = useMemo(() => {
