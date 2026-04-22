@@ -30,13 +30,52 @@ interface Props {
   confirmingApptId: string | null;
 }
 
-const QualBadge = ({ ok, label }: { ok: boolean; label: string }) => (
-  <div className={cn(
-    "flex items-center gap-1.5 text-xs px-2 py-1 rounded-md",
-    ok ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : "bg-rose-500/15 text-rose-700 dark:text-rose-400"
-  )}>
-    {ok ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldX className="h-3.5 w-3.5" />}
-    {label}
+const formatStatutEmploi = (v: string | null): string => {
+  if (!v) return "";
+  const map: Record<string, string> = {
+    salarie: "Salarié",
+    salarié: "Salarié",
+    independant: "Indépendant",
+    indépendant: "Indépendant",
+    etudiant: "Étudiant",
+    étudiant: "Étudiant",
+    retraite: "Retraité",
+    retraité: "Retraité",
+    sans_emploi: "Sans emploi",
+    autre: "Autre",
+  };
+  return map[v.toLowerCase()] || v;
+};
+
+const formatPermis = (v: string | null): string => {
+  if (!v) return "";
+  if (["B", "C", "G", "L", "F", "N"].includes(v)) return `Permis ${v}`;
+  if (v.toLowerCase() === "suisse") return "Suisse";
+  return v;
+};
+
+type Tone = "ok" | "warn" | "ko" | "neutral";
+const toneClasses: Record<Tone, string> = {
+  ok: "text-emerald-600 dark:text-emerald-400",
+  warn: "text-amber-600 dark:text-amber-400",
+  ko: "text-rose-600 dark:text-rose-400",
+  neutral: "text-muted-foreground",
+};
+
+const ToneIcon = ({ tone }: { tone: Tone }) => {
+  if (tone === "ok") return <ShieldCheck className={cn("h-3.5 w-3.5", toneClasses.ok)} />;
+  if (tone === "ko") return <ShieldX className={cn("h-3.5 w-3.5", toneClasses.ko)} />;
+  if (tone === "warn") return <Circle className={cn("h-3.5 w-3.5", toneClasses.warn)} />;
+  return <Circle className={cn("h-3.5 w-3.5", toneClasses.neutral)} />;
+};
+
+const FormRow = ({ label, value, tone }: { label: string; value: React.ReactNode; tone?: Tone }) => (
+  <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+    <span className="text-muted-foreground">{label}</span>
+    <span className={cn("font-medium break-words inline-flex items-center gap-1.5", tone && toneClasses[tone])}>
+      {tone && <ToneIcon tone={tone} />}
+      <span>{value}</span>
+    </span>
   </div>
 );
 
@@ -173,12 +212,15 @@ export function LeadDetailSheet({
             </section>
           )}
 
-          {/* Qualification */}
+          {/* Réponses du formulaire */}
           {lead.type_recherche !== "Vendre" && (
             <section>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Qualification</h4>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
+                <FileText className="h-3 w-3" /> Réponses du formulaire
+              </h4>
+              <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-2">
+                {/* Statut qualification */}
+                <div className="flex items-center gap-2 pb-2 border-b border-border/40">
                   {lead.is_qualified === true ? (
                     <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 gap-1"><ShieldCheck className="h-3 w-3" />Qualifié</Badge>
                   ) : lead.is_qualified === false ? (
@@ -187,28 +229,67 @@ export function LeadDetailSheet({
                     <Badge variant="secondary" className="gap-1"><Circle className="h-3 w-3" />À évaluer</Badge>
                   )}
                 </div>
-                {isLouer && (
-                  <div className="flex flex-wrap gap-1.5">
+
+                {/* Recherche */}
+                {lead.type_recherche && <FormRow label="Type de recherche" value={lead.type_recherche} />}
+                {lead.type_bien && <FormRow label="Type de bien" value={lead.type_bien} />}
+                {lead.localite && (
+                  <FormRow label="Région" value={<span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{lead.localite}</span>} />
+                )}
+                {lead.budget && (
+                  <FormRow label={isAcheter ? "Budget achat" : "Budget mensuel"} value={<span className="inline-flex items-center gap-1"><Wallet className="h-3 w-3" />{lead.budget}</span>} />
+                )}
+
+                {/* Locataires */}
+                {isLouer && (lead.statut_emploi || lead.permis_nationalite || lead.poursuites !== null || lead.a_garant !== null) && (
+                  <div className="pt-2 border-t border-border/40 space-y-2">
                     {lead.statut_emploi && (
-                      <QualBadge ok={lead.statut_emploi === "salarie"} label={lead.statut_emploi === "salarie" ? "Salarié" : "Non salarié"} />
+                      <FormRow
+                        label="Statut professionnel"
+                        value={<span className="inline-flex items-center gap-1"><Briefcase className="h-3 w-3" />{formatStatutEmploi(lead.statut_emploi)}</span>}
+                        tone={lead.statut_emploi === "salarie" || lead.statut_emploi === "salarié" ? "ok" : "warn"}
+                      />
                     )}
                     {lead.permis_nationalite && (
-                      <QualBadge
-                        ok={["B", "C", "Suisse"].includes(lead.permis_nationalite)}
-                        label={`Permis ${lead.permis_nationalite}`}
+                      <FormRow
+                        label="Permis / Nationalité"
+                        value={<span className="inline-flex items-center gap-1"><Globe className="h-3 w-3" />{formatPermis(lead.permis_nationalite)}</span>}
+                        tone={["B", "C", "Suisse"].includes(lead.permis_nationalite) ? "ok" : "warn"}
                       />
                     )}
                     {lead.poursuites !== null && (
-                      <QualBadge
-                        ok={!lead.poursuites || !!lead.a_garant}
-                        label={lead.poursuites ? (lead.a_garant ? "Poursuites + garant" : "Poursuites") : "Pas de poursuites"}
+                      <FormRow
+                        label="Extrait de poursuites"
+                        value={lead.poursuites ? "Oui" : "Aucune"}
+                        tone={lead.poursuites ? "ko" : "ok"}
+                      />
+                    )}
+                    {lead.a_garant !== null && (
+                      <FormRow
+                        label="Garant disponible"
+                        value={lead.a_garant ? "Oui" : "Non"}
+                        tone={lead.a_garant ? "ok" : "neutral"}
                       />
                     )}
                   </div>
                 )}
-                {isAcheter && lead.budget && (
-                  <div className="text-xs text-muted-foreground flex items-center gap-1">
-                    <Wallet className="h-3 w-3" /> Budget : {lead.budget}
+
+                {/* Acheteurs */}
+                {isAcheter && (lead.accord_bancaire !== null || lead.apport_personnel) && (
+                  <div className="pt-2 border-t border-border/40 space-y-2">
+                    {lead.accord_bancaire !== null && (
+                      <FormRow
+                        label="Accord bancaire"
+                        value={lead.accord_bancaire ? "Oui" : "Non"}
+                        tone={lead.accord_bancaire ? "ok" : "warn"}
+                      />
+                    )}
+                    {lead.apport_personnel && (
+                      <FormRow
+                        label="Apport personnel"
+                        value={<span className="inline-flex items-center gap-1"><Award className="h-3 w-3" />{lead.apport_personnel}</span>}
+                      />
+                    )}
                   </div>
                 )}
               </div>
