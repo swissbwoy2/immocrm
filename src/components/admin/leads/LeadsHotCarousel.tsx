@@ -32,7 +32,7 @@ export function LeadsHotCarousel({ hot, onConfirm, confirmingId, onSelect }: Pro
         <span className="text-xs text-muted-foreground">({hot.length})</span>
       </div>
       <ScrollArea className="w-full">
-        <div className="flex gap-3 pb-3">
+        <div className="flex gap-3 pb-3 snap-x snap-mandatory">
           {hot.map((h, i) => (
             <motion.div
               key={h.lead.id + h.reason}
@@ -42,7 +42,7 @@ export function LeadsHotCarousel({ hot, onConfirm, confirmingId, onSelect }: Pro
             >
               <Card
                 className={cn(
-                  "min-w-[300px] p-3 flex items-center gap-3 cursor-pointer hover:shadow-lg transition-all",
+                  "min-w-[260px] sm:min-w-[300px] snap-start p-3 flex items-center gap-3 cursor-pointer hover:shadow-lg transition-all",
                   "bg-gradient-to-br border-orange-500/30",
                   h.reason === "rdv_today"
                     ? "from-amber-500/10 to-orange-500/5"
