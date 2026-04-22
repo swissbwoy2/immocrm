@@ -24,7 +24,6 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Verify user has admin or closeur role
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -64,48 +63,79 @@ Deno.serve(async (req) => {
     let duplicates = 0;
     let errors = 0;
 
-    // Process in batches of 50
-    const batchSize = 50;
-    for (let i = 0; i < leads.length; i += batchSize) {
-      const batch = leads.slice(i, i + batchSize);
-      
-      const rows = batch.map((lead: any) => {
-        const source = lead.source || 'CSV Import';
-        const leadStatus = source.toLowerCase() === 'payé' ? 'qualified' : 'new';
-        const formulaire = lead.formulaire || formulaire_name || null;
-        const prenom = lead.prenom || '';
-        const nom = lead.nom || '';
-        const fullName = [prenom, nom].filter(Boolean).join(' ') || null;
-        
-        return {
-          leadgen_id: `csv-import-${crypto.randomUUID()}`,
-          email: lead.email?.toLowerCase()?.trim() || null,
-          first_name: prenom || null,
-          last_name: nom || null,
-          full_name: fullName,
-          phone: lead.telephone || null,
-          source,
-          form_name: formulaire,
-          lead_status: leadStatus,
-          imported_at: new Date().toISOString(),
-        };
-      }).filter((r: any) => r.email);
+    // Pre-fetch existing emails in meta_leads to dedupe by email
+    const incomingEmails = Array.from(
+      new Set(
+        leads
+          .map((l: any) => l.email?.toLowerCase()?.trim())
+          .filter(Boolean)
+      )
+    );
 
-      for (const row of rows) {
-        const { error } = await supabase
+    const existingEmails = new Set<string>();
+    if (incomingEmails.length > 0) {
+      // chunk to avoid huge IN()
+      for (let i = 0; i < incomingEmails.length; i += 200) {
+        const chunk = incomingEmails.slice(i, i + 200);
+        const { data: existing } = await supabase
           .from('meta_leads')
-          .insert(row);
+          .select('email')
+          .in('email', chunk);
+        (existing || []).forEach((r: any) => {
+          if (r.email) existingEmails.add(r.email.toLowerCase());
+        });
+      }
+    }
 
-        if (error) {
-          if (error.code === '23505') {
-            duplicates++;
-          } else {
-            errors++;
-            console.error('Insert error:', error.message);
-          }
+    for (const lead of leads) {
+      const email = lead.email?.toLowerCase()?.trim() || null;
+      if (!email) {
+        errors++;
+        continue;
+      }
+
+      if (existingEmails.has(email)) {
+        duplicates++;
+        continue;
+      }
+
+      const prenom = lead.prenom || '';
+      const nom = lead.nom || '';
+      const fullName = [prenom, nom].filter(Boolean).join(' ') || null;
+      const formulaire = lead.formulaire || formulaire_name || null;
+      const originalSource = lead.source || 'CSV Import';
+      const leadStatus = String(originalSource).toLowerCase() === 'payé' ? 'qualified' : 'new';
+
+      const row = {
+        leadgen_id: `csv_${crypto.randomUUID()}`,
+        source: 'csv_import',
+        form_name: formulaire,
+        email,
+        phone: lead.telephone || null,
+        first_name: prenom || null,
+        last_name: nom || null,
+        full_name: fullName,
+        lead_status: leadStatus,
+        imported_at: new Date().toISOString(),
+        raw_meta_payload: {
+          original_source: originalSource,
+          original_formulaire: formulaire,
+          import_filename: formulaire_name || null,
+        },
+      };
+
+      const { error } = await supabase.from('meta_leads').insert(row);
+
+      if (error) {
+        if (error.code === '23505') {
+          duplicates++;
         } else {
-          inserted++;
+          errors++;
+          console.error('Insert error:', error.message);
         }
+      } else {
+        inserted++;
+        existingEmails.add(email);
       }
     }
 
@@ -122,7 +152,7 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error('Import error:', err);
     return new Response(
-      JSON.stringify({ error: err.message }),
+      JSON.stringify({ error: (err as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
