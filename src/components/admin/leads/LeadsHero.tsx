@@ -17,7 +17,7 @@ interface Props {
   hotCount: number;
   notContactedCount: number;
   onRelance: () => void;
-  onImport: () => void;
+  onImport?: () => void;
   onExport: () => void;
 }
 
