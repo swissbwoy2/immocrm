@@ -159,19 +159,41 @@ export default function AdminCalendrier() {
         }
       });
 
-      setEvents([...(eventsRes.data || []), ...candidatureEvents]);
+      // Transform phone appointments into virtual calendar events
+      const phoneApptEvents: CalendarEvent[] = [];
+      (phoneApptsRes.data || []).forEach((appt: any) => {
+        if (!appt?.slot_start) return;
+        const lead = appt.leads;
+        const prospectName = appt.prospect_name
+          || (lead ? `${lead.prenom || ''} ${lead.nom || ''}`.trim() : '')
+          || 'Prospect';
+        const phone = appt.prospect_phone || lead?.telephone || '';
+        const email = appt.prospect_email || lead?.email || '';
+        phoneApptEvents.push({
+          id: `phone-rdv-${appt.id}`,
+          title: `📞 RDV téléphonique — ${prospectName}`,
+          event_date: appt.slot_start,
+          end_date: appt.slot_end || undefined,
+          event_type: 'rdv_telephonique',
+          status: appt.status === 'confirme' ? 'effectue' : 'planifie',
+          description: `Téléphone : ${phone}\nEmail : ${email}`,
+          all_day: false,
+        });
+      });
+
+      setEvents([...(eventsRes.data || []), ...candidatureEvents, ...phoneApptEvents]);
       setVisites(visitesRes.data || []);
       setAgents((agentsRes.data as any) || []);
       setClients((clientsRes.data as any) || []);
       
       if (!eventsRes.error && !visitesRes.error) {
-        console.log(`✅ Calendrier chargé: ${(eventsRes.data || []).length + candidatureEvents.length} événements, ${visitesRes.data?.length || 0} visites`);
+        console.log(`✅ Calendrier chargé: ${(eventsRes.data || []).length + candidatureEvents.length + phoneApptEvents.length} événements, ${visitesRes.data?.length || 0} visites`);
       }
     } catch (error: any) {
       console.error('Error loading calendar data:', error);
-      toast.error('Erreur lors du chargement des données: ' + error.message);
+      if (!silent) toast.error('Erreur lors du chargement des données: ' + error.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
