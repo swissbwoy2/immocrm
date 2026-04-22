@@ -4,12 +4,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, Tag, ExternalLink, Leaf, RefreshCw, Download } from 'lucide-react';
+import { Search, Tag, ExternalLink, Leaf, RefreshCw, Download, Upload, FileText as FileTextIcon, Loader2 } from 'lucide-react';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -87,6 +87,9 @@ export default function MetaLeads() {
   const [showBackfillDialog, setShowBackfillDialog] = useState(false);
   const [checkingPageId, setCheckingPageId] = useState(false);
   const [pageIdError, setPageIdError] = useState('');
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     fetchLeads();
