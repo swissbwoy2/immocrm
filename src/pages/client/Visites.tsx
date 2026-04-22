@@ -525,7 +525,11 @@ export default function Visites() {
                       <div className="p-2 bg-blue-500/20 rounded-lg">
                         <User className="w-4 h-4 text-blue-600" />
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="relative flex-1 min-w-0">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
+      </div>
                         <p className="text-xs text-muted-foreground">Concierge</p>
                         <p className="font-medium text-sm truncate">{visite.offres.concierge_nom}</p>
                         {visite.offres.concierge_tel && (

@@ -598,7 +598,11 @@ export default function Candidatures() {
                     <CollapsibleTrigger className="w-full text-left p-5 md:p-6 relative z-10 cursor-pointer hover:bg-muted/10 transition-colors">
                       <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                         {/* Info */}
-                        <div className="flex-1 min-w-0">
+                        <div className="relative flex-1 min-w-0">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
+      </div>
                           <div className="flex items-center gap-3 mb-3 flex-wrap">
                             <div className="flex items-center gap-2">
                               <div className="p-2 rounded-xl bg-primary/10 text-primary">

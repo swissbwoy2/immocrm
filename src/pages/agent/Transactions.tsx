@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 
 const Transactions = () => {
   const navigate = useNavigate();
@@ -149,8 +150,7 @@ const Transactions = () => {
   }
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="p-4 md:p-8">
+    <PremiumPageShellV2 className="flex-1 overflow-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">Mes Transactions</h1>
           <p className="text-muted-foreground">
@@ -327,8 +327,7 @@ const Transactions = () => {
             })
           )}
         </div>
-      </div>
-    </div>
+    </PremiumPageShellV2>
   );
 };
 

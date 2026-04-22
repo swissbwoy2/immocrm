@@ -467,7 +467,11 @@ export default function ProprietaireDetail() {
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors cursor-pointer"
                       onClick={() => navigate(`/admin/projets-developpement`)}
                     >
-                      <div className="flex-1">
+                      <div className="relative flex-1">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
+      </div>
                         <p className="font-medium">{immeuble.nom || immeuble.adresse}</p>
                         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground mt-1">
                           <span className="flex items-center gap-1">

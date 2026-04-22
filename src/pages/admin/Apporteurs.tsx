@@ -28,6 +28,7 @@ import {
   TableHead,
   TableRow
 } from '@/components/premium';
+import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 
 interface Apporteur {
   id: string;
@@ -175,8 +176,7 @@ export default function AdminApporteurs() {
   }
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="p-4 md:p-8">
+    <PremiumPageShellV2 className="flex-1 overflow-auto">
         {/* Premium Header */}
         <PremiumPageHeader
           title="Apporteurs d'affaires"
@@ -366,7 +366,6 @@ export default function AdminApporteurs() {
             </TableBody>
           </PremiumTable>
         )}
-      </div>
-    </div>
+    </PremiumPageShellV2>
   );
 }

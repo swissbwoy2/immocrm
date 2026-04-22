@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PremiumPageHeader, PremiumCard, PremiumKPICard, PremiumEmptyState } from "@/components/premium";
 import { useAuth } from '@/contexts/AuthContext';
+import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 
 interface ProprietaireWithProfile {
   id: string;
@@ -132,8 +133,7 @@ export default function AgentProprietaires() {
   }
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="p-4 md:p-8 space-y-6">
+    <PremiumPageShellV2 className="flex-1 overflow-auto">
         <PremiumPageHeader
           title="Mes Propriétaires"
           subtitle={`${proprietaires.length} propriétaires assignés`}
@@ -247,7 +247,6 @@ export default function AgentProprietaires() {
             ))}
           </div>
         )}
-      </div>
-    </div>
+    </PremiumPageShellV2>
   );
 }

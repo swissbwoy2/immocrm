@@ -462,7 +462,11 @@ export default function AgentProprietaireDetail() {
                       key={immeuble.id} 
                       className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors"
                     >
-                      <div className="flex-1">
+                      <div className="relative flex-1">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
+      </div>
                         <h4 className="font-semibold">{immeuble.nom}</h4>
                         <p className="text-sm text-muted-foreground flex items-center gap-1">
                           <MapPin className="h-3.5 w-3.5" />

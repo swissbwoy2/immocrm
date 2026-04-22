@@ -9,7 +9,11 @@ export default function RemplirDemandeIA() {
           Importez un formulaire PDF, sélectionnez un client et laissez l'IA pré-remplir les champs automatiquement
         </p>
       </div>
-      <div className="flex-1 overflow-hidden">
+      <div className="relative flex-1 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
+      </div>
         <SmartRentalFormFiller />
       </div>
     </div>

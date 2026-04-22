@@ -20,6 +20,7 @@ import { countUniqueVisitesInRange, countUniqueOffresInRange } from "@/utils/vis
 import { PremiumKPICard } from "@/components/premium/PremiumKPICard";
 import { PremiumCard } from "@/components/premium/PremiumCard";
 import { cn } from "@/lib/utils";
+import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 
 interface Agent {
   id: string;
@@ -490,8 +491,7 @@ const AgentDetail = () => {
   }
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="p-4 md:p-8 space-y-6">
+    <PremiumPageShellV2 className="flex-1 overflow-auto">
         {/* Back Button */}
         <Button
           variant="ghost"
@@ -864,8 +864,7 @@ const AgentDetail = () => {
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </PremiumPageShellV2>
   );
 };
 

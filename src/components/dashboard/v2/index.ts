@@ -1,4 +1,5 @@
 export { PremiumPageShellV2 } from './PremiumPageShellV2';
+export { PremiumPageGlow } from './PremiumPageGlow';
 export { PremiumPageHeaderV2 } from './PremiumPageHeaderV2';
 export { PremiumKPICardV2 } from './PremiumKPICardV2';
 export { PremiumChartContainerV2 } from './PremiumChartContainerV2';

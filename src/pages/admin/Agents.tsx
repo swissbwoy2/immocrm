@@ -10,6 +10,7 @@ import { Plus, Mail, Phone, Users, Trash2, RefreshCw, UserCog, Search, Copy, Loa
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PremiumPageHeader, PremiumCard, PremiumKPICard, PremiumEmptyState } from "@/components/premium";
+import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 
 interface AgentInvitationStatus {
   email: string | null;
@@ -320,8 +321,7 @@ const Agents = () => {
   }
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="p-4 md:p-8">
+    <PremiumPageShellV2 className="flex-1 overflow-auto">
         {/* Premium Header */}
         <PremiumPageHeader
           title="Gestion des Agents"
@@ -555,8 +555,7 @@ const Agents = () => {
             ))
           )}
         </div>
-      </div>
-    </div>
+    </PremiumPageShellV2>
   );
 };
 

@@ -652,7 +652,11 @@ export default function ClientDetail() {
       <div className="p-4 md:p-8 space-y-6">
         {/* Header - Responsive */}
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div className="flex-1 min-w-0">
+          <div className="relative flex-1 min-w-0">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
+      </div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
               <h1 className="text-2xl sm:text-3xl font-bold">
                 {profile.prenom} {profile.nom}

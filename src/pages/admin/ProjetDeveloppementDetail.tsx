@@ -235,7 +235,11 @@ export default function AdminProjetDeveloppementDetail() {
       <div className="flex min-h-screen items-center justify-center">
         <div className="relative">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border border-primary/30"></div>
+          <div className="relative absolute inset-0 animate-ping rounded-full h-12 w-12 border border-primary/30">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
+      </div></div>
         </div>
       </div>
     );

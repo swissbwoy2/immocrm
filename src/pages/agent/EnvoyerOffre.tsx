@@ -17,6 +17,7 @@ import { useDraftManager, initialFormData } from "@/hooks/useDraftManager";
 import { DraftManagerDialog } from "@/components/DraftManagerDialog";
 import { ClientMultiSelect } from "@/components/ClientMultiSelect";
 import { GoogleAddressAutocomplete, AddressComponents } from "@/components/GoogleAddressAutocomplete";
+import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 
 const EnvoyerOffre = () => {
   const location = useLocation();
@@ -398,8 +399,7 @@ const EnvoyerOffre = () => {
   };
 
   return (
-    <div className="flex-1 overflow-auto">
-      <div className="p-4 md:p-8">
+    <PremiumPageShellV2 className="flex-1 overflow-auto">
         <h1 className="text-3xl font-bold mb-8">Envoyer une offre</h1>
 
         <Tabs defaultValue="email" className="mb-4">
@@ -753,8 +753,7 @@ const EnvoyerOffre = () => {
             </Card>
           </div>
         </div>
-      </div>
-    </div>
+    </PremiumPageShellV2>
   );
 };
 

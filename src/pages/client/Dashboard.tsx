@@ -39,6 +39,7 @@ import { useSolvabilityCheck } from '@/hooks/useSolvabilityCheck';
 import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck';
 import { FloatingParticles } from '@/components/messaging/FloatingParticles';
 import { SectionErrorBoundary } from '@/components/SectionErrorBoundary';
+import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 
 import RenovationClientDashboard from './dashboards/RenovationClientDashboard';
 import VenteClientDashboard from './dashboards/VenteClientDashboard';
@@ -380,12 +381,14 @@ function ClientDashboardLocation() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="relative">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border border-primary/30"></div>
+      <PremiumPageShellV2>
+        <div className="flex items-center justify-center py-32">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+            <div className="absolute inset-0 animate-ping rounded-full h-12 w-12 border border-primary/30" />
+          </div>
         </div>
-      </div>
+      </PremiumPageShellV2>
     );
   }
 
@@ -479,10 +482,8 @@ function ClientDashboardLocation() {
   return (
     <>
       <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-y-auto relative">
-        {/* Global floating particles */}
-        <FloatingParticles count={12} className="fixed inset-0 pointer-events-none z-0 opacity-30" />
-        
-        <div className="relative z-10 p-4 md:p-8">
+        <FloatingParticles count={8} className="fixed inset-0 pointer-events-none z-0 opacity-20" />
+        <PremiumPageShellV2 className="relative z-10">
           {/* Premium Dashboard Header */}
           <SectionErrorBoundary sectionName="DashboardHeader">
             <PremiumDashboardHeader
@@ -1016,11 +1017,11 @@ function ClientDashboardLocation() {
               </div>
             </div>
           </div>
-        </div>
+        </PremiumPageShellV2>
       </PullToRefresh>
-      
+
       {user && (
-        <AccountActivationModal 
+        <AccountActivationModal
           isOpen={showActivationModal} 
           onClose={() => setShowActivationModal(false)}
           userId={user.id}
