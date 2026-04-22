@@ -67,12 +67,12 @@ export default function AdminCalendrier() {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
 
       // Use paginated fetch to bypass 1000-row server limit
-      const [eventsRes, visitesRes, agentsRes, clientsRes, candidaturesRes] = await Promise.all([
+      const [eventsRes, visitesRes, agentsRes, clientsRes, candidaturesRes, phoneApptsRes] = await Promise.all([
         fetchAllPaginated(() =>
           supabase.from('calendar_events').select('*').order('event_date', { ascending: true })
         ),
@@ -86,6 +86,11 @@ export default function AdminCalendrier() {
             .select('id, client_id, offre_id, date_etat_lieux, heure_etat_lieux, date_signature_choisie, statut, clients(id, profiles!clients_user_id_fkey(prenom, nom)), offres(adresse, agent_id)')
             .or('date_etat_lieux.not.is.null,date_signature_choisie.not.is.null')
         ),
+        supabase.from('lead_phone_appointments')
+          .select('id, lead_id, slot_start, slot_end, status, prospect_name, prospect_email, prospect_phone, leads(prenom, nom, email, telephone)')
+          .in('status', ['confirme', 'en_attente'])
+          .order('slot_start', { ascending: true })
+          .limit(5000),
       ]);
 
       // Log results for debugging
@@ -154,28 +159,50 @@ export default function AdminCalendrier() {
         }
       });
 
-      setEvents([...(eventsRes.data || []), ...candidatureEvents]);
+      // Transform phone appointments into virtual calendar events
+      const phoneApptEvents: CalendarEvent[] = [];
+      (phoneApptsRes.data || []).forEach((appt: any) => {
+        if (!appt?.slot_start) return;
+        const lead = appt.leads;
+        const prospectName = appt.prospect_name
+          || (lead ? `${lead.prenom || ''} ${lead.nom || ''}`.trim() : '')
+          || 'Prospect';
+        const phone = appt.prospect_phone || lead?.telephone || '';
+        const email = appt.prospect_email || lead?.email || '';
+        phoneApptEvents.push({
+          id: `phone-rdv-${appt.id}`,
+          title: `📞 RDV téléphonique — ${prospectName}`,
+          event_date: appt.slot_start,
+          end_date: appt.slot_end || undefined,
+          event_type: 'rdv_telephonique',
+          status: appt.status === 'confirme' ? 'effectue' : 'planifie',
+          description: `Téléphone : ${phone}\nEmail : ${email}`,
+          all_day: false,
+        });
+      });
+
+      setEvents([...(eventsRes.data || []), ...candidatureEvents, ...phoneApptEvents]);
       setVisites(visitesRes.data || []);
       setAgents((agentsRes.data as any) || []);
       setClients((clientsRes.data as any) || []);
       
       if (!eventsRes.error && !visitesRes.error) {
-        console.log(`✅ Calendrier chargé: ${(eventsRes.data || []).length + candidatureEvents.length} événements, ${visitesRes.data?.length || 0} visites`);
+        console.log(`✅ Calendrier chargé: ${(eventsRes.data || []).length + candidatureEvents.length + phoneApptEvents.length} événements, ${visitesRes.data?.length || 0} visites`);
       }
     } catch (error: any) {
       console.error('Error loading calendar data:', error);
-      toast.error('Erreur lors du chargement des données: ' + error.message);
+      if (!silent) toast.error('Erreur lors du chargement des données: ' + error.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
-  // Debounced reload for realtime events
+  // Debounced reload for realtime events (silent — no spinner)
   const debouncedReload = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      loadData();
-    }, 1500);
+      loadData(true);
+    }, 2500);
   }, [loadData]);
 
   // Initial load + realtime subscriptions + polling fallback
@@ -186,32 +213,31 @@ export default function AdminCalendrier() {
     const channel = supabase
       .channel('admin-calendar-sync')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'visites' }, () => {
-        console.log('🔄 Realtime: visites change detected');
         debouncedReload();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_events' }, () => {
-        console.log('🔄 Realtime: calendar_events change detected');
         debouncedReload();
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'candidatures' }, () => {
-        console.log('🔄 Realtime: candidatures change detected');
         debouncedReload();
       })
-      .subscribe((status) => {
-        console.log('📡 Calendar realtime status:', status);
-      });
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lead_phone_appointments' }, () => {
+        debouncedReload();
+      })
+      .subscribe();
 
-    // Polling fallback every 30s
+    // Polling fallback (silent) every 120s
     const pollInterval = setInterval(() => {
-      loadData();
-    }, 30000);
+      loadData(true);
+    }, 120000);
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
-  }, [loadData, debouncedReload]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Filter events
   const filteredEvents = useMemo(() => {
@@ -285,7 +311,7 @@ export default function AdminCalendrier() {
 
       toast.success('Événement créé avec succès');
       setShowEventForm(false);
-      loadData();
+      loadData(true);
     } catch (error: any) {
       console.error('Error creating event:', error);
       toast.error('Erreur lors de la création de l\'événement');
@@ -304,7 +330,7 @@ export default function AdminCalendrier() {
       if (error) throw error;
 
       toast.success('Statut mis à jour');
-      loadData();
+      loadData(true);
     } catch (error: any) {
       console.error('Error updating event:', error);
       toast.error('Erreur lors de la mise à jour');
@@ -313,7 +339,7 @@ export default function AdminCalendrier() {
 
   const handleDeleteEvent = async (eventId: string) => {
     try {
-      // Handle virtual events (signature, état des lieux)
+      // Handle virtual events (signature, état des lieux, RDV téléphonique)
       if (eventId.startsWith('signature-')) {
         const candidatureId = eventId.replace('signature-', '');
         const { error } = await supabase
@@ -323,7 +349,7 @@ export default function AdminCalendrier() {
 
         if (error) throw error;
         toast.success('Date de signature supprimée');
-        loadData();
+        loadData(true);
         return;
       }
 
@@ -336,7 +362,20 @@ export default function AdminCalendrier() {
 
         if (error) throw error;
         toast.success('Date d\'état des lieux supprimée');
-        loadData();
+        loadData(true);
+        return;
+      }
+
+      if (eventId.startsWith('phone-rdv-')) {
+        const apptId = eventId.replace('phone-rdv-', '');
+        const { error } = await supabase
+          .from('lead_phone_appointments')
+          .update({ status: 'annule' })
+          .eq('id', apptId);
+
+        if (error) throw error;
+        toast.success('RDV téléphonique annulé');
+        loadData(true);
         return;
       }
 
@@ -349,7 +388,7 @@ export default function AdminCalendrier() {
       if (error) throw error;
 
       toast.success('Événement supprimé');
-      loadData();
+      loadData(true);
     } catch (error: any) {
       console.error('Error deleting event:', error);
       toast.error('Erreur lors de la suppression');
@@ -366,7 +405,7 @@ export default function AdminCalendrier() {
       if (error) throw error;
 
       toast.success('Visite supprimée');
-      loadData();
+      loadData(true);
     } catch (error: any) {
       console.error('Error deleting visite:', error);
       toast.error('Erreur lors de la suppression de la visite');
@@ -386,7 +425,7 @@ export default function AdminCalendrier() {
 
       toast.success('Visite(s) supprimée(s)');
       setVisiteDetailDialogOpen(false);
-      loadData();
+      loadData(true);
     } catch (error: any) {
       console.error('Error deleting visite group:', error);
       toast.error('Erreur lors de la suppression');

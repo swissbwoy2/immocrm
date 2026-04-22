@@ -20,6 +20,7 @@ export const eventTypeLabels: Record<string, string> = {
   reunion: 'Réunion',
   signature: 'Signature bail',
   etat_lieux: 'État des lieux',
+  rdv_telephonique: 'RDV téléphonique',
   autre: 'Autre',
 };
 
@@ -31,6 +32,7 @@ export const eventTypeColors: Record<string, string> = {
   reunion: 'bg-purple-500/10 text-purple-700 border-purple-500/30 dark:text-purple-400',
   signature: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-400',
   etat_lieux: 'bg-cyan-500/10 text-cyan-700 border-cyan-500/30 dark:text-cyan-400',
+  rdv_telephonique: 'bg-indigo-500/10 text-indigo-700 border-indigo-500/30 dark:text-indigo-400',
   autre: 'bg-gray-500/10 text-gray-700 border-gray-500/30 dark:text-gray-400',
 };
 
@@ -45,6 +47,7 @@ export const eventTypeCalendarColors: Record<string, string> = {
   reunion: 'bg-purple-500',
   signature: 'bg-emerald-600',
   etat_lieux: 'bg-cyan-500',
+  rdv_telephonique: 'bg-indigo-500',
   autre: 'bg-gray-500',
 };
 
