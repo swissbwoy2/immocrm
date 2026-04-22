@@ -65,7 +65,11 @@ export default function MigrateDocuments() {
   };
 
   return (
-    <div className="container max-w-4xl py-8">
+    <div className="container max-w-4xl py-8 relative">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
+      </div>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

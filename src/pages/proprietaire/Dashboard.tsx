@@ -238,7 +238,11 @@ export default function ProprietaireDashboard() {
 
   return (
     <PullToRefresh onRefresh={handleRefresh} className="flex-1 overflow-y-auto relative">
-      <FloatingParticles count={10} className="fixed inset-0 pointer-events-none z-0 opacity-20" />
+      <FloatingParticles count={6} className="fixed inset-0 pointer-events-none z-0 opacity-15" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
+      </div>
       
       <div className="relative z-10 p-4 md:p-8">
         {/* Header */}

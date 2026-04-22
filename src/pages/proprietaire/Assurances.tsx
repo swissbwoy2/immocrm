@@ -55,7 +55,11 @@ export default function Assurances() {
   if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
 
   return (
-    <div className="p-4 md:p-8">
+    <div className="p-4 md:p-8 relative">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
+      </div>
       <PremiumPageHeader title="Assurances" subtitle={`${assurances.length} police(s)`} icon={Shield} action={<Button onClick={() => setShowAddDialog(true)}><Plus className="w-4 h-4 mr-2" />Nouvelle assurance</Button>} />
       <AddAssuranceDialog open={showAddDialog} onClose={() => setShowAddDialog(false)} onSuccess={loadData} />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
