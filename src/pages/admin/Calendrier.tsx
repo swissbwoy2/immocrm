@@ -311,7 +311,7 @@ export default function AdminCalendrier() {
 
       toast.success('Événement créé avec succès');
       setShowEventForm(false);
-      loadData();
+      loadData(true);
     } catch (error: any) {
       console.error('Error creating event:', error);
       toast.error('Erreur lors de la création de l\'événement');
