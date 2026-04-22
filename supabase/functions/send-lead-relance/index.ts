@@ -354,25 +354,24 @@ serve(async (req) => {
     // Limit to 3 leads per invocation to avoid CPU timeout
     const limitedIds = lead_ids.slice(0, 3);
 
-    // Get SMTP config: prefer the logged-in user's config, fallback to info@immo-rama.ch
-    let { data: emailConfig } = await supabase
+    // Get SMTP config: prefer the logged-in user's config, keep agency fallback ready
+    const { data: userEmailConfig } = await supabase
       .from('email_configurations')
       .select('*')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .maybeSingle();
 
-    if (!emailConfig) {
-      const { data: fallback } = await supabase
-        .from('email_configurations')
-        .select('*')
-        .eq('email_from', 'info@immo-rama.ch')
-        .eq('is_active', true)
-        .maybeSingle();
-      emailConfig = fallback;
-    }
+    const { data: agencyFallbackConfig } = await supabase
+      .from('email_configurations')
+      .select('*')
+      .eq('email_from', 'info@immo-rama.ch')
+      .eq('is_active', true)
+      .maybeSingle();
 
-    if (!emailConfig) {
+    let activeEmailConfig = userEmailConfig ?? agencyFallbackConfig;
+
+    if (!activeEmailConfig) {
       throw new Error('Aucune configuration SMTP trouvée pour cet utilisateur (ni de fallback info@immo-rama.ch).');
     }
 
@@ -389,25 +388,32 @@ serve(async (req) => {
     // Fetch random offres from DB
     const offres = await fetchRandomOffres(supabase);
 
-    // Setup SMTP
-    const port = emailConfig.smtp_port || 465;
-    const useTLS = port === 465;
+    const createSmtpClient = (config: any) => {
+      const port = config.smtp_port || 465;
+      const useTLS = port === 465;
 
-    smtpClient = new SMTPClient({
-      connection: {
-        hostname: emailConfig.smtp_host,
-        port,
-        tls: useTLS,
-        auth: {
-          username: emailConfig.smtp_user,
-          password: emailConfig.smtp_password,
+      return new SMTPClient({
+        connection: {
+          hostname: config.smtp_host,
+          port,
+          tls: useTLS,
+          auth: {
+            username: config.smtp_user,
+            password: config.smtp_password,
+          },
         },
-      },
-    });
+      });
+    };
 
-    const fromAddress = emailConfig.display_name
-      ? `${emailConfig.display_name} <${emailConfig.email_from}>`
-      : emailConfig.email_from;
+    const getFromAddress = (config: any) => config.display_name
+      ? `${config.display_name} <${config.email_from}>`
+      : config.email_from;
+
+    const isSmtpAuthError = (message: string) =>
+      /535|invalid login or password|authentication|auth failed/i.test(message);
+
+    smtpClient = createSmtpClient(activeEmailConfig);
+    let fromAddress = getFromAddress(activeEmailConfig);
 
     let sentCount = 0;
     let errorCount = 0;
@@ -423,12 +429,36 @@ serve(async (req) => {
         const subject = `${prenom}, tu as déjà trouvé ton futur logement ?`;
         const html = generateMarketingEmail(prenom, localite, budget, offres);
 
-        await smtpClient.send({
-          from: fromAddress,
-          to: lead.email,
-          subject,
-          html,
-        });
+        try {
+          await smtpClient.send({
+            from: fromAddress,
+            to: lead.email,
+            subject,
+            html,
+          });
+        } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          const canFallback = !!agencyFallbackConfig && activeEmailConfig.id !== agencyFallbackConfig.id;
+
+          if (!canFallback || !isSmtpAuthError(errorMessage)) {
+            throw err;
+          }
+
+          console.warn(`SMTP auth failed for ${activeEmailConfig.email_from}, retrying with agency fallback info@immo-rama.ch`);
+
+          try { await smtpClient.close(); } catch (_) { /* ignore */ }
+
+          activeEmailConfig = agencyFallbackConfig;
+          smtpClient = createSmtpClient(activeEmailConfig);
+          fromAddress = getFromAddress(activeEmailConfig);
+
+          await smtpClient.send({
+            from: fromAddress,
+            to: lead.email,
+            subject,
+            html,
+          });
+        }
 
         await supabase
           .from('leads')
