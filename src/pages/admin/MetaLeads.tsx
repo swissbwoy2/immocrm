@@ -305,7 +305,11 @@ export default function MetaLeads() {
             {filtered.length} lead{filtered.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => setShowImportDialog(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Importer CSV
+          </Button>
           <Button variant="outline" size="sm" disabled={syncing || checkingPageId} onClick={handlePreCheck}>
             <Download className={`h-4 w-4 mr-2 ${syncing || checkingPageId ? 'animate-spin' : ''}`} />
             {syncing ? 'Import en cours...' : checkingPageId ? 'Vérification...' : 'Synchroniser Meta'}
@@ -355,6 +359,50 @@ export default function MetaLeads() {
           </Button>
         </div>
       </div>
+
+      {/* Import CSV Dialog */}
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-primary" />
+              Importer un CSV
+            </DialogTitle>
+            <DialogDescription>
+              Format Wix accepté. Les doublons (par email) sont ignorés.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="border-2 border-dashed rounded-lg p-6 text-center">
+              <Input
+                type="file"
+                accept=".csv"
+                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                className="mx-auto"
+              />
+              {importFile && (
+                <div className="mt-2 flex items-center gap-2 justify-center text-sm text-muted-foreground">
+                  <FileTextIcon className="h-4 w-4" />
+                  {importFile.name}
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => { setShowImportDialog(false); setImportFile(null); }}
+              disabled={importing}
+            >
+              Annuler
+            </Button>
+            <Button onClick={handleImportCSV} disabled={!importFile || importing} className="gap-2">
+              {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {importing ? 'Import…' : 'Importer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
