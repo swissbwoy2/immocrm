@@ -30,13 +30,52 @@ interface Props {
   confirmingApptId: string | null;
 }
 
-const QualBadge = ({ ok, label }: { ok: boolean; label: string }) => (
-  <div className={cn(
-    "flex items-center gap-1.5 text-xs px-2 py-1 rounded-md",
-    ok ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400" : "bg-rose-500/15 text-rose-700 dark:text-rose-400"
-  )}>
-    {ok ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldX className="h-3.5 w-3.5" />}
-    {label}
+const formatStatutEmploi = (v: string | null): string => {
+  if (!v) return "";
+  const map: Record<string, string> = {
+    salarie: "Salarié",
+    salarié: "Salarié",
+    independant: "Indépendant",
+    indépendant: "Indépendant",
+    etudiant: "Étudiant",
+    étudiant: "Étudiant",
+    retraite: "Retraité",
+    retraité: "Retraité",
+    sans_emploi: "Sans emploi",
+    autre: "Autre",
+  };
+  return map[v.toLowerCase()] || v;
+};
+
+const formatPermis = (v: string | null): string => {
+  if (!v) return "";
+  if (["B", "C", "G", "L", "F", "N"].includes(v)) return `Permis ${v}`;
+  if (v.toLowerCase() === "suisse") return "Suisse";
+  return v;
+};
+
+type Tone = "ok" | "warn" | "ko" | "neutral";
+const toneClasses: Record<Tone, string> = {
+  ok: "text-emerald-600 dark:text-emerald-400",
+  warn: "text-amber-600 dark:text-amber-400",
+  ko: "text-rose-600 dark:text-rose-400",
+  neutral: "text-muted-foreground",
+};
+
+const ToneIcon = ({ tone }: { tone: Tone }) => {
+  if (tone === "ok") return <ShieldCheck className={cn("h-3.5 w-3.5", toneClasses.ok)} />;
+  if (tone === "ko") return <ShieldX className={cn("h-3.5 w-3.5", toneClasses.ko)} />;
+  if (tone === "warn") return <Circle className={cn("h-3.5 w-3.5", toneClasses.warn)} />;
+  return <Circle className={cn("h-3.5 w-3.5", toneClasses.neutral)} />;
+};
+
+const FormRow = ({ label, value, tone }: { label: string; value: React.ReactNode; tone?: Tone }) => (
+  <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
+    <span className="text-muted-foreground">{label}</span>
+    <span className={cn("font-medium break-words inline-flex items-center gap-1.5", tone && toneClasses[tone])}>
+      {tone && <ToneIcon tone={tone} />}
+      <span>{value}</span>
+    </span>
   </div>
 );
 
