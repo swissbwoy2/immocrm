@@ -405,7 +405,7 @@ export default function AdminCalendrier() {
       if (error) throw error;
 
       toast.success('Visite supprimée');
-      loadData();
+      loadData(true);
     } catch (error: any) {
       console.error('Error deleting visite:', error);
       toast.error('Erreur lors de la suppression de la visite');
