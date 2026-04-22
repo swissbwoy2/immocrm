@@ -1,137 +1,57 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { toast } from "sonner";
-import { 
-  PremiumTable, 
-  PremiumTableHeader, 
-  PremiumTableRow, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableRow 
-} from "@/components/premium/PremiumTable";
-import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
-import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  CheckCircle, 
-  Circle, 
-  Trash2, 
-  MessageSquare, 
-  Download,
-  Mail,
-  MapPin,
-  Wallet,
-  Phone,
-  User,
-  ShieldCheck,
-  ShieldX,
-  Zap,
-  Send,
-  Loader2,
-  Upload,
-  FileText as FileTextIcon,
-  Target,
-  UserPlus,
-} from "lucide-react";
-import { ClientTypeBadge } from "@/components/ClientTypeBadge";
-import { getLeadSource, LEAD_SOURCE_FILTER_OPTIONS, type LeadSourceKey } from "@/lib/lead-source";
-
-type Lead = {
-  id: string;
-  email: string;
-  prenom: string | null;
-  nom: string | null;
-  telephone: string | null;
-  localite: string | null;
-  budget: string | null;
-  statut_emploi: string | null;
-  permis_nationalite: string | null;
-  poursuites: boolean | null;
-  a_garant: boolean | null;
-  is_qualified: boolean | null;
-  source: string | null;
-  utm_source: string | null;
-  utm_medium: string | null;
-  utm_campaign: string | null;
-  utm_content: string | null;
-  utm_term: string | null;
-  created_at: string | null;
-  contacted: boolean | null;
-  notes: string | null;
-  formulaire: string | null;
-  type_recherche: string | null;
-};
+import { Loader2, Send, Upload, Zap, FileText as FileTextIcon } from "lucide-react";
+import { getLeadSource, type LeadSourceKey } from "@/lib/lead-source";
+import { LeadsHero, type ViewMode } from "@/components/admin/leads/LeadsHero";
+import { LeadsKpiStrip } from "@/components/admin/leads/LeadsKpiStrip";
+import { LeadsFilters, type PeriodFilter } from "@/components/admin/leads/LeadsFilters";
+import { LeadsHotCarousel, type HotItem } from "@/components/admin/leads/LeadsHotCarousel";
+import { LeadsPipeline } from "@/components/admin/leads/LeadsPipeline";
+import { LeadsListView } from "@/components/admin/leads/LeadsListView";
+import { LeadsCardsView } from "@/components/admin/leads/LeadsCardsView";
+import { LeadDetailSheet } from "@/components/admin/leads/LeadDetailSheet";
+import { useLeadsRealtime } from "@/hooks/useLeadsRealtime";
+import type { Lead, PhoneAppointment, PipelineStage } from "@/components/admin/leads/types";
 
 export default function Leads() {
   const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<"all" | "contacted" | "not_contacted" | "qualified" | "not_qualified" | "to_evaluate">("all");
-  const [formulaireFilter, setFormulaireFilter] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
+  useLeadsRealtime();
+
+  // ---------- View / filters ----------
+  const [view, setView] = useState<ViewMode>("pipeline");
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState<LeadSourceKey | "all">("all");
+  const [period, setPeriod] = useState<PeriodFilter>("all");
+  const [hot, setHot] = useState(false);
+
+  // ---------- UI state ----------
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [notes, setNotes] = useState("");
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [showRelanceDialog, setShowRelanceDialog] = useState(false);
   const [relanceSending, setRelanceSending] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
   const [invitingLeadId, setInvitingLeadId] = useState<string | null>(null);
+  const [confirmingApptId, setConfirmingApptId] = useState<string | null>(null);
 
-  const { data: leads = [], isLoading } = useQuery({
-    queryKey: ["leads", filter, formulaireFilter, typeFilter],
+  // ---------- Data ----------
+  const { data: leads = [] } = useQuery({
+    queryKey: ["leads"],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from("leads")
         .select("*")
-        .order("created_at", { ascending: false });
-
-      if (filter === "contacted") {
-        query = query.eq("contacted", true);
-      } else if (filter === "not_contacted") {
-        query = query.or("contacted.is.null,contacted.eq.false");
-      } else if (filter === "qualified") {
-        query = query.eq("is_qualified", true);
-      } else if (filter === "not_qualified") {
-        query = query.eq("is_qualified", false);
-      } else if (filter === "to_evaluate") {
-        query = query.is("is_qualified", null);
-      }
-
-      if (formulaireFilter !== "all") {
-        query = query.eq("formulaire", formulaireFilter);
-      }
-
-      if (typeFilter !== "all") {
-        if (typeFilter === "none") {
-          query = query.is("type_recherche", null);
-        } else {
-          query = query.eq("type_recherche", typeFilter);
-        }
-      }
-
-      const { data, error } = await query;
+        .order("created_at", { ascending: false })
+        .limit(15000);
       if (error) throw error;
       return data as Lead[];
     },
@@ -145,75 +65,113 @@ export default function Leads() {
         .select("id, lead_id, slot_start, slot_end, status, prospect_email")
         .order("slot_start", { ascending: true });
       if (error) throw error;
-      return data as any[];
+      return data as PhoneAppointment[];
     },
   });
 
-  const apptByLeadId = new Map<string, any>();
-  const apptByEmail = new Map<string, any>();
-  phoneAppointments.forEach((a) => {
-    if (a.lead_id) apptByLeadId.set(a.lead_id, a);
-    if (a.prospect_email) apptByEmail.set(a.prospect_email.toLowerCase(), a);
-  });
-
-  const [confirmingApptId, setConfirmingApptId] = useState<string | null>(null);
-  const confirmAppointment = async (appointmentId: string) => {
-    setConfirmingApptId(appointmentId);
-    try {
-      const { error } = await supabase.functions.invoke('confirm-phone-appointment', {
-        body: { appointment_id: appointmentId },
-      });
-      if (error) throw error;
-      toast.success('Rendez-vous confirmé. Email + invitation envoyés au prospect.');
-      queryClient.invalidateQueries({ queryKey: ["lead-phone-appointments"] });
-    } catch (e: any) {
-      console.error(e);
-      toast.error('Erreur: ' + (e.message || 'confirmation échouée'));
-    } finally {
-      setConfirmingApptId(null);
-    }
-  };
-
-  const { data: formulaires = [] } = useQuery({
-    queryKey: ["lead-formulaires"],
+  const { data: clientEmailRows = [] } = useQuery({
+    queryKey: ["clients-email-set"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("leads")
-        .select("formulaire")
-        .not("formulaire", "is", null);
+        .from("profiles")
+        .select("email")
+        .not("email", "is", null)
+        .limit(15000);
       if (error) throw error;
-      const unique = [...new Set((data as any[]).map((d) => d.formulaire).filter(Boolean))];
-      return unique as string[];
+      return (data as any[]).map((r) => ({ email: r.email as string }));
     },
   });
 
-  const toggleContacted = useMutation({
-    mutationFn: async ({ id, contacted }: { id: string; contacted: boolean }) => {
-      const { error } = await supabase
-        .from("leads")
-        .update({ contacted })
-        .eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      toast.success("Statut mis à jour");
-    },
-  });
+  const apptByLeadId = useMemo(() => {
+    const m = new Map<string, PhoneAppointment>();
+    phoneAppointments.forEach((a) => { if (a.lead_id) m.set(a.lead_id, a); });
+    return m;
+  }, [phoneAppointments]);
 
-  const updateNotes = useMutation({
-    mutationFn: async ({ id, notes }: { id: string; notes: string }) => {
-      const { error } = await supabase
-        .from("leads")
-        .update({ notes })
-        .eq("id", id);
+  const apptByEmail = useMemo(() => {
+    const m = new Map<string, PhoneAppointment>();
+    phoneAppointments.forEach((a) => { if (a.prospect_email) m.set(a.prospect_email.toLowerCase(), a); });
+    return m;
+  }, [phoneAppointments]);
+
+  const clientEmails = useMemo(() => {
+    const s = new Set<string>();
+    clientEmailRows.forEach((c) => c.email && s.add(c.email.toLowerCase()));
+    return s;
+  }, [clientEmailRows]);
+
+  const getApptForLead = (l: Lead): PhoneAppointment | null =>
+    apptByLeadId.get(l.id) || (l.email ? apptByEmail.get(l.email.toLowerCase()) || null : null);
+
+  // ---------- Filtering ----------
+  const filteredLeads = useMemo(() => {
+    let out = leads;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      out = out.filter((l) =>
+        (l.email || "").toLowerCase().includes(q) ||
+        (l.prenom || "").toLowerCase().includes(q) ||
+        (l.nom || "").toLowerCase().includes(q) ||
+        (l.telephone || "").toLowerCase().includes(q) ||
+        (l.localite || "").toLowerCase().includes(q)
+      );
+    }
+    if (typeFilter !== "all") out = out.filter((l) => l.type_recherche === typeFilter);
+    if (sourceFilter !== "all") out = out.filter((l) => getLeadSource(l).key === sourceFilter);
+    if (period !== "all") {
+      const days = period === "7d" ? 7 : 30;
+      const cutoff = Date.now() - days * 86400_000;
+      out = out.filter((l) => l.created_at && new Date(l.created_at).getTime() >= cutoff);
+    }
+    if (hot) {
+      const in48h = Date.now() + 48 * 3600_000;
+      out = out.filter((l) => {
+        const a = getApptForLead(l);
+        const rdvSoon = a && new Date(a.slot_start).getTime() <= in48h && a.status !== "annule";
+        const qualifiedCold = l.is_qualified === true && !l.contacted;
+        return rdvSoon || qualifiedCold;
+      });
+    }
+    return out;
+  }, [leads, search, typeFilter, sourceFilter, period, hot, apptByLeadId, apptByEmail]);
+
+  // ---------- KPIs ----------
+  const kpis = useMemo(() => {
+    const total = filteredLeads.length;
+    const rdvLeads = filteredLeads.filter((l) => !!getApptForLead(l));
+    const rdvCount = rdvLeads.length;
+    const rdvConfirmed = rdvLeads.filter((l) => getApptForLead(l)?.status === "confirme").length;
+    const qualified = filteredLeads.filter((l) => l.is_qualified === true).length;
+    const contacted = filteredLeads.filter((l) => l.contacted).length;
+    return { total, rdvCount, rdvConfirmed, qualified, contacted };
+  }, [filteredLeads, apptByLeadId, apptByEmail]);
+
+  // ---------- Hot items ----------
+  const hotItems: HotItem[] = useMemo(() => {
+    const items: HotItem[] = [];
+    const in24h = Date.now() + 24 * 3600_000;
+    const now = Date.now();
+    leads.forEach((l) => {
+      const a = getApptForLead(l);
+      if (a && new Date(a.slot_start).getTime() <= in24h && new Date(a.slot_start).getTime() >= now && a.status !== "annule") {
+        items.push({ lead: l, reason: "rdv_today", appt: a });
+      } else if (l.is_qualified === true && !l.contacted) {
+        const created = l.created_at ? new Date(l.created_at).getTime() : 0;
+        if (now - created > 48 * 3600_000) {
+          items.push({ lead: l, reason: "qualified_cold" });
+        }
+      }
+    });
+    return items.slice(0, 12);
+  }, [leads, apptByLeadId, apptByEmail]);
+
+  // ---------- Mutations & actions ----------
+  const updateLead = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<Lead> }) => {
+      const { error } = await supabase.from("leads").update(data).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      setSelectedLead(null);
-      toast.success("Notes enregistrées");
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leads"] }),
   });
 
   const deleteLead = useMutation({
@@ -227,50 +185,45 @@ export default function Leads() {
     },
   });
 
-  const sendRelance = async (leadIds: string[]) => {
-    setRelanceSending(true);
+  const handleMoveStage = (lead: Lead, stage: PipelineStage) => {
+    const data: Partial<Lead> = {};
+    switch (stage) {
+      case "nouveau": data.contacted = false; data.is_qualified = null; break;
+      case "rdv": data.contacted = false; break;
+      case "contacte": data.contacted = true; data.is_qualified = null; break;
+      case "qualifie": data.contacted = true; data.is_qualified = true; break;
+      case "client": data.contacted = true; data.is_qualified = true; break;
+    }
+    updateLead.mutate({ id: lead.id, data });
+    toast.success(`Déplacé vers ${stage}`);
+  };
+
+  const confirmAppointment = async (appointmentId: string) => {
+    setConfirmingApptId(appointmentId);
     try {
-      let totalSent = 0;
-      let totalErrors = 0;
-      const batchSize = 3;
-
-      for (let i = 0; i < leadIds.length; i += batchSize) {
-        const batch = leadIds.slice(i, i + batchSize);
-        const { data, error } = await supabase.functions.invoke('send-lead-relance', {
-          body: { lead_ids: batch },
-        });
-        if (error) throw error;
-        if (!data.success) throw new Error(data.error);
-        totalSent += data.sent || 0;
-        totalErrors += data.errors || 0;
-      }
-
-      toast.success(`${totalSent} email(s) de relance envoyé(s) !`, {
-        description: totalErrors > 0 ? `${totalErrors} erreur(s)` : undefined,
+      const { error } = await supabase.functions.invoke("confirm-phone-appointment", {
+        body: { appointment_id: appointmentId },
       });
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      setShowRelanceDialog(false);
-    } catch (err) {
-      toast.error("Erreur lors de l'envoi", {
-        description: err instanceof Error ? err.message : "Erreur inconnue",
-      });
+      if (error) throw error;
+      toast.success("Rendez-vous confirmé. Email + invitation envoyés.");
+      queryClient.invalidateQueries({ queryKey: ["lead-phone-appointments"] });
+    } catch (e: any) {
+      toast.error("Erreur : " + (e.message || "confirmation échouée"));
     } finally {
-      setRelanceSending(false);
+      setConfirmingApptId(null);
     }
   };
 
   const sendSingleRelance = async (lead: Lead) => {
-    toast.loading(`Envoi à ${lead.prenom || lead.email}...`, { id: `relance-${lead.id}` });
+    toast.loading(`Envoi à ${lead.prenom || lead.email}…`, { id: `relance-${lead.id}` });
     try {
-      const { data, error } = await supabase.functions.invoke('send-lead-relance', {
-        body: { lead_ids: [lead.id] },
-      });
+      const { data, error } = await supabase.functions.invoke("send-lead-relance", { body: { lead_ids: [lead.id] } });
       if (error) throw error;
-      if (!data.success) throw new Error(data.error);
+      if (!data?.success) throw new Error(data?.error || "Erreur");
       toast.success(`Email envoyé à ${lead.prenom || lead.email}`, { id: `relance-${lead.id}` });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
     } catch (err) {
-      toast.error(`Erreur pour ${lead.email}`, { 
+      toast.error(`Erreur pour ${lead.email}`, {
         id: `relance-${lead.id}`,
         description: err instanceof Error ? err.message : "Erreur inconnue",
       });
@@ -278,50 +231,31 @@ export default function Leads() {
   };
 
   const inviteLeadAsClient = async (lead: Lead) => {
-    if (!lead.email) {
-      toast.error("Email manquant pour ce lead");
-      return;
-    }
-    const isLouer = (lead.type_recherche || '').toLowerCase() === 'location' || (lead.type_recherche || '').toLowerCase() === 'louer';
-    const isAcheter = (lead.type_recherche || '').toLowerCase() === 'achat' || (lead.type_recherche || '').toLowerCase() === 'acheter';
-    const typeRecherche = isLouer ? 'Louer' : isAcheter ? 'Acheter' : 'Louer';
-
-    if (!confirm(
-      `Inviter ${lead.prenom || ''} ${lead.nom || ''} (${lead.email}) en tant que client ?\n\n` +
-      `• Compte créé en mode invitation légère (à activer manuellement)\n` +
-      `• Type : ${typeRecherche}\n` +
-      (typeRecherche === 'Louer' ? `• Facture AbaNinja de 300 CHF générée automatiquement\n` : '') +
-      `• Email d'invitation envoyé`
-    )) return;
-
+    if (!lead.email) return toast.error("Email manquant");
+    const isLouer = (lead.type_recherche || "").toLowerCase() === "location" || (lead.type_recherche || "").toLowerCase() === "louer";
+    const isAcheter = (lead.type_recherche || "").toLowerCase() === "achat" || (lead.type_recherche || "").toLowerCase() === "acheter";
+    const typeRecherche = isLouer ? "Louer" : isAcheter ? "Acheter" : "Louer";
+    if (!confirm(`Inviter ${lead.prenom || ""} ${lead.nom || ""} (${lead.email}) en tant que client ?`)) return;
     setInvitingLeadId(lead.id);
-    toast.loading(`Invitation de ${lead.prenom || lead.email}...`, { id: `invite-${lead.id}` });
+    toast.loading(`Invitation de ${lead.prenom || lead.email}…`, { id: `invite-${lead.id}` });
     try {
-      const { data, error } = await supabase.functions.invoke('invite-client', {
+      const { data, error } = await supabase.functions.invoke("invite-client", {
         body: {
           email: lead.email,
-          prenom: lead.prenom || lead.email.split('@')[0],
-          nom: lead.nom || '',
-          telephone: lead.telephone || '',
+          prenom: lead.prenom || lead.email.split("@")[0],
+          nom: lead.nom || "",
+          telephone: lead.telephone || "",
           invitationLegere: true,
           typeRecherche,
         },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-
-      // Marquer le lead comme contacté
-      await supabase.from('leads').update({ contacted: true }).eq('id', lead.id);
-
-      toast.success(`Client invité : ${lead.email}`, {
-        id: `invite-${lead.id}`,
-        description: typeRecherche === 'Louer'
-          ? 'Facture AbaNinja créée. Compte à activer manuellement après paiement.'
-          : 'Compte à activer manuellement.',
-      });
+      await supabase.from("leads").update({ contacted: true }).eq("id", lead.id);
+      toast.success(`Client invité : ${lead.email}`, { id: `invite-${lead.id}` });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
     } catch (err) {
-      toast.error(`Erreur invitation`, {
+      toast.error("Erreur invitation", {
         id: `invite-${lead.id}`,
         description: err instanceof Error ? err.message : "Erreur inconnue",
       });
@@ -330,37 +264,39 @@ export default function Leads() {
     }
   };
 
+  const sendRelanceAll = async () => {
+    const ids = filteredLeads.filter((l) => !l.contacted).map((l) => l.id);
+    setRelanceSending(true);
+    try {
+      let totalSent = 0, totalErrors = 0;
+      for (let i = 0; i < ids.length; i += 3) {
+        const batch = ids.slice(i, i + 3);
+        const { data, error } = await supabase.functions.invoke("send-lead-relance", { body: { lead_ids: batch } });
+        if (error) throw error;
+        if (!data.success) throw new Error(data.error);
+        totalSent += data.sent || 0;
+        totalErrors += data.errors || 0;
+      }
+      toast.success(`${totalSent} email(s) envoyé(s)`, { description: totalErrors > 0 ? `${totalErrors} erreur(s)` : undefined });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      setShowRelanceDialog(false);
+    } catch (err) {
+      toast.error("Erreur lors de l'envoi", { description: err instanceof Error ? err.message : "Erreur inconnue" });
+    } finally {
+      setRelanceSending(false);
+    }
+  };
+
   const exportCSV = () => {
-    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Localité", "Budget", "Statut Emploi", "Permis", "Poursuites", "Garant", "Qualifié", "Date", "Contacté", "Source", "Source brute", "UTM Source", "UTM Medium", "UTM Campaign", "UTM Content", "UTM Term", "Notes"];
-    const rows = displayedLeads.map((lead) => [
-      lead.prenom || "",
-      lead.nom || "",
-      lead.email,
-      lead.telephone || "",
-      lead.localite || "",
-      lead.budget || "",
-      lead.statut_emploi || "",
-      lead.permis_nationalite || "",
-      lead.poursuites ? "Oui" : "Non",
-      lead.a_garant ? "Oui" : "Non",
-      lead.is_qualified ? "Oui" : "Non",
-      lead.created_at ? format(new Date(lead.created_at), "dd/MM/yyyy HH:mm") : "",
-      lead.contacted ? "Oui" : "Non",
-      getLeadSource(lead).label,
-      lead.source || "",
-      lead.utm_source || "",
-      lead.utm_medium || "",
-      lead.utm_campaign || "",
-      lead.utm_content || "",
-      lead.utm_term || "",
-      lead.notes || "",
+    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Localité", "Budget", "Type", "Qualifié", "Date", "Contacté", "Source", "Notes"];
+    const rows = filteredLeads.map((l) => [
+      l.prenom || "", l.nom || "", l.email, l.telephone || "", l.localite || "", l.budget || "",
+      l.type_recherche || "", l.is_qualified ? "Oui" : "Non",
+      l.created_at ? format(new Date(l.created_at), "dd/MM/yyyy HH:mm") : "",
+      l.contacted ? "Oui" : "Non", getLeadSource(l).label, (l.notes || "").replace(/\n/g, " "),
     ]);
-
-    const csvContent = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${cell}"`).join(","))
-      .join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = `leads_${format(new Date(), "yyyy-MM-dd")}.csv`;
@@ -372,674 +308,167 @@ export default function Leads() {
     setImporting(true);
     try {
       const text = await importFile.text();
-      const cleanText = text.replace(/^\uFEFF/, '');
-      const lines = cleanText.split('\n').filter(l => l.trim());
-      if (lines.length < 2) throw new Error('CSV vide');
-
-      const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
-      
-      const nameIdx = headers.findIndex(h => h.includes('nom') && !h.includes('famille'));
-      const emailIdx = headers.findIndex(h => h.includes('e-mail') || h.includes('email') || h.includes('adresse e'));
-      const sourceIdx = headers.findIndex(h => h === 'source');
-      const formulaireIdx = headers.findIndex(h => h.includes('formulaire'));
-      const phoneIdx = headers.findIndex(h => h.includes('téléphone') || h.includes('telephone') || h.includes('phone'));
-
-      if (emailIdx === -1) throw new Error('Colonne email non trouvée');
-
-      const parsedLeads = [];
+      const cleanText = text.replace(/^\uFEFF/, "");
+      const lines = cleanText.split("\n").filter((l) => l.trim());
+      if (lines.length < 2) throw new Error("CSV vide");
+      const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, "").toLowerCase());
+      const nameIdx = headers.findIndex((h) => h.includes("nom") && !h.includes("famille"));
+      const emailIdx = headers.findIndex((h) => h.includes("e-mail") || h.includes("email") || h.includes("adresse e"));
+      const sourceIdx = headers.findIndex((h) => h === "source");
+      const formulaireIdx = headers.findIndex((h) => h.includes("formulaire"));
+      const phoneIdx = headers.findIndex((h) => h.includes("téléphone") || h.includes("telephone") || h.includes("phone"));
+      if (emailIdx === -1) throw new Error("Colonne email non trouvée");
+      const parsed = [];
       for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        const cols = lines[i].split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
         const email = cols[emailIdx]?.trim();
-        if (!email || !email.includes('@')) continue;
-
-        const fullName = nameIdx >= 0 ? cols[nameIdx] : '';
-        const parts = fullName.split(' ');
-        const prenom = parts[0] || '';
-        const nom = parts.slice(1).join(' ') || '';
-
-        parsedLeads.push({
-          email,
-          prenom: prenom || null,
-          nom: nom || null,
+        if (!email || !email.includes("@")) continue;
+        const fullName = nameIdx >= 0 ? cols[nameIdx] : "";
+        const parts = fullName.split(" ");
+        parsed.push({
+          email, prenom: parts[0] || null, nom: parts.slice(1).join(" ") || null,
           telephone: phoneIdx >= 0 ? cols[phoneIdx] || null : null,
-          source: sourceIdx >= 0 ? cols[sourceIdx] || 'CSV Import' : 'CSV Import',
+          source: sourceIdx >= 0 ? cols[sourceIdx] || "CSV Import" : "CSV Import",
           formulaire: formulaireIdx >= 0 ? cols[formulaireIdx] || null : null,
         });
       }
-
-      const { data, error } = await supabase.functions.invoke('import-leads-csv', {
-        body: { leads: parsedLeads, formulaire_name: importFile.name },
-      });
-
+      const { data, error } = await supabase.functions.invoke("import-leads-csv", { body: { leads: parsed, formulaire_name: importFile.name } });
       if (error) throw error;
-      
-      toast.success(`${data.inserted} leads importés`, {
-        description: data.duplicates > 0 ? `${data.duplicates} doublons ignorés` : undefined,
-      });
-      
+      toast.success(`${data.inserted} leads importés`, { description: data.duplicates > 0 ? `${data.duplicates} doublons ignorés` : undefined });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
-      queryClient.invalidateQueries({ queryKey: ["lead-formulaires"] });
       setShowImportDialog(false);
       setImportFile(null);
     } catch (err) {
-      toast.error("Erreur d'import", {
-        description: err instanceof Error ? err.message : "Erreur inconnue",
-      });
+      toast.error("Erreur d'import", { description: err instanceof Error ? err.message : "Erreur inconnue" });
     } finally {
       setImporting(false);
     }
   };
 
-  const displayedLeads = sourceFilter === "all"
-    ? leads
-    : leads.filter((l) => getLeadSource(l).key === sourceFilter);
-
-  const notContactedLeads = displayedLeads.filter((l) => !l.contacted);
-  const notContactedCount = notContactedLeads.length;
-  const qualifiedCount = displayedLeads.filter((l) => l.is_qualified).length;
-
-  const chercheurCount = displayedLeads.filter((l) => l.type_recherche === 'Louer' || l.type_recherche === 'Acheter').length;
-  const vendeurCount = displayedLeads.filter((l) => l.type_recherche === 'Vendre').length;
+  const openLead = (l: Lead) => { setSelectedLead(l); setSheetOpen(true); };
+  const notContactedCount = filteredLeads.filter((l) => !l.contacted).length;
 
   return (
     <div className="relative space-y-6">
       <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
+        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/5 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
       </div>
-      <PremiumPageHeader
-        title="Leads Shortlist"
-        subtitle={`${displayedLeads.length} leads • ${chercheurCount} chercheurs • ${vendeurCount} vendeurs • ${qualifiedCount} qualifiés • ${notContactedCount} non contactés`}
+
+      <div className="relative space-y-5">
+        <LeadsHero
+          view={view}
+          setView={setView}
+          total={kpis.total}
+          rdvCount={kpis.rdvCount}
+          hotCount={hotItems.length}
+          notContactedCount={notContactedCount}
+          onRelance={() => setShowRelanceDialog(true)}
+          onImport={() => setShowImportDialog(true)}
+          onExport={exportCSV}
+        />
+
+        <LeadsKpiStrip
+          total={kpis.total}
+          rdvCount={kpis.rdvCount}
+          rdvConfirmed={kpis.rdvConfirmed}
+          qualifiedCount={kpis.qualified}
+          contactedCount={kpis.contacted}
+          onFilterRdv={() => setHot(true)}
+          onFilterQualified={() => setTypeFilter("all")}
+        />
+
+        <LeadsHotCarousel
+          hot={hotItems}
+          onConfirm={confirmAppointment}
+          confirmingId={confirmingApptId}
+          onSelect={openLead}
+        />
+
+        <LeadsFilters
+          search={search} setSearch={setSearch}
+          typeFilter={typeFilter} setTypeFilter={setTypeFilter}
+          sourceFilter={sourceFilter} setSourceFilter={setSourceFilter}
+          period={period} setPeriod={setPeriod}
+          hot={hot} setHot={setHot}
+          resultCount={filteredLeads.length}
+        />
+
+        {view === "pipeline" && (
+          <LeadsPipeline
+            leads={filteredLeads}
+            appointments={apptByLeadId}
+            apptByEmail={apptByEmail}
+            clientEmails={clientEmails}
+            onSelect={openLead}
+            onMove={handleMoveStage}
+          />
+        )}
+        {view === "list" && (
+          <LeadsListView
+            leads={filteredLeads}
+            appointments={apptByLeadId}
+            apptByEmail={apptByEmail}
+            onSelect={openLead}
+          />
+        )}
+        {view === "cards" && (
+          <LeadsCardsView
+            leads={filteredLeads}
+            appointments={apptByLeadId}
+            apptByEmail={apptByEmail}
+            onSelect={openLead}
+          />
+        )}
+      </div>
+
+      <LeadDetailSheet
+        lead={selectedLead}
+        appt={selectedLead ? getApptForLead(selectedLead) : null}
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        onUpdateNotes={(id, notes) => updateLead.mutate({ id, data: { notes } })}
+        onToggleContacted={(l) => updateLead.mutate({ id: l.id, data: { contacted: !l.contacted } })}
+        onSendRelance={sendSingleRelance}
+        onInviteAsClient={inviteLeadAsClient}
+        onConfirmAppt={confirmAppointment}
+        onDelete={(l) => deleteLead.mutate(l.id)}
+        invitingLeadId={invitingLeadId}
+        confirmingApptId={confirmingApptId}
       />
-
-      <div className="flex flex-col sm:flex-row gap-4 justify-between">
-        <div className="flex gap-2 flex-wrap">
-          <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Filtrer par statut" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les leads</SelectItem>
-              <SelectItem value="qualified">Qualifiés uniquement</SelectItem>
-              <SelectItem value="not_qualified">Non qualifiés</SelectItem>
-              <SelectItem value="to_evaluate">À évaluer</SelectItem>
-              <SelectItem value="not_contacted">Non contactés</SelectItem>
-              <SelectItem value="contacted">Contactés</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Type de lead" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les types</SelectItem>
-              <SelectItem value="Louer">🔑 Location</SelectItem>
-              <SelectItem value="Acheter">🏠 Achat</SelectItem>
-              <SelectItem value="Vendre">🏢 Vendeur</SelectItem>
-              <SelectItem value="none">❓ À classifier</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as LeadSourceKey | "all")}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Source d'acquisition" />
-            </SelectTrigger>
-            <SelectContent>
-              {LEAD_SOURCE_FILTER_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {formulaires.length > 0 && (
-            <Select value={formulaireFilter} onValueChange={setFormulaireFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Filtrer par formulaire" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les formulaires</SelectItem>
-                {formulaires.map((f) => (
-                  <SelectItem key={f} value={f}>{f}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-
-        <div className="flex gap-2">
-          <Button 
-            variant="default" 
-            onClick={() => setShowRelanceDialog(true)} 
-            className="gap-2"
-            disabled={notContactedCount === 0}
-          >
-            <Zap className="h-4 w-4" />
-            Relancer tous ({notContactedCount})
-          </Button>
-          <Button variant="outline" onClick={() => setShowImportDialog(true)} className="gap-2">
-            <Upload className="h-4 w-4" />
-            Importer CSV
-          </Button>
-          <Button variant="outline" onClick={exportCSV} className="gap-2">
-            <Download className="h-4 w-4" />
-            Exporter CSV
-          </Button>
-        </div>
-      </div>
-
-      <PremiumTable>
-        <PremiumTableHeader>
-          <TableRow>
-            <TableHead>Contact</TableHead>
-            <TableHead>Source</TableHead>
-            <TableHead>Recherche</TableHead>
-            <TableHead>Qualification</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Statut</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </PremiumTableHeader>
-        <TableBody>
-          {isLoading ? (
-            <TableRow>
-              <TableCell colSpan={7} className="text-center py-8">
-                Chargement...
-              </TableCell>
-            </TableRow>
-          ) : displayedLeads.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                Aucun lead pour le moment
-              </TableCell>
-            </TableRow>
-          ) : (
-            displayedLeads.map((lead) => {
-              const sourceInfo = getLeadSource(lead);
-              return (
-              <PremiumTableRow key={lead.id}>
-                <TableCell>
-                  <div className="space-y-1">
-                    {(lead.prenom || lead.nom) && (
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{lead.prenom} {lead.nom}</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{lead.email}</span>
-                    </div>
-                    {lead.telephone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{lead.telephone}</span>
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    <Badge variant="outline" className={sourceInfo.badgeClass}>
-                      {sourceInfo.label}
-                    </Badge>
-                    {lead.utm_campaign && (
-                      <div className="text-[10px] text-muted-foreground truncate max-w-[160px]" title={lead.utm_campaign}>
-                        {lead.utm_campaign}
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-2">
-                    <ClientTypeBadge typeRecherche={lead.type_recherche} size="sm" />
-                    {lead.localite && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{lead.localite}</span>
-                      </div>
-                    )}
-                    {lead.budget && (
-                      <div className="flex items-center gap-2">
-                        <Wallet className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{lead.budget}</span>
-                      </div>
-                    )}
-                    {lead.formulaire && (
-                      <div className="flex items-center gap-2">
-                        <Target className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground">{lead.formulaire}</span>
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="space-y-2">
-                    {lead.is_qualified === true ? (
-                      <Badge className="bg-green-500/20 text-green-600 border-green-500/30 gap-1">
-                        <ShieldCheck className="h-3 w-3" />
-                        Qualifié
-                      </Badge>
-                    ) : lead.is_qualified === false ? (
-                      <Badge variant="destructive" className="gap-1">
-                        <ShieldX className="h-3 w-3" />
-                        Non qualifié
-                      </Badge>
-                    ) : (
-                      <Badge variant="secondary" className="gap-1">
-                        <Circle className="h-3 w-3" />
-                        À évaluer
-                      </Badge>
-                    )}
-                    {lead.type_recherche !== 'Vendre' && (
-                      <div className="text-xs text-muted-foreground space-y-0.5">
-                        {lead.type_recherche === 'Acheter' ? (
-                          <>
-                            {lead.budget && <div>💰 Budget : {lead.budget}</div>}
-                          </>
-                        ) : (
-                          <>
-                            {lead.statut_emploi && (
-                              <div>{lead.statut_emploi === 'salarie' ? '✓ Salarié' : '✗ Non salarié'}</div>
-                            )}
-                            {lead.permis_nationalite && (
-                              <div>{['B', 'C', 'Suisse'].includes(lead.permis_nationalite) ? '✓' : '✗'} Permis {lead.permis_nationalite}</div>
-                            )}
-                            {lead.poursuites !== null && (
-                              <div>
-                                {lead.poursuites ? (
-                                  lead.a_garant ? '✓ Poursuites + Garant' : '✗ Poursuites sans garant'
-                                ) : '✓ Pas de poursuites'}
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {lead.created_at && (
-                    <span className="text-sm text-muted-foreground">
-                      {format(new Date(lead.created_at), "dd MMM yyyy HH:mm", { locale: fr })}
-                    </span>
-                  )}
-                  {(() => {
-                    const appt = apptByLeadId.get(lead.id) || (lead.email && apptByEmail.get(lead.email.toLowerCase()));
-                    if (!appt) return null;
-                    const isConfirmed = appt.status === 'confirme';
-                    return (
-                      <div className="mt-1">
-                        <Badge
-                          variant="outline"
-                          className={isConfirmed
-                            ? "bg-success/15 text-success border-success/40"
-                            : "bg-warning/15 text-warning border-warning/40"}
-                        >
-                          📞 {format(new Date(appt.slot_start), "EEE d MMM HH'h'mm", { locale: fr })}
-                          {isConfirmed ? " · confirmé" : " · en attente"}
-                        </Badge>
-                      </div>
-                    );
-                  })()}
-                </TableCell>
-                <TableCell>
-                  {lead.contacted ? (
-                    <Badge variant="default" className="bg-green-500/20 text-green-600 border-green-500/30">
-                      Contacté
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">Non contacté</Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center justify-end gap-1">
-                    {(() => {
-                      const appt = apptByLeadId.get(lead.id) || (lead.email && apptByEmail.get(lead.email.toLowerCase()));
-                      if (!appt || appt.status !== 'en_attente') return null;
-                      return (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => confirmAppointment(appt.id)}
-                          disabled={confirmingApptId === appt.id}
-                          title="Confirmer le RDV téléphonique (envoie email + .ics)"
-                        >
-                          {confirmingApptId === appt.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-success" />
-                          ) : (
-                            <CheckCircle className="h-4 w-4 text-success" />
-                          )}
-                        </Button>
-                      );
-                    })()}
-                    {(lead.source === 'landing_analyse_dossier' || lead.source === 'landing_quickform' || lead.source === 'landing_quickform_achat') && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => inviteLeadAsClient(lead)}
-                        disabled={invitingLeadId === lead.id}
-                        title="Inviter comme client (création compte + facture 300 CHF si location)"
-                      >
-                        {invitingLeadId === lead.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                        ) : (
-                          <UserPlus className="h-4 w-4 text-primary" />
-                        )}
-                      </Button>
-                    )}
-                    {!lead.contacted && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => sendSingleRelance(lead)}
-                        title="Envoyer email de relance"
-                      >
-                        <Send className="h-4 w-4 text-primary" />
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => toggleContacted.mutate({ id: lead.id, contacted: !lead.contacted })}
-                      title={lead.contacted ? "Marquer non contacté" : "Marquer contacté"}
-                    >
-                      {lead.contacted ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <Circle className="h-4 w-4" />
-                      )}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setSelectedLead(lead);
-                        setNotes(lead.notes || "");
-                      }}
-                      title="Ajouter des notes"
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        if (confirm("Supprimer ce lead ?")) {
-                          deleteLead.mutate(lead.id);
-                        }
-                      }}
-                      title="Supprimer"
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </PremiumTableRow>
-              );
-            })
-          )}
-        </TableBody>
-      </PremiumTable>
-
-      {/* Notes Dialog */}
-      <Dialog open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Notes pour {selectedLead?.prenom} {selectedLead?.nom || selectedLead?.email}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {selectedLead && (() => {
-              const info = getLeadSource(selectedLead);
-              const rows: Array<[string, string | null]> = [
-                ["Source", info.label],
-                ["Campagne", selectedLead.utm_campaign],
-                ["Medium", selectedLead.utm_medium],
-                ["Contenu", selectedLead.utm_content],
-                ["Terme", selectedLead.utm_term],
-                ["Source brute", selectedLead.source],
-                ["Formulaire", selectedLead.formulaire],
-              ].filter(([, v]) => !!v) as Array<[string, string]>;
-              return (
-                <div className="rounded-md border bg-muted/30 p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Origine</span>
-                    <Badge variant="outline" className={info.badgeClass}>{info.label}</Badge>
-                  </div>
-                  <div className="grid grid-cols-[110px_1fr] gap-x-3 gap-y-1 text-xs">
-                    {rows.map(([k, v]) => (
-                      <div key={k} className="contents">
-                        <span className="text-muted-foreground">{k}</span>
-                        <span className="font-medium break-all">{v}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-            <div>
-              <label className="text-sm font-medium mb-1 block">Type de lead</label>
-              <Select 
-                value={selectedLead?.type_recherche || "none"} 
-                onValueChange={(v) => {
-                  if (selectedLead) {
-                    const newType = v === "none" ? null : v;
-                    supabase.from("leads").update({ type_recherche: newType }).eq("id", selectedLead.id).then(() => {
-                      queryClient.invalidateQueries({ queryKey: ["leads"] });
-                      setSelectedLead({ ...selectedLead, type_recherche: newType });
-                      toast.success("Type mis à jour");
-                    });
-                  }
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Louer">🔑 Location</SelectItem>
-                  <SelectItem value="Acheter">🏠 Achat</SelectItem>
-                  <SelectItem value="Vendre">🏢 Vendeur</SelectItem>
-                  <SelectItem value="none">❓ Non défini</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Ajouter des notes de suivi..."
-              rows={4}
-            />
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setSelectedLead(null)}>
-              Annuler
-            </Button>
-            <Button
-              onClick={() => {
-                if (selectedLead) {
-                  updateNotes.mutate({ id: selectedLead.id, notes });
-                }
-              }}
-            >
-              Enregistrer
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Relance Dialog */}
       <Dialog open={showRelanceDialog} onOpenChange={setShowRelanceDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Zap className="h-5 w-5 text-primary" />
-              Relance marketing — {notContactedCount} lead(s)
-            </DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Zap className="h-5 w-5 text-primary" />Relance marketing</DialogTitle>
             <DialogDescription>
-              Un email marketing professionnel sera envoyé à tous les leads non contactés.
+              Un email marketing sera envoyé aux <strong>{notContactedCount}</strong> leads non contactés des résultats actuels.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{notContactedCount}</div>
-                <div className="text-xs text-muted-foreground">Destinataires</div>
-              </div>
-              <div className="h-10 w-px bg-border" />
-              <div className="text-sm text-muted-foreground">
-                <strong>Objet :</strong> {"{prenom}"}, tu as déjà trouvé ton futur logement ?
-              </div>
-            </div>
-
-            <div className="text-sm font-medium">Aperçu de l'email :</div>
-            <ScrollArea className="h-[400px] rounded-lg border">
-              <div className="p-4 bg-[#f4f6f9]">
-                <div className="max-w-[500px] mx-auto bg-white rounded-xl overflow-hidden shadow-sm">
-                  {/* Header */}
-                  <div className="bg-gradient-to-r from-[#1e3a5f] to-[#3b82b8] p-5">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-xl font-bold text-white">🏠 Logisorama</div>
-                        <div className="text-[10px] text-white/60 mt-0.5">by Immo-rama.ch</div>
-                      </div>
-                      <div className="text-xs text-white/80">📞 +41 76 483 91 99</div>
-                    </div>
-                  </div>
-                  {/* Content */}
-                  <div className="p-6 space-y-4">
-                    <h3 className="text-lg font-bold text-[#1e3a5f] text-center">
-                      {"{prenom}"}, tu as déjà trouvé ton futur logement ? 🤔
-                    </h3>
-                    <p className="text-xs text-gray-500 text-center leading-relaxed">
-                      On sait que la recherche d'un logement en Suisse romande, c'est <strong>un vrai parcours du combattant</strong>. Avec un taux de vacance inférieur à 1%, les bons appartements partent en quelques heures.
-                    </p>
-                    {/* Stats */}
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="bg-blue-50 rounded-lg p-3 text-center">
-                        <div className="text-lg font-bold text-[#1e3a5f]">1100+</div>
-                        <div className="text-[10px] text-gray-500 uppercase">Offres</div>
-                      </div>
-                      <div className="bg-green-50 rounded-lg p-3 text-center">
-                        <div className="text-lg font-bold text-green-700">95%</div>
-                        <div className="text-[10px] text-gray-500 uppercase">Satisfaction</div>
-                      </div>
-                      <div className="bg-yellow-50 rounded-lg p-3 text-center">
-                        <div className="text-lg font-bold text-amber-600">48h</div>
-                        <div className="text-[10px] text-gray-500 uppercase">Délai</div>
-                      </div>
-                    </div>
-                    {/* Comment ça marche */}
-                    <div className="text-center">
-                      <div className="text-sm font-bold text-[#1e3a5f] mb-2">Comment ça marche ?</div>
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div>
-                          <div className="text-xl">🔍</div>
-                          <div className="text-[10px] font-bold text-[#1e3a5f]">On cherche</div>
-                        </div>
-                        <div>
-                          <div className="text-xl">🏠</div>
-                          <div className="text-[10px] font-bold text-[#1e3a5f]">Tu visites</div>
-                        </div>
-                        <div>
-                          <div className="text-xl">🔑</div>
-                          <div className="text-[10px] font-bold text-[#1e3a5f]">Tu emménages</div>
-                        </div>
-                      </div>
-                    </div>
-                    {/* CTA */}
-                    <div className="text-center pt-2">
-                      <div className="inline-block bg-gradient-to-r from-[#1e3a5f] to-[#2d5f8a] text-white px-6 py-3 rounded-xl font-semibold text-sm">
-                        Activer ma recherche →
-                      </div>
-                    </div>
-                    {/* Offres section */}
-                    <div className="border-t pt-4">
-                      <div className="text-sm font-bold text-[#1e3a5f] text-center mb-2">📬 Offres déjà envoyées à nos clients</div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="border rounded-lg overflow-hidden">
-                          <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=300&h=120&fit=crop" alt="Apt" className="w-full h-16 object-cover" />
-                          <div className="p-2">
-                            <div className="text-xs font-bold text-[#1e3a5f]">CHF 1'850/mois</div>
-                            <div className="text-[10px] text-gray-500">📍 Lausanne • 3.5p • 72m²</div>
-                          </div>
-                        </div>
-                        <div className="border rounded-lg overflow-hidden">
-                          <img src="https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=300&h=120&fit=crop" alt="Apt" className="w-full h-16 object-cover" />
-                          <div className="p-2">
-                            <div className="text-xs font-bold text-[#1e3a5f]">CHF 2'400/mois</div>
-                            <div className="text-[10px] text-gray-500">📍 Genève • 4.5p • 95m²</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Stars */}
-                    <div className="text-center text-lg">⭐⭐⭐⭐⭐</div>
-                    {/* Signature */}
-                    <div className="border-t pt-3 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#1e3a5f] flex items-center justify-center text-white text-sm font-bold">CR</div>
-                      <div>
-                        <div className="text-xs font-bold text-[#1e3a5f]">Christ Ramazani</div>
-                        <div className="text-[10px] text-gray-500">Fondateur & CEO — Immo-rama.ch</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </ScrollArea>
-
-            {notContactedCount > 0 && (
-              <div className="text-xs text-muted-foreground">
-                💡 Les leads seront automatiquement marqués comme "contactés" après l'envoi.
-              </div>
-            )}
-          </div>
-
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRelanceDialog(false)} disabled={relanceSending}>
-              Annuler
-            </Button>
-            <Button 
-              onClick={() => sendRelance(notContactedLeads.map(l => l.id))}
-              disabled={relanceSending || notContactedCount === 0}
-              className="gap-2"
-            >
-              {relanceSending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Envoi en cours...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Envoyer à {notContactedCount} lead(s)
-                </>
-              )}
+            <Button variant="outline" onClick={() => setShowRelanceDialog(false)} disabled={relanceSending}>Annuler</Button>
+            <Button onClick={sendRelanceAll} disabled={relanceSending || notContactedCount === 0} className="gap-2">
+              {relanceSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {relanceSending ? "Envoi…" : `Envoyer à ${notContactedCount}`}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* Import CSV Dialog */}
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5 text-primary" />
-              Importer un fichier CSV
-            </DialogTitle>
-            <DialogDescription>
-              Format Wix accepté. Les doublons (même email + formulaire) seront automatiquement ignorés.
-            </DialogDescription>
+            <DialogTitle className="flex items-center gap-2"><Upload className="h-5 w-5 text-primary" />Importer un CSV</DialogTitle>
+            <DialogDescription>Format Wix accepté. Les doublons sont ignorés.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="border-2 border-dashed rounded-lg p-6 text-center">
-              <Input
-                type="file"
-                accept=".csv"
-                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                className="mx-auto"
-              />
+              <Input type="file" accept=".csv" onChange={(e) => setImportFile(e.target.files?.[0] || null)} className="mx-auto" />
               {importFile && (
                 <div className="mt-2 flex items-center gap-2 justify-center text-sm text-muted-foreground">
-                  <FileTextIcon className="h-4 w-4" />
-                  {importFile.name}
+                  <FileTextIcon className="h-4 w-4" />{importFile.name}
                 </div>
               )}
             </div>
@@ -1048,7 +477,7 @@ export default function Leads() {
             <Button variant="outline" onClick={() => { setShowImportDialog(false); setImportFile(null); }} disabled={importing}>Annuler</Button>
             <Button onClick={handleImportCSV} disabled={!importFile || importing} className="gap-2">
               {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {importing ? "Import en cours..." : "Importer"}
+              {importing ? "Import…" : "Importer"}
             </Button>
           </DialogFooter>
         </DialogContent>
