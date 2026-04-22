@@ -17,7 +17,7 @@ interface Props {
   hotCount: number;
   notContactedCount: number;
   onRelance: () => void;
-  onImport: () => void;
+  onImport?: () => void;
   onExport: () => void;
 }
 
@@ -75,9 +75,11 @@ export function LeadsHero({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onImport} className="gap-2">
-                <Upload className="h-4 w-4" /> Importer CSV
-              </DropdownMenuItem>
+              {onImport && (
+                <DropdownMenuItem onClick={onImport} className="gap-2">
+                  <Upload className="h-4 w-4" /> Importer CSV
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={onExport} className="gap-2">
                 <Download className="h-4 w-4" /> Exporter CSV
               </DropdownMenuItem>

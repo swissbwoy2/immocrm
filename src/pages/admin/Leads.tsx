@@ -5,9 +5,8 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Send, Upload, Zap, FileText as FileTextIcon } from "lucide-react";
+import { Loader2, Send, Zap } from "lucide-react";
 import { getLeadSource, type LeadSourceKey } from "@/lib/lead-source";
 import { LeadsHero, type ViewMode } from "@/components/admin/leads/LeadsHero";
 import { LeadsKpiStrip } from "@/components/admin/leads/LeadsKpiStrip";
@@ -37,9 +36,6 @@ export default function Leads() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [showRelanceDialog, setShowRelanceDialog] = useState(false);
   const [relanceSending, setRelanceSending] = useState(false);
-  const [showImportDialog, setShowImportDialog] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importing, setImporting] = useState(false);
   const [invitingLeadId, setInvitingLeadId] = useState<string | null>(null);
   const [confirmingApptId, setConfirmingApptId] = useState<string | null>(null);
 
@@ -50,6 +46,7 @@ export default function Leads() {
       const { data, error } = await supabase
         .from("leads")
         .select("*")
+        .neq("source", "Payé")
         .order("created_at", { ascending: false })
         .limit(15000);
       if (error) throw error;
@@ -303,48 +300,6 @@ export default function Leads() {
     link.click();
   };
 
-  const handleImportCSV = async () => {
-    if (!importFile) return;
-    setImporting(true);
-    try {
-      const text = await importFile.text();
-      const cleanText = text.replace(/^\uFEFF/, "");
-      const lines = cleanText.split("\n").filter((l) => l.trim());
-      if (lines.length < 2) throw new Error("CSV vide");
-      const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, "").toLowerCase());
-      const nameIdx = headers.findIndex((h) => h.includes("nom") && !h.includes("famille"));
-      const emailIdx = headers.findIndex((h) => h.includes("e-mail") || h.includes("email") || h.includes("adresse e"));
-      const sourceIdx = headers.findIndex((h) => h === "source");
-      const formulaireIdx = headers.findIndex((h) => h.includes("formulaire"));
-      const phoneIdx = headers.findIndex((h) => h.includes("téléphone") || h.includes("telephone") || h.includes("phone"));
-      if (emailIdx === -1) throw new Error("Colonne email non trouvée");
-      const parsed = [];
-      for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
-        const email = cols[emailIdx]?.trim();
-        if (!email || !email.includes("@")) continue;
-        const fullName = nameIdx >= 0 ? cols[nameIdx] : "";
-        const parts = fullName.split(" ");
-        parsed.push({
-          email, prenom: parts[0] || null, nom: parts.slice(1).join(" ") || null,
-          telephone: phoneIdx >= 0 ? cols[phoneIdx] || null : null,
-          source: sourceIdx >= 0 ? cols[sourceIdx] || "CSV Import" : "CSV Import",
-          formulaire: formulaireIdx >= 0 ? cols[formulaireIdx] || null : null,
-        });
-      }
-      const { data, error } = await supabase.functions.invoke("import-leads-csv", { body: { leads: parsed, formulaire_name: importFile.name } });
-      if (error) throw error;
-      toast.success(`${data.inserted} leads importés`, { description: data.duplicates > 0 ? `${data.duplicates} doublons ignorés` : undefined });
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      setShowImportDialog(false);
-      setImportFile(null);
-    } catch (err) {
-      toast.error("Erreur d'import", { description: err instanceof Error ? err.message : "Erreur inconnue" });
-    } finally {
-      setImporting(false);
-    }
-  };
-
   const openLead = (l: Lead) => { setSelectedLead(l); setSheetOpen(true); };
   const notContactedCount = filteredLeads.filter((l) => !l.contacted).length;
 
@@ -364,7 +319,6 @@ export default function Leads() {
           hotCount={hotItems.length}
           notContactedCount={notContactedCount}
           onRelance={() => setShowRelanceDialog(true)}
-          onImport={() => setShowImportDialog(true)}
           onExport={exportCSV}
         />
 
@@ -456,32 +410,6 @@ export default function Leads() {
         </DialogContent>
       </Dialog>
 
-      {/* Import CSV Dialog */}
-      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Upload className="h-5 w-5 text-primary" />Importer un CSV</DialogTitle>
-            <DialogDescription>Format Wix accepté. Les doublons sont ignorés.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="border-2 border-dashed rounded-lg p-6 text-center">
-              <Input type="file" accept=".csv" onChange={(e) => setImportFile(e.target.files?.[0] || null)} className="mx-auto" />
-              {importFile && (
-                <div className="mt-2 flex items-center gap-2 justify-center text-sm text-muted-foreground">
-                  <FileTextIcon className="h-4 w-4" />{importFile.name}
-                </div>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowImportDialog(false); setImportFile(null); }} disabled={importing}>Annuler</Button>
-            <Button onClick={handleImportCSV} disabled={!importFile || importing} className="gap-2">
-              {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {importing ? "Import…" : "Importer"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
