@@ -339,7 +339,7 @@ export default function AdminCalendrier() {
 
   const handleDeleteEvent = async (eventId: string) => {
     try {
-      // Handle virtual events (signature, état des lieux)
+      // Handle virtual events (signature, état des lieux, RDV téléphonique)
       if (eventId.startsWith('signature-')) {
         const candidatureId = eventId.replace('signature-', '');
         const { error } = await supabase
@@ -349,7 +349,7 @@ export default function AdminCalendrier() {
 
         if (error) throw error;
         toast.success('Date de signature supprimée');
-        loadData();
+        loadData(true);
         return;
       }
 
@@ -362,7 +362,20 @@ export default function AdminCalendrier() {
 
         if (error) throw error;
         toast.success('Date d\'état des lieux supprimée');
-        loadData();
+        loadData(true);
+        return;
+      }
+
+      if (eventId.startsWith('phone-rdv-')) {
+        const apptId = eventId.replace('phone-rdv-', '');
+        const { error } = await supabase
+          .from('lead_phone_appointments')
+          .update({ status: 'annule' })
+          .eq('id', apptId);
+
+        if (error) throw error;
+        toast.success('RDV téléphonique annulé');
+        loadData(true);
         return;
       }
 
@@ -375,7 +388,7 @@ export default function AdminCalendrier() {
       if (error) throw error;
 
       toast.success('Événement supprimé');
-      loadData();
+      loadData(true);
     } catch (error: any) {
       console.error('Error deleting event:', error);
       toast.error('Erreur lors de la suppression');
