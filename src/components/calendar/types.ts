@@ -47,6 +47,7 @@ export const eventTypeCalendarColors: Record<string, string> = {
   reunion: 'bg-purple-500',
   signature: 'bg-emerald-600',
   etat_lieux: 'bg-cyan-500',
+  rdv_telephonique: 'bg-indigo-500',
   autre: 'bg-gray-500',
 };
 
