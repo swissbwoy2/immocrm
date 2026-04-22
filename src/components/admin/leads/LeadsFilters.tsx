@@ -34,18 +34,18 @@ export function LeadsFilters({
   return (
     <div className="space-y-3">
       <div className="flex flex-col lg:flex-row gap-2">
-        <div className="relative flex-1 min-w-[240px]">
+        <div className="relative w-full lg:flex-1 lg:min-w-[240px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher nom, email, téléphone, ville…"
-            className="pl-9"
+            className="pl-9 h-11 lg:h-10"
           />
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 overflow-x-auto -mx-1 px-1 pb-1 lg:overflow-visible lg:flex-wrap scrollbar-thin">
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[150px]"><SelectValue placeholder="Type" /></SelectTrigger>
+            <SelectTrigger className="min-w-[120px] w-[120px] sm:w-[150px] flex-shrink-0 h-11 lg:h-10 text-xs sm:text-sm"><SelectValue placeholder="Type" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tous types</SelectItem>
               <SelectItem value="Louer">🔑 Location</SelectItem>
@@ -54,7 +54,7 @@ export function LeadsFilters({
             </SelectContent>
           </Select>
           <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as LeadSourceKey | "all")}>
-            <SelectTrigger className="w-[170px]"><SelectValue placeholder="Source" /></SelectTrigger>
+            <SelectTrigger className="min-w-[130px] w-[130px] sm:w-[170px] flex-shrink-0 h-11 lg:h-10 text-xs sm:text-sm"><SelectValue placeholder="Source" /></SelectTrigger>
             <SelectContent>
               {LEAD_SOURCE_FILTER_OPTIONS.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -62,7 +62,7 @@ export function LeadsFilters({
             </SelectContent>
           </Select>
           <Select value={period} onValueChange={(v) => setPeriod(v as PeriodFilter)}>
-            <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="min-w-[120px] w-[120px] sm:w-[130px] flex-shrink-0 h-11 lg:h-10 text-xs sm:text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Toutes dates</SelectItem>
               <SelectItem value="7d">7 derniers jours</SelectItem>
@@ -71,12 +71,11 @@ export function LeadsFilters({
           </Select>
           <Button
             variant={hot ? "default" : "outline"}
-            size="sm"
             onClick={() => setHot(!hot)}
-            className="gap-1"
+            className="gap-1 flex-shrink-0 h-11 lg:h-10"
           >
             <Flame className="h-4 w-4" />
-            Hot leads
+            Hot
           </Button>
         </div>
       </div>

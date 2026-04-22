@@ -91,17 +91,17 @@ export function LeadsKpiStrip({
               k.accent
             )}
           >
-            <div className="p-4 flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            <div className="p-3 sm:p-4 flex flex-col gap-1.5 sm:gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide truncate">
                   {k.label}
                 </span>
-                <div className="opacity-70">{k.icon}</div>
+                <div className="opacity-70 flex-shrink-0">{k.icon}</div>
               </div>
-              <div className="text-3xl font-bold text-foreground tabular-nums">
+              <div className="text-2xl sm:text-3xl font-bold text-foreground tabular-nums">
                 <AnimatedCounter value={k.value} decimals={k.decimals ?? 0} suffix={k.suffix} />
               </div>
-              {k.hint && <div className="text-xs text-muted-foreground">{k.hint}</div>}
+              {k.hint && <div className="text-[10px] sm:text-xs text-muted-foreground truncate">{k.hint}</div>}
             </div>
           </Card>
         </motion.div>

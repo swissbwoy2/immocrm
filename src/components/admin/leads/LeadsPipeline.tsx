@@ -45,7 +45,7 @@ function Column({
     <div
       ref={setNodeRef}
       className={cn(
-        "flex-1 min-w-[260px] rounded-xl bg-gradient-to-b border border-border/40 p-3 flex flex-col gap-3 transition-all",
+        "flex-1 min-w-[280px] sm:min-w-[260px] snap-start rounded-xl bg-gradient-to-b border border-border/40 p-3 flex flex-col gap-3 transition-all",
         gradient,
         isOver && `ring-2 ${ring}`
       )}
@@ -78,14 +78,22 @@ export function LeadsPipeline({ leads, appointments, apptByEmail, clientEmails, 
   const getAppt = (l: Lead): PhoneAppointment | null =>
     appointments.get(l.id) || (l.email ? apptByEmail.get(l.email.toLowerCase()) || null : null);
 
+  // RDV is "active" if pending/confirmed AND slot not more than 24h in the past
+  const isApptActive = (a: PhoneAppointment | null) => {
+    if (!a) return false;
+    if (a.status !== "en_attente" && a.status !== "confirme") return false;
+    const slot = new Date(a.slot_start).getTime();
+    return slot > Date.now() - 24 * 3600 * 1000;
+  };
+
   const grouped = useMemo(() => {
     const map: Record<PipelineStage, Lead[]> = {
       nouveau: [], rdv: [], contacte: [], qualifie: [], client: [],
     };
     leads.forEach((l) => {
       const isClient = !!l.email && clientEmails.has(l.email.toLowerCase());
-      const hasAppt = !!getAppt(l);
-      const s = getStage(l, hasAppt, isClient);
+      const hasActiveAppt = isApptActive(getAppt(l));
+      const s = getStage(l, hasActiveAppt, isClient);
       map[s].push(l);
     });
     return map;
@@ -98,8 +106,8 @@ export function LeadsPipeline({ leads, appointments, apptByEmail, clientEmails, 
     const lead = leads.find((l) => l.id === leadId);
     if (!lead) return;
     const isClient = !!lead.email && clientEmails.has(lead.email.toLowerCase());
-    const hasAppt = !!getAppt(lead);
-    const current = getStage(lead, hasAppt, isClient);
+    const hasActiveAppt = isApptActive(getAppt(lead));
+    const current = getStage(lead, hasActiveAppt, isClient);
     if (current === target) return;
     onMove(lead, target);
   };
@@ -107,7 +115,7 @@ export function LeadsPipeline({ leads, appointments, apptByEmail, clientEmails, 
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <ScrollArea className="w-full">
-        <div className="flex gap-3 pb-4 min-w-max">
+        <div className="flex gap-3 pb-4 min-w-max snap-x snap-mandatory">
           {STAGES.map((s) => (
             <Column
               key={s.key}

@@ -43,11 +43,11 @@ export const STAGES: { key: PipelineStage; label: string; gradient: string; ring
   { key: "client", label: "Client", gradient: "from-primary/20 to-primary/5", ring: "ring-primary/40" },
 ];
 
-export function getStage(lead: Lead, hasAppointment: boolean, isClient: boolean): PipelineStage {
+export function getStage(lead: Lead, hasActiveAppt: boolean, isClient: boolean): PipelineStage {
   if (isClient) return "client";
+  if (hasActiveAppt) return "rdv";
   if (lead.is_qualified === true) return "qualifie";
   if (lead.contacted) return "contacte";
-  if (hasAppointment) return "rdv";
   return "nouveau";
 }
 
