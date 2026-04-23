@@ -16,6 +16,7 @@ import { PremiumCalendarView } from '@/components/calendar/PremiumCalendarView';
 import { PremiumEventFilters } from '@/components/calendar/PremiumEventFilters';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
 import { PremiumDayEvents } from '@/components/calendar/PremiumDayEvents';
+import { PhoneAppointmentDetailDialog, type PhoneAppointmentRaw } from '@/components/calendar/PhoneAppointmentDetailDialog';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -58,6 +59,10 @@ export default function AdminCalendrier() {
   // Visite detail dialog
   const [selectedVisiteGroup, setSelectedVisiteGroup] = useState<any[] | null>(null);
   const [visiteDetailDialogOpen, setVisiteDetailDialogOpen] = useState(false);
+
+  // Phone appointment detail
+  const [phoneAppts, setPhoneAppts] = useState<PhoneAppointmentRaw[]>([]);
+  const [selectedPhoneApptId, setSelectedPhoneApptId] = useState<string | null>(null);
 
   // Filters
   const [filterAgent, setFilterAgent] = useState('all');
@@ -185,6 +190,7 @@ export default function AdminCalendrier() {
       setVisites(visitesRes.data || []);
       setAgents((agentsRes.data as any) || []);
       setClients((clientsRes.data as any) || []);
+      setPhoneAppts((phoneApptsRes.data as any) || []);
       
       if (!eventsRes.error && !visitesRes.error) {
         console.log(`✅ Calendrier chargé: ${(eventsRes.data || []).length + candidatureEvents.length + phoneApptEvents.length} événements, ${visitesRes.data?.length || 0} visites`);
@@ -590,9 +596,18 @@ export default function AdminCalendrier() {
             onDelete={handleDeleteEvent}
             onDeleteVisite={handleDeleteVisite}
             onVisiteGroupClick={handleVisiteGroupClick}
+            onPhoneApptClick={(id) => setSelectedPhoneApptId(id)}
           />
         </div>
       </div>
+
+      {/* Phone appointment detail dialog */}
+      <PhoneAppointmentDetailDialog
+        appt={phoneAppts.find((a) => a.id === selectedPhoneApptId) || null}
+        open={!!selectedPhoneApptId}
+        onClose={() => setSelectedPhoneApptId(null)}
+        onCancelled={() => loadData(true)}
+      />
 
       {/* Event form modal */}
       <EventForm
