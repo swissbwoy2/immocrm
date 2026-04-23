@@ -22,6 +22,7 @@ interface PremiumDayEventsProps {
   onDelete?: (eventId: string) => void;
   onDeleteVisite?: (visiteId: string) => void;
   onVisiteGroupClick?: (visites: any[]) => void;
+  onPhoneApptClick?: (apptId: string) => void;
 }
 
 const statusIcons: Record<string, React.ReactNode> = {
@@ -39,7 +40,8 @@ export function PremiumDayEvents({
   onStatusChange, 
   onDelete, 
   onDeleteVisite, 
-  onVisiteGroupClick 
+  onVisiteGroupClick,
+  onPhoneApptClick,
 }: PremiumDayEventsProps) {
   if (!date) {
     return (
@@ -384,6 +386,8 @@ export function PremiumDayEvents({
               const data = item.data;
               const eventDate = new Date(data.event_date);
               const timeRemaining = getTimeRemaining(eventDate);
+              const isPhoneRdv = typeof data.id === 'string' && data.id.startsWith('phone-rdv-');
+              const phoneApptId = isPhoneRdv ? data.id.replace('phone-rdv-', '') : null;
 
               return (
                 <div
@@ -392,8 +396,12 @@ export function PremiumDayEvents({
                   className={cn(
                     'group relative rounded-xl bg-gradient-to-br from-card to-card/80 border overflow-hidden animate-fade-in',
                     'transition-all duration-300 hover:shadow-lg hover:scale-[1.01]',
-                    eventTypeColors[item.eventType]
+                    eventTypeColors[item.eventType],
+                    isPhoneRdv && onPhoneApptClick && 'cursor-pointer hover:border-indigo-500/50'
                   )}
+                  onClick={isPhoneRdv && onPhoneApptClick ? () => onPhoneApptClick(phoneApptId!) : undefined}
+                  role={isPhoneRdv && onPhoneApptClick ? 'button' : undefined}
+                  tabIndex={isPhoneRdv && onPhoneApptClick ? 0 : undefined}
                 >
                   {/* Shine effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
@@ -460,11 +468,12 @@ export function PremiumDayEvents({
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0 transition-colors"
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </AlertDialogTrigger>
-                          <AlertDialogContent>
+                          <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                             <AlertDialogHeader>
                               <AlertDialogTitle>Supprimer cet événement ?</AlertDialogTitle>
                               <AlertDialogDescription>
@@ -490,7 +499,7 @@ export function PremiumDayEvents({
                     </div>
 
                     {/* Status actions */}
-                    {onStatusChange && data.status !== 'effectue' && !data.id.startsWith('signature-') && !data.id.startsWith('etat-lieux-') && (
+                    {onStatusChange && data.status !== 'effectue' && !data.id.startsWith('signature-') && !data.id.startsWith('etat-lieux-') && !isPhoneRdv && (
                       <div className="flex gap-2 pt-3 border-t border-border/50">
                         <Button
                           size="sm"
