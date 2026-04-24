@@ -522,15 +522,22 @@ export default function AdminCalendrier() {
                 size="sm"
                 disabled={filtered.length === 0}
                 onClick={() => {
-                  const icsEvents: ICSEventData[] = filtered.map((v: any) => {
-                    const clientName = getClientName(v.client_id);
-                    const agentName = getAgentName(v.agent_id);
+                  // Regrouper les visites en double (même adresse + même date) → 1 seul .ics par visite physique
+                  const groups = groupVisitesByPhysique(filtered as any[]);
+                  const icsEvents: ICSEventData[] = groups.map(g => {
+                    const v: any = g.representative;
                     const offre = v.offres;
+                    const clientNames = g.items
+                      .map((it: any) => getClientName(it.client_id))
+                      .filter(Boolean)
+                      .join(', ');
+                    const agentName = getAgentName(v.agent_id);
+                    const suffix = g.count > 1 ? ` (${g.count} clients)` : '';
                     return {
-                      uid: `${v.id}@immocrm`,
-                      title: `Visite - ${v.adresse || offre?.adresse || 'Adresse inconnue'}`,
+                      uid: buildStableVisiteUID(v.adresse || offre?.adresse || '', v.date_visite),
+                      title: `Visite - ${v.adresse || offre?.adresse || 'Adresse inconnue'}${suffix}`,
                       description: buildVisiteICSDescription({
-                        clients: clientName || undefined,
+                        clients: clientNames || undefined,
                         agent: agentName || undefined,
                         adresse: v.adresse || offre?.adresse,
                         prix: offre?.prix ? `${Number(offre.prix).toLocaleString('fr-CH')} CHF` : undefined,
@@ -546,7 +553,7 @@ export default function AdminCalendrier() {
                     };
                   });
                   downloadMultiEventICSFile(icsEvents, `visites_${label.replace(/[^a-zA-Z]/g, '_').toLowerCase()}.ics`);
-                  toast.success(`${filtered.length} visite(s) exportée(s)`);
+                  toast.success(`${groups.length} visite(s) exportée(s)${filtered.length > groups.length ? ` (${filtered.length - groups.length} doublon(s) regroupé(s))` : ''}`);
                 }}
                 className="gap-1.5"
               >
