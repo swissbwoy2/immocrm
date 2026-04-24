@@ -20,7 +20,7 @@ import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { PremiumKPICard } from "@/components/premium/PremiumKPICard";
 import { cn } from "@/lib/utils";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { groupOffresByEnvoi } from "@/utils/visitesCalculator";
 import { Users } from "lucide-react";
 
