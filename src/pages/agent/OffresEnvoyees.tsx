@@ -369,12 +369,22 @@ export default function OffresEnvoyees() {
     return matchesSearch && matchesStatus;
   });
 
+  // Comptage des groupes (1 offre envoyée à N clients = 1 offre logique)
+  const groupOffreKey = (o: any) =>
+    `${o.agent_id || 'na'}__${(o.date_envoi || '').slice(0, 10)}__${(o.adresse || '').trim().toLowerCase()}__${o.prix ?? ''}`;
+  const offreGroupSizes = new Map<string, number>();
+  for (const o of offres) {
+    const k = groupOffreKey(o);
+    offreGroupSizes.set(k, (offreGroupSizes.get(k) || 0) + 1);
+  }
+  const uniqueGroupKeys = (arr: any[]) => new Set(arr.map(groupOffreKey)).size;
+
   const stats = {
-    total: offres.length,
+    total: uniqueGroupKeys(offres),
     demandesEnAttente: pendingPostulations.length,
-    enCours: offres.filter(o => ['interesse', 'visite_planifiee', 'visite_effectuee', 'candidature_deposee', 'demande_postulation'].includes(o.statut)).length,
-    acceptees: offres.filter(o => o.statut === 'acceptee').length,
-    refusees: offres.filter(o => o.statut === 'refusee').length,
+    enCours: uniqueGroupKeys(offres.filter(o => ['interesse', 'visite_planifiee', 'visite_effectuee', 'candidature_deposee', 'demande_postulation'].includes(o.statut))),
+    acceptees: uniqueGroupKeys(offres.filter(o => o.statut === 'acceptee')),
+    refusees: uniqueGroupKeys(offres.filter(o => o.statut === 'refusee')),
   };
 
   const toggleOfferSelection = (offerId: string) => {
@@ -735,6 +745,14 @@ export default function OffresEnvoyees() {
                             <User className="h-3.5 w-3.5" />
                             <span className="truncate">{getClientName(offre)}</span>
                           </div>
+                          {(() => {
+                            const size = offreGroupSizes.get(groupOffreKey(offre)) || 1;
+                            return size > 1 ? (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
+                                +{size - 1} autre{size - 1 > 1 ? 's' : ''} client{size - 1 > 1 ? 's' : ''}
+                              </Badge>
+                            ) : null;
+                          })()}
                           {!offre.is_own && offre.agents?.profiles && (
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/50 text-amber-600 dark:text-amber-400 bg-amber-500/10">
                               Envoyé par {offre.agents.profiles.prenom} {offre.agents.profiles.nom}
