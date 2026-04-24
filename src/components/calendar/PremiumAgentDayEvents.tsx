@@ -217,11 +217,19 @@ export function PremiumAgentDayEvents({
                   size="sm"
                   onClick={() => {
                     const icsEvents: ICSEventData[] = [];
-                    visites.forEach(v => {
+                    // Regrouper les visites multi-clients (même adresse + même date)
+                    const groups = groupVisitesByPhysique(visites as any[]);
+                    groups.forEach(g => {
+                      const v: any = g.representative;
+                      const clients = g.items
+                        .map((it: any) => it.client_profile ? `${it.client_profile.prenom} ${it.client_profile.nom}` : null)
+                        .filter(Boolean)
+                        .join(', ');
+                      const suffix = g.count > 1 ? ` (${g.count} clients)` : '';
                       icsEvents.push({
-                        uid: `${v.id}@immocrm`,
-                        title: `Visite - ${v.adresse}`,
-                        description: v.client_profile ? `${v.client_profile.prenom} ${v.client_profile.nom}` : '',
+                        uid: buildStableVisiteUID(v.adresse, v.date_visite),
+                        title: `Visite - ${v.adresse}${suffix}`,
+                        description: clients,
                         location: v.adresse,
                         startDate: toSwissTime(v.date_visite),
                       });
