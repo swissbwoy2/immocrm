@@ -2370,6 +2370,51 @@ export type Database = {
           },
         ]
       }
+      client_anonymisations: {
+        Row: {
+          adresse: string | null
+          anonymise_at: string
+          anonymise_par: string | null
+          client_id: string
+          created_at: string
+          email: string | null
+          id: string
+          motif: string | null
+          nom: string | null
+          prenom: string | null
+          telephone: string | null
+          user_id: string
+        }
+        Insert: {
+          adresse?: string | null
+          anonymise_at?: string
+          anonymise_par?: string | null
+          client_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          motif?: string | null
+          nom?: string | null
+          prenom?: string | null
+          telephone?: string | null
+          user_id: string
+        }
+        Update: {
+          adresse?: string | null
+          anonymise_at?: string
+          anonymise_par?: string | null
+          client_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          motif?: string | null
+          nom?: string | null
+          prenom?: string | null
+          telephone?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       client_candidates: {
         Row: {
           adresse: string | null
@@ -2631,6 +2676,8 @@ export type Database = {
           agent_id: string | null
           anciennete_mois: number | null
           animaux: boolean | null
+          anonymise_at: string | null
+          anonymise_motif: string | null
           apport_personnel: number | null
           autres_credits: boolean | null
           budget_max: number | null
@@ -2695,6 +2742,8 @@ export type Database = {
           agent_id?: string | null
           anciennete_mois?: number | null
           animaux?: boolean | null
+          anonymise_at?: string | null
+          anonymise_motif?: string | null
           apport_personnel?: number | null
           autres_credits?: boolean | null
           budget_max?: number | null
@@ -2759,6 +2808,8 @@ export type Database = {
           agent_id?: string | null
           anciennete_mois?: number | null
           animaux?: boolean | null
+          anonymise_at?: string | null
+          anonymise_motif?: string | null
           apport_personnel?: number | null
           autres_credits?: boolean | null
           budget_max?: number | null
@@ -6529,6 +6580,7 @@ export type Database = {
       profiles: {
         Row: {
           actif: boolean | null
+          anonymise_at: string | null
           avatar_url: string | null
           created_at: string | null
           email: string
@@ -6544,6 +6596,7 @@ export type Database = {
         }
         Insert: {
           actif?: boolean | null
+          anonymise_at?: string | null
           avatar_url?: string | null
           created_at?: string | null
           email: string
@@ -6559,6 +6612,7 @@ export type Database = {
         }
         Update: {
           actif?: boolean | null
+          anonymise_at?: string | null
           avatar_url?: string | null
           created_at?: string | null
           email?: string
