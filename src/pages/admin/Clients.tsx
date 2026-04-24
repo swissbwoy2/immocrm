@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Mail, Phone, MapPin, Calendar, Users, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield, UserX, ChevronRight, Sparkles, Filter, Home, Key, Wallet, UserPlus, Loader2, CheckSquare, X as XIcon } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield, ShieldCheck, UserX, ChevronRight, Sparkles, Filter, Home, Key, Wallet, UserPlus, Loader2, CheckSquare, X as XIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { BulkActionsBar, STATUT_LABELS as BULK_STATUT_LABELS, type BulkStatut } from "@/components/admin/clients/BulkActionsBar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -435,17 +435,17 @@ const Clients = () => {
       if (error) throw error;
 
       toast({
-        title: 'Client supprimé',
-        description: 'Le client a été supprimé avec succès',
+        title: 'Client anonymisé (RGPD)',
+        description: 'Données sensibles effacées. Nom, email et téléphone conservés pour la comptabilité.',
       });
 
       // Recharger les données
       await loadData();
     } catch (error) {
-      console.error('Error deleting client:', error);
+      console.error('Error anonymising client:', error);
       toast({
         title: 'Erreur',
-        description: 'Impossible de supprimer le client',
+        description: "Impossible d'anonymiser le client",
         variant: 'destructive',
       });
     } finally {
@@ -548,8 +548,8 @@ const Clients = () => {
         });
       }
       toast({
-        title: failed === 0 ? 'Suppression réussie' : 'Suppression partielle',
-        description: `${success} client(s) supprimé(s)${failed > 0 ? ` · ${failed} échec(s)` : ''}`,
+        title: failed === 0 ? 'Anonymisation réussie' : 'Anonymisation partielle',
+        description: `${success} client(s) anonymisé(s) (RGPD)${failed > 0 ? ` · ${failed} échec(s)` : ''}`,
         variant: failed === 0 ? 'default' : 'destructive',
       });
       await loadData();
@@ -1082,33 +1082,51 @@ const Clients = () => {
                     <Pencil className="h-3.5 w-3.5 md:h-4 md:w-4" />
                   </Button>
 
-                  {/* Bouton Supprimer */}
+                  {/* Bouton Anonymiser RGPD */}
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 md:h-8 md:w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        className="h-7 w-7 md:h-8 md:w-8 text-muted-foreground hover:text-amber-600 hover:bg-amber-500/10"
                         onClick={(e) => e.stopPropagation()}
                         disabled={deletingClientId === client.user_id}
+                        title="Anonymiser (RGPD)"
                       >
-                        <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                        <ShieldCheck className="h-3.5 w-3.5 md:h-4 md:w-4" />
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent onClick={(e) => e.stopPropagation()} className="max-w-[95vw] sm:max-w-lg">
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Supprimer ce client ?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Cette action est irréversible. Le client {profile?.prenom} {profile?.nom} et toutes ses données seront définitivement supprimés.
+                        <AlertDialogTitle className="flex items-center gap-2">
+                          <ShieldCheck className="w-5 h-5 text-amber-600" />
+                          Anonymiser ce client (RGPD) ?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription asChild>
+                          <div className="space-y-2 text-sm">
+                            <p>
+                              Conformément au <strong>droit à l'effacement</strong> (art. 17 RGPD / nLPD CH),
+                              les données personnelles sensibles de <strong>{profile?.prenom} {profile?.nom}</strong> seront effacées :
+                              dossier, situation financière, documents, conversations, mandat signé.
+                            </p>
+                            <p className="text-foreground">
+                              ✅ <strong>Conservés</strong> pour la comptabilité et les statistiques :
+                              nom, prénom, email, téléphone, factures et commissions.
+                            </p>
+                            <p className="text-amber-700 dark:text-amber-400">
+                              Le client ne pourra plus se connecter. <strong>Action irréversible.</strong>
+                            </p>
+                          </div>
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Annuler</AlertDialogCancel>
-                        <AlertDialogAction 
+                        <AlertDialogAction
                           onClick={(e) => handleDeleteClient(client.user_id, e)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          className="bg-amber-600 text-white hover:bg-amber-700"
                         >
-                          Supprimer
+                          <ShieldCheck className="w-4 h-4 mr-2" />
+                          Anonymiser
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -1507,9 +1525,25 @@ const Clients = () => {
       <AlertDialog open={bulkDeleteOpen} onOpenChange={(o) => !bulkLoading && setBulkDeleteOpen(o)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Supprimer {selectedIds.size} client(s) ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Action irréversible. Les comptes, candidatures, documents et conversations associés seront définitivement supprimés.
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-amber-600" />
+              Anonymiser {selectedIds.size} client(s) — Demande RGPD
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>
+                  Conformément au <strong>droit à l'effacement</strong> (art. 17 RGPD / nLPD CH),
+                  les données personnelles sensibles seront effacées (dossier, situation financière,
+                  documents, conversations, mandat).
+                </p>
+                <p className="text-foreground">
+                  ✅ <strong>Conservés</strong> : nom, prénom, email, téléphone — indispensables à la
+                  <strong> comptabilité</strong> (factures, commissions) et aux <strong>statistiques</strong> de l'agence.
+                </p>
+                <p className="text-amber-700 dark:text-amber-400">
+                  Les clients ne pourront plus se connecter. <strong>Action irréversible.</strong>
+                </p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1517,10 +1551,10 @@ const Clients = () => {
             <AlertDialogAction
               onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
               disabled={bulkLoading}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-amber-600 text-white hover:bg-amber-700"
             >
-              {bulkLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
-              Supprimer définitivement
+              {bulkLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
+              Anonymiser (RGPD)
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
