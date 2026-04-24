@@ -988,6 +988,7 @@ const Clients = () => {
 
             if (!profile) return null;
 
+            const isSelected = selectedIds.has(client.id);
             return (
               <div 
                 key={client.id} 
@@ -997,11 +998,33 @@ const Clients = () => {
                   "transition-all duration-500 ease-out",
                   "hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:border-primary/40 hover:-translate-y-2",
                   "animate-fade-in",
-                  !isSolvable && "border-destructive/30 hover:border-destructive/50"
+                  !isSolvable && "border-destructive/30 hover:border-destructive/50",
+                  isSelected && "ring-2 ring-primary border-primary/60 bg-primary/5"
                 )}
                 style={{ animationDelay: `${Math.min(index * 50, 400)}ms` }}
-                onClick={() => navigate(`/admin/clients/${client.id}`)}
+                onClick={() => {
+                  if (selectionMode) {
+                    toggleSelect(client.id);
+                  } else {
+                    navigate(`/admin/clients/${client.id}`);
+                  }
+                }}
               >
+                {selectionMode && (
+                  <div
+                    className="absolute top-3 left-3 z-20 h-7 w-7 rounded-md bg-background/90 backdrop-blur border border-border shadow-sm flex items-center justify-center"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSelect(client.id);
+                    }}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelect(client.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
                 {/* Animated glow border on hover */}
                 <div className={cn(
                   "absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none",
