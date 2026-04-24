@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { AddToCalendarButton } from './AddToCalendarButton';
 import { downloadMultiEventICSFile, buildVisiteICSDescription, type ICSEventData } from '@/utils/generateICS';
+import { buildStableVisiteUID, groupVisitesByPhysique } from '@/utils/visitesCalculator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
