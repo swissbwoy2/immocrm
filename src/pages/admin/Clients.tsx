@@ -100,6 +100,12 @@ const Clients = () => {
   const [invitingClientId, setInvitingClientId] = useState<string | null>(null);
   const [offresToday, setOffresToday] = useState<Map<string, number>>(new Map());
   const [docConfirmations, setDocConfirmations] = useState<Set<string>>(new Set());
+  // Multi-sélection
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkStatutTarget, setBulkStatutTarget] = useState<BulkStatut | null>(null);
   const [displayCount, setDisplayCount] = useState(50);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
