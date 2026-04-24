@@ -141,10 +141,11 @@ const Clients = () => {
     try {
       setLoading(true);
 
-      // Load clients
+      // Load clients (exclure anonymisés RGPD par défaut — restent en base pour stats/comptabilité)
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select('*')
+        .is('anonymise_at', null)
         .order('created_at', { ascending: false })
         .limit(15000);
 
