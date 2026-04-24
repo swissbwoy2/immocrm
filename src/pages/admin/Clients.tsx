@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Mail, Phone, MapPin, Calendar, Users, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield, UserX, ChevronRight, Sparkles, Filter, Home, Key, Wallet, UserPlus, Loader2 } from "lucide-react";
+import { Mail, Phone, MapPin, Calendar, Users, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield, UserX, ChevronRight, Sparkles, Filter, Home, Key, Wallet, UserPlus, Loader2, CheckSquare, X as XIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkActionsBar, STATUT_LABELS as BULK_STATUT_LABELS, type BulkStatut } from "@/components/admin/clients/BulkActionsBar";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { useNavigate } from "react-router-dom";
@@ -98,6 +100,12 @@ const Clients = () => {
   const [invitingClientId, setInvitingClientId] = useState<string | null>(null);
   const [offresToday, setOffresToday] = useState<Map<string, number>>(new Map());
   const [docConfirmations, setDocConfirmations] = useState<Set<string>>(new Set());
+  // Multi-sélection
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkStatutTarget, setBulkStatutTarget] = useState<BulkStatut | null>(null);
   const [displayCount, setDisplayCount] = useState(50);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -503,6 +511,82 @@ const Clients = () => {
     }
   };
 
+  // ============= Multi-sélection =============
+  const toggleSelect = (clientId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(clientId)) next.delete(clientId);
+      else next.add(clientId);
+      return next;
+    });
+  };
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    const targets = clients.filter((c) => ids.includes(c.id));
+    if (targets.length === 0) return;
+
+    setBulkLoading(true);
+    let success = 0;
+    let failed = 0;
+    const BATCH = 5;
+    try {
+      for (let i = 0; i < targets.length; i += BATCH) {
+        const slice = targets.slice(i, i + BATCH);
+        const results = await Promise.allSettled(
+          slice.map((c) => supabase.functions.invoke('delete-client', { body: { userId: c.user_id } }))
+        );
+        results.forEach((r) => {
+          if (r.status === 'fulfilled' && !r.value.error) success++;
+          else failed++;
+        });
+      }
+      toast({
+        title: failed === 0 ? 'Suppression réussie' : 'Suppression partielle',
+        description: `${success} client(s) supprimé(s)${failed > 0 ? ` · ${failed} échec(s)` : ''}`,
+        variant: failed === 0 ? 'default' : 'destructive',
+      });
+      await loadData();
+      exitSelectionMode();
+      setBulkDeleteOpen(false);
+    } catch (error: any) {
+      console.error('Bulk delete error:', error);
+      toast({ title: 'Erreur', description: error.message || 'Suppression échouée', variant: 'destructive' });
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkChangeStatut = async (statut: BulkStatut) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkLoading(true);
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({ statut, date_changement_statut: new Date().toISOString() } as any)
+        .in('id', ids);
+      if (error) throw error;
+      toast({
+        title: 'Statut mis à jour',
+        description: `${ids.length} client(s) → ${BULK_STATUT_LABELS[statut]}`,
+      });
+      await loadData();
+      exitSelectionMode();
+      setBulkStatutTarget(null);
+    } catch (error: any) {
+      console.error('Bulk statut error:', error);
+      toast({ title: 'Erreur', description: error.message || 'Mise à jour échouée', variant: 'destructive' });
+    } finally {
+      setBulkLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -532,6 +616,15 @@ const Clients = () => {
           badge="Administration"
           action={
             <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant={selectionMode ? "secondary" : "outline"}
+                onClick={() => (selectionMode ? exitSelectionMode() : setSelectionMode(true))}
+                disabled={clients.length === 0}
+              >
+                {selectionMode ? <XIcon className="w-4 h-4 mr-1 md:mr-2" /> : <CheckSquare className="w-4 h-4 mr-1 md:mr-2" />}
+                <span className="hidden sm:inline">{selectionMode ? 'Annuler' : 'Sélectionner'}</span>
+              </Button>
               <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="sm" disabled={clients.length === 0 || deleting}>
@@ -895,6 +988,7 @@ const Clients = () => {
 
             if (!profile) return null;
 
+            const isSelected = selectedIds.has(client.id);
             return (
               <div 
                 key={client.id} 
@@ -904,11 +998,33 @@ const Clients = () => {
                   "transition-all duration-500 ease-out",
                   "hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:border-primary/40 hover:-translate-y-2",
                   "animate-fade-in",
-                  !isSolvable && "border-destructive/30 hover:border-destructive/50"
+                  !isSolvable && "border-destructive/30 hover:border-destructive/50",
+                  isSelected && "ring-2 ring-primary border-primary/60 bg-primary/5"
                 )}
                 style={{ animationDelay: `${Math.min(index * 50, 400)}ms` }}
-                onClick={() => navigate(`/admin/clients/${client.id}`)}
+                onClick={() => {
+                  if (selectionMode) {
+                    toggleSelect(client.id);
+                  } else {
+                    navigate(`/admin/clients/${client.id}`);
+                  }
+                }}
               >
+                {selectionMode && (
+                  <div
+                    className="absolute top-3 left-3 z-20 h-7 w-7 rounded-md bg-background/90 backdrop-blur border border-border shadow-sm flex items-center justify-center"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSelect(client.id);
+                    }}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelect(client.id)}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
                 {/* Animated glow border on hover */}
                 <div className={cn(
                   "absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none",
@@ -1376,6 +1492,62 @@ const Clients = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <BulkActionsBar
+        visible={selectionMode}
+        selectedCount={selectedIds.size}
+        totalVisible={sortedClients.length}
+        loading={bulkLoading}
+        onSelectAll={() => setSelectedIds(new Set(sortedClients.map((c) => c.id)))}
+        onClear={() => setSelectedIds(new Set())}
+        onCancel={exitSelectionMode}
+        onDelete={() => setBulkDeleteOpen(true)}
+        onChangeStatut={(s) => setBulkStatutTarget(s)}
+      />
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={(o) => !bulkLoading && setBulkDeleteOpen(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer {selectedIds.size} client(s) ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Action irréversible. Les comptes, candidatures, documents et conversations associés seront définitivement supprimés.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkLoading}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
+              disabled={bulkLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {bulkLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              Supprimer définitivement
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!bulkStatutTarget} onOpenChange={(o) => !bulkLoading && !o && setBulkStatutTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Passer {selectedIds.size} client(s) au statut « {bulkStatutTarget ? BULK_STATUT_LABELS[bulkStatutTarget] : ''} » ?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Le statut sera mis à jour pour tous les clients sélectionnés. La date de changement de statut est enregistrée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkLoading}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); if (bulkStatutTarget) handleBulkChangeStatut(bulkStatutTarget); }}
+              disabled={bulkLoading}
+            >
+              {bulkLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
