@@ -456,7 +456,7 @@ export function PremiumAgentDayEvents({
                         {/* Add to Calendar */}
                         <AddToCalendarButton
                           event={{
-                            uid: `${firstVisite.id}@immocrm`,
+                            uid: buildStableVisiteUID(firstVisite.adresse, firstVisite.date_visite),
                             title: `Visite - ${firstVisite.adresse}`,
                             description: buildVisiteICSDescription({
                               clients: group.map((v: any) => {
