@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
 import { downloadMultiEventICSFile, buildVisiteICSDescription, type ICSEventData } from '@/utils/generateICS';
+import { buildStableVisiteUID, groupVisitesByPhysique } from '@/utils/visitesCalculator';
 import { AddressLink } from '@/components/AddressLink';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -825,7 +826,7 @@ export default function AgentVisites() {
             <div className="flex items-center gap-2">
               <AddToCalendarButton
                 event={{
-                  uid: `${visite.id}@immocrm`,
+                  uid: buildStableVisiteUID(visite.adresse, visite.date_visite),
                   title: `Visite${visite.est_deleguee ? ' déléguée' : ''} - ${visite.adresse}`,
                   description: buildVisiteICSDescription({
                     clients: `${visite.client_profile?.prenom || ''} ${visite.client_profile?.nom || ''}`.trim(),
@@ -1200,13 +1201,23 @@ export default function AgentVisites() {
                       size="sm"
                       disabled={filtered.length === 0}
                       onClick={() => {
-                        const icsEvents: ICSEventData[] = filtered.map((v: any) => ({
-                          uid: `${v.id}@immocrm`,
-                          title: `Visite - ${v.adresse}`,
-                          description: v.client_profile ? `${v.client_profile.prenom} ${v.client_profile.nom}` : '',
-                          location: v.adresse || '',
-                          startDate: new Date(v.date_visite),
-                        }));
+                        // Regrouper les visites multi-clients (même adresse + même date)
+                        const groups = groupVisitesByPhysique(filtered as any[]);
+                        const icsEvents: ICSEventData[] = groups.map(g => {
+                          const v: any = g.representative;
+                          const clients = g.items
+                            .map((it: any) => it.client_profile ? `${it.client_profile.prenom} ${it.client_profile.nom}` : null)
+                            .filter(Boolean)
+                            .join(', ');
+                          const suffix = g.count > 1 ? ` (${g.count} clients)` : '';
+                          return {
+                            uid: buildStableVisiteUID(v.adresse, v.date_visite),
+                            title: `Visite - ${v.adresse}${suffix}`,
+                            description: clients,
+                            location: v.adresse || '',
+                            startDate: new Date(v.date_visite),
+                          };
+                        });
                         downloadMultiEventICSFile(icsEvents, `visites_${label.replace(/[^a-zA-Z]/g, '_').toLowerCase()}.ics`);
                       }}
                       className="gap-1.5"
@@ -1667,7 +1678,7 @@ export default function AgentVisites() {
             )}
             <AddToCalendarButton
               event={{
-                uid: selectedVisite?.id ? `${selectedVisite.id}@immocrm` : undefined,
+                uid: selectedVisite?.adresse && selectedVisite?.date_visite ? buildStableVisiteUID(selectedVisite.adresse, selectedVisite.date_visite) : undefined,
                 title: `Visite - ${selectedVisite?.adresse}`,
                 description: buildVisiteICSDescription({
                   clients: `${selectedVisite?.client_profile?.prenom || ''} ${selectedVisite?.client_profile?.nom || ''}`.trim(),
