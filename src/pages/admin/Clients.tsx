@@ -511,6 +511,82 @@ const Clients = () => {
     }
   };
 
+  // ============= Multi-sélection =============
+  const toggleSelect = (clientId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(clientId)) next.delete(clientId);
+      else next.add(clientId);
+      return next;
+    });
+  };
+
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    const targets = clients.filter((c) => ids.includes(c.id));
+    if (targets.length === 0) return;
+
+    setBulkLoading(true);
+    let success = 0;
+    let failed = 0;
+    const BATCH = 5;
+    try {
+      for (let i = 0; i < targets.length; i += BATCH) {
+        const slice = targets.slice(i, i + BATCH);
+        const results = await Promise.allSettled(
+          slice.map((c) => supabase.functions.invoke('delete-client', { body: { userId: c.user_id } }))
+        );
+        results.forEach((r) => {
+          if (r.status === 'fulfilled' && !r.value.error) success++;
+          else failed++;
+        });
+      }
+      toast({
+        title: failed === 0 ? 'Suppression réussie' : 'Suppression partielle',
+        description: `${success} client(s) supprimé(s)${failed > 0 ? ` · ${failed} échec(s)` : ''}`,
+        variant: failed === 0 ? 'default' : 'destructive',
+      });
+      await loadData();
+      exitSelectionMode();
+      setBulkDeleteOpen(false);
+    } catch (error: any) {
+      console.error('Bulk delete error:', error);
+      toast({ title: 'Erreur', description: error.message || 'Suppression échouée', variant: 'destructive' });
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleBulkChangeStatut = async (statut: BulkStatut) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setBulkLoading(true);
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({ statut, date_changement_statut: new Date().toISOString() } as any)
+        .in('id', ids);
+      if (error) throw error;
+      toast({
+        title: 'Statut mis à jour',
+        description: `${ids.length} client(s) → ${BULK_STATUT_LABELS[statut]}`,
+      });
+      await loadData();
+      exitSelectionMode();
+      setBulkStatutTarget(null);
+    } catch (error: any) {
+      console.error('Bulk statut error:', error);
+      toast({ title: 'Erreur', description: error.message || 'Mise à jour échouée', variant: 'destructive' });
+    } finally {
+      setBulkLoading(false);
+    }
+  };
 
   if (loading) {
     return (
