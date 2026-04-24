@@ -745,6 +745,14 @@ export default function OffresEnvoyees() {
                             <User className="h-3.5 w-3.5" />
                             <span className="truncate">{getClientName(offre)}</span>
                           </div>
+                          {(() => {
+                            const size = offreGroupSizes.get(groupOffreKey(offre)) || 1;
+                            return size > 1 ? (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
+                                +{size - 1} autre{size - 1 > 1 ? 's' : ''} client{size - 1 > 1 ? 's' : ''}
+                              </Badge>
+                            ) : null;
+                          })()}
                           {!offre.is_own && offre.agents?.profiles && (
                             <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-500/50 text-amber-600 dark:text-amber-400 bg-amber-500/10">
                               Envoyé par {offre.agents.profiles.prenom} {offre.agents.profiles.nom}
