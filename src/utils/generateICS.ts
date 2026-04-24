@@ -217,3 +217,64 @@ export async function sendCalendarInvite(
     return false;
   }
 }
+
+/**
+ * ============================================================
+ * GROUPED VISIT ICS — single .ics event for N clients
+ * ============================================================
+ */
+import { buildStableVisiteUID } from './visitesCalculator';
+
+export interface GroupedVisiteICSInput {
+  adresse: string;
+  date_visite: string; // ISO
+  duration_min?: number;
+  agent_name?: string;
+  prix?: string | number;
+  pieces?: number | string;
+  surface?: number | string;
+  etage?: number | string;
+  notes?: string;
+  lien_annonce?: string;
+  description?: string;
+  clients: Array<{ nom?: string; prenom?: string; telephone?: string | null; email?: string | null }>;
+}
+
+export function buildGroupedVisiteICSEvent(input: GroupedVisiteICSInput): ICSEventData {
+  const start = new Date(input.date_visite);
+  const end = new Date(start.getTime() + (input.duration_min || 30) * 60_000);
+
+  const clientsList = input.clients
+    .filter(Boolean)
+    .map(c => {
+      const name = `${c.prenom || ''} ${c.nom || ''}`.trim() || 'Client';
+      const tel = c.telephone ? ` 📞 ${c.telephone}` : '';
+      return `• ${name}${tel}`;
+    })
+    .join('\n');
+
+  const clientsLabel = `${input.clients.length} client${input.clients.length > 1 ? 's' : ''}`;
+  const headline = buildVisiteICSDescription({
+    clients: clientsLabel,
+    agent: input.agent_name,
+    adresse: input.adresse,
+    prix: typeof input.prix === 'number' ? `CHF ${input.prix.toLocaleString()}/mois` : input.prix as string | undefined,
+    pieces: input.pieces,
+    surface: input.surface,
+    etage: input.etage,
+    notes: input.notes,
+    lien_annonce: input.lien_annonce,
+    description: input.description,
+  });
+
+  const description = `${headline}\n\n👥 Clients :\n${clientsList}`;
+
+  return {
+    title: `Visite — ${input.adresse}${input.clients.length > 1 ? ` (${input.clients.length} clients)` : ''}`,
+    description,
+    location: input.adresse,
+    startDate: start,
+    endDate: end,
+    uid: buildStableVisiteUID(input.adresse, input.date_visite),
+  };
+}
