@@ -9,7 +9,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Trash2, X, CheckSquare, Square, Tag, Loader2 } from "lucide-react";
+import { ShieldCheck, X, CheckSquare, Square, Tag, Loader2 } from "lucide-react";
 
 export type BulkStatut = "actif" | "en_attente" | "reloge" | "stoppe" | "suspendu" | "inactif";
 
@@ -104,9 +104,9 @@ export function BulkActionsBar({
                   {loading ? (
                     <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
                   ) : (
-                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                    <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
                   )}
-                  Supprimer
+                  Anonymiser (RGPD)
                 </Button>
 
                 <Button size="sm" variant="ghost" onClick={onCancel} disabled={loading} className="h-8 w-8 p-0">
