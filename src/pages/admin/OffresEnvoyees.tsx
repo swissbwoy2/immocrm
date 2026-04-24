@@ -585,12 +585,27 @@ export default function AdminOffresEnvoyees() {
     return matchesSearch && matchesStatus && matchesAgent;
   });
 
-  // Stats (basées sur les offres chargées — totalOffres = compteur exact serveur)
-  const totalOffres = totalCount || offres.length;
-  const offresEnvoyees = offres.filter(o => o.statut === 'envoyee' || o.statut === 'vue').length;
-  const offresInteresse = offres.filter(o => ['interesse', 'visite_planifiee', 'visite_effectuee'].includes(o.statut || '')).length;
-  const candidatures = offres.filter(o => o.statut === 'candidature_deposee').length;
-  const offresAcceptees = offres.filter(o => o.statut === 'acceptee').length;
+  // Regroupement : 1 offre logique = même agent + même adresse + même prix + même jour d'envoi
+  const groupedFilteredOffres = groupOffresByEnvoi(
+    filteredOffres.map(o => ({ ...o, date_envoi: o.date_envoi || '' }))
+  );
+
+  // Stats basées sur les GROUPES (1 offre envoyée à 5 clients = 1 offre logique)
+  const allGroups = groupOffresByEnvoi(offres.map(o => ({ ...o, date_envoi: o.date_envoi || '' })));
+  const groupStatus = (g: typeof allGroups[number]) => {
+    // Statut "le plus avancé" du groupe pour les KPI
+    const statuses = g.items.map(i => i.statut || 'envoyee');
+    if (statuses.includes('acceptee')) return 'acceptee';
+    if (statuses.includes('candidature_deposee')) return 'candidature_deposee';
+    if (statuses.some(s => ['interesse', 'visite_planifiee', 'visite_effectuee'].includes(s))) return 'interesse';
+    if (statuses.includes('vue')) return 'vue';
+    return 'envoyee';
+  };
+  const totalOffres = allGroups.length;
+  const offresEnvoyees = allGroups.filter(g => ['envoyee', 'vue'].includes(groupStatus(g))).length;
+  const offresInteresse = allGroups.filter(g => groupStatus(g) === 'interesse').length;
+  const candidatures = allGroups.filter(g => groupStatus(g) === 'candidature_deposee').length;
+  const offresAcceptees = allGroups.filter(g => groupStatus(g) === 'acceptee').length;
 
   if (loading) {
     return (
