@@ -1492,6 +1492,62 @@ const Clients = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <BulkActionsBar
+        visible={selectionMode}
+        selectedCount={selectedIds.size}
+        totalVisible={sortedClients.length}
+        loading={bulkLoading}
+        onSelectAll={() => setSelectedIds(new Set(sortedClients.map((c) => c.id)))}
+        onClear={() => setSelectedIds(new Set())}
+        onCancel={exitSelectionMode}
+        onDelete={() => setBulkDeleteOpen(true)}
+        onChangeStatut={(s) => setBulkStatutTarget(s)}
+      />
+
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={(o) => !bulkLoading && setBulkDeleteOpen(o)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer {selectedIds.size} client(s) ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Action irréversible. Les comptes, candidatures, documents et conversations associés seront définitivement supprimés.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkLoading}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
+              disabled={bulkLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {bulkLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              Supprimer définitivement
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!bulkStatutTarget} onOpenChange={(o) => !bulkLoading && !o && setBulkStatutTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Passer {selectedIds.size} client(s) au statut « {bulkStatutTarget ? BULK_STATUT_LABELS[bulkStatutTarget] : ''} » ?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Le statut sera mis à jour pour tous les clients sélectionnés. La date de changement de statut est enregistrée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkLoading}>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); if (bulkStatutTarget) handleBulkChangeStatut(bulkStatutTarget); }}
+              disabled={bulkLoading}
+            >
+              {bulkLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
