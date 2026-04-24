@@ -763,43 +763,50 @@ export default function AdminOffresEnvoyees() {
               </div>
             </Card>
           ) : (
-            filteredOffres.map((offre, index) => {
+            groupedFilteredOffres.map((group, index) => {
+              const offre = group.representative;
+              const isMulti = group.count > 1;
               const statusConfig = STATUS_CONFIG[offre.statut || 'envoyee'] || STATUS_CONFIG.envoyee;
-              
+
               return (
-                <Card 
-                  key={offre.id} 
+                <Card
+                  key={group.key}
                   className={cn(
-                    "group relative overflow-hidden transition-all duration-300 cursor-pointer",
-                    "hover:shadow-lg hover:-translate-y-0.5",
+                    "group relative overflow-hidden transition-all duration-300",
+                    "hover:shadow-lg",
                     "border-l-4",
                     statusConfig.borderColor
                   )}
-                  onClick={() => handleOpenOffreDetail(offre)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && handleOpenOffreDetail(offre)}
                   style={{ animationDelay: `${index * 30}ms` }}
                 >
-                  {/* Shine effect on hover */}
                   <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                   </div>
 
-                  <div className="relative p-4 md:p-6">
+                  <div
+                    className="relative p-4 md:p-6 cursor-pointer"
+                    onClick={() => handleOpenOffreDetail(offre)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === 'Enter' && handleOpenOffreDetail(offre)}
+                  >
                     <div className="flex flex-col gap-4">
-                      {/* Header avec statut et timeline */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-3 flex-wrap">
                           <h3 className="text-lg font-semibold group-hover:text-primary transition-colors">
                             {offre.titre || offre.adresse}
                           </h3>
                           {getStatusBadge(offre.statut)}
+                          {isMulti && (
+                            <Badge variant="secondary" className="gap-1 bg-primary/10 text-primary border-primary/20">
+                              <Users className="w-3 h-3" />
+                              {group.count} clients
+                            </Badge>
+                          )}
                         </div>
                         <OfferTimeline currentStatut={offre.statut} />
                       </div>
-                      
-                      {/* Infos principales */}
+
                       <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                         <span className="flex items-center gap-1.5">
                           <MapPin className="w-4 h-4 text-primary/70" />
@@ -811,15 +818,10 @@ export default function AdminOffresEnvoyees() {
                             {offre.type_bien}
                           </span>
                         )}
-                        {offre.pieces && (
-                          <span>{offre.pieces} pièces</span>
-                        )}
-                        {offre.surface && (
-                          <span>{offre.surface} m²</span>
-                        )}
+                        {offre.pieces && <span>{offre.pieces} pièces</span>}
+                        {offre.surface && <span>{offre.surface} m²</span>}
                       </div>
 
-                      {/* Prix, Agent, Client */}
                       <div className="flex flex-wrap items-center gap-4 text-sm">
                         <span className="font-bold text-primary text-base">
                           CHF {offre.prix.toLocaleString()}/mois
@@ -828,10 +830,12 @@ export default function AdminOffresEnvoyees() {
                           <User className="w-4 h-4" />
                           {getAgentName(offre.agent_id)}
                         </span>
-                        <span className="flex items-center gap-1.5 text-muted-foreground">
-                          <User className="w-4 h-4" />
-                          {getClientName(offre.client_id)}
-                        </span>
+                        {!isMulti && (
+                          <span className="flex items-center gap-1.5 text-muted-foreground">
+                            <User className="w-4 h-4" />
+                            {getClientName(offre.client_id)}
+                          </span>
+                        )}
                         {offre.date_envoi && (
                           <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
                             <Calendar className="w-3 h-3" />
@@ -840,10 +844,9 @@ export default function AdminOffresEnvoyees() {
                         )}
                       </div>
 
-                      {/* Actions */}
-                      <div className="flex gap-2 pt-2 border-t border-border/50">
-                        <Button 
-                          variant="outline" 
+                      <div className="flex gap-2 pt-2 border-t border-border/50 flex-wrap">
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={(e) => handleOpenTransferDialog(offre, e)}
                           className="relative z-10 hover:bg-primary/5"
@@ -851,9 +854,9 @@ export default function AdminOffresEnvoyees() {
                           <Forward className="w-4 h-4 mr-1.5" />
                           Envoyer à un client
                         </Button>
-                        {offre.client_id && (
-                          <Button 
-                            variant="outline" 
+                        {!isMulti && offre.client_id && (
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -868,6 +871,64 @@ export default function AdminOffresEnvoyees() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Liste dépliable des clients destinataires */}
+                  {isMulti && (
+                    <Collapsible>
+                      <CollapsibleTrigger
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full px-4 md:px-6 py-2 flex items-center justify-center gap-2 text-xs font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 border-t border-border/50 transition-colors"
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        Voir les {group.count} destinataires & leurs statuts
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="px-4 md:px-6 pb-4 pt-2 space-y-2 bg-muted/30">
+                          {group.items.map((item) => {
+                            const itemStatus = STATUS_CONFIG[item.statut || 'envoyee'] || STATUS_CONFIG.envoyee;
+                            return (
+                              <div
+                                key={item.id}
+                                className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-background border border-border/50 hover:border-primary/30 transition-colors"
+                              >
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <User className="w-4 h-4 text-muted-foreground shrink-0" />
+                                  <span className="text-sm font-medium truncate">
+                                    {getClientName(item.client_id)}
+                                  </span>
+                                  {getStatusBadge(item.statut)}
+                                </div>
+                                <div className="flex gap-1.5 shrink-0">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenOffreDetail(item);
+                                    }}
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                  </Button>
+                                  {item.client_id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/admin/clients/${item.client_id}`);
+                                      }}
+                                    >
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
                 </Card>
               );
             })
