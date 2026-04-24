@@ -833,7 +833,7 @@ export default function AdminCalendrier() {
             {selectedVisiteGroup && (
               <AddToCalendarButton
                 event={{
-                  uid: `${selectedVisiteGroup[0].id}@immocrm`,
+                  uid: buildStableVisiteUID(selectedVisiteGroup[0].adresse || '', selectedVisiteGroup[0].date_visite),
                   title: `Visite - ${selectedVisiteGroup[0].offres?.titre || selectedVisiteGroup[0].adresse || 'Visite'}`,
                   description: buildVisiteICSDescription({
                     clients: getUniqueVisitesByClient(selectedVisiteGroup)
