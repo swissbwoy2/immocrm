@@ -616,6 +616,15 @@ const Clients = () => {
           badge="Administration"
           action={
             <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant={selectionMode ? "secondary" : "outline"}
+                onClick={() => (selectionMode ? exitSelectionMode() : setSelectionMode(true))}
+                disabled={clients.length === 0}
+              >
+                {selectionMode ? <XIcon className="w-4 h-4 mr-1 md:mr-2" /> : <CheckSquare className="w-4 h-4 mr-1 md:mr-2" />}
+                <span className="hidden sm:inline">{selectionMode ? 'Annuler' : 'Sélectionner'}</span>
+              </Button>
               <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" size="sm" disabled={clients.length === 0 || deleting}>
