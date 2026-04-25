@@ -385,14 +385,20 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
   addText('Pour l\'activation de vos recherches de logement', margin, yPosition, 10);
   yPosition -= 20;
   
-  addText('Coordonnees bancaires:', margin, yPosition, 10, helveticaBold);
-  yPosition -= lineHeight;
-  addText('Beneficiaire: Immo-Rama, Chemin de l\'Esparcette 5, 1023 Crissier', margin, yPosition, 10);
-  yPosition -= lineHeight;
-  addText('IBAN: CH87 8080 8004 9815 5643 7', margin, yPosition, 10);
-  yPosition -= lineHeight;
-  addText('SWIFT-BIC: RAIFCH22 | BANQUE RAIFFEISEN DU GROS DE VAUD', margin, yPosition, 10);
-  yPosition -= 30;
+  const paymentMethod = (data.payment_method ?? 'qr_invoice');
+  if (paymentMethod === 'twint') {
+    addText('Mode de paiement choisi: TWINT instantane', margin, yPosition, 10, helveticaBold);
+    yPosition -= lineHeight;
+    addText('Numero TWINT: 079 483 91 99', margin, yPosition, 10, helveticaBold);
+    yPosition -= lineHeight;
+    addText(`Mention obligatoire: ${sanitizeText(data.prenom)} ${sanitizeText(data.nom)} - Acompte mandat`, margin, yPosition, 10);
+    yPosition -= 30;
+  } else {
+    addText('Mode de paiement choisi: Facture QR par email', margin, yPosition, 10, helveticaBold);
+    yPosition -= lineHeight;
+    addText('Vous recevrez une facture QR par email, payable depuis votre app bancaire.', margin, yPosition, 10);
+    yPosition -= 30;
+  }
   
   // Dispositions complètes du mandat selon le type
   checkNewPage();
