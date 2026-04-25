@@ -51,6 +51,7 @@ interface MandatData {
   candidats: any[];
   signature_data: string;
   code_promo: string;
+  payment_method?: 'twint' | 'qr_invoice';
   demande_id?: string;
   client_id?: string;
 }
