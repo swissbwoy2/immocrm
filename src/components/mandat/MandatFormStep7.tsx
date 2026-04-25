@@ -37,7 +37,7 @@ export default function MandatFormStep7({ data, onChange }: Props) {
           </div>
           <h3 className="text-sm font-semibold text-[hsl(40_20%_75%)]">Récapitulatif de votre dossier</h3>
         </div>
-        <MandatRecapitulatif data={data} />
+        <MandatRecapitulatif data={data} onChange={onChange} />
       </div>
 
       {/* Code promo */}

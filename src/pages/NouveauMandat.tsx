@@ -233,6 +233,7 @@ export default function NouveauMandat() {
         cgv_acceptees: formData.cgv_acceptees,
         cgv_acceptees_at: new Date().toISOString(),
         code_promo: formData.code_promo,
+        payment_method: formData.payment_method ?? 'qr_invoice',
         montant_acompte: montantAcompte,
         abaninja_client_uuid: abaninjaClientUuid,
         abaninja_invoice_id: abaninjaInvoiceId,
@@ -308,7 +309,8 @@ export default function NouveauMandat() {
             souhaits_particuliers: formData.souhaits_particuliers,
             candidats: formData.candidats,
             signature_data: formData.signature_data,
-            code_promo: formData.code_promo
+            code_promo: formData.code_promo,
+            payment_method: formData.payment_method ?? 'qr_invoice'
           }
         });
         console.log('Mandat PDF email sent');

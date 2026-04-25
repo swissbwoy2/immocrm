@@ -19,6 +19,7 @@ interface MandatConfirmationRequest {
   type_bien: string;
   pieces_recherche: string;
   budget_max: number;
+  payment_method?: 'twint' | 'qr_invoice';
 }
 
 serve(async (req) => {
@@ -102,25 +103,20 @@ serve(async (req) => {
         </p>
       </div>
       
+      ${(data.payment_method ?? 'qr_invoice') === 'twint' ? `
       <div class="bank-details">
-        <h4>🏦 Coordonnées bancaires pour le paiement</h4>
-        <p>Veuillez effectuer le virement avec la référence suivante :</p>
-        <div class="bank-info">
-          <strong>Référence :</strong> ${data.prenom} ${data.nom} - Mandat
-        </div>
-        <div class="bank-info">
-          <strong>Bénéficiaire :</strong> Immo-Rama, Chemin de l'Esparcette 5, 1023 Crissier
-        </div>
-        <div class="bank-info">
-          <strong>IBAN :</strong> CH87 8080 8004 9815 5643 7
-        </div>
-        <div class="bank-info">
-          <strong>SWIFT-BIC :</strong> RAIFCH22
-        </div>
-        <div class="bank-info">
-          <strong>Banque :</strong> BANQUE RAIFFEISEN DU GROS DE VAUD
-        </div>
+        <h4>📱 Paiement TWINT instantané</h4>
+        <p>Payez l'acompte par TWINT au numéro :</p>
+        <div class="bank-info" style="font-size:18px;font-weight:bold;text-align:center;">079 483 91 99</div>
+        <p style="margin-top:10px;">⚠️ <strong>Mention obligatoire</strong> dans le message TWINT :</p>
+        <div class="bank-info" style="text-align:center;">${data.prenom} ${data.nom} - Acompte mandat</div>
       </div>
+      ` : `
+      <div class="bank-details" style="background:#dbeafe;border-color:#3b82f6;">
+        <h4 style="color:#1e40af;">🧾 Facture QR par email</h4>
+        <p>Vous recevrez votre facture QR par email sous quelques minutes. Vous pourrez la régler depuis votre application bancaire (e-banking, mobile banking).</p>
+      </div>
+      `}
       
       <div class="section">
         <h3>📌 Prochaines étapes</h3>

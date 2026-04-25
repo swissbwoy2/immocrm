@@ -703,35 +703,36 @@ const handler = async (req: Request): Promise<Response> => {
       yPosition -= 15;
     }
     
-    // ===== INFORMATIONS BANCAIRES =====
+    // ===== MODALITES DE PAIEMENT DE L'ACOMPTE =====
     checkNewPage();
     yPosition -= 10;
     page.drawRectangle({
       x: margin - 5,
-      y: yPosition - 85,
+      y: yPosition - 105,
       width: pageWidth - 2 * margin + 10,
-      height: 95,
+      height: 115,
       color: rgb(0.95, 0.97, 1),
     });
     
-    addText('INFORMATIONS BANCAIRES POUR L\'ACTIVATION DE VOS RECHERCHES', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addText("MODALITES DE PAIEMENT DE L'ACOMPTE", margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
     yPosition -= 5;
-    addText('Votre dossier sera active des reception du paiement ou de la preuve de paiement.', margin, yPosition, 8, helveticaFont, rgb(0.4, 0.4, 0.4));
+    addText("Votre dossier sera active des reception du paiement.", margin, yPosition, 8, helveticaFont, rgb(0.4, 0.4, 0.4));
     yPosition -= 18;
     
-    addText('BANQUE RAIFFEISEN DU GROS DE VAUD', margin, yPosition, 10, helveticaBold);
+    addText("Option 1 - TWINT instantane (recommande)", margin, yPosition, 10, helveticaBold);
     yPosition -= lineHeight;
-    addText('Agence Immo-Rama', margin, yPosition, 9);
+    addText("Numero TWINT : 079 483 91 99", margin + 10, yPosition, 9);
     yPosition -= lineHeight;
-    addText('Chemin de l\'Esparcette 5, 1023 Crissier', margin, yPosition, 9);
+    addText("Mention obligatoire : Prenom NOM du mandant - Acompte mandat", margin + 10, yPosition, 9);
     yPosition -= lineHeight + 5;
     
-    addText('IBAN: CH87 8080 8004 9815 5643 7', margin, yPosition, 10, helveticaBold);
-    addText('SWIFT-BIC: RAIFCH22', margin + 250, yPosition, 10);
+    addText("Option 2 - Facture QR par email", margin, yPosition, 10, helveticaBold);
+    yPosition -= lineHeight;
+    addText("Une facture QR vous est envoyee par email, payable depuis votre app bancaire.", margin + 10, yPosition, 9);
     yPosition -= lineHeight + 5;
     
     const acompte = isPurchase ? "2'500 CHF" : "300 CHF";
-    addText(`Acompte pour l'activation de vos recherches: ${acompte}`, margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
+    addText(`Montant de l'acompte : ${acompte}`, margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
     yPosition -= 30;
     
     // ===== 7. SIGNATURE ET VALIDATION =====

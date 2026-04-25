@@ -58,7 +58,10 @@ export interface MandatFormData {
   
   // Code promo
   code_promo: string;
-  
+
+  // Mode de paiement de l'acompte
+  payment_method: 'twint' | 'qr_invoice';
+
   // Commercial - Location type
   location_type: 'personnel' | 'societe' | null;
   
@@ -229,7 +232,8 @@ export const initialFormData: MandatFormData = {
   signature_data: '',
   cgv_acceptees: false,
   code_promo: '',
-  
+  payment_method: 'qr_invoice',
+
   // Commercial fields
   location_type: null,
   raison_sociale: '',

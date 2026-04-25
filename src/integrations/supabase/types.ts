@@ -3319,6 +3319,7 @@ export type Database = {
           nombre_occupants: number
           notes_admin: string | null
           numero_plaques: string | null
+          payment_method: string
           pieces_actuel: number
           pieces_recherche: string
           poursuites: boolean | null
@@ -3382,6 +3383,7 @@ export type Database = {
           nombre_occupants?: number
           notes_admin?: string | null
           numero_plaques?: string | null
+          payment_method?: string
           pieces_actuel?: number
           pieces_recherche: string
           poursuites?: boolean | null
@@ -3445,6 +3447,7 @@ export type Database = {
           nombre_occupants?: number
           notes_admin?: string | null
           numero_plaques?: string | null
+          payment_method?: string
           pieces_actuel?: number
           pieces_recherche?: string
           poursuites?: boolean | null

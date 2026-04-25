@@ -1,6 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MandatFormData } from './types';
+import PaymentMethodSelector, { PaymentMethod } from './PaymentMethodSelector';
 import { 
   User, Home, Briefcase, Search, Users, FileText, 
   MapPin, Phone, Mail, Calendar, CreditCard, Car, 
@@ -11,9 +12,10 @@ import { fr } from 'date-fns/locale';
 
 interface Props {
   data: MandatFormData;
+  onChange?: (data: Partial<MandatFormData>) => void;
 }
 
-export default function MandatRecapitulatif({ data }: Props) {
+export default function MandatRecapitulatif({ data, onChange }: Props) {
   const isPurchase = data.type_recherche === 'Acheter';
   const acompte = isPurchase ? 2500 : 300;
 
@@ -322,24 +324,13 @@ export default function MandatRecapitulatif({ data }: Props) {
           </div>
           <div className="text-3xl font-bold text-primary">{acompte} CHF</div>
         </div>
-        <div className="mt-4 p-3 bg-background/50 rounded-lg text-sm space-y-3">
-          <p className="font-medium">Coordonnées bancaires:</p>
-          <div className="space-y-1">
-            <p className="font-semibold text-foreground">BANQUE RAIFFEISEN DU GROS DE VAUD</p>
-            <p className="text-muted-foreground">Agence Immo-Rama</p>
-            <p className="text-muted-foreground">Chemin de l'Esparcette 5</p>
-            <p className="text-muted-foreground">1023 Crissier</p>
-          </div>
-          <div className="pt-2 border-t border-border/50 space-y-1">
-            <p>
-              <span className="text-muted-foreground">IBAN : </span>
-              <span className="font-mono font-medium text-foreground">CH87 8080 8004 9815 5643 7</span>
-            </p>
-            <p>
-              <span className="text-muted-foreground">SWIFT-BIC : </span>
-              <span className="font-mono font-medium text-foreground">RAIFCH22</span>
-            </p>
-          </div>
+        <div className="mt-4">
+          <PaymentMethodSelector
+            value={(data.payment_method ?? 'qr_invoice') as PaymentMethod}
+            onChange={(value) => onChange?.({ payment_method: value })}
+            prenom={data.prenom}
+            nom={data.nom}
+          />
         </div>
         {data.code_promo && (
           <div className="mt-3 flex items-center gap-2">
