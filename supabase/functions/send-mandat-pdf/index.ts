@@ -844,16 +844,20 @@ const handler = async (req: Request): Promise<Response> => {
                 </ul>
               </div>
               
-              <div class="bank-info">
-                <strong>Pour activer votre dossier</strong>
-                <p>Veuillez effectuer le virement de l'acompte de <strong>${acompte} CHF</strong>:</p>
-                <ul style="list-style: none; padding: 0; margin: 10px 0;">
-                  <li><strong>Beneficiaire:</strong> Immo-Rama, Chemin de l'Esparcette 5, 1023 Crissier</li>
-                  <li><strong>IBAN:</strong> CH87 8080 8004 9815 5643 7</li>
-                  <li><strong>SWIFT-BIC:</strong> RAIFCH22</li>
-                  <li><strong>Banque:</strong> BANQUE RAIFFEISEN DU GROS DE VAUD</li>
-                </ul>
+              ${(data.payment_method ?? 'qr_invoice') === 'twint' ? `
+              <div class="bank-info" style="background:#fef3c7;border-left:4px solid #f59e0b;padding:16px;margin:20px 0;border-radius:8px;">
+                <strong style="color:#92400e;">📱 Paiement TWINT instantane</strong>
+                <p style="margin:10px 0 5px 0;">Acompte de <strong>${acompte} CHF</strong> a payer par TWINT au :</p>
+                <p style="font-size:20px;font-weight:bold;font-family:monospace;background:white;padding:10px;border-radius:4px;text-align:center;margin:10px 0;">079 483 91 99</p>
+                <p style="margin:5px 0;color:#92400e;">⚠️ <strong>Mention obligatoire</strong> dans le message TWINT :</p>
+                <p style="background:white;padding:8px;border-radius:4px;text-align:center;font-weight:600;">${sanitizeText(data.prenom)} ${sanitizeText(data.nom)} - Acompte mandat</p>
               </div>
+              ` : `
+              <div class="bank-info" style="background:#dbeafe;border-left:4px solid #3b82f6;padding:16px;margin:20px 0;border-radius:8px;">
+                <strong style="color:#1e40af;">🧾 Facture QR par email</strong>
+                <p style="margin:10px 0;">Vous recevrez votre facture QR (acompte de <strong>${acompte} CHF</strong>) par email sous quelques minutes. Vous pourrez la regler depuis votre application bancaire (e-banking, mobile banking).</p>
+              </div>
+              `}
               
               <p>Votre dossier sera active des reception du paiement.</p>
               
