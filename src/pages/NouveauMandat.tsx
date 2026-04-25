@@ -309,7 +309,8 @@ export default function NouveauMandat() {
             souhaits_particuliers: formData.souhaits_particuliers,
             candidats: formData.candidats,
             signature_data: formData.signature_data,
-            code_promo: formData.code_promo
+            code_promo: formData.code_promo,
+            payment_method: formData.payment_method ?? 'qr_invoice'
           }
         });
         console.log('Mandat PDF email sent');
