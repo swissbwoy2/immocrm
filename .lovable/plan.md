@@ -1,67 +1,82 @@
-# Regroupement offres & visites multi-clients (UI + .ics)
+## 🎯 Objectif
 
-## Problème
-Quand une offre est envoyée à plusieurs clients pour le même bien :
-- `/offres-envoyees` (admin & agent) affiche N cartes identiques (1 par client)
-- `/agent/visites` & calendrier admin : N entrées de visite identiques
-- Export `.ics` : N événements dupliqués dans iPhone/Google/Outlook au lieu d'1 seul avec tous les clients
+Remplacer l'affichage automatique des **coordonnées bancaires (IBAN)** par un **choix de mode de paiement** lors de la création du compte / signature du mandat. Le client coche une option :
 
-## Solution : clé canonique + UID stable
+- ✅ **Payer par TWINT** (instantané) → affiche le numéro `079 483 91 99` avec mention obligatoire `Prénom NOM – Acompte mandat`
+- ✅ **Recevoir ma facture QR** (par email) → indique simplement que la facture QR sera envoyée par email
 
-### 1. Helpers partagés
-**`src/utils/visitesCalculator.ts`** — ajouter :
-- `buildVisiteGroupKey(adresse, date_visite)` → clé physique pour regrouper visites
-- `buildOffreGroupKey(agent_id, adresse, prix, date_envoi)` → clé canonique offre
-- `buildStableVisiteUID(adresse, date_visite)` → UID RFC 5545 stable `visite-{iso}-{slug}@logisorama.ch`
-- `groupVisitesByPhysique<T>(visites)` → `{ key, representative, clients[], items[] }[]`
-- `groupOffresByEnvoi<T>(offres)` → idem pour offres
+⚠️ **Note comptable** : la facture QR AbaNinja est générée automatiquement dans tous les cas (pour la comptabilité et la conformité). Le choix du client influence uniquement **ce qu'on lui montre** comme instructions de paiement.
 
-**`src/utils/generateICS.ts`** — ajouter :
-- `buildGroupedVisiteICSEvent(group)` qui construit un `ICSEventData` unique avec :
-  - `uid` = `buildStableVisiteUID(...)` (stable → mises à jour fusionnées par iOS/Google)
-  - `description` listant tous les clients (nom + téléphone) via `buildVisiteICSDescription`
-  - `title` ex. `Visite — {adresse} ({N} clients)`
+---
 
-### 2. Pages offres envoyées
-**`src/pages/admin/OffresEnvoyees.tsx`** & **`src/pages/agent/OffresEnvoyees.tsx`** :
-- Appliquer `groupOffresByEnvoi` après le fetch
-- 1 carte par groupe, badge `👥 {N} clients`
-- Accordéon dépliable listant chaque client avec son statut individuel (les rows DB restent séparées pour le tracking)
-- KPI compteurs basés sur groupes (déjà géré côté visites via `countUniqueOffres`, à aligner ici)
-- Bouton "Calendrier" → `buildGroupedVisiteICSEvent` quand une `date_visite` existe
+## 📋 Modifications
 
-### 3. Visites
-**`src/pages/agent/Visites.tsx`** :
-- Regrouper l'affichage via `groupVisitesByPhysique`
-- Export batch & bouton individuel utilisent le UID stable + description groupée
+### 1. UI — Sélecteur de mode de paiement (formulaire mandat)
 
-**`src/pages/admin/Calendrier.tsx`** :
-- Dialog détail visite + export batch journée alignés sur UID stable + groupement
+**`src/components/mandat/MandatRecapitulatif.tsx`** (étape récap avant signature)
+- Remplacer le bloc statique "Coordonnées bancaires" (l. 318-345) par un composant de choix avec 2 cartes cliquables :
+  - 📱 **TWINT instantané** (recommandé)
+  - 🧾 **Facture QR par email**
+- Persister le choix dans le state du formulaire (`payment_method: 'twint' | 'qr_invoice'`).
+- Si TWINT sélectionné → afficher la box jaune avec `079 483 91 99` + mention `[Prénom] [Nom] – Acompte mandat`.
+- Si Facture QR → afficher message court : "Vous recevrez votre facture QR par email sous quelques minutes. Payable depuis votre app bancaire."
 
-### 4. Composants calendrier
-**`src/components/calendar/PremiumDayEvents.tsx`**, **`PremiumAgentDayEvents.tsx`**, **`PremiumClientDayEvents.tsx`** :
-- `AddToCalendarButton` reçoit l'event groupé (déjà visuellement regroupé en UI, on aligne juste le `.ics`)
+**`src/components/mandat/CGVContent.tsx`** (l. 85-105 et 201-225)
+- Retirer les 2 blocs "Informations bancaires" statiques avec IBAN.
+- Les remplacer par une mention neutre : "Le mode de paiement (TWINT ou facture QR) sera choisi lors de la finalisation du mandat."
 
-### 5. Cohérence d'insertion
-**`src/components/ResendOfferDialog.tsx`** (et tout endroit qui boucle sur clients pour insérer offres/visites) :
-- Pré-calculer `const now = new Date().toISOString()` AVANT la boucle
-- Réutiliser exactement le même `date_envoi` et `date_visite` pour tous les inserts du batch → garantit le groupement parfait (pas d'écart de millisecondes)
+### 2. Persistance du choix
 
-## Fichiers modifiés
-```
-[MOD] src/utils/visitesCalculator.ts        + helpers groupement & UID
-[MOD] src/utils/generateICS.ts              + buildGroupedVisiteICSEvent
-[MOD] src/pages/admin/OffresEnvoyees.tsx
-[MOD] src/pages/agent/OffresEnvoyees.tsx
-[MOD] src/pages/agent/Visites.tsx
-[MOD] src/pages/admin/Calendrier.tsx
-[MOD] src/components/calendar/PremiumDayEvents.tsx
-[MOD] src/components/calendar/PremiumAgentDayEvents.tsx
-[MOD] src/components/calendar/PremiumClientDayEvents.tsx
-[MOD] src/components/ResendOfferDialog.tsx
-```
+**Migration DB** : ajouter une colonne `payment_method` (text, nullable, default `'qr_invoice'`) sur la table `demandes_mandat` (et/ou `clients` selon où le récap est sauvegardé — à confirmer en lecture du schéma juste avant migration).
 
-## Garanties
-- ✅ Aucune migration DB : les rows individuelles restent (statuts par client, tracking, RLS inchangés)
-- ✅ UID stable RFC 5545 → si vous ré-importez l'.ics, iPhone/Google met à jour au lieu de dupliquer
-- ✅ Toutes les actions individuelles (relancer, marquer répondu, etc.) restent disponibles dans l'accordéon
+**Edge function `mandate-submit-signature`** (et/ou `mandate-update-draft`) : accepter et persister `payment_method` envoyé depuis le front.
+
+### 3. Emails de confirmation
+
+**`supabase/functions/send-mandat-confirmation/index.ts`** (l. 100-120)
+- Lire `payment_method` du client.
+- Si `twint` → afficher box jaune TWINT avec `079 483 91 99` + mention `Prénom NOM – Acompte mandat`.
+- Si `qr_invoice` → afficher box bleue : "Votre facture QR vient d'être envoyée à votre adresse email. Vous pouvez la régler depuis votre app bancaire."
+
+**`supabase/functions/send-mandat-pdf/index.ts`** (l. 380-395 PDF + l. 840-850 HTML email)
+- Même logique conditionnelle pour la section paiement du PDF récapitulatif et du HTML d'accompagnement.
+
+### 4. PDF du mandat complet
+
+**`supabase/functions/generate-full-mandat-pdf/index.ts`** (l. 706-735)
+- Remplacer la section `INFORMATIONS BANCAIRES POUR L'ACTIVATION` par une section neutre : `MODALITES DE PAIEMENT DE L'ACOMPTE`.
+- Mentionner les **2 options disponibles** (TWINT `079 483 91 99` OU facture QR par email) sans privilégier l'une, puisque le PDF du mandat est un document légal qui doit refléter les options offertes.
+- Encodage : conserver ASCII strict (pas de `'`, `é`, `à` directs sans les fonctions `cleanText` existantes — cf. mémoire PDF sanitization U+202F/U+00A0).
+
+### 5. Factures officielles (intactes)
+
+❌ **Ne PAS toucher** :
+- `create-abaninja-invoice/index.ts`
+- `create-final-invoice/index.ts`
+- `resend-abaninja-invoice/index.ts`
+- `abaninja-webhook/index.ts`
+
+→ La facture QR AbaNinja reste émise systématiquement (obligation comptable suisse). Seul l'affichage côté client est conditionnel.
+
+---
+
+## 🧪 Validation après implémentation
+
+1. Création d'un compte avec choix **TWINT** → email reçu affiche box TWINT, PDF récap aussi.
+2. Création d'un compte avec choix **Facture QR** → email reçu mentionne "facture QR par email", pas de TWINT.
+3. Dans les 2 cas → la facture QR AbaNinja est bien créée en arrière-plan (vérification logs `create-abaninja-invoice`).
+4. PDF du mandat complet → présente les 2 options de paiement de manière neutre.
+
+---
+
+## 📁 Fichiers modifiés
+
+- `src/components/mandat/MandatRecapitulatif.tsx`
+- `src/components/mandat/CGVContent.tsx`
+- `supabase/functions/send-mandat-confirmation/index.ts`
+- `supabase/functions/send-mandat-pdf/index.ts`
+- `supabase/functions/generate-full-mandat-pdf/index.ts`
+- `supabase/functions/mandate-submit-signature/index.ts` (persistance)
+- Migration SQL : `payment_method` sur `demandes_mandat`
+
+Confirmes-tu ce plan ?
