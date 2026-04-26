@@ -73,7 +73,7 @@ export function FloatingConversationList({ onSelect }: Props) {
 
         const [clientsRes, agentsRes] = await Promise.all([
           clientIds.length
-            ? supabase.from('clients').select('id, prenom, nom, user_id').in('id', clientIds)
+            ? supabase.from('clients').select('id, user_id').in('id', clientIds)
             : Promise.resolve({ data: [] as any[] }),
           agentIds.length
             ? supabase.from('agents').select('id, user_id').in('id', agentIds)

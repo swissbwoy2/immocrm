@@ -63,13 +63,13 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
         const { data: ag } = await supabase.from('agents').select('user_id').eq('id', conv.agent_id).maybeSingle();
         otherUserId = ag?.user_id ?? null;
       } else if (userRole === 'agent' && conv.client_id) {
-        const { data: cli } = await supabase.from('clients').select('user_id, prenom, nom').eq('id', conv.client_id).maybeSingle();
+        const { data: cli } = await supabase.from('clients').select('user_id').eq('id', conv.client_id).maybeSingle();
         otherUserId = cli?.user_id ?? null;
-        if (cli) fallbackName = `${cli.prenom || ''} ${cli.nom || ''}`.trim() || 'Client';
+        fallbackName = 'Client';
       } else if (conv.client_id) {
-        const { data: cli } = await supabase.from('clients').select('user_id, prenom, nom').eq('id', conv.client_id).maybeSingle();
+        const { data: cli } = await supabase.from('clients').select('user_id').eq('id', conv.client_id).maybeSingle();
         otherUserId = cli?.user_id ?? null;
-        if (cli) fallbackName = `${cli.prenom || ''} ${cli.nom || ''}`.trim() || 'Client';
+        fallbackName = 'Client';
       }
 
       if (otherUserId) {
