@@ -5,8 +5,6 @@ import { Loader2, ScanLine, Trash2, Check, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import WebDocumentScanner from './WebDocumentScanner';
 import {
-  isNativeScanner,
-  captureNativePage,
   pagesToPdf,
   pageToJpegFile,
   type CapturedPage,
@@ -53,21 +51,9 @@ export default function UniversalDocumentScanner({
     onOpenChange(false);
   };
 
-  const startCapture = async () => {
-    if (isNativeScanner()) {
-      try {
-        setBusy(true);
-        const page = await captureNativePage();
-        setPages((prev) => [...prev, page]);
-      } catch (e) {
-        console.error('[UniversalDocumentScanner] capture native error', e);
-        toast.error("Capture annulée ou erreur caméra.");
-      } finally {
-        setBusy(false);
-      }
-    } else {
-      setWebOpen(true);
-    }
+  const startCapture = () => {
+    // Web app : on passe toujours par le scanner navigateur (getUserMedia + input capture)
+    setWebOpen(true);
   };
 
   const onWebCapture = (page: CapturedPage) => {
