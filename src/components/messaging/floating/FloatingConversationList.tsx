@@ -45,8 +45,8 @@ export function FloatingConversationList({ onSelect }: Props) {
       // 1) Get conversations relevant to the user
       let convQuery = supabase
         .from('conversations')
-        .select('id, agent_id, client_id, conversation_type, updated_at')
-        .order('updated_at', { ascending: false })
+        .select('id, agent_id, client_id, conversation_type, last_message_at')
+        .order('last_message_at', { ascending: false })
         .range(from, to);
 
       if (userRole === 'client') {
@@ -155,7 +155,7 @@ export function FloatingConversationList({ onSelect }: Props) {
           otherAvatar: otherProfile?.avatar_url ?? null,
           isOnline: !!otherProfile?.is_online,
           lastMessage: last?.content ?? null,
-          lastMessageAt: last?.created_at ?? conv.updated_at ?? null,
+          lastMessageAt: last?.created_at ?? conv.last_message_at ?? null,
           unread: unreadByConv.get(conv.id) || 0,
         };
       });
