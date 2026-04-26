@@ -419,21 +419,8 @@ export default function NouveauMandat() {
       <PremiumProgressBlock currentStep={currentStep} totalSteps={STEPS.length} stepTitle={STEPS[currentStep]?.title ?? ''} />
       <PremiumStepIndicator steps={STEPS} currentStep={currentStep} />
 
-      <div className="container mx-auto px-4 max-w-2xl pb-8">
-        {/* Step title */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold font-serif text-[hsl(40_20%_88%)]">
-            {STEPS[currentStep].icon}{' '}
-            <span className="text-[hsl(38_55%_65%)]">{STEPS[currentStep].title}</span>
-          </h1>
-          <p className="text-sm text-[hsl(40_20%_45%)] mt-2">
-            {currentStep < 4
-              ? 'Étape par étape vers votre nouveau logement'
-              : formData.type_recherche === 'Acheter'
-              ? 'Pour un bien immobilier à acheter'
-              : 'Pour un logement à louer'}
-          </p>
-        </div>
+      <div className="container mx-auto px-4 max-w-2xl pb-8 pt-4">
+        {/* Titre/sous-titre vivent dans chaque step (style Macoloc) */}
 
         <PremiumFormCard>
           <PremiumStepTransition stepKey={currentStep} direction={1}>

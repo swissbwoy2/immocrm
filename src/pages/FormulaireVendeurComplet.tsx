@@ -816,15 +816,8 @@ export default function FormulaireVendeurComplet() {
       <PremiumProgressBlock currentStep={currentStep - 1} totalSteps={STEPS.length} stepTitle={STEPS[currentStep - 1]?.title ?? ''} />
       <PremiumStepIndicator steps={STEPS} currentStep={currentStep - 1} />
 
-      <div className="container mx-auto px-4 max-w-3xl pb-8">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold font-serif text-[hsl(40_20%_88%)] mb-2">
-            Complétez les informations de votre bien
-          </h1>
-          <p className="text-[hsl(40_20%_48%)] text-sm">
-            Plus vous nous donnez de détails, plus notre matching sera précis.
-          </p>
-        </div>
+      <div className="container mx-auto px-4 max-w-3xl pb-8 pt-4">
+        {/* Titre/sous-titre vivent dans chaque step */}
 
         <PremiumFormCard>
             {/* Form */}
