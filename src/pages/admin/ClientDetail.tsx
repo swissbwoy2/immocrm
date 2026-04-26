@@ -2452,64 +2452,25 @@ export default function ClientDetail() {
                       className="mt-4 group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30"
                       disabled={regeneratingContract}
                       onClick={async () => {
-                        if (!client.demande_mandat_id) return;
-                        
                         setRegeneratingContract(true);
                         try {
-                          const { data: demande, error: demandeError } = await supabase
-                            .from('demandes_mandat')
-                            .select('*')
-                            .eq('id', client.demande_mandat_id)
-                            .single();
-                          
-                          if (demandeError) throw demandeError;
-                          
-                          const { data: result, error: funcError } = await supabase.functions.invoke('generate-mandat-contract', {
-                            body: {
-                              clientId: client.id,
-                              demandeId: demande.id,
-                              prenom: demande.prenom,
-                              nom: demande.nom,
-                              email: demande.email,
-                              telephone: demande.telephone,
-                              adresse: demande.adresse,
-                              date_naissance: demande.date_naissance,
-                              nationalite: demande.nationalite,
-                              type_permis: demande.type_permis,
-                              etat_civil: demande.etat_civil,
-                              profession: demande.profession,
-                              employeur: demande.employeur,
-                              revenus_mensuels: demande.revenus_mensuels,
-                              type_recherche: demande.type_recherche,
-                              type_bien: demande.type_bien,
-                              pieces_recherche: demande.pieces_recherche,
-                              region_recherche: demande.region_recherche,
-                              budget_max: demande.budget_max,
-                              signature_data: demande.signature_data,
-                              cgv_acceptees_at: demande.cgv_acceptees_at,
-                              candidats: demande.candidats,
-                              gerance_actuelle: demande.gerance_actuelle,
-                              loyer_actuel: demande.loyer_actuel,
-                              depuis_le: demande.depuis_le,
-                              motif_changement: demande.motif_changement,
-                              nombre_occupants: demande.nombre_occupants,
-                              souhaits_particuliers: demande.souhaits_particuliers,
-                            }
+                          const { error: funcError } = await supabase.functions.invoke('generate-full-mandat-pdf', {
+                            body: { client_id: client.id },
                           });
-                          
+
                           if (funcError) throw funcError;
-                          
+
                           toast({
-                            title: 'Contrat généré',
-                            description: 'Le PDF a été généré avec succès',
+                            title: 'Mandat complet généré',
+                            description: 'Le PDF complet a été généré avec succès',
                           });
-                          
+
                           loadClientData();
                         } catch (error) {
                           console.error('Error generating contract:', error);
                           toast({
                             title: 'Erreur',
-                            description: 'Impossible de générer le contrat',
+                            description: 'Impossible de générer le mandat complet',
                             variant: 'destructive',
                           });
                         } finally {
